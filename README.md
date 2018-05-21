@@ -1,7 +1,7 @@
 # MARC21-To-FOLIO
 A Python3 script parsing MARC21 toFOLIO inventory format. 
 
-#Prerequisits
+# Prerequisits
 ## Python 3
 Install python 3 in a newer version
 ## Pymarc
