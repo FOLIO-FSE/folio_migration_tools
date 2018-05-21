@@ -8,5 +8,5 @@ Install python 3 in a newer version
 pip install pymarc
 
 
-Usage (in a bash command prompt)
+# Usage (in a bash command prompt)
 python3 main.py /PATH_TO_FOLDER_CONTAINING_MARC_FILES/ PATH_TO_RESULTS_FILE FOLIO_OKAPI_URL FOLIO_TENANT_ID X-OKAPI-TOKEN SOURCE_SYSTEM_ID
