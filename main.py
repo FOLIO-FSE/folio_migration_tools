@@ -25,12 +25,12 @@ def getIdentifiers(marcRecord, identifierTypes):
     for fieldTag in a.keys():
         for field in record.get_fields(fieldTag):
             yield {'identifierTypeId':a[fieldTag], 'value' : field.format_field() }
+
 # Fetches identifierTypes from FOLIO
 def getFoliIdentifierTypes(okapiUrl, okapiHeaders):
     path = '/identifier-types?limit=100&query=cql.allRecords=1%20sortby%20name'
     req =  requests.get(okapiUrl+path, headers = okapiHeaders)
     return json.loads(req.text)['identifierTypes']
-
 
 # Fetches contribuor types from FOLIO
 def getFolioContributorTypes(okapiUrl, okapiHeaders):
@@ -43,12 +43,14 @@ def getFolioContributorNameTypes(okapiUrl, okapiHeaders):
     path = '/contributor-name-types?limit=100&query=cql.allRecords=1 sortby ordering'
     req =  requests.get(okapiUrl+path, headers = okapiHeaders)
     return json.loads(req.text)['contributorNameTypes']
+
 # Fetches the JSON Schema for instances
 def getInstanceJSONSchema():
     url = 'https://raw.github.com' 
     path = '/folio-org/mod-inventory-storage/master/ramls/instance.json'
     req = requests.get(url + path)
     return json.loads(req.text)
+
 # Parses a bib recod into a FOLIO Inventory instance object
 def parseBibRecord(marcRecord,folioRecord, contributorNameTypes, identifierTypes, recordSource):
     folioRecord['title'] = marcRecord.title() or ''
@@ -119,7 +121,7 @@ with open(resultPath,'a') as resultsFile:
                                               , contributorNameTypes
                                               , foliIdentifierTypes
                                              , recordSource)
-#                        validate(fRec,instanceJSONSchema)
+                        validate(fRec,instanceJSONSchema)
                         resultsFile.write('{}\n'.format(json.dumps(fRec)))
                         if records % 10000 == 0 :
                             elapsed = records/(time.time() - start)
