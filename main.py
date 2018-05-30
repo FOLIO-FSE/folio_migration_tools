@@ -134,6 +134,10 @@ okapiHeaders = {'x-okapi-token': okapiToken,
                 'content-type': 'application/json'}
 recordSource = sys.argv[6]
 print("\tRecord source:\t", recordSource)
+
+idMapFilePath = sys.argv[7]
+print("\tidMap will get stored at:\t", idMapFilePath)
+
 holdings = 0
 records = 0
 start = time.time()
@@ -142,16 +146,20 @@ files = [f for f in listdir(sys.argv[1])
 bufsize = 1
 print("Files to process:")
 print(json.dumps(files, sort_keys=True, indent=4))
-print("fetching foliIdentifierTypes")
+print("Fetching foliIdentifierTypes...", end='')
 foliIdentifierTypes = getFoliIdentifierTypes(okapiUrl,
                                              okapiHeaders)
 print("done")
-print("fetching CreatorTypes")
+print("fetching CreatorTypes...", end='')
 contributorNameTypes = getFolioContributorNameTypes(okapiUrl,
                                                     okapiHeaders)
 print("done")
-print("Fetching JSON schema for Instances")
+print("Fetching JSON schema for Instances...", end='')
 instanceJSONSchema = getInstanceJSONSchema()
+print("done")
+idMap = {}
+print("Starting")
+print("Rec./s\t\tHolds\t\tTot. recs\t\tFile\t\t")
 with open(resultPath, 'a') as resultsFile:
     for f in files:
         with open(sys.argv[1]+f, 'rb') as fh:
@@ -169,18 +177,23 @@ with open(resultPath, 'a') as resultsFile:
                                               contributorNameTypes,
                                               foliIdentifierTypes,
                                               recordSource)
+                        if(record['907']['a']):
+                            sierraId = record['907']['a'].replace('.b', '')[:-1]
+                            idMap[sierraId] = fRec['id']
                         validate(fRec, instanceJSONSchema)
                         resultsFile.write('{}\n'.format(json.dumps(fRec)))
                         if records % 1000 == 0:
                             elapsed = '{0:.3g}'.format(records/(time.time() - start))
-                            printTemplate = """Records/second: {}\t
-                                               Holdings: {}\tTotal records:{}\t
-                                               Current file:{}"""
+                            printTemplate = "{}\t\t{}\t\t{}\t\t{}\t\t{}"
                             print(printTemplate.format(elapsed,
                                                        holdings,
-                                                       records, f))
+                                                       records,
+                                                       f,
+                                                       len(idMap)), end='\r')
                 except Exception as inst:
                     print(type(inst))
                     print(inst.args)
                     print(inst)
+    with open(idMapFilePath, 'w') as json_file:
+        json.dump(idMap, json_file, sort_keys=True, indent=4)
     print("done")
