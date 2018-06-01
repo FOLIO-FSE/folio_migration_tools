@@ -1,4 +1,5 @@
 import json
+import argparse
 import sys
 import requests
 import time
@@ -115,43 +116,51 @@ def parseBibRecord(marcRecord, folioRecord,
     folioRecord['notes'] = ['', '']
     return folioRecord
 
+parser = argparse.ArgumentParser()
+parser.add_argument("source_folder", help="path of the folder where the marc files resides")
+parser.add_argument("result_path", help="path and name of the results file")
+parser.add_argument("okapi_url", help="url of your FOLIO OKAPI endpoint. See settings->software version in FOLIO")
+parser.add_argument("tenant_id", help="id of the FOLIO tenant. See settings->software version in FOLIO")
+parser.add_argument("okapi_token", help="the x-okapi-token. Easiest optained via F12 in the webbrowser")
+parser.add_argument("record_source", help="name of the source system or collection from which the records are added")
+parser.add_argument("-id_dict_path", "-i", help="path to file saving a dictionary of Sierra ids and new InstanceIds to be used for matching the right holdings and items to the right instance.")
+parser.add_argument("-postgres_dump",
+                    "-p", 
+                    help="results will be written out for Postgres ingestion. Default is JSON",
+                    action="store_true")
+args = parser.parse_args()
+
 
 def folioRecordTemplate(id):
     return {'id': str(id)}
 
 
 print('Will post data to')
-resultPath = sys.argv[2]
-print('\tresults file:\t', resultPath)
-okapiUrl = sys.argv[3]
-print("\tOkapi URL:\t", okapiUrl)
-tenantId = sys.argv[4]
-print("\tTenanti Id:\t", tenantId)
-okapiToken = sys.argv[5]
-print("\tToken:   \t", okapiToken)
-okapiHeaders = {'x-okapi-token': okapiToken,
-                'x-okapi-tenant': tenantId,
+print('\tresults file:\t', args.result_path)
+print("\tOkapi URL:\t", args.okapi_url)
+print("\tTenanti Id:\t", args.tenant_id)
+print("\tToken:   \t", args.okapi_token)
+okapiHeaders = {'x-okapi-token': args.okapi_token,
+                'x-okapi-tenant': args.tenant_id,
                 'content-type': 'application/json'}
-recordSource = sys.argv[6]
-print("\tRecord source:\t", recordSource)
+print("\tRecord source:\t", args.record_source)
 
-idMapFilePath = sys.argv[7]
-print("\tidMap will get stored at:\t", idMapFilePath)
+print("\tidMap will get stored at:\t", args.id_dict_path)
 
 holdings = 0
 records = 0
 start = time.time()
-files = [f for f in listdir(sys.argv[1])
-         if isfile(join(sys.argv[1], f))]
+files = [f for f in listdir(args.source_folder)
+         if isfile(join(args.source_folder, f))]
 bufsize = 1
 print("Files to process:")
 print(json.dumps(files, sort_keys=True, indent=4))
 print("Fetching foliIdentifierTypes...", end='')
-foliIdentifierTypes = getFoliIdentifierTypes(okapiUrl,
+foliIdentifierTypes = getFoliIdentifierTypes(args.okapi_url,
                                              okapiHeaders)
 print("done")
 print("fetching CreatorTypes...", end='')
-contributorNameTypes = getFolioContributorNameTypes(okapiUrl,
+contributorNameTypes = getFolioContributorNameTypes(args.okapi_url,
                                                     okapiHeaders)
 print("done")
 print("Fetching JSON schema for Instances...", end='')
@@ -160,7 +169,7 @@ print("done")
 idMap = {}
 print("Starting")
 print("Rec./s\t\tHolds\t\tTot. recs\t\tFile\t\t")
-with open(resultPath, 'a') as resultsFile:
+with open(args.result_path, 'a') as resultsFile:
     for f in files:
         with open(sys.argv[1]+f, 'rb') as fh:
             reader = MARCReader(fh, 'rb',
@@ -176,12 +185,15 @@ with open(resultPath, 'a') as resultsFile:
                                               folioRecordTemplate(uuid.uuid4()),
                                               contributorNameTypes,
                                               foliIdentifierTypes,
-                                              recordSource)
+                                              args.record_source)
                         if(record['907']['a']):
                             sierraId = record['907']['a'].replace('.b', '')[:-1]
                             idMap[sierraId] = fRec['id']
                         validate(fRec, instanceJSONSchema)
-                        resultsFile.write('{}\n'.format(json.dumps(fRec)))
+                        if(args.postgres_dump):
+                            resultsFile.write('{}\t{}\n'.format(fRec['id'], json.dumps(fRec)))
+                        else:
+                            resultsFile.write('{}\n'.format(json.dumps(fRec)))
                         if records % 1000 == 0:
                             elapsed = '{0:.3g}'.format(records/(time.time() - start))
                             printTemplate = "{}\t\t{}\t\t{}\t\t{}\t\t{}"
