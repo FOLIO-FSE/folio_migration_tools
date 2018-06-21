@@ -44,6 +44,15 @@ def get_languages(marc_record, valid_languages):
     return languages
 
 
+def fetch_language_codes():
+    url = "https://www.loc.gov/standards/codelists/languages.xml"
+    tree = ET.fromstring(requests.get(url).content)
+    ns = "{info:lc/xmlns/codelist-v1}"
+    xp = "{0}languages/{0}language/{0}code".format(ns)
+    for code in tree.findall(xp):
+        yield code.text
+
+
 # Collects Identifiers from the record and adds the appropriate metadata"""
 def getIdentifiers(marcRecord, identifierTypes):
     a = {'020': next(f['id'] for f
@@ -108,7 +117,7 @@ def getInstanceJSONSchema():
 # Parses a bib recod into a FOLIO Inventory instance object
 def parseBibRecord(marcRecord, folioRecord,
                    contributorNameTypes, identifierTypes, recordSource,
-                   instance_types, instance_formats):
+                   instance_types, instance_formats, language_codes):
     folioRecord['title'] = marcRecord.title() or ''
     folioRecord['source'] = recordSource
     folioRecord['contributors'] = list(getContributors(marcRecord,
@@ -140,7 +149,7 @@ def parseBibRecord(marcRecord, folioRecord,
     # TODO: add physical description
     folioRecord['physicalDescriptions'] = ['pd1', 'pd2']
     # TODO: add languages
-    folioRecord['languages'] = get_languages(marcRecord, "")
+    folioRecord['languages'] = get_languages(marcRecord, language_codes)
     # TODO: add notes
     folioRecord['notes'] = ['', '']
     return folioRecord
@@ -206,15 +215,9 @@ print(instance_types[randint(0, len(instance_types)-1)]['id'])
 print("done")
 
 print("Fetching valid language codes...")
-#ns = {'ns': 'http://www.loc.gov/standards/codelists/codelist.xsd'}
-#req = requests.get('https://www.loc.gov/standards/codelists/languages.xml')
-#tree = ET.parse(req.raw)
-#root = tree.getroot()
-#for lang in root.findall("./ns:languages/ns:language/ns:code"):
-#    print(type(lang))
-#    print(len(lang))
-#    print(lang.text)
+language_codes = fetch_language_codes()
 print("done")
+
 print("Fetching Instance formats...", end='')
 instance_formats = get_folio_instance_formats(args.okapi_url,
                                               okapiHeaders)
@@ -241,7 +244,8 @@ with open(args.result_path, 'a') as resultsFile:
                                               foliIdentifierTypes,
                                               args.record_source,
                                               instance_types,
-                                              instance_formats)
+                                              instance_formats,
+                                              language_codes)
                         if(record['907']['a']):
                             sierraId = record['907']['a'].replace('.b', '')[:-1]
                             idMap[sierraId] = fRec['id']
