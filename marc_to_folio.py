@@ -33,6 +33,42 @@ def getContributors(record, contributorNameTypes):
                    'primary': first < 2}
 
 
+def get_urls(marc_record):
+    for field in marc_record.get_fields('856'):
+        yield field['u'] or ''
+
+
+def get_subjects(marc_record):
+    tags = ['600', '610', '611', '630', '647', '648', '650', '651'
+            '653', '654', '655', '656', '657', '658', '662']
+    for tag in tags:
+        for field in marc_record.get_fields(tag):
+            yield field.format_field()
+
+
+def get_alternative_titles(marc_record):
+    tags = ['246', '247']
+    for tag in tags:
+        for field in marc_record.get_fields(tag):
+            yield field.format_field()
+
+
+def get_publication(marc_record):
+    tags = ['260', '264']
+    for tag in tags:
+        for field in marc_record.get_fields(tag):
+            yield {'publisher': field['b'] or '',
+                   'place': field['a'] or '',
+                   'dateOfPublication': field['c'] or ''}
+
+
+def get_series(marc_record):
+    tags = ['440', '490']
+    for tag in tags:
+        for field in marc_record.get_fields(tag):
+            yield field['a'] or ''
+
+
 def get_languages(marc_record, valid_languages):
     languages = (marc_record['041'] and marc_record['041']
                  .get_subfields('a', 'b', 'd', 'e', 'f', 'g', 'h',
@@ -54,11 +90,12 @@ def fetch_language_codes():
 
 
 # Collects Identifiers from the record and adds the appropriate metadata"""
-def getIdentifiers(marcRecord, identifierTypes):
+def getIdentifiers(marc_record, identifierTypes):
     a = {'020': next(f['id'] for f
                      in identifierTypes if f['name'] == 'ISBN'),
          '022': next(f['id'] for f
-                     in identifierTypes if f['name'] == 'ISSN')}
+                     in identifierTypes if f['name'] == 'ISSN'),
+         '907': '7e591197-f335-4afb-bc6d-a6d76ca3bace'}
     for fieldTag in a.keys():
         for field in record.get_fields(fieldTag):
             yield {'identifierTypeId': a[fieldTag],
@@ -115,44 +152,35 @@ def getInstanceJSONSchema():
 
 
 # Parses a bib recod into a FOLIO Inventory instance object
-def parseBibRecord(marcRecord, folioRecord,
+def parseBibRecord(marc_record, folio_record,
                    contributorNameTypes, identifierTypes, recordSource,
                    instance_types, instance_formats, language_codes):
-    folioRecord['title'] = marcRecord.title() or ''
-    folioRecord['source'] = recordSource
-    folioRecord['contributors'] = list(getContributors(marcRecord,
-                                                       contributorNameTypes))
-    folioRecord['identifiers'] = list(getIdentifiers(marcRecord,
-                                                     identifierTypes))
+    folio_record['title'] = marc_record.title() or ''
+    folio_record['source'] = recordSource
+    folio_record['contributors'] = list(getContributors(marc_record,
+                                                        contributorNameTypes))
+    folio_record['identifiers'] = list(getIdentifiers(marc_record,
+                                                      identifierTypes))
     # TODO: Add instanceTypeId
-    folioRecord['instanceTypeId'] = instance_types[randint(0, len(instance_types)-1)]['id']
-    # TODO:add alternative titles
-    folioRecord['alternativeTitles'] = ["Alternative title1",
-                                        "Alternative title 2"]
-    # TODO: add series
-    folioRecord['series'] = ['Series 1', 'Series 2']
-    # TODO: add edtion info
-    folioRecord['edition'] = 'Edition'
-    # TODO: add subjects
-    folioRecord['subjects'] = ['Subject 1', 'Subject 2']
+    folio_record['instanceTypeId'] = instance_types[randint(0, len(instance_types)-1)]['id']
+    folio_record['alternativeTitles'] = list(set(get_alternative_titles(marc_record)))
+    folio_record['series'] = list(set(get_series(marc_record)))
+    folio_record['edition'] = (marc_record['250'] and marc_record['250']['a']) or ''
+    folio_record['subjects'] = list(set(get_subjects(marc_record)))
     # TODO: add classification
-    # folioRecord['classification'] = [{'classificationNumber':'a',
+    # folio_record['classification'] = [{'classificationNumber':'a',
     # 'classificationTypeId':''}]
-    # TODO: add publication
-    folioRecord['publication'] = [{'publisher': 'a',
-                                   'place': 'b',
-                                   'dateOfPublication': 'c'}]
-    # TODO: add urls
-    folioRecord['urls'] = ['http://dn.se', 'https://svd.se']
+    folio_record['publication'] = list((get_publication(marc_record)))
+    folio_record['urls'] = list(set(get_urls(marc_record)))
     # TODO: add instanceFormatId
-    folioRecord['instanceFormatId'] = instance_formats[randint(0, len(instance_formats)-1)]['id']
+    folio_record['instanceFormatId'] = instance_formats[randint(0, len(instance_formats)-1)]['id']
     # TODO: add physical description
-    folioRecord['physicalDescriptions'] = ['pd1', 'pd2']
+    folio_record['physicalDescriptions'] = ['pd1', 'pd2']
     # TODO: add languages
-    folioRecord['languages'] = get_languages(marcRecord, language_codes)
+    folio_record['languages'] = get_languages(marc_record, language_codes)
     # TODO: add notes
-    folioRecord['notes'] = ['', '']
-    return folioRecord
+    folio_record['notes'] = ['', '']
+    return folio_record
 
 
 parser = argparse.ArgumentParser()
@@ -170,7 +198,7 @@ parser.add_argument("-postgres_dump",
 args = parser.parse_args()
 
 
-def folioRecordTemplate(id):
+def folio_recordTemplate(id):
     return {'id': str(id)}
 
 
@@ -239,7 +267,7 @@ with open(args.result_path, 'a') as resultsFile:
                         holdings += 1
                     else:
                         fRec = parseBibRecord(record,
-                                              folioRecordTemplate(uuid.uuid4()),
+                                              folio_recordTemplate(uuid.uuid4()),
                                               contributorNameTypes,
                                               foliIdentifierTypes,
                                               args.record_source,
