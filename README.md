@@ -1,5 +1,5 @@
 # MARC21-To-FOLIO
-A Python3 script parsing MARC21 toFOLIO inventory format. 
+A Python3 script parsing MARC21 toFOLIO inventory format. Adopts some data into previously set parameters
 
 # Prerequisits
 ## Python 3
