@@ -254,7 +254,7 @@ print("done")
 idMap = {}
 print("Starting")
 print("Rec./s\t\tHolds\t\tTot. recs\t\tFile\t\t")
-with open(args.result_path, 'a') as resultsFile:
+with open(args.result_path, 'w+') as resultsFile:
     for f in files:
         with open(sys.argv[1]+f, 'rb') as fh:
             reader = MARCReader(fh, 'rb',
@@ -294,6 +294,6 @@ with open(args.result_path, 'a') as resultsFile:
                     print(type(inst))
                     print(inst.args)
                     print(inst)
-    with open(id_dict_path, 'w') as json_file:
+    with open(id_dict_path, 'w+') as json_file:
         json.dump(idMap, json_file, sort_keys=True, indent=4)
     print("done")
