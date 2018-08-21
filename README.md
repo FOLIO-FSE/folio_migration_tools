@@ -1,3 +1,5 @@
+This repo has been forked to https://github.com/FOLIO-FSE/MARC21-To-FOLIO and lives there from now on
+
 # MARC21-To-FOLIO
 A Python3 script parsing MARC21 toFOLIO inventory format. Adopts some data into previously set parameters
 
