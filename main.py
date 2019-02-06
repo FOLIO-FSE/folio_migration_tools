@@ -1,11 +1,16 @@
-import json
 import argparse
+import json
 import sys
 import time
-from marc_to_folio.MtFMapper import MtFMapper
-from pymarc import MARCReader
 from os import listdir
 from os.path import isfile, join
+
+import requests
+from jsonschema import ValidationError, validate
+from marc_to_folio.ChalmersMapper import ChalmersMapper
+from marc_to_folio.DefaultMapper import DefaultMapper
+from marc_to_folio.FolioClient import FolioClient
+from pymarc import MARCReader
 
 
 def write_to_file(f, pg_dump, folio_record):
@@ -15,6 +20,12 @@ def write_to_file(f, pg_dump, folio_record):
     else:
         f.write('{}\n'.format(json.dumps(folio_record)))
 
+# Fetches the JSON Schema for instances
+def get_instance_json_schema():
+    url = 'https://raw.github.com'
+    path = '/folio-org/mod-inventory-storage/master/ramls/instance.json'
+    req = requests.get(url+path)
+    return json.loads(req.text)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("source_folder",
@@ -51,17 +62,22 @@ print("\tTenanti Id:\t", args.tenant_id)
 print("\tToken:   \t", args.okapi_token)
 print("\tRecord source:\t", args.record_source)
 print("\tidMap will get stored at:\t", args.id_dict_path)
+
+json_schema = get_instance_json_schema()
 id_dict_path = args.id_dict_path
 holdings = 0
 records = 0
-start = time.time()
 files = [f for f in listdir(args.source_folder)
          if isfile(join(args.source_folder, f))]
 print("Files to process:")
 print(json.dumps(files, sort_keys=True, indent=4))
 idMap = {}
-mapper = MtFMapper(args)
+folio_client = FolioClient(args)
+default_mapper = DefaultMapper(folio_client)
+chalmers_mapper = ChalmersMapper(folio_client)
+
 print("Starting")
+start = time.time()
 print("Rec./s\t\tHolds\t\tTot. recs\t\tFile\t\t")
 with open(args.result_path, 'w+') as results_file:
     for f in files:
@@ -69,32 +85,43 @@ with open(args.result_path, 'w+') as results_file:
             reader = MARCReader(fh, 'rb',
                                 hide_utf8_warnings=True,
                                 utf8_handling='replace')
-            for record in reader:
+            for marc_record in reader:
                 try:
                     records += 1
-                    if record['004']:
+                    if marc_record['004']:
                         holdings += 1
                     else:
-                        folio_rec = mapper.parse_bib_record(record,
-                                                            args.record_source)
-                        if(record['907']['a']):
-                            sierra_id = record['907']['a'].replace('.b', '')[:-1]
-                            idMap[sierra_id] = folio_rec['id']
+                        # Transform the MARC21 to a FOLIO record
+                        folio_rec = default_mapper.parse_bib_record(marc_record,
+                                                                    args.record_source)
+                        # Handles additional things specific to Chalmers
+                        chalmers_mapper.parse_bib_record(marc_record, folio_rec, idMap)
+                        # Adds the folio record's id to a list of ID-mappings
+                        # validate against json schema
+                        validate(folio_rec, json_schema)
+                        # Change to write batches
                         write_to_file(results_file,
                                       args.postgres_dump,
                                       folio_rec)
                         if records % 1000 == 0:
-                            elapsed = '{0:.3g}'.format(records/(time.time() - start))
+                            e = records/(time.time() - start)
+                            elapsed = '{0:.3g}'.format(e)
                             print_template = "{}\t\t{}\t\t{}\t\t{}\t\t{}"
                             print(print_template.format(elapsed,
                                                         holdings,
                                                         records,
                                                         f,
                                                         len(idMap)), end='\r')
+                except ValidationError as ee:
+                    print(ee)
+                except ValueError as ve:
+                    print(ve)
                 except Exception as inst:
                     print(type(inst))
                     print(inst.args)
                     print(inst)
+                    print(marc_record)
+                    raise inst
     with open(id_dict_path, 'w+') as json_file:
         json.dump(idMap, json_file, sort_keys=True, indent=4)
     print("done")
