@@ -1,13 +1,9 @@
 import json
-import uuid
-import xml.etree.ElementTree as ET
-from random import randint
-
 import requests
-from jsonschema import ValidationError, validate
+
 
 class FolioClient:
-# Bootstrapping (loads data needed later in the script.)
+    # Bootstrapping (loads data needed later in the script.)
     def __init__(self, config):
         cql_all = '?limit=100&query=cql.allRecords=1 sortby name'
         self.okapi_url = config.okapi_url
