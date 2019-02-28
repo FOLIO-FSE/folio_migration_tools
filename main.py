@@ -7,6 +7,7 @@ from os.path import isfile, join
 
 import pymarc
 from marc_to_folio.chalmers_mapper import ChalmersMapper
+from marc_to_folio.alabama_mapper import AlabamaMapper
 from marc_to_folio.default_mapper import DefaultMapper
 from marc_to_folio.folio_client import FolioClient
 from marc_to_folio.marc_processor import MarcProcessor
@@ -32,6 +33,9 @@ def main():
     parser.add_argument("-chalmers_stuff", "-c",
                         help=("Do special stuff according to Chalmers"),
                         action="store_true")
+    parser.add_argument("-alabama_stuff", "-a",
+                        help=("Do special stuff according to Alabama"),
+                        action="store_true")
     parser.add_argument("-marcxml", "-x", help=("DATA is in MARCXML format"),
                         action="store_true")
     args = parser.parse_args()
@@ -52,6 +56,8 @@ def main():
     default_mapper = DefaultMapper(folio_client)
     if args.chalmers_stuff:
         extra_mapper = ChalmersMapper(folio_client)
+    elif args.alabama_stuff:
+        extra_mapper = AlabamaMapper(folio_client)
     else:
         extra_mapper = None
     print("Starting")
