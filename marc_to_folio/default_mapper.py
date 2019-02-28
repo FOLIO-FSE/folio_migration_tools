@@ -21,7 +21,6 @@ class DefaultMapper:
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function'''
         # not mapped. Randomizes an instance type:
-        rand_idx = randint(0, len(self.folio.instance_types)-1)
         rec = {
             'id': str(uuid.uuid4()),
             # This should be the new Libris ID?
@@ -32,7 +31,7 @@ class DefaultMapper:
             'contributors': list(self.get_contributors(marc_record)),
             'identifiers': list(self.get_identifiers(marc_record)),
             # TODO: Add instanceTypeId
-            'instanceTypeId': self.folio.instance_types[rand_idx]['id'],
+            'instanceTypeId': self.folio.instance_types[0]['id'],
             # 'alternativeTitles': list(self.get_alt_titles(marc_record)),
             'series': list(set(self.get_series(marc_record))),
             'editions': [(marc_record['250'] and
@@ -56,7 +55,7 @@ class DefaultMapper:
         title_string = " ".join(field.get_subfields('a', 'n', 'p'))
         ind2 = field.indicator2
         if ind2 == '0':
-            return title_string 
+            return title_string
         elif ind2 in map(str, range(1, 9)):
             num_take = int(ind2)
             return title_string[:num_take]
@@ -162,8 +161,9 @@ class DefaultMapper:
         languages = (marc_record['041'] and marc_record['041']
                      .get_subfields('a', 'b', 'd', 'e', 'f', 'g', 'h',
                                     'j', 'k', 'm', 'n')) or []
-        from_008 = marc_record['008'][35:37]
-        if from_008 not in ['###', 'zxx']:
+        from_008 = (marc_record['008'][35:37]
+                    if '008' in marc_record else '')
+        if from_008 and from_008 not in ['###', 'zxx']:
             languages.append(from_008)
         languages = list(set(filter(None, languages)))
         # TODO: test agianist valide language codes
