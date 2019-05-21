@@ -1,5 +1,6 @@
 '''Mapper for specific Chalmers requirements'''
 import uuid
+import json
 from jsonschema import validate
 
 
@@ -19,16 +20,17 @@ class ChalmersMapper:
         Community mapping suggestion: https://bit.ly/2S7Gyp3'''
         s_or_p = self.s_or_p(marc_record)
         save_source_record = folio_record['hrid'] == 'FOLIOstorage'
-        if save_source_record:
-            del folio_record['hrid']
-
+        # if save_source_record:
+        #    del folio_record['hrid']
+        # TEMP SOLUTION B/C of duplicate Libris ids in sierra:
+        del folio_record['hrid']
         if save_source_record:
             self.save_source_record(marc_record)
 
         self.id_map[self.get_source_id(marc_record)] = {
             'id': folio_record['id'],
             's_or_p': s_or_p}
-        folio_record['identifiers'] += self.get_identifiers(marc_record)
+        folio_record['identifiers'].extend(self.get_identifiers(marc_record))
         if s_or_p == 'p':  # create holdings record from sierra bib
             if '852' not in marc_record:
                 print(marc_record)
@@ -137,9 +139,24 @@ class ChalmersMapper:
                               .format(self.get_source_id(marc_record)))
 
     def get_identifiers(self, marc_record):
-        '''Adds sierra Id'''
-        yield {'identifierTypeId': '3187432f-9434-40a8-8782-35a111a1491e',
-               'value': self.get_source_id(marc_record)}
+        '''Adds sierra Id and Libris ids. If no modern Libris ID, take 001'''
+        return [{'identifierTypeId': '3187432f-9434-40a8-8782-35a111a1491e',
+                 'value': self.get_source_id(marc_record)},
+                {'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
+                 'value': (self.get_xl_id(marc_record) or
+                           marc_record['001'].format_field())}]
+
+    def get_xl_id(self, marc_record):
+        for id_placeholder in marc_record.get_fields('887'):
+            if '5' not in id_placeholder:
+                # Get that broken libris holdings id out of there!
+                a = id_placeholder['a']
+                jstring = a.replace('{lrub}', '{')
+                jstring = jstring.replace('{lcub}', '}')
+                xl_id = json.loads(jstring)['@id']
+                print(xl_id)
+                return xl_id
+        return ''
 
     def get_source_id(self, marc_record):
         '''Gets the system Id from sierra'''

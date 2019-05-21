@@ -4,33 +4,27 @@ import json
 from jsonschema import ValidationError, validate
 
 
-class MarcProcessor():
+class HoldingsMarcProcessor():
     '''the processor'''
-    def __init__(self, default_mapper, extra_mapper, folio_client,
+    def __init__(self, default_mapper, folio_client,
                  results_file, args):
-        self.holdings_count = 0
         self.results_file = results_file
-        self.instance_schema = folio_client.get_instance_json_schema()
+        self.holdings_schema = folio_client.get_holdings_schema()
         self.records_count = 0
         self.default_mapper = default_mapper
-        self.extra_mapper = extra_mapper
+        self.instance_id_map = {}
+        self.holdings_id_map = {}
         self.args = args
         self.start = time.time()
 
     def process_record(self, marc_record):
-        '''processes a marc record and saves it'''
+        '''processes a marc holdings record and saves it'''
         try:
             self.records_count += 1
-            if marc_record['004']:
-                self.holdings_count += 1
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.default_mapper.parse_bib(marc_record,
-                                                      self.args.data_source)
-            if self.extra_mapper:
-                self.extra_mapper.parse_bib(marc_record, folio_rec)
-
+            folio_rec = self.default_mapper.parse_hold(marc_record)
             # validate record against json schema
-            validate(folio_rec, self.instance_schema)
+            validate(folio_rec, self.holdings_schema)
             # write record to file
             write_to_file(self.results_file,
                           self.args.postgres_dump,
@@ -46,32 +40,27 @@ class MarcProcessor():
             print(value_error)
             # print(marc_record)
             print("Removing record from idMap")
-            if self.extra_mapper:
-                self.extra_mapper.remove_from_id_map(marc_record)
             # raise value_error
         except ValidationError as validation_error:
             print("Error validating record. Halting...")
-            # raise validation_error
+            raise validation_error
         except Exception as inst:
             print(type(inst))
             print(inst.args)
             print(inst)
             print(marc_record)
-            #raise inst
+            raise inst
 
     def wrap_up(self):
         '''Finalizes the mapping by writing things out.'''
-        print("Saving map of old and new IDs")
-        if self.extra_mapper and self.extra_mapper.id_map:
-            with open(self.args.id_dict_path, 'w+') as id_map_file:
-                json.dump(self.extra_mapper.id_map, id_map_file,
-                          sort_keys=True, indent=4)
-        print("Saving holdings created from bibs")
-        if self.extra_mapper:
-            if any(self.extra_mapper.holdings_map):
-                with open(self.args.holdings_map_path, 'w+') as holdings_file:
-                    for key, holding in self.extra_mapper.holdings_map.items():
-                        write_to_file(holdings_file, False, holding)
+        id_map = self.default_mapper.holdings_id_map
+        path = self.args.holdings_id_dict_path
+        print("Saving map of {} old and new IDs to {}"
+              .format(len(id_map), path))
+        with open(self.args.holdings_id_dict_path, 'w+') as id_map_file:
+            json.dump(id_map, id_map_file,
+                      indent=4)
+        print(self.default_mapper.folio.missing_location_codes)
 
 
 def write_to_file(file, pg_dump, folio_record):

@@ -1,8 +1,4 @@
 '''Mapper for specific Alabama requirements'''
-import uuid
-from jsonschema import validate
-
-
 class AlabamaMapper:
     '''Extra mapper specific for Alabama requirements'''
     # TODO: Add Alabama specific subjects

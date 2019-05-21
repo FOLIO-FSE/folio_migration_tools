@@ -7,6 +7,7 @@ from os.path import isfile, join
 
 import pymarc
 from marc_to_folio.chalmers_mapper import ChalmersMapper
+from marc_to_folio.five_collages_mapper import FiveCollagesMapper
 from marc_to_folio.alabama_mapper import AlabamaMapper
 from marc_to_folio.default_mapper import DefaultMapper
 from marc_to_folio.folio_client import FolioClient
@@ -33,6 +34,9 @@ def main():
     parser.add_argument("-chalmers_stuff", "-c",
                         help=("Do special stuff according to Chalmers"),
                         action="store_true")
+    parser.add_argument("-five_collages_stuff", "-f",
+                        help=("Do special stuff according to Five Collages"),
+                        action="store_true")
     parser.add_argument("-alabama_stuff", "-a",
                         help=("Do special stuff according to Alabama"),
                         action="store_true")
@@ -58,6 +62,8 @@ def main():
         extra_mapper = ChalmersMapper(folio_client)
     elif args.alabama_stuff:
         extra_mapper = AlabamaMapper(folio_client)
+    elif args.five_collages_stuff:
+        extra_mapper = FiveCollagesMapper(folio_client)
     else:
         extra_mapper = None
     print("Starting")
@@ -67,10 +73,12 @@ def main():
         processor = MarcProcessor(default_mapper, extra_mapper, folio_client,
                                   results_file, args)
         for file_name in files:
+            f_path = sys.argv[1]+file_name
+            # print("loading MARC21 records from {}".format(f_path))
             if args.marcxml:
-                pymarc.map_xml(processor.process_record, file_name)
+                pymarc.map_xml(processor.process_record, f_path)
             else:
-                with open(sys.argv[1]+file_name, 'rb') as marc_file:
+                with open(f_path, 'rb') as marc_file:
                     pymarc.map_records(processor.process_record, marc_file)
     # wrap up
     print("Done. Wrapping up...")
