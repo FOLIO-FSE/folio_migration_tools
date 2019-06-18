@@ -1,0 +1,187 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2018-11-15T13:05:26.003Z</responseDate>
+    <request verb="GetRecord" identifier="http://libris.kb.se/bib/19049386" metadataPrefix="marcxml">http://libris.kb.se/oaipmh/</request>
+    <ListRecords>
+        <record>
+            <header>
+                <identifier>https://libris.kb.se/6qjvp1hj3xk33vg</identifier>
+                <datestamp>2018-08-07T13:19:17.068Z</datestamp>
+                <setSpec>bib</setSpec>
+            </header>
+            <metadata>
+                <record xmlns="http://www.loc.gov/MARC21/slim" type="Bibliographic">
+                    <leader>     cam a       7  4500</leader>
+                    <controlfield tag="001">19049386</controlfield>
+                    <controlfield tag="005">20180807151917.0</controlfield>
+                    <controlfield tag="008">160107t20152016xxu|||||||||||000 ||eng| </controlfield>
+                    <datafield ind1=" " ind2=" " tag="020">
+                        <subfield code="a">9780071842013</subfield>
+                        <subfield code="q">(paperback)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="020">
+                        <subfield code="a">0071842012</subfield>
+                        <subfield code="q">(paperback)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="035">
+                        <subfield code="a">(OCoLC)ocn898162644</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="035">
+                        <subfield code="a">(OCoLC)898162644</subfield>
+                        <subfield code="z">(OCoLC)898087359</subfield>
+                        <subfield code="z">(OCoLC)930007675</subfield>
+                        <subfield code="z">(OCoLC)942940565</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="037">
+                        <subfield code="a">1399860</subfield>
+                        <subfield code="b">QBI</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="040">
+                        <subfield code="a">BTCTA</subfield>
+                        <subfield code="b">eng</subfield>
+                        <subfield code="c">BTCTA</subfield>
+                        <subfield code="d">YDXCP</subfield>
+                        <subfield code="d">BDX</subfield>
+                        <subfield code="d">JOZ</subfield>
+                        <subfield code="d">GK5</subfield>
+                        <subfield code="d">AZT</subfield>
+                        <subfield code="d">OCLCF</subfield>
+                        <subfield code="d">OCLCQ</subfield>
+                        <subfield code="d">QBX</subfield>
+                        <subfield code="d">JQM</subfield>
+                        <subfield code="d">DAC</subfield>
+                        <subfield code="d">OCLCQ</subfield>
+                        <subfield code="d">Z</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="041">
+                        <subfield code="a">eng</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="4" tag="050">
+                        <subfield code="a">TK7895.E42</subfield>
+                        <subfield code="b">C45 2016</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2="4" tag="082">
+                        <subfield code="a">004.165</subfield>
+                        <subfield code="b">C4412r 2015</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="084">
+                        <subfield code="a">Puaz Raspberry Pi</subfield>
+                        <subfield code="2">kssb/8</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="084">
+                        <subfield code="a">Puaz Java</subfield>
+                        <subfield code="2">kssb/8</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="100">
+                        <subfield code="a">Chin, Stephen,</subfield>
+                        <subfield code="d">1977-</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="111">
+                        <subfield code="a">Wolfcon</subfield>
+                        <subfield code="c">Durham</subfield>
+                        <subfield code="d">2018</subfield>
+                        <subfield code="e">Hackathon</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2="0" tag="245">
+                        <subfield code="a">Raspberry Pi with Java :</subfield>
+                        <subfield code="b">programming the internet of things (IoT) /</subfield>
+                        <subfield code="c">Stephen Chin with James L. Weaver.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="c">2015</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="a">New York :</subfield>
+                        <subfield code="b">McGraw-Hill Eucation,</subfield>
+                        <subfield code="c">2016</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="a">New York :</subfield>
+                        <subfield code="b">McGraw-Hill Eucation,</subfield>
+                        <subfield code="c">[2015]</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="4" tag="264">
+                        <subfield code="c">©2016</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="300">
+                        <subfield code="a">xv, 315 pages, 5 unnumbered pages</subfield>
+                        <subfield code="b">illustrations, charts</subfield>
+                        <subfield code="c">24 cm.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="336">
+                        <subfield code="a">text</subfield>
+                        <subfield code="b">txt</subfield>
+                        <subfield code="2">rdacontent</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="337">
+                        <subfield code="a">unmediated</subfield>
+                        <subfield code="b">n</subfield>
+                        <subfield code="2">rdamedia</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="338">
+                        <subfield code="a">volume</subfield>
+                        <subfield code="b">nc</subfield>
+                        <subfield code="2">rdacarrier</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="340">
+                        <subfield code="b">24 cm.</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2=" " tag="490">
+                        <subfield code="a">Oracle Press book</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="490">
+                        <subfield code="a">McGraw-Hill technical education series</subfield>
+                    </datafield>
+
+                    <datafield ind1=" " ind2=" " tag="520">
+                        <subfield code="a">"Create embedded projects for personal and professional applications. Join the Internet of Things revolution with a project-based approach to building embedded Java applications. Written by recognized Java experts, this Oracle Press guide features a series of low-cost, DIY projects that gradually escalate your development skills. Learn how to set up and configure your Raspberry Pi, connect external hardware, work with the NetBeans IDE, and write and embed powerful Java applications. Raspberry Pi with Java: Programming the Internet of Things (IoT) covers hobbyist as well as professional home and industry applications."--Back cover.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="522">
+                        <subfield code="a">County-level data from Virginia.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="524">
+                        <subfield code="a">Dakota</subfield>
+                        <subfield code="2">usc</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="525">
+                        <subfield code="a">Supplements accompany some issues.</subfield>
+                    </datafield>
+
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Raspberry Pi (Computer)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Java (Computer program language)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Internet of things.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Computer programming.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="700">
+                        <subfield code="a">Weaver, James L.</subfield>
+                        <subfield code="e">contributor.</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2=" " tag="730">
+                        <subfield code="a">Oracle Press book.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="830">
+                        <subfield code="a">McGraw-Hill technical education series</subfield>
+                    </datafield>
+                    <datafield ind1="4" ind2="2" tag="856">
+                        <subfield code="u">http://www.MHProfessional.com</subfield>
+                        <subfield code="z">Code examples in the book are available for download.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="887">
+                        <subfield code="a">{"@id":"6qjvp1hj3xk33vg","modified":"2018-08-07T15:19:17.068+02:00","checksum":"80358162479"}</subfield>
+                        <subfield code="2">librisxl</subfield>
+                    </datafield>
+                </record>
+            </metadata>
+            <about>
+                <agent name="Z"/>
+            </about>
+        </record>
+    </ListRecords>
+</OAI-PMH>

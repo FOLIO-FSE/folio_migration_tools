@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2018-11-15T10:20:51.299Z</responseDate>
+    <request verb="ListRecords" metadataPrefix="marcxml_includehold" from="2018-11-14T08:00:00Z" until="2018-11-14T20:00:00Z" x-withDeletedData="true" set="bib:Z">http://libris.kb.se/oaipmh/</request>
+    <ListRecords>
+        <record>
+            <header>
+                <identifier>https://libris.kb.se/q71mrrl224qd4t7</identifier>
+                <datestamp>2014-04-22T11:44:13Z</datestamp>
+                <setSpec>bib</setSpec>
+            </header>
+            <metadata>
+                <record xmlns="http://www.loc.gov/MARC21/slim" type="Bibliographic">
+                    <leader>     cas a       3  4500</leader>
+                    <controlfield tag="001">856382</controlfield>
+                    <controlfield tag="005">20140422134413.0</controlfield>
+                    <controlfield tag="008">011211c19uu9999be |||||||||||0   ||fre| </controlfield>
+                    <datafield ind1=" " ind2=" " tag="035">
+                        <subfield code="9">9908814524</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="040">
+                        <subfield code="a">Z</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="041">
+                        <subfield code="a">fre</subfield>
+                    </datafield>
+                    <datafield ind1="4" ind2=" " tag="130">
+                        <subfield code="a">Les cahiers d'urbanisme</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="222">
+                        <subfield code="a">Urbana tidskrifter</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2="4" tag="245">
+                        <subfield code="a">Les cahiers d'urbanisme</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2="2" tag="246">
+                        <subfield code="a">Cahiers d'urbanisme et d'aménagement du territoire</subfield>
+                        <subfield code="f">57/58/59 -</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="c">19uu-</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="a">Bruxelles,</subfield>
+                        <subfield code="c">1949-</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2=" " tag="362">
+                        <subfield code="a">No 1-</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="887">
+                        <subfield code="a">{"@id":"q71mrrl224qd4t7","modified":"2014-04-22T13:44:13+02:00","checksum":"6014306435"}</subfield>
+                        <subfield code="2">librisxl</subfield>
+                    </datafield>
+                </record>
+            </metadata>
+            <about>
+                <agent name="unknown"/>
+            </about>
+        </record>
+    </ListRecords>
+</OAI-PMH>

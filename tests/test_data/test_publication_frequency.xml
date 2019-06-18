@@ -1,0 +1,191 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2018-11-15T10:20:51.299Z</responseDate>
+    <request verb="ListRecords" metadataPrefix="marcxml_includehold" from="2018-11-14T08:00:00Z" until="2018-11-14T20:00:00Z" x-withDeletedData="true" set="bib:Z">http://libris.kb.se/oaipmh/</request>
+    <ListRecords>
+        <record>
+            <header>
+                <identifier>https://libris.kb.se/8sl08b9l54wxk4m</identifier>
+                <datestamp>2017-08-11T09:17:19Z</datestamp>
+                <setSpec>bib</setSpec>
+            </header>
+            <metadata>
+                <record xmlns="http://www.loc.gov/MARC21/slim" type="Bibliographic">
+                    <leader>     nam a       7  4500</leader>
+                    <controlfield tag="001">21080448</controlfield>
+                    <controlfield tag="005">20170811111719.0</controlfield>
+                    <controlfield tag="008">170811t20152015sz |||||||||||000 ||eng| </controlfield>
+                    <datafield ind1=" " ind2=" " tag="010">
+                        <subfield code="a">2015939348</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="020">
+                        <subfield code="a">3319161717</subfield>
+                        <subfield code="q">hardcover</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="020">
+                        <subfield code="a">9783319161716</subfield>
+                        <subfield code="q">hardcover</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="035">
+                        <subfield code="a">(OCoLC)ocn945563480</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="040">
+                        <subfield code="a">YDXCP</subfield>
+                        <subfield code="b">eng</subfield>
+                        <subfield code="c">YDXCP</subfield>
+                        <subfield code="d">OIP</subfield>
+                        <subfield code="d">UUS</subfield>
+                        <subfield code="d">CDX</subfield>
+                        <subfield code="d">BTCTA</subfield>
+                        <subfield code="d">Z</subfield>
+                        <subfield code="e">rda</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="041">
+                        <subfield code="a">eng</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="4" tag="050">
+                        <subfield code="a">TA157</subfield>
+                        <subfield code="b">.E592 2015</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="4" tag="050">
+                        <subfield code="a">TA157</subfield>
+                        <subfield code="b">.E54 2015</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2="4" tag="082">
+                        <subfield code="a">620.001</subfield>
+                        <subfield code="2">23</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="710">
+                        <subfield code="a">EBSCO Industries</subfield>
+                        <subfield code="b">Information Services</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2="0" tag="245">
+                        <subfield code="a">Engineering education and practice in context.</subfield>
+                        <subfield code="n">Volume 2.</subfield>
+                        <subfield code="p">Engineering identities, epistemologies and values. /</subfield>
+                        <subfield code="c">Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors.</subfield>
+                    </datafield>
+                    <datafield ind1="3" ind2="0" tag="246">
+                        <subfield code="a">Engineering identities, epistemologies and values</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="260">
+                        <subfield code="a">New York, N.Y. :</subfield>
+                        <subfield code="b">Elsevier,</subfield>
+                        <subfield code="c">1984.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="c">2015</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="a">Cham :</subfield>
+                        <subfield code="b">Springer,</subfield>
+                        <subfield code="c">[2015]</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="4" tag="264">
+                        <subfield code="c">©2015</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="300">
+                        <subfield code="a">xxxiv, 416 pages</subfield>
+                        <subfield code="b">illustrations</subfield>
+                        <subfield code="c">24 cm.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="310">
+                        <subfield code="a">Varannan månad,</subfield>
+                        <subfield code="b">1983-</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="310">
+                        <subfield code="a">Varannan månad,</subfield>
+                        <subfield code="b">1983-</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="321">
+                        <subfield code="a">Monthly,</subfield>
+                        <subfield code="b">Mar. 1972-Dec. 1980</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="336">
+                        <subfield code="a">text</subfield>
+                        <subfield code="b">txt</subfield>
+                        <subfield code="2">rdacontent</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="337">
+                        <subfield code="a">unmediated</subfield>
+                        <subfield code="b">n</subfield>
+                        <subfield code="2">rdamedia</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="338">
+                        <subfield code="a">volume</subfield>
+                        <subfield code="b">nc</subfield>
+                        <subfield code="2">rdacarrier</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="340">
+                        <subfield code="b">24 cm.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="490">
+                        <subfield code="a">Philosophy of engineering and technology ;</subfield>
+                        <subfield code="v">volume 21</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="504">
+                        <subfield code="a">Includes bibliographical references.</subfield>
+                    </datafield>
+                    <datafield ind1="8" ind2=" " tag="505">
+                        <subfield code="a">General Introduction. The Engineering -- Context Nexus: A Perennial Discourse; Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham and Byron Newberry -- Section 1. Engineering Identities -- Section Introduction; Tony Marjoram and Mike Murphy -- Chapter 1. Dialectics of Engineering; Byron Newberry -- Chapter 2. ?Nuts and Bolts and People?. Gender-Troubled Engineering Identities; Wendy Faulkner -- Chapter 3. Designing the Identities of Engineers; Mike Murphy, Shannon Chance and Eddie Conlon -- Chapter 4. Engineering as Profession: Some Methodological Problems in its Study; Michael Davis -- Chapter 5. Engineering Ethics and Engineering Identities: Crossing National Borders; Gary Lee Downey, Juan C. Lucena and Carl Mitcham -- Chapter 6. Identifying Engineering: The Need for Better Numbers on Human and Related Resources and Policy; Tony Marjoram -- Section 2. The Epistemological Basis of Engineering -- Section Introduction; Anders Buch and Stig Andur Peder-sen -- Chapter 7. Studying Engineering Practice; Anders Buch -- Chapter 8. Design Methodology and Engineering Design: From Technical Problem Solving to Social Exploration; Pieter E. Vermaas -- Chapter 9. The Epistemological Basis of Engineering: and its Reflection in the Modern Engineering Curriculum; William Grimson and Mike Murphy -- Chapter 10. The Tension between Science and Engineering Design; Stig Andur Pedersen -- Chapter 11. Efficiency Animals: Efficiency as an Engineering Value; Byron Newberry -- Section 3. Engineering Values and Normativities -- Section Introduction; Jen Schneider and Wayne Ambler -- Chapter 12. On the Normativity of Professionalism; Martin Meganck -- Chapter 13. Engineer's Ecoskepticism as an Ethical Problem; Christelle Didier and Kristoff Talin -- Chapter 14. Engineering as a Technological Way of World-making; Sylvain Lavelle -- Chapter 15. The Nuclear Pipeline: Integrating Nuclear Power and Climate Change; Jen Schneider, Abraham S. D. Tidwell, and Savannah Avgerinos Fitzwater -- Chapter 16. Societal Implications of the Emerging Smart Grid: Challenges for Engineering; Joseph Herkert and Timothy Kostyk -- Chapter 17. From Engineering Ethics to Engineering Politics; Carl Mitcham and Wang Nan -- Chapter 18. Guiding Gulliver: Challenges for Ethical Engineering; Wayne Ambler -- Section 4. Competing Contexts in Engineering -- Section Introduction; Matthew Wisnioski and William Grimson -- Chapter 19. Engineers Make Their Own Context: Vision-Making in the Profession; Matthew Wisnioski -- Chapter 20. Process versus Context; Joseph C. Pitt -- Chapter 21. Engineering Activity as Text in Micro-Meso-Macro Contexts; Li Bocong -- Chapter 22. Substantive and Procedural Contexts of Engineering Design; Sjoerd Zwart and Peter Kroes -- Chapter 23. The De-contextualising of Engineering: A Myth or a Misunderstanding; William Grimson -- Author Biographies.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="520">
+                        <subfield code="a">This second companion volume on engineering studies considers engineering practice including contextual analyses of engineering identity, epistemologies, and values. Key overlapping questions examine such issues as an engineering identity, engineering self-understandings enacted in the professional world, distinctive characters of engineering knowledge, and how engineering science and engineering design interact in practice. Authors bring with them perspectives from their institutional homes in Europe, North America, Australia, and Asia. The volume includes 24 contributions by more than 30 authors from engineering, the social sciences, and the humanities. Additional issues the chapters scrutinize include prominent norms of engineering, how they interact with the values of efficiency or environmental sustainability. A concluding set of articles considers the meaning of context more generally by asking if engineers create their own contexts or are they created by contexts. Taken as a whole, this collection of original scholarly work is unique in its broad, multidisciplinary consideration of the changing character of engineering practice.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="599">
+                        <subfield code="a">Imported from: zcat.oclc.org:210/OLUCWorldCat (Do not remove)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Engineering</subfield>
+                        <subfield code="x">Philosophy.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Engineering</subfield>
+                        <subfield code="x">Study and teaching.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="7" tag="650">
+                        <subfield code="a">Engineering</subfield>
+                        <subfield code="x">Philosophy.</subfield>
+                        <subfield code="2">fast</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="700">
+                        <subfield code="a">Hyldgaard Christensen, Steen</subfield>
+                        <subfield code="e">editor.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="700">
+                        <subfield code="a">Didier, Christelle</subfield>
+                        <subfield code="e">editor.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="700">
+                        <subfield code="a">Jamison, Andrew,</subfield>
+                        <subfield code="d">1948-</subfield>
+                        <subfield code="e">editor.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="700">
+                        <subfield code="a">Meganck, Martin</subfield>
+                        <subfield code="e">editor.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="700">
+                        <subfield code="a">Mitcham, Carl</subfield>
+                        <subfield code="e">editor.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="700">
+                        <subfield code="a">Newberry, Byron</subfield>
+                        <subfield code="e">editor.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="830">
+                        <subfield code="a">Philosophy of engineering and technology ;</subfield>
+                        <subfield code="v">v. 21.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="887">
+                        <subfield code="a">{"@id":"8sl08b9l54wxk4m","modified":"2017-08-11T11:17:19+02:00","checksum":"86550674522"}</subfield>
+                        <subfield code="2">librisxl</subfield>
+                    </datafield>
+                </record>
+            </metadata>
+            <about>
+                <agent name="unknown"/>
+            </about>
+        </record>
+    </ListRecords>
+</OAI-PMH>
