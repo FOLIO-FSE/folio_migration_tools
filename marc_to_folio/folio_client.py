@@ -9,8 +9,14 @@ class FolioClient:
         '''# Bootstrapping (loads data needed later in the script.)'''
         cql_all = '?limit=100&query=cql.allRecords=1 sortby name'
         self.okapi_url = config.okapi_url
-        self.okapi_headers = {'x-okapi-token': config.okapi_token,
-                              'x-okapi-tenant': config.tenant_id,
+        self.tenant_id = config.tenant_id
+        self.username = config.username
+        self.password = config.password
+        print("Authenticating user {} to FOLIO...".format(self.username))
+        self.login()
+        print("Logged in. Token acquired.")
+        self.okapi_headers = {'x-okapi-token': self.okapi_token,
+                              'x-okapi-tenant': self.tenant_id,
                               'content-type': 'application/json'}
         self.identifier_types = self.folio_get("/identifier-types",
                                                "identifierTypes",
@@ -58,6 +64,26 @@ class FolioClient:
                                           cql_all)
         print(len(self.class_types))
 
+    def login(self):
+        '''Logs into FOLIO in order to get the okapi token'''
+        try:
+            headers = {
+                'x-okapi-tenant': self.tenant_id,
+                'content-type': 'application/json'}
+            payload = {"username": self.username,
+                       "password": self.password}
+            path = "/authn/login"
+            url = self.okapi_url + path
+            req = requests.post(url, data=json.dumps(payload), headers=headers)
+            if req.status_code != 201:
+                print(req.text)
+                raise ValueError("Request failed {}".format(req.status_code))
+            self.okapi_token = req.headers.get('x-okapi-token')
+            self.refresh_token = req.headers.get('refreshtoken')
+        except Exception as exception:
+            print("Failed login request. No login token acquired.")
+            raise exception
+
     def folio_get(self, path, key, query=''):
         '''Fetches data from FOLIO and turns it into a json object'''
         url = self.okapi_url+path+query
@@ -95,10 +121,10 @@ class FolioClient:
         try:
             return next(l['id'] for l in self.locations
                         if location_code.strip() == l['code'])
-        except Exception as ee:
+        except Exception as exception:
             print("No location with code '{}' in locations"
                   .format(location_code.strip()))
-            # print(ee)
+            print(exception)
             self.missing_location_codes.add(location_code)
             return next(l['id'] for l in self.locations
                         if l['code'] == 'catch_all')

@@ -57,7 +57,7 @@ class MarcProcessor():
             print(inst.args)
             print(inst)
             print(marc_record)
-            #raise inst
+            # raise inst
 
     def wrap_up(self):
         '''Finalizes the mapping by writing things out.'''

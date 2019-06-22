@@ -14,7 +14,8 @@ def main():
     parser.add_argument("result_path", help="path to Instance results file")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
-    parser.add_argument("okapi_token", help=("the x-okapi-token."))
+    parser.add_argument("username", help=("the api user"))
+    parser.add_argument("password", help=("the api users password"))
     parser.add_argument("-holdings_id_dict_path", "-ih",
                         help=(""))
     parser.add_argument("-instance_id_dict_path", "-i",

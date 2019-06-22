@@ -1,5 +1,6 @@
 {
-  "okapi_token": "",
+  "username": "",
+  "password": "",
   "okapi_url": "",
   "tenant_id": ""
 }
