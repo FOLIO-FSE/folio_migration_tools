@@ -101,3 +101,5 @@ ENV/
 # mypy
 .mypy_cache/
 results/
+# own stuff
+tests/test_config.json
