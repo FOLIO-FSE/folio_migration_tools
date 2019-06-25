@@ -30,8 +30,8 @@ def main():
     print('\tresults file:\t', args.result_path)
     print("\tOkapi URL:\t", args.okapi_url)
     print("\tTenanti Id:\t", args.tenant_id)
-    print("\tToken:   \t", args.okapi_token)
-    # print("\tRecord source:\t", args.data_source)
+    print("\tUsername:   \t",args.username)
+    print("\tPassword:   \tSecret")
     print("\tinstance idMap will get stored at:\t", args.instance_id_dict_path)
     print("\thold idMap will get stored at:\t", args.holdings_id_dict_path)
 

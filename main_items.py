@@ -15,7 +15,8 @@ def main():
     parser.add_argument("result_path", help="path to Instance results file")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
-    parser.add_argument("okapi_token", help=("the x-okapi-token."))
+    parser.add_argument("username", help=("the api user"))
+    parser.add_argument("password", help=("the api users password"))
     parser.add_argument("-holdings_id_dict_path", "-ih",
                         help=(""))
     parser.add_argument("-items_id_dict_path", "-it",
@@ -28,8 +29,8 @@ def main():
     print('\tresults file:\t', args.result_path)
     print("\tOkapi URL:\t", args.okapi_url)
     print("\tTenanti Id:\t", args.tenant_id)
-    print("\tToken:   \t", args.okapi_token)
-    # print("\tRecord source:\t", args.data_source)
+    print("\tUsername:   \t",args.username)
+    print("\tPassword:   \tSecret")
     print("\titems idMap will get stored at:\t", args.items_id_dict_path)
     print("\thold idMap will get stored at:\t", args.holdings_id_dict_path)
 
