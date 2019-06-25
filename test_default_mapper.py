@@ -1,4 +1,6 @@
 import unittest
+import xml.etree.ElementTree as ET
+from lxml import etree
 import pymarc
 import json
 from collections import namedtuple
@@ -8,341 +10,189 @@ from marc_to_folio.folio_client import FolioClient
 
 
 class TestDefaultMapper(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         with open('./tests/test_config.json') as settings_file:
-            self.config = json.load(settings_file,
-                                    object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
-            self.folio = FolioClient(self.config)
-            self.mapper = DefaultMapper(self.folio)
-            self.instance_schema = self.folio.get_instance_json_schema()
+            cls.config = json.load(settings_file,
+                                   object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+            cls.folio = FolioClient(cls.config)
+            cls.mapper = DefaultMapper(cls.folio)
+            cls.mapper = DefaultMapper(cls.folio)
+            cls.instance_schema = cls.folio.get_instance_json_schema()
+
+    def default_map(self, file_name, xpath):
+        ns = {'marc': 'http://www.loc.gov/MARC21/slim',
+              'oai': 'http://www.openarchives.org/OAI/2.0/'}
+        file_path = r'./tests/test_data/{}'.format(file_name)
+        record = pymarc.parse_xml_to_array(file_path)[0]
+        result = self.mapper.parse_bib(record, "source")
+        validate(result, self.instance_schema)
+        root = etree.parse(file_path)
+        data = str('')
+        for element in root.xpath(xpath, namespaces=ns):
+            data = ' '.join(
+                [data, str(etree.tostring(element, pretty_print=True), 'utf-8')])
+        return [result, data]
 
     def test_simple_title(self):
-        file_path = './tests/test_data/test1.xml'
-        record = pymarc.parse_xml_to_array(file_path)[0]
-        mapper = DefaultMapper(self.folio)
-        result = mapper.parse_bib(record, "source")
-        validate(result, self.instance_schema)
-        self.assertEqual('Modern Electrosynthetic Methods in Organic Chemistry', result['title'])
+        xpath = "//marc:datafield[@tag='245']"
+        record = self.default_map('test1.xml', xpath)
+        self.assertEqual(
+            'Modern Electrosynthetic Methods in Organic Chemistry', record[0]['title'])
         # TODO: test abcense of / for chalmers
 
+    def test_composed_title(self):
+        message = 'Should create a composed title (245) with the [a, b, k, n, p] subfields.'
+        xpath = "//marc:datafield[@tag='245']"
+        record = self.default_map('test_composed_title.xml', xpath)
+        # self.assertFalse('/' in record['title'])
+        self.assertEqual('The wedding collection. Volume 4, Love will be our home: 15 songs of love and commitment. / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors.',
+                         record[0]['title'], message + '\n' + record[1])
 
+    def test_alternative_titles_246(self):
+        message = 'Should match 246 to alternativeTitles'
+        xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+        record = self.default_map('test3.xml', xpath)
+        # self.assertFalse(all('/' in t for t in record['alternativeTitles']))
+        title = 'Engineering identities, epistemologies and values'
+        alt_titles = list((t['alternativeTitle'] for t
+                           in record[0]['alternativeTitles']))
+        self.assertIn(title, alt_titles, message + '\n' + record[1])
 
+    def test_alternative_titles_130(self):
+        message = 'Should match 130 to alternativeTitles'
+        xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+        record = self.default_map('test4.xml', xpath)
+        # self.assertFalse(all('/' in t for t in record['alternativeTitles']))
+        title = "Les cahiers d'urbanisme"
+        alt_titles = list((t['alternativeTitle'] for t
+                           in record[0]['alternativeTitles']))
+        self.assertIn(title, alt_titles, message + '\n' + record[1])
 
+    def alternative_titles_246_and_130(self):
+        message = 'Should match 246 to alternativeTitles when there is also 130'
+        xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+        record = self.default_map('test4.xml', xpath)
+        title = "Cahiers d'urbanisme et d'aménagement du territoire"
+        alt_titles = list((t['alternativeTitle'] for t
+                           in record[0]['alternativeTitles']))
+        self.assertIn(title, alt_titles, message + '\n' + record[1])
 
-'''// SIMPLE TITLE (245)
-  let assert_1 = 'Should match title (245)'
-  it(assert_1, function () {
-    let data = fs.readFileSync('spec/dataconverter/test1.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].title).not.toContain('/')
-      expect(item[0].title).toBe('Modern Electrosynthetic Methods in Organic Chemistry')
-      if (logging) {
-        log(data, assert_1, "//marc:datafield[@tag='245']", item[0], 'title')
-      }
-    })
-  })
-  // COMPOSED TITLE
-  let assert_2 = 'Should create a composed title (245) with the [a, b, k, n, p] subfields.'
-  it(assert_2, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_composed_title.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].title).not.toContain('/')
-      expect(item[0].title).toBe(
-        'The wedding collection. Volume 4, Love will be our home: 15 songs of love and commitment.'
-      )
-      if (logging) {
-        log(data, assert_2, "//marc:datafield[@tag='245']", item[0], 'title')
-      }
-    })
-  })
+    def alternative_titles_4(self):
+        message = 'Should match 222 to alternativeTitles when there is also 130'
+        xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+        record = self.default_map('test4.xml', xpath)
+        # self.assertFalse(all('/' in t for t in record['alternativeTitles']))
+        title = "Urbana tidskrifter"
+        self.assertIn(title, (t['alternativeTitle'] for t
+                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+        title = "Cahiers d'urbanisme et d'aménagement du territoire"
+        self.assertIn(title, (t['alternativeTitle'] for t
+                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+        title = "Les cahiers d'urbanisme"
+        self.assertIn(title, (t['alternativeTitle'] for t
+                              in record[0]['alternativeTitles']), message + '\n' + record[1])
 
-  // ALTERNATIVE TITLES (246)
-  let assert_3 = 'Should match 246 to alternativeTitles'
-  it(assert_3, function () {
-    let data = fs.readFileSync('spec/dataconverter/test3.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].alternativeTitles).not.toContain('/')
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: 'Engineering identities, epistemologies and values' }
-      )
-      if (logging) {
-        log(data, assert_3,
-          "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']",
-          item[0], 'alternativeTitles')
-      }
-    })
-  })
+    def test_editions(self):
+        message = 'Should add editions (250) to the editions list and enforce unique'
+        xpath = "//marc:datafield[@tag='250']"
+        record = self.default_map('test_editions.xml', xpath)
+        editions_stmts = ['8. uppl.', '[Revised]']
+        for stmt in editions_stmts:
+            self.assertIn(stmt, record[0]['editions'],
+                          message + '\n' + record[1])
 
-  let assert_4 = 'Should match 130 to alternativeTitles'
-  it(assert_4, function () {
-    let data = fs.readFileSync('spec/dataconverter/test4.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].alternativeTitles).toContain( { alternativeTitle: "Les cahiers d'urbanisme" })
-      if (logging) {
-        log(data, assert_4,
-          "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']",
-          item[0], 'alternativeTitles')
-      }
-    })
-  })
+    def test_languages_041(self):
+        message = 'Should add languages (041$a) to the languages list; ignores non-ISO languages'
+        xpath = "//marc:datafield[@tag='041']"
+        record = self.default_map('test_multiple_languages.xml', xpath)
+        lang_codes = ['eng', 'ger', 'fre', 'ita']
+        should_not_be_there = ['en_US', '###', 'zxx']
+        for lang_code in should_not_be_there:
+            self.assertNotIn(lang_code, record[0]['languages'],
+                             message + '\n' + record[1])
+        for lang_code in lang_codes:
+            self.assertIn(lang_code, record[0]['languages'],
+                          message + '\n' + record[1])
 
-  let assert_5 = 'Should match 246 to alternativeTitles when there is also 130'
-  it(assert_5, function () {
-    let data = fs.readFileSync('spec/dataconverter/test4.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: "Cahiers d'urbanisme et d'aménagement du territoire" }
-      )
-      if (logging) {
-        log(data, assert_5,
-          "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']",
-          item[0], 'alternativeTitles')
-      }
-    })
-  })
+    def test_languages_008(self):
+        message = 'Should add language found in 008 where there is no 041'
+        xpath = "//marc:controlfield[@tag='008']"
+        record = self.default_map('test_language_in_008.xml', xpath)
+        self.assertIn('fre', record[0]['languages'],
+                      message + '\n' + record[1])
 
-  let assert_6 = 'Should match 222 to alternativeTitles (when there are also 130 and 246)'
-  it(assert_6, function () {
-    let data = fs.readFileSync('spec/dataconverter/test4.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: "Cahiers d'urbanisme et d'aménagement du territoire" })
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: "Les cahiers d'urbanisme" })
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: 'Urbana tidskrifter' })
-      if (logging) {
-        log(data,
-          assert_6,
-          "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']",
-          item[0], 'alternativeTitles')
-      }
-    })
-  })
+    def test_physical_descriptions(self):
+        message = 'Should add physical descriptions (300$abce)'
+        xpath = "//marc:datafield[@tag='300']"
+        record = self.default_map('test_physical_descriptions.xml', xpath)
+        phy_des = 'xxxiv, 416 pages illustrations 24 cm.'
+        self.assertIn(phy_des, record[0]['physicalDescriptions'],
+                      message + '\n' + record[1])
 
-  // EDITIONS
-  let assert_7 = 'Should add editions (250) to the editions list and enforce unique'
-  it(assert_7, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_editions.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].editions).toContain('8. uppl.')
-      expect(item[0].editions).toContain('[Revised]')
-      if (logging) {
-        log(data, assert_7, "//marc:datafield[@tag='250']", item[0], 'editions')
-      }
-    })
-  })
+    def test_index_title(self):
+        message = 'Should trim title (245) by n-chars, as specified by indicator 2'
+        xpath = "//marc:datafield[@tag='245']"
+        record = self.default_map('test_index_title.xml', xpath)
+        self.assertEqual("cahiers d'urbanisme", record[0]['indexTitle'],
+                         message + '\n' + record[1])
 
-  // LANGUAGES
-  let assert_8 = 'Should add languages (041$a) to the languages list; ignores non-ISO languages'
-  it(assert_8, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_multiple_languages.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].languages).toContain('eng')
-      expect(item[0].languages).toContain('ger')
-      expect(item[0].languages).toContain('fre')
-      expect(item[0].languages).toContain('ita')
-      expect(item[0].languages).not.toContain('en_US')
-      expect(item[0].languages).not.toContain('###')
-      expect(item[0].languages).not.toContain('zxx')
-      if (logging) {
-        log(data, assert_8, "//marc:datafield[@tag='041']", item[0], 'languages')
-      }
-    })
-  })
+    def test_alternative_titles_all(self):
+        message = 'Should add all types of alternative titles: 130, 222, 240, 246, 247 '
+        xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+        record = self.default_map('test_alternative_titles.xml', xpath)
+        # 246
+        title = "Engineering identities, epistemologies and values - remainder title"
+        self.assertIn(title, (t['alternativeTitle'] for t
+                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+        # 247
+        title = "Medical world news annual review of medicine"
+        self.assertIn(title, (t['alternativeTitle'] for t
+                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+        # 240
+        title = "Laws, etc. (Laws of Kenya : 1948)"
+        self.assertIn(title, (t['alternativeTitle'] for t
+                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+        # 222
+        title = "Soviet astronomy letters"
+        self.assertIn(title, (t['alternativeTitle'] for t
+                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+        # 130
+        title = "Star is born (Motion picture : 1954)"
+        self.assertIn(title, (t['alternativeTitle'] for t
+                              in record[0]['alternativeTitles']), message + '\n' + record[1])
 
-  let assert_9 = 'Should add language found in 008 where there is no 041'
-  it(assert_9, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_language_in_008.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].languages).toContain('fre')
-      if (logging) {
-        log(data, assert_9, "//marc:controlfield[@tag='008']", item[0], 'languages')
-      }
-    })
-  })
-
-  // HRID
-  let assert_10 = 'Should create an hrid using the OAI-PMH identifier'
-  it(assert_10, function () {
-    let data = fs.readFileSync('spec/dataconverter/test2.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].hrid).toBe('https://libris.kb.se/6qjvp1hj3xk33vg')
-      if (logging) {
-        log(data, assert_10, '/oai:OAI-PMH/oai:ListRecords/oai:record/oai:header', item[0], 'hrid')
-      }
-    })
-  })
-
-  // PHYSICAL DESCRIPTIONS
-  let assert_11 = 'Should add physical descriptions (300$abce)'
-  it(assert_11, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_physical_descriptions.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].physicalDescriptions).toContain('xxxiv, 416 pages illustrations 24 cm.')
-      if (logging) {
-        log(data, assert_11, "//marc:datafield[@tag='300']", item[0], 'physicalDescriptions')
-      }
-    })
-  })
-
-  // INDEX TITLE (245)
-  let assert_12 = 'Should trim title (245) by n-chars, as specified by indicator 2'
-  it(assert_12, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_index_title.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].indexTitle).toBe('cahiers d\'urbanisme')
-      if (logging) {
-        log(data, assert_12, "//marc:datafield[@tag='245']", item[0], 'indexTitle')
-      }
-    })
-  })
-
-  // ALTERNATIVE TITLES: 130, 222, 240, 246, 247
-  let assert_13 = 'Should add all types of alternative titles: 130, 222, 240, 246, 247 '
-  it(assert_13, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_alternative_titles.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 246
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: 'Engineering identities, epistemologies and values - remainder title' }
-      )
-      // 247
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: 'Medical world news annual review of medicine' }
-      )
-      // 240
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: 'Laws, etc. (Laws of Kenya : 1948)' }
-      )
-      // 222
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: 'Soviet astronomy letters' }
-      )
-      // 130
-      expect(item[0].alternativeTitles).toContain(
-        { alternativeTitle: 'Star is born (Motion picture : 1954)' }
-      )
-      if (logging) {
-        log(data, assert_13,
-          "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']",
-          item[0], 'alternativeTitles')
-      }
-    })
-  })
-
-  // IDENTIFIERS: 010, 019, 020, 022, 024, 028, 035
-  let assert_14 = 'Should add identifiers: 010, 019, 020, 022, 024, 028, 035'
-  it(assert_14, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_identifiers.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 010
-      expect(item[0].identifiers).toContain(
-        { value: '2008011507', identifierTypeId: 'c858e4f2-2b6b-4385-842b-60732ee14abb' }
-      )
-      // 020
-      expect(item[0].identifiers).toContain(
-        { value: '9780307264787', identifierTypeId: '8261054f-be78-422d-bd51-4ed9f33c3422' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '9780071842013', identifierTypeId: '8261054f-be78-422d-bd51-4ed9f33c3422' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '0071842012', identifierTypeId: '8261054f-be78-422d-bd51-4ed9f33c3422' }
-      )
-      // 020$z
-      expect(item[0].identifiers).toContain(
-        { value: '9780307264755', identifierTypeId: 'fc6a5089-d1ef-46d6-ab4b-cbbc15055a76' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '9780307264766', identifierTypeId: 'fc6a5089-d1ef-46d6-ab4b-cbbc15055a76' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '9780307264777', identifierTypeId: 'fc6a5089-d1ef-46d6-ab4b-cbbc15055a76' }
-      )
-      // 022
-      expect(item[0].identifiers).toContain(
-        { value: '0376-4583', identifierTypeId: '913300b2-03ed-469a-8179-c1092c991227' }
-      )
-      // 022$z
-      expect(item[0].identifiers).toContain(
-        { value: '0027-3473', identifierTypeId: 'c216c962-ae4b-4279-be09-9ee25fe04e05' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '0027-3475', identifierTypeId: 'c216c962-ae4b-4279-be09-9ee25fe04e05' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '0027-3476', identifierTypeId: 'c216c962-ae4b-4279-be09-9ee25fe04e05' }
-      )
-      // 022$l
-      expect(item[0].identifiers).toContain(
-        { value: '1234-1232', identifierTypeId: 'c2972b6b-1616-4803-9acd-958ddf855928' }
-      )
-      // 02$2m
-      expect(item[0].identifiers).toContain(
-        { value: '1560-15605', identifierTypeId: '7d437a09-d000-41c5-8ac9-888798a753ca' }
-      )
-      // 022$y
-      expect(item[0].identifiers).toContain(
-        { value: '0046-2254', identifierTypeId: 'c5b2d7e9-f523-41ba-938b-6651b65de522' }
-      )
-      // 024
-      expect(item[0].identifiers).toContain(
-        { value: '7822183031', identifierTypeId: '2e8b3b6c-0e7d-4e48-bca2-b0b23b376af5' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: 'M011234564', identifierTypeId: '2e8b3b6c-0e7d-4e48-bca2-b0b23b376af5' }
-      )
-      // 028
-      expect(item[0].identifiers).toContain(
-        { value: 'PJC 222013', identifierTypeId: 'b5d8cdc4-9441-487c-90cf-0c7ec97728eb' }
-      )
-      // 035
-      expect(item[0].identifiers).toContain(
-        { value: '(OCoLC)898162644', identifierTypeId: '7e591197-f335-4afb-bc6d-a6d76ca3bace' }
-      )
-      // 035$z
-      expect(item[0].identifiers).toContain(
-        { value: '(OCoLC)898087359', identifierTypeId: '1090fc18-ee8e-4503-8187-3c4125d9e214' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '(OCoLC)930007675', identifierTypeId: '1090fc18-ee8e-4503-8187-3c4125d9e214' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '(OCoLC)942940565', identifierTypeId: '1090fc18-ee8e-4503-8187-3c4125d9e214' }
-      )
-      // 019
-      expect(item[0].identifiers).toContain(
-        { value: '62874189', identifierTypeId: '1090fc18-ee8e-4503-8187-3c4125d9e214' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '244170452', identifierTypeId: '1090fc18-ee8e-4503-8187-3c4125d9e214' }
-      )
-      expect(item[0].identifiers).toContain(
-        { value: '677051564', identifierTypeId: '1090fc18-ee8e-4503-8187-3c4125d9e214' }
-      )
-      if (logging) {
-        log(data, assert_14,
-          "//marc:datafield[@tag='010' or @tag='020' or @tag='022' or @tag='024' or @tag='028' or @tag='035' or @tag='019']",
-          item[0], 'identifiers')
-      }
-    })
-  })
-
+    def test_identifiers(self):
+        message = 'Should add identifiers: 010, 019, 020, 022, 024, 028, 035'
+        xpath = "//marc:datafield[@tag='010' or @tag='020' or @tag='022' or @tag='024' or @tag='028' or @tag='035' or @tag='019']"
+        record = self.default_map('test_identifiers.xml', xpath)
+        m = message + '\n' + record[1]
+        self.assertIn('2008011507', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('9780307264787', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('9780071842013', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('0071842012', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('9780307264755', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('9780307264766', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('9780307264777', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('0376-4583', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('0027-3475', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('0027-3476', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('1234-1232', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('1560-15605', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('0046-2254', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('7822183031', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('M011234564', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('PJC 222013', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('(OCoLC)898162644', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('(OCoLC)898087359', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('(OCoLC)930007675', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('(OCoLC)942940565', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('0027-3473', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('62874189', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('244170452', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('677051564', (i['value'] for i in record[0]['identifiers']), m)
+ 
+'''
   // SERIES: 800, 810, 811, 830, 440, 490
   let assert_15 = 'Should add series statements (800, 810, 811, 830, 440, 490) to series list'
   it(assert_15, function () {

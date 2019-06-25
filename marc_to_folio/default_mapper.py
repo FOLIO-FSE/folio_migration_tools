@@ -13,7 +13,7 @@ class DefaultMapper:
     def __init__(self, folio):
         self.folio = folio
         print("Fetching valid language codes...")
-        self.language_codes = self.fetch_language_codes()
+        self.language_codes = list(self.fetch_language_codes())
 
     def parse_bib(self, marc_record, record_source):
         ''' Parses a bib recod into a FOLIO Inventory instance object
@@ -32,10 +32,9 @@ class DefaultMapper:
             'identifiers': list(self.get_identifiers(marc_record)),
             # TODO: Add instanceTypeId
             'instanceTypeId': self.folio.instance_types[0]['id'],
-            'alternativeTitles': self.get_alt_titles(marc_record),
+            'alternativeTitles': list(self.get_alt_titles(marc_record)),
             'series': list(set(self.get_series(marc_record))),
-            'editions': [(marc_record['250'] and
-                          marc_record['250']['a']) or ''],
+            'editions': list(set(self.get_editions(marc_record))),
             'subjects': list(set(self.get_subjects(marc_record))),
             'classifications': list(self.get_classifications(marc_record)),
             'publication': list((self.get_publication(marc_record))),
@@ -46,6 +45,11 @@ class DefaultMapper:
             'languages': self.get_languages(marc_record),
             'notes': list(self.get_notes(marc_record))}
         return rec
+
+    def get_editions(self, marc_record):
+        fields = marc_record.get_fields('250')
+        for field in fields:
+            yield " ".join(field.get_subfields('a','b'))
 
     def get_physical_desc(self, marc_record):
         # TODO: improve according to spec
@@ -146,6 +150,10 @@ class DefaultMapper:
                                in self.folio.alt_title_types
                                if f['name'] == 'catch_all'),
                           list('anpdfghklmorst')],
+                  '222': [next(f['id'] for f
+                               in self.folio.alt_title_types
+                               if f['name'] == 'catch_all'),
+                          list('anpdfghklmorst')],
                   '240': [next(f['id'] for f
                                in self.folio.alt_title_types
                                if f['name'] == 'catch_all'),
@@ -158,14 +166,13 @@ class DefaultMapper:
                                in self.folio.alt_title_types
                                if f['name'] == 'catch_all'),
                           list('anpbfghx')]}
-        res = []
         for field_tag in fields:
             for field in marc_record.get_fields(field_tag):
-                res.append({'alternativeTitleTypeId': fields[field_tag][0],
-                            'alternativeTitle': " "
-                            .join(field.get_subfields(*fields[field_tag][1]))})
-        return list(dict((v['alternativeTitleTypeId'], v)
-                         for v in res).values())
+                yield {'alternativeTitleTypeId': fields[field_tag][0],
+                            'alternativeTitle': " - "
+                            .join(field.get_subfields(*fields[field_tag][1]))}
+        # return list(dict((v['alternativeTitleTypeId'], v)
+        #                 for v in res).values())
 
     def get_publication(self, marc_record):
         # TODO: Improve with 008 and 260/4 $c
@@ -186,16 +193,20 @@ class DefaultMapper:
 
     def get_languages(self, marc_record):
         '''Get languages and tranforms them to correct codes'''
-        languages = (marc_record['041'] and marc_record['041']
-                     .get_subfields('a', 'b', 'd', 'e', 'f', 'g', 'h',
-                                    'j', 'k', 'm', 'n')) or []
-        from_008 = (marc_record['008'][35:37]
-                    if '008' in marc_record else '')
-        if from_008 and from_008 not in ['###', 'zxx']:
-            languages.append(from_008)
-        languages = list(set(filter(None, languages)))
+        languages = set()
+        skip_languages = ['###', 'zxx']
+        lang_fields = marc_record.get_fields('041')
+        if len(lang_fields) > 0:
+            subfields = 'abdefghjkmn'
+            for lang_tag in lang_fields:
+                languages.update(lang_tag.get_subfields(*list(subfields)))
+            languages = set(self.filter_langs(filter(None, languages), skip_languages))
+        else:
+            from_008 = ''.join((marc_record['008'].data[35:38]))
+            if from_008:
+                languages.add(from_008)
         # TODO: test agianist valide language codes
-        return languages
+        return list(languages)
 
     def fetch_language_codes(self):
         '''fetches the list of standardized language codes from LoC'''
@@ -224,23 +235,39 @@ class DefaultMapper:
     def get_identifiers(self, marc_record):
         '''Collects Identifiers and adds the appropriate metadata'''
         fields = {'010': [next((f['id'] for f
-                               in self.folio.identifier_types
-                               if f['name'] == 'LCCN'), ''), ['a']],
+                                in self.folio.identifier_types
+                                if f['name'] == 'LCCN'), ''), 'a'],
+                  '019': [next((f['id'] for f
+                                in self.folio.identifier_types
+                                if f['name'] == 'System Control Number'), ''), 'a'],
                   '020': [next((f['id'] for f
-                               in self.folio.identifier_types
-                               if f['name'] == 'ISBN'), ''), ['a', 'c', 'q']],
+                                in self.folio.identifier_types
+                                if f['name'] == 'ISBN'), ''), 'acz'],
+                  '024': [next((f['id'] for f
+                                in self.folio.identifier_types
+                                if f['name'] == 'Other Standard Identifier'), ''), 'a'],
+                  '028': [next((f['id'] for f
+                                in self.folio.identifier_types
+                                if f['name'] == 'Publisher Number'), ''), 'a'],
                   '022': [next((f['id'] for f
-                               in self.folio.identifier_types
-                               if f['name'] == 'ISSN'), ''), ['a', '2']],
+                                in self.folio.identifier_types
+                                if f['name'] == 'ISSN'), ''), 'a2zlmy'],
                   '035': [next((f['id'] for f
-                               in self.folio.identifier_types
-                               if f['name'] == 'Control Number'), ''), ['a']],
+                                in self.folio.identifier_types
+                                if f['name'] == 'Control Number'), ''), 'az'],
                   '074': [next((f['id'] for f
-                               in self.folio.identifier_types
-                               if f['name'] == 'GPO Item Number'), ''), ['a']]
+                                in self.folio.identifier_types
+                                if f['name'] == 'GPO Item Number'), ''), 'a']
                   }
         for field_tag in fields:
             for field in marc_record.get_fields(field_tag):
-                yield {'identifierTypeId': fields[field_tag][0],
-                       'value': " "
-                       .join(field.get_subfields(*fields[field_tag][1]))}
+                for subfield in field.get_subfields(*list(fields[field_tag][1])):
+                    yield {'identifierTypeId': fields[field_tag][0],
+                           'value': subfield}
+
+    def filter_langs(self, language_values, forbidden_values):
+        for language_value in language_values:
+            if language_value in self.language_codes and language_value not in forbidden_values:
+                yield language_value
+            else:
+                print('Illegal language code: {}'.format(language_value))

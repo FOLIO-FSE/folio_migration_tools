@@ -10,6 +10,7 @@ pytest = "*"
 jsonschema = "*"
 requests = "*"
 pymarc = "*"
+lxml = "*"
 
 [requires]
 python_version = "3.7"
