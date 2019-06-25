@@ -199,110 +199,63 @@ class TestDefaultMapper(unittest.TestCase):
         record = self.default_map('test_series.xml', xpath)
         m = message + '\n' + record[1]
         # 800
-        self.assertIn('Joyce, James, 1882-1941. James Joyce archive.', record[0]['series'], m)
+        self.assertIn('Joyce, James, 1882-1941. James Joyce archive.',
+                      record[0]['series'], m)
         # 810
-        self.assertIn('United States. Dept. of the Army. Field manual.', record[0]['series'], m)
+        self.assertIn('United States. Dept. of the Army. Field manual.',
+                      record[0]['series'], m)
         # 811
-        self.assertIn('International Congress of Nutrition (11th : 1978 : Rio de Janeiro, Brazil). Nutrition and food science ; v. 1.', record[0]['series'], m)
+        self.assertIn('International Congress of Nutrition (11th : 1978 : Rio de Janeiro, Brazil). Nutrition and food science ; v. 1.',
+                      record[0]['series'], m)
         # 830
-        self.assertIn('Philosophy of engineering and technology ; v. 21.', record[0]['series'], m)
-        self.assertIn('American university studies. Foreign language instruction ; vol. 12.', record[0]['series'], m)
+        self.assertIn('Philosophy of engineering and technology ; v. 21.',
+                      record[0]['series'], m)
+        self.assertIn('American university studies. Foreign language instruction ; vol. 12.',
+                      record[0]['series'], m)
         # 440
-        self.assertIn('Journal of polymer science. Part C, Polymer symposia ; no. 39', record[0]['series'], m)
+        self.assertIn('Journal of polymer science. Part C, Polymer symposia ; no. 39',
+                      record[0]['series'], m)
         # 490
-        self.assertIn('Pediatric clinics of North America ; v. 2, no. 4.', record[0]['series'], m)
+        self.assertIn('Pediatric clinics of North America ; v. 2, no. 4.',
+                      record[0]['series'], m)
+
+    def test_series_deduped(self):
+        message = 'Should deduplicate identical series statements from 830 and 490 in series list'
+        xpath = "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']"
+        record = self.default_map('test_series_duplicates.xml', xpath)
+        m = message + '\n' + record[1]
+        self.assertEqual(2, len(record[0]['series']))
+        self.assertIn('McGraw-Hill technical education series',
+                      record[0]['series'], m)
+
+    def test_contributors(self):
+        message = 'Should add contributors (100, 111 700) to the contributors list'
+        xpath = "//marc:datafield[@tag='100' or @tag='111' or @tag='700']"
+        record = self.default_map('test_contributors.xml', xpath)
+        m = message + '\n' + record[1]
+        with self.subTest("100, no contrib type indicated"):
+            self.assertIn('Chin, Stephen, 1977-',
+                          list(c['name'] for c in record[0]['contributors']), m)
+        with self.subTest("100$4"):
+            self.assertIn('Presthus, Robert Vance',
+                          list(c['name'] for c in record[0]['contributors']), m)
+        with self.subTest("100$ade4, unknown typeid, set type text to cartographer"):
+            self.assertIn('Lous, Christian Carl, 1724-1804',
+                          list(c['name'] for c in record[0]['contributors']), m)
+        with self.subTest("700$e (contributor)"):
+            self.assertIn('Weaver, James L.',
+                          (c['name'] for c in record[0]['contributors']), m)
+        with self.subTest("111$acde, no contrib type id"):
+            self.assertIn('Wolfcon Durham 2018',
+                          (c['name'] for c in record[0]['contributors']), m)
+        with self.subTest("111$abbde4"):
+            self.assertIn('Kyōto Daigaku. Genshiro Jikkenjo. Senmon Kenkyūkai (2013 January 25)',
+                          (c['name'] for c in record[0]['contributors']), m)
+        with self.subTest("111$aee44  multiple relation types (author, illustrator), pick first one?"):
+            self.assertIn('Tupera Tupera (Firm),',
+                          (c['name'] for c in record[0]['contributors']), m)
+
 '''
-
-  let assert_16 = 'Should deduplicate identical series statements from 830 and 490 in series list'
-  it(assert_16, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_series_duplicates.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].series).toContain('McGraw-Hill technical education series')
-      if (logging) {
-        log(data, assert_16,
-          "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']",
-          item[0], 'series')
-      }
-    })
-  })
-
-  // CONTRIBUTORS: 100, 111, 700
-  let assert_17 = 'Should add contributors (100, 111 700) to the contributors list'
-  it(assert_17, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_contributors.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 100, no contrib type indicated
-      expect(item[0].contributors).toContain(
-        {
-          contributorNameTypeId: '2b94c631-fca9-4892-a730-03ee529ffe2a',
-          name: 'Chin, Stephen, 1977-',
-          contributorTypeId: '',
-          contributorTypeText: ''
-        }
-      )
-      // 100$4
-      expect(item[0].contributors).toContain(
-        {
-          contributorNameTypeId: '2b94c631-fca9-4892-a730-03ee529ffe2a',
-          name: 'Presthus, Robert Vance',
-          contributorTypeId: '9c78babf-c596-4f6a-945f-652545f703aa',
-          contributorTypeText: '' }
-      )
-      // 100$ade4, unknown typeid, set type text to cartographer
-      expect(item[0].contributors).toContain(
-        {
-          contributorNameTypeId: '2b94c631-fca9-4892-a730-03ee529ffe2a',
-          name: 'Lous, Christian Carl, 1724-1804',
-          contributorTypeId: '',
-          contributorTypeText: 'cartographer' }
-      )
-      // 700$e (contributor)
-      expect(item[0].contributors).toContain(
-        {
-          contributorNameTypeId: '2b94c631-fca9-4892-a730-03ee529ffe2a',
-          name: 'Weaver, James L.',
-          contributorTypeId: '52942db3-9331-4d69-8c9d-f76a9085bad7',
-          contributorTypeText: ''
-        }
-      )
-      // 111$acde, no contrib type id
-      expect(item[0].contributors).toContain(
-        {
-          contributorNameTypeId: 'e8b311a6-3b21-03f2-2269-dd9310cb2d0a',
-          name: 'Wolfcon Durham 2018',
-          contributorTypeId: '',
-          contributorTypeText: 'Hackathon'
-        }
-      )
-      // 111$abbde4
-      expect(item[0].contributors).toContain(
-        {
-          contributorNameTypeId: 'e8b311a6-3b21-03f2-2269-dd9310cb2d0a',
-          name: 'Kyōto Daigaku. Genshiro Jikkenjo. Senmon Kenkyūkai (2013 January 25)',
-          contributorTypeId: '9c78babf-c596-4f6a-945f-652545f703aa',
-          contributorTypeText: ''
-        }
-      )
-      // 111$aee44
-      // multiple relation types (author, illustrator), pick first one?
-      expect(item[0].contributors).toContain(
-        {
-          contributorNameTypeId: 'e8b311a6-3b21-03f2-2269-dd9310cb2d0a',
-          name: 'Tupera Tupera (Firm)',
-          contributorTypeId: '9c78babf-c596-4f6a-945f-652545f703aa',
-          contributorTypeText: ''
-        }
-      )
-      if (logging) {
-        log(data, assert_17,
-          "//marc:datafield[@tag='100' or @tag='111' or @tag='700']",
-          item[0], 'contributors')
-      }
-    })
-  })
-
   // CLASSIFICATIONS: 050, 082, 090, 086
   let assert_18 = 'Should add classifications (050, 082, 090, 086) to the classifications list'
   it(assert_18, function () {
