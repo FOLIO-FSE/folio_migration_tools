@@ -167,6 +167,7 @@ class TestDefaultMapper(unittest.TestCase):
         xpath = "//marc:datafield[@tag='010' or @tag='020' or @tag='022' or @tag='024' or @tag='028' or @tag='035' or @tag='019']"
         record = self.default_map('test_identifiers.xml', xpath)
         m = message + '\n' + record[1]
+        # TODO: Test identifier type id in additional mappers
         self.assertIn('2008011507', (i['value'] for i in record[0]['identifiers']), m)
         self.assertIn('9780307264787', (i['value'] for i in record[0]['identifiers']), m)
         self.assertIn('9780071842013', (i['value'] for i in record[0]['identifiers']), m)
@@ -192,34 +193,25 @@ class TestDefaultMapper(unittest.TestCase):
         self.assertIn('244170452', (i['value'] for i in record[0]['identifiers']), m)
         self.assertIn('677051564', (i['value'] for i in record[0]['identifiers']), m)
  
+    def test_series(self):
+        message = 'Should add series statements (800, 810, 811, 830, 440, 490) to series list'
+        xpath = "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']"
+        record = self.default_map('test_series.xml', xpath)
+        m = message + '\n' + record[1]
+        # 800
+        self.assertIn('Joyce, James, 1882-1941. James Joyce archive.', record[0]['series'], m)
+        # 810
+        self.assertIn('United States. Dept. of the Army. Field manual.', record[0]['series'], m)
+        # 811
+        self.assertIn('International Congress of Nutrition (11th : 1978 : Rio de Janeiro, Brazil). Nutrition and food science ; v. 1.', record[0]['series'], m)
+        # 830
+        self.assertIn('Philosophy of engineering and technology ; v. 21.', record[0]['series'], m)
+        self.assertIn('American university studies. Foreign language instruction ; vol. 12.', record[0]['series'], m)
+        # 440
+        self.assertIn('Journal of polymer science. Part C, Polymer symposia ; no. 39', record[0]['series'], m)
+        # 490
+        self.assertIn('Pediatric clinics of North America ; v. 2, no. 4.', record[0]['series'], m)
 '''
-  // SERIES: 800, 810, 811, 830, 440, 490
-  let assert_15 = 'Should add series statements (800, 810, 811, 830, 440, 490) to series list'
-  it(assert_15, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_series.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // console.log('ITEM', item[0].toJSON());
-      // 800
-      expect(item[0].series).toContain('Joyce, James, 1882-1941. James Joyce archive.')
-      // 810
-      expect(item[0].series).toContain('United States. Dept. of the Army. Field manual.')
-      // 811
-      expect(item[0].series).toContain('International Congress of Nutrition (11th : 1978 : Rio de Janeiro, Brazil). Nutrition and food science ; v. 1.')
-      // 830
-      expect(item[0].series).toContain('Philosophy of engineering and technology ; v. 21.')
-      expect(item[0].series).toContain('American university studies. Foreign language instruction ; vol. 12.')
-      // 440
-      expect(item[0].series).toContain('Journal of polymer science. Part C, Polymer symposia ; no. 39')
-      // 490
-      expect(item[0].series).toContain('Pediatric clinics of North America ; v. 2, no. 4.')
-    })
-    if (logging) {
-      log(data, assert_15,
-        "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']",
-        item[0], 'series')
-    }
-  })
 
   let assert_16 = 'Should deduplicate identical series statements from 830 and 490 in series list'
   it(assert_16, function () {

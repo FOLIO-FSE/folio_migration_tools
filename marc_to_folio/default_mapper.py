@@ -186,10 +186,15 @@ class DefaultMapper:
 
     def get_series(self, marc_record):
         '''Series'''
-        tags = ['440', '490', '800', '810', '811', '830']
-        for tag in tags:
-            for field in marc_record.get_fields(tag):
-                yield field.format_field()
+        tags = {'440': 'anpv',
+                '490': '3av',
+                '800': 'abcdefghjklmnopqrstuvwx35',
+                '810': 'abcdefghklmnoprstuvwx35',
+                '811': 'acdefghjklnpqstuvwx35',
+                '830': 'adfghklmnoprstvwx35'}
+        for key, value in tags.items():
+            for field in marc_record.get_fields(key):
+                yield ' '.join(field.get_subfields(*value))
 
     def get_languages(self, marc_record):
         '''Get languages and tranforms them to correct codes'''
