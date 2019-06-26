@@ -1,5 +1,4 @@
 import unittest
-import xml.etree.ElementTree as ET
 from lxml import etree
 import pymarc
 import json
@@ -192,7 +191,7 @@ class TestDefaultMapper(unittest.TestCase):
         self.assertIn('62874189', (i['value'] for i in record[0]['identifiers']), m)
         self.assertIn('244170452', (i['value'] for i in record[0]['identifiers']), m)
         self.assertIn('677051564', (i['value'] for i in record[0]['identifiers']), m)
- 
+
     def test_series(self):
         message = 'Should add series statements (800, 810, 811, 830, 440, 490) to series list'
         xpath = "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']"
@@ -255,391 +254,291 @@ class TestDefaultMapper(unittest.TestCase):
             self.assertIn('Tupera Tupera (Firm),',
                           (c['name'] for c in record[0]['contributors']), m)
 
-'''
-  // CLASSIFICATIONS: 050, 082, 090, 086
-  let assert_18 = 'Should add classifications (050, 082, 090, 086) to the classifications list'
-  it(assert_18, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_classifications.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // LoC 050
-      expect(item[0].classifications).toContain({
-        classificationNumber: 'TK7895.E42 C45 2016',
-        classificationTypeId: 'ce176ace-a53e-4b4d-aa89-725ed7b2edac'
-      })
-      // Dewey 082
-      expect(item[0].classifications).toContain({
-        classificationNumber: '004.165',
-        classificationTypeId: '42471af9-7d25-4f3a-bf78-60d29dcf463b'
-      })
-      // LoC local 090
-      expect(item[0].classifications).toContain({
-        classificationNumber: 'HV6089 .M37 1989a',
-        classificationTypeId: 'ce176ace-a53e-4b4d-aa89-725ed7b2edac'
-      })
-      // SuDOC 086
-      expect(item[0].classifications).toContain({
-        classificationNumber: 'ITC 1.12:TA-503 (A)-18 AND 332-279',
-        classificationTypeId: 'sudoc-identifier' })
-      if (logging) {
-        log(data, assert_18,
-          "//marc:datafield[@tag='050' or @tag='082' or @tag='090' or @tag='086']",
-          item[0], 'classifications')
-      }
-    })
-  })
+    def test_classifications(self):
+        message = 'Should add classifications (050, 082, 090, 086) to the classifications list'
+        xpath = "//marc:datafield[@tag='050' or @tag='082' or @tag='090' or @tag='086']"
+        record = self.default_map('test_classifications.xml', xpath)
+        classes = list(c['classificationNumber'] for c
+                       in record[0]['classifications'])
+        m = message + '\n' + record[1]
+        with self.subTest("LoC 050"):
+            self.assertIn('TK7895.E42 C45 2016', classes, m)
+        with self.subTest("Dewey 082"):
+            self.assertIn('004.165', classes, m)
+        with self.subTest("LoC Local 090"):
+            self.assertIn('HV6089 .M37 1989a', classes, m)
+        with self.subTest("SuDOC 086"):
+            self.assertIn('ITC 1.12:TA-503 (A)-18 AND 332-279', classes, m)
 
-  // SUBJECTS: 600, 610, 611, 630, 647, 648, 650, 651
-  let assert_19 = 'Should add subjects (600, 610, 611, 630, 647, 648, 650, 651) to the subjects list'
-  it(assert_19, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_subjects.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 600$abcdq
-      expect(item[0].subjects).toContain(
-        'Kougeas, Sōkr. V. IV Diogenes, Emperor of the East, active 1068-1071. (Sōkratēs V.)')
-      // 610$abcdn
-      expect(item[0].subjects).toContain(
-        'Frederick II, King of Prussia, 1712-1786. No. 2.')
-      // 611$acde
-      expect(item[0].subjects).toContain(
-        'Mississippi Valley Sanitary Fair (Venice, Italy). (1864 : ǂc Saint Louis, Mo.). Freedmen and Union Refugees\' Department.')
-      // 630$adfhklst
-      expect(item[0].subjects).toContain(
-        'B.J. and the Bear. (1906) 1998. [medium] Manuscript. English New International [title]')
-      // 647$acdvxyz
-      expect(item[0].subjects).toContain(
-        'Bunker Hill, Battle of (Boston, Massachusetts : 1775)')
-      // 648$avxyz
-      expect(item[0].subjects).toContain(
-        'Twentieth century Social life and customs.')
-      // 650$abcdvxyz
-      expect(item[0].subjects).toContain(
-        'Engineering Philosophy.')
-      // 651$avxyz
-      expect(item[0].subjects).toContain(
-        'Aix-en-Provence (France) Philosophy. Early works to 1800.')
-      if (logging) {
-        log(data, assert_19,
-          "//marc:datafield[@tag='600' or @tag='610' or @tag='611' or @tag='630' or @tag='647' or @tag='648' or @tag='650' or @tag='651']",
-          item[0], 'subjects')
-      }
-    })
-  })
+    def test_subjects(self):
+        message = 'Should add subjects (600, 610, 611, 630, 647, 648, 650, 651) to the subjects list'
+        xpath = "//marc:datafield[@tag='600' or @tag='610' or @tag='611' or @tag='630' or @tag='647' or @tag='648' or @tag='650' or @tag='651']"
+        record = self.default_map('test_subjects.xml', xpath)
+        m = message + '\n' + record[1]
+        with self.subTest("600$abcdq"):
+            self.assertIn('Kougeas, Sōkr. V. IV Diogenes, Emperor of the East, active 1068-1071. (Sōkratēs V.)',
+                          record[0]['subjects'], m)
+        with self.subTest("610$abcdn"):
+            self.assertIn('Frederick II, King of Prussia, 1712-1786. No. 2.',
+                          record[0]['subjects'], m)
+        with self.subTest("611$acde"):
+            self.assertIn('Mississippi Valley Sanitary Fair (Venice, Italy). (1864 : ǂc Saint Louis, Mo.). Freedmen and Union Refugees\' Department.',
+                          record[0]['subjects'], m)
+        with self.subTest("630$adfhklst"):
+            self.assertIn('B.J. and the Bear. (1906) 1998. [medium] Manuscript. English New International [title]',
+                          record[0]['subjects'], m)
+        with self.subTest("647$acdvxyz"):
+            self.assertIn('Bunker Hill, Battle of (Boston, Massachusetts : 1775)',
+                          record[0]['subjects'], m)
+        with self.subTest("648$avxyz"):
+            self.assertIn('Twentieth century Social life and customs',
+                          record[0]['subjects'], m)
+        with self.subTest("650$abcdvxyz"):
+            self.assertIn('Engineering Philosophy.',
+                          record[0]['subjects'], m)
+        with self.subTest("651$avxyz"):
+            self.assertIn('Aix-en-Provence (France) Philosophy. Early works to 1800.',
+                          record[0]['subjects'], m)
 
-  // PUBLICATION: 260, 264
-  let assert_20 = 'Should add publications (260$abc & 264$abc) to the publications list'
-  it(assert_20, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_publications.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 260$abc
-      expect(item[0].publication).toContain(
-        {
-          publisher: 'Elsevier',
-          place: 'New York NY',
-          dateOfPublication: '1984' }
-      )
-      // 264$abc
-      expect(item[0].publication).toContain(
-        {
-          publisher: 'Springer',
-          place: 'Cham',
-          dateOfPublication: '[2015]',
-          role: 'Publication' }
-      )
-      if (logging) {
-        log(data, assert_20,
-          "//marc:datafield[@tag='260' or @tag='264']",
-          item[0], 'publication')
-      }
-    })
-  })
+    def test_publication(self):
+        message = 'Should add publications (260$abc & 264$abc) to the publications list'
+        xpath = "//marc:datafield[@tag='260' or @tag='264']"
+        record = self.default_map('test_publications.xml', xpath)
+        m = message + '\n' + record[1]
+        with self.subTest('260$abc'):
+            publication = {
+                'publisher': 'Elsevier',
+                'place': 'New York NY',
+                'dateOfPublication': '1984'}
+            self.assertIn(publication,
+                          record[0]['publication'], m)
+        with self.subTest('264$abc'):
+            publication = {
+                'publisher': 'Springer',
+                'place': 'Cham',
+                'dateOfPublication': '[2015]',
+                'role': 'Publication'}
+            self.assertIn(publication,
+                          record[0]['publication'], m)
 
-  // PUBLICATION FREQUENCY: 310, 321
-  let assert_21 = 'Should add publication frequency (310$ab & 321$ab) to the publicationFrequency list'
-  it(assert_21, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_publication_frequency.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].publicationFrequency.length).toEqual(2) // check deduplication
-      // 310$ab
-      expect(item[0].publicationFrequency).toContain('Varannan månad, 1983-')
-      // 321$ab
-      expect(item[0].publicationFrequency).toContain('Monthly, Mar. 1972-Dec. 1980')
-      if (logging) {
-        log(data, assert_21,
-          "//marc:datafield[@tag='310' or @tag='321']",
-          item[0], 'publicationFrequency')
-      }
-    })
-  })
+    def test_publication_frequency(self):
+        message = 'Should add publication frequency (310$ab & 321$ab) to the publicationFrequency list'
+        xpath = "//marc:datafield[@tag='310' or @tag='321']"
+        record = self.default_map('test_publication_frequency.xml', xpath)
+        m = message + '\n' + record[1]
+        self.assertEqual(2, len(record[0]['publicationFrequency']), m)
+        with self.subTest('310$ab'):
+            self.assertIn('Varannan månad, 1983-',
+                          record[0]['publicationFrequency'], m)
+        with self.subTest('321$ab'):
+            self.assertIn('Monthly, Mar. 1972-Dec. 1980-',
+                          record[0]['publicationFrequency'], m)
 
-  // PUBLICATION RANGE: 362
-  let assert_22 = 'Should add publication range (362$a) to the publicationRange list'
-  it(assert_22, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_publication_range.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].publicationRange.length).toEqual(1) // check deduplication
-      expect(item[0].publicationRange).toContain('No 1-')
-      if (logging) {
-        log(data, assert_22,
-          "//marc:datafield[@tag='362']",
-          item[0], 'publicationRange')
-      }
-    })
-  })
+    def test_publication_range(self):
+        message = 'Should add publication range (362$a) to the publicationRange list'
+        xpath = "//marc:datafield[@tag='362']"
+        record = self.default_map('test_publication_range.xml', xpath)
+        m = message + '\n' + record[1]
+        self.assertEqual(1, len(record[0]['publicationRange']), m)
+        self.assertIn('No 1-',
+                      record[0]['publicationRange'], m)
 
-  // NOTES: 500-510
-  let assert_23 = 'Should add notes (500-510) to notes list'
-  it(assert_23, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_50x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 500$a
-      expect(item[0].notes).toContain('"Embedded application development for home and industry."--Cover.')
-      // 500$3a5
-      expect(item[0].notes).toContain('Cotsen copy: Published plain red wrappers with first and last leaves pasted to interior wrappers. NjP')
-      // 501$a5
-      expect(item[0].notes).toContain('With: Humiliations follow\'d with deliverances. Boston : Printed by B. Green; J. Allen for S. Philips, 1697. Bound together subsequent to publication. DLC')
-      // 502$bcd
-      expect(item[0].notes).toContain('M. Eng. University of Louisville 2013')
-      // 504$ab
-      expect(item[0].notes).toContain('Includes bibliographical references. 19')
-      // 506$a
-      expect(item[0].notes).toContain('Classified.')
-      // 507$b
-      expect(item[0].notes).toContain('Not drawn to scale.')
-      // 508$a
-      expect(item[0].notes).toContain('Film editor, Martyn Down ; consultant, Robert F. Miller.')
-      // 508$a
-      expect(item[0].notes).toContain('Film editor, Martyn Down ; consultant, Robert F. Miller.')
-      // 510$axb
-      expect(item[0].notes).toContain('Index medicus, 0019-3879, v1n1, 1984-')
-      if (logging) {
-        log(data, assert_23,
-          "//marc:datafield[@tag='500' or @tag='501' or @tag='502' or @tag='504' or @tag='505' or @tag='506' " +
-          "or @tag='508' or @tag='510']",
-          item[0], 'notes')
-      }
-    })
-  })
+    def test_notes_50x(self):
+        message = 'Should add notes (500-510) to notes list'
+        xpath = "//marc:datafield[@tag='500' or @tag='501' or @tag='502' or @tag='504' or @tag='505' or @tag='506' or @tag='508' or @tag='510']"
+        record = self.default_map('test_notes_50x.xml', xpath)
+        m = message + '\n' + record[1]
+        notes = list(record[0]['notes'])
+        with self.subTest('500$a'):
+            self.assertIn('"Embedded application development for home and industry."--Cover.',
+                          notes, m)
+        with self.subTest('500$3a5'):
+            self.assertIn('Cotsen copy: Published plain red wrappers with first and last leaves pasted to interior wrappers. NjP',
+                          notes, m)
+        with self.subTest('501$a5'):
+            self.assertIn('With: Humiliations follow\'d with deliverances. Boston : Printed by B. Green; J. Allen for S. Philips, 1697. Bound together subsequent to publication. DLC',
+                          notes, m)
+        with self.subTest('502$bcd'):
+            self.assertIn('M. Eng. University of Louisville 2013',
+                          notes, m)
+        with self.subTest('504$ab'):
+            self.assertIn('Includes bibliographical references. 19',
+                          notes, m)
+        with self.subTest('506$a'):
+            self.assertIn('Classified.',
+                          notes, m)
+        with self.subTest('507$b'):
+            self.assertIn('Not drawn to scale.',
+                          notes, m)
+        with self.subTest('508$a'):
+            self.assertIn('Film editor, Martyn Down ; consultant, Robert F. Miller.',
+                          notes, m)
+        with self.subTest('508$a'):
+            self.assertIn('Film editor, Martyn Down ; consultant, Robert F. Miller.',
+                          notes, m)
+        with self.subTest('510$axb'):
+            self.assertIn('Index medicus, 0019-3879, v1n1, 1984-',
+                          notes, m)
 
-  // NOTES: 511-518
-  let assert_24 = 'Should add notes (511-518) to notes list'
-  it(assert_24, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_51x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 511$a
-      expect(item[0].notes).toContain('Marshall Moss, violin ; Neil Roberts, harpsichord.')
-      // 513$ab
-      expect(item[0].notes).toContain('Quarterly technical progress report; January-April 1, 1977.')
-      // 514$adef
-      expect(item[0].notes).toContain('The map layer that displays Special Feature Symbols shows the approximate location of small (less than 2 acres in size) areas of soils... Quarter quadrangles edited and joined internally and to surrounding quads. All known errors corrected. The combination of spatial linework layer, Special Feature Symbols layer, and attribute data are considered a complete SSURGO dataset.')
-      // 515$a
-      expect(item[0].notes).toContain('Designation New series dropped with volume 38, 1908.')
-      // 516$a
-      expect(item[0].notes).toContain('Numeric (Summary statistics).')
-      // 518$3dp
-      expect(item[0].notes).toContain('3rd work 1981 November 25 Neues Gewandhaus, Leipzig.')
-      if (logging) {
-        log(data, assert_24,
-          "//marc:datafield[@tag='511' or @tag='513' or @tag='514' or @tag='515' or @tag='516' or @tag='518']",
-          item[0], 'notes')
-      }
-    })
-  })
+    def test_notes_51x(self):
+        message = 'Should add notes (511-518) to notes list'
+        xpath = "//marc:datafield[@tag='511' or @tag='513' or @tag='514' or @tag='515' or @tag='516' or @tag='518']"
+        record = self.default_map('test_notes_51x.xml', xpath)
+        m = message + '\n' + record[1]
+        notes = list(record[0]['notes'])
+        with self.subTest('511$a'):
+            self.assertIn('Marshall Moss, violin ; Neil Roberts, harpsichord.',
+                          notes, m)
+        with self.subTest('513$ab'):
+            self.assertIn('Quarterly technical progress report; January-April 1, 1977.',
+                          notes, m)
+        with self.subTest('514$adef'):
+            self.assertIn('The map layer that displays Special Feature Symbols shows the approximate location of small (less than 2 acres in size) areas of soils... Quarter quadrangles edited and joined internally and to surrounding quads. All known errors corrected. The combination of spatial linework layer, Special Feature Symbols layer, and attribute data are considered a complete SSURGO dataset.',
+                          notes, m)
+        with self.subTest('515$a'):
+            self.assertIn('Designation New series dropped with volume 38, 1908.',
+                          notes, m)
+        with self.subTest('516$a'):
+            self.assertIn('Numeric (Summary statistics).',
+                          notes, m)
+        with self.subTest('518$3dp'):
+            self.assertIn('3rd work 1981 November 25 Neues Gewandhaus, Leipzig.',
+                          notes, m)
 
-  // NOTES: 520-525
-  let assert_25 = 'Should add notes (520-525) to notes list'
-  it(assert_25, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_52x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 520$a
-      expect(item[0].notes).toContain('"Create embedded projects for personal and professional applications. Join the Internet of Things revolution with a project-based approach to building embedded Java applications. Written by recognized Java experts, this Oracle Press guide features a series of low-cost, DIY projects that gradually escalate your development skills. Learn how to set up and configure your Raspberry Pi, connect external hardware, work with the NetBeans IDE, and write and embed powerful Java applications. Raspberry Pi with Java: Programming the Internet of Things (IoT) covers hobbyist as well as professional home and industry applications."--Back cover.')
-      // 522$a
-      expect(item[0].notes).toContain('County-level data from Virginia.')
-      // 524$a
-      expect(item[0].notes).toContain('Dakota')
-      // 525$a
-      expect(item[0].notes).toContain('Supplements accompany some issues.')
-      if (logging) {
-        log(data, assert_25,
-          "//marc:datafield[@tag='520' or @tag='522' or @tag='524' or @tag='525']",
-          item[0], 'notes')
-      }
-    })
-  })
+    def test_notes_52x(self):
+        message = 'Should add notes (520-525) to notes list'
+        xpath = "//marc:datafield[@tag='520' or @tag='522' or @tag='524' or @tag='525']"
+        record = self.default_map('test_notes_52x.xml', xpath)
+        m = message + '\n' + record[1]
+        notes = list(record[0]['notes'])
+        with self.subTest('520$a'):
+            self.assertIn('"Create embedded projects for personal and professional applications. Join the Internet of Things revolution with a project-based approach to building embedded Java applications. Written by recognized Java experts, this Oracle Press guide features a series of low-cost, DIY projects that gradually escalate your development skills. Learn how to set up and configure your Raspberry Pi, connect external hardware, work with the NetBeans IDE, and write and embed powerful Java applications. Raspberry Pi with Java: Programming the Internet of Things (IoT) covers hobbyist as well as professional home and industry applications."--Back cover.',
+                          notes, m)
+        with self.subTest('522$a'):
+            self.assertIn('County-level data from Virginia.',
+                          notes, m)
+        with self.subTest('524$a'):
+            self.assertIn('Dakota',
+                          notes, m)
+        with self.subTest('525$a'):
+            self.assertIn('Supplements accompany some issues.',
+                          notes, m)
 
-  // NOTES: 530-534
-  let assert_26 = 'Should add notes (530-534) to notes list'
-  it(assert_26, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_53x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 530$a
-      expect(item[0].notes).toContain('Available on microfiche.')
-      // 532$a
-      expect(item[0].notes).toContain('Closed captioning in English.')
-      // 533$abcdfn5
-      expect(item[0].notes).toContain('Electronic reproduction. Cambridge, Mass. Harvard College Library Digital Imaging Group, 2003 (Latin American pamphlet digital project at Harvard University ; 0005). Electronic reproduction from microfilm master negative produced by Harvard College Library Imaging Services. MH')
-      // 534$patn
-      expect(item[0].notes).toContain('Originally issued: Frederick, John. Luck. Published in: Argosy, 1919.')
-      if (logging) {
-        log(data, assert_26,
-          "//marc:datafield[@tag='530' or @tag='532' or @tag='533' or @tag='534']",
-          item[0], 'notes')
-      }
-    })
-  })
+    def test_notes_53x(self):
+        message = 'Should add notes (530-534) to notes list'
+        xpath = "//marc:datafield[@tag='530' or @tag='532' or @tag='533' or @tag='534']"
+        record = self.default_map('test_notes_53x.xml', xpath)
+        notes = list(record[0]['notes'])
+        m = message + '\n' + record[1]
+        with self.subTest('530$a'):
+            self.assertIn('Available on microfiche.',
+                          notes, m)
+        with self.subTest('532$a'):
+            self.assertIn('Closed captioning in English.',
+                          notes, m)
+        with self.subTest('533$abcdfn5'):
+            self.assertIn('Electronic reproduction. Cambridge, Mass. Harvard College Library Digital Imaging Group, 2003 (Latin American pamphlet digital project at Harvard University ; 0005). Electronic reproduction from microfilm master negative produced by Harvard College Library Imaging Services. MH',
+                          notes, m)
+        with self.subTest('534$patn'):
+            self.assertIn('Originally issued: Frederick, John. Luck. Published in: Argosy, 1919.',
+                          notes, m)
 
-  // NOTES: 540-546
-  let assert_27 = 'Should add notes (540-546) to notes list'
-  it(assert_27, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_54x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 540
-      expect(item[0].notes).toContain('There are copyright and contractual restrictions applying to the reproduction of most of these recordings; Department of Treasury; Treasury contracts 7-A130 through 39-A179.')
-      // 541
-      expect(item[0].notes).toContain('5 diaries 25 cubic feet; Merriwether, Stuart; 458 Yonkers Road, Poughkeepsie, NY 12601; Purchase at auction; 19810924; 81-325; Jonathan P. Merriwether Estate; $7,850.')
-      // 542
-      expect(item[0].notes).toContain('Duchess Foods Government of Canada Copyright 1963, par la Compagnie Canadienne de l\'Exposition Universelle de 1967 1963 Nov. 2010 Copyright Services, Library and Archives Canada')
-      // 544
-      expect(item[0].notes).toContain('Burt Barnes papers; State Historical Society of Wisconsin.')
-      // 545
-      expect(item[0].notes).toContain('The Faribault State School and Hospital provided care, treatment, training, and a variety of other services to mentally retarded individuals and their families. It was operated by the State of Minnesota from 1879 to 1998 under different administrative structures and with different names. A more detailed history of the Hospital may be found at http://www.mnhs.org/library/findaids/80881.html')
-      // 546
-      expect(item[0].notes).toContain('Marriage certificate German; Fraktur.')
-      if (logging) {
-        log(data, assert_27,
-          "//marc:datafield[@tag='540' or @tag='541' or @tag='542' or @tag='544' or @tag='545' or @tag='546']",
-          item[0], 'notes')
-      }
-    })
-  })
+    def test_notes_54x(self):
+        message = 'Should add notes (540-546) to notes list'
+        xpath = "//marc:datafield[@tag='540' or @tag='541' or @tag='542' or @tag='544' or @tag='545' or @tag='546']"
+        record = self.default_map('test_notes_54x.xml', xpath)
+        notes = list(record[0]['notes'])
+        m = message + '\n' + record[1]
+        with self.subTest('540'):
+            self.assertIn('There are copyright and contractual restrictions applying to the reproduction of most of these recordings; Department of Treasury; Treasury contracts 7-A130 through 39-A179.',
+                          notes, m)
+        with self.subTest('541'):
+            self.assertIn('5 diaries 25 cubic feet; Merriwether, Stuart; 458 Yonkers Road, Poughkeepsie, NY 12601; Purchase at auction; 19810924; 81-325; Jonathan P. Merriwether Estate; $7,850.',
+                          notes, m)
+        with self.subTest('542'):
+            self.assertIn('Duchess Foods Government of Canada Copyright 1963, par la Compagnie Canadienne de l\'Exposition Universelle de 1967 1963 Nov. 2010 Copyright Services, Library and Archives Canada',
+                          notes, m)
+        with self.subTest('544'):
+            self.assertIn('Burt Barnes papers; State Historical Society of Wisconsin.',
+                          notes, m)
+        with self.subTest('545'):
+            self.assertIn('The Faribault State School and Hospital provided care, treatment, training, and a variety of other services to mentally retarded individuals and their families. It was operated by the State of Minnesota from 1879 to 1998 under different administrative structures and with different names. A more detailed history of the Hospital may be found at http://www.mnhs.org/library/findaids/80881.html',
+                          notes, m)
+        with self.subTest('546'):
+            self.assertIn('Marriage certificate German; Fraktur.',
+                          notes, m)
 
-  // NOTES: 550-556
-  let assert_28 = 'Should add notes (550-556) to notes list'
-  it(assert_28, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_55x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 550$a
-      expect(item[0].notes).toContain('Organ of the Potomac-side Naturalists\' Club.')
-      // 552
-      expect(item[0].notes).toContain('NYROADS The roads of New York, none unknown irregular.')
-      // 555
-      expect(item[0].notes).toContain('Available in repository and on Internet; Folder level control; http://digital.library.pitt.edu/cgi-bin/f/findaid/findaid-idx?type=simple;c=ascead;view=text;subview=outline;didno=US-PPiU-ais196815')
-      // 556
-      expect(item[0].notes).toContain('Disaster recovery : a model plan for libraries and information centers. 0959328971')
-      if (logging) {
-        log(data, assert_28,
-          "//marc:datafield[@tag='550' or @tag='552' or @tag='555' or @tag='556']",
-          item[0], 'notes')
-      }
-    })
-  })
+    def test_notes_55x(self):
+        message = 'Should add notes (550-556) to notes list'
+        xpath = "//marc:datafield[@tag='550' or @tag='552' or @tag='555' or @tag='556']"
+        record = self.default_map('test_notes_55x.xml', xpath)
+        notes = list(record[0]['notes'])
+        m = message + '\n' + record[1]
+        with self.subTest('550$a'):
+            self.assertIn('Organ of the Potomac-side Naturalists\' Club.',
+                          notes, m)
+        with self.subTest('552'):
+            self.assertIn('NYROADS The roads of New York, none unknown irregular.',
+                          notes, m)
+        with self.subTest('555'):
+            self.assertIn('Available in repository and on Internet; Folder level control; http://digital.library.pitt.edu/cgi-bin/f/findaid/findaid-idx?type=simple;c=ascead;view=text;subview=outline;didno=US-PPiU-ais196815',
+                          notes, m)
+        with self.subTest('556'):
+            self.assertIn('Disaster recovery : a model plan for libraries and information centers. 0959328971',
+                          notes, m)
 
-  // NOTES: 561-567
-  let assert_29 = 'Should add notes (561-567) to notes list'
-  it(assert_29, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_56x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 561$3a
-      expect(item[0].notes).toContain('Family correspondence Originally collected by Henry Fitzhugh, willed to his wife Sarah Jackson Fitzhugh and given by her to her grandson Jonathan Irving Jackson, who collected some further information about his grandmother and the papers of their relatives and Cellarsville neighbors, the Arnold Fitzhugh\'s, before donating the materials along with his own papers as mayor of Cellarsville to the Historical Society.')
-      // 562
-      expect(item[0].notes).toContain('The best get better Sue Hershkowitz')
-      // 563
-      expect(item[0].notes).toContain('Gold-tooled morocco binding by Benjamin West, approximately 1840. Uk')
-      // 565
-      // todo: can't be right, spreadsheet shoduld include subfield 3 i think
-      expect(item[0].notes).toContain('11;')
-      // 567
-      expect(item[0].notes).toContain('Continuous, deterministic, predictive.')
-      if (logging) {
-        log(data, assert_29,
-          "//marc:datafield[@tag='561' or @tag='562' or @tag='563' or @tag='565' or @tag='567']",
-          item[0], 'notes')
-      }
-    })
-  })
+    def test_notes_56x(self):
+        message = 'Should add notes (561-567) to notes list'
+        xpath = "//marc:datafield[@tag='561' or @tag='562' or @tag='563' or @tag='565' or @tag='567']"
+        record = self.default_map('test_notes_56x.xml', xpath)
+        notes = list(record[0]['notes'])
+        m = message + '\n' + record[1]
+        with self.subTest('561$3a'):
+            self.assertIn('Family correspondence Originally collected by Henry Fitzhugh, willed to his wife Sarah Jackson Fitzhugh and given by her to her grandson Jonathan Irving Jackson, who collected some further information about his grandmother and the papers of their relatives and Cellarsville neighbors, the Arnold Fitzhugh\'s, before donating the materials along with his own papers as mayor of Cellarsville to the Historical Society.',
+                          notes, m)
+        with self.subTest('562'):
+            self.assertIn('The best get better Sue Hershkowitz',
+                          notes, m)
+        with self.subTest('563'):
+            self.assertIn('Gold-tooled morocco binding by Benjamin West, approximately 1840. Uk',
+                          notes, m)
+        with self.subTest('565'):
+            # TODO: can't be right, spreadsheet shoduld include subfield 3 i think
+            self.assertIn('11;', notes, m)
+        with self.subTest('567'):
+            self.assertIn('Continuous, deterministic, predictive.', notes, m)
 
-  // NOTES: 580-586
-  let assert_30 = 'Should add notes (580-586) to notes list'
-  it(assert_30, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_58x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 580
-      expect(item[0].notes).toContain('Forms part of the Frances Benjamin Johnston Collection.')
-      // 583
-      expect(item[0].notes).toContain('scrapbooks (10 volumes) 1 cu. ft. microfilm 198303 at completion of arrangement 1983 master film schedule Thomas Swing')
-      // 586
-      expect(item[0].notes).toContain('Pulitzer prize in music, 2004')
-      if (logging) {
-        log(data, assert_30,
-          "//marc:datafield[@tag='580' or @tag='583' or @tag='586']",
-          item[0], 'notes')
-      }
-    })
-  })
+    def test_notes_58x(self):
+        message = 'Should add notes (580-586) to notes list'
+        xpath = "//marc:datafield[@tag='580' or @tag='583' or @tag='586']"
+        record = self.default_map('test_notes_58x.xml', xpath)
+        notes = list(record[0]['notes'])
+        m = message + '\n' + record[1]
+        with self.subTest('580'):
+            self.assertIn('Forms part of the Frances Benjamin Johnston Collection.',
+                          notes, m)
+        with self.subTest('583'):
+            self.assertIn('scrapbooks (10 volumes) 1 cu. ft. microfilm 198303 at completion of arrangement 1983 master film schedule Thomas Swing',
+                          notes, m)
+        with self.subTest('586'):
+            self.assertIn('Pulitzer prize in music, 2004',
+                          notes, m)
 
-  // NOTES: 590-599
-  let assert_31 = 'Should add notes (590-599) to notes list'
-  it(assert_31, function () {
-    let data = fs.readFileSync('spec/dataconverter/test_notes_59x.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      // 590$a
-      expect(item[0].notes).toContain('Labels reversed on library\'s copy.')
-      // 592$a
-      expect(item[0].notes).toContain('Copy in McGill Library\'s Osler Library of the History of Medicine, Robertson Collection copy 1: signature on title page, Jos. E. Dion, E.E.M., Montréal.')
-      // 599$abcde
-      expect(item[0].notes).toContain('c.2 2014 $25.00 pt art dept.')
-      if (logging) {
-        log(data, assert_31,
-          "//marc:datafield[@tag='590' or @tag='592' or @tag='599']",
-          item[0], 'notes')
-      }
-    })
-  })
-
-  // getRecord - Crashing example made into a test.
-  it('Should just work. Get record example', function () {
-    let data = fs.readFileSync('spec/dataconverter/test_get_record.xml', 'utf8')
-    return dataConverter.convertMarcToFolio(data).then((item) => {
-      expect(item[0].isValid).toBeTruthy()
-      expect(item[0].title).toContain('Rysslands ekonomiska geografi')
-    })
-  })
-})
-
-function log (data, heading, xpath, json, key) {
-  let XPath = require('xpath')
-  let Dom = require('xmldom').DOMParser
-  let select = XPath.useNamespaces({
-    'marc': 'http://www.loc.gov/MARC21/slim',
-    'oai': 'http://www.openarchives.org/OAI/2.0/' })
-  const prettifyXml = require('prettify-xml')
-  let doc = new Dom().parseFromString(data.toString())
-  let nodes = select(xpath, doc)
-  console.log(
-    '\n' +
-    '====================================================================================================\n' +
-    heading + '\n' +
-    '====================================================================================================\n'
-  )
-  nodes.forEach(function (xmlNode) {
-    console.log(prettifyXml(xmlNode.toString()))
-  })
-  console.log('\n"' + key + '" : ' + JSON.stringify(json[key], null, '  ') + '\n')
-}
-'''
+    def test_notes_59x(self):
+        message = 'Should add notes (590-599) to notes list'
+        xpath = "//marc:datafield[@tag='590' or @tag='592' or @tag='599']"
+        record = self.default_map('test_notes_59x.xml', xpath)
+        notes = list(record[0]['notes'])
+        m = message + '\n' + record[1]
+        with self.subTest('590$a'):
+            self.assertIn('Labels reversed on library\'s copy.',
+                            notes, m)
+        with self.subTest('592$a'):
+            self.assertIn('Copy in McGill Library\'s Osler Library of the History of Medicine, Robertson Collection copy 1: signature on title page, Jos. E. Dion, E.E.M., Montréal.',
+                            notes, m)
+        with self.subTest('599$abcde'):
+            self.assertIn('c.2 2014 $25.00 pt art dept.',
+                            notes, m)
 
 if __name__ == '__main__':
     unittest.main()
