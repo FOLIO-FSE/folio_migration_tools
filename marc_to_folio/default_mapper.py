@@ -1,6 +1,7 @@
 '''The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications'''
 import uuid
+import re
 import xml.etree.ElementTree as ET
 
 import requests
@@ -11,6 +12,8 @@ class DefaultMapper:
     the FOLIO community convention'''
     # Bootstrapping (loads data needed later in the script.)
     def __init__(self, folio):
+        self.filter_chars = r'[.,\/#!$%\^&\*;:{}=\-_`~()]'
+        self.filter_last_chars = r',$'
         self.folio = folio
         print("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
@@ -33,6 +36,8 @@ class DefaultMapper:
             # TODO: Add instanceTypeId
             'instanceTypeId': self.folio.instance_types[0]['id'],
             'alternativeTitles': list(self.get_alt_titles(marc_record)),
+            'publicationFrequency': list(set(self.get_publication_frequency(marc_record))),
+            'publicationRange': list(set(self.get_publication_range(marc_record))),
             'series': list(set(self.get_series(marc_record))),
             'editions': list(set(self.get_editions(marc_record))),
             'subjects': list(set(self.get_subjects(marc_record))),
@@ -49,7 +54,16 @@ class DefaultMapper:
     def get_editions(self, marc_record):
         fields = marc_record.get_fields('250')
         for field in fields:
-            yield " ".join(field.get_subfields('a','b'))
+            yield " ".join(field.get_subfields('a', 'b'))
+
+    def get_publication_frequency(self, marc_record):
+        for tag in ['310', '321']:
+            for field in marc_record.get_fields(tag):
+                yield ' '.join(field.get_subfields(*'ab'))
+
+    def get_publication_range(self, marc_record):
+        for field in marc_record.get_fields('362'):
+            yield ' '.join(field.get_subfields('a'))
 
     def get_physical_desc(self, marc_record):
         # TODO: improve according to spec
@@ -74,16 +88,54 @@ class DefaultMapper:
     def get_notes(self, marc_record):
         '''Collects all notes fields and stores them as generic notes.'''
         # TODO: specify note types with better accuracy.
-        note_tags = ['500', '501', '502', '504', '505', '506', '507', '508',
-                     '510', '511', '513', '514', '515', '516', '518', '520',
-                     '521', '522', '524', '525', '526', '530', '532', '533',
-                     '534', '535', '536', '538', '540', '541', '542', '544',
-                     '545', '546', '547', '550', '552', '555', '556', '561',
-                     '562', '563', '565', '567', '580', '581', '583', '584',
-                     '585', '586', '588', '590', '255', ]
-        for tag in note_tags:
-            for field in marc_record.get_fields(tag):
-                yield field.format_field()
+        note_tags = {'500': 'a35',
+                     '501': 'a5',
+                     '502': 'abcd',
+                     '504': 'ab',
+                     '505': 'agrt',
+                     '506': 'a',
+                     '507': 'ab',
+                     '508': 'a',
+                     '510': 'abcx',
+                     '511': 'a',
+                     '513': 'ab',
+                     '514': 'acdeghz',
+                     '515': 'a',
+                     '516': 'a',
+                     '518': '3adop',
+                     '520': '3abc',
+                     '522': 'a',
+                     '524': 'a',
+                     '525': 'a',
+                     '530': 'a',
+                     '532': 'a',
+                     '533': 'abcdefmn35',
+                     '534': 'abcefklmnoptxz3',
+                     '540': 'abcdu5',
+                     '541': '3abcdefhno5',
+                     '542': 'abcdngfosu',
+                     '544': 'ad',
+                     '545': 'abu',
+                     '546': '3ab',
+                     '547': 'a',
+                     '550': 'a',
+                     '552': 'ablmnz',
+                     '555': 'abcdu',
+                     '556': 'az',
+                     '561': '3au5',
+                     '562': '3abc5',
+                     '563': '3a5',
+                     '565': 'a',
+                     '567': 'a',
+                     '580': 'a',
+                     '583': 'abcdefhijklnouxz235',
+                     '586': 'a',
+                     '590': 'a',
+                     '592': 'a',
+                     '599': 'abcde'}
+        for key, value in note_tags.items():
+            for field in marc_record.get_fields(key):
+                yield " ".join(field.get_subfields(*value))
 
     def get_title(self, marc_record):
         if '245' not in marc_record:
@@ -104,19 +156,31 @@ class DefaultMapper:
     def get_contributors(self, marc_record):
         '''Collects contributors from the marc record and adds the apropriate
         Ids'''
-        fields = {'100': next((f['id'] for f in self.folio.contrib_name_types
-                              if f['name'] == 'Personal name'), ''),
-                  '110': next((f['id'] for f in self.folio.contrib_name_types
-                              if f['name'] == 'Corporate name'), ''),
-                  '111': next((f['id'] for f in self.folio.contrib_name_types
-                              if f['name'] == 'Meeting name'), '')}
+        def name_type_id(n): return next((f['id'] for f
+                                          in self.folio.contrib_name_types
+                                          if f['name'] == n), '')
+        fields = {'100': {'subfields': 'abcdq',
+                          'nameTypeId': 'Personal name'},
+                  '110': {'subfields': 'abcdn',
+                          'nameTypeId': 'Corporate name'},
+                  '111': {'subfields': 'abcd',
+                          'nameTypeId': 'Meeting name'},
+                  '700': {'subfields': 'abcdq',
+                          'nameTypeId': 'Personal name'},
+                  '710': {'subfields':  'abcdn',
+                          'nameTypeId': 'Corporate name'},
+                  '711': {'subfields': 'abcd',
+                          'nameTypeId': 'Meeting name'}
+                  }
         first = 0
         for field_tag in fields:
             for field in marc_record.get_fields(field_tag):
                 ctype = self.get_contrib_type_id(marc_record)
                 first += 1
-                yield {'name': field.format_field(),
-                       'contributorNameTypeId': fields[field_tag],
+                subs = field.get_subfields(*fields[field_tag]['subfields'])
+                ntd = name_type_id(fields[field_tag]['nameTypeId'])
+                yield {'name': re.sub(self.filter_last_chars, '', ' '.join(subs)),
+                       'contributorNameTypeId': ntd,
                        'contributorTypeId': ctype,
                        'primary': first < 2}
 
@@ -138,11 +202,28 @@ class DefaultMapper:
 
     def get_subjects(self, marc_record):
         ''' Get subject headings from the marc record.'''
-        tags = ['600', '610', '611', '630', '647', '648', '650', '651'
-                '653', '654', '655', '656', '657', '658', '662']
-        for tag in tags:
-            for field in marc_record.get_fields(tag):
-                yield field.format_field()
+        tags = {'600': 'abcdq',
+                '610': 'abcdn',
+                '611': 'acde',
+                '630': 'adfhklst',
+                '647': 'acdvxyz',
+                '648': 'avxyz',
+                '650': 'abcdvxyz',
+                '651': 'avxyz'}
+        non_mapped_tags = {'653': '',
+                           '654': '',
+                           '655': '',
+                           '656': '',
+                           '657': '',
+                           '658': '',
+                           '662': ''}
+        for tag in list(non_mapped_tags.keys()):
+            if any(marc_record.get_fields(tag)):
+                print("Unmapped Subject field {} in {}"
+                      .format(tag, marc_record['001']))
+        for key, value in tags.items():
+            for field in marc_record.get_fields(key):
+                yield " ".join(field.get_subfields(*value)).strip()
 
     def get_alt_titles(self, marc_record):
         '''Finds all Alternative titles.'''
@@ -169,21 +250,33 @@ class DefaultMapper:
         for field_tag in fields:
             for field in marc_record.get_fields(field_tag):
                 yield {'alternativeTitleTypeId': fields[field_tag][0],
-                            'alternativeTitle': " - "
-                            .join(field.get_subfields(*fields[field_tag][1]))}
+                       'alternativeTitle': " - "
+                       .join(field.get_subfields(*fields[field_tag][1]))}
         # return list(dict((v['alternativeTitleTypeId'], v)
         #                 for v in res).values())
 
     def get_publication(self, marc_record):
         # TODO: Improve with 008 and 260/4 $c
         '''Publication'''
-        tags = ['260', '264']
-        for tag in tags:
-            for field in marc_record.get_fields(tag):
-                yield {'publisher': field['b'] or '',
-                       'place': field['a'] or '',
-                       'dateOfPublication': field['c'] or ''}
+        for field in marc_record.get_fields('260'):
+            yield {'publisher': re.sub(self.filter_chars, str(''), str(field['b'])).strip() or '',
+                   'place': re.sub(self.filter_chars, str(''), str(field['a'])).strip() or '',
+                   'dateOfPublication': re.sub(self.filter_chars, str(''), str(field['c'])).strip() or ''}
+        for field in marc_record.get_fields('264'):
+            yield {'publisher': re.sub(self.filter_chars, str(''), str(field['b'])).strip() or '',
+                   'place': re.sub(self.filter_chars, str(''), str(field['a'])).strip() or '',
+                   'dateOfPublication': re.sub(self.filter_chars, str(''), str(field['c'])).strip() or '',
+                   'role': self.get_publication_role(field.indicators[1])}
 
+    def get_publication_role(self, ind2):
+        roles = {'0': 'Production',
+                 '1': 'Publication',
+                 '2': 'Distribution',
+                 '3': 'Manufacturer',
+                 '4': ''
+                 }
+        return roles[ind2]
+    
     def get_series(self, marc_record):
         '''Series'''
         tags = {'440': 'anpv',
@@ -224,18 +317,18 @@ class DefaultMapper:
 
     def get_classifications(self, marc_record):
         '''Collects Classes and adds the appropriate metadata'''
-        fields = {'050': [next(f['id'] for f
-                               in self.folio.class_types
-                               if f['name'] == 'LC'), ['a', 'b']],
-                  '082': [next(f['id'] for f
-                               in self.folio.class_types
-                               if f['name'] == 'Dewey'), ['a', 'b']]
+        get_class_type_id = lambda x: next(f['id'] for f
+                                           in self.folio.class_types
+                                           if f['name'] == x)
+        fields = {'050': ['LC', 'ab'],
+                  '082': ['Dewey', 'a'],
+                  '086': ['catch_all', 'a'],
+                  '090': ['catch_all', 'ab']
                   }
         for field_tag in fields:
             for field in marc_record.get_fields(field_tag):
-                yield {'classificationTypeId': fields[field_tag][0],
-                       'classificationNumber': " "
-                       .join(field.get_subfields(fields[field_tag][1]))}
+                yield {'classificationTypeId': get_class_type_id(fields[field_tag][0]),
+                       'classificationNumber': " ".join(field.get_subfields(*fields[field_tag][1]))}
 
     def get_identifiers(self, marc_record):
         '''Collects Identifiers and adds the appropriate metadata'''
