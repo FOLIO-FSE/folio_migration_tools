@@ -48,6 +48,23 @@ class TestChalmersMapper(unittest.TestCase):
         self.assertEqual('The wedding collection. Volume 4, Love will be our home: 15 songs of love and commitment.',
                          record[0]['title'], record[1])
 
+    def test_ids(self):
+        message = 'Should fetch Libris Bib id, Libris XL id and Sierra ID'
+        xpath = "//marc:datafield[@tag='001' or @tag='907' or @tag='887']"
+        record = self.do_map('test_publications.xml', xpath, message)
+        with self.subTest("libris bib id"):
+            bibid =  {'identifierTypeId': '28c170c6-3194-4cff-bfb2-ee9525205cf7',
+                      'value': '21080448'}
+            self.assertIn(bibid, record[0]['identifiers'], record[1])
+        with self.subTest("XL ID"):
+            xl_id = {'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
+                     'value': '8sl08b9l54wxk4m'}
+            self.assertIn(xl_id, record[0]['identifiers'], record[1])
+        with self.subTest("Sierra bib identifier"):
+            sierra_id = {'identifierTypeId': '3187432f-9434-40a8-8782-35a111a1491e',
+                         'value': '0000001'}
+            self.assertIn(sierra_id, record[0]['identifiers'], record[1])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -169,6 +169,9 @@
                         <subfield code="a">{"@id":"8sl08b9l54wxk4m","modified":"2017-08-11T11:17:19+02:00","checksum":"86550674522"}</subfield>
                         <subfield code="2">librisxl</subfield>
                     </datafield>
+                     <datafield ind1=" " ind2=" " tag="907">
+                        <subfield code="a">.b00000011</subfield>
+                    </datafield>
                 </record>
             </metadata>
             <about>

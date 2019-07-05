@@ -151,7 +151,9 @@ class ChalmersMapper(DefaultMapper):
                  'value': self.get_source_id(marc_record)},
                 {'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
                  'value': (self.get_xl_id(marc_record) or
-                           marc_record['001'].format_field())}]
+                           marc_record['001'].format_field())},
+                {'identifierTypeId': '28c170c6-3194-4cff-bfb2-ee9525205cf7',
+                 'value': marc_record['001'].format_field()}]
 
     def get_xl_id(self, marc_record):
         for id_placeholder in marc_record.get_fields('887'):
