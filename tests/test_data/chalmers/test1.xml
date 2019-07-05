@@ -1,0 +1,92 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2018-11-15T10:20:51.299Z</responseDate>
+    <request verb="ListRecords" metadataPrefix="marcxml_includehold" from="2018-11-14T08:00:00Z" until="2018-11-14T20:00:00Z" x-withDeletedData="true" set="bib:Z">http://libris.kb.se/oaipmh/</request>
+    <ListRecords>
+        <record>
+            <header>
+                <identifier>https://libris.kb.se/08fdgmvvxpk8gt7t</identifier>
+                <datestamp>2018-11-14T09:45:53.097671Z</datestamp>
+                <setSpec>bib</setSpec>
+            </header>
+            <metadata>
+                <record xmlns="http://www.loc.gov/MARC21/slim" type="Bibliographic">
+                    <leader>     cam a       3  4500</leader>
+                    <controlfield tag="001">08fdgmvvxpk8gt7t</controlfield>
+                    <controlfield tag="003">OCoLC</controlfield>
+                    <controlfield tag="005">20181114044453.0</controlfield>
+                    <controlfield tag="008">150328s2016    xx |||||||||||000 ||eng|d</controlfield>
+                    <datafield ind1=" " ind2=" " tag="020">
+                        <subfield code="a">9781482249163</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="020">
+                        <subfield code="a">1482249162</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="040">
+                        <subfield code="a">Z</subfield>
+                        <subfield code="b">eng</subfield>
+                        <subfield code="c">BTCTA</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="041">
+                        <subfield code="a">eng</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2="0" tag="245">
+                        <subfield code="a">Modern Electrosynthetic Methods in Organic Chemistry</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="250">
+                        <subfield code="a">8. uppl.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="c">2016</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="b">CRC Pr I Llc,</subfield>
+                        <subfield code="c">2016.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="300">
+                        <subfield code="a">pages</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="599">
+                        <subfield code="a">Imported from: zcat.oclc.org:210/OLUCWorldCat (Do not remove)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="720">
+                        <subfield code="a">Marken, Frank</subfield>
+                        <subfield code="4">editor</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="720">
+                        <subfield code="a">Atobe, Mahito</subfield>
+                        <subfield code="4">editor</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="887">
+                        <subfield code="a">{"@id":"08fdgmvvxpk8gt7t","modified":"2018-11-14T04:44:53.0+01:00","checksum":"43279656644"}</subfield>
+                        <subfield code="2">librisxl</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="907">
+                        <subfield code="a">.b00000011</subfield>
+                    </datafield>
+                </record>
+            </metadata>
+            <about>
+                <holding sigel="Z" id="hrxwz6gvf86c3x01">
+                    <record xmlns="http://www.loc.gov/MARC21/slim" type="Holdings">
+                        <leader>     cx  a       |n 4500</leader>
+                        <controlfield tag="001">hrxwz6gvf86c3x01</controlfield>
+                        <controlfield tag="005">20181114105405.0</controlfield>
+                        <controlfield tag="008">181114||0000|||||000||||||000000</controlfield>
+                        <datafield ind1=" " ind2=" " tag="852">
+                            <subfield code="b">Z</subfield>
+                            <subfield code="h">Beställd / On order since 181115</subfield>
+                        </datafield>
+                        <datafield ind1=" " ind2=" " tag="887">
+                            <subfield code="a">{"@id":"hrxwz6gvf86c3x01","modified":"2018-11-14T10:54:05.542+01:00","checksum":"12247037321"}</subfield>
+                            <subfield code="2">librisxl</subfield>
+                        </datafield>
+                    </record>
+                </holding>
+            </about>
+            <about>
+                <agent name="Z"/>
+            </about>
+        </record>
+    </ListRecords>
+</OAI-PMH>

@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2019-05-22T09:33:32.293Z</responseDate>
+    <request verb="GetRecord" identifier="https://libris.kb.se/6qjz91jj2gpb788" metadataPrefix="marcxml">http://libris.kb.se/oaipmh/</request>
+    <GetRecord>
+        <record>
+            <header>
+                <identifier>https://libris.kb.se/6qjz91jj2gpb788</identifier>
+                <datestamp>2017-11-22T14:54:30Z</datestamp>
+                <setSpec>bib</setSpec>
+            </header>
+            <metadata>
+                <record xmlns="http://www.loc.gov/MARC21/slim" type="Bibliographic">
+                    <leader>     cam a       3  4500</leader>
+                    <controlfield tag="001">21964516</controlfield>
+                    <controlfield tag="005">20171122155430.0</controlfield>
+                    <controlfield tag="008">171122s1917    sw |||||||||||000 ||swe| </controlfield>
+                    <datafield ind1=" " ind2=" " tag="040">
+                        <subfield code="a">Sha</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="041">
+                        <subfield code="a">swe</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2="0" tag="245">
+                        <subfield code="a">Rysslands ekonomiska geografi /</subfield>
+                        <subfield code="c">av Sten De Geer.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="a">Karlstad :</subfield>
+                        <subfield code="b">Nya Wermlands-tidningens A-B.</subfield>
+                        <subfield code="c">1917</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="300">
+                        <subfield code="a">27 s.</subfield>
+                        <subfield code="b">ill.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="887">
+                        <subfield code="a">{"@id":"6qjz91jj2gpb788","modified":"2017-11-22T15:54:30+01:00","checksum":"19798595997"}</subfield>
+                        <subfield code="2">librisxl</subfield>
+                    </datafield>
+                </record>
+            </metadata>
+            <about>
+                <agent name="unknown"/>
+            </about>
+        </record>
+    </GetRecord>
+</OAI-PMH>

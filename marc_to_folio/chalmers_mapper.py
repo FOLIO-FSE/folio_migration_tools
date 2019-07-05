@@ -1,21 +1,27 @@
 '''Mapper for specific Chalmers requirements'''
 import uuid
+import re
 import json
 from jsonschema import validate
+from marc_to_folio.default_mapper import DefaultMapper
 
 
-class ChalmersMapper:
+class ChalmersMapper(DefaultMapper):
     '''Extra mapper specific for Chalmer requirements'''
     # TODO: Add Chalmers specific subjects
 
     def __init__(self, folio):
+        super().__init__(folio)
+        self.filter_last_isbd_chars = r'[,/]$'
         ''' Bootstrapping (loads data needed later in the script.)'''
         self.folio = folio
         self.holdings_map = {}
         self.id_map = {}
         self.holdings_schema = folio.get_holdings_schema()
 
-    def parse_bib(self, marc_record, folio_record):
+    def parse_bib(self, marc_record, record_source):
+
+        folio_record = super().parse_bib(marc_record, record_source)
         '''Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3'''
         s_or_p = self.s_or_p(marc_record)
@@ -58,6 +64,7 @@ class ChalmersMapper:
             else:
                 print("Holdings already saved {}".format(key))
             # TODO: check for unhandled 866s
+        return folio_record
 
     def save_source_record(self, marc_record):
         '''Saves the source Marc_record to the Source record Storage module'''
@@ -160,7 +167,17 @@ class ChalmersMapper:
 
     def get_source_id(self, marc_record):
         '''Gets the system Id from sierra'''
-        if marc_record['907']['a']:
-            return marc_record['907']['a'].replace('.b', '')[:-1]
-        else:
+        if '907' not in marc_record:
             raise ValueError("No Sierra record id found")
+        return marc_record['907']['a'].replace('.b', '')[:-1]
+
+    def get_title(self, marc_record):
+        if '245' not in marc_record:
+            return ''
+        '''Get title or raise exception.'''
+        title = " ".join(marc_record['245'].get_subfields(*list('abknp')))
+        if title:
+            return re.sub(self.filter_last_isbd_chars, str(''), title).strip()
+        else:
+            raise ValueError("No title for {}\n{}"
+                             .format(marc_record['001'], marc_record))

@@ -1,0 +1,414 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2018-11-15T13:05:26.003Z</responseDate>
+    <request verb="GetRecord" identifier="http://libris.kb.se/bib/19049386" metadataPrefix="marcxml">http://libris.kb.se/oaipmh/</request>
+    <ListRecords>
+        <record>
+            <header>
+                <identifier>https://libris.kb.se/6qjvp1hj3xk33vg</identifier>
+                <datestamp>2018-08-07T13:19:17.068Z</datestamp>
+                <setSpec>bib</setSpec>
+            </header>
+            <metadata>
+                <record xmlns="http://www.loc.gov/MARC21/slim" type="Bibliographic">
+                    <leader>     cam a       7  4500</leader>
+                    <controlfield tag="001">19049386</controlfield>
+                    <controlfield tag="005">20180807151917.0</controlfield>
+                    <controlfield tag="008">160107t20152016xxu|||||||||||000 ||eng| </controlfield>
+                    <datafield ind1=" " ind2=" " tag="020">
+                        <subfield code="a">9780071842013</subfield>
+                        <subfield code="q">(paperback)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="020">
+                        <subfield code="a">0071842012</subfield>
+                        <subfield code="q">(paperback)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="035">
+                        <subfield code="a">(OCoLC)ocn898162644</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="035">
+                        <subfield code="a">(OCoLC)898162644</subfield>
+                        <subfield code="z">(OCoLC)898087359</subfield>
+                        <subfield code="z">(OCoLC)930007675</subfield>
+                        <subfield code="z">(OCoLC)942940565</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="037">
+                        <subfield code="a">1399860</subfield>
+                        <subfield code="b">QBI</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="040">
+                        <subfield code="a">BTCTA</subfield>
+                        <subfield code="b">eng</subfield>
+                        <subfield code="c">BTCTA</subfield>
+                        <subfield code="d">YDXCP</subfield>
+                        <subfield code="d">BDX</subfield>
+                        <subfield code="d">JOZ</subfield>
+                        <subfield code="d">GK5</subfield>
+                        <subfield code="d">AZT</subfield>
+                        <subfield code="d">OCLCF</subfield>
+                        <subfield code="d">OCLCQ</subfield>
+                        <subfield code="d">QBX</subfield>
+                        <subfield code="d">JQM</subfield>
+                        <subfield code="d">DAC</subfield>
+                        <subfield code="d">OCLCQ</subfield>
+                        <subfield code="d">Z</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="041">
+                        <subfield code="a">eng</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="4" tag="050">
+                        <subfield code="a">TK7895.E42</subfield>
+                        <subfield code="b">C45 2016</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2="4" tag="082">
+                        <subfield code="a">004.165</subfield>
+                        <subfield code="b">C4412r 2015</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="084">
+                        <subfield code="a">Puaz Raspberry Pi</subfield>
+                        <subfield code="2">kssb/8</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="084">
+                        <subfield code="a">Puaz Java</subfield>
+                        <subfield code="2">kssb/8</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="100">
+                        <subfield code="a">Chin, Stephen,</subfield>
+                        <subfield code="d">1977-</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="111">
+                        <subfield code="a">Wolfcon</subfield>
+                        <subfield code="c">Durham</subfield>
+                        <subfield code="d">2018</subfield>
+                        <subfield code="e">Hackathon</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2="0" tag="245">
+                        <subfield code="a">Raspberry Pi with Java :</subfield>
+                        <subfield code="b">programming the internet of things (IoT) /</subfield>
+                        <subfield code="c">Stephen Chin with James L. Weaver.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="c">2015</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="a">New York :</subfield>
+                        <subfield code="b">McGraw-Hill Eucation,</subfield>
+                        <subfield code="c">2016</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="1" tag="264">
+                        <subfield code="a">New York :</subfield>
+                        <subfield code="b">McGraw-Hill Eucation,</subfield>
+                        <subfield code="c">[2015]</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="4" tag="264">
+                        <subfield code="c">©2016</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="300">
+                        <subfield code="a">xv, 315 pages, 5 unnumbered pages</subfield>
+                        <subfield code="b">illustrations, charts</subfield>
+                        <subfield code="c">24 cm.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="336">
+                        <subfield code="a">text</subfield>
+                        <subfield code="b">txt</subfield>
+                        <subfield code="2">rdacontent</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="337">
+                        <subfield code="a">unmediated</subfield>
+                        <subfield code="b">n</subfield>
+                        <subfield code="2">rdamedia</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="338">
+                        <subfield code="a">volume</subfield>
+                        <subfield code="b">nc</subfield>
+                        <subfield code="2">rdacarrier</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="340">
+                        <subfield code="b">24 cm.</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2=" " tag="490">
+                        <subfield code="a">Oracle Press book</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="490">
+                        <subfield code="a">McGraw-Hill technical education series</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="500">
+                        <subfield code="a">"Embedded application development for home and industry."--Cover.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="500">
+                        <subfield code="3">Cotsen copy:</subfield>
+                        <subfield code="a">Published plain red wrappers with first and last leaves pasted to interior wrappers.</subfield>
+                        <subfield code="5">NjP</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="501">
+                        <subfield code="a">With: Humiliations follow'd with deliverances. Boston : Printed by B. Green; J. Allen for S. Philips, 1697. Bound together subsequent to publication.</subfield>
+                        <subfield code="5">DLC</subfield>
+                    </datafield>
+
+                    <datafield ind1=" " ind2=" " tag="502">
+                        <subfield code="b">M. Eng.</subfield>
+                        <subfield code="c">University of Louisville</subfield>
+                        <subfield code="d">2013</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="504">
+                        <subfield code="a">Includes bibliographical references.</subfield>
+                        <subfield code="b">19</subfield>
+                    </datafield>
+                    <datafield ind1="8" ind2=" " tag="505">
+                        <subfield code="a">Baking Pi -- Your first Java project -- Binary timer -- IoT hat -- Line runner -- Tea station -- Autonomous drone -- Retro video game emulator -- Nighthacking RetroPi -- Index.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="506">
+                        <subfield code="a">Classified.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="507">
+                        <subfield code="b">Not drawn to scale.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="508">
+                        <subfield code="a">Film editor, Martyn Down ; consultant, Robert F. Miller.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="510">
+                        <subfield code="a">Index medicus,</subfield>
+                        <subfield code="x">0019-3879,</subfield>
+                        <subfield code="b">v1n1, 1984-</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="511">
+                        <subfield code="a">Marshall Moss, violin ; Neil Roberts, harpsichord.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="513">
+                        <subfield code="a">Quarterly technical progress report;</subfield>
+                        <subfield code="b">January-April 1, 1977.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="514">
+                        <subfield code="a">The map layer that displays Special Feature Symbols shows the approximate location of small (less than 2 acres in size) areas of soils...</subfield>
+                        <subfield code="d">Quarter quadrangles edited and joined internally and to surrounding quads. All known errors corrected.</subfield>
+                        <subfield code="e">The combination of spatial linework layer, Special Feature Symbols layer, and attribute data are considered a complete SSURGO dataset.</subfield>
+                        <subfield code="f">The actual on ground transition between the area represented by the Special Feature Symbol and the surrounding soils generally is very narrow with a well defined edge. The center of the feature area was compiled and digitized as a point. The same standards for compilation and digitizing used for line data were applied to the development of the special feature symbols layer.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="515">
+                        <subfield code="a">Designation New series dropped with volume 38, 1908.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="516">
+                        <subfield code="a">Numeric (Summary statistics).</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="518">
+                        <subfield code="3">3rd work</subfield>
+                        <subfield code="d">1981 November 25</subfield>
+                        <subfield code="p">Neues Gewandhaus, Leipzig.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="520">
+                        <subfield code="a">"Create embedded projects for personal and professional applications. Join the Internet of Things revolution with a project-based approach to building embedded Java applications. Written by recognized Java experts, this Oracle Press guide features a series of low-cost, DIY projects that gradually escalate your development skills. Learn how to set up and configure your Raspberry Pi, connect external hardware, work with the NetBeans IDE, and write and embed powerful Java applications. Raspberry Pi with Java: Programming the Internet of Things (IoT) covers hobbyist as well as professional home and industry applications."--Back cover.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="522">
+                        <subfield code="a">County-level data from Virginia.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="524">
+                        <subfield code="a">Dakota</subfield>
+                        <subfield code="2">usc</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="525">
+                        <subfield code="a">Supplements accompany some issues.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="530">
+                        <subfield code="a">Available on microfiche.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="532">
+                        <subfield code="a">Closed captioning in English.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="533">
+                        <subfield code="a">Electronic reproduction.</subfield>
+                        <subfield code="b">Cambridge, Mass.</subfield>
+                        <subfield code="c">Harvard College Library Digital Imaging Group,</subfield>
+                        <subfield code="d">2003</subfield>
+                        <subfield code="f">(Latin American pamphlet digital project at Harvard University ; 0005).</subfield>
+                        <subfield code="n">Electronic reproduction from microfilm master negative produced by Harvard College Library Imaging Services.</subfield>
+                        <subfield code="5">MH</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="534">
+                        <subfield code="p">Originally issued:</subfield>
+                        <subfield code="a">Frederick, John.</subfield>
+                        <subfield code="t">Luck.</subfield>
+                        <subfield code="n">Published in: Argosy, 1919.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="540">
+                        <subfield code="3">Recorded radio programs</subfield>
+                        <subfield code="a">There are copyright and contractual restrictions applying to the reproduction of most of these recordings;</subfield>
+                        <subfield code="b">Department of Treasury;</subfield>
+                        <subfield code="c">Treasury contracts 7-A130 through 39-A179.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="541">
+                        <subfield code="3">5 diaries</subfield>
+                        <subfield code="n">25</subfield>
+                        <subfield code="o">cubic feet;</subfield>
+                        <subfield code="a">Merriwether, Stuart;</subfield>
+                        <subfield code="b">458 Yonkers Road, Poughkeepsie, NY 12601;</subfield>
+                        <subfield code="c">Purchase at auction;</subfield>
+                        <subfield code="d">19810924;</subfield>
+                        <subfield code="e">81-325;</subfield>
+                        <subfield code="f">Jonathan P. Merriwether Estate;</subfield>
+                        <subfield code="h">$7,850.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="542">
+                        <subfield code="c">Duchess Foods</subfield>
+                        <subfield code="d">Government of Canada</subfield>
+                        <subfield code="e">Copyright Services, Library and Archives Canada, Ottawa, Ont.</subfield>
+                        <subfield code="f">Copyright 1963, par la Compagnie Canadienne de l'Exposition Universelle de 1967</subfield>
+                        <subfield code="g">1963</subfield>
+                        <subfield code="i">1963</subfield>
+                        <subfield code="k">Duchess Foods</subfield>
+                        <subfield code="l">under copyright protection through Dec. 31, 2013</subfield>
+                        <subfield code="m">published ǂn Copyright not renewable. This work will enter the public domain on Jan. 1, 2014</subfield>
+                        <subfield code="o">Nov. 2010</subfield>
+                        <subfield code="p">Canada</subfield>
+                        <subfield code="q">CaQMCCA</subfield>
+                        <subfield code="r">Canada</subfield>
+                        <subfield code="s">Copyright Services, Library and Archives Canada</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="544">
+                        <subfield code="3">Correspondence files;</subfield>
+                        <subfield code="a">Burt Barnes papers;</subfield>
+                        <subfield code="e">Also located at;</subfield>
+                        <subfield code="a">State Historical Society of Wisconsin.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="545">
+                        <subfield code="a">The Faribault State School and Hospital provided care, treatment, training, and a variety of other services to mentally retarded individuals and their families. It was operated by the State of Minnesota from 1879 to 1998 under different administrative structures and with different names. A more detailed history of the Hospital may be found at</subfield>
+                        <subfield code="u">http://www.mnhs.org/library/findaids/80881.html</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="546">
+                        <subfield code="3">Marriage certificate</subfield>
+                        <subfield code="a">German;</subfield>
+                        <subfield code="b">Fraktur.</subfield>
+                    </datafield>
+
+                    <datafield ind1=" " ind2=" " tag="550">
+                        <subfield code="a">Organ of the Potomac-side Naturalists' Club.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="552">
+                        <subfield code="a">NYROADS</subfield>
+                        <subfield code="b">The roads of New York, none</subfield>
+                        <subfield code="c">NYROADS_TYPE</subfield>
+                        <subfield code="d">The road types of New York, none</subfield>
+                        <subfield code="e">1</subfield>
+                        <subfield code="f">Interstate Highway, none</subfield>
+                        <subfield code="g">1-4</subfield>
+                        <subfield code="h">New York Road Types, none</subfield>
+                        <subfield code="k">1999010-19990201</subfield>
+                        <subfield code="l">unknown</subfield>
+                        <subfield code="n">irregular.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="555">
+                        <subfield code="3">Finding aid</subfield>
+                        <subfield code="b">Available in repository and on Internet;</subfield>
+                        <subfield code="c">Folder level control;</subfield>
+                        <subfield code="u">http://digital.library.pitt.edu/cgi-bin/f/findaid/findaid-idx?type=simple;c=ascead;view=text;subview=outline;didno=US-PPiU-ais196815</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="556">
+                        <subfield code="a">Disaster recovery : a model plan for libraries and information centers.</subfield>
+                        <subfield code="z">0959328971</subfield>
+                    </datafield>
+
+                    <datafield ind1=" " ind2=" " tag="561">
+                        <subfield code="3">Family correspondence</subfield>
+                        <subfield code="a">Originally collected by Henry Fitzhugh, willed to his wife Sarah Jackson Fitzhugh and given by her to her grandson Jonathan Irving Jackson, who collected some further information about his grandmother and the papers of their relatives and Cellarsville neighbors, the Arnold Fitzhugh's, before donating the materials along with his own papers as mayor of Cellarsville to the Historical Society.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="562">
+                        <subfield code="3">The best get better Sue Hershkowitz</subfield>
+                        <subfield code="e">2 copies;</subfield>
+                        <subfield code="d">Originally given orally as a keynote address.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="563">
+                        <subfield code="a">Gold-tooled morocco binding by Benjamin West, approximately 1840.</subfield>
+                        <subfield code="u">[URI]</subfield>
+                        <subfield code="5">Uk</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="565">
+                        <subfield code="3">Military petitioners files</subfield>
+                        <subfield code="a">11;</subfield>
+                        <subfield code="b">name;</subfield>
+                        <subfield code="b">address;</subfield>
+                        <subfield code="b">date of birth;</subfield>
+                        <subfield code="b">place of birth;</subfield>
+                        <subfield code="b">date of application;</subfield>
+                        <subfield code="b">dates of service;</subfield>
+                        <subfield code="b">branch of service;</subfield>
+                        <subfield code="b">date of induction;</subfield>
+                        <subfield code="b">rank;</subfield>
+                        <subfield code="b">latest occupation;</subfield>
+                        <subfield code="b">dependents;</subfield>
+                        <subfield code="c">pensioners;</subfield>
+                        <subfield code="d">Civil War (1861-1865) veterans</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="567">
+                        <subfield code="a">Continuous, deterministic, predictive.</subfield>
+                    </datafield>
+
+                    <datafield ind1=" " ind2=" " tag="580">
+                        <subfield code="a">Forms part of the Frances Benjamin Johnston Collection.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="583">
+                        <subfield code="3">scrapbooks (10 volumes)</subfield>
+                        <subfield code="n">1</subfield>
+                        <subfield code="o">cu. ft.</subfield>
+                        <subfield code="a">microfilm</subfield>
+                        <subfield code="c">198303</subfield>
+                        <subfield code="e">at completion of arrangement</subfield>
+                        <subfield code="f">1983 master film schedule</subfield>
+                        <subfield code="k">Thomas Swing</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="586">
+                        <subfield code="3">Tempest fantasy</subfield>
+                        <subfield code="a">Pulitzer prize in music, 2004</subfield>
+                    </datafield>
+
+                    <datafield ind1=" " ind2=" " tag="590">
+                        <subfield code="a">Labels reversed on library's copy.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="592">
+                        <subfield code="a">Copy in McGill Library's Osler Library of the History of Medicine, Robertson Collection copy 1: signature on title page, Jos. E. Dion, E.E.M., Montréal.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="599">
+                        <subfield code="a">c.2</subfield>
+                        <subfield code="b">2014</subfield>
+                        <subfield code="c">$25.00</subfield>
+                        <subfield code="d">pt</subfield>
+                        <subfield code="e">art dept.</subfield>
+                    </datafield>
+
+
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Raspberry Pi (Computer)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Java (Computer program language)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Internet of things.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="650">
+                        <subfield code="a">Computer programming.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="700">
+                        <subfield code="a">Weaver, James L.</subfield>
+                        <subfield code="e">contributor.</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2=" " tag="730">
+                        <subfield code="a">Oracle Press book.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="830">
+                        <subfield code="a">McGraw-Hill technical education series</subfield>
+                    </datafield>
+                    <datafield ind1="4" ind2="2" tag="856">
+                        <subfield code="u">http://www.MHProfessional.com</subfield>
+                        <subfield code="z">Code examples in the book are available for download.</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="887">
+                        <subfield code="a">{"@id":"6qjvp1hj3xk33vg","modified":"2018-08-07T15:19:17.068+02:00","checksum":"80358162479"}</subfield>
+                        <subfield code="2">librisxl</subfield>
+                    </datafield>
+                </record>
+            </metadata>
+            <about>
+                <agent name="Z"/>
+            </about>
+        </record>
+    </ListRecords>
+</OAI-PMH>
