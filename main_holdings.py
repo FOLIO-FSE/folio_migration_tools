@@ -2,7 +2,7 @@
 import argparse
 import json
 import pymarc
-from marc_to_folio.folio_client import FolioClient
+from folioclient.FolioClient import FolioClient
 from marc_to_folio.holdings_marc_processor import HoldingsMarcProcessor
 from marc_to_folio.holdings_default_mapper import HoldingsDefaultMapper
 
@@ -36,7 +36,10 @@ def main():
     print("\thold idMap will get stored at:\t", args.holdings_id_dict_path)
 
     print("File to process: {}".format(args.records_file))
-    folio_client = FolioClient(args)
+    folio_client = FolioClient(args.okapi_url,
+                               args.tenant_id,
+                               args.username,
+                               args.password)
     instance_id_map = {}
     with open(args.instance_id_dict_path, 'r') as json_file:
             instance_id_map = json.load(json_file)

@@ -5,7 +5,7 @@ from lxml import etree
 from collections import namedtuple
 from jsonschema import validate
 from marc_to_folio.chalmers_mapper import ChalmersMapper
-from marc_to_folio.folio_client import FolioClient
+from folioclient.FolioClient import FolioClient
 
 
 class TestChalmersMapper(unittest.TestCase):
@@ -14,7 +14,10 @@ class TestChalmersMapper(unittest.TestCase):
         with open('./tests/test_config.json') as settings_file:
             cls.config = json.load(settings_file,
                                    object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
-            cls.folio = FolioClient(cls.config)
+            cls.folio = FolioClient(cls.config.okapi_url,
+                                      cls.config.tenant_id,
+                                      cls.config.username,
+                                      cls.config.password)
             cls.mapper = ChalmersMapper(cls.folio)
             cls.instance_schema = cls.folio.get_instance_json_schema()
 

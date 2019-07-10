@@ -10,7 +10,7 @@ from marc_to_folio.chalmers_mapper import ChalmersMapper
 from marc_to_folio.five_collages_mapper import FiveCollagesMapper
 from marc_to_folio.alabama_mapper import AlabamaMapper
 from marc_to_folio.default_mapper import DefaultMapper
-from marc_to_folio.folio_client import FolioClient
+from folioclient.FolioClient import FolioClient
 from marc_to_folio.marc_processor import MarcProcessor
 
 
@@ -58,7 +58,10 @@ def main():
              if isfile(join(args.source_folder, f))]
     print("Files to process:")
     print(json.dumps(files, sort_keys=True, indent=4))
-    folio_client = FolioClient(args)
+    folio_client = FolioClient(args.okapi_url,
+                               args.tenant_id,
+                               args.username,
+                               args.password)
     default_mapper = DefaultMapper(folio_client)
     if args.chalmers_stuff:
         extra_mapper = ChalmersMapper(folio_client)

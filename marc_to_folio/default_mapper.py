@@ -276,7 +276,7 @@ class DefaultMapper:
                  '4': ''
                  }
         return roles[ind2]
-    
+
     def get_series(self, marc_record):
         '''Series'''
         tags = {'440': 'anpv',
