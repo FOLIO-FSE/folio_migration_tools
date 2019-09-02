@@ -1,8 +1,14 @@
 '''Mapper for specific Chalmers requirements'''
-import uuid
-import re
 import json
+import re
+import uuid
+from io import BytesIO, StringIO
+from itertools import islice
+
+import requests
 from jsonschema import validate
+from pymarc import JSONWriter, MARCReader, MARCWriter, Field
+
 from marc_to_folio.default_mapper import DefaultMapper
 
 
@@ -26,15 +32,15 @@ class ChalmersMapper(DefaultMapper):
         Community mapping suggestion: https://bit.ly/2S7Gyp3'''
         s_or_p = self.s_or_p(marc_record)
         save_source_record = folio_record['hrid'] == 'FOLIOstorage'
-        # if save_source_record:
-        #    del folio_record['hrid']
-        # TEMP SOLUTION B/C of duplicate Libris ids in sierra:
         del folio_record['hrid']
         if save_source_record:
-            self.save_source_record(marc_record)
-
+            folio_record['statisticalCodeIds'] = ['67e08311-90f8-4639-82cc-f7085c6511d8']
+        else:
+            folio_record['statisticalCodeIds'] = ['55326d56-4466-43d7-83ed-73ffd4d4221f']
+            # self.save_source_record(marc_record, folio_record['id'])
         self.id_map[self.get_source_id(marc_record)] = {
             'id': folio_record['id'],
+            'libris_001': marc_record['001'].format_field(),
             's_or_p': s_or_p}
         folio_record['identifiers'].extend(self.get_identifiers(marc_record))
         if s_or_p == 'p':  # create holdings record from sierra bib
@@ -66,10 +72,48 @@ class ChalmersMapper(DefaultMapper):
             # TODO: check for unhandled 866s
         return folio_record
 
-    def save_source_record(self, marc_record):
+    def save_source_record(self, marc_record, instance_id):
         '''Saves the source Marc_record to the Source record Storage module'''
-        # TODO: Monitor SRS development
         print("Will save {} to SRS".format(self.get_source_id(marc_record)))
+        marc_record.add_field(Field(tag='999',
+                                    indicators=['f', 'f'],
+                                    subfields=['i', instance_id]))
+        json_string = StringIO()
+        writer = JSONWriter(json_string)
+        writer.write(marc_record)
+        writer.close(close_fh=False)
+        a = {
+            "id": str(uuid.uuid4()),
+            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
+            "matchedProfileId": str(uuid.uuid4()),
+            "matchedId": str(uuid.uuid4()),
+            "generation": 1,
+            "recordType": "MARC",
+            "rawRecord": {
+                "id": str(uuid.uuid4()),
+                "content": marc_record.as_json()
+            },
+            "parsedRecord": {
+                "id": str(uuid.uuid4()),
+                "content": marc_record.as_json()
+            }
+        }
+        try:
+            self.post_new_source_storage_record(json.dumps(a))            
+        except Exception as ee:
+            # print(json.dumps(a))
+            print(ee)
+        
+    def post_new_source_storage_record(self, loan):
+        okapi_headers = self.folio.okapi_headers
+        host = self.folio.okapi_url
+        path = ("{}/source-storage/records".format(host))
+        response = requests.post(path,
+                                 data=loan,
+                                 headers=okapi_headers)
+        if response.status_code != 201:
+            print("Something went wrong. HTTP {}\nMessage:\t{}"
+                  .format(response.status_code, response.text))
 
     def remove_from_id_map(self, marc_record):
         ''' removes the ID from the map in case parsing failed'''
@@ -147,7 +191,7 @@ class ChalmersMapper(DefaultMapper):
 
     def get_identifiers(self, marc_record):
         '''Adds sierra Id and Libris ids. If no modern Libris ID, take 001'''
-        return [{'identifierTypeId': '3187432f-9434-40a8-8782-35a111a1491e',
+        return [{'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
                  'value': self.get_source_id(marc_record)},
                 {'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
                  'value': (self.get_xl_id(marc_record) or
@@ -183,3 +227,29 @@ class ChalmersMapper(DefaultMapper):
         else:
             raise ValueError("No title for {}\n{}"
                              .format(marc_record['001'], marc_record))
+
+    def get_subjects(self, marc_record):
+            ''' Get subject headings from the marc record.'''
+            tags = {'600': 'abcdq',
+                    '610': 'abcdn',
+                    '611': 'acde',
+                    '630': 'adfhklst',
+                    '647': 'acdvxyz',
+                    '648': 'avxyz',
+                    '650': 'abcdvxyz',
+                    '651': 'avxyz',
+                    '653': 'a',
+                    '655': 'abcvxyz'}
+            non_mapped_tags = {
+                '654': '',
+                '656': '',
+                '657': '',
+                '658': '',
+                '662': ''}
+            for tag in list(non_mapped_tags.keys()):
+                if any(marc_record.get_fields(tag)):
+                    print("CM: Unmapped Subject field {} in {}"
+                          .format(tag, marc_record['001']))
+            for key, value in tags.items():
+                for field in marc_record.get_fields(key):
+                    yield " ".join(field.get_subfields(*value)).strip()

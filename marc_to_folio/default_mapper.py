@@ -45,6 +45,7 @@ class DefaultMapper:
             'publication': list((self.get_publication(marc_record))),
             # TODO: add instanceFormatId
             'instanceFormatIds': [self.folio.instance_formats[0]['id']],
+            # TODO: Mode of issuance
             # TODO: add physical description
             'physicalDescriptions': list(self.get_physical_desc(marc_record)),
             'languages': self.get_languages(marc_record),
@@ -74,6 +75,8 @@ class DefaultMapper:
     def get_index_title(self, marc_record):
         # TODO: fixa!
         '''Returns the index title according to the rules'''
+        if '245' not in marc_record:
+            return ''
         field = marc_record['245']
         title_string = " ".join(field.get_subfields('a', 'n', 'p'))
         ind2 = field.indicator2
@@ -135,7 +138,13 @@ class DefaultMapper:
                      '599': 'abcde'}
         for key, value in note_tags.items():
             for field in marc_record.get_fields(key):
-                yield " ".join(field.get_subfields(*value))
+                yield {
+                    # TODO: add logic for noteTypeId
+                    "instanceNoteTypeId": "9d4fcaa1-b1a5-48ea-b0d1-986839737ad2",
+                    "note": " ".join(field.get_subfields(*value)),
+                    # TODO: Map staffOnly according to field
+                    "staffOnly": False
+                } 
 
     def get_title(self, marc_record):
         if '245' not in marc_record:
@@ -229,23 +238,23 @@ class DefaultMapper:
         '''Finds all Alternative titles.'''
         fields = {'130': [next(f['id'] for f
                                in self.folio.alt_title_types
-                               if f['name'] == 'catch_all'),
+                               if f['name'] == 'No type specified'),
                           list('anpdfghklmorst')],
                   '222': [next(f['id'] for f
                                in self.folio.alt_title_types
-                               if f['name'] == 'catch_all'),
+                               if f['name'] == 'No type specified'),
                           list('anpdfghklmorst')],
                   '240': [next(f['id'] for f
                                in self.folio.alt_title_types
-                               if f['name'] == 'catch_all'),
+                               if f['name'] == 'No type specified'),
                           list('anpdfghklmors')],
                   '246': [next(f['id'] for f
                                in self.folio.alt_title_types
-                               if f['name'] == 'catch_all'),
+                               if f['name'] == 'No type specified'),
                           list('anpbfgh5')],
                   '247': [next(f['id'] for f
                                in self.folio.alt_title_types
-                               if f['name'] == 'catch_all'),
+                               if f['name'] == 'No type specified'),
                           list('anpbfghx')]}
         for field_tag in fields:
             for field in marc_record.get_fields(field_tag):
@@ -275,7 +284,9 @@ class DefaultMapper:
                  '3': 'Manufacturer',
                  '4': ''
                  }
-        return roles[ind2]
+        if ind2.strip() not in roles.keys():
+            return roles['4']
+        return roles[ind2.strip()]
 
     def get_series(self, marc_record):
         '''Series'''
@@ -294,12 +305,26 @@ class DefaultMapper:
         languages = set()
         skip_languages = ['###', 'zxx']
         lang_fields = marc_record.get_fields('041')
-        if len(lang_fields) > 0:
+        if len(lang_fields) > 0 :
             subfields = 'abdefghjkmn'
             for lang_tag in lang_fields:
-                languages.update(lang_tag.get_subfields(*list(subfields)))
-            languages = set(self.filter_langs(filter(None, languages), skip_languages))
-        else:
+                lang_codes = lang_tag.get_subfields(*list(subfields))
+                for lang_code in lang_codes:
+                    langlength = len(lang_code.replace(" ", ""))
+                    if langlength == 3:
+                        languages.add(lang_code.replace(" ", ""))
+                    elif langlength > 3 and langlength % 3 == 0:
+                        lc = lang_code.replace(" ", "")
+                        new_codes = [lc[i:i+3]
+                                     for i in range(0, len(lc), 3)]
+                        languages.update(new_codes)
+                        languages.discard(lang_code)
+
+                languages.update()
+            languages = set(self.filter_langs(filter(None, languages),
+                                              skip_languages,
+                                              marc_record['001'].format_field()))
+        elif '008' in marc_record and len(marc_record['008'].data) > 38:
             from_008 = ''.join((marc_record['008'].data[35:38]))
             if from_008:
                 languages.add(from_008)
@@ -317,18 +342,24 @@ class DefaultMapper:
 
     def get_classifications(self, marc_record):
         '''Collects Classes and adds the appropriate metadata'''
-        get_class_type_id = lambda x: next(f['id'] for f
+        get_class_type_id = lambda x: next((f['id'] for f
                                            in self.folio.class_types
-                                           if f['name'] == x)
+                                           if f['name'] == x), None)
         fields = {'050': ['LC', 'ab'],
                   '082': ['Dewey', 'a'],
-                  '086': ['catch_all', 'a'],
-                  '090': ['catch_all', 'ab']
+                  '086': ['GDC', 'a'],
+                  '090': ['LC', 'ab']
                   }
         for field_tag in fields:
             for field in marc_record.get_fields(field_tag):
-                yield {'classificationTypeId': get_class_type_id(fields[field_tag][0]),
-                       'classificationNumber': " ".join(field.get_subfields(*fields[field_tag][1]))}
+                class_type = get_class_type_id(fields[field_tag][0])
+                if class_type:
+                    yield {'classificationTypeId': get_class_type_id(fields[field_tag][0]),
+                           'classificationNumber': " ".join(field.get_subfields(*fields[field_tag][1]))}
+                else:
+                    print("No classification type for {} ({}) for {}."
+                          .format(field.tag, field.format_field(),
+                                  marc_record['001'].format_field(),))
 
     def get_identifiers(self, marc_record):
         '''Collects Identifiers and adds the appropriate metadata'''
@@ -363,9 +394,15 @@ class DefaultMapper:
                     yield {'identifierTypeId': fields[field_tag][0],
                            'value': subfield}
 
-    def filter_langs(self, language_values, forbidden_values):
+    def filter_langs(self, language_values, forbidden_values, legacyid):
         for language_value in language_values:
             if language_value in self.language_codes and language_value not in forbidden_values:
                 yield language_value
             else:
-                print('Illegal language code: {}'.format(language_value))
+                if language_value == 'jap':
+                    yield 'jpn'
+                elif language_value == 'fra':
+                    yield 'fre'
+                else:
+                    print('Illegal language code: {} for {}'
+                    .format(language_value, legacyid))

@@ -11,6 +11,7 @@ from marc_to_folio.items_processor import ItemsProcessor
 
 def main():
     '''Main method. Magic starts here.'''
+    # TODO: räknare på allt!
     parser = argparse.ArgumentParser()
     parser.add_argument("records_file", help="path to marc records folder")
     parser.add_argument("result_path", help="path to Instance results file")
@@ -25,6 +26,8 @@ def main():
     parser.add_argument("-postgres_dump", "-p",
                         help=("results will be written out for Postgres"
                               "ingestion. Default is JSON"),
+                        action="store_true")
+    parser.add_argument("-validate", "-v", help=("Validate JSON data against JSON Schema"),
                         action="store_true")
     args = parser.parse_args()
     print('\tresults file:\t', args.result_path)

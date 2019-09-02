@@ -43,7 +43,7 @@ class ItemsDefaultMapper:
             # 'circulationNotes': [{'noteType': 'Check in',
             #                     'note': '',
             #                     'staffOnly': False}],
-            'status': [{'name': 'Available'}],
+            'status': {'name': 'Available'},
             'materialTypeId': '6a63d094-191c-4535-bf23-a1a4cf387759',
             'permanentLoanTypeId': '76ed1db8-a995-46bc-bed2-f9b21f8b9358',
             # 'temporaryLoanTypeId': '',
