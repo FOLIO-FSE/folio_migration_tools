@@ -34,15 +34,17 @@ class ChalmersMapper(DefaultMapper):
         save_source_record = folio_record['hrid'] == 'FOLIOstorage'
         del folio_record['hrid']
         if save_source_record:
-            folio_record['statisticalCodeIds'] = ['67e08311-90f8-4639-82cc-f7085c6511d8']
+            folio_record['statisticalCodeIds'] = [
+                '67e08311-90f8-4639-82cc-f7085c6511d8']
         else:
-            folio_record['statisticalCodeIds'] = ['55326d56-4466-43d7-83ed-73ffd4d4221f']
+            folio_record['statisticalCodeIds'] = [
+                '55326d56-4466-43d7-83ed-73ffd4d4221f']
             # self.save_source_record(marc_record, folio_record['id'])
         self.id_map[self.get_source_id(marc_record)] = {
             'id': folio_record['id'],
             'libris_001': marc_record['001'].format_field(),
             's_or_p': s_or_p}
-        folio_record['identifiers'].extend(self.get_identifiers(marc_record))
+        folio_record['identifiers'] = self.get_identifiers(marc_record)
         if s_or_p == 'p':  # create holdings record from sierra bib
             if '852' not in marc_record:
                 print(marc_record)
@@ -99,11 +101,11 @@ class ChalmersMapper(DefaultMapper):
             }
         }
         try:
-            self.post_new_source_storage_record(json.dumps(a))            
+            self.post_new_source_storage_record(json.dumps(a))
         except Exception as ee:
             # print(json.dumps(a))
             print(ee)
-        
+
     def post_new_source_storage_record(self, loan):
         okapi_headers = self.folio.okapi_headers
         host = self.folio.okapi_url
@@ -190,14 +192,22 @@ class ChalmersMapper(DefaultMapper):
                               .format(self.get_source_id(marc_record)))
 
     def get_identifiers(self, marc_record):
+        identifiers = list(super().get_identifiers(marc_record))
+
         '''Adds sierra Id and Libris ids. If no modern Libris ID, take 001'''
-        return [{'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
-                 'value': self.get_source_id(marc_record)},
-                {'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
-                 'value': (self.get_xl_id(marc_record) or
-                           marc_record['001'].format_field())},
-                {'identifierTypeId': '28c170c6-3194-4cff-bfb2-ee9525205cf7',
-                 'value': marc_record['001'].format_field()}]
+        # SierraId
+        identifiers.append({'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
+                            'value': self.get_source_id(marc_record)})
+        # "LIBRIS XL ID"
+        identifiers.append({'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
+                            'value': (self.get_xl_id_long(marc_record))})
+        # "LIBRIS BIB ID"
+        identifiers.append({'identifierTypeId': '28c170c6-3194-4cff-bfb2-ee9525205cf7',
+                            'value': marc_record['001'].format_field()})
+        # LIBRIS XL ID (kort)
+        identifiers.append({'identifierTypeId': '4f3c4c2c-8b04-4b54-9129-f732f1eb3e14',
+                            'value': self.get_xl_id(marc_record)})
+        return list(identifiers)
 
     def get_xl_id(self, marc_record):
         for id_placeholder in marc_record.get_fields('887'):
@@ -206,14 +216,26 @@ class ChalmersMapper(DefaultMapper):
                 a = id_placeholder['a']
                 jstring = a.replace('{lrub}', '{')
                 jstring = jstring.replace('{lcub}', '}')
-                xl_id = json.loads(jstring)['@id']
-                print(xl_id)
+                xl_id = json.loads(jstring)['@id']                
                 return xl_id
         return ''
 
+    def get_xl_id_long(self, marc_record):
+        short_id = self.get_xl_id(marc_record)
+        if short_id != '':
+            return "https://libris.kb.se/{}".format(short_id)
+        f001 = marc_record['001'].format_field()
+        if f001.isnumeric():
+            return "https://libris.kb.se/bib/{}".format(f001)
+        else:
+            return "https://libris.kb.se/{}".format(f001)
+        raise ValueError('No libris id parsed!')
+
     def get_source_id(self, marc_record):
         '''Gets the system Id from sierra'''
+
         if '907' not in marc_record:
+            print(marc_record)
             raise ValueError("No Sierra record id found")
         return marc_record['907']['a'].replace('.b', '')[:-1]
 
@@ -229,27 +251,27 @@ class ChalmersMapper(DefaultMapper):
                              .format(marc_record['001'], marc_record))
 
     def get_subjects(self, marc_record):
-            ''' Get subject headings from the marc record.'''
-            tags = {'600': 'abcdq',
-                    '610': 'abcdn',
-                    '611': 'acde',
-                    '630': 'adfhklst',
-                    '647': 'acdvxyz',
-                    '648': 'avxyz',
-                    '650': 'abcdvxyz',
-                    '651': 'avxyz',
-                    '653': 'a',
-                    '655': 'abcvxyz'}
-            non_mapped_tags = {
-                '654': '',
-                '656': '',
-                '657': '',
-                '658': '',
-                '662': ''}
-            for tag in list(non_mapped_tags.keys()):
-                if any(marc_record.get_fields(tag)):
-                    print("CM: Unmapped Subject field {} in {}"
-                          .format(tag, marc_record['001']))
-            for key, value in tags.items():
-                for field in marc_record.get_fields(key):
-                    yield " ".join(field.get_subfields(*value)).strip()
+        ''' Get subject headings from the marc record.'''
+        tags = {'600': 'abcdq',
+                '610': 'abcdn',
+                '611': 'acde',
+                '630': 'adfhklst',
+                '647': 'acdvxyz',
+                '648': 'avxyz',
+                '650': 'abcdvxyz',
+                '651': 'avxyz',
+                '653': 'a',
+                '655': 'abcvxyz'}
+        non_mapped_tags = {
+            '654': '',
+            '656': '',
+            '657': '',
+            '658': '',
+            '662': ''}
+        for tag in list(non_mapped_tags.keys()):
+            if any(marc_record.get_fields(tag)):
+                print("CM: Unmapped Subject field {} in {}"
+                      .format(tag, marc_record['001']))
+        for key, value in tags.items():
+            for field in marc_record.get_fields(key):
+                yield " ".join(field.get_subfields(*value)).strip()

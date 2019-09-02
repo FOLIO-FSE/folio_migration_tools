@@ -28,7 +28,8 @@ class TestDefaultMapper(unittest.TestCase):
         file_path = r'./tests/test_data/default/{}'.format(file_name)
         record = pymarc.parse_xml_to_array(file_path)[0]
         result = self.mapper.parse_bib(record, "source")
-        # validate(result, self.instance_schema)
+        if self.config.validate_json_schema:
+            validate(result, self.instance_schema)
         root = etree.parse(file_path)
         data = str('')
         for element in root.xpath(xpath, namespaces=ns):
@@ -170,30 +171,54 @@ class TestDefaultMapper(unittest.TestCase):
         record = self.default_map('test_identifiers.xml', xpath)
         m = message + '\n' + record[1]
         # TODO: Test identifier type id in additional mappers
-        self.assertIn('2008011507', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('9780307264787', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('9780071842013', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('0071842012', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('9780307264755', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('9780307264766', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('9780307264777', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('0376-4583', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('0027-3475', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('0027-3476', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('1234-1232', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('1560-15605', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('0046-2254', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('7822183031', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('M011234564', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('PJC 222013', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('(OCoLC)898162644', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('(OCoLC)898087359', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('(OCoLC)930007675', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('(OCoLC)942940565', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('0027-3473', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('62874189', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('244170452', (i['value'] for i in record[0]['identifiers']), m)
-        self.assertIn('677051564', (i['value'] for i in record[0]['identifiers']), m)
+        self.assertIn('2008011507', (i['value']
+                                     for i in record[0]['identifiers']), m)
+        self.assertIn('9780307264787', (i['value']
+                                        for i in record[0]['identifiers']), m)
+        self.assertIn('9780071842013', (i['value']
+                                        for i in record[0]['identifiers']), m)
+        self.assertIn('0071842012', (i['value']
+                                     for i in record[0]['identifiers']), m)
+        self.assertIn('9780307264755', (i['value']
+                                        for i in record[0]['identifiers']), m)
+        self.assertIn('9780307264766', (i['value']
+                                        for i in record[0]['identifiers']), m)
+        self.assertIn('9780307264777', (i['value']
+                                        for i in record[0]['identifiers']), m)
+        self.assertIn('0376-4583', (i['value']
+                                    for i in record[0]['identifiers']), m)
+        self.assertIn('0027-3475', (i['value']
+                                    for i in record[0]['identifiers']), m)
+        self.assertIn('0027-3476', (i['value']
+                                    for i in record[0]['identifiers']), m)
+        self.assertIn('1234-1232', (i['value']
+                                    for i in record[0]['identifiers']), m)
+        self.assertIn('1560-15605', (i['value']
+                                     for i in record[0]['identifiers']), m)
+        self.assertIn('0046-2254', (i['value']
+                                    for i in record[0]['identifiers']), m)
+        self.assertIn('7822183031', (i['value']
+                                     for i in record[0]['identifiers']), m)
+        self.assertIn('M011234564', (i['value']
+                                     for i in record[0]['identifiers']), m)
+        self.assertIn('PJC 222013', (i['value']
+                                     for i in record[0]['identifiers']), m)
+        self.assertIn('(OCoLC)898162644', (i['value']
+                                           for i in record[0]['identifiers']), m)
+        self.assertIn('(OCoLC)898087359', (i['value']
+                                           for i in record[0]['identifiers']), m)
+        self.assertIn('(OCoLC)930007675', (i['value']
+                                           for i in record[0]['identifiers']), m)
+        self.assertIn('(OCoLC)942940565', (i['value']
+                                           for i in record[0]['identifiers']), m)
+        self.assertIn('0027-3473', (i['value']
+                                    for i in record[0]['identifiers']), m)
+        self.assertIn('62874189', (i['value']
+                                   for i in record[0]['identifiers']), m)
+        self.assertIn('244170452', (i['value']
+                                    for i in record[0]['identifiers']), m)
+        self.assertIn('677051564', (i['value']
+                                    for i in record[0]['identifiers']), m)
 
     def test_series(self):
         message = 'Should add series statements (800, 810, 811, 830, 440, 490) to series list'
