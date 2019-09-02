@@ -9,6 +9,7 @@ from marc_to_folio.holdings_default_mapper import HoldingsDefaultMapper
 
 def main():
     '''Main method. Magic starts here.'''
+    # TODO: räknare på allt!
     parser = argparse.ArgumentParser()
     parser.add_argument("records_file", help="path to marc records folder")
     parser.add_argument("result_path", help="path to Instance results file")
@@ -25,6 +26,8 @@ def main():
                               "ingestion. Default is JSON"),
                         action="store_true")
     parser.add_argument("-marcxml", "-x", help=("DATA is in MARCXML format"),
+                        action="store_true")
+    parser.add_argument("-validate", "-v", help=("Validate JSON data against JSON Schema"),
                         action="store_true")
     args = parser.parse_args()
     print('\tresults file:\t', args.result_path)
@@ -48,7 +51,7 @@ def main():
     print("Starting")
     print("Rec./s\t\tTot. recs\t\t")
 
-    with open(args.result_path, 'w+') as results_file:
+    with open(args.result_path + '/folio_holdings.json', 'w+') as results_file:
         processor = HoldingsMarcProcessor(default_mapper,
                                           folio_client,
                                           results_file, args)
