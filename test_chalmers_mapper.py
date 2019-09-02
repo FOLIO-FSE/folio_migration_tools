@@ -15,9 +15,9 @@ class TestChalmersMapper(unittest.TestCase):
             cls.config = json.load(settings_file,
                                    object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
             cls.folio = FolioClient(cls.config.okapi_url,
-                                      cls.config.tenant_id,
-                                      cls.config.username,
-                                      cls.config.password)
+                                    cls.config.tenant_id,
+                                    cls.config.username,
+                                    cls.config.password)
             cls.mapper = ChalmersMapper(cls.folio)
             cls.instance_schema = cls.folio.get_instance_json_schema()
 
@@ -64,9 +64,10 @@ class TestChalmersMapper(unittest.TestCase):
                      'value': '8sl08b9l54wxk4m'}
             self.assertIn(xl_id, record[0]['identifiers'], record[1])
         with self.subTest("Sierra bib identifier"):
-            sierra_id = {'identifierTypeId': '3187432f-9434-40a8-8782-35a111a1491e',
+            sierra_id = {'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
                          'value': '0000001'}
             self.assertIn(sierra_id, record[0]['identifiers'], record[1])
+    
 
 
 if __name__ == '__main__':
