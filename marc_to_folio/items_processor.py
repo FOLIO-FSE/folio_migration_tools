@@ -23,8 +23,8 @@ class ItemsProcessor():
             self.records_count += 1
             # Transform the item to a FOLIO record
             folio_rec = self.default_mapper.parse_item(record)
-            # validate record against json schema
-            validate(folio_rec, self.item_schema)
+            if self.args.validate:
+                validate(folio_rec, self.item_schema)
             # write record to file
             write_to_file(self.results_file,
                           self.args.postgres_dump,

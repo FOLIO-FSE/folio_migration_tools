@@ -23,8 +23,8 @@ class HoldingsMarcProcessor():
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.default_mapper.parse_hold(marc_record)
-            # validate record against json schema
-            validate(folio_rec, self.holdings_schema)
+            if self.args.validate:
+                validate(folio_rec, self.holdings_schema)
             # write record to file
             write_to_file(self.results_file,
                           self.args.postgres_dump,
