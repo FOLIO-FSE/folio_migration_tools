@@ -8,13 +8,17 @@ class MarcProcessor():
     '''the processor'''
     def __init__(self, mapper, folio_client,
                  results_file, args):
-        self.holdings_count = 0
         self.results_folder = args.results_folder
         self.results_file = results_file
         self.instance_id_map_path = self.results_folder + '/instance_id_map.json'
         self.holdings_path = self.results_folder + '/folio_holdings.json'
         self.instance_schema = folio_client.get_instance_json_schema()
-        self.records_count = 0
+        self.stats = {
+            'bibs_processed': 0,
+            'failed_bibs': 0,
+            'successful_bibs': 0,
+            'holdings': 0
+        }
         self.mapper = mapper
         self.args = args
         self.start = time.time()
@@ -23,9 +27,7 @@ class MarcProcessor():
         '''processes a marc record and saves it'''
         folio_rec = None
         try:
-            self.records_count += 1
-            if marc_record['004']:
-                self.holdings_count += 1
+            self.stats['bibs_processed'] += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_bib(marc_record,
                                               self.args.data_source)
@@ -36,12 +38,14 @@ class MarcProcessor():
                           self.args.postgres_dump,
                           folio_rec)
             # Print progress
-            if self.records_count % 10000 == 0:
-                elapsed = self.records_count/(time.time() - self.start)
+            if self.stats['bibs_processed'] % 10000 == 0:
+                elapsed = self.stats['bibs_processed']/(time.time() - self.start)
                 elapsed_formatted = '{0:.3g}'.format(elapsed)
-                print("{}\t\t{}".format(elapsed_formatted, self.records_count),
+                print("{}\t\t{}".format(elapsed, self.stats['bibs_processed']),
                       flush=True)
+            self.stats['successful_bibs'] += 1
         except ValueError as value_error:
+            self.stats['failed_bibs'] += 1
             print(marc_record)
             print(value_error)
             print("Removing record from idMap")
@@ -51,9 +55,11 @@ class MarcProcessor():
                 self.mapper.remove_from_id_map(marc_record)
             # raise value_error
         except ValidationError as validation_error:
+            self.stats['failed_bibs'] += 1
             print("Error validating record. Halting...")
             raise validation_error
         except Exception as inst:
+            self.stats['failed_bibs'] += 1
             print(type(inst))
             print(inst.args)
             print(inst)
@@ -64,10 +70,10 @@ class MarcProcessor():
 
     def wrap_up(self):
         '''Finalizes the mapping by writing things out.'''
-        print("Done. # of MARC records processed:\t{}".format(self.records_count))
+        print(self.stats)
         print("Saving map of old and new IDs")
         print("Number of Instances in map:\t{}"
-        .format(len(self.mapper.id_map)))
+              .format(len(self.mapper.id_map)))
         if self.mapper.id_map:
             with open(self.instance_id_map_path, 'w+') as id_map_file:
                 json.dump(self.mapper.id_map, id_map_file,

@@ -65,7 +65,7 @@ class TestChalmersMapper(unittest.TestCase):
         sierra_id = {'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
                      'value': '0000001'}
         self.assertIn(sierra_id, record[0]['identifiers'], record[1])
-    
+
     def test_old_bib_ids(self):
         message = 'Should fetch Libris Bib id,'
         xpath = "//marc:datafield[@tag='001' or @tag='907' or @tag='887']"
@@ -79,6 +79,27 @@ class TestChalmersMapper(unittest.TestCase):
         sierra_id = {'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
                      'value': '0000001'}
         self.assertIn(sierra_id, record[0]['identifiers'], record[1])
+
+    def test_permanent_location_two_holdings(self):
+        message = 'PERMANENT LOCATION, TWO HOLDINGS'
+        xpath = "//marc:datafield[@tag='001' or @tag='866' or @tag='852']"
+        self.mapper.holdings_map = {}
+        record = self.do_map('multiple_852s.xml', xpath, message)
+        print(self.mapper.holdings_map)
+        self.assertEqual(2, len(self.mapper.holdings_map))
+        permanenent_loc_ids = [h["permanentLocationId"]
+                               for h in self.mapper.holdings_map.values()]
+        callNumbers = [h["callNumber"]
+                       for h in self.mapper.holdings_map.values()]
+        holdingsStatements = [h["holdingsStatements"][0]
+                              for h in self.mapper.holdings_map.values()]
+        self.assertIn("e2e4b00a-fbe7-4c2a-ac50-361062949d56", permanenent_loc_ids)
+        self.assertIn("921e0666-fdd3-4e54-a4c4-a20d8d2333fd", permanenent_loc_ids)
+        self.assertIn("Vp", callNumbers)
+        self.assertIn("Sjöfartstidskrifter", callNumbers)
+        self.assertIn({'statement': 'Årg. 24-40 (1986-2002)', 'note': ''}, holdingsStatements)
+        # self.assertIn("", holdingsStatements)
+        
 
     def test_identifiers(self):
         message = 'Should add identifiers: 010, 019, 020, 022, 024, 028, 035 and local IDs'

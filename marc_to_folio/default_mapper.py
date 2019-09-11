@@ -403,6 +403,10 @@ class DefaultMapper:
                     yield 'jpn'
                 elif language_value == 'fra':
                     yield 'fre'
+                elif language_value == 'sve':
+                    yield 'swe'
+                elif language_value == 'tys':
+                    yield 'ger'
                 else:
                     print('Illegal language code: {} for {}'
                     .format(language_value, legacyid))

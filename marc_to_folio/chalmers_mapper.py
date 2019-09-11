@@ -26,7 +26,6 @@ class ChalmersMapper(DefaultMapper):
         self.holdings_schema = folio.get_holdings_schema()
 
     def parse_bib(self, marc_record, record_source):
-
         folio_record = super().parse_bib(marc_record, record_source)
         '''Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3'''
@@ -37,8 +36,7 @@ class ChalmersMapper(DefaultMapper):
             folio_record['statisticalCodeIds'] = [
                 '67e08311-90f8-4639-82cc-f7085c6511d8']
         else:
-            folio_record['statisticalCodeIds'] = [
-                '55326d56-4466-43d7-83ed-73ffd4d4221f']
+            folio_record['statisticalCodeIds'] = ['55326d56-4466-43d7-83ed-73ffd4d4221f']
             # self.save_source_record(marc_record, folio_record['id'])
         self.id_map[self.get_source_id(marc_record)] = {
             'id': folio_record['id'],
@@ -61,14 +59,14 @@ class ChalmersMapper(DefaultMapper):
                          in marc_record.get_fields('866')
                          if '5' in f866 and
                          # ('a' in f866 or 'z' in f866) and
-                         (f866['5']).upper() == f852['5']]
+                         (f866['5']).upper() == f852['5'].upper()]
                 holding = self.create_holding([f852, f866s],
                                               folio_record['id'],
                                               self.get_source_id(marc_record))
                 key = self.to_key(holding)
-            if key not in self.holdings_map:
-                validate(holding, self.holdings_schema)
-                self.holdings_map[self.to_key(holding)] = holding
+                if key not in self.holdings_map:
+                    validate(holding, self.holdings_schema)
+                    self.holdings_map[self.to_key(holding)] = holding
             else:
                 print("Holdings already saved {}".format(key))
             # TODO: check for unhandled 866s
@@ -168,10 +166,11 @@ class ChalmersMapper(DefaultMapper):
 
     def loc_id_from_sigel(self, sigel, source_id):
         # TODO: replace with proper map file
-        locs = {'enll': 'af39ff72-b375-43e9-926d-283a445633d4',
-                'z': 'a67560fb-ec45-4ee4-8b47-4b2498449eae',
-                'za': '9fd580d6-43e3-4e0e-8e70-089536e3ea73',
-                'zl': '3187484c-877a-4b25-9c48-f80edb3e239f'}
+        locs = {'enll': '553ffd9b-26b5-4aa6-a426-187f8bbb77a3',
+                'z': '921e0666-fdd3-4e54-a4c4-a20d8d2333fd',
+                'za': 'ddbeedde-a75a-4d76-bc16-43b292910ca9',
+                'zl': 'e2e4b00a-fbe7-4c2a-ac50-361062949d56'}                
+    
         if sigel and sigel.lower() in locs:
             return locs[sigel.lower()]
         else:
@@ -210,6 +209,9 @@ class ChalmersMapper(DefaultMapper):
         return list(identifiers)
 
     def get_xl_id(self, marc_record):
+        f001 = str(marc_record['001'].format_field())
+        if '887' not in marc_record and not f001.isnumeric():
+            return f001
         for id_placeholder in marc_record.get_fields('887'):
             if '5' not in id_placeholder:
                 # Get that broken libris holdings id out of there!
