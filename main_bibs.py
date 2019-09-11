@@ -6,11 +6,11 @@ from os import listdir
 from os.path import isfile, join
 
 import pymarc
-from marc_to_folio import ChalmersMapper
-from marc_to_folio import FiveCollagesMapper
-from marc_to_folio import AlabamaMapper
-from marc_to_folio import DefaultMapper
 from folioclient.FolioClient import FolioClient
+from pymarc import MARCReader
+
+from marc_to_folio import (AlabamaMapper, ChalmersMapper, DefaultMapper,
+                           FiveCollagesMapper)
 from marc_to_folio.marc_processor import MarcProcessor
 
 
@@ -35,7 +35,7 @@ def main():
     parser.add_argument("-marcxml", "-x", help=("DATA is in MARCXML format"),
                         action="store_true")
     parser.add_argument("-validate", "-v", help=("Validate JSON data against JSON Schema"),
-                        action="store_true")
+                        action="store_true")    
         
     args = parser.parse_args()
     results_file = args.results_folder + '/folio_instances.json'
@@ -71,17 +71,21 @@ def main():
         processor = MarcProcessor(mapper, folio_client,
                                   results_file, args)
         for file_name in files:
-            print("running {}".format(file_name))
-            try:
-                f_path = sys.argv[1]+file_name
-                # print("loading MARC21 records from {}".format(f_path))
-                if args.marcxml:
-                    pymarc.map_xml(processor.process_record, f_path)
-                else:
-                    with open(f_path, 'rb') as marc_file:
-                        pymarc.map_records(processor.process_record, marc_file)
-            except Exception as exception:
-                print(exception)
+            with open(sys.argv[1]+file_name, 'rb') as marc_file:
+                reader = MARCReader(marc_file, 'rb')
+                print("running {}".format(file_name))
+                for marc_record in reader:
+                    try:
+                        processor.process_record(marc_record)
+                        #f_path = sys.argv[1]+file_name
+                        # print("loading MARC21 records from {}".format(f_path))
+                        # if args.marcxml:
+                        #    pymarc.map_xml(processor.process_record, f_path)
+                        # else:
+                        #    with open(f_path, 'rb') as marc_file:
+                        #        pymarc.map_records(processor.process_record, marc_file)
+                    except Exception as exception:
+                        print(exception)
     # wrap up
     print("Done. Wrapping up...")
     processor.wrap_up()
