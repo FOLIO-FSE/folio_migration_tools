@@ -74,7 +74,7 @@ class TestChalmersMapper(unittest.TestCase):
                  'value': '21080448'}
         self.assertIn(bibid, record[0]['identifiers'], record[1])
         xl_id = {'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
-                 'value': 'https://libris.kb.se/bib/21080448'}
+                 'value': 'http://libris.kb.se/bib/21080448'}
         self.assertIn(xl_id, record[0]['identifiers'], record[1])
         sierra_id = {'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
                      'value': '0000001'}

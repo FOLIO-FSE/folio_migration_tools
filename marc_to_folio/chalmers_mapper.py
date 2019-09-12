@@ -218,7 +218,7 @@ class ChalmersMapper(DefaultMapper):
                 a = id_placeholder['a']
                 jstring = a.replace('{lrub}', '{')
                 jstring = jstring.replace('{lcub}', '}')
-                xl_id = json.loads(jstring)['@id']                
+                xl_id = json.loads(jstring)['@id']
                 return xl_id
         return ''
 
@@ -228,7 +228,7 @@ class ChalmersMapper(DefaultMapper):
             return "https://libris.kb.se/{}".format(short_id)
         f001 = marc_record['001'].format_field()
         if f001.isnumeric():
-            return "https://libris.kb.se/bib/{}".format(f001)
+            return "http://libris.kb.se/bib/{}".format(f001)
         else:
             return "https://libris.kb.se/{}".format(f001)
         raise ValueError('No libris id parsed!')
