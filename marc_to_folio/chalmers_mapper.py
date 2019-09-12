@@ -243,14 +243,24 @@ class ChalmersMapper(DefaultMapper):
 
     def get_title(self, marc_record):
         if '245' not in marc_record:
+            print("No 245 for {}\n{}"
+                  .format(marc_record['001'], marc_record))
             return ''
         '''Get title or raise exception.'''
-        title = " ".join(marc_record['245'].get_subfields(*list('abknp')))
-        if title:
-            return re.sub(self.filter_last_isbd_chars, str(''), title).strip()
-        else:
-            raise ValueError("No title for {}\n{}"
-                             .format(marc_record['001'], marc_record))
+        titles = marc_record.get_fields('245')
+        if len(titles) > 1:
+            print("More than one title for  {}\n{}"
+                  .format(marc_record['001'], titles))
+            parsed_titles = [
+                " ".join(t.get_subfields(*list('abknp'))) for t in titles]
+            return max(parsed_titles, key=len)
+        if len(titles) == 1:
+            title = " ".join(titles[0].get_subfields(*list('abknp')))
+            if title:
+                return re.sub(self.filter_last_isbd_chars, str(''), title).strip()
+            else:
+                print("No title for {}\n{}"
+                      .format(marc_record['001'], marc_record))
 
     def get_subjects(self, marc_record):
         ''' Get subject headings from the marc record.'''
