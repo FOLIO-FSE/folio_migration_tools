@@ -48,8 +48,8 @@ class TestChalmersMapper(unittest.TestCase):
         message = 'With two 245s, the longes should be choosen'
         xpath = "//marc:datafield[@tag='245']"
         record = self.do_map('test_title_with_two_245s.xml', xpath, message)
-        self.assertEqual('Raspberry Pi with Java : programming the internet of things (IoT) /', record[0]['title'],
-                         record[1])        
+        self.assertEqual('Raspberry Pi with Java : programming the internet of things (IoT)', record[0]['title'],
+                         record[1])
 
     def test_composed_title(self):
         message = 'Should create a composed title (245) with the [a, b, k, n, p] subfields.'

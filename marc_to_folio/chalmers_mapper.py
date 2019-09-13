@@ -253,7 +253,8 @@ class ChalmersMapper(DefaultMapper):
                   .format(marc_record['001'], titles))
             parsed_titles = [
                 " ".join(t.get_subfields(*list('abknp'))) for t in titles]
-            return max(parsed_titles, key=len)
+            title = max(parsed_titles, key=len)
+            return re.sub(self.filter_last_isbd_chars, str(''), title).strip()
         if len(titles) == 1:
             title = " ".join(titles[0].get_subfields(*list('abknp')))
             if title:
