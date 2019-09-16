@@ -33,8 +33,7 @@ class DefaultMapper:
             'source': record_source,
             'contributors': list(self.get_contributors(marc_record)),
             'identifiers': list(self.get_identifiers(marc_record)),
-            # TODO: Add instanceTypeId
-            'instanceTypeId': self.folio.instance_types[0]['id'],
+            'instanceTypeId': self.get_instance_type_id(marc_record),
             'alternativeTitles': list(self.get_alt_titles(marc_record)),
             'publicationFrequency': list(set(self.get_publication_frequency(marc_record))),
             'publicationRange': list(set(self.get_publication_range(marc_record))),
@@ -45,7 +44,7 @@ class DefaultMapper:
             'publication': list((self.get_publication(marc_record))),
             # TODO: add instanceFormatId
             'instanceFormatIds': [self.folio.instance_formats[0]['id']],
-            # TODO: Mode of issuance
+            'modeOfIssuanceId': self.get_mode_of_issuance_id(marc_record),
             # TODO: add physical description
             'physicalDescriptions': list(self.get_physical_desc(marc_record)),
             'languages': self.get_languages(marc_record),
@@ -161,6 +160,27 @@ class DefaultMapper:
         '''Create a new folio record from template'''
         # if created from json schema validation could happen earlier...
         return {'id': str(identifier)}
+
+    def get_instance_type_id(self, marc_record):
+        instance_type_code = marc_record.leader[6]
+        table = {
+            'a': 'txt',
+            'm': 'txt',
+            't': 'txt',
+            'e': 'cri',
+            'g': 'tdi',
+            'i': 'snd',
+            'p': 'xxx'}
+        code = table.get(instance_type_code, 'unmapped')
+        return next(i['id'] for i in self.folio.instance_types
+                    if code == i['code'])
+
+    def get_mode_of_issuance_id(self, marc_record):
+        mode_of_issuance = marc_record.leader[7]
+        table = {'m': 'Monograph', 's': 'Serial'}
+        name = table.get(mode_of_issuance, 'Other')
+        return next(i['id'] for i in self.folio.modes_of_issuance
+                    if name == i['name'])
 
     def get_contributors(self, marc_record):
         '''Collects contributors from the marc record and adds the apropriate

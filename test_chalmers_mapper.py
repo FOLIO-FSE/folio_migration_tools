@@ -43,6 +43,8 @@ class TestChalmersMapper(unittest.TestCase):
         self.assertEqual('Modern Electrosynthetic Methods in Organic Chemistry', record[0]['title'],
                          record[1])
         self.assertNotIn('/', record[0]['title'], record[1])
+        self.assertEqual('6312d172-f0cf-40f6-b27d-9fa8feaf332f', record[0]['instanceTypeId'])
+        self.assertEqual('9d18a02f-5897-4c31-9106-c9abb5c7ae8b', record[0]['modeOfIssuanceId'])
 
     def test_simple_title_two245s(self):
         message = 'With two 245s, the longes should be choosen'
