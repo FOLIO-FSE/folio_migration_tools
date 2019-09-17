@@ -8,7 +8,7 @@ class AlabamaMapper(DefaultMapper):
     # TODO: Add 090 as LC classification
     #TODO: Add mappings for 653, 655
 
-    def __init__(self, folio):
+    def __init__(self, folio, results_path):
         ''' Bootstrapping (loads data needed later in the script.)'''
         super().__init__(folio)
         self.folio = folio

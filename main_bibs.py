@@ -59,7 +59,7 @@ def main():
                             if args.mapper and args.mapper in m), "DefaultMapper")
         print(mapper_name)
         class_ = getattr(module, mapper_name)
-        mapper = class_(folio_client)
+        mapper = class_(folio_client, args.results_folder)
     except Exception as ee:
         print("could not instantiate mapper")
         raise ee

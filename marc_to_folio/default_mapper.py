@@ -11,7 +11,7 @@ class DefaultMapper:
     '''Maps a MARC record to inventory instance format according to
     the FOLIO community convention'''
     # Bootstrapping (loads data needed later in the script.)
-    def __init__(self, folio):
+    def __init__(self, folio, results_path):
         self.filter_chars = r'[.,\/#!$%\^&\*;:{}=\-_`~()]'
         self.filter_last_chars = r',$'
         self.folio = folio
@@ -43,7 +43,8 @@ class DefaultMapper:
             'classifications': list(self.get_classifications(marc_record)),
             'publication': list((self.get_publication(marc_record))),
             # TODO: add instanceFormatId
-            'instanceFormatIds': [self.folio.instance_formats[0]['id']],
+            'instanceFormatIds':['8d511d33-5e85-4c5d-9bce-6e3c9cd0c324'],
+            # 'instanceFormatIds': [self.folio.instance_formats[0]['id']],
             'modeOfIssuanceId': self.get_mode_of_issuance_id(marc_record),
             # TODO: add physical description
             'physicalDescriptions': list(self.get_physical_desc(marc_record)),

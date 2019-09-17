@@ -18,7 +18,7 @@ class TestChalmersMapper(unittest.TestCase):
                                     cls.config.tenant_id,
                                     cls.config.username,
                                     cls.config.password)
-            cls.mapper = ChalmersMapper(cls.folio)
+            cls.mapper = ChalmersMapper(cls.folio, '')
             cls.instance_schema = cls.folio.get_instance_json_schema()
 
     def do_map(self, file_name, xpath, message):

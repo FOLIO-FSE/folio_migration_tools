@@ -16,13 +16,16 @@ class ChalmersMapper(DefaultMapper):
     '''Extra mapper specific for Chalmer requirements'''
     # TODO: Add Chalmers specific subjects
 
-    def __init__(self, folio):
-        super().__init__(folio)
+    def __init__(self, folio, results_path):
+        super().__init__(folio, results_path)
         self.filter_last_isbd_chars = r'[,/]$'
         ''' Bootstrapping (loads data needed later in the script.)'''
         self.folio = folio
+        self.results_path = results_path
         self.holdings_map = {}
         self.id_map = {}
+        with open('/md/chalmers/res/20190916/xl_id_map.json', 'r') as xl_id_file:
+            self.xl_id_map = json.load(xl_id_file)
         self.holdings_schema = folio.get_holdings_schema()
 
     def parse_bib(self, marc_record, record_source):
@@ -31,18 +34,26 @@ class ChalmersMapper(DefaultMapper):
         Community mapping suggestion: https://bit.ly/2S7Gyp3'''
         s_or_p = self.s_or_p(marc_record)
         save_source_record = folio_record['hrid'] == 'FOLIOstorage'
+        folio_record['identifiers'] = self.get_identifiers(marc_record)
         del folio_record['hrid']
         if save_source_record:
             folio_record['statisticalCodeIds'] = [
                 '67e08311-90f8-4639-82cc-f7085c6511d8']
+            srs_id = self.save_source_record(marc_record, folio_record['id'])
+            folio_record['identifiers'].append(
+                {'identifierTypeId': '8e258acc-7dc5-4635-b581-675ac4c510e3',
+                 'value': srs_id})
+        elif marc_record['001'].format_field() == 'InventoryOnly':
+            print('Inventory only')
+            folio_record['statisticalCodeIds'] = [
+                '61db329f-7a82-478f-8060-5cc5328b22a5']
         else:
-            folio_record['statisticalCodeIds'] = ['55326d56-4466-43d7-83ed-73ffd4d4221f']
-            # self.save_source_record(marc_record, folio_record['id'])
+            folio_record['statisticalCodeIds'] = [
+                '55326d56-4466-43d7-83ed-73ffd4d4221f']
         self.id_map[self.get_source_id(marc_record)] = {
             'id': folio_record['id'],
             'libris_001': marc_record['001'].format_field(),
             's_or_p': s_or_p}
-        folio_record['identifiers'] = self.get_identifiers(marc_record)
         if s_or_p == 'p':  # create holdings record from sierra bib
             if '852' not in marc_record:
                 print(marc_record)
@@ -65,16 +76,15 @@ class ChalmersMapper(DefaultMapper):
                                               self.get_source_id(marc_record))
                 key = self.to_key(holding)
                 if key not in self.holdings_map:
-                    validate(holding, self.holdings_schema)
+                    # validate(holding, self.holdings_schema)
                     self.holdings_map[self.to_key(holding)] = holding
-            else:
-                print("Holdings already saved {}".format(key))
+                else:
+                    print("Holdings already saved {}".format(key))
             # TODO: check for unhandled 866s
         return folio_record
 
     def save_source_record(self, marc_record, instance_id):
         '''Saves the source Marc_record to the Source record Storage module'''
-        print("Will save {} to SRS".format(self.get_source_id(marc_record)))
         marc_record.add_field(Field(tag='999',
                                     indicators=['f', 'f'],
                                     subfields=['i', instance_id]))
@@ -99,9 +109,11 @@ class ChalmersMapper(DefaultMapper):
             }
         }
         try:
-            self.post_new_source_storage_record(json.dumps(a))
+            with open(self.results_path + '/srs.json', 'a+') as srs_file:
+                srs_file.write(json.dumps(a)+'\n')
+            # self.post_new_source_storage_record(json.dumps(a))
+            return a['id']
         except Exception as ee:
-            # print(json.dumps(a))
             print(ee)
 
     def post_new_source_storage_record(self, loan):
@@ -169,8 +181,8 @@ class ChalmersMapper(DefaultMapper):
         locs = {'enll': '553ffd9b-26b5-4aa6-a426-187f8bbb77a3',
                 'z': '921e0666-fdd3-4e54-a4c4-a20d8d2333fd',
                 'za': 'ddbeedde-a75a-4d76-bc16-43b292910ca9',
-                'zl': 'e2e4b00a-fbe7-4c2a-ac50-361062949d56'}                
-    
+                'zl': 'e2e4b00a-fbe7-4c2a-ac50-361062949d56'}
+
         if sigel and sigel.lower() in locs:
             return locs[sigel.lower()]
         else:
@@ -212,6 +224,8 @@ class ChalmersMapper(DefaultMapper):
         f001 = str(marc_record['001'].format_field())
         if '887' not in marc_record and not f001.isnumeric():
             return f001
+        if f001 in self.xl_id_map and not self.xl_id_map[f001].isnumeric():
+            return self.xl_id_map[f001]
         for id_placeholder in marc_record.get_fields('887'):
             if '5' not in id_placeholder:
                 # Get that broken libris holdings id out of there!
@@ -249,11 +263,11 @@ class ChalmersMapper(DefaultMapper):
         '''Get title or raise exception.'''
         titles = marc_record.get_fields('245')
         if len(titles) > 1:
-            print("More than one title for  {}\n{}"
-                  .format(marc_record['001'], titles))
             parsed_titles = [
                 " ".join(t.get_subfields(*list('abknp'))) for t in titles]
             title = max(parsed_titles, key=len)
+            print("More than one title for {}\t{}"
+                  .format(marc_record['001'], title))
             return re.sub(self.filter_last_isbd_chars, str(''), title).strip()
         if len(titles) == 1:
             title = " ".join(titles[0].get_subfields(*list('abknp')))

@@ -18,8 +18,7 @@ class TestDefaultMapper(unittest.TestCase):
                                     cls.config.tenant_id,
                                     cls.config.username,
                                     cls.config.password)
-            cls.mapper = DefaultMapper(cls.folio)
-            cls.mapper = DefaultMapper(cls.folio)
+            cls.mapper = DefaultMapper(cls.folio, '')
             cls.instance_schema = cls.folio.get_instance_json_schema()
 
     def default_map(self, file_name, xpath):
@@ -40,6 +39,8 @@ class TestDefaultMapper(unittest.TestCase):
     def test_simple_title(self):
         xpath = "//marc:datafield[@tag='245']"
         record = self.default_map('test1.xml', xpath)
+        self.assertIn('8d511d33-5e85-4c5d-9bce-6e3c9cd0c324',
+                      record[0]['instanceFormatIds'])
         self.assertEqual(
             'Modern Electrosynthetic Methods in Organic Chemistry', record[0]['title'])
         # TODO: test abcense of / for chalmers
@@ -259,7 +260,7 @@ class TestDefaultMapper(unittest.TestCase):
         message = 'Should add contributors (100, 111 700) to the contributors list'
         xpath = "//marc:datafield[@tag='100' or @tag='111' or @tag='700']"
         record = self.default_map('test_contributors.xml', xpath)
-        contributors = list( (c['name'] for c in record[0]['contributors']))
+        contributors = list((c['name'] for c in record[0]['contributors']))
         m = message + '\n' + record[1]
         with self.subTest("100, no contrib type indicated"):
             self.assertIn('Chin, Stephen, 1977-', contributors, m)
@@ -272,7 +273,8 @@ class TestDefaultMapper(unittest.TestCase):
         with self.subTest("111$acde, no contrib type id"):
             self.assertIn('Wolfcon Durham 2018', contributors, m)
         with self.subTest("111$abbde4"):
-            self.assertIn('Kyōto Daigaku. Genshiro Jikkenjo. Senmon Kenkyūkai (2013 January 25)', contributors, m)
+            self.assertIn(
+                'Kyōto Daigaku. Genshiro Jikkenjo. Senmon Kenkyūkai (2013 January 25)', contributors, m)
         with self.subTest("111$aee44  multiple relation types (author, illustrator), pick first one?"):
             self.assertIn('Tupera Tupera (Firm)', contributors, m)
 
@@ -554,13 +556,14 @@ class TestDefaultMapper(unittest.TestCase):
         m = message + '\n' + record[1]
         with self.subTest('590$a'):
             self.assertIn('Labels reversed on library\'s copy.',
-                            notes, m)
+                          notes, m)
         with self.subTest('592$a'):
             self.assertIn('Copy in McGill Library\'s Osler Library of the History of Medicine, Robertson Collection copy 1: signature on title page, Jos. E. Dion, E.E.M., Montréal.',
-                            notes, m)
+                          notes, m)
         with self.subTest('599$abcde'):
             self.assertIn('c.2 2014 $25.00 pt art dept.',
-                            notes, m)
+                          notes, m)
+
 
 if __name__ == '__main__':
     unittest.main()
