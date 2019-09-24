@@ -5,6 +5,7 @@ import re
 import xml.etree.ElementTree as ET
 
 import requests
+from collections import defaultdict
 
 
 class DefaultMapper:
@@ -43,7 +44,7 @@ class DefaultMapper:
             'classifications': list(self.get_classifications(marc_record)),
             'publication': list((self.get_publication(marc_record))),
             # TODO: add instanceFormatId
-            'instanceFormatIds':['8d511d33-5e85-4c5d-9bce-6e3c9cd0c324'],
+            'instanceFormatIds': ['8d511d33-5e85-4c5d-9bce-6e3c9cd0c324'],
             # 'instanceFormatIds': [self.folio.instance_formats[0]['id']],
             'modeOfIssuanceId': self.get_mode_of_issuance_id(marc_record),
             # TODO: add physical description
@@ -384,35 +385,57 @@ class DefaultMapper:
 
     def get_identifiers(self, marc_record):
         '''Collects Identifiers and adds the appropriate metadata'''
-        fields = {'010': [next((f['id'] for f
-                                in self.folio.identifier_types
-                                if f['name'] == 'LCCN'), ''), 'a'],
-                  '019': [next((f['id'] for f
-                                in self.folio.identifier_types
-                                if f['name'] == 'System Control Number'), ''), 'a'],
-                  '020': [next((f['id'] for f
-                                in self.folio.identifier_types
-                                if f['name'] == 'ISBN'), ''), 'acz'],
-                  '024': [next((f['id'] for f
-                                in self.folio.identifier_types
-                                if f['name'] == 'Other Standard Identifier'), ''), 'a'],
-                  '028': [next((f['id'] for f
-                                in self.folio.identifier_types
-                                if f['name'] == 'Publisher Number'), ''), 'a'],
-                  '022': [next((f['id'] for f
-                                in self.folio.identifier_types
-                                if f['name'] == 'ISSN'), ''), 'a2zlmy'],
-                  '035': [next((f['id'] for f
-                                in self.folio.identifier_types
-                                if f['name'] == 'Control Number'), ''), 'az'],
-                  '074': [next((f['id'] for f
-                                in self.folio.identifier_types
-                                if f['name'] == 'GPO Item Number'), ''), 'a']
-                  }
-        for field_tag in fields:
-            for field in marc_record.get_fields(field_tag):
-                for subfield in field.get_subfields(*list(fields[field_tag][1])):
-                    yield {'identifierTypeId': fields[field_tag][0],
+        fields = [
+            ['010', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'LCCN'), ''),
+             'a'],
+            ['019', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'System control number'), ''),
+             'a'],
+            ['020', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'ISBN'), ''), 'a'],
+            ['020', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'Invalid ISBN'), ''),
+             'z'],
+            ['024', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'Other standard identifier'), ''),
+             'a'],
+            ['028', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'Publisher or distributor number'), ''),
+             'a'],
+            ['022', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'ISSN'), ''),
+             'a'],
+            ['022', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'Invalid ISSN'), ''),
+             'zmy'],
+            ['022', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'Linking ISSN'), ''),
+             'l'],
+            ['035', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'Control number'), ''),
+             'az'],
+            ['074', next((f['id'] for f
+                          in self.folio.identifier_types
+                          if f['name'] == 'GPO item number'), ''),
+             'a']]
+        for b in fields:
+            tag = b[0]
+            identifier_type_id = b[1]
+            subfields = b[2]
+            for field in marc_record.get_fields(tag):
+                for subfield in field.get_subfields(*list(subfields)):
+                    yield {'identifierTypeId': identifier_type_id,
                            'value': subfield}
 
     def filter_langs(self, language_values, forbidden_values, legacyid):

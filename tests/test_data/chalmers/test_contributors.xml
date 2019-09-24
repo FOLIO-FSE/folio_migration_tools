@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
     <responseDate>2018-11-15T13:05:26.003Z</responseDate>
     <request verb="GetRecord" identifier="http://libris.kb.se/bib/19049386" metadataPrefix="marcxml">http://libris.kb.se/oaipmh/</request>
@@ -199,10 +199,13 @@
                         <subfield code="a">{"@id":"6qjvp1hj3xk33vg","modified":"2018-08-07T15:19:17.068+02:00","checksum":"80358162479"}</subfield>
                         <subfield code="2">librisxl</subfield>
                     </datafield>
+                    <datafield ind1=" " ind2=" " tag="907">
+                        <subfield code="a">.b00000011</subfield>
+                    </datafield>
                 </record>
             </metadata>
             <about>
-                <agent name="Z"/>
+                <agent name="Z" />
             </about>
         </record>
     </ListRecords>

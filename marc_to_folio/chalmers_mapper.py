@@ -34,7 +34,8 @@ class ChalmersMapper(DefaultMapper):
         Community mapping suggestion: https://bit.ly/2S7Gyp3'''
         s_or_p = self.s_or_p(marc_record)
         save_source_record = folio_record['hrid'] == 'FOLIOstorage'
-        folio_record['identifiers'] = self.get_identifiers(marc_record)
+        if marc_record['001'].format_field() != 'InventoryOnly':
+            folio_record['identifiers'] = self.get_identifiers(marc_record)
         del folio_record['hrid']
         if save_source_record:
             folio_record['statisticalCodeIds'] = [
@@ -45,6 +46,7 @@ class ChalmersMapper(DefaultMapper):
                  'value': srs_id})
         elif marc_record['001'].format_field() == 'InventoryOnly':
             print('Inventory only')
+            folio_record['source'] = 'FOLIO'
             folio_record['statisticalCodeIds'] = [
                 '61db329f-7a82-478f-8060-5cc5328b22a5']
         else:
@@ -142,7 +144,7 @@ class ChalmersMapper(DefaultMapper):
                        if 'callNumber' in holding else '')
         loc_id = (holding['permanentLocationId']
                   if 'permanentLocationId' in holding else '')
-        return '-'.join([inst_id, call_number, loc_id])
+        return '-'.join([inst_id, call_number, loc_id, ''])
 
     def create_holding(self, pair, instance_id, source_id):
         holding = {
