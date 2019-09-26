@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
     <responseDate>2018-11-15T10:20:51.299Z</responseDate>
     <request verb="ListRecords" metadataPrefix="marcxml_includehold" from="2018-11-14T08:00:00Z" until="2018-11-14T20:00:00Z" x-withDeletedData="true" set="bib:Z">http://libris.kb.se/oaipmh/</request>
@@ -31,7 +31,7 @@
                         <subfield code="a">Urbana tidskrifter</subfield>
                     </datafield>
                     <datafield ind1="0" ind2="4" tag="245">
-                        <subfield code="a">Les cahiers d'urbanisme</subfield>
+                        <subfield code="a">Les cahiers d'urbanisme : </subfield>
                     </datafield>
                     <datafield ind1="1" ind2="2" tag="246">
                         <subfield code="a">Cahiers d'urbanisme et d'aménagement du territoire</subfield>
@@ -54,7 +54,7 @@
                 </record>
             </metadata>
             <about>
-                <agent name="unknown"/>
+                <agent name="unknown" />
             </about>
         </record>
     </ListRecords>

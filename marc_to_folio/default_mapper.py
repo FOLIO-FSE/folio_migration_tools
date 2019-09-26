@@ -14,6 +14,7 @@ class DefaultMapper:
     # Bootstrapping (loads data needed later in the script.)
     def __init__(self, folio, results_path):
         self.filter_chars = r'[.,\/#!$%\^&\*;:{}=\-_`~()]'
+        self.filter_chars_dop = r'[.,\/#!$%\^&\*;:{}=\_`~()]'
         self.filter_last_chars = r',$'
         self.folio = folio
         print("Fetching valid language codes...")
@@ -79,13 +80,13 @@ class DefaultMapper:
         if '245' not in marc_record:
             return ''
         field = marc_record['245']
-        title_string = " ".join(field.get_subfields('a', 'n', 'p'))
+        title_string = " ".join(field.get_subfields('a', 'n', 'p','b'))
         ind2 = field.indicator2
         if ind2 == '0':
             return title_string
         elif ind2 in map(str, range(1, 9)):
             num_take = int(ind2)
-            return title_string[num_take:]
+            return title_string[num_take:].strip().replace(':','').strip()
         else:
             return ''
 
@@ -290,15 +291,24 @@ class DefaultMapper:
         # TODO: Improve with 008 and 260/4 $c
         '''Publication'''
         for field in marc_record.get_fields('260'):
-            yield {'publisher': re.sub(self.filter_chars, str(''), str(field['b'])).strip() or '',
-                   'place': re.sub(self.filter_chars, str(''), str(field['a'])).strip() or '',
-                   'dateOfPublication': re.sub(self.filter_chars, str(''), str(field['c'])).strip() or ''}
+            dop = str(next(iter(field.get_subfields('c')), ''))
+            yield {'publisher': self.get_filtered_subfield(field, 'b'),
+                   'place': self.get_filtered_subfield(field, 'a'),
+                   'dateOfPublication': re.sub(self.filter_chars_dop,
+                                               str(''), dop).strip() or ''}
         for field in marc_record.get_fields('264'):
-            yield {'publisher': re.sub(self.filter_chars, str(''), str(field['b'])).strip() or '',
-                   'place': re.sub(self.filter_chars, str(''), str(field['a'])).strip() or '',
-                   'dateOfPublication': re.sub(self.filter_chars, str(''), str(field['c'])).strip() or '',
+            dop = str(next(iter(field.get_subfields('c')), ''))
+            yield {'publisher': self.get_filtered_subfield(field, 'b'),
+                   'place': self.get_filtered_subfield(field, 'a'),
+                   'dateOfPublication': re.sub(self.filter_chars_dop,
+                                               str(''), dop).strip() or '',
                    'role': self.get_publication_role(field.indicators[1])}
 
+    def get_filtered_subfield(self, field, name):
+        field_value = next(iter(field.get_subfields(name)), '')
+        return re.sub(self.filter_chars, str(''), str(field_value)).strip() or ''
+
+        
     def get_publication_role(self, ind2):
         roles = {'0': 'Production',
                  '1': 'Publication',
