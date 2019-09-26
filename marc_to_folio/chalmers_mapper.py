@@ -34,8 +34,7 @@ class ChalmersMapper(DefaultMapper):
         Community mapping suggestion: https://bit.ly/2S7Gyp3'''
         s_or_p = self.s_or_p(marc_record)
         save_source_record = folio_record['hrid'] == 'FOLIOstorage'
-        if marc_record['001'].format_field() != 'InventoryOnly':
-            folio_record['identifiers'] = self.get_identifiers(marc_record)
+        folio_record['identifiers'] = self.get_identifiers(marc_record)
         del folio_record['hrid']
         if save_source_record:
             folio_record['statisticalCodeIds'] = [
@@ -44,8 +43,7 @@ class ChalmersMapper(DefaultMapper):
             folio_record['identifiers'].append(
                 {'identifierTypeId': '8e258acc-7dc5-4635-b581-675ac4c510e3',
                  'value': srs_id})
-        elif marc_record['001'].format_field() == 'InventoryOnly':
-            print('Inventory only')
+        elif marc_record['001'].format_field().strip() == "InventoryOnly":
             folio_record['source'] = 'FOLIO'
             folio_record['statisticalCodeIds'] = [
                 '61db329f-7a82-478f-8060-5cc5328b22a5']
@@ -206,20 +204,21 @@ class ChalmersMapper(DefaultMapper):
 
     def get_identifiers(self, marc_record):
         identifiers = list(super().get_identifiers(marc_record))
-
         '''Adds sierra Id and Libris ids. If no modern Libris ID, take 001'''
         # SierraId
         identifiers.append({'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
                             'value': self.get_source_id(marc_record)})
-        # "LIBRIS XL ID"
-        identifiers.append({'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
-                            'value': (self.get_xl_id_long(marc_record))})
-        # "LIBRIS BIB ID"
-        identifiers.append({'identifierTypeId': '28c170c6-3194-4cff-bfb2-ee9525205cf7',
-                            'value': marc_record['001'].format_field()})
-        # LIBRIS XL ID (kort)
-        identifiers.append({'identifierTypeId': '4f3c4c2c-8b04-4b54-9129-f732f1eb3e14',
-                            'value': self.get_xl_id(marc_record)})
+        if marc_record['001'].format_field().strip() != "InventoryOnly":
+            print("Not:{}".format(marc_record['001'].format_field().strip()))
+            # "LIBRIS XL ID"
+            identifiers.append({'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
+                                'value': (self.get_xl_id_long(marc_record))})
+            # "LIBRIS BIB ID"
+            identifiers.append({'identifierTypeId': '28c170c6-3194-4cff-bfb2-ee9525205cf7',
+                                'value': marc_record['001'].format_field()})
+            # LIBRIS XL ID (kort)
+            identifiers.append({'identifierTypeId': '4f3c4c2c-8b04-4b54-9129-f732f1eb3e14',
+                                'value': self.get_xl_id(marc_record)})
         return list(identifiers)
 
     def get_xl_id(self, marc_record):

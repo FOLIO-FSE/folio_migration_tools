@@ -43,8 +43,10 @@ class TestChalmersMapper(unittest.TestCase):
         self.assertEqual('Modern Electrosynthetic Methods in Organic Chemistry', record[0]['title'],
                          record[1])
         self.assertNotIn('/', record[0]['title'], record[1])
-        self.assertEqual('6312d172-f0cf-40f6-b27d-9fa8feaf332f', record[0]['instanceTypeId'])
-        self.assertEqual('9d18a02f-5897-4c31-9106-c9abb5c7ae8b', record[0]['modeOfIssuanceId'])
+        self.assertEqual('6312d172-f0cf-40f6-b27d-9fa8feaf332f',
+                         record[0]['instanceTypeId'])
+        self.assertEqual('9d18a02f-5897-4c31-9106-c9abb5c7ae8b',
+                         record[0]['modeOfIssuanceId'])
 
     def test_simple_title_two245s(self):
         message = 'With two 245s, the longes should be choosen'
@@ -100,12 +102,13 @@ class TestChalmersMapper(unittest.TestCase):
     def test_old_bib_ids(self):
         message = 'Should fetch Libris Bib id,'
         xpath = "//marc:datafield[@tag='001' or @tag='907' or @tag='887']"
-        record = self.do_map('test_identifiers_libris_old_bib.xml', xpath, message)
+        record = self.do_map(
+            'test_identifiers_libris_old_bib.xml', xpath, message)
         bibid = {'identifierTypeId': '28c170c6-3194-4cff-bfb2-ee9525205cf7',
                  'value': '21080448'}
         self.assertIn(bibid, record[0]['identifiers'], record[1])
         xl_id = {'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
-                 'value': 'http://libris.kb.se/bib/21080448'}        
+                 'value': 'http://libris.kb.se/bib/21080448'}
         sierra_id = {'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
                      'value': '0000001'}
         self.assertIn(sierra_id, record[0]['identifiers'], record[1])
@@ -123,12 +126,23 @@ class TestChalmersMapper(unittest.TestCase):
                        for h in self.mapper.holdings_map.values()]
         holdingsStatements = [h["holdingsStatements"][0]
                               for h in self.mapper.holdings_map.values()]
-        self.assertIn("e2e4b00a-fbe7-4c2a-ac50-361062949d56", permanenent_loc_ids)
-        self.assertIn("921e0666-fdd3-4e54-a4c4-a20d8d2333fd", permanenent_loc_ids)
+        self.assertIn("e2e4b00a-fbe7-4c2a-ac50-361062949d56",
+                      permanenent_loc_ids)
+        self.assertIn("921e0666-fdd3-4e54-a4c4-a20d8d2333fd",
+                      permanenent_loc_ids)
         self.assertIn("Vp", callNumbers)
         self.assertIn("Sjöfartstidskrifter", callNumbers)
-        self.assertIn({'statement': 'Årg. 24-40 (1986-2002)', 'note': ''}, holdingsStatements)
+        self.assertIn({'statement': 'Årg. 24-40 (1986-2002)',
+                       'note': ''}, holdingsStatements)
         # self.assertIn("", holdingsStatements)
+
+    def test_inventory_only(self):
+        message = 'PERMANENT LOCATION, TWO HOLDINGS'
+        xpath = "//marc:datafield[@tag='001' or @tag='887' or @tag='907']"
+        self.mapper.holdings_map = {}
+        record = self.do_map('inventory_only.xml', xpath, message)
+        print(record[0]['identifiers'])
+        self.assertTrue(True)
 
     def test_identifiers(self):
         message = 'Should add identifiers: 010, 019, 020, 022, 024, 028, 035 and local IDs'
@@ -136,6 +150,7 @@ class TestChalmersMapper(unittest.TestCase):
         record = self.do_map('test_identifiers_libris.xml', xpath, message)
         m = message + '\n' + record[1]
         # TODO: Test identifier type id in additional mappers
+        print(record[0]['publication'])
         self.assertIn('2008011507', (i['value']
                                      for i in record[0]['identifiers']), m)
         self.assertIn('9780307264787', (i['value']
@@ -198,7 +213,7 @@ class TestChalmersMapper(unittest.TestCase):
         xl_id_short = {
             'identifierTypeId': '4f3c4c2c-8b04-4b54-9129-f732f1eb3e14',
             'value': '8sl08b9l54wxk4m'}
-        self.assertIn(xl_id_short, record[0]['identifiers'], record[1])    
+        self.assertIn(xl_id_short, record[0]['identifiers'], record[1])
 
 
 if __name__ == '__main__':
