@@ -18,8 +18,8 @@ class AlabamaMapper(DefaultMapper):
         self.holdings_schema = folio.get_holdings_schema()
 
     def parse_bib(self, marc_record, record_source):
-        throw Exception("001:s with BHI as prefix")
-        throw Exception("FIX boundwidths")
+        raise Exception("001:s with BHI as prefix")
+        raise Exception("FIX boundwidths")
         '''Performs extra parsing, based on local requirements'''
         folio_record = super().parse_bib(marc_record, record_source)
         legacy_id = marc_record['001'].format_field()
