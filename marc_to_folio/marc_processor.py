@@ -6,12 +6,11 @@ from jsonschema import ValidationError, validate
 
 class MarcProcessor():
     '''the processor'''
+
     def __init__(self, mapper, folio_client,
                  results_file, args):
         self.results_folder = args.results_folder
         self.results_file = results_file
-        self.instance_id_map_path = self.results_folder + '/instance_id_map.json'
-        self.holdings_path = self.results_folder + '/folio_holdings.json'
         self.instance_schema = folio_client.get_instance_json_schema()
         self.stats = {
             'bibs_processed': 0,
@@ -39,7 +38,8 @@ class MarcProcessor():
                           folio_rec)
             # Print progress
             if self.stats['bibs_processed'] % 10000 == 0:
-                elapsed = self.stats['bibs_processed']/(time.time() - self.start)
+                elapsed = self.stats['bibs_processed'] / \
+                    (time.time() - self.start)
                 elapsed_formatted = '{0:.3g}'.format(elapsed)
                 print("{}\t\t{}".format(elapsed, self.stats['bibs_processed']),
                       flush=True)
@@ -53,7 +53,7 @@ class MarcProcessor():
                                          "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
-            # raise value_error
+            raise value_error
         except ValidationError as validation_error:
             self.stats['failed_bibs'] += 1
             print("Error validating record. Halting...")
@@ -75,13 +75,15 @@ class MarcProcessor():
         print("Number of Instances in map:\t{}"
               .format(len(self.mapper.id_map)))
         if self.mapper.id_map:
-            with open(self.instance_id_map_path, 'w+') as id_map_file:
+            map_path = self.results_folder + '/instance_id_map.json'
+            with open(map_path, 'w+') as id_map_file:
                 json.dump(self.mapper.id_map, id_map_file,
                           sort_keys=True, indent=4)
 
         print("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
-            with open(self.holdings_path, 'w+') as holdings_file:
+            holdings_path = self.results_folder + '/folio_holdings.json'
+            with open(holdings_path, 'w+') as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     write_to_file(holdings_file, False, holding)
 

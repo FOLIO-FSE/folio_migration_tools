@@ -2,12 +2,8 @@
 import json
 import re
 import uuid
-from io import BytesIO, StringIO
-from itertools import islice
 
-import requests
 from jsonschema import validate
-from pymarc import JSONWriter, MARCReader, MARCWriter, Field
 
 from marc_to_folio.default_mapper import DefaultMapper
 
@@ -24,14 +20,13 @@ class ChalmersMapper(DefaultMapper):
         self.results_path = results_path
         self.holdings_map = {}
         self.id_map = {}
-        with open('/md/chalmers/res/20190916/xl_id_map.json', 'r') as xl_id_file:
+        with open(results_path + '/xl_id_map.json', 'r') as xl_id_file:
             self.xl_id_map = json.load(xl_id_file)
         self.holdings_schema = folio.get_holdings_schema()
 
     def parse_bib(self, marc_record, record_source):
+        '''Performs extra parsing, based on local requirements'''
         folio_record = super().parse_bib(marc_record, record_source)
-        '''Parses a bib recod into a FOLIO Inventory instance object
-        Community mapping suggestion: https://bit.ly/2S7Gyp3'''
         s_or_p = self.s_or_p(marc_record)
         save_source_record = folio_record['hrid'] == 'FOLIOstorage'
         folio_record['identifiers'] = self.get_identifiers(marc_record)
@@ -39,7 +34,8 @@ class ChalmersMapper(DefaultMapper):
         if save_source_record:
             folio_record['statisticalCodeIds'] = [
                 '67e08311-90f8-4639-82cc-f7085c6511d8']
-            srs_id = self.save_source_record(marc_record, folio_record['id'])
+            srs_id = super().save_source_record(
+                self.results_path, marc_record, folio_record['id'])
             folio_record['identifiers'].append(
                 {'identifierTypeId': '8e258acc-7dc5-4635-b581-675ac4c510e3',
                  'value': srs_id})
@@ -56,7 +52,6 @@ class ChalmersMapper(DefaultMapper):
             's_or_p': s_or_p}
         if s_or_p == 'p':  # create holdings record from sierra bib
             if '852' not in marc_record:
-                print(marc_record)
                 raise ValueError("missing 852 for {}"
                                  .format(self.get_source_id(marc_record)))
             sigels_in_852 = set()
@@ -82,50 +77,6 @@ class ChalmersMapper(DefaultMapper):
                     print("Holdings already saved {}".format(key))
             # TODO: check for unhandled 866s
         return folio_record
-
-    def save_source_record(self, marc_record, instance_id):
-        '''Saves the source Marc_record to the Source record Storage module'''
-        marc_record.add_field(Field(tag='999',
-                                    indicators=['f', 'f'],
-                                    subfields=['i', instance_id]))
-        json_string = StringIO()
-        writer = JSONWriter(json_string)
-        writer.write(marc_record)
-        writer.close(close_fh=False)
-        a = {
-            "id": str(uuid.uuid4()),
-            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
-            "matchedProfileId": str(uuid.uuid4()),
-            "matchedId": str(uuid.uuid4()),
-            "generation": 1,
-            "recordType": "MARC",
-            "rawRecord": {
-                "id": str(uuid.uuid4()),
-                "content": marc_record.as_json()
-            },
-            "parsedRecord": {
-                "id": str(uuid.uuid4()),
-                "content": marc_record.as_json()
-            }
-        }
-        try:
-            with open(self.results_path + '/srs.json', 'a+') as srs_file:
-                srs_file.write(json.dumps(a)+'\n')
-            # self.post_new_source_storage_record(json.dumps(a))
-            return a['id']
-        except Exception as ee:
-            print(ee)
-
-    def post_new_source_storage_record(self, loan):
-        okapi_headers = self.folio.okapi_headers
-        host = self.folio.okapi_url
-        path = ("{}/source-storage/records".format(host))
-        response = requests.post(path,
-                                 data=loan,
-                                 headers=okapi_headers)
-        if response.status_code != 201:
-            print("Something went wrong. HTTP {}\nMessage:\t{}"
-                  .format(response.status_code, response.text))
 
     def remove_from_id_map(self, marc_record):
         ''' removes the ID from the map in case parsing failed'''
@@ -208,8 +159,7 @@ class ChalmersMapper(DefaultMapper):
         # SierraId
         identifiers.append({'identifierTypeId': '5fc83ef4-7572-40cf-9f64-79c41e9ccf8b',
                             'value': self.get_source_id(marc_record)})
-        if marc_record['001'].format_field().strip() != "InventoryOnly":
-            print("Not:{}".format(marc_record['001'].format_field().strip()))
+        if marc_record['001'].format_field().strip() not in ["InventoryOnly", "FOLIOstorage"]:
             # "LIBRIS XL ID"
             identifiers.append({'identifierTypeId': '925c7fb9-0b87-4e16-8713-7f4ea71d854b',
                                 'value': (self.get_xl_id_long(marc_record))})

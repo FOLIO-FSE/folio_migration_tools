@@ -1,24 +1,33 @@
 '''The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications'''
-import uuid
+import json
 import re
+import uuid
 import xml.etree.ElementTree as ET
+from io import StringIO
 
 import requests
-from collections import defaultdict
+
+from pymarc import Field, JSONWriter
 
 
 class DefaultMapper:
     '''Maps a MARC record to inventory instance format according to
     the FOLIO community convention'''
     # Bootstrapping (loads data needed later in the script.)
+
     def __init__(self, folio, results_path):
         self.filter_chars = r'[.,\/#!$%\^&\*;:{}=\-_`~()]'
         self.filter_chars_dop = r'[.,\/#!$%\^&\*;:{}=\_`~()]'
         self.filter_last_chars = r',$'
         self.folio = folio
+        self.id_map = {}
         print("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
+        self.contrib_name_types = {}
+        self.alt_title_map = {}
+        self.identifier_types = []
+
 
     def parse_bib(self, marc_record, record_source):
         ''' Parses a bib recod into a FOLIO Inventory instance object
@@ -54,6 +63,51 @@ class DefaultMapper:
             'notes': list(self.get_notes(marc_record))}
         return rec
 
+    def save_source_record(self, results_path, marc_record, instance_id):
+        '''Saves the source Marc_record to the Source record Storage module'''
+        marc_record.add_field(Field(tag='999',
+                                    indicators=['f', 'f'],
+                                    subfields=['i', instance_id]))
+        json_string = StringIO()
+        writer = JSONWriter(json_string)
+        writer.write(marc_record)
+        writer.close(close_fh=False)
+        a = {
+            "id": str(uuid.uuid4()),
+            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
+            "matchedProfileId": str(uuid.uuid4()),
+            "matchedId": str(uuid.uuid4()),
+            "generation": 1,
+            "recordType": "MARC",
+            "rawRecord": {
+                "id": str(uuid.uuid4()),
+                "content": marc_record.as_json()
+            },
+            "parsedRecord": {
+                "id": str(uuid.uuid4()),
+                "content": marc_record.as_json()
+            }
+        }
+        try:
+            with open(results_path + '/srs.json', 'a+') as srs_file:
+                srs_file.write("{}\t{}\n".format(a['id'], json.dumps(a) + '\n'))
+            # self.post_new_source_storage_record(json.dumps(a))
+            return a['id']
+        except Exception as ee:
+            print(ee)
+            raise ee
+
+    def post_new_source_storage_record(self, loan):
+        okapi_headers = self.folio.okapi_headers
+        host = self.folio.okapi_url
+        path = ("{}/source-storage/records".format(host))
+        response = requests.post(path,
+                                 data=loan,
+                                 headers=okapi_headers)
+        if response.status_code != 201:
+            print("Something went wrong. HTTP {}\nMessage:\t{}"
+                  .format(response.status_code, response.text))
+
     def get_editions(self, marc_record):
         fields = marc_record.get_fields('250')
         for field in fields:
@@ -80,15 +134,14 @@ class DefaultMapper:
         if '245' not in marc_record:
             return ''
         field = marc_record['245']
-        title_string = " ".join(field.get_subfields('a', 'n', 'p','b'))
+        title_string = " ".join(field.get_subfields('a', 'b', 'n', 'p'))
         ind2 = field.indicator2
-        if ind2 == '0':
-            return title_string
-        elif ind2 in map(str, range(1, 9)):
+        reg_str = r'[\s:\/]{0,3}$'
+        if ind2 in map(str, range(1, 9)):
             num_take = int(ind2)
-            return title_string[num_take:].strip().replace(':','').strip()
+            return re.sub(reg_str, '', title_string[num_take:])
         else:
-            return ''
+            return re.sub(reg_str, '', title_string)
 
     def get_notes(self, marc_record):
         '''Collects all notes fields and stores them as generic notes.'''
@@ -146,7 +199,7 @@ class DefaultMapper:
                     "note": " ".join(field.get_subfields(*value)),
                     # TODO: Map staffOnly according to field
                     "staffOnly": False
-                } 
+                }
 
     def get_title(self, marc_record):
         if '245' not in marc_record:
@@ -165,6 +218,7 @@ class DefaultMapper:
         return {'id': str(identifier)}
 
     def get_instance_type_id(self, marc_record):
+        # TODO: Check 336 first!
         instance_type_code = marc_record.leader[6]
         table = {
             'a': 'txt',
@@ -185,12 +239,14 @@ class DefaultMapper:
         return next(i['id'] for i in self.folio.modes_of_issuance
                     if name == i['name'])
 
+    def name_type_id(self, n):
+        if not any(self.contrib_name_types):
+            self.contrib_name_types = {f['name']: f['id'] for f in self.folio.contrib_name_types}
+        return self.contrib_name_types[n]
+
     def get_contributors(self, marc_record):
         '''Collects contributors from the marc record and adds the apropriate
         Ids'''
-        def name_type_id(n): return next((f['id'] for f
-                                          in self.folio.contrib_name_types
-                                          if f['name'] == n), '')
         fields = {'100': {'subfields': 'abcdq',
                           'nameTypeId': 'Personal name'},
                   '110': {'subfields': 'abcdn',
@@ -199,7 +255,7 @@ class DefaultMapper:
                           'nameTypeId': 'Meeting name'},
                   '700': {'subfields': 'abcdq',
                           'nameTypeId': 'Personal name'},
-                  '710': {'subfields':  'abcdn',
+                  '710': {'subfields': 'abcdn',
                           'nameTypeId': 'Corporate name'},
                   '711': {'subfields': 'abcd',
                           'nameTypeId': 'Meeting name'}
@@ -210,7 +266,7 @@ class DefaultMapper:
                 ctype = self.get_contrib_type_id(marc_record)
                 first += 1
                 subs = field.get_subfields(*fields[field_tag]['subfields'])
-                ntd = name_type_id(fields[field_tag]['nameTypeId'])
+                ntd = self.name_type_id(fields[field_tag]['nameTypeId'])
                 yield {'name': re.sub(self.filter_last_chars, '', ' '.join(subs)),
                        'contributorNameTypeId': ntd,
                        'contributorTypeId': ctype,
@@ -259,31 +315,32 @@ class DefaultMapper:
 
     def get_alt_titles(self, marc_record):
         '''Finds all Alternative titles.'''
-        fields = {'130': [next(f['id'] for f
-                               in self.folio.alt_title_types
-                               if f['name'] == 'No type specified'),
-                          list('anpdfghklmorst')],
-                  '222': [next(f['id'] for f
-                               in self.folio.alt_title_types
-                               if f['name'] == 'No type specified'),
-                          list('anpdfghklmorst')],
-                  '240': [next(f['id'] for f
-                               in self.folio.alt_title_types
-                               if f['name'] == 'No type specified'),
-                          list('anpdfghklmors')],
-                  '246': [next(f['id'] for f
-                               in self.folio.alt_title_types
-                               if f['name'] == 'No type specified'),
-                          list('anpbfgh5')],
-                  '247': [next(f['id'] for f
-                               in self.folio.alt_title_types
-                               if f['name'] == 'No type specified'),
-                          list('anpbfghx')]}
-        for field_tag in fields:
+        if not any(self.alt_title_map):
+            self.alt_title_map = {'130': [next(f['id'] for f
+                                               in self.folio.alt_title_types
+                                               if f['name'] == 'No type specified'),
+                                          list('anpdfghklmorst')],
+                                  '222': [next(f['id'] for f
+                                               in self.folio.alt_title_types
+                                               if f['name'] == 'No type specified'),
+                                          list('anpdfghklmorst')],
+                                  '240': [next(f['id'] for f
+                                               in self.folio.alt_title_types
+                                               if f['name'] == 'No type specified'),
+                                          list('anpdfghklmors')],
+                                  '246': [next(f['id'] for f
+                                               in self.folio.alt_title_types
+                                               if f['name'] == 'No type specified'),
+                                          list('anpbfgh5')],
+                                  '247': [next(f['id'] for f
+                                               in self.folio.alt_title_types
+                                               if f['name'] == 'No type specified'),
+                                          list('anpbfghx')]}
+        for field_tag in self.alt_title_map:
             for field in marc_record.get_fields(field_tag):
-                yield {'alternativeTitleTypeId': fields[field_tag][0],
+                yield {'alternativeTitleTypeId': self.alt_title_map[field_tag][0],
                        'alternativeTitle': " - "
-                       .join(field.get_subfields(*fields[field_tag][1]))}
+                       .join(field.get_subfields(*self.alt_title_map[field_tag][1]))}
         # return list(dict((v['alternativeTitleTypeId'], v)
         #                 for v in res).values())
 
@@ -308,7 +365,6 @@ class DefaultMapper:
         field_value = next(iter(field.get_subfields(name)), '')
         return re.sub(self.filter_chars, str(''), str(field_value)).strip() or ''
 
-        
     def get_publication_role(self, ind2):
         roles = {'0': 'Production',
                  '1': 'Publication',
@@ -337,17 +393,18 @@ class DefaultMapper:
         languages = set()
         skip_languages = ['###', 'zxx']
         lang_fields = marc_record.get_fields('041')
-        if len(lang_fields) > 0 :
+        if len(lang_fields) > 0:
             subfields = 'abdefghjkmn'
             for lang_tag in lang_fields:
                 lang_codes = lang_tag.get_subfields(*list(subfields))
                 for lang_code in lang_codes:
+                    lang_code = str(lang_code).lower()
                     langlength = len(lang_code.replace(" ", ""))
                     if langlength == 3:
                         languages.add(lang_code.replace(" ", ""))
                     elif langlength > 3 and langlength % 3 == 0:
                         lc = lang_code.replace(" ", "")
-                        new_codes = [lc[i:i+3]
+                        new_codes = [lc[i:i + 3]
                                      for i in range(0, len(lc), 3)]
                         languages.update(new_codes)
                         languages.discard(lang_code)
@@ -359,7 +416,7 @@ class DefaultMapper:
         elif '008' in marc_record and len(marc_record['008'].data) > 38:
             from_008 = ''.join((marc_record['008'].data[35:38]))
             if from_008:
-                languages.add(from_008)
+                languages.add(from_008.lower())
         # TODO: test agianist valide language codes
         return list(languages)
 
@@ -374,9 +431,10 @@ class DefaultMapper:
 
     def get_classifications(self, marc_record):
         '''Collects Classes and adds the appropriate metadata'''
-        get_class_type_id = lambda x: next((f['id'] for f
-                                           in self.folio.class_types
-                                           if f['name'] == x), None)
+        def get_class_type_id(x):
+            return next((f['id'] for f
+                         in self.folio.class_types
+                         if f['name'] == x), None)
         fields = {'050': ['LC', 'ab'],
                   '082': ['Dewey', 'a'],
                   '086': ['GDC', 'a'],
@@ -395,51 +453,53 @@ class DefaultMapper:
 
     def get_identifiers(self, marc_record):
         '''Collects Identifiers and adds the appropriate metadata'''
-        fields = [
-            ['010', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'LCCN'), ''),
-             'a'],
-            ['019', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'System control number'), ''),
-             'a'],
-            ['020', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'ISBN'), ''), 'a'],
-            ['020', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'Invalid ISBN'), ''),
-             'z'],
-            ['024', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'Other standard identifier'), ''),
-             'a'],
-            ['028', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'Publisher or distributor number'), ''),
-             'a'],
-            ['022', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'ISSN'), ''),
-             'a'],
-            ['022', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'Invalid ISSN'), ''),
-             'zmy'],
-            ['022', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'Linking ISSN'), ''),
-             'l'],
-            ['035', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'Control number'), ''),
-             'az'],
-            ['074', next((f['id'] for f
-                          in self.folio.identifier_types
-                          if f['name'] == 'GPO item number'), ''),
-             'a']]
-        for b in fields:
+        if not any(self.identifier_types):
+            self.identifier_types = [
+                ['010', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'LCCN'), ''),
+                 'a'],
+                ['019', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'System control number'), ''),
+                 'a'],
+                ['020', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'ISBN'), ''), 'a'],
+                ['020', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'Invalid ISBN'), ''),
+                 'z'],
+                ['024', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'Other standard identifier'), ''),
+                 'a'],
+                ['028', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'Publisher or distributor number'), ''),
+                 'a'],
+                ['022', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'ISSN'), ''),
+                 'a'],
+                ['022', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'Invalid ISSN'), ''),
+                 'zmy'],
+                ['022', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'Linking ISSN'), ''),
+                 'l'],
+                #TODO: OCLC number? Distinguish 035s from eachother
+                ['035', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'Control number'), ''),
+                 'az'],
+                ['074', next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == 'GPO item number'), ''),
+                 'a']]
+        for b in self.identifier_types:
             tag = b[0]
             identifier_type_id = b[1]
             subfields = b[2]
@@ -463,4 +523,4 @@ class DefaultMapper:
                     yield 'ger'
                 else:
                     print('Illegal language code: {} for {}'
-                    .format(language_value, legacyid))
+                          .format(language_value, legacyid))

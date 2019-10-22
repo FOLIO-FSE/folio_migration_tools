@@ -86,6 +86,7 @@ def main():
                         #        pymarc.map_records(processor.process_record, marc_file)
                     except Exception as exception:
                         print(exception)
+                        raise exception
     # wrap up
     print("Done. Wrapping up...")
     processor.wrap_up()

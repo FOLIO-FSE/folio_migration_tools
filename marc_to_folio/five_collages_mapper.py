@@ -10,7 +10,6 @@ class FiveCollagesMapper(DefaultMapper):
         ''' Bootstrapping (loads data needed later in the script.)'''
         super().__init__(folio)
         self.folio = folio
-        self.holdings_map = {}
         self.id_map = {}
         self.holdings_schema = folio.get_holdings_schema()
 
