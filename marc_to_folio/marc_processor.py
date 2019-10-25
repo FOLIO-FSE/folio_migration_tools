@@ -65,7 +65,7 @@ class MarcProcessor():
             print(inst)
             if folio_rec:
                 print(folio_rec)
-            print(marc_record)
+            # print(marc_record)
             raise inst
 
     def wrap_up(self):

@@ -1,6 +1,8 @@
 '''Main "script."'''
 import argparse
 import json
+import logging
+import traceback
 import sys
 from os import listdir
 from os.path import isfile, join
@@ -16,6 +18,7 @@ from marc_to_folio.marc_processor import MarcProcessor
 
 def main():
     # TODO: räknare på allt!
+    logging.basicConfig(level=logging.CRITICAL)
     mappers = [cls.__name__ for cls in DefaultMapper.__subclasses__()]
     module = __import__("marc_to_folio")
     parser = argparse.ArgumentParser()
@@ -48,8 +51,8 @@ def main():
 
     files = [f for f in listdir(args.source_folder)
              if isfile(join(args.source_folder, f))]
-    print("Files to process:")
-    print(json.dumps(files, sort_keys=True, indent=4))
+    print("Files to process: {}".format(len(files)))
+    # print(json.dumps(files, sort_keys=True, indent=4))
     folio_client = FolioClient(args.okapi_url,
                                args.tenant_id,
                                args.username,
@@ -71,23 +74,33 @@ def main():
         processor = MarcProcessor(mapper, folio_client,
                                   results_file, args)
         for file_name in files:
-            with open(sys.argv[1]+file_name, 'rb') as marc_file:
-                reader = MARCReader(marc_file, 'rb')
-                print("running {}".format(file_name))
-                for marc_record in reader:
-                    try:
-                        processor.process_record(marc_record)
-                        #f_path = sys.argv[1]+file_name
-                        # print("loading MARC21 records from {}".format(f_path))
-                        # if args.marcxml:
-                        #    pymarc.map_xml(processor.process_record, f_path)
-                        # else:
-                        #    with open(f_path, 'rb') as marc_file:
-                        #        pymarc.map_records(processor.process_record, marc_file)
-                    except Exception as exception:
-                        print(exception)
-                        raise exception
-    # wrap up
+            try:
+                with open(sys.argv[1]+file_name, 'rb') as marc_file:
+                    reader = MARCReader(marc_file, 'rb')
+                    reader.hide_utf8_warnings = True
+                    print("running {}".format(file_name))
+                    for marc_record in reader:
+                        try:
+                            processor.process_record(marc_record)
+                            #f_path = sys.argv[1]+file_name
+                            # print("loading MARC21 records from {}".format(f_path))
+                            # if args.marcxml:
+                            #    pymarc.map_xml(processor.process_record, f_path)
+                            # else:
+                            #    with open(f_path, 'rb') as marc_file:
+                            #        pymarc.map_records(processor.process_record, marc_file)
+                        except UnicodeDecodeError as decode_error:
+                            print("UnicodeDecodeError in {}:\t {}"
+                                .format(file_name, exception))
+                            print("File {} needs fixing".format(file_name))
+                        except Exception as exception:
+                            print(exception)
+                            traceback.print_exc()
+            except Exception as exception:
+                print(exception)
+                traceback.print_exc()
+                print(file_name)
+        # wrap up
     print("Done. Wrapping up...")
     processor.wrap_up()
     print("done")
