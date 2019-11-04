@@ -151,54 +151,32 @@ class TestChalmersMapper(unittest.TestCase):
         m = message + '\n' + record[1]
         # TODO: Test identifier type id in additional mappers
         print(record[0]['publication'])
-        self.assertIn('2008011507', (i['value']
-                                     for i in record[0]['identifiers']), m)
-        self.assertIn('9780307264787', (i['value']
-                                        for i in record[0]['identifiers']), m)
-        self.assertIn('9780071842013', (i['value']
-                                        for i in record[0]['identifiers']), m)
-        self.assertIn('0071842012', (i['value']
-                                     for i in record[0]['identifiers']), m)
-        self.assertIn('9780307264755', (i['value']
-                                        for i in record[0]['identifiers']), m)
-        self.assertIn('9780307264766', (i['value']
-                                        for i in record[0]['identifiers']), m)
-        self.assertIn('9780307264777', (i['value']
-                                        for i in record[0]['identifiers']), m)
-        self.assertIn('0376-4583', (i['value']
-                                    for i in record[0]['identifiers']), m)
-        self.assertIn('0027-3475', (i['value']
-                                    for i in record[0]['identifiers']), m)
-        self.assertIn('0027-3476', (i['value']
-                                    for i in record[0]['identifiers']), m)
-        self.assertIn('1234-1232', (i['value']
-                                    for i in record[0]['identifiers']), m)
-        self.assertIn('1560-15605', (i['value']
-                                     for i in record[0]['identifiers']), m)
-        self.assertIn('0046-2254', (i['value']
-                                    for i in record[0]['identifiers']), m)
-        self.assertIn('7822183031', (i['value']
-                                     for i in record[0]['identifiers']), m)
-        self.assertIn('M011234564', (i['value']
-                                     for i in record[0]['identifiers']), m)
-        self.assertIn('PJC 222013', (i['value']
-                                     for i in record[0]['identifiers']), m)
-        self.assertIn('(OCoLC)898162644', (i['value']
-                                           for i in record[0]['identifiers']), m)
-        self.assertIn('(OCoLC)898087359', (i['value']
-                                           for i in record[0]['identifiers']), m)
-        self.assertIn('(OCoLC)930007675', (i['value']
-                                           for i in record[0]['identifiers']), m)
-        self.assertIn('(OCoLC)942940565', (i['value']
-                                           for i in record[0]['identifiers']), m)
-        self.assertIn('0027-3473', (i['value']
-                                    for i in record[0]['identifiers']), m)
-        self.assertIn('62874189', (i['value']
-                                   for i in record[0]['identifiers']), m)
-        self.assertIn('244170452', (i['value']
-                                    for i in record[0]['identifiers']), m)
-        self.assertIn('677051564', (i['value']
-                                    for i in record[0]['identifiers']), m)
+        identifier_values = (i['value']
+                                     for i in record[0]['identifiers'])
+        self.assertIn('2008011507', identifier_values, m)
+        self.assertIn('9780307264787', identifier_values, m)
+        self.assertIn('9780071842013', identifier_values, m)
+        self.assertIn('0071842012', identifier_values, m)
+        self.assertIn('9780307264755', identifier_values, m)
+        self.assertIn('9780307264766', identifier_values, m)
+        self.assertIn('9780307264777', identifier_values, m)
+        self.assertIn('0376-4583', identifier_values, m)
+        self.assertIn('0027-3475', identifier_values, m)
+        self.assertIn('0027-3476', identifier_values, m)
+        self.assertIn('1234-1232', identifier_values, m)
+        self.assertIn('1560-15605', identifier_values, m)
+        self.assertIn('0046-2254', identifier_values, m)
+        self.assertIn('7822183031', identifier_values, m)
+        self.assertIn('M011234564', identifier_values, m)
+        self.assertIn('PJC 222013', identifier_values, m)
+        self.assertIn('(OCoLC)898162644', identifier_values, m)
+        self.assertIn('(OCoLC)898087359', identifier_values, m)
+        self.assertIn('(OCoLC)930007675', identifier_values, m)
+        self.assertIn('(OCoLC)942940565', identifier_values, m)
+        self.assertIn('0027-3473', identifier_values, m)
+        self.assertIn('62874189', identifier_values, m)
+        self.assertIn('244170452', identifier_values, m)
+        self.assertIn('677051564', identifier_values, m)
         bibid = {
             'identifierTypeId': '28c170c6-3194-4cff-bfb2-ee9525205cf7',
             'value': '21080448'}
