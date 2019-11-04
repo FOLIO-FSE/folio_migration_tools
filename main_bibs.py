@@ -69,7 +69,7 @@ def main():
 
     print("Starting")
     print("Rec./s\t\tTot. recs\t\t")
-
+    failed_files = list()
     with open(results_file, 'w+') as results_file:
         processor = MarcProcessor(mapper, folio_client,
                                   results_file, args)
@@ -89,13 +89,14 @@ def main():
                             # else:
                             #    with open(f_path, 'rb') as marc_file:
                             #        pymarc.map_records(processor.process_record, marc_file)
-                        except UnicodeDecodeError as decode_error:
-                            print("UnicodeDecodeError in {}:\t {}"
-                                .format(file_name, exception))
-                            print("File {} needs fixing".format(file_name))
                         except Exception as exception:
                             print(exception)
                             traceback.print_exc()
+            except UnicodeDecodeError as decode_error:
+                print("UnicodeDecodeError in {}:\t {}"
+                      .format(file_name, decode_error))
+                print("File {} needs fixing".format(file_name))
+                failed_files.append(file_name)
             except Exception as exception:
                 print(exception)
                 traceback.print_exc()
@@ -103,6 +104,8 @@ def main():
         # wrap up
     print("Done. Wrapping up...")
     processor.wrap_up()
+    print("Failed files:")
+    print(json.dumps(failed_files, sort_keys=True, indent=4))
     print("done")
 
 
