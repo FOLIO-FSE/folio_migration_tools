@@ -1,5 +1,7 @@
 '''Main "script."'''
 import argparse
+import os
+import logging
 import json
 import pymarc
 from folioclient.FolioClient import FolioClient
@@ -10,17 +12,14 @@ from marc_to_folio.holdings_default_mapper import HoldingsDefaultMapper
 def main():
     '''Main method. Magic starts here.'''
     # TODO: räknare på allt!
+    logging.basicConfig(level=logging.CRITICAL)
     parser = argparse.ArgumentParser()
     parser.add_argument("records_file", help="path to marc records folder")
-    parser.add_argument("result_path", help="path to Instance results file")
+    parser.add_argument("result_folder", help="path to results folder")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
-    parser.add_argument("-holdings_id_dict_path", "-ih",
-                        help=(""))
-    parser.add_argument("-instance_id_dict_path", "-i",
-                        help=(""))
     parser.add_argument("-postgres_dump", "-p",
                         help=("results will be written out for Postgres"
                               "ingestion. Default is JSON"),
@@ -30,28 +29,25 @@ def main():
     parser.add_argument("-validate", "-v", help=("Validate JSON data against JSON Schema"),
                         action="store_true")
     args = parser.parse_args()
-    print('\tresults file:\t', args.result_path)
+    print('\tresults are stored at:\t', args.result_folder)
     print("\tOkapi URL:\t", args.okapi_url)
     print("\tTenanti Id:\t", args.tenant_id)
-    print("\tUsername:   \t",args.username)
-    print("\tPassword:   \tSecret")
-    print("\tinstance idMap will get stored at:\t", args.instance_id_dict_path)
-    print("\thold idMap will get stored at:\t", args.holdings_id_dict_path)
-
+    print("\tUsername:\t", args.username)
+    print("\tPassword:\tSecret")
     print("File to process: {}".format(args.records_file))
     folio_client = FolioClient(args.okapi_url,
                                args.tenant_id,
                                args.username,
                                args.password)
     instance_id_map = {}
-    with open(args.instance_id_dict_path, 'r') as json_file:
-            instance_id_map = json.load(json_file)
+    with open(os.path.join(args.result_folder, 'instance_id_map.json'), 'r') as json_file:
+        instance_id_map = json.load(json_file)
     print("Number of instances in ID map: {}".format(len(instance_id_map)))
     default_mapper = HoldingsDefaultMapper(folio_client, instance_id_map)
     print("Starting")
     print("Rec./s\t\tTot. recs\t\t")
 
-    with open(args.result_path + '/folio_holdings.json', 'w+') as results_file:
+    with open(os.path.join(args.result_folder, 'folio_holdings.json'), 'w+') as results_file:
         processor = HoldingsMarcProcessor(default_mapper,
                                           folio_client,
                                           results_file, args)

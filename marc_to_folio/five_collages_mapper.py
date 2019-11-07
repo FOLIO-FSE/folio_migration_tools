@@ -6,12 +6,15 @@ class FiveCollagesMapper(DefaultMapper):
     '''Extra mapper specific for Alabama requirements'''
     # TODO: Add Alabama specific subjects
 
-    def __init__(self, folio):
+    def __init__(self, folio, results_path):
         ''' Bootstrapping (loads data needed later in the script.)'''
-        super().__init__(folio)
+        super().__init__(folio, results_path)
         self.folio = folio
         self.id_map = {}
+        self.results_path = results_path
         self.holdings_schema = folio.get_holdings_schema()
+        # raise Exception("Mode of issuance ids?")
+        #raise Exception("Instance type ids?")
 
     def parse_bib(self, marc_record, record_source):
         '''Performs extra parsing, based on local requirements'''
@@ -35,14 +38,16 @@ class FiveCollagesMapper(DefaultMapper):
                 '647': 'acdvxyz',
                 '648': 'avxyz',
                 '650': 'abcdvxyz',
+                '651': 'avxyz',
                 '653': 'a',
+                '654': 'abcevyz01234',
                 '655': 'abcdvxyz',
+                '656': 'akvxyz0132',
                 '657': 'avxyz',
-                '651': 'avxyz'}
-        non_mapped_tags = {'654': '',
-                           '656': '',
-                           '658': '',
-                           '662': ''}
+                '658': 'abcd2',
+                '662': 'abcdefgh0124'
+                }
+        non_mapped_tags = {}
         for tag in list(non_mapped_tags.keys()):
             if any(marc_record.get_fields(tag)):
                 print("Unmapped Subject field {} in {}"

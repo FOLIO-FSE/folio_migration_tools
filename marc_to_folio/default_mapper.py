@@ -29,50 +29,50 @@ class DefaultMapper:
         self.alt_title_map = {}
         self.identifier_types = []
         self.note_tags = {'500': 'a35',
-                     '501': 'a5',
-                     '502': 'abcd',
-                     '504': 'ab',
-                     '505': 'agrt',
-                     '506': 'a',
-                     '507': 'ab',
-                     '508': 'a',
-                     '510': 'abcx',
-                     '511': 'a',
-                     '513': 'ab',
-                     '514': 'acdeghz',
-                     '515': 'a',
-                     '516': 'a',
-                     '518': '3adop',
-                     '520': '3abc',
-                     '522': 'a',
-                     '524': 'a',
-                     '525': 'a',
-                     '530': 'a',
-                     '532': 'a',
-                     '533': 'abcdefmn35',
-                     '534': 'abcefklmnoptxz3',
-                     '540': 'abcdu5',
-                     '541': '3abcdefhno5',
-                     '542': 'abcdngfosu',
-                     '544': 'ad',
-                     '545': 'abu',
-                     '546': '3ab',
-                     '547': 'a',
-                     '550': 'a',
-                     '552': 'ablmnz',
-                     '555': 'abcdu',
-                     '556': 'az',
-                     '561': '3au5',
-                     '562': '3abc5',
-                     '563': '3a5',
-                     '565': 'a',
-                     '567': 'a',
-                     '580': 'a',
-                     '583': 'abcdefhijklnouxz235',
-                     '586': 'a',
-                     '590': 'a',
-                     '592': 'a',
-                     '599': 'abcde'}
+                          '501': 'a5',
+                          '502': 'abcd',
+                          '504': 'ab',
+                          '505': 'agrt',
+                          '506': 'a',
+                          '507': 'ab',
+                          '508': 'a',
+                          '510': 'abcx',
+                          '511': 'a',
+                          '513': 'ab',
+                          '514': 'acdeghz',
+                          '515': 'a',
+                          '516': 'a',
+                          '518': '3adop',
+                          '520': '3abc',
+                          '522': 'a',
+                          '524': 'a',
+                          '525': 'a',
+                          '530': 'a',
+                          '532': 'a',
+                          '533': 'abcdefmn35',
+                          '534': 'abcefklmnoptxz3',
+                          '540': 'abcdu5',
+                          '541': '3abcdefhno5',
+                          '542': 'abcdngfosu',
+                          '544': 'ad',
+                          '545': 'abu',
+                          '546': '3ab',
+                          '547': 'a',
+                          '550': 'a',
+                          '552': 'ablmnz',
+                          '555': 'abcdu',
+                          '556': 'az',
+                          '561': '3au5',
+                          '562': '3abc5',
+                          '563': '3a5',
+                          '565': 'a',
+                          '567': 'a',
+                          '580': 'a',
+                          '583': 'abcdefhijklnouxz235',
+                          '586': 'a',
+                          '590': 'a',
+                          '592': 'a',
+                          '599': 'abcde'}
         self.subject_tags = {'600': 'abcdq',
                 '610': 'abcdn',
                 '611': 'acde',
@@ -114,7 +114,7 @@ class DefaultMapper:
             'subjects': list(set(self.get_subjects(marc_record))),
             'classifications': list(self.get_classifications(marc_record)),
             'publication': list((self.get_publication(marc_record))),
-            'natureOfContent': self.get_nature_of_content(marc_record),
+            # 'natureOfContentTermIds': list(self.get_nature_of_content(marc_record)),
             # TODO: add instanceFormatId
             'instanceFormatIds': ['8d511d33-5e85-4c5d-9bce-6e3c9cd0c324'],
             # 'instanceFormatIds': [self.folio.instance_formats[0]['id']],
@@ -185,7 +185,7 @@ class DefaultMapper:
             yield ' '.join(field.get_subfields('a'))
 
     def get_nature_of_content(self, marc_record):
-        return "81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"
+        return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
 
     def get_physical_desc(self, marc_record):
         # TODO: improve according to spec
@@ -295,7 +295,7 @@ class DefaultMapper:
     def get_contrib_type_id(self, marc_record):
         ''' Maps type of contribution to the right FOLIO Contributor types'''
         # TODO: create logic here...
-        ret = '5daa3848-958c-4dd8-9724-b7ae83a99a27'
+        ret = 'a5bee4d0-c5b9-449c-a6ee-880143b117bc'
         return ret
 
     def get_urls(self, marc_record):
