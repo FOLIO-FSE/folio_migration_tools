@@ -41,7 +41,7 @@ class MarcProcessor():
                 elapsed = self.stats['bibs_processed'] / \
                     (time.time() - self.start)
                 elapsed_formatted = '{0:.3g}'.format(elapsed)
-                print("{}\t\t{}".format(elapsed, self.stats['bibs_processed']),
+                print("{}\t\t{}".format(elapsed_formatted, self.stats['bibs_processed']),
                       flush=True)
             self.stats['successful_bibs'] += 1
         except ValueError as value_error:
@@ -70,6 +70,10 @@ class MarcProcessor():
 
     def wrap_up(self):
         '''Finalizes the mapping by writing things out.'''
+        try:
+            self.mapper.wrap_up()
+        except Exception as ee:
+            print(f"error when flushing last srs recs {ee}")
         print(self.stats)
         print("Saving map of old and new IDs")
         print("Number of Instances in map:\t{}"

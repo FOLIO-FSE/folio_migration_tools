@@ -1,13 +1,15 @@
 '''The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications'''
+import collections
 import json
+import os.path
 import re
 import uuid
 import xml.etree.ElementTree as ET
+from concurrent.futures import ProcessPoolExecutor
 from io import StringIO
 
 import requests
-
 from pymarc import Field, JSONWriter
 
 
@@ -21,7 +23,15 @@ class DefaultMapper:
         self.filter_chars_dop = r'[.,\/#!$%\^&\*;:{}=\_`~()]'
         self.filter_last_chars = r',$'
         self.folio = folio
+        self.srs_recs = []
         self.holdings_map = {}
+        self.results_path = results_path
+        self.srs_records_file = open(os.path.join(
+            self.results_path, 'srs.json'), "w+")
+        self.srs_raw_records_file = open(os.path.join(
+            self.results_path, 'srs_raw_records.json'), "w+")
+        self.srs_marc_records_file = open(os.path.join(
+            self.results_path, 'srs_marc_records.json'), "w+")
         self.id_map = {}
         print("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
@@ -74,21 +84,26 @@ class DefaultMapper:
                           '592': 'a',
                           '599': 'abcde'}
         self.subject_tags = {'600': 'abcdq',
-                '610': 'abcdn',
-                '611': 'acde',
-                '630': 'adfhklst',
-                '647': 'acdvxyz',
-                '648': 'avxyz',
-                '650': 'abcdvxyz',
-                '651': 'avxyz',
-                '653': 'a',
-                '655': 'abcvxyz235'}
+                             '610': 'abcdn',
+                             '611': 'acde',
+                             '630': 'adfhklst',
+                             '647': 'acdvxyz',
+                             '648': 'avxyz',
+                             '650': 'abcdvxyz',
+                             '651': 'avxyz',
+                             '653': 'a',
+                             '655': 'abcvxyz235'}
         self.non_mapped_subject_tags = {'654': '',
-                           '656': '',
-                           '657': '',
-                           '658': '',
-                           '662': ''}
+                                        '656': '',
+                                        '657': '',
+                                        '658': '',
+                                        '662': ''}
 
+    def wrap_up(self):
+        self.flush_srs_recs()
+        self.srs_records_file.close()
+        self.srs_marc_records_file.close()
+        self.srs_raw_records_file.close()
 
     def parse_bib(self, marc_record, record_source):
         ''' Parses a bib recod into a FOLIO Inventory instance object
@@ -125,39 +140,23 @@ class DefaultMapper:
             'notes': list(self.get_notes(marc_record))}
         return rec
 
-    def save_source_record(self, results_path, marc_record, instance_id):
+    def save_source_record(self, marc_record, instance_id):
         '''Saves the source Marc_record to the Source record Storage module'''
         marc_record.add_field(Field(tag='999',
                                     indicators=['f', 'f'],
                                     subfields=['i', instance_id]))
-        json_string = StringIO()
-        writer = JSONWriter(json_string)
-        writer.write(marc_record)
-        writer.close(close_fh=False)
-        a = {
-            "id": str(uuid.uuid4()),
-            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
-            "matchedProfileId": str(uuid.uuid4()),
-            "matchedId": str(uuid.uuid4()),
-            "generation": 1,
-            "recordType": "MARC",
-            "rawRecord": {
-                "id": str(uuid.uuid4()),
-                "content": marc_record.as_json()
-            },
-            "parsedRecord": {
-                "id": str(uuid.uuid4()),
-                "content": marc_record.as_json()
-            }
-        }
-        try:
-            with open(results_path + '/srs.json', 'a+') as srs_file:
-                srs_file.write("{}\t{}\n".format(a['id'], json.dumps(a) + '\n'))
-            # self.post_new_source_storage_record(json.dumps(a))
-            return a['id']
-        except Exception as ee:
-            print(ee)
-            raise ee
+        self.srs_recs.append((marc_record, instance_id))
+        if len(self.srs_recs) > 1000:
+            self.flush_srs_recs()
+            self.srs_recs = []
+
+    def flush_srs_recs(self):
+        pool = ProcessPoolExecutor(max_workers=4)
+        results = list(pool.map(get_srs_strings, self.srs_recs))
+        self.srs_records_file.write("".join(r[0]for r in results))
+        self.srs_marc_records_file.write(
+            "".join(r[2] for r in results))
+        self.srs_raw_records_file.write("".join(r[1] for r in results))
 
     def post_new_source_storage_record(self, loan):
         okapi_headers = self.folio.okapi_headers
@@ -210,7 +209,7 @@ class DefaultMapper:
 
     def get_notes(self, marc_record):
         '''Collects all notes fields and stores them as generic notes.'''
-        # TODO: specify note types with better accuracy.        
+        # TODO: specify note types with better accuracy.
         for key, value in self.note_tags.items():
             for field in marc_record.get_fields(key):
                 yield {
@@ -261,7 +260,8 @@ class DefaultMapper:
 
     def name_type_id(self, n):
         if not any(self.contrib_name_types):
-            self.contrib_name_types = {f['name']: f['id'] for f in self.folio.contrib_name_types}
+            self.contrib_name_types = {f['name']: f['id']
+                                       for f in self.folio.contrib_name_types}
         return self.contrib_name_types[n]
 
     def get_contributors(self, marc_record):
@@ -495,7 +495,7 @@ class DefaultMapper:
                               in self.folio.identifier_types
                               if f['name'] == 'Linking ISSN'), ''),
                  'l'],
-                #TODO: OCLC number? Distinguish 035s from eachother
+                # TODO: OCLC number? Distinguish 035s from eachother
                 ['035', next((f['id'] for f
                               in self.folio.identifier_types
                               if f['name'] == 'Control number'), ''),
@@ -529,3 +529,42 @@ class DefaultMapper:
                 else:
                     print('Illegal language code: {} for {}'
                           .format(language_value, legacyid))
+
+
+# Wrapping corouting which waits for return from process pool.
+
+def get_srs_strings(my_tuple):
+    json_string = StringIO()
+    writer = JSONWriter(json_string)
+    writer.write(my_tuple[0])
+    writer.close(close_fh=False)
+    marc_uuid = str(uuid.uuid4())
+    raw_uuid = str(uuid.uuid4())
+    record = {
+        "id": str(uuid.uuid4()),
+        "deleted": False,
+        "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
+        "matchedProfileId": str(uuid.uuid4()),
+        "matchedId": str(uuid.uuid4()),
+        "generation": 1,
+        "recordType": "MARC",
+        "rawRecordId": raw_uuid,
+        "parsedRecordId": marc_uuid,
+        "additionalInfo": {
+            "suppressDiscovery": False
+        },
+        "externalIdHolder": {
+            "instanceId": my_tuple[1]
+        }
+    }
+    raw_record = {
+        "id": raw_uuid,
+        "content": my_tuple[0].as_json()
+    }
+    marc_record = {
+        "id": marc_uuid,
+        "content": json.loads(my_tuple[0].as_json())
+    }
+    return (f"{record['id']}\t{json.dumps(record)}\n",
+            f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
+            f"{marc_record['id']}\t{json.dumps(marc_record)}\n")

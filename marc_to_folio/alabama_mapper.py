@@ -17,6 +17,9 @@ class AlabamaMapper(DefaultMapper):
         self.id_map = {}
         self.holdings_schema = folio.get_holdings_schema()
 
+    def wrap_up(self):
+        super().flush_srs_recs()
+
     def parse_bib(self, marc_record, record_source):
         # raise Exception("001:s with BHI as prefix")
         # raise Exception("FIX boundwidths")

@@ -14,12 +14,21 @@ class FiveCollagesMapper(DefaultMapper):
         self.results_path = results_path
         self.holdings_schema = folio.get_holdings_schema()
         # raise Exception("Mode of issuance ids?")
-        #raise Exception("Instance type ids?")
+        # raise Exception("Instance type ids?")
+
+    def wrap_up(self):
+        super().wrap_up()
 
     def parse_bib(self, marc_record, record_source):
         '''Performs extra parsing, based on local requirements'''
         folio_record = super().parse_bib(marc_record, record_source)
         legacy_id = marc_record['001'].format_field()
+        if '852' in marc_record:
+            print("852 found for{}. Holdings record?".format(legacy_id))
+        srs_id = (super().save_source_record(marc_record, folio_record['id']))
+        folio_record['identifiers'].append(
+            {'identifierTypeId': '8e258acc-7dc5-4635-b581-675ac4c510e3',
+                'value': srs_id})
         self.id_map[legacy_id] = {'id': folio_record['id']}
         return folio_record
 
