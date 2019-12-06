@@ -1,0 +1,83 @@
+{
+    "fields": {
+        "Instance_id": {
+            "target": "",
+            "description": ""
+        },
+        "Holding_id": {
+            "target": "holdingsRecordId",
+            "description": "",
+            "valueFromMap": true,
+            "mapPath": ""
+        },
+        "Item_barcode": {
+            "target": "barcode",
+            "description": ""
+        },
+        "Item_level_call_number": {
+            "target": "itemLevelCallNumber",
+            "description": ""
+        },
+        "Chronology": {
+            "target": "chronology",
+            "description": ""
+        },
+        "Enumeration": {
+            "target": "enumeration",
+            "description": ""
+        },
+        "Number_of_pieces": {
+            "target": "descriptionOfPieces",
+            "description": ""
+        },
+        "Material_type": {
+            "target": "materialTypeId",
+            "description": ""
+        },
+        "Permanent_location": {
+            "target": "permanentLocationId",
+            "description": "",
+            "valueFromMap": true,
+            "mapPath": ""
+        },
+        "Temporary_location": {
+            "target": "temporaryLocationId",
+            "description": "",
+            "valueFromMap": true,
+            "mapPath": ""
+        },
+        "Item_note": {
+            "target": "",
+            "description": ""
+        },
+        "Historical_Browses": {
+            "target": "",
+            "description": ""
+        },
+        "Historical_Charges": {
+            "target": "",
+            "description": ""
+        },
+        "Holds_Placed": {
+            "target": "",
+            "description": ""
+        },
+        "Recalls_Placed": {
+            "target": "",
+            "description": ""
+        },
+        "Item_status": {
+            "target": "",
+            "description": ""
+        },
+        "Item_status_date": {
+            "target": "",
+            "description": ""
+        }
+    },
+    "materialTypeMap": "/md/alabama/loan_type_map.tsv",
+    "itemsFileType": "TSV",
+    "itemsFileDelimiter": "\t",
+    "mapOnLocationField": "code",
+    "metadataUserId": "d916e883-f8f1-4188-bc1d-f0dce1511b50"
+}
