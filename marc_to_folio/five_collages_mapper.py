@@ -9,6 +9,7 @@ class FiveCollagesMapper(DefaultMapper):
     def __init__(self, folio, results_path):
         ''' Bootstrapping (loads data needed later in the script.)'''
         super().__init__(folio, results_path)
+        self.migration_user_id = 'd916e883-f8f1-4188-bc1d-f0dce1511b50'
         self.folio = folio
         self.id_map = {}
         self.results_path = results_path
@@ -22,6 +23,8 @@ class FiveCollagesMapper(DefaultMapper):
     def parse_bib(self, marc_record, record_source):
         '''Performs extra parsing, based on local requirements'''
         folio_record = super().parse_bib(marc_record, record_source)
+        folio_record['metadata'] = super().get_metadata_construct(
+            self.migration_user_id)
         legacy_id = marc_record['001'].format_field()
         if '852' in marc_record:
             print("852 found for{}. Holdings record?".format(legacy_id))
@@ -30,11 +33,14 @@ class FiveCollagesMapper(DefaultMapper):
             {'identifierTypeId': '8e258acc-7dc5-4635-b581-675ac4c510e3',
                 'value': srs_id})
         self.id_map[legacy_id] = {'id': folio_record['id']}
+        folio_record['identifiers'].append(
+            {'identifierTypeId': '2433e5d8-e5de-4cd4-d54c-28f3836df4e9',
+             'value': legacy_id})
         return folio_record
 
     def remove_from_id_map(self, marc_record):
         ''' removes the ID from the map in case parsing failed'''
-        id_key = marc_record['001']
+        id_key = marc_record['001'].format_field()
         if id_key in self.id_map:
             del self.id_map[id_key]
 

@@ -59,6 +59,10 @@ class MarcProcessor():
             print("Error validating record. Halting...")
             raise validation_error
         except Exception as inst:
+            remove_from_id_map = getattr(self.mapper,
+                                         "remove_from_id_map", None)
+            if callable(remove_from_id_map):
+                self.mapper.remove_from_id_map(marc_record)
             self.stats['failed_bibs'] += 1
             print(type(inst))
             print(inst.args)

@@ -2,6 +2,7 @@
 FOLIO community specifications'''
 import collections
 import json
+from datetime import datetime
 import os.path
 import re
 import uuid
@@ -104,6 +105,14 @@ class DefaultMapper:
         self.srs_records_file.close()
         self.srs_marc_records_file.close()
         self.srs_raw_records_file.close()
+
+    def get_metadata_construct(self, user_id):
+        df = '%Y-%m-%dT%H:%M:%S.%f+0000'
+        return {
+            "createdDate": datetime.now().strftime(df),
+            "createdByUserId": user_id,
+            "updatedDate": datetime.now().strftime(df),
+            "updatedByUserId": user_id}
 
     def parse_bib(self, marc_record, record_source):
         ''' Parses a bib recod into a FOLIO Inventory instance object
@@ -510,8 +519,9 @@ class DefaultMapper:
             subfields = b[2]
             for field in marc_record.get_fields(tag):
                 for subfield in field.get_subfields(*list(subfields)):
-                    yield {'identifierTypeId': identifier_type_id,
-                           'value': subfield}
+                    if identifier_type_id:
+                        yield {'identifierTypeId': identifier_type_id,
+                               'value': subfield}
 
     def filter_langs(self, language_values, forbidden_values, legacyid):
         for language_value in language_values:

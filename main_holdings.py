@@ -1,18 +1,23 @@
 '''Main "script."'''
 import argparse
 import os
+import csv
 import logging
 import json
 import pymarc
 from folioclient.FolioClient import FolioClient
 from marc_to_folio.holdings_marc_processor import HoldingsMarcProcessor
-from marc_to_folio.holdings_default_mapper import HoldingsDefaultMapper
+from marc_to_folio import HoldingsDefaultMapper
+from marc_to_folio import HoldingsAlabamaMapper
 
 
 def main():
     '''Main method. Magic starts here.'''
     # TODO: räknare på allt!
     logging.basicConfig(level=logging.CRITICAL)
+    module = __import__("marc_to_folio")
+    mappers = [cls.__name__ for cls in HoldingsDefaultMapper.__subclasses__()]
+    print(mappers)
     parser = argparse.ArgumentParser()
     parser.add_argument("records_file", help="path to marc records folder")
     parser.add_argument("result_folder", help="path to results folder")
@@ -24,6 +29,10 @@ def main():
                         help=("results will be written out for Postgres"
                               "ingestion. Default is JSON"),
                         action="store_true")
+    parser.add_argument("-mapper", "-m",
+                        help=("The mapper of choice"))
+    parser.add_argument("-location_map_path", "-l",
+                        help=("path of location map"))
     parser.add_argument("-marcxml", "-x", help=("DATA is in MARCXML format"),
                         action="store_true")
     parser.add_argument("-validate", "-v", help=("Validate JSON data against JSON Schema"),
@@ -40,15 +49,31 @@ def main():
                                args.username,
                                args.password)
     instance_id_map = {}
+    location_map = {}
+    print(f"Locations in FOLIO: {len(folio_client.locations)}")
+    csv.register_dialect('tsv', delimiter='\t')
+    if args.location_map_path:
+        with open(args.location_map_path) as location_map_f:
+            location_map = list(csv.DictReader(location_map_f,
+                                               dialect='tsv'))
+        print(f"Locations in map: {len(location_map)}")
     with open(os.path.join(args.result_folder, 'instance_id_map.json'), 'r') as json_file:
         instance_id_map = json.load(json_file)
+    try:
+        mapper_name = next((m for m in mappers
+                            if args.mapper and args.mapper in m), "HoldingsDefaultMapper")
+        print(mapper_name)
+        class_ = getattr(module, mapper_name)
+        mapper = class_(folio_client, instance_id_map, location_map)
+
+    except Exception as ee:
+        print("could not instantiate mapper")
+        raise ee
     print("Number of instances in ID map: {}".format(len(instance_id_map)))
-    default_mapper = HoldingsDefaultMapper(folio_client, instance_id_map)
-    print("Starting")
     print("Rec./s\t\tTot. recs\t\t")
 
     with open(os.path.join(args.result_folder, 'folio_holdings.json'), 'w+') as results_file:
-        processor = HoldingsMarcProcessor(default_mapper,
+        processor = HoldingsMarcProcessor(mapper,
                                           folio_client,
                                           results_file, args)
         if args.marcxml:

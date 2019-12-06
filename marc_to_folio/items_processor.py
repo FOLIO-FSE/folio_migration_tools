@@ -1,17 +1,19 @@
 ''' Class that processes each MARC record '''
 import time
 import json
+import os
 from jsonschema import ValidationError, validate
 
 
 class ItemsProcessor():
     '''the processor'''
-    def __init__(self, default_mapper, folio_client,
+
+    def __init__(self, mapper, folio_client,
                  results_file, args):
         self.results_file = results_file
         self.item_schema = folio_client.get_item_schema()
         self.records_count = 0
-        self.default_mapper = default_mapper
+        self.mapper = mapper
         self.instance_id_map = {}
         self.holdings_id_map = {}
         self.args = args
@@ -22,17 +24,18 @@ class ItemsProcessor():
         try:
             self.records_count += 1
             # Transform the item to a FOLIO record
-            folio_rec = self.default_mapper.parse_item(record)
+            folio_rec = self.mapper.parse_item(record)
             if self.args.validate:
                 validate(folio_rec, self.item_schema)
             # write record to file
-            write_to_file(self.results_file,
-                          self.args.postgres_dump,
-                          folio_rec)
+            if folio_rec:
+                write_to_file(self.results_file,
+                              self.args.postgres_dump,
+                              folio_rec)
             # Print progress
-            if self.records_count % 10000 == 0:
-                elapsed = self.records_count/(time.time() - self.start)
-                elapsed_formatted = '{0:.3g}'.format(elapsed)
+            if self.records_count % 100000 == 0:
+                elapsed = self.records_count / (time.time() - self.start)
+                elapsed_formatted = '{}'.format(elapsed)
                 print("{}\t\t{}".format(elapsed_formatted, self.records_count),
                       flush=True)
         except ValueError as value_error:
@@ -53,14 +56,15 @@ class ItemsProcessor():
 
     def wrap_up(self):
         '''Finalizes the mapping by writing things out.'''
-        id_map = self.default_mapper.item_id_map
-        path = self.args.items_id_dict_path
+        id_map = self.mapper.item_id_map
+        path = os.path.join(self.args.result_path, 'item_id_map.json')
         print("Saving map of {} old and new IDs to {}"
               .format(len(id_map), path))
-        with open(self.args.items_id_dict_path, 'w+') as id_map_file:
+        with open(path, 'w+') as id_map_file:
             json.dump(id_map, id_map_file,
                       indent=4)
-        print(self.default_mapper.folio.missing_location_codes)
+        print(self.mapper.folio.missing_location_codes)
+        self.mapper.wrap_up()
 
 
 def write_to_file(file, pg_dump, folio_record):

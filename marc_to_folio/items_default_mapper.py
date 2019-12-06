@@ -1,103 +1,234 @@
-'''The default mapper, responsible for parsing Items acording to the
+'''The Alabama mapper, responsible for parsing Items acording to the
 FOLIO community specifications'''
 import uuid
+import json
+import csv
+import sys
+import traceback
+from datetime import datetime
+csv.field_size_limit(sys.maxsize)
 
 
 class ItemsDefaultMapper:
     '''Maps an Item to inventory Item format according to
     the FOLIO community convention'''
     # Bootstrapping (loads data needed later in the script.)
-    def __init__(self, folio, holdings_id_map):
+
+    def __init__(self, folio, item_map, holdings_id_map, location_map):
+        print("init")
+        csv.register_dialect('tsv', delimiter='\t')
         self.folio = folio
+        self.stats = {"missing_location_codes": 0,
+                      "unmapped item types": 0}
+        self.item_schema = folio.get_item_schema()
         self.item_id_map = {}
+        self.map = item_map
         self.holdings_id_map = holdings_id_map
+        self.mapped_folio_fields = {}
+        for key in self.item_schema['properties'].keys():
+            self.mapped_folio_fields[key] = 0
+        self.mapped_legacy_field = {}
 
-    def parse_item(self, record):
-        '''Parses a holdings record into a FOLIO Inventory Holdings object
-        community mapping suggestion: '''
-        rec = {
-            'id': str(uuid.uuid4()),
-            'holdingsRecordId': self.get_holdings_id(record),
-            # 'formerIds': [],
-            # 'discoverySuppress': False,
-            # 'accessionNumber': '',
-            'barcode': self.get_barcode(record).strip(),
-            'itemLevelCallNumber': self.get_or_empty('Z30_CALL_NO', record),
-            # 'itemLevelCallNumberPrefix': 
-            # 'itemLevelCallNumberSuffix': '',
-            # 'itemLevelCallNumberTypeId': '',
-            # 'volume': '',
-            # 'enumeration': '',
-            # 'chronology': '',
-            # 'yearCaption': [''],
-            # 'itemIdentifier': '',
-            # 'copyNumbers': [''],
-            # 'numberOfPieces': '',
-            # 'descriptionOfPieces': '',
-            # 'numberOfMissingPieces': '',
-            # 'missingPieces': '',
-            # 'missingPiecesDate': '',
-            # 'itemDamagedStatusId': '',
-            # 'itemDamagedStatusDate': '',
-            'notes': list(self.get_notes(record)),
-            # 'circulationNotes': [{'noteType': 'Check in',
-            #                     'note': '',
-            #                     'staffOnly': False}],
-            'status': {'name': 'Available'},
-            'materialTypeId': '6a63d094-191c-4535-bf23-a1a4cf387759',
-            'permanentLoanTypeId': '76ed1db8-a995-46bc-bed2-f9b21f8b9358',
-            # 'temporaryLoanTypeId': '',
-            'permanentLocationId': self.folio.get_location_id(record['Z30_COLLECTION']),
-            # 'temporaryLocationId': '',
-            # 'electronicAccess': [{
-            # 'uri': '',
-            # 'linkText': '',
-            # 'materialsSpecification': '',
-            # 'publicNote': '',
-            # 'relationshipId': ''}],
-            # 'inTransitDestinationServicePointId': '',
-            # 'purchaseOrderLineIdentifier': ''
-            #
-        }
-        self.item_id_map[str(record['Z30_HOL_DOC_NUMBER_X'])] = rec['id']
-        return rec
+        '''Locations stuff'''
+        self.failed_items = []
+        self.locations_map = {}
+        self.missing_location_codes = {}
+        self.setup_locations(location_map)
+        self.unmapped_location_id = self.get_loc_id('ATDM')
 
-    def get_or_empty(self, code, record):
-        val = record[code].strip()
-        if len(val) < 1 or val is "null":
-            return val
-        return ''
+        '''Loan types, material types'''
+        self.loan_type_map = {}
+        self.unmapped_loan_types = {}
+        self.setup_m_and_l_types()
 
-    def get_holdings_id(self, record):
+        '''Note types'''
+        self.item_note_types = self.folio.folio_get_all("/item-note-types",
+                                                        "itemNoteTypes")
+        self.note_id = next(x['id'] for x in self.item_note_types
+                            if 'Note' == x['name'])
+
+    def setup_m_and_l_types(self, ):
+        with open(self.map['materialTypeMap']) as material_type_f:
+            mt_map = list(csv.DictReader(material_type_f, dialect='tsv'))
+            loan_types = self.folio.folio_get_all("/loan-types",
+                                                  "loantypes")
+            material_types = self.folio.folio_get_all("/material-types",
+                                                      "mtypes")
+            for b in mt_map:
+                lt_id = next((x['id'] for x in loan_types
+                              if b['loan_type'] == x['name']), "Unmapped")
+                mt_id = next((x['id'] for x in material_types
+                              if b['material_type'] == x['name']), "Unmapped")
+                if lt_id == "Unmapped":
+                    print(b['loan_type'])
+                if mt_id == "Unmapped":
+                    print(b['material_type'])
+                self.loan_type_map[b['legacy_type']] = {"loan_type": lt_id,
+                                                        "material_type": mt_id}
+        print(f"set up LoanTypeMap: {len(self.loan_type_map)} rows.")
+
+    def setup_locations(self, location_map):
+        temp_map = {}
+        for loc in self.folio.locations:
+            key = loc[self.map['mapOnLocationField']].strip()
+            temp_map[key] = loc['id']
+        if location_map and any(location_map):
+            for v in location_map:
+                if ',' in v['legacy_code']:
+                    for k in v['legacy_code'].split(','):
+                        self.locations_map[k.strip(
+                        )] = temp_map[v['folio_code']]
+                else:
+                    self.locations_map[v['legacy_code']
+                                       ] = temp_map[v['folio_code']]
+        else:
+            print("No location map supplied")
+            self.locations_map = temp_map
+        # self.locations_map = location_map
+        # print(json.dumps(self.locations_map, indent=4))
+
+    def wrap_up(self):
+        # print(json.dumps(self.failed_items, indent=4))
+        print("mapped FOLIO fields")
+        print(json.dumps(self.mapped_folio_fields, indent=4))
+        print("Mapped legacy fields")
+        print(json.dumps(self.mapped_legacy_field, indent=4))
+        print("Missing location codes")
+        print(json.dumps(self.missing_location_codes, indent=4))
+        print("unmapped loan types")
+        print(json.dumps(self.unmapped_loan_types, indent=4))
+        print(json.dumps(self.stats, indent=4))
+
+    def get_loc_id(self, loc_code):
+        return next((l['id'] for l in self.folio.locations
+                     if loc_code.strip() == l['code']))
+
+    def get_metadata_construct(self, user_id):
+        df = '%Y-%m-%dT%H:%M:%S.%f+0000'
+        return {
+            "createdDate": datetime.now().strftime(df),
+            "createdByUserId": user_id,
+            "updatedDate": datetime.now().strftime(df),
+            "updatedByUserId": user_id}
+
+    def get_records(self, file):
+        reader = None
+        if self.map['itemsFileType'] == 'TSV':
+            reader = csv.DictReader(file, dialect='tsv')
+        if self.map['itemsFileType'] == 'CSV':
+            csv.register_dialect(
+                'my_csv', delimiter=self.map['itemsFileDelimiter'])
+            reader = csv.DictReader(file, dialect='my_csv')
+        i = 0
         try:
-            old_holdings_id = str(record['Z30_HOL_DOC_NUMBER_X'])
-            return self.holdings_id_map[old_holdings_id]
+            for row in reader:
+                i += 1
+                yield row
+        except Exception as ee:
+            print(f"row:{i}")
+            print(ee)
+            # raise ee
+
+    def parse_item(self, legacy_item):
+        try:
+            item = {"id": str(uuid.uuid4()),
+                    "status": {"name": "Available"},
+                    "metadata": self.get_metadata_construct(self.map["metadataUserId"])}
+            legacy_id = ""
+            for legacy_key, value in self.map['fields'].items():
+                folio_field = value['target']
+                legacy_value = legacy_item.get(legacy_key, "").strip()
+                if legacy_value and folio_field:
+                    if folio_field == "formerIds":
+                        legacy_id = legacy_value
+                    elif folio_field in ["permanentLocationId", "temporaryLocationId"]:
+                        item[folio_field] = self.get_location_code(
+                            legacy_value)
+                    elif folio_field == "materialTypeId":
+                        self.handle_material_types(legacy_value, item)
+                    elif folio_field == "holdingsRecordId":
+                        if legacy_value not in self.holdings_id_map:
+                            raise ValueError(
+                                f"Holdings id {legacy_value} not in id map")
+                        else:
+                            item[folio_field] = self.holdings_id_map[legacy_value]
+                    elif folio_field == 'notes':
+                        self.add_note(legacy_value, item)
+                    else:
+                        if self.is_string(folio_field):
+                            item[folio_field] = legacy_value
+                        elif self.is_string_array(folio_field):
+                            if folio_field in item and any(item[folio_field]):
+                                item[folio_field].append(legacy_value)
+                            else:
+                                item[folio_field] = [legacy_value]
+                    self.count_mapped(folio_field, legacy_key)
+            for req in self.item_schema['required']:
+                if req not in item.keys():
+                    raise Exception(f"{req} is required")
+                if "permanentLoanTypeId" not in item.keys():
+                    raise Exception(f"{req} is required")
+                if "materialTypeId" not in item.keys():
+                    raise Exception(f"{req} is required")
+            self.item_id_map[legacy_id] = item['id']
+            return item
         except Exception as ee:
             print(ee)
-            raise ValueError("Error getting new FOLIO holding id from item {}"
-                             .format(record['Z30_REC_KEY']))
+            # traceback.print_exc()
+            #raise ee
+            return None
 
-    def get_barcode(self, record):
-        return (record['Z30_BARCODE'] if 'Z30_BARCODE' in record else '')
+    def get_location_code(self, legacy_value):
+        location_id = self.locations_map.get(
+            legacy_value.strip(), self.unmapped_location_id)
+        if location_id == self.unmapped_location_id:
+            self.missing_location_codes[legacy_value] = self.missing_location_codes.get(
+                legacy_value, 0) + 1
+            self.stats["missing_location_codes"] += 1
+        return location_id
 
-    def get_notes(self, record):
-        '''returns the various notes fields from the marc record'''
-        note_fields = ['Z30_NOTE_CIRCULATION', 'Z30_NOTE_INTERNAL',
-                       'Z30_NOTE_OPAC']
-        for note_field in [record[n] for n in note_fields if record[n]]:
-            if note_field != "null":
-                yield {
-                    'itemsNoteTypeId': '2c93c2c2-a7c3-4e35-a5cb-04b2713cdbc2',
-                    'note': note_field,
-                    'staffOnly': True}
+    def is_string(self, target):
+        folio_prop = self.item_schema['properties'][target]['type']
+        return folio_prop == 'string'
 
-    def get_location(self, marc_record):
-        '''returns the location mapped and translated'''
-        if '852' in marc_record and 'c' in marc_record['852']:
-            return marc_record['852']['c']
-        return 'catch_all'
+    def is_string_array(self, target):
+        f = self.item_schema['properties'][target]
+        return (f['type'] == 'array' and f['items']['type'] == 'string')
 
-    def get_holdingsStatements(self, marc_record):
-        '''returns the various holdings statements'''
-        yield {'statement': 'Some statement',
-               'note': 'some note'}
+    def count_mapped(self, target, legacy_key):
+        if target:
+            self.mapped_folio_fields[target] += 1
+        if legacy_key:
+            self.mapped_legacy_field[legacy_key] = self.mapped_legacy_field.get(
+                legacy_key, 0) + 1
+
+    def add_note(self, note_string, item, note_type_name="", staffOnly=False):
+        nt_id = next((x['id'] for x in self.item_note_types
+                      if note_type_name == x['name']), self.note_id)
+        note_to_add = {"itemNoteTypeId": nt_id,
+                       "note": note_string,
+                       "staffOnly": staffOnly}
+        if "notes" in item and any(item['notes']):
+            item['notes'].append(note_to_add)
+        else:
+            item['notes'] = [note_to_add]
+
+    def handle_material_types(self, legacy_value, item):
+        v = legacy_value
+        if v.startswith("DigitalEquip"):
+            v = "DigitalEquipment"
+            # TODO: map value!
+            cost = v.replace("DigitalEquip_", "")
+            self.add_note(cost, item, "Replacement Cost (USD)", True)
+            print(f"adding Cost note: {cost}")
+        if '*' in self.loan_type_map:
+            item["permanentLoanTypeId"] = self.loan_type_map['*']["loan_type"]
+            item["materialTypeId"] = self.loan_type_map['*']["material_type"]
+        elif v not in self.loan_type_map:
+            self.unmapped_loan_types[v] = self.unmapped_loan_types.get(
+                v, 0) + 1
+            self.stats["unmapped item types"] += 1
+        else:
+            t = self.loan_type_map[v]
+            item["permanentLoanTypeId"] = t["loan_type"]
+            item["materialTypeId"] = t["material_type"]
