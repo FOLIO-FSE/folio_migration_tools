@@ -37,6 +37,7 @@ class DefaultMapper:
         print("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
         self.contrib_name_types = {}
+        self.mapped_folio_fields = {}
         self.alt_title_map = {}
         self.identifier_types = []
         self.note_tags = {'500': 'a35',
@@ -147,7 +148,17 @@ class DefaultMapper:
             'physicalDescriptions': list(self.get_physical_desc(marc_record)),
             'languages': self.get_languages(marc_record),
             'notes': list(self.get_notes(marc_record))}
+        self.validate(rec)
         return rec
+
+    def validate(self, folio_rec):
+        if folio_rec["title"].strip() == "":
+            print(f"No title for {folio_rec['hrid']}")
+        for key, value in folio_rec.items():
+            if isinstance(value, str)  and len(value) > 0:
+                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(key, 0) + 1
+            if isinstance(value, list) and len(value) > 0:
+                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(key, 0) + 1on
 
     def save_source_record(self, marc_record, instance_id):
         '''Saves the source Marc_record to the Source record Storage module'''
@@ -563,7 +574,7 @@ def get_srs_strings(my_tuple):
         "additionalInfo": {
             "suppressDiscovery": False
         },
-        "externalIdHolder": {
+        "externalIdsHolder": {
             "instanceId": my_tuple[1]
         }
     }
