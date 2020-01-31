@@ -5,3 +5,4 @@ from marc_to_folio.default_mapper import DefaultMapper
 from marc_to_folio.holdings_alabama_mapper import HoldingsAlabamaMapper
 from marc_to_folio.holdings_default_mapper import HoldingsDefaultMapper
 from marc_to_folio.items_default_mapper import ItemsDefaultMapper
+from marc_to_folio.folio_rules_mapper import RulesMapper

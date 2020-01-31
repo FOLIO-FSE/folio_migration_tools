@@ -1,20 +1,21 @@
 '''The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications'''
-import collections
 import json
-from datetime import datetime
 import os.path
 import re
 import uuid
 import xml.etree.ElementTree as ET
 from concurrent.futures import ProcessPoolExecutor
+from datetime import datetime
 from io import StringIO
 
 import requests
 from pymarc import Field, JSONWriter
 
+from marc_to_folio.default_mapper import DefaultMapper
 
-class DefaultMapper:
+
+class RulesMapper(DefaultMapper):
     '''Maps a MARC record to inventory instance format according to
     the FOLIO community convention'''
     # Bootstrapping (loads data needed later in the script.)
@@ -24,7 +25,19 @@ class DefaultMapper:
         self.filter_chars_dop = r'[.,\/#!$%\^&\*;:{}=\_`~()]'
         self.filter_last_chars = r',$'
         self.folio = folio
+        self.migration_user_id = 'd916e883-f8f1-4188-bc1d-f0dce1511b50'
         self.srs_recs = []
+        instance_url = 'https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json'
+        schema_request = requests.get(instance_url)
+        # schema_request = requests.get('https://raw.githubusercontent.com/folio-org/mod-source-record-manager/master/ramls/instance.json')
+        schema_text = schema_request.text
+        # schema_text = schema_text.replace('raml-util/schemas/tags.schema', 'https://raw.githubusercontent.com/folio-org/raml/master/schemas/tags.schema')
+        # schema_text = schema_text.replace('raml-util/schemas/metadata.schema', 'https://raw.githubusercontent.com/folio-org/raml/master/schemas/metadata.schema')
+
+        self.instance_schema = json.loads(schema_text)
+        # self.instance_schema['properties'].pop('tags')
+        # self.instance_schema['title'] = 'Instance'
+        # self.instance_schema['$id'] = instance_url
         self.holdings_map = {}
         self.results_path = results_path
         self.srs_records_file = open(os.path.join(
@@ -40,125 +53,172 @@ class DefaultMapper:
         self.mapped_folio_fields = {}
         self.alt_title_map = {}
         self.identifier_types = []
-        self.note_tags = {'500': 'a35',
-                          '501': 'a5',
-                          '502': 'abcd',
-                          '504': 'ab',
-                          '505': 'agrt',
-                          '506': 'a',
-                          '507': 'ab',
-                          '508': 'a',
-                          '510': 'abcx',
-                          '511': 'a',
-                          '513': 'ab',
-                          '514': 'acdeghz',
-                          '515': 'a',
-                          '516': 'a',
-                          '518': '3adop',
-                          '520': '3abc',
-                          '522': 'a',
-                          '524': 'a',
-                          '525': 'a',
-                          '530': 'a',
-                          '532': 'a',
-                          '533': 'abcdefmn35',
-                          '534': 'abcefklmnoptxz3',
-                          '540': 'abcdu5',
-                          '541': '3abcdefhno5',
-                          '542': 'abcdngfosu',
-                          '544': 'ad',
-                          '545': 'abu',
-                          '546': '3ab',
-                          '547': 'a',
-                          '550': 'a',
-                          '552': 'ablmnz',
-                          '555': 'abcdu',
-                          '556': 'az',
-                          '561': '3au5',
-                          '562': '3abc5',
-                          '563': '3a5',
-                          '565': 'a',
-                          '567': 'a',
-                          '580': 'a',
-                          '583': 'abcdefhijklnouxz235',
-                          '586': 'a',
-                          '590': 'a',
-                          '592': 'a',
-                          '599': 'abcde'}
-        self.subject_tags = {'600': 'abcdq',
-                             '610': 'abcdn',
-                             '611': 'acde',
-                             '630': 'adfhklst',
-                             '647': 'acdvxyz',
-                             '648': 'avxyz',
-                             '650': 'abcdvxyz',
-                             '651': 'avxyz',
-                             '653': 'a',
-                             '655': 'abcvxyz235'}
-        self.non_mapped_subject_tags = {'654': '',
-                                        '656': '',
-                                        '657': '',
-                                        '658': '',
-                                        '662': ''}
+        # self.mappings = self.folio.folio_get_single_object('/mapping-rules')
+        with open('/mnt/c/code/folio-fse/MARC21-To-FOLIO/maps/mapping_rules_default.json') as map_f:
+            self.mappings = json.load(map_f)
+        self.unmapped_tags = {}
+
+    def add_stats(self, stats, a):
+        if a not in stats:
+            stats[a] = 1
+        else:
+            stats[a] += 1
 
     def wrap_up(self):
         self.flush_srs_recs()
         self.srs_records_file.close()
         self.srs_marc_records_file.close()
         self.srs_raw_records_file.close()
+        print(self.unmapped_tags)
 
-    def get_metadata_construct(self, user_id):
-        df = '%Y-%m-%dT%H:%M:%S.%f+0000'
-        return {
-            "createdDate": datetime.now().strftime(df),
-            "createdByUserId": user_id,
-            "updatedDate": datetime.now().strftime(df),
-            "updatedByUserId": user_id}
+    '''
+    def instantiate_instance(self, userId):
+        builder = pjs.ObjectBuilder(self.instance_schema)
+        ns = builder.build_classes()
+        Instance = ns.Instance
+        i = Instance()
+        print(i)
+        '''
 
     def parse_bib(self, marc_record, record_source):
         ''' Parses a bib recod into a FOLIO Inventory instance object
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function'''
-        # not mapped. Randomizes an instance type:
         rec = {
             'id': str(uuid.uuid4()),
-            # This should be the new Libris ID?
-            'hrid': str(marc_record['001'].format_field()),
-            # TODO: add Instance status
-            'title': self.get_title(marc_record),
-            'indexTitle': self.get_index_title(marc_record),
-            'source': record_source,
-            'contributors': list(self.get_contributors(marc_record)),
-            'identifiers': list(self.get_identifiers(marc_record)),
-            'instanceTypeId': self.get_instance_type_id(marc_record),
-            'alternativeTitles': list(self.get_alt_titles(marc_record)),
-            'publicationFrequency': list(set(self.get_publication_frequency(marc_record))),
-            'publicationRange': list(set(self.get_publication_range(marc_record))),
-            'series': list(set(self.get_series(marc_record))),
-            'editions': list(set(self.get_editions(marc_record))),
-            'subjects': list(set(self.get_subjects(marc_record))),
-            'classifications': list(self.get_classifications(marc_record)),
-            'publication': list((self.get_publication(marc_record))),
-            # 'natureOfContentTermIds': list(self.get_nature_of_content(marc_record)),
-            # TODO: add instanceFormatId
-            'instanceFormatIds': ['8d511d33-5e85-4c5d-9bce-6e3c9cd0c324'],
-            # 'instanceFormatIds': [self.folio.instance_formats[0]['id']],
-            'modeOfIssuanceId': self.get_mode_of_issuance_id(marc_record),
-            # TODO: add physical description
-            'physicalDescriptions': list(self.get_physical_desc(marc_record)),
-            'languages': self.get_languages(marc_record),
-            'notes': list(self.get_notes(marc_record))}
-        self.validate(rec)
+            'metadata': super().get_metadata_construct(self.migration_user_id)}
+        for marc_field in marc_record:
+            if marc_field.tag not in self.mappings:
+                self.add_stats(self.unmapped_tags, marc_field.tag)
+            else:
+                mappings = self.mappings[marc_field.tag]
+                self.map_field_according_to_mapping(marc_field, mappings, rec)
+
+        # self.validate(rec)        
+        for key, value in rec.items():
+            if isinstance(value, list):
+                res = []
+                for v in value:
+                    if v not in res:
+                        res.append(v)
+                rec[key] = res
+        print(json.dumps(rec, indent=4, sort_keys=True))
         return rec
+
+    def map_field_according_to_mapping(self, marc_field, mappings, rec):
+        for mapping in mappings:
+            if 'entity' not in mapping:
+                if 'rules' in mapping and any(mapping['rules']) and any(mapping['rules'][0]['conditions']):
+                    self.add_value_to_target(
+                        rec, mapping['target'], self.apply_rules(marc_field, mapping))
+                else:
+                    self.add_value_to_target(rec, mapping['target'], marc_field.format_field())
+            else:
+                self.handle_entity_mapping(marc_field, mapping['entity'], rec)
+
+    def handle_entity_mapping(self, marc_field, entity_mapping, rec):
+        e_parent = entity_mapping[0]['target'].split('.')[0]
+        sch = self.instance_schema['properties']
+        print(f"entity mapping into {e_parent} {marc_field.tag} parent is of type {sch[e_parent]['type']}")
+        entity = {}
+        for em in entity_mapping:
+            k = em['target'].split('.')[-1]
+            v = ' '.join(marc_field.get_subfields(*em['subfield']))
+            entity[k] = v
+        if sch[e_parent]['type'] == 'array':
+            if e_parent not in rec:
+                rec[e_parent] = [entity]
+            else:
+                rec[e_parent].append(entity)
+        else:
+            rec[e_parent] = entity
+
+    def apply_rules(self, marc_field, mapping):
+        # print(mapping)
+        # print(marc_field)
+        c_type_def = mapping['rules'][0]['conditions'][0]['type'].split(',')
+        condition_types = [x.strip() for x in c_type_def]
+        # print(f'conditions {condition_types}')
+        value = ''
+        if mapping.get('applyRulesOnConcatenatedData', ''):
+            value = ' '.join(marc_field.get_subfields(*mapping['subfield']))
+            value = self.apply_rule(value, condition_types)
+        else:
+            value = ' '.join([self.apply_rule(x, condition_types) for x in marc_field.get_subfields(*mapping['subfield'])])
+        if not value:
+            print(f"no value! {value} {marc_field}")
+        return value
+
+    def apply_rule(self, value, condition_types):
+        for condition_type in condition_types:
+            if condition_type == 'trim_period':
+                value = value.rstrip('.')
+            elif condition_type == 'trim':
+                value = value.strip()
+            elif condition_type == 'remove_ending_punc':
+                for char in ';:,/+= ':
+                    value = value.rstrip(char)
+            # elif condition_type == 'remove_prefix_by_indicator':
+                
+            # elif condition_type == 'capitalize':
+
+            else:
+                print(f'{condition_type} not matched!')
+        return value
+
+    def add_value_to_target(self, rec, target_string, value):
+        targets = target_string.split('.')
+        sch = self.instance_schema['properties']
+        prop = rec
+        sc_prop = sch
+        sc_parent = None
+        parent = None
+        if len(targets) == 1:
+            # print(f"{target_string} {value} {rec}")
+            if sch[target_string]['type'] == 'array' and sch[target_string]['items']['type'] == 'string':
+                if target_string not in rec:
+                    rec[target_string] = [value]
+                else:
+                    # print(f"Adding into list! {target_string} {(rec[target_string])} {value}")
+                    rec[target_string].append(value)
+            elif sch[target_string]['type'] == 'string':
+                rec[target_string] = value
+            else:
+                print(f"Edge! {target_string} {sch[target_string]['type']}")
+        else:
+            for target in targets:
+                if target in sc_prop:
+                    sc_prop = sc_prop[target]
+                else:
+                    sc_prop = sc_parent['items']['properties'][target]
+                if target not in rec:
+                    if sc_prop['type'] == 'array':
+                        prop[target] = []
+                        break
+                        # prop[target].append({})
+                    elif sc_parent['type'] == 'array' and sc_prop['type'] == 'string':
+                        print(f"break! {target} {sc_prop['type']} {prop}")
+                        break
+                    else:
+                        if (sc_parent['type'] == 'array'):
+                            prop[target] = {}
+                            parent.append(prop[target])
+                if target == targets[-1]:
+                    prop[target] = value
+                prop = prop[target]
+                sc_parent = sc_prop
+                parent = target
 
     def validate(self, folio_rec):
         if folio_rec["title"].strip() == "":
             print(f"No title for {folio_rec['hrid']}")
         for key, value in folio_rec.items():
-            if isinstance(value, str)  and len(value) > 0:
-                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(key, 0) + 1
+            if isinstance(value, str) and len(value) > 0:
+                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(
+                    key, 0) + 1
             if isinstance(value, list) and len(value) > 0:
-                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(key, 0) + 1
+                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(
+                    key, 0) + 1
 
     def save_source_record(self, marc_record, instance_id):
         '''Saves the source Marc_record to the Source record Storage module'''

@@ -15,6 +15,8 @@ requests = "*"
 pymarc = "*"
 lxml = "*"
 folioclient = "*"
+python-jsonschema-objects = "*"
+pylint = "*"
 
 [requires]
 python_version = "3.7"

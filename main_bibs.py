@@ -3,17 +3,14 @@ import argparse
 import json
 import logging
 import sys
-import asyncio
 import traceback
 from os import listdir
 from os.path import isfile, join
 
-import pymarc
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
 
-from marc_to_folio import (AlabamaMapper, ChalmersMapper, DefaultMapper,
-                           FiveCollagesMapper)
+from marc_to_folio import DefaultMapper
 from marc_to_folio.marc_processor import MarcProcessor
 
 
