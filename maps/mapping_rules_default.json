@@ -1023,7 +1023,7 @@
                         {
                             "conditions": [
                                 {
-                                    "type": "trim_period, trim"
+                                    "type": "remove_ending_punc, trim"
                                 }
                             ]
                         }
@@ -1118,6 +1118,51 @@
             ]
         }
     ],
+    "222": [
+        {
+            "entity": [
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_alternative_title_type_id",
+                                    "parameter": {
+                                        "name": "Uniform title"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "alternativeTitles.alternativeTitleTypeId",
+                    "subfield": [
+                        "a",
+                        "b"
+                    ],
+                    "description": "Alternative Title id",
+                    "applyRulesOnConcatenatedData": true
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "alternativeTitles.alternativeTitle",
+                    "subfield": [
+                        "a",
+                        "b"
+                    ],
+                    "description": "Alternative Title",
+                    "applyRulesOnConcatenatedData": true
+                }
+            ]
+        }
+    ],
     "240": [
         {
             "entity": [
@@ -1188,6 +1233,15 @@
     "245": [
         {
             "target": "title",
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "remove_ending_punc"
+                        }
+                    ]
+                }
+            ],
             "subfield": [
                 "a",
                 "n",
@@ -1208,7 +1262,7 @@
                 {
                     "conditions": [
                         {
-                            "type": "remove_prefix_by_indicator, capitalize"
+                            "type": "remove_prefix_by_indicator, capitalize, remove_ending_punc"
                         }
                     ]
                 }

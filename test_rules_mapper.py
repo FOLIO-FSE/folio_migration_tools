@@ -44,11 +44,11 @@ class TestRulesMapper(unittest.TestCase):
         # TODO: test abcense of / for chalmers
 
     def test_composed_title(self):
-        message = 'Should create a composed title (245) with the [a, b, k, n, p] subfields.'
+        message = 'Should create a composed title (245) with the [a, b, k, n, p] subfields'
         xpath = "//marc:datafield[@tag='245']"
         record = self.default_map('test_composed_title.xml', xpath)
         # self.assertFalse('/' in record['title'])
-        self.assertEqual('The wedding collection. Volume 4, Love will be our home: 15 songs of love and commitment. / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors.',
+        self.assertEqual('The wedding collection. Volume 4, Love will be our home: 15 songs of love and commitment. / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors',
                          record[0]['title'], message + '\n' + record[1])
 
     def test_alternative_titles_246(self):
@@ -86,20 +86,20 @@ class TestRulesMapper(unittest.TestCase):
         record = self.default_map('test4.xml', xpath)
         # self.assertFalse(all('/' in t for t in record['alternativeTitles']))
         title = "Urbana tidskrifter"
-        self.assertIn(title, (t['alternativeTitle'] for t
+        self.assertIn(title, list(t['alternativeTitle'] for t
                               in record[0]['alternativeTitles']), message + '\n' + record[1])
-        title = "Cahiers d'urbanisme et d'aménagement du territoire"
-        self.assertIn(title, (t['alternativeTitle'] for t
+        title = "Cahiers d'urbanisme et d'aménagement du territoire 57/58/59"
+        self.assertIn(title, list(t['alternativeTitle'] for t
                               in record[0]['alternativeTitles']), message + '\n' + record[1])
         title = "Les cahiers d'urbanisme"
-        self.assertIn(title, (t['alternativeTitle'] for t
+        self.assertIn(title, list(t['alternativeTitle'] for t
                               in record[0]['alternativeTitles']), message + '\n' + record[1])
 
     def test_editions(self):
         message = 'Should add editions (250) to the editions list and enforce unique'
         xpath = "//marc:datafield[@tag='250']"
         record = self.default_map('test_editions.xml', xpath)
-        editions_stmts = ['8. uppl.', '[Revised]']
+        editions_stmts = ['8. uppl', '[Revised]']
         for stmt in editions_stmts:
             self.assertIn(stmt, record[0]['editions'],
                           message + '\n' + record[1])
@@ -144,24 +144,24 @@ class TestRulesMapper(unittest.TestCase):
         xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
         record = self.default_map('test_alternative_titles.xml', xpath)
         # 246
-        title = "Engineering identities, epistemologies and values - remainder title"
-        self.assertIn(title, (t['alternativeTitle'] for t
+        title = "Engineering identities, epistemologies and values remainder title"
+        self.assertIn(title, list(t['alternativeTitle'] for t
                               in record[0]['alternativeTitles']), message + '\n' + record[1])
         # 247
         title = "Medical world news annual review of medicine"
-        self.assertIn(title, (t['alternativeTitle'] for t
+        self.assertIn(title, list(t['alternativeTitle'] for t
                               in record[0]['alternativeTitles']), message + '\n' + record[1])
         # 240
         title = "Laws, etc. (Laws of Kenya : 1948)"
-        self.assertIn(title, (t['alternativeTitle'] for t
+        self.assertIn(title, list(t['alternativeTitle'] for t
                               in record[0]['alternativeTitles']), message + '\n' + record[1])
         # 222
         title = "Soviet astronomy letters"
-        self.assertIn(title, (t['alternativeTitle'] for t
+        self.assertIn(title, list(t['alternativeTitle'] for t
                               in record[0]['alternativeTitles']), message + '\n' + record[1])
         # 130
         title = "Star is born (Motion picture : 1954)"
-        self.assertIn(title, (t['alternativeTitle'] for t
+        self.assertIn(title, list(t['alternativeTitle'] for t
                               in record[0]['alternativeTitles']), message + '\n' + record[1])
 
     def test_identifiers(self):
@@ -203,24 +203,24 @@ class TestRulesMapper(unittest.TestCase):
         record = self.default_map('test_series.xml', xpath)
         m = message + '\n' + record[1]
         # 800
-        self.assertIn('Joyce, James, 1882-1941. James Joyce archive.',
+        self.assertIn('Joyce, James, 1882-1941. James Joyce archive',
                       record[0]['series'], m)
         # 810
-        self.assertIn('United States. Dept. of the Army. Field manual.',
+        self.assertIn('United States. Dept. of the Army. Field manual',
                       record[0]['series'], m)
         # 811
-        self.assertIn('International Congress of Nutrition (11th : 1978 : Rio de Janeiro, Brazil). Nutrition and food science ; v. 1.',
+        self.assertIn('International Congress of Nutrition (11th : 1978 : Rio de Janeiro, Brazil). Nutrition and food science ; v. 1',
                       record[0]['series'], m)
         # 830
-        self.assertIn('Philosophy of engineering and technology ; v. 21.',
+        self.assertIn('Philosophy of engineering and technology ; v. 21',
                       record[0]['series'], m)
-        self.assertIn('American university studies. Foreign language instruction ; vol. 12.',
+        self.assertIn('American university studies. Foreign language instruction ; vol. 12',
                       record[0]['series'], m)
         # 440
         self.assertIn('Journal of polymer science. Part C, Polymer symposia ; no. 39',
                       record[0]['series'], m)
         # 490
-        self.assertIn('Pediatric clinics of North America ; v. 2, no. 4.',
+        self.assertIn('Pediatric clinics of North America ; v. 2, no. 4',
                       record[0]['series'], m)
 
     def test_series_deduped(self):
@@ -248,7 +248,7 @@ class TestRulesMapper(unittest.TestCase):
         with self.subTest("100$ade4, unknown typeid, set type text to cartographer"):
             self.assertIn('Lous, Christian Carl, 1724-1804', contributors, m)
         with self.subTest("700$e (contributor)"):
-            self.assertIn('Weaver, James L.', contributors, m)
+            self.assertIn('Weaver, James L', contributors, m)
         with self.subTest("111$acde, no contrib type id"):
             self.assertIn('Wolfcon Durham 2018', contributors, m)
         with self.subTest("111$abbde4"):
@@ -294,7 +294,7 @@ class TestRulesMapper(unittest.TestCase):
             self.assertIn('Bunker Hill, Battle of (Boston, Massachusetts : 1775)',
                           record[0]['subjects'], m)
         with self.subTest("648$avxyz"):
-            self.assertIn('Twentieth century Social life and customs.',
+            self.assertIn('Twentieth century Social life and customs',
                           record[0]['subjects'], m)
         with self.subTest("650$abcdvxyz"):
             self.assertIn('Engineering Philosophy',
@@ -353,7 +353,7 @@ class TestRulesMapper(unittest.TestCase):
         m = message + '\n' + record[1]
         notes = list([note['note'] for note in record[0]['notes']])
         with self.subTest('500$a'):
-            self.assertIn('"Embedded application development for home and industry."--Cover.',
+            self.assertIn('"Embedded application development for home and industry."--Cover',
                           notes, m)
         with self.subTest('500$3a5'):
             self.assertIn('Cotsen copy: Published plain red wrappers with first and last leaves pasted to interior wrappers. NjP',
@@ -368,16 +368,16 @@ class TestRulesMapper(unittest.TestCase):
             self.assertIn('Includes bibliographical references. 19',
                           notes, m)
         with self.subTest('506$a'):
-            self.assertIn('Classified.',
+            self.assertIn('Classified',
                           notes, m)
         with self.subTest('507$b'):
-            self.assertIn('Not drawn to scale.',
+            self.assertIn('Not drawn to scale',
                           notes, m)
         with self.subTest('508$a'):
-            self.assertIn('Film editor, Martyn Down ; consultant, Robert F. Miller.',
+            self.assertIn('Film editor, Martyn Down ; consultant, Robert F. Miller',
                           notes, m)
         with self.subTest('508$a'):
-            self.assertIn('Film editor, Martyn Down ; consultant, Robert F. Miller.',
+            self.assertIn('Film editor, Martyn Down ; consultant, Robert F. Miller',
                           notes, m)
         with self.subTest('510$axb'):
             self.assertIn('Index medicus, 0019-3879, v1n1, 1984-',
@@ -390,22 +390,22 @@ class TestRulesMapper(unittest.TestCase):
         m = message + '\n' + record[1]
         notes = list([note['note'] for note in record[0]['notes']])
         with self.subTest('511$a'):
-            self.assertIn('Marshall Moss, violin ; Neil Roberts, harpsichord.',
+            self.assertIn('Marshall Moss, violin ; Neil Roberts, harpsichord',
                           notes, m)
         with self.subTest('513$ab'):
-            self.assertIn('Quarterly technical progress report; January-April 1, 1977.',
+            self.assertIn('Quarterly technical progress report; January-April 1, 1977',
                           notes, m)
         with self.subTest('514$adef'):
-            self.assertIn('The map layer that displays Special Feature Symbols shows the approximate location of small (less than 2 acres in size) areas of soils... Quarter quadrangles edited and joined internally and to surrounding quads. All known errors corrected. The combination of spatial linework layer, Special Feature Symbols layer, and attribute data are considered a complete SSURGO dataset. The actual on ground transition between the area represented by the Special Feature Symbol and the surrounding soils generally is very narrow with a well defined edge. The center of the feature area was compiled and digitized as a point. The same standards for compilation and digitizing used for line data were applied to the development of the special feature symbols layer.',
+            self.assertIn('The map layer that displays Special Feature Symbols shows the approximate location of small (less than 2 acres in size) areas of soils... Quarter quadrangles edited and joined internally and to surrounding quads. All known errors corrected. The combination of spatial linework layer, Special Feature Symbols layer, and attribute data are considered a complete SSURGO dataset. The actual on ground transition between the area represented by the Special Feature Symbol and the surrounding soils generally is very narrow with a well defined edge. The center of the feature area was compiled and digitized as a point. The same standards for compilation and digitizing used for line data were applied to the development of the special feature symbols layer',
                           notes, m)
         with self.subTest('515$a'):
-            self.assertIn('Designation New series dropped with volume 38, 1908.',
+            self.assertIn('Designation New series dropped with volume 38, 1908',
                           notes, m)
         with self.subTest('516$a'):
-            self.assertIn('Numeric (Summary statistics).',
+            self.assertIn('Numeric (Summary statistics)',
                           notes, m)
         with self.subTest('518$3dp'):
-            self.assertIn('3rd work 1981 November 25 Neues Gewandhaus, Leipzig.',
+            self.assertIn('3rd work 1981 November 25 Neues Gewandhaus, Leipzig',
                           notes, m)
 
     def test_notes_52x(self):
@@ -415,16 +415,16 @@ class TestRulesMapper(unittest.TestCase):
         m = message + '\n' + record[1]
         notes = list([note['note'] for note in record[0]['notes']])
         with self.subTest('520$a'):
-            self.assertIn('"Create embedded projects for personal and professional applications. Join the Internet of Things revolution with a project-based approach to building embedded Java applications. Written by recognized Java experts, this Oracle Press guide features a series of low-cost, DIY projects that gradually escalate your development skills. Learn how to set up and configure your Raspberry Pi, connect external hardware, work with the NetBeans IDE, and write and embed powerful Java applications. Raspberry Pi with Java: Programming the Internet of Things (IoT) covers hobbyist as well as professional home and industry applications."--Back cover.',
+            self.assertIn('"Create embedded projects for personal and professional applications. Join the Internet of Things revolution with a project-based approach to building embedded Java applications. Written by recognized Java experts, this Oracle Press guide features a series of low-cost, DIY projects that gradually escalate your development skills. Learn how to set up and configure your Raspberry Pi, connect external hardware, work with the NetBeans IDE, and write and embed powerful Java applications. Raspberry Pi with Java: Programming the Internet of Things (IoT) covers hobbyist as well as professional home and industry applications."--Back cover',
                           notes, m)
         with self.subTest('522$a'):
-            self.assertIn('County-level data from Virginia.',
+            self.assertIn('County-level data from Virginia',
                           notes, m)
         with self.subTest('524$a'):
             self.assertIn('Dakota usc',
                           notes, m)
         with self.subTest('525$a'):
-            self.assertIn('Supplements accompany some issues.',
+            self.assertIn('Supplements accompany some issues',
                           notes, m)
 
     def test_notes_53x(self):
@@ -434,16 +434,16 @@ class TestRulesMapper(unittest.TestCase):
         notes = list([note['note'] for note in record[0]['notes']])
         m = message + '\n' + record[1]
         with self.subTest('530$a'):
-            self.assertIn('Available on microfiche.',
+            self.assertIn('Available on microfiche',
                           notes, m)
         with self.subTest('532$a'):
-            self.assertIn('Closed captioning in English.',
+            self.assertIn('Closed captioning in English',
                           notes, m)
         with self.subTest('533$abcdfn5'):
             self.assertIn('Electronic reproduction. Cambridge, Mass. Harvard College Library Digital Imaging Group, 2003 (Latin American pamphlet digital project at Harvard University ; 0005). Electronic reproduction from microfilm master negative produced by Harvard College Library Imaging Services. MH',
                           notes, m)
         with self.subTest('534$patn'):
-            self.assertIn('Originally issued: Frederick, John. Luck. Published in: Argosy, 1919.',
+            self.assertIn('Originally issued: Frederick, John. Luck. Published in: Argosy, 1919',
                           notes, m)
 
     def test_notes_54x(self):
@@ -453,22 +453,22 @@ class TestRulesMapper(unittest.TestCase):
         notes = list([note['note'] for note in record[0]['notes']])
         m = message + '\n' + record[1]
         with self.subTest('540'):
-            self.assertIn('Recorded radio programs There are copyright and contractual restrictions applying to the reproduction of most of these recordings; Department of Treasury; Treasury contracts 7-A130 through 39-A179.',
+            self.assertIn('Recorded radio programs There are copyright and contractual restrictions applying to the reproduction of most of these recordings; Department of Treasury; Treasury contracts 7-A130 through 39-A179',
                           notes, m)
         with self.subTest('541'):
-            self.assertIn('5 diaries 25 cubic feet; Merriwether, Stuart; 458 Yonkers Road, Poughkeepsie, NY 12601; Purchase at auction; 19810924; 81-325; Jonathan P. Merriwether Estate; $7,850.',
+            self.assertIn('5 diaries 25 cubic feet; Merriwether, Stuart; 458 Yonkers Road, Poughkeepsie, NY 12601; Purchase at auction; 19810924; 81-325; Jonathan P. Merriwether Estate; $7,850',
                           notes, m)
         with self.subTest('542'):
             self.assertIn('Duchess Foods Government of Canada Copyright Services, Library and Archives Canada, Ottawa, Ont. Copyright 1963, par la Compagnie Canadienne de l\'Exposition Universelle de 1967 1963 1963 Duchess Foods under copyright protection through Dec. 31, 2013 published ǂn Copyright not renewable. This work will enter the public domain on Jan. 1, 2014 Nov. 2010 Canada CaQMCCA Canada Copyright Services, Library and Archives Canada',
                           notes, m)
         with self.subTest('544'):
-            self.assertIn('Correspondence files; Burt Barnes papers; Also located at; State Historical Society of Wisconsin.',
+            self.assertIn('Correspondence files; Burt Barnes papers; Also located at; State Historical Society of Wisconsin',
                           notes, m)
         with self.subTest('545'):
             self.assertIn('The Faribault State School and Hospital provided care, treatment, training, and a variety of other services to mentally retarded individuals and their families. It was operated by the State of Minnesota from 1879 to 1998 under different administrative structures and with different names. A more detailed history of the Hospital may be found at http://www.mnhs.org/library/findaids/80881.html',
                           notes, m)
         with self.subTest('546'):
-            self.assertIn('Marriage certificate German; Fraktur.',
+            self.assertIn('Marriage certificate German; Fraktur',
                           notes, m)
 
     def test_notes_55x(self):
@@ -478,10 +478,10 @@ class TestRulesMapper(unittest.TestCase):
         notes = list([note['note'] for note in record[0]['notes']])
         m = message + '\n' + record[1]
         with self.subTest('550$a'):
-            self.assertIn('Organ of the Potomac-side Naturalists\' Club.',
+            self.assertIn('Organ of the Potomac-side Naturalists\' Club',
                           notes, m)
         with self.subTest('552'):
-            self.assertIn('NYROADS The roads of New York, none NYROADS_TYPE The road types of New York, none 1 Interstate Highway, none 1-4 New York Road Types, none 1999010-19990201 unknown irregular.',
+            self.assertIn('NYROADS The roads of New York, none NYROADS_TYPE The road types of New York, none 1 Interstate Highway, none 1-4 New York Road Types, none 1999010-19990201 unknown irregular',
                           notes, m)
         with self.subTest('555'):
             self.assertIn('Finding aid Available in repository and on Internet; Folder level control; http://digital.library.pitt.edu/cgi-bin/f/findaid/findaid-idx?type=simple;c=ascead;view=text;subview=outline;didno=US-PPiU-ais196815',
@@ -497,10 +497,10 @@ class TestRulesMapper(unittest.TestCase):
         notes = list([note['note'] for note in record[0]['notes']])
         m = message + '\n' + record[1]
         with self.subTest('561$3a'):
-            self.assertIn('Family correspondence Originally collected by Henry Fitzhugh, willed to his wife Sarah Jackson Fitzhugh and given by her to her grandson Jonathan Irving Jackson, who collected some further information about his grandmother and the papers of their relatives and Cellarsville neighbors, the Arnold Fitzhugh\'s, before donating the materials along with his own papers as mayor of Cellarsville to the Historical Society.',
+            self.assertIn('Family correspondence Originally collected by Henry Fitzhugh, willed to his wife Sarah Jackson Fitzhugh and given by her to her grandson Jonathan Irving Jackson, who collected some further information about his grandmother and the papers of their relatives and Cellarsville neighbors, the Arnold Fitzhugh\'s, before donating the materials along with his own papers as mayor of Cellarsville to the Historical Society',
                           notes, m)
         with self.subTest('562'):
-            self.assertIn('The best get better Sue Hershkowitz 2 copies; Originally given orally as a keynote address.',
+            self.assertIn('The best get better Sue Hershkowitz 2 copies; Originally given orally as a keynote address',
                           notes, m)
         with self.subTest('563'):
             self.assertIn('Gold-tooled morocco binding by Benjamin West, approximately 1840. [URI] Uk',
@@ -509,7 +509,7 @@ class TestRulesMapper(unittest.TestCase):
             # TODO: can't be right, spreadsheet shoduld include subfield 3 i think
             self.assertIn('Military petitioners files 11; name; address; date of birth; place of birth; date of application; dates of service; branch of service; date of induction; rank; latest occupation; dependents; pensioners; Civil War (1861-1865) veterans', notes, m)
         with self.subTest('567'):
-            self.assertIn('Continuous, deterministic, predictive.', notes, m)
+            self.assertIn('Continuous, deterministic, predictive', notes, m)
 
     def test_notes_58x(self):
         message = 'Should add notes (580-586) to notes list'
@@ -518,7 +518,7 @@ class TestRulesMapper(unittest.TestCase):
         notes = list([note['note'] for note in record[0]['notes']])
         m = message + '\n' + record[1]
         with self.subTest('580'):
-            self.assertIn('Forms part of the Frances Benjamin Johnston Collection.',
+            self.assertIn('Forms part of the Frances Benjamin Johnston Collection',
                           notes, m)
         with self.subTest('583'):
             self.assertIn('scrapbooks (10 volumes) 1 cu. ft. microfilm 198303 at completion of arrangement 1983 master film schedule Thomas Swing',
@@ -534,13 +534,13 @@ class TestRulesMapper(unittest.TestCase):
         notes = list([note['note'] for note in record[0]['notes']])
         m = message + '\n' + record[1]
         with self.subTest('590$a'):
-            self.assertIn('Labels reversed on library\'s copy.',
+            self.assertIn('Labels reversed on library\'s copy',
                           notes, m)
         with self.subTest('592$a'):
-            self.assertIn('Copy in McGill Library\'s Osler Library of the History of Medicine, Robertson Collection copy 1: signature on title page, Jos. E. Dion, E.E.M., Montréal.',
+            self.assertIn('Copy in McGill Library\'s Osler Library of the History of Medicine, Robertson Collection copy 1: signature on title page, Jos. E. Dion, E.E.M., Montréal',
                           notes, m)
         with self.subTest('599$abcde'):
-            self.assertIn('c.2 2014 $25.00 pt art dept.',
+            self.assertIn('c.2 2014 $25.00 pt art dept',
                           notes, m)
 
 

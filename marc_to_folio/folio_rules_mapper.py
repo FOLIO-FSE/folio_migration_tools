@@ -123,7 +123,8 @@ class RulesMapper(DefaultMapper):
         entity = {}
         for em in entity_mapping:
             k = em['target'].split('.')[-1]
-            v = ' '.join(marc_field.get_subfields(*em['subfield']))
+            v = self.apply_rules(marc_field, em)
+            #v = ' '.join(marc_field.get_subfields(*em['subfield']))
             entity[k] = v
         if sch[e_parent]['type'] == 'array':
             if e_parent not in rec:
@@ -132,39 +133,48 @@ class RulesMapper(DefaultMapper):
                 rec[e_parent].append(entity)
         else:
             rec[e_parent] = entity
+        # rec[e_parent] = list(rec[e_parent])
 
     def apply_rules(self, marc_field, mapping):
         # print(mapping)
         # print(marc_field)
-        c_type_def = mapping['rules'][0]['conditions'][0]['type'].split(',')
-        condition_types = [x.strip() for x in c_type_def]
-        # print(f'conditions {condition_types}')
         value = ''
-        if mapping.get('applyRulesOnConcatenatedData', ''):
+        if 'rules' in mapping and  any(mapping['rules']) and any(mapping['rules'][0]['conditions']):
+            c_type_def = mapping['rules'][0]['conditions'][0]['type'].split(',')
+            condition_types = [x.strip() for x in c_type_def]
+            # print(f'conditions {condition_types}')
+            if mapping.get('applyRulesOnConcatenatedData', ''):
+                value = ' '.join(marc_field.get_subfields(*mapping['subfield']))
+                value = self.apply_rule(value, condition_types, marc_field)
+            else:
+                value = ' '.join([self.apply_rule(x, condition_types, marc_field) for x in marc_field.get_subfields(*mapping['subfield'])])
+            if not value:
+                print(f"no value! {value} {marc_field}")
+            return value
+        elif 'rules' not in mapping or not any(mapping['rules']) or not any(mapping['rules'][0]['conditions']):
             value = ' '.join(marc_field.get_subfields(*mapping['subfield']))
-            value = self.apply_rule(value, condition_types)
-        else:
-            value = ' '.join([self.apply_rule(x, condition_types) for x in marc_field.get_subfields(*mapping['subfield'])])
-        if not value:
-            print(f"no value! {value} {marc_field}")
-        return value
+            print(f"no rules")
+            return value
 
-    def apply_rule(self, value, condition_types):
+
+    def apply_rule(self, value, condition_types, marc_field):
+        v = value
         for condition_type in condition_types:
             if condition_type == 'trim_period':
-                value = value.rstrip('.')
+                v = v.strip().rstrip('.').rstrip(',')
             elif condition_type == 'trim':
-                value = value.strip()
+                v = v.strip()
             elif condition_type == 'remove_ending_punc':
-                for char in ';:,/+= ':
-                    value = value.rstrip(char)
-            # elif condition_type == 'remove_prefix_by_indicator':
-                
+                chars = '.;:,/+=- '
+                while len(v) > 0 and v[-1] in chars:
+                    v = v.rstrip(v[-1])
+            elif condition_type == 'remove_prefix_by_indicator':
+                v = self.get_index_title(marc_field, v)
             # elif condition_type == 'capitalize':
 
             else:
                 print(f'{condition_type} not matched!')
-        return value
+        return v
 
     def add_value_to_target(self, rec, target_string, value):
         targets = target_string.split('.')
@@ -272,14 +282,10 @@ class RulesMapper(DefaultMapper):
             for field in marc_record.get_fields(tag):
                 yield field.format_field()
 
-    def get_index_title(self, marc_record):
+    def get_index_title(self, marc_field, title_string):
         # TODO: fixa!
-        '''Returns the index title according to the rules'''
-        if '245' not in marc_record:
-            return ''
-        field = marc_record['245']
-        title_string = " ".join(field.get_subfields('a', 'b', 'n', 'p'))
-        ind2 = field.indicator2
+        '''Returns the index title according to the rules''' 
+        ind2 = marc_field.indicator2
         reg_str = r'[\s:\/]{0,3}$'
         if ind2 in map(str, range(1, 9)):
             num_take = int(ind2)
