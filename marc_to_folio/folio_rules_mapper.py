@@ -3,6 +3,7 @@ FOLIO community specifications'''
 import json
 import os.path
 import re
+from textwrap import wrap
 import uuid
 import xml.etree.ElementTree as ET
 from concurrent.futures import ProcessPoolExecutor
@@ -71,38 +72,23 @@ class RulesMapper(DefaultMapper):
         self.srs_raw_records_file.close()
         print(self.unmapped_tags)
 
-    '''
-    def instantiate_instance(self, userId):
-        builder = pjs.ObjectBuilder(self.instance_schema)
-        ns = builder.build_classes()
-        Instance = ns.Instance
-        i = Instance()
-        print(i)
-        '''
-
     def parse_bib(self, marc_record, record_source):
         ''' Parses a bib recod into a FOLIO Inventory instance object
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function'''
         rec = {
             'id': str(uuid.uuid4()),
-            'metadata': super().get_metadata_construct(self.migration_user_id)}
+            'metadata': super().get_metadata_construct(self.migration_user_id)
+        }
         for marc_field in marc_record:
             if marc_field.tag not in self.mappings:
                 self.add_stats(self.unmapped_tags, marc_field.tag)
             else:
                 mappings = self.mappings[marc_field.tag]
                 self.map_field_according_to_mapping(marc_field, mappings, rec)
-
-        # self.validate(rec)        
-        for key, value in rec.items():
-            if isinstance(value, list):
-                res = []
-                for v in value:
-                    if v not in res:
-                        res.append(v)
-                rec[key] = res
-        print(json.dumps(rec, indent=4, sort_keys=True))
+        # TODO: add generic stuff here
+        # self.validate(rec)
+        self.dedupe_rec(rec)
         return rec
 
     def map_field_according_to_mapping(self, marc_field, mappings, rec):
@@ -112,52 +98,84 @@ class RulesMapper(DefaultMapper):
                     self.add_value_to_target(
                         rec, mapping['target'], self.apply_rules(marc_field, mapping))
                 else:
-                    self.add_value_to_target(rec, mapping['target'], marc_field.format_field())
+                    self.add_value_to_target(
+                        rec, mapping['target'], marc_field.format_field())
             else:
-                self.handle_entity_mapping(marc_field, mapping['entity'], rec)
+                e_per_subfield = mapping.get(
+                    'entityPerRepeatedSubfield', False)
+                self.handle_entity_mapping(
+                    marc_field, mapping['entity'], rec, e_per_subfield)
 
-    def handle_entity_mapping(self, marc_field, entity_mapping, rec):
+    def handle_entity_mapping(self, marc_field, entity_mapping, rec, e_per_subfield):
         e_parent = entity_mapping[0]['target'].split('.')[0]
-        sch = self.instance_schema['properties']
-        print(f"entity mapping into {e_parent} {marc_field.tag} parent is of type {sch[e_parent]['type']}")
+        if e_per_subfield:
+            for sf_tuple in grouped(marc_field.subfields, 2):
+                temp_field = Field(tag=marc_field.tag,
+                                   indicators=marc_field.indicators,
+                                   subfields=[sf_tuple[0], sf_tuple[1]])
+                entity = self.create_entity(
+                    entity_mapping, temp_field, e_parent)
+                self.add_entity_to_record(entity, e_parent, rec)
+        else:
+            entity = self.create_entity(entity_mapping, marc_field, e_parent)
+            self.add_entity_to_record(entity, e_parent, rec)
+
+    def create_entity(self, entity_mapping, marc_field, entity_parent_key):
         entity = {}
         for em in entity_mapping:
             k = em['target'].split('.')[-1]
-            v = self.apply_rules(marc_field, em)
-            #v = ' '.join(marc_field.get_subfields(*em['subfield']))
-            entity[k] = v
-        if sch[e_parent]['type'] == 'array':
-            if e_parent not in rec:
-                rec[e_parent] = [entity]
+            rv = self.apply_rules(marc_field, em)
+            v = rv[0]
+            if entity_parent_key == k:
+                entity = v
             else:
-                rec[e_parent].append(entity)
+                entity[k] = v
+        return entity
+
+    def add_entity_to_record(self, entity, entity_parent_key, rec):
+        sch = self.instance_schema['properties']
+        if sch[entity_parent_key]['type'] == 'array':
+            if entity_parent_key not in rec:
+                rec[entity_parent_key] = [entity]
+            else:
+                rec[entity_parent_key].append(entity)
         else:
-            rec[e_parent] = entity
-        # rec[e_parent] = list(rec[e_parent])
+            rec[entity_parent_key] = entity
 
     def apply_rules(self, marc_field, mapping):
         # print(mapping)
         # print(marc_field)
+        values = []
         value = ''
-        if 'rules' in mapping and  any(mapping['rules']) and any(mapping['rules'][0]['conditions']):
-            c_type_def = mapping['rules'][0]['conditions'][0]['type'].split(',')
+        if mapping.get('rules', []) and mapping['rules'][0].get('conditions', []):
+            c_type_def = mapping['rules'][0]['conditions'][0]['type'].split(
+                ',')
             condition_types = [x.strip() for x in c_type_def]
+            parameter = mapping['rules'][0]['conditions'][0].get(
+                'parameter', {})
             # print(f'conditions {condition_types}')
             if mapping.get('applyRulesOnConcatenatedData', ''):
-                value = ' '.join(marc_field.get_subfields(*mapping['subfield']))
-                value = self.apply_rule(value, condition_types, marc_field)
+                value = ' '.join(
+                    marc_field.get_subfields(*mapping['subfield']))
+                value = self.apply_rule(
+                    value, condition_types, marc_field, parameter)
             else:
-                value = ' '.join([self.apply_rule(x, condition_types, marc_field) for x in marc_field.get_subfields(*mapping['subfield'])])
-            if not value:
-                print(f"no value! {value} {marc_field}")
-            return value
-        elif 'rules' not in mapping or not any(mapping['rules']) or not any(mapping['rules'][0]['conditions']):
+                if mapping.get('subfield', []):
+                    value = ' '.join([self.apply_rule(x, condition_types, marc_field, parameter)
+                                      for x in marc_field.get_subfields(*mapping['subfield'])])
+                else:
+                    value = self.apply_rule(
+                        marc_field.format_field(), condition_types, marc_field, parameter)
+        elif not mapping.get('rules', []) or not mapping['rules'][0].get('conditions', []):
             value = ' '.join(marc_field.get_subfields(*mapping['subfield']))
-            print(f"no rules")
-            return value
+            print(f"no rules {mapping}")
+        if mapping.get('subFieldSplit', ''):
+            values = wrap(value, 3)
+        else:
+            values = [value]
+        return values
 
-
-    def apply_rule(self, value, condition_types, marc_field):
+    def apply_rule(self, value, condition_types, marc_field, parameter):
         v = value
         for condition_type in condition_types:
             if condition_type == 'trim_period':
@@ -171,10 +189,39 @@ class RulesMapper(DefaultMapper):
             elif condition_type == 'remove_prefix_by_indicator':
                 v = self.get_index_title(marc_field, v)
             # elif condition_type == 'capitalize':
-
+            elif condition_type == 'clean_isbn':
+                self.clean_isbn(value)
+            elif condition_type == 'set_publisher_role':
+                roles = {"0": "Production",
+                         "1": "Publication",
+                         "2": "Distribution",
+                         "3": "Manufacture"}
+                return roles.get(marc_field.indicator2, '')
+            elif condition_type == 'char_select':
+                return value[parameter['from']:parameter['to']]
+            elif condition_type == 'set_identifier_type_id_by_name':
+                v = next((f['id'] for f
+                              in self.folio.identifier_types
+                              if f['name'] == parameter['name']), '')
+            elif condition_type == 'set_contributor_name_type_id':
+                v = self.name_type_id(parameter['name'])
+            elif condition_type == 'set_contributor_type_id':
+                v = self.get_contrib_type_id(marc_field)
+            elif condition_type == 'set_contributor_type_text':
+                v = self.get_contrib_type_text(marc_field)
+            elif condition_type == 'set_alternative_title_type_id':
+                v = self.get_alternative_title_type(parameter)
             else:
                 print(f'{condition_type} not matched!')
         return v
+
+    def get_alternative_title_type(self, parameter):
+        undef = next((f['id'] for f in self.folio.alt_title_types
+                      if f['name'] == 'No type specified'), '')
+        if not undef:
+            raise ValueError('No Alternative Title type named No type specified')
+        return next((f['id'] for f in self.folio.alt_title_types
+                     if f['name'] == parameter['name']), undef)
 
     def add_value_to_target(self, rec, target_string, value):
         targets = target_string.split('.')
@@ -187,12 +234,12 @@ class RulesMapper(DefaultMapper):
             # print(f"{target_string} {value} {rec}")
             if sch[target_string]['type'] == 'array' and sch[target_string]['items']['type'] == 'string':
                 if target_string not in rec:
-                    rec[target_string] = [value]
+                    rec[target_string] = value
                 else:
                     # print(f"Adding into list! {target_string} {(rec[target_string])} {value}")
-                    rec[target_string].append(value)
+                    rec[target_string].extend(value)
             elif sch[target_string]['type'] == 'string':
-                rec[target_string] = value
+                rec[target_string] = value[0]
             else:
                 print(f"Edge! {target_string} {sch[target_string]['type']}")
         else:
@@ -214,7 +261,7 @@ class RulesMapper(DefaultMapper):
                             prop[target] = {}
                             parent.append(prop[target])
                 if target == targets[-1]:
-                    prop[target] = value
+                    prop[target] = value[0]
                 prop = prop[target]
                 sc_parent = sc_prop
                 parent = target
@@ -247,6 +294,9 @@ class RulesMapper(DefaultMapper):
         self.srs_marc_records_file.write(
             "".join(r[2] for r in results))
         self.srs_raw_records_file.write("".join(r[1] for r in results))
+
+    def clean_isbn(self, isbn):
+        return isbn
 
     def post_new_source_storage_record(self, loan):
         okapi_headers = self.folio.okapi_headers
@@ -284,7 +334,7 @@ class RulesMapper(DefaultMapper):
 
     def get_index_title(self, marc_field, title_string):
         # TODO: fixa!
-        '''Returns the index title according to the rules''' 
+        '''Returns the index title according to the rules'''
         ind2 = marc_field.indicator2
         reg_str = r'[\s:\/]{0,3}$'
         if ind2 in map(str, range(1, 9)):
@@ -378,11 +428,29 @@ class RulesMapper(DefaultMapper):
                        'contributorTypeId': ctype,
                        'primary': first < 2}
 
-    def get_contrib_type_id(self, marc_record):
-        ''' Maps type of contribution to the right FOLIO Contributor types'''
-        # TODO: create logic here...
-        ret = 'a5bee4d0-c5b9-449c-a6ee-880143b117bc'
-        return ret
+    def get_contrib_type_id(self,marc_field):
+        undefined = {}
+        for cont_type in self.folio.contributor_types:
+            if cont_type['name'] == 'Undefined':
+                undefined = cont_type
+            for subfield in  marc_field.get_subfields('4', 'e'):
+                if subfield.lower() == cont_type['code'].lower():
+                    return cont_type['id']
+                elif subfield.lower() == cont_type['name'].lower():
+                    return cont_type['id']                
+        return undefined['id']
+
+    def get_contrib_type_text(self,marc_field):
+        undefined = {}
+        for cont_type in self.folio.contributor_types:
+            if cont_type['name'] == 'Undefined':
+                undefined = cont_type
+            for subfield in  marc_field.get_subfields('4', 'e'):
+                if subfield.lower() == cont_type['code'].lower():
+                    return cont_type['name']
+                elif subfield.lower() == cont_type['name'].lower():
+                    return cont_type['name']                
+        return undefined['name']
 
     def get_urls(self, marc_record):
         for field in marc_record.get_fields('856'):
@@ -617,8 +685,18 @@ class RulesMapper(DefaultMapper):
                     print('Illegal language code: {} for {}'
                           .format(language_value, legacyid))
 
+    def dedupe_rec(self, rec):
+        # remove duplicates
+        for key, value in rec.items():
+            if isinstance(value, list):
+                res = []
+                for v in value:
+                    if v not in res:
+                        res.append(v)
+                rec[key] = res
 
 # Wrapping corouting which waits for return from process pool.
+
 
 def get_srs_strings(my_tuple):
     json_string = StringIO()
@@ -655,3 +733,8 @@ def get_srs_strings(my_tuple):
     return (f"{record['id']}\t{json.dumps(record)}\n",
             f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
             f"{marc_record['id']}\t{json.dumps(marc_record)}\n")
+
+
+def grouped(iterable, n):
+    "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
+    return zip(*[iter(iterable)]*n)

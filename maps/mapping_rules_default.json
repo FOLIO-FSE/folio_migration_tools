@@ -120,8 +120,7 @@
                     "target": "identifiers.value",
                     "subfield": [
                         "a",
-                        "c",
-                        "q"
+                        "c"
                     ],
                     "description": "Valid ISBN",
                     "requiredSubfield": [
@@ -129,7 +128,8 @@
                     ],
                     "applyRulesOnConcatenatedData": true
                 }
-            ]
+            ],
+            "entityPerRepeatedSubfield": true
         },
         {
             "entity": [
@@ -165,7 +165,6 @@
                     "target": "identifiers.value",
                     "subfield": [
                         "z",
-                        "q",
                         "c"
                     ],
                     "description": "Invalid ISBN",
@@ -174,7 +173,8 @@
                     ],
                     "applyRulesOnConcatenatedData": true
                 }
-            ]
+            ],
+            "entityPerRepeatedSubfield": true
         }
     ],
     "022": [
@@ -411,14 +411,16 @@
                     ],
                     "target": "identifiers.identifierTypeId",
                     "subfield": [
-                        "a"
+                        "a",
+                        "z"
                     ],
                     "description": "Type for System Control Number"
                 },
                 {
                     "target": "identifiers.value",
                     "subfield": [
-                        "a"
+                        "a",
+                        "z"
                     ],
                     "description": "System Control Number"
                 }
@@ -1488,71 +1490,75 @@
     ],
     "260": [
         {
-            "rules": [
+            "entity": [
                 {
-                    "conditions": [
+                    "rules": [
                         {
-                            "type": "remove_ending_punc, trim"
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
                         }
-                    ]
-                }
-            ],
-            "target": "publication.place",
-            "subfield": [
-                "a"
-            ],
-            "description": "Place of publication",
-            "subFieldDelimiter": [
-                {
-                    "value": " ; ",
-                    "subfields": [
+                    ],
+                    "target": "publication.place",
+                    "subfield": [
                         "a"
-                    ]
-                }
-            ]
-        },
-        {
-            "rules": [
-                {
-                    "conditions": [
+                    ],
+                    "description": "Place of publication",
+                    "subFieldDelimiter": [
                         {
-                            "type": "remove_ending_punc, trim"
+                            "value": " ; ",
+                            "subfields": [
+                                "a"
+                            ]
                         }
                     ]
-                }
-            ],
-            "target": "publication.publisher",
-            "subfield": [
-                "b"
-            ],
-            "subFieldDelimiter": [
+                },
                 {
-                    "value": " ; ",
-                    "subfields": [
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "publication.publisher",
+                    "subfield": [
                         "b"
-                    ]
-                }
-            ]
-        },
-        {
-            "rules": [
-                {
-                    "conditions": [
+                    ],
+                    "subFieldDelimiter": [
                         {
-                            "type": "remove_ending_punc, trim, trim_period"
+                            "value": " ; ",
+                            "subfields": [
+                                "b"
+                            ]
                         }
                     ]
-                }
-            ],
-            "target": "publication.dateOfPublication",
-            "subfield": [
-                "c"
-            ],
-            "subFieldDelimiter": [
+                },
                 {
-                    "value": " ; ",
-                    "subfields": [
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim, trim_period"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "publication.dateOfPublication",
+                    "subfield": [
                         "c"
+                    ],
+                    "subFieldDelimiter": [
+                        {
+                            "value": " ; ",
+                            "subfields": [
+                                "c"
+                            ]
+                        }
                     ]
                 }
             ]
@@ -1560,95 +1566,99 @@
     ],
     "264": [
         {
-            "rules": [
+            "entity": [
                 {
-                    "conditions": [
+                    "rules": [
                         {
-                            "type": "remove_ending_punc, trim"
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
                         }
-                    ]
-                }
-            ],
-            "target": "publication.place",
-            "subfield": [
-                "a"
-            ],
-            "description": "Place of publication",
-            "subFieldDelimiter": [
-                {
-                    "value": " ; ",
-                    "subfields": [
+                    ],
+                    "target": "publication.place",
+                    "subfield": [
                         "a"
-                    ]
-                }
-            ]
-        },
-        {
-            "rules": [
-                {
-                    "conditions": [
+                    ],
+                    "description": "Place of publication",
+                    "subFieldDelimiter": [
                         {
-                            "type": "remove_ending_punc, trim"
+                            "value": " ; ",
+                            "subfields": [
+                                "a"
+                            ]
                         }
                     ]
-                }
-            ],
-            "target": "publication.publisher",
-            "subfield": [
-                "b"
-            ],
-            "description": "Publisher of publication",
-            "subFieldDelimiter": [
+                },
                 {
-                    "value": " ; ",
-                    "subfields": [
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "publication.publisher",
+                    "subfield": [
                         "b"
-                    ]
-                }
-            ]
-        },
-        {
-            "rules": [
-                {
-                    "conditions": [
+                    ],
+                    "description": "Publisher of publication",
+                    "subFieldDelimiter": [
                         {
-                            "type": "remove_ending_punc, trim, trim_period"
+                            "value": " ; ",
+                            "subfields": [
+                                "b"
+                            ]
                         }
                     ]
-                }
-            ],
-            "target": "publication.dateOfPublication",
-            "subfield": [
-                "c"
-            ],
-            "description": "Date of publication",
-            "subFieldDelimiter": [
+                },
                 {
-                    "value": " ; ",
-                    "subfields": [
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim, trim_period"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "publication.dateOfPublication",
+                    "subfield": [
                         "c"
-                    ]
-                }
-            ]
-        },
-        {
-            "rules": [
-                {
-                    "conditions": [
+                    ],
+                    "description": "Date of publication",
+                    "subFieldDelimiter": [
                         {
-                            "type": "set_publisher_role"
+                            "value": " ; ",
+                            "subfields": [
+                                "c"
+                            ]
                         }
                     ]
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_publisher_role"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "publication.role",
+                    "subfield": [
+                        "a",
+                        "b",
+                        "c"
+                    ],
+                    "description": "Role of publication, defined by 2nd indicator",
+                    "applyRulesOnConcatenatedData": true
                 }
-            ],
-            "target": "publication.role",
-            "subfield": [
-                "a",
-                "b",
-                "c"
-            ],
-            "description": "Role of publication, defined by 2nd indicator",
-            "applyRulesOnConcatenatedData": true
+            ]
         }
     ],
     "300": [
