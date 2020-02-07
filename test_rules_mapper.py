@@ -34,7 +34,7 @@ class TestRulesMapper(unittest.TestCase):
         for element in root.xpath(xpath, namespaces=ns):
             data = ' '.join(
                 [data, str(etree.tostring(element, pretty_print=True), 'utf-8')])
-        print(json.dumps(result, indent=4, sort_keys=True))
+        # print(json.dumps(rec, indent=4, sort_keys=True))
         return [result, data]
 
     def test_simple_title(self):
@@ -137,7 +137,7 @@ class TestRulesMapper(unittest.TestCase):
         message = 'Should trim title (245) by n-chars, as specified by indicator 2'
         xpath = "//marc:datafield[@tag='245']"
         record = self.default_map('test_index_title.xml', xpath)
-        self.assertEqual("cahiers d'urbanisme", record[0]['indexTitle'],
+        self.assertEqual("Cahiers d'urbanisme", record[0]['indexTitle'],
                          message + '\n' + record[1])
 
     def test_alternative_titles_all(self):

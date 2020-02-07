@@ -2,7 +2,6 @@
 FOLIO community specifications'''
 import json
 import os.path
-import re
 from textwrap import wrap
 import uuid
 import xml.etree.ElementTree as ET
@@ -12,7 +11,7 @@ from io import StringIO
 
 import requests
 from pymarc import Field, JSONWriter
-
+from marc_to_folio.conditions import Conditions
 from marc_to_folio.default_mapper import DefaultMapper
 
 
@@ -26,6 +25,7 @@ class RulesMapper(DefaultMapper):
         self.filter_chars_dop = r'[.,\/#!$%\^&\*;:{}=\_`~()]'
         self.filter_last_chars = r',$'
         self.folio = folio
+        self.conditions = Conditions(folio)
         self.migration_user_id = 'd916e883-f8f1-4188-bc1d-f0dce1511b50'
         self.srs_recs = []
         instance_url = 'https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json'
@@ -58,12 +58,34 @@ class RulesMapper(DefaultMapper):
         with open('/mnt/c/code/folio-fse/MARC21-To-FOLIO/maps/mapping_rules_default.json') as map_f:
             self.mappings = json.load(map_f)
         self.unmapped_tags = {}
+        self.unmapped_conditions = {}
 
-    def add_stats(self, stats, a):
-        if a not in stats:
-            stats[a] = 1
-        else:
-            stats[a] += 1
+    def parse_bib(self, marc_record, record_source):
+        ''' Parses a bib recod into a FOLIO Inventory instance object
+            Community mapping suggestion: https://bit.ly/2S7Gyp3
+             This is the main function'''
+        folio_instance = {
+            'id': str(uuid.uuid4()),
+            'metadata': super().get_metadata_construct(self.migration_user_id)
+        }
+        for marc_field in marc_record:
+            if marc_field.tag not in self.mappings:
+                add_stats(self.unmapped_tags, marc_field.tag)
+            else:
+                mappings = self.mappings[marc_field.tag]
+                self.map_field_according_to_mapping(
+                    marc_field, mappings, folio_instance)
+        # Do stuff not easily captured by the mapping rules
+        folio_instance['modeOfIssuanceId'] = self.get_mode_of_issuance_id(
+            marc_record)
+        folio_instance['languages'].extend(self.get_languages(marc_record))
+        folio_instance['languages'] = list(self.filter_langs(
+            folio_instance['languages'], marc_record['001'].format_field()))
+        folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
+            marc_record)
+        self.validate(folio_instance)
+        self.dedupe_rec(folio_instance)
+        return folio_instance
 
     def wrap_up(self):
         self.flush_srs_recs()
@@ -71,25 +93,7 @@ class RulesMapper(DefaultMapper):
         self.srs_marc_records_file.close()
         self.srs_raw_records_file.close()
         print(self.unmapped_tags)
-
-    def parse_bib(self, marc_record, record_source):
-        ''' Parses a bib recod into a FOLIO Inventory instance object
-            Community mapping suggestion: https://bit.ly/2S7Gyp3
-             This is the main function'''
-        rec = {
-            'id': str(uuid.uuid4()),
-            'metadata': super().get_metadata_construct(self.migration_user_id)
-        }
-        for marc_field in marc_record:
-            if marc_field.tag not in self.mappings:
-                self.add_stats(self.unmapped_tags, marc_field.tag)
-            else:
-                mappings = self.mappings[marc_field.tag]
-                self.map_field_according_to_mapping(marc_field, mappings, rec)
-        # TODO: add generic stuff here
-        # self.validate(rec)
-        self.dedupe_rec(rec)
-        return rec
+        print(self.unmapped_conditions)
 
     def map_field_according_to_mapping(self, marc_field, mappings, rec):
         for mapping in mappings:
@@ -99,7 +103,7 @@ class RulesMapper(DefaultMapper):
                         rec, mapping['target'], self.apply_rules(marc_field, mapping))
                 else:
                     self.add_value_to_target(
-                        rec, mapping['target'], marc_field.format_field())
+                        rec, mapping['target'], [marc_field.format_field()])
             else:
                 e_per_subfield = mapping.get(
                     'entityPerRepeatedSubfield', False)
@@ -125,11 +129,12 @@ class RulesMapper(DefaultMapper):
         for em in entity_mapping:
             k = em['target'].split('.')[-1]
             rv = self.apply_rules(marc_field, em)
-            v = rv[0]
-            if entity_parent_key == k:
-                entity = v
-            else:
-                entity[k] = v
+            if rv:
+                v = rv[0]
+                if entity_parent_key == k:
+                    entity = v
+                else:
+                    entity[k] = v
         return entity
 
     def add_entity_to_record(self, entity, entity_parent_key, rec):
@@ -143,8 +148,6 @@ class RulesMapper(DefaultMapper):
             rec[entity_parent_key] = entity
 
     def apply_rules(self, marc_field, mapping):
-        # print(mapping)
-        # print(marc_field)
         values = []
         value = ''
         if mapping.get('rules', []) and mapping['rules'][0].get('conditions', []):
@@ -168,7 +171,7 @@ class RulesMapper(DefaultMapper):
                         marc_field.format_field(), condition_types, marc_field, parameter)
         elif not mapping.get('rules', []) or not mapping['rules'][0].get('conditions', []):
             value = ' '.join(marc_field.get_subfields(*mapping['subfield']))
-            print(f"no rules {mapping}")
+            # print(f"no rules {mapping}")
         if mapping.get('subFieldSplit', ''):
             values = wrap(value, 3)
         else:
@@ -178,50 +181,9 @@ class RulesMapper(DefaultMapper):
     def apply_rule(self, value, condition_types, marc_field, parameter):
         v = value
         for condition_type in condition_types:
-            if condition_type == 'trim_period':
-                v = v.strip().rstrip('.').rstrip(',')
-            elif condition_type == 'trim':
-                v = v.strip()
-            elif condition_type == 'remove_ending_punc':
-                chars = '.;:,/+=- '
-                while len(v) > 0 and v[-1] in chars:
-                    v = v.rstrip(v[-1])
-            elif condition_type == 'remove_prefix_by_indicator':
-                v = self.get_index_title(marc_field, v)
-            # elif condition_type == 'capitalize':
-            elif condition_type == 'clean_isbn':
-                self.clean_isbn(value)
-            elif condition_type == 'set_publisher_role':
-                roles = {"0": "Production",
-                         "1": "Publication",
-                         "2": "Distribution",
-                         "3": "Manufacture"}
-                return roles.get(marc_field.indicator2, '')
-            elif condition_type == 'char_select':
-                return value[parameter['from']:parameter['to']]
-            elif condition_type == 'set_identifier_type_id_by_name':
-                v = next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == parameter['name']), '')
-            elif condition_type == 'set_contributor_name_type_id':
-                v = self.name_type_id(parameter['name'])
-            elif condition_type == 'set_contributor_type_id':
-                v = self.get_contrib_type_id(marc_field)
-            elif condition_type == 'set_contributor_type_text':
-                v = self.get_contrib_type_text(marc_field)
-            elif condition_type == 'set_alternative_title_type_id':
-                v = self.get_alternative_title_type(parameter)
-            else:
-                print(f'{condition_type} not matched!')
+            v = self.conditions.get_condition(
+                condition_type, v, parameter, marc_field)
         return v
-
-    def get_alternative_title_type(self, parameter):
-        undef = next((f['id'] for f in self.folio.alt_title_types
-                      if f['name'] == 'No type specified'), '')
-        if not undef:
-            raise ValueError('No Alternative Title type named No type specified')
-        return next((f['id'] for f in self.folio.alt_title_types
-                     if f['name'] == parameter['name']), undef)
 
     def add_value_to_target(self, rec, target_string, value):
         targets = target_string.split('.')
@@ -236,12 +198,12 @@ class RulesMapper(DefaultMapper):
                 if target_string not in rec:
                     rec[target_string] = value
                 else:
-                    # print(f"Adding into list! {target_string} {(rec[target_string])} {value}")
                     rec[target_string].extend(value)
             elif sch[target_string]['type'] == 'string':
                 rec[target_string] = value[0]
             else:
-                print(f"Edge! {target_string} {sch[target_string]['type']}")
+                raise Exception(
+                    f"Edge! {target_string} {sch[target_string]['type']}")
         else:
             for target in targets:
                 if target in sc_prop:
@@ -249,17 +211,21 @@ class RulesMapper(DefaultMapper):
                 else:
                     sc_prop = sc_parent['items']['properties'][target]
                 if target not in rec:
-                    if sc_prop['type'] == 'array':
+                    sc_prop_type = sc_prop.get('type', 'string')
+                    if sc_prop_type == 'array':
                         prop[target] = []
                         break
                         # prop[target].append({})
-                    elif sc_parent['type'] == 'array' and sc_prop['type'] == 'string':
+                    elif sc_parent['type'] == 'array' and sc_prop_type == 'string':
                         print(f"break! {target} {sc_prop['type']} {prop}")
                         break
                     else:
                         if (sc_parent['type'] == 'array'):
                             prop[target] = {}
                             parent.append(prop[target])
+                        else:
+                            raise Exception(
+                                f"Edge! {target_string} {sch[target_string]}")
                 if target == targets[-1]:
                     prop[target] = value[0]
                 prop = prop[target]
@@ -295,9 +261,6 @@ class RulesMapper(DefaultMapper):
             "".join(r[2] for r in results))
         self.srs_raw_records_file.write("".join(r[1] for r in results))
 
-    def clean_isbn(self, isbn):
-        return isbn
-
     def post_new_source_storage_record(self, loan):
         okapi_headers = self.folio.okapi_headers
         host = self.folio.okapi_url
@@ -309,83 +272,8 @@ class RulesMapper(DefaultMapper):
             print("Something went wrong. HTTP {}\nMessage:\t{}"
                   .format(response.status_code, response.text))
 
-    def get_editions(self, marc_record):
-        fields = marc_record.get_fields('250')
-        for field in fields:
-            yield " ".join(field.get_subfields('a', 'b'))
-
-    def get_publication_frequency(self, marc_record):
-        for tag in ['310', '321']:
-            for field in marc_record.get_fields(tag):
-                yield ' '.join(field.get_subfields(*'ab'))
-
-    def get_publication_range(self, marc_record):
-        for field in marc_record.get_fields('362'):
-            yield ' '.join(field.get_subfields('a'))
-
     def get_nature_of_content(self, marc_record):
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
-
-    def get_physical_desc(self, marc_record):
-        # TODO: improve according to spec
-        for tag in ['300']:
-            for field in marc_record.get_fields(tag):
-                yield field.format_field()
-
-    def get_index_title(self, marc_field, title_string):
-        # TODO: fixa!
-        '''Returns the index title according to the rules'''
-        ind2 = marc_field.indicator2
-        reg_str = r'[\s:\/]{0,3}$'
-        if ind2 in map(str, range(1, 9)):
-            num_take = int(ind2)
-            return re.sub(reg_str, '', title_string[num_take:])
-        else:
-            return re.sub(reg_str, '', title_string)
-
-    def get_notes(self, marc_record):
-        '''Collects all notes fields and stores them as generic notes.'''
-        # TODO: specify note types with better accuracy.
-        for key, value in self.note_tags.items():
-            for field in marc_record.get_fields(key):
-                yield {
-                    # TODO: add logic for noteTypeId
-                    "instanceNoteTypeId": "9d4fcaa1-b1a5-48ea-b0d1-986839737ad2",
-                    "note": " ".join(field.get_subfields(*value)),
-                    # TODO: Map staffOnly according to field
-                    "staffOnly": False
-                }
-
-    def get_title(self, marc_record):
-        if '245' not in marc_record:
-            return ''
-        '''Get title or raise exception.'''
-        title = " ".join(marc_record['245'].get_subfields(*list('anpbcfghks')))
-        if title:
-            return title
-        else:
-            raise ValueError("No title for {}\n{}"
-                             .format(marc_record['001'], marc_record))
-
-    def folio_record_template(self, identifier):
-        '''Create a new folio record from template'''
-        # if created from json schema validation could happen earlier...
-        return {'id': str(identifier)}
-
-    def get_instance_type_id(self, marc_record):
-        # TODO: Check 336 first!
-        instance_type_code = marc_record.leader[6]
-        table = {
-            'a': 'txt',
-            'm': 'txt',
-            't': 'txt',
-            'e': 'cri',
-            'g': 'tdi',
-            'i': 'snd',
-            'p': 'xxx'}
-        code = table.get(instance_type_code, 'zzz')
-        return next(i['id'] for i in self.folio.instance_types
-                    if code == i['code'])
 
     def get_mode_of_issuance_id(self, marc_record):
         mode_of_issuance = marc_record.leader[7]
@@ -394,163 +282,9 @@ class RulesMapper(DefaultMapper):
         return next(i['id'] for i in self.folio.modes_of_issuance
                     if name == i['name'])
 
-    def name_type_id(self, n):
-        if not any(self.contrib_name_types):
-            self.contrib_name_types = {f['name']: f['id']
-                                       for f in self.folio.contrib_name_types}
-        return self.contrib_name_types[n]
-
-    def get_contributors(self, marc_record):
-        '''Collects contributors from the marc record and adds the apropriate
-        Ids'''
-        fields = {'100': {'subfields': 'abcdq',
-                          'nameTypeId': 'Personal name'},
-                  '110': {'subfields': 'abcdn',
-                          'nameTypeId': 'Corporate name'},
-                  '111': {'subfields': 'abcd',
-                          'nameTypeId': 'Meeting name'},
-                  '700': {'subfields': 'abcdq',
-                          'nameTypeId': 'Personal name'},
-                  '710': {'subfields': 'abcdn',
-                          'nameTypeId': 'Corporate name'},
-                  '711': {'subfields': 'abcd',
-                          'nameTypeId': 'Meeting name'}
-                  }
-        first = 0
-        for field_tag in fields:
-            for field in marc_record.get_fields(field_tag):
-                ctype = self.get_contrib_type_id(marc_record)
-                first += 1
-                subs = field.get_subfields(*fields[field_tag]['subfields'])
-                ntd = self.name_type_id(fields[field_tag]['nameTypeId'])
-                yield {'name': re.sub(self.filter_last_chars, '', ' '.join(subs)),
-                       'contributorNameTypeId': ntd,
-                       'contributorTypeId': ctype,
-                       'primary': first < 2}
-
-    def get_contrib_type_id(self,marc_field):
-        undefined = {}
-        for cont_type in self.folio.contributor_types:
-            if cont_type['name'] == 'Undefined':
-                undefined = cont_type
-            for subfield in  marc_field.get_subfields('4', 'e'):
-                if subfield.lower() == cont_type['code'].lower():
-                    return cont_type['id']
-                elif subfield.lower() == cont_type['name'].lower():
-                    return cont_type['id']                
-        return undefined['id']
-
-    def get_contrib_type_text(self,marc_field):
-        undefined = {}
-        for cont_type in self.folio.contributor_types:
-            if cont_type['name'] == 'Undefined':
-                undefined = cont_type
-            for subfield in  marc_field.get_subfields('4', 'e'):
-                if subfield.lower() == cont_type['code'].lower():
-                    return cont_type['name']
-                elif subfield.lower() == cont_type['name'].lower():
-                    return cont_type['name']                
-        return undefined['name']
-
-    def get_urls(self, marc_record):
-        for field in marc_record.get_fields('856'):
-            yield {
-                'uri': (field['u'] if 'u' in field else ''),
-                'linkText': (field['y'] if 'y' in field else ''),
-                'materialsSpecification': field['3'] if '3' in field else '',
-                'publicNote': field['z'] if 'z' in field else ''
-                # 'relationsshipId': field.indicator2}
-            }
-
-    def get_subjects(self, marc_record):
-        ''' Get subject headings from the marc record.'''
-        for tag in list(self.non_mapped_subject_tags.keys()):
-            if any(marc_record.get_fields(tag)):
-                print("Unmapped Subject field {} in {}"
-                      .format(tag, marc_record['001']))
-        for key, value in self.subject_tags.items():
-            for field in marc_record.get_fields(key):
-                yield " ".join(field.get_subfields(*value)).strip()
-
-    def get_alt_titles(self, marc_record):
-        '''Finds all Alternative titles.'''
-        if not any(self.alt_title_map):
-            self.alt_title_map = {'130': [next(f['id'] for f
-                                               in self.folio.alt_title_types
-                                               if f['name'] == 'No type specified'),
-                                          list('anpdfghklmorst')],
-                                  '222': [next(f['id'] for f
-                                               in self.folio.alt_title_types
-                                               if f['name'] == 'No type specified'),
-                                          list('anpdfghklmorst')],
-                                  '240': [next(f['id'] for f
-                                               in self.folio.alt_title_types
-                                               if f['name'] == 'No type specified'),
-                                          list('anpdfghklmors')],
-                                  '246': [next(f['id'] for f
-                                               in self.folio.alt_title_types
-                                               if f['name'] == 'No type specified'),
-                                          list('anpbfgh5')],
-                                  '247': [next(f['id'] for f
-                                               in self.folio.alt_title_types
-                                               if f['name'] == 'No type specified'),
-                                          list('anpbfghx')]}
-        for field_tag in self.alt_title_map:
-            for field in marc_record.get_fields(field_tag):
-                yield {'alternativeTitleTypeId': self.alt_title_map[field_tag][0],
-                       'alternativeTitle': " - "
-                       .join(field.get_subfields(*self.alt_title_map[field_tag][1]))}
-        # return list(dict((v['alternativeTitleTypeId'], v)
-        #                 for v in res).values())
-
-    def get_publication(self, marc_record):
-        # TODO: Improve with 008 and 260/4 $c
-        '''Publication'''
-        for field in marc_record.get_fields('260'):
-            dop = str(next(iter(field.get_subfields('c')), ''))
-            yield {'publisher': self.get_filtered_subfield(field, 'b'),
-                   'place': self.get_filtered_subfield(field, 'a'),
-                   'dateOfPublication': re.sub(self.filter_chars_dop,
-                                               str(''), dop).strip() or ''}
-        for field in marc_record.get_fields('264'):
-            dop = str(next(iter(field.get_subfields('c')), ''))
-            yield {'publisher': self.get_filtered_subfield(field, 'b'),
-                   'place': self.get_filtered_subfield(field, 'a'),
-                   'dateOfPublication': re.sub(self.filter_chars_dop,
-                                               str(''), dop).strip() or '',
-                   'role': self.get_publication_role(field.indicators[1])}
-
-    def get_filtered_subfield(self, field, name):
-        field_value = next(iter(field.get_subfields(name)), '')
-        return re.sub(self.filter_chars, str(''), str(field_value)).strip() or ''
-
-    def get_publication_role(self, ind2):
-        roles = {'0': 'Production',
-                 '1': 'Publication',
-                 '2': 'Distribution',
-                 '3': 'Manufacturer',
-                 '4': ''
-                 }
-        if ind2.strip() not in roles.keys():
-            return roles['4']
-        return roles[ind2.strip()]
-
-    def get_series(self, marc_record):
-        '''Series'''
-        tags = {'440': 'anpv',
-                '490': '3av',
-                '800': 'abcdefghjklmnopqrstuvwx35',
-                '810': 'abcdefghklmnoprstuvwx35',
-                '811': 'acdefghjklnpqstuvwx35',
-                '830': 'adfghklmnoprstvwx35'}
-        for key, value in tags.items():
-            for field in marc_record.get_fields(key):
-                yield ' '.join(field.get_subfields(*value))
-
     def get_languages(self, marc_record):
         '''Get languages and tranforms them to correct codes'''
         languages = set()
-        skip_languages = ['###', 'zxx']
         lang_fields = marc_record.get_fields('041')
         if any(lang_fields):
             subfields = 'abdefghjkmn'
@@ -570,7 +304,6 @@ class RulesMapper(DefaultMapper):
 
                 languages.update()
             languages = set(self.filter_langs(filter(None, languages),
-                                              skip_languages,
                                               marc_record['001'].format_field()))
         elif '008' in marc_record and len(marc_record['008'].data) > 38:
             from_008 = ''.join((marc_record['008'].data[35:38]))
@@ -588,87 +321,8 @@ class RulesMapper(DefaultMapper):
         for code in tree.findall(xpath_expr):
             yield code.text
 
-    def get_classifications(self, marc_record):
-        '''Collects Classes and adds the appropriate metadata'''
-        def get_class_type_id(x):
-            return next((f['id'] for f
-                         in self.folio.class_types
-                         if f['name'] == x), None)
-        fields = {'050': ['LC', 'ab'],
-                  '082': ['Dewey', 'a'],
-                  '086': ['GDC', 'a'],
-                  '090': ['LC', 'ab']
-                  }
-        for field_tag in fields:
-            for field in marc_record.get_fields(field_tag):
-                class_type = get_class_type_id(fields[field_tag][0])
-                if class_type:
-                    yield {'classificationTypeId': get_class_type_id(fields[field_tag][0]),
-                           'classificationNumber': " ".join(field.get_subfields(*fields[field_tag][1]))}
-                else:
-                    print("No classification type for {} ({}) for {}."
-                          .format(field.tag, field.format_field(),
-                                  marc_record['001'].format_field(),))
-
-    def get_identifiers(self, marc_record):
-        '''Collects Identifiers and adds the appropriate metadata'''
-        if not any(self.identifier_types):
-            self.identifier_types = [
-                ['010', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'LCCN'), ''),
-                 'a'],
-                ['019', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'System control number'), ''),
-                 'a'],
-                ['020', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'ISBN'), ''), 'a'],
-                ['020', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'Invalid ISBN'), ''),
-                 'z'],
-                ['024', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'Other standard identifier'), ''),
-                 'a'],
-                ['028', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'Publisher or distributor number'), ''),
-                 'a'],
-                ['022', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'ISSN'), ''),
-                 'a'],
-                ['022', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'Invalid ISSN'), ''),
-                 'zmy'],
-                ['022', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'Linking ISSN'), ''),
-                 'l'],
-                # TODO: OCLC number? Distinguish 035s from eachother
-                ['035', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'Control number'), ''),
-                 'az'],
-                ['074', next((f['id'] for f
-                              in self.folio.identifier_types
-                              if f['name'] == 'GPO item number'), ''),
-                 'a']]
-        for b in self.identifier_types:
-            tag = b[0]
-            identifier_type_id = b[1]
-            subfields = b[2]
-            for field in marc_record.get_fields(tag):
-                for subfield in field.get_subfields(*list(subfields)):
-                    if identifier_type_id:
-                        yield {'identifierTypeId': identifier_type_id,
-                               'value': subfield}
-
-    def filter_langs(self, language_values, forbidden_values, legacyid):
+    def filter_langs(self, language_values, legacyid):
+        forbidden_values = ['###', 'zxx']
         for language_value in language_values:
             if language_value in self.language_codes and language_value not in forbidden_values:
                 yield language_value
@@ -694,8 +348,6 @@ class RulesMapper(DefaultMapper):
                     if v not in res:
                         res.append(v)
                 rec[key] = res
-
-# Wrapping corouting which waits for return from process pool.
 
 
 def get_srs_strings(my_tuple):
@@ -737,4 +389,11 @@ def get_srs_strings(my_tuple):
 
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
-    return zip(*[iter(iterable)]*n)
+    return zip(*[iter(iterable)] * n)
+
+
+def add_stats(stats, a):
+    if a not in stats:
+        stats[a] = 1
+    else:
+        stats[a] += 1
