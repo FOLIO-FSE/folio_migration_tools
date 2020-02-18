@@ -40,13 +40,7 @@ class AlabamaMapper(DefaultMapper):
         folio_record['identifiers'].append(
             {'identifierTypeId': '7e591197-f335-4afb-bc6d-a6d76ca3bace',
              'value': legacy_id})
-        # if True:
-        #    srs_id = (super().save_source_record(
-        #        marc_record, folio_record['id']))
-        #    if srs_id:
-        #        folio_record['identifiers'].append(
-        #            {'identifierTypeId': '8e258acc-7dc5-4635-b581-675ac4c510e3',
-        #             'value': srs_id})
+
         return folio_record
 
     def remove_from_id_map(self, marc_record):

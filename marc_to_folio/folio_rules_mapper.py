@@ -21,32 +21,17 @@ class RulesMapper(DefaultMapper):
     # Bootstrapping (loads data needed later in the script.)
 
     def __init__(self, folio, results_path):
-        self.filter_chars = r'[.,\/#!$%\^&\*;:{}=\-_`~()]'
-        self.filter_chars_dop = r'[.,\/#!$%\^&\*;:{}=\_`~()]'
-        self.filter_last_chars = r',$'
+        super().__init__(folio, results_path)
         self.folio = folio
         self.conditions = Conditions(folio)
         self.migration_user_id = 'd916e883-f8f1-4188-bc1d-f0dce1511b50'
-        self.srs_recs = []
         instance_url = 'https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json'
         schema_request = requests.get(instance_url)
-        # schema_request = requests.get('https://raw.githubusercontent.com/folio-org/mod-source-record-manager/master/ramls/instance.json')
         schema_text = schema_request.text
-        # schema_text = schema_text.replace('raml-util/schemas/tags.schema', 'https://raw.githubusercontent.com/folio-org/raml/master/schemas/tags.schema')
-        # schema_text = schema_text.replace('raml-util/schemas/metadata.schema', 'https://raw.githubusercontent.com/folio-org/raml/master/schemas/metadata.schema')
-
         self.instance_schema = json.loads(schema_text)
-        # self.instance_schema['properties'].pop('tags')
-        # self.instance_schema['title'] = 'Instance'
-        # self.instance_schema['$id'] = instance_url
         self.holdings_map = {}
         self.results_path = results_path
-        self.srs_records_file = open(os.path.join(
-            self.results_path, 'srs.json'), "w+")
-        self.srs_raw_records_file = open(os.path.join(
-            self.results_path, 'srs_raw_records.json'), "w+")
-        self.srs_marc_records_file = open(os.path.join(
-            self.results_path, 'srs_marc_records.json'), "w+")
+        # TODO: Move SRS Handling to somewhere more central
         self.id_map = {}
         print("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
@@ -54,9 +39,9 @@ class RulesMapper(DefaultMapper):
         self.mapped_folio_fields = {}
         self.alt_title_map = {}
         self.identifier_types = []
-        # self.mappings = self.folio.folio_get_single_object('/mapping-rules')
-        with open('/mnt/c/code/folio-fse/MARC21-To-FOLIO/maps/mapping_rules_default.json') as map_f:
-            self.mappings = json.load(map_f)
+        self.mappings = self.folio.folio_get_single_object('/mapping-rules')
+        # with open('/mnt/c/code/folio-fse/MARC21-To-FOLIO/maps/mapping_rules_default.json') as map_f:
+        #    self.mappings = json.load(map_f)
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
 
@@ -68,6 +53,7 @@ class RulesMapper(DefaultMapper):
             'id': str(uuid.uuid4()),
             'metadata': super().get_metadata_construct(self.migration_user_id)
         }
+        temp_inst_type = ''
         for marc_field in marc_record:
             if marc_field.tag not in self.mappings:
                 add_stats(self.unmapped_tags, marc_field.tag)
@@ -75,35 +61,49 @@ class RulesMapper(DefaultMapper):
                 mappings = self.mappings[marc_field.tag]
                 self.map_field_according_to_mapping(
                     marc_field, mappings, folio_instance)
+            if marc_field.tag == '008':
+                temp_inst_type = folio_instance['instanceTypeId']
+
         # Do stuff not easily captured by the mapping rules
+        if temp_inst_type and not folio_instance['instanceTypeId']:
+            folio_instance['instanceTypeId'] = temp_inst_type
+        elif (not temp_inst_type and not folio_instance['instanceTypeId']):
+            raise ValueError('No Instance type ID')
         folio_instance['modeOfIssuanceId'] = self.get_mode_of_issuance_id(
             marc_record)
         folio_instance['languages'].extend(self.get_languages(marc_record))
         folio_instance['languages'] = list(self.filter_langs(
-            folio_instance['languages'], marc_record['001'].format_field()))
-        folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
-            marc_record)
-        self.validate(folio_instance)
+            folio_instance['languages'], marc_record))
+        # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
+        #     marc_record)
+        # self.validate(folio_instance)
         self.dedupe_rec(folio_instance)
+        super().save_source_record(marc_record, folio_instance['id'])
+        '''
+        raise Exception("trim away multiple whitespace and newlines..")'''
         return folio_instance
 
     def wrap_up(self):
-        self.flush_srs_recs()
-        self.srs_records_file.close()
-        self.srs_marc_records_file.close()
-        self.srs_raw_records_file.close()
-        print(self.unmapped_tags)
-        print(self.unmapped_conditions)
+        super().wrap_up()
+        print(json.dumps(self.unmapped_tags, indent=4))
+        print(json.dumps(self.unmapped_conditions, indent=4))
 
     def map_field_according_to_mapping(self, marc_field, mappings, rec):
         for mapping in mappings:
             if 'entity' not in mapping:
-                if 'rules' in mapping and any(mapping['rules']) and any(mapping['rules'][0]['conditions']):
-                    self.add_value_to_target(
-                        rec, mapping['target'], self.apply_rules(marc_field, mapping))
+                target = mapping['target']
+                if has_conditions(mapping):
+                    values = self.apply_rules(marc_field, mapping)
+                    # TODO: add condition to customize this...
+                    if marc_field.tag == '655':
+                        values[0] = f"Genre: {values[0]}"
+                    self.add_value_to_target(rec, target, values)
+                elif has_value_to_add(mapping):
+                    value = [mapping['rules'][0]['value']]
+                    self.add_value_to_target(rec, target, value)
                 else:
-                    self.add_value_to_target(
-                        rec, mapping['target'], [marc_field.format_field()])
+                    value = marc_field.format_field() if marc_field else ''
+                    self.add_value_to_target(rec, target, [value])
             else:
                 e_per_subfield = mapping.get(
                     'entityPerRepeatedSubfield', False)
@@ -119,22 +119,25 @@ class RulesMapper(DefaultMapper):
                                    subfields=[sf_tuple[0], sf_tuple[1]])
                 entity = self.create_entity(
                     entity_mapping, temp_field, e_parent)
-                self.add_entity_to_record(entity, e_parent, rec)
+                if type(entity) is dict and any(entity.values()):
+                    self.add_entity_to_record(entity, e_parent, rec)
+                elif type(entity) is list and any(entity):
+                    self.add_entity_to_record(entity, e_parent, rec)
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
-            self.add_entity_to_record(entity, e_parent, rec)
+            if any(entity.values()):
+                self.add_entity_to_record(entity, e_parent, rec)
 
-    def create_entity(self, entity_mapping, marc_field, entity_parent_key):
+    def create_entity(self, entity_mappings, marc_field, entity_parent_key):
         entity = {}
-        for em in entity_mapping:
-            k = em['target'].split('.')[-1]
-            rv = self.apply_rules(marc_field, em)
-            if rv:
-                v = rv[0]
+        for entity_mapping in entity_mappings:
+            k = entity_mapping['target'].split('.')[-1]
+            values = self.apply_rules(marc_field, entity_mapping)
+            if values:
                 if entity_parent_key == k:
-                    entity = v
+                    entity = values[0]
                 else:
-                    entity[k] = v
+                    entity[k] = values[0]
         return entity
 
     def add_entity_to_record(self, entity, entity_parent_key, rec):
@@ -150,7 +153,7 @@ class RulesMapper(DefaultMapper):
     def apply_rules(self, marc_field, mapping):
         values = []
         value = ''
-        if mapping.get('rules', []) and mapping['rules'][0].get('conditions', []):
+        if has_conditions(mapping):
             c_type_def = mapping['rules'][0]['conditions'][0]['type'].split(
                 ',')
             condition_types = [x.strip() for x in c_type_def]
@@ -167,11 +170,13 @@ class RulesMapper(DefaultMapper):
                     value = ' '.join([self.apply_rule(x, condition_types, marc_field, parameter)
                                       for x in marc_field.get_subfields(*mapping['subfield'])])
                 else:
+                    value1 = marc_field.format_field() if marc_field else ''
                     value = self.apply_rule(
-                        marc_field.format_field(), condition_types, marc_field, parameter)
+                        value1, condition_types, marc_field, parameter)
+        elif has_value_to_add(mapping):
+            return [mapping['rules'][0]['value']]
         elif not mapping.get('rules', []) or not mapping['rules'][0].get('conditions', []):
             value = ' '.join(marc_field.get_subfields(*mapping['subfield']))
-            # print(f"no rules {mapping}")
         if mapping.get('subFieldSplit', ''):
             values = wrap(value, 3)
         else:
@@ -186,60 +191,63 @@ class RulesMapper(DefaultMapper):
         return v
 
     def add_value_to_target(self, rec, target_string, value):
-        targets = target_string.split('.')
-        sch = self.instance_schema['properties']
-        prop = rec
-        sc_prop = sch
-        sc_parent = None
-        parent = None
-        if len(targets) == 1:
-            # print(f"{target_string} {value} {rec}")
-            if sch[target_string]['type'] == 'array' and sch[target_string]['items']['type'] == 'string':
-                if target_string not in rec:
-                    rec[target_string] = value
-                else:
-                    rec[target_string].extend(value)
-            elif sch[target_string]['type'] == 'string':
-                rec[target_string] = value[0]
-            else:
-                raise Exception(
-                    f"Edge! {target_string} {sch[target_string]['type']}")
-        else:
-            for target in targets:
-                if target in sc_prop:
-                    sc_prop = sc_prop[target]
-                else:
-                    sc_prop = sc_parent['items']['properties'][target]
-                if target not in rec:
-                    sc_prop_type = sc_prop.get('type', 'string')
-                    if sc_prop_type == 'array':
-                        prop[target] = []
-                        break
-                        # prop[target].append({})
-                    elif sc_parent['type'] == 'array' and sc_prop_type == 'string':
-                        print(f"break! {target} {sc_prop['type']} {prop}")
-                        break
+        if value:
+            targets = target_string.split('.')
+            sch = self.instance_schema['properties']
+            prop = rec
+            sc_prop = sch
+            sc_parent = None
+            parent = None
+            if len(targets) == 1:
+                # print(f"{target_string} {value} {rec}")
+                if (sch[target_string]['type'] == 'array' and
+                        sch[target_string]['items']['type'] == 'string'):
+                    if target_string not in rec:
+                        rec[target_string] = value
                     else:
-                        if (sc_parent['type'] == 'array'):
-                            prop[target] = {}
-                            parent.append(prop[target])
+                        rec[target_string].extend(value)
+                elif sch[target_string]['type'] == 'string':
+                    rec[target_string] = value[0]
+                else:
+                    raise Exception(
+                        f"Edge! {target_string} {sch[target_string]['type']}")
+            else:
+                for target in targets:
+                    if target in sc_prop:
+                        sc_prop = sc_prop[target]
+                    else:
+                        sc_prop = sc_parent['items']['properties'][target]
+                    if target not in rec:
+                        sc_prop_type = sc_prop.get('type', 'string')
+                        if sc_prop_type == 'array':
+                            prop[target] = []
+                            break
+                            # prop[target].append({})
+                        elif sc_parent['type'] == 'array' and sc_prop_type == 'string':
+                            print(
+                                f"break! {target} {sc_prop} {sc_parent} {prop}")
+                            break
                         else:
-                            raise Exception(
-                                f"Edge! {target_string} {sch[target_string]}")
-                if target == targets[-1]:
-                    prop[target] = value[0]
-                prop = prop[target]
-                sc_parent = sc_prop
-                parent = target
+                            if (sc_parent['type'] == 'array'):
+                                prop[target] = {}
+                                parent.append(prop[target])
+                            else:
+                                raise Exception(
+                                    f"Edge! {target_string} {sch[target_string]}")
+                    if target == targets[-1]:
+                        prop[target] = value[0]
+                    prop = prop[target]
+                    sc_parent = sc_prop
+                    parent = target
 
     def validate(self, folio_rec):
         if folio_rec["title"].strip() == "":
             print(f"No title for {folio_rec['hrid']}")
         for key, value in folio_rec.items():
-            if isinstance(value, str) and len(value) > 0:
+            if isinstance(value, str) and any(value):
                 self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(
                     key, 0) + 1
-            if isinstance(value, list) and len(value) > 0:
+            if isinstance(value, list) and any(value):
                 self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(
                     key, 0) + 1
 
@@ -291,8 +299,8 @@ class RulesMapper(DefaultMapper):
             for lang_tag in lang_fields:
                 lang_codes = lang_tag.get_subfields(*list(subfields))
                 for lang_code in lang_codes:
-                    lang_code = str(lang_code).lower()
-                    langlength = len(lang_code.replace(" ", ""))
+                    lang_code = str(lang_code).lower().replace(" ", "")
+                    langlength = len(lang_code)
                     if langlength == 3:
                         languages.add(lang_code.replace(" ", ""))
                     elif langlength > 3 and langlength % 3 == 0:
@@ -304,9 +312,9 @@ class RulesMapper(DefaultMapper):
 
                 languages.update()
             languages = set(self.filter_langs(filter(None, languages),
-                                              marc_record['001'].format_field()))
+                                              marc_record))
         elif '008' in marc_record and len(marc_record['008'].data) > 38:
-            from_008 = ''.join((marc_record['008'].data[35:38]))
+            from_008 = ''.join((marc_record['008'].data[35: 38]))
             if from_008:
                 languages.add(from_008.lower())
         # TODO: test agianist valide language codes
@@ -321,7 +329,7 @@ class RulesMapper(DefaultMapper):
         for code in tree.findall(xpath_expr):
             yield code.text
 
-    def filter_langs(self, language_values, legacyid):
+    def filter_langs(self, language_values, marc_record):
         forbidden_values = ['###', 'zxx']
         for language_value in language_values:
             if language_value in self.language_codes and language_value not in forbidden_values:
@@ -335,9 +343,13 @@ class RulesMapper(DefaultMapper):
                     yield 'swe'
                 elif language_value == 'tys':
                     yield 'ger'
+                elif not language_value:
+                    continue
+                elif not language_value.strip():
+                    continue
                 else:
                     print('Illegal language code: {} for {}'
-                          .format(language_value, legacyid))
+                          .format(language_value, get_legacy_id(marc_record)))
 
     def dedupe_rec(self, rec):
         # remove duplicates
@@ -397,3 +409,22 @@ def add_stats(stats, a):
         stats[a] = 1
     else:
         stats[a] += 1
+
+
+def get_legacy_id(marc_record):
+    if '001' in marc_record and marc_record['001']:
+        return marc_record['001'].format_field()
+    elif '907' in marc_record and 'a' in marc_record['907'] and marc_record['907']['a']:
+        return marc_record['907']['a']
+    else:
+        return marc_record.title()
+
+
+def has_conditions(mapping):
+    return (mapping.get('rules', []) and
+            mapping['rules'][0].get('conditions', []))
+
+
+def has_value_to_add(mapping):
+    return (mapping.get('rules', []) and
+            mapping['rules'][0].get('value', ''))

@@ -35,71 +35,6 @@ class DefaultMapper:
             self.results_path, 'srs_marc_records.json'), "w+")
         self.id_map = {}
         print("Fetching valid language codes...")
-        self.language_codes = list(self.fetch_language_codes())
-        self.contrib_name_types = {}
-        self.mapped_folio_fields = {}
-        self.alt_title_map = {}
-        self.identifier_types = []
-        self.note_tags = {'500': 'a35',
-                          '501': 'a5',
-                          '502': 'abcd',
-                          '504': 'ab',
-                          '505': 'agrt',
-                          '506': 'a',
-                          '507': 'ab',
-                          '508': 'a',
-                          '510': 'abcx',
-                          '511': 'a',
-                          '513': 'ab',
-                          '514': 'acdeghz',
-                          '515': 'a',
-                          '516': 'a',
-                          '518': '3adop',
-                          '520': '3abc',
-                          '522': 'a',
-                          '524': 'a',
-                          '525': 'a',
-                          '530': 'a',
-                          '532': 'a',
-                          '533': 'abcdefmn35',
-                          '534': 'abcefklmnoptxz3',
-                          '540': 'abcdu5',
-                          '541': '3abcdefhno5',
-                          '542': 'abcdngfosu',
-                          '544': 'ad',
-                          '545': 'abu',
-                          '546': '3ab',
-                          '547': 'a',
-                          '550': 'a',
-                          '552': 'ablmnz',
-                          '555': 'abcdu',
-                          '556': 'az',
-                          '561': '3au5',
-                          '562': '3abc5',
-                          '563': '3a5',
-                          '565': 'a',
-                          '567': 'a',
-                          '580': 'a',
-                          '583': 'abcdefhijklnouxz235',
-                          '586': 'a',
-                          '590': 'a',
-                          '592': 'a',
-                          '599': 'abcde'}
-        self.subject_tags = {'600': 'abcdq',
-                             '610': 'abcdn',
-                             '611': 'acde',
-                             '630': 'adfhklst',
-                             '647': 'acdvxyz',
-                             '648': 'avxyz',
-                             '650': 'abcdvxyz',
-                             '651': 'avxyz',
-                             '653': 'a',
-                             '655': 'abcvxyz235'}
-        self.non_mapped_subject_tags = {'654': '',
-                                        '656': '',
-                                        '657': '',
-                                        '658': '',
-                                        '662': ''}
 
     def wrap_up(self):
         self.flush_srs_recs()
@@ -155,10 +90,12 @@ class DefaultMapper:
         if folio_rec["title"].strip() == "":
             print(f"No title for {folio_rec['hrid']}")
         for key, value in folio_rec.items():
-            if isinstance(value, str)  and len(value) > 0:
-                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(key, 0) + 1
+            if isinstance(value, str) and len(value) > 0:
+                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(
+                    key, 0) + 1
             if isinstance(value, list) and len(value) > 0:
-                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(key, 0) + 1
+                self.mapped_folio_fields['key]'] = self.mapped_folio_fields.get(
+                    key, 0) + 1
 
     def save_source_record(self, marc_record, instance_id):
         '''Saves the source Marc_record to the Source record Storage module'''
@@ -174,8 +111,7 @@ class DefaultMapper:
         pool = ProcessPoolExecutor(max_workers=4)
         results = list(pool.map(get_srs_strings, self.srs_recs))
         self.srs_records_file.write("".join(r[0]for r in results))
-        self.srs_marc_records_file.write(
-            "".join(r[2] for r in results))
+        self.srs_marc_records_file.write("".join(r[2] for r in results))
         self.srs_raw_records_file.write("".join(r[1] for r in results))
 
     def post_new_source_storage_record(self, loan):

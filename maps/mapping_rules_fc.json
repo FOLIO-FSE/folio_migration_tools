@@ -1722,26 +1722,6 @@
             "applyRulesOnConcatenatedData": true
         }
     ],
-    "321": [
-        {
-            "rules": [
-                {
-                    "conditions": [
-                        {
-                            "type": "trim_period"
-                        }
-                    ]
-                }
-            ],
-            "target": "publicationFrequency",
-            "subfield": [
-                "a",
-                "b"
-            ],
-            "description": "Publication frequency",
-            "applyRulesOnConcatenatedData": true
-        }
-    ],
     "336": [
         {
             "rules": [
@@ -5856,81 +5836,6 @@
                 {
                     "value": "--",
                     "subfields": []
-                }
-            ],
-            "applyRulesOnConcatenatedData": true
-        }
-    ],
-    "647": [
-        {
-            "rules": [
-                {
-                    "conditions": [
-                        {
-                            "type": "trim_period, trim"
-                        }
-                    ]
-                }
-            ],
-            "target": "subjects",
-            "subfield": [
-                "a",
-                "c",
-                "d",
-                "x",
-                "y",
-                "z",
-                "v"
-            ],
-            "description": "Subject Headings",
-            "subFieldDelimiter": [
-                {
-                    "value": "--",
-                    "subfields": [
-                        "x",
-                        "y",
-                        "z",
-                        "v"
-                    ]
-                },
-                {
-                    "value": "--",
-                    "subfields": []
-                }
-            ],
-            "applyRulesOnConcatenatedData": true
-        }
-    ],
-    "648": [
-        {
-            "rules": [
-                {
-                    "conditions": [
-                        {
-                            "type": "trim_period, trim"
-                        }
-                    ]
-                }
-            ],
-            "target": "subjects",
-            "subfield": [
-                "a",
-                "x",
-                "y",
-                "z",
-                "v"
-            ],
-            "description": "Subject Headings",
-            "subFieldDelimiter": [
-                {
-                    "value": "--",
-                    "subfields": [
-                        "a",
-                        "x",
-                        "y",
-                        "z",
-                        "v"
-                    ]
                 }
             ],
             "applyRulesOnConcatenatedData": true
