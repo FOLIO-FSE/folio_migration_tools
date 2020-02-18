@@ -77,6 +77,7 @@ def main():
                 with open(join(sys.argv[1], file_name), 'rb') as marc_file:
                     reader = MARCReader(marc_file, 'rb')
                     reader.hide_utf8_warnings = True
+                    # reader.force_utf8 = True
                     print("running {}".format(file_name))
                     for idx, marc_record in enumerate(reader):
                         try:
@@ -92,13 +93,13 @@ def main():
                         except Exception as exception:
                             print(exception)
                             traceback.print_exc()
-            except UnicodeDecodeError as decode_error:
-                print(
-                    f"UnicodeDecodeError in {file_name} for index {idx} (after record id {marc_record['001'].data})")
-                print("UnicodeDecodeError in {}:\t {}"
-                      .format(file_name, decode_error))
-                print("File {} needs fixing".format(file_name))
-                failed_files.append(file_name)
+                        except UnicodeDecodeError as decode_error:
+                            print(
+                                f"UnicodeDecodeError in {file_name} for index {idx} (after record id {marc_record['001'].data})")
+                            print("UnicodeDecodeError in {}:\t {}"
+                                  .format(file_name, decode_error))
+                            print("File {} needs fixing".format(file_name))
+                            failed_files.append(file_name)
             except Exception as exception:
                 print(exception)
                 traceback.print_exc()

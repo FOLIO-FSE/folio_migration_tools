@@ -22,7 +22,7 @@
         {
             "rules": [
                 {
-                    "value": "MARC21",
+                    "value": "MARC",
                     "conditions": []
                 }
             ],
@@ -6603,6 +6603,52 @@
                     "description": "URL public note"
                 }
             ]
+        }
+    ],
+    "907": [
+        {
+            "entity": [
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_identifier_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Sierra bib Record ID"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "identifiers.identifierTypeId",
+                    "subfield": [
+                        "a"
+                    ],
+                    "description": "Type for Sierra bib record IDentifier"
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "identifiers.value",
+                    "subfield": [
+                        "a"
+                    ],
+                    "description": "Sierra bib Record ID",
+                    "requiredSubfield": [
+                        "a"
+                    ],
+                    "applyRulesOnConcatenatedData": true
+                }
+            ],
+            "entityPerRepeatedSubfield": true
         }
     ]
 }
