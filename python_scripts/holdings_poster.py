@@ -37,7 +37,7 @@ def main():
                 batch.append(json_rec)
                 if len(batch) == 1000:
                     data = {"instances": batch}
-                    path = "/instance-storage/batch/synchronous"
+                    path = "/holdings-storage/batch/synchronous"
                     url = folio_client.okapi_url + path
                     response = requests.post(url,
                                              data=json.dumps(data),
