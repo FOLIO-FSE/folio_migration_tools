@@ -31,7 +31,7 @@ def main():
     batch = []
     with open(args.data_source, 'r') as file:
         for row in file:
-            json_rec = json.loads(row.split('\t')[1])
+            json_rec = json.loads(row)
             i += 1
             try:
                 batch.append(json_rec)
