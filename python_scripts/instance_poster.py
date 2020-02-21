@@ -45,7 +45,6 @@ def main():
                     if response.status_code != 201:
                         print("Error Posting Instance")
                         print(response.status_code)
-                        print(json.dumps)
                         print(response.text)
                     else:
                         print(

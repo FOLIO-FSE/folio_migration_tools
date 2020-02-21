@@ -36,7 +36,7 @@ def main():
             try:
                 batch.append(json_rec)
                 if len(batch) == 1000:
-                    data = {"instances": batch}
+                    data = {"holdingsRecords": batch}
                     path = "/holdings-storage/batch/synchronous"
                     url = folio_client.okapi_url + path
                     response = requests.post(url,
@@ -45,7 +45,6 @@ def main():
                     if response.status_code != 201:
                         print("Error Posting Instance")
                         print(response.status_code)
-                        print(json.dumps)
                         print(response.text)
                     else:
                         print(
