@@ -15,4 +15,5 @@ The mapping-rules mapper path is the way forward, and this repo will defer from 
 ## Running the script
 pipenv run python3 main_bibs.py PATH_TO_FOLDER_WITH_MARC_FILES RESULTS_FOLDER OKAPI_URL TENANT_ID USERNAME PASSWORD RECORD_SOURCE_NAME 
 
+The above will fetch the mapping-rules from the FOLIO tenant specified and transform the supplied MARC21 record files into FOLIO Instance
 
