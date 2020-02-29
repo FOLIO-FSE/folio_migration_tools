@@ -7,13 +7,13 @@ Read more on this in the Readme in the [Source record manager Module repo](https
 
 The mapping-rules mapper path is the way forward, and this repo will defer from the previous path.
 
-## Running the tests for the default_mapper and the Rules mapper
+## Running the tests for the Rules mapper
 
 * Install the packages in the Pipfile
 * pipenv run python3 -m unittest test_rules_mapper.TestRulesMapper
 
 ## Running the script
-pipenv run python3 main_bibs.py PATH_TO_FOLDER_WITH_MARC_FILES RESULTS_FOLDER OKAPI_URL TENANT_ID USERNAME PASSWORD RECORD_SOURCE_NAME 
+pipenv run python3 main_bibs.py PATH_TO_FOLDER_WITH_MARC_FILES RESULTS_FOLDER OKAPI_URL TENANT_ID USERNAME PASSWORD RECORD_SOURCE_NAME -m RulesMapper 
 
 The above will fetch the mapping-rules from the FOLIO tenant specified and transform the supplied MARC21 record files into FOLIO Instance
 
