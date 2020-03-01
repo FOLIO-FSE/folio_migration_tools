@@ -161,7 +161,7 @@
             "description": ""
         },
         "Z30_COPY_ID": {
-            "target": "copyNumbers",
+            "target": "copyNumber",
             "description": ""
         },
         "Z30_HOL_DOC_NUMBER_X": {

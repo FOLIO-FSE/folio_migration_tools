@@ -22,7 +22,7 @@
         {
             "rules": [
                 {
-                    "value": "MARC21",
+                    "value": "MARC",
                     "conditions": []
                 }
             ],
