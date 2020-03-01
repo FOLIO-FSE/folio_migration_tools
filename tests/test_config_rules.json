@@ -1,7 +1,0 @@
-{
-  "username": "folio",
-  "password": "RollTide",
-  "okapi_url": "https://okapi-fse-us-east-1.folio.ebsco.com",
-  "tenant_id": "fs00001005",
-  "validate_json_schema": false
-}
