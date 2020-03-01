@@ -202,6 +202,12 @@ class DefaultMapper:
             'e': 'cri',
             'g': 'tdi',
             'i': 'snd',
+            'c': 'ntm',
+            'j': 'prm',
+            'b': 'txt',
+            'k': 'sti',
+            'r': 'tdf',
+            'o': 'xxx',
             'p': 'xxx'}
         code = table.get(instance_type_code, 'zzz')
         return next(i['id'] for i in self.folio.instance_types
