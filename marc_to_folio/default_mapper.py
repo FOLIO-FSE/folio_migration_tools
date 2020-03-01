@@ -1,6 +1,5 @@
 '''The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications'''
-import collections
 import json
 from datetime import datetime
 import os.path

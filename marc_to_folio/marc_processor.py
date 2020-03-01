@@ -46,14 +46,14 @@ class MarcProcessor():
             self.stats['successful_bibs'] += 1
         except ValueError as value_error:
             self.stats['failed_bibs'] += 1
-            print(marc_record)
+            #  print(marc_record)
             print(value_error)
             print("Removing record from idMap")
             remove_from_id_map = getattr(self.mapper,
                                          "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
-            raise value_error
+            # raise value_error
         except ValidationError as validation_error:
             self.stats['failed_bibs'] += 1
             print("Error validating record. Halting...")
@@ -76,8 +76,8 @@ class MarcProcessor():
         '''Finalizes the mapping by writing things out.'''
         try:
             self.mapper.wrap_up()
-        except Exception as ee:
-            print(f"error when flushing last srs recs {ee}")
+        except Exception as exception:
+            print(f"error when flushing last srs recs {exception}")
         print(self.stats)
         print("Saving map of old and new IDs")
         print("Number of Instances in map:\t{}"

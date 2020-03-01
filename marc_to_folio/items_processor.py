@@ -13,6 +13,7 @@ class ItemsProcessor():
         self.results_file = results_file
         self.item_schema = folio_client.get_item_schema()
         self.records_count = 0
+        self.written_items = 0
         self.mapper = mapper
         self.instance_id_map = {}
         self.holdings_id_map = {}
@@ -33,7 +34,7 @@ class ItemsProcessor():
                               self.args.postgres_dump,
                               folio_rec)
             # Print progress
-            if self.records_count % 100000 == 0:
+            if self.records_count % 10000 == 0:
                 elapsed = self.records_count / (time.time() - self.start)
                 elapsed_formatted = '{}'.format(elapsed)
                 print("{}\t\t{}".format(elapsed_formatted, self.records_count),
@@ -65,6 +66,7 @@ class ItemsProcessor():
                       indent=4)
         print(self.mapper.folio.missing_location_codes)
         self.mapper.wrap_up()
+        print(f"{self.written_items} written")
 
 
 def write_to_file(file, pg_dump, folio_record):
