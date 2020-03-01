@@ -59,6 +59,7 @@ def main():
         print(f"Locations in map: {len(location_map)}")
     with open(os.path.join(args.result_folder, 'instance_id_map.json'), 'r') as json_file:
         instance_id_map = json.load(json_file)
+    print(len(instance_id_map))
     try:
         mapper_name = next((m for m in mappers
                             if args.mapper and args.mapper in m), "HoldingsDefaultMapper")
