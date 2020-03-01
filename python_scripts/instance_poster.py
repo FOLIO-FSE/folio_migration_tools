@@ -17,6 +17,7 @@ def main():
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
+    parser.add_argument("batch_size", help=("batch size"))
     args = parser.parse_args()
     print("\tOkapi URL:\t", args.okapi_url)
     print("\tTenanti Id:\t", args.tenant_id)
@@ -35,7 +36,7 @@ def main():
             i += 1
             try:
                 batch.append(json_rec)
-                if len(batch) == 1000:
+                if len(batch) == int(args.batch_size):
                     data = {"instances": batch}
                     path = "/instance-storage/batch/synchronous"
                     url = folio_client.okapi_url + path

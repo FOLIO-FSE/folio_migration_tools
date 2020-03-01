@@ -17,6 +17,7 @@ def main():
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
+    parser.add_argument("batch_size", help=("batch size"))
     args = parser.parse_args()
     print("\tOkapi URL:\t", args.okapi_url)
     print("\tTenanti Id:\t", args.tenant_id)
@@ -31,11 +32,11 @@ def main():
     batch = []
     with open(args.data_source, 'r') as file:
         for row in file:
-            json_rec = json.loads(row)
             i += 1
             try:
+                json_rec = json.loads(row)
                 batch.append(json_rec)
-                if len(batch) == 1000:
+                if len(batch) == int(args.batch_size):
                     data = {"holdingsRecords": batch}
                     path = "/holdings-storage/batch/synchronous"
                     url = folio_client.okapi_url + path
@@ -43,7 +44,7 @@ def main():
                                              data=json.dumps(data),
                                              headers=folio_client.okapi_headers)
                     if response.status_code != 201:
-                        print("Error Posting Instance")
+                        print("Error Posting Holdings record")
                         print(response.status_code)
                         print(response.text)
                     else:
