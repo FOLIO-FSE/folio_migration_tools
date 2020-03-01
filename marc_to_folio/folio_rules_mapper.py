@@ -1,12 +1,10 @@
 '''The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications'''
 import json
-import os.path
 from textwrap import wrap
 import uuid
 import xml.etree.ElementTree as ET
 from concurrent.futures import ProcessPoolExecutor
-from datetime import datetime
 from io import StringIO
 
 import requests
@@ -51,7 +49,7 @@ class RulesMapper(DefaultMapper):
              This is the main function'''
         folio_instance = {
             'id': str(uuid.uuid4()),
-            'metadata': super().get_metadata_construct(self.migration_user_id)
+            'metadata': self.folio.get_metadata_construct()
         }
         temp_inst_type = ''
         for marc_field in marc_record:
@@ -65,13 +63,18 @@ class RulesMapper(DefaultMapper):
                 temp_inst_type = folio_instance['instanceTypeId']
 
         # Do stuff not easily captured by the mapping rules
+        folio_instance['source'] = "MARC"
         if temp_inst_type and not folio_instance['instanceTypeId']:
             folio_instance['instanceTypeId'] = temp_inst_type
-        elif (not temp_inst_type and not folio_instance['instanceTypeId']):
+        elif (not temp_inst_type
+                and not folio_instance.get('instanceTypeId', '')):
             raise ValueError('No Instance type ID')
         folio_instance['modeOfIssuanceId'] = self.get_mode_of_issuance_id(
             marc_record)
-        folio_instance['languages'].extend(self.get_languages(marc_record))
+        if 'languages' in folio_instance:
+            folio_instance['languages'].extend(self.get_languages(marc_record))
+        else:
+            folio_instance['languages'] = self.get_languages(marc_record)
         folio_instance['languages'] = list(self.filter_langs(
             folio_instance['languages'], marc_record))
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
@@ -79,8 +82,12 @@ class RulesMapper(DefaultMapper):
         # self.validate(folio_instance)
         self.dedupe_rec(folio_instance)
         super().save_source_record(marc_record, folio_instance['id'])
+
         '''
-        raise Exception("trim away multiple whitespace and newlines..")'''
+        raise Exception("trim away multiple whitespace and newlines..")
+        raise Exception('createDate and update date and catalogeddate')'''
+        self.id_map[get_source_id(marc_record)] = {
+            'id': folio_instance['id']}
         return folio_instance
 
     def wrap_up(self):
@@ -167,8 +174,11 @@ class RulesMapper(DefaultMapper):
                     value, condition_types, marc_field, parameter)
             else:
                 if mapping.get('subfield', []):
-                    value = ' '.join([self.apply_rule(x, condition_types, marc_field, parameter)
-                                      for x in marc_field.get_subfields(*mapping['subfield'])])
+                    subfields = marc_field.get_subfields(*mapping['subfield'])
+                    value = ' '.join([self.apply_rule(x, condition_types,
+                                                      marc_field,
+                                                      parameter)
+                                      for x in subfields])
                 else:
                     value1 = marc_field.format_field() if marc_field else ''
                     value = self.apply_rule(
@@ -200,8 +210,8 @@ class RulesMapper(DefaultMapper):
             parent = None
             if len(targets) == 1:
                 # print(f"{target_string} {value} {rec}")
-                if (sch[target_string]['type'] == 'array' and
-                        sch[target_string]['items']['type'] == 'string'):
+                if (sch[target_string]['type'] == 'array'
+                        and sch[target_string]['items']['type'] == 'string'):
                     if target_string not in rec:
                         rec[target_string] = value
                     else:
@@ -330,7 +340,7 @@ class RulesMapper(DefaultMapper):
             yield code.text
 
     def filter_langs(self, language_values, marc_record):
-        forbidden_values = ['###', 'zxx']
+        forbidden_values = ['###', 'zxx', 'n/a', 'N/A', '|||']
         for language_value in language_values:
             if language_value in self.language_codes and language_value not in forbidden_values:
                 yield language_value
@@ -347,7 +357,7 @@ class RulesMapper(DefaultMapper):
                     continue
                 elif not language_value.strip():
                     continue
-                else:
+                elif language_value not in forbidden_values:
                     print('Illegal language code: {} for {}'
                           .format(language_value, get_legacy_id(marc_record)))
 
@@ -421,10 +431,20 @@ def get_legacy_id(marc_record):
 
 
 def has_conditions(mapping):
-    return (mapping.get('rules', []) and
-            mapping['rules'][0].get('conditions', []))
+    return (mapping.get('rules', [])
+            and mapping['rules'][0].get('conditions', []))
 
 
 def has_value_to_add(mapping):
-    return (mapping.get('rules', []) and
-            mapping['rules'][0].get('value', ''))
+    return (mapping.get('rules', [])
+            and mapping['rules'][0].get('value', ''))
+
+
+def get_source_id(marc_record):
+    '''Gets the system Id from sierra'''
+    if '907' in marc_record and 'a' in marc_record['907']:
+        return marc_record['907']['a'].replace('.b', '')[:-1]
+    elif '001' in marc_record:
+        return marc_record['001'].format_field()
+    else:
+        raise ValueError('No 001 present')
