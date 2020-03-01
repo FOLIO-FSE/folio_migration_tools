@@ -16,18 +16,19 @@ class Conditions():
         self.default_contributor_type = {}
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
-        try:
-            if not self.cache.get(name, ''):
-                self.cache[name] = getattr(self, 'condition_' + str(name))
-            return self.cache[name](value, parameter, marc_field)
-            # return getattr(self, 'condition_' + str(name))(value, parameter, marc_field)
-        except AttributeError as attrib_error:
-            print(f'Unhandled condition: {name} {attrib_error} ')
-            return value
-        except ValueError as value_error:
-            print(
-                f'Unhandled value: {name} {value_error} {type(value_error)} ')
-            return value
+        # try:
+        if not self.cache.get(name, ''):
+            self.cache[name] = getattr(self, 'condition_' + str(name))
+        return self.cache[name](value, parameter, marc_field)
+        # return getattr(self, 'condition_' + str(name))(value, parameter,
+        # marc_field)
+        # except AttributeError as attrib_error:
+        #     print(f'Unhandled condition: {name} {attrib_error} ')
+        #    return value
+        # except ValueError as value_error:
+        #     print(
+        #         f'Unhandled value: {name} {value_error} {type(value_error)} ')
+        #    return value
 
     def condition_trim_period(self, value, parameter, marc_field):
         return value.strip().rstrip('.').rstrip(',')
@@ -88,7 +89,7 @@ class Conditions():
         if not any(self.instance_note_types):
             self.instance_note_types = self.folio.folio_get_all("/instance-note-types",
                                                                 "instanceNoteTypes",
-                                                                '?query=cql.allRecords=1 sortby name')
+                                                                '?query=cql.allRecords=1')
         v = next((f['id'] for f
                   in self.instance_note_types
                   if f['name'] == parameter['name']), '')
