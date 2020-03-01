@@ -88,13 +88,13 @@ class TestRulesMapper(unittest.TestCase):
         # self.assertFalse(all('/' in t for t in record['alternativeTitles']))
         title = "Urbana tidskrifter"
         self.assertIn(title, list(t['alternativeTitle'] for t
-                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+                                  in record[0]['alternativeTitles']), message + '\n' + record[1])
         title = "Cahiers d'urbanisme et d'aménagement du territoire 57/58/59"
         self.assertIn(title, list(t['alternativeTitle'] for t
-                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+                                  in record[0]['alternativeTitles']), message + '\n' + record[1])
         title = "Les cahiers d'urbanisme"
         self.assertIn(title, list(t['alternativeTitle'] for t
-                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+                                  in record[0]['alternativeTitles']), message + '\n' + record[1])
 
     def test_editions(self):
         message = 'Should add editions (250) to the editions list and enforce unique'
@@ -147,23 +147,23 @@ class TestRulesMapper(unittest.TestCase):
         # 246
         title = "Engineering identities, epistemologies and values remainder title"
         self.assertIn(title, list(t['alternativeTitle'] for t
-                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+                                  in record[0]['alternativeTitles']), message + '\n' + record[1])
         # 247
         title = "Medical world news annual review of medicine"
         self.assertIn(title, list(t['alternativeTitle'] for t
-                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+                                  in record[0]['alternativeTitles']), message + '\n' + record[1])
         # 240
         title = "Laws, etc. (Laws of Kenya : 1948)"
         self.assertIn(title, list(t['alternativeTitle'] for t
-                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+                                  in record[0]['alternativeTitles']), message + '\n' + record[1])
         # 222
         title = "Soviet astronomy letters"
         self.assertIn(title, list(t['alternativeTitle'] for t
-                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+                                  in record[0]['alternativeTitles']), message + '\n' + record[1])
         # 130
         title = "Star is born (Motion picture : 1954)"
         self.assertIn(title, list(t['alternativeTitle'] for t
-                              in record[0]['alternativeTitles']), message + '\n' + record[1])
+                                  in record[0]['alternativeTitles']), message + '\n' + record[1])
 
     def test_identifiers(self):
         message = 'Should add identifiers: 010, 019, 020, 022, 024, 028, 035'
@@ -172,7 +172,7 @@ class TestRulesMapper(unittest.TestCase):
         m = message + '\n' + record[1]
         # TODO: Test identifier type id in additional mappers
         identifier_values = list(i['value']
-                             for i in record[0]['identifiers'])
+                                 for i in record[0]['identifiers'])
         self.assertIn('2008011507', identifier_values, m)
         self.assertIn('9780307264787', identifier_values, m)
         self.assertIn('9780071842013', identifier_values, m)
@@ -234,7 +234,6 @@ class TestRulesMapper(unittest.TestCase):
         self.assertIn('McGraw-Hill technical education series',
                       record[0]['series'], m)
         self.assertEqual(2, len(record[0]['series']), m)
-        
 
     def test_contributors(self):
         message = 'Should add contributors (100, 111 700) to the contributors list'
