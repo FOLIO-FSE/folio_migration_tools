@@ -63,9 +63,8 @@ class ChalmersMapper(DefaultMapper):
                           .format(self.get_source_id(marc_record)))
                 f866s = [f866 for f866
                          in marc_record.get_fields('866')
-                         if '5' in f866 and
-                         # ('a' in f866 or 'z' in f866) and
-                         (f866['5']).upper() == f852['5'].upper()]
+                         if '5' in f866
+                            and (f866['5']).upper() == f852['5'].upper()]
                 holding = self.create_holding([f852, f866s],
                                               folio_record['id'],
                                               self.get_source_id(marc_record))
