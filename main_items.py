@@ -85,11 +85,15 @@ def main():
     failed_files = list()
     with open(os.path.join(args.result_path, 'folio_items.json'), 'w+') as results_file:
         processor = ItemsProcessor(mapper, folio_client, results_file, args)
+        f = 0
+        i = 0
         for file_name in files:
+            f += 1
             print(f"running {file_name}")
             try:
                 with open(join(args.records_file, file_name), 'r+', errors='replace') as items_file:
                     for rec in mapper.get_records(items_file):
+                        i += 1
                         processor.process_record(rec)
             except UnicodeDecodeError as decode_error:
                 print(
@@ -98,16 +102,13 @@ def main():
                       .format(file_name, decode_error))
                 print("File {} needs fixing".format(file_name))
                 failed_files.append(file_name)
-            except Exception as exception:
-                print(exception)
-                traceback.print_exc()
-                print(file_name)
     # wrap up
     print("Done. Wrapping up...")
     processor.wrap_up()
     print("Failed files:")
     print(json.dumps(failed_files, sort_keys=True, indent=4))
     print("done")
+    print(f"processt {i} records in {f} files")
 
 
 if __name__ == '__main__':
