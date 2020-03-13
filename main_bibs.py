@@ -78,6 +78,7 @@ def main():
         processor = MarcProcessor(mapper, folio_client, results_file, args)
         for file_name in files:
             try:
+<<<<<<< HEAD
                 with open(join(sys.argv[1], file_name), "rb") as marc_file:
                     reader = MARCReader(marc_file, "rb", permissive=True)
                     # reader.force_utf8 = True
@@ -93,6 +94,34 @@ def main():
                             failed_records.append(reader.current_chunk)
                         else:
                             processor.process_record(record)
+=======
+                with open(join(sys.argv[1], file_name), 'rb') as marc_file:
+                    reader = MARCReader(marc_file, 'rb')
+                    reader.hide_utf8_warnings = True
+                    # reader.force_utf8 = True
+                    print("running {}".format(file_name))
+                    for idx, marc_record in enumerate(reader):
+                        try:
+                            processor.process_record(marc_record)
+                            # f_path = sys.argv[1]+file_name
+                            # print("loading MARC21 records from {}".format(f_path))
+                            # if args.marcxml:
+                            #    pymarc.map_xml(processor.process_record, f_path)
+                            # else:
+                            #    with open(f_path, 'rb') as marc_file:
+                            #        pymarc.map_records(processor.process_record, marc_file)
+
+                        except Exception as exception:
+                            print(exception)
+                            traceback.print_exc()
+                        except UnicodeDecodeError as decode_error:
+                            print(
+                                f"UnicodeDecodeError in {file_name} for index {idx} (after record id {marc_record['001'].data})")
+                            print("UnicodeDecodeError in {}:\t {}"
+                                  .format(file_name, decode_error))
+                            print("File {} needs fixing".format(file_name))
+                            failed_files.append(file_name)
+>>>>>>> c231e94ae8fb92e224460bfb7bdc2cddf1c9325a
             except Exception as exception:
                 print(exception)
                 traceback.print_exc()
