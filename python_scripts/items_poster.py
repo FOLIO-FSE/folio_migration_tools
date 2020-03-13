@@ -1,4 +1,4 @@
-'''Posts a file of Instances to OKAPI'''
+"""Posts a file of Instances to OKAPI"""
 import argparse
 import json
 import time
@@ -9,8 +9,7 @@ from folioclient.FolioClient import FolioClient
 
 
 def main():
-    start = time.time()
-    failed_files = []
+    failed_ids = []
     parser = argparse.ArgumentParser()
     parser.add_argument("data_source", help="path to marc records folder")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
@@ -24,40 +23,61 @@ def main():
     print("\tUsername:   \t", args.username)
     print("\tPassword:   \tSecret")
     print("\tRecord source:\t", args.data_source, flush=True)
-    folio_client = FolioClient(args.okapi_url,
-                               args.tenant_id,
-                               args.username,
-                               args.password)
+    folio_client = FolioClient(
+        args.okapi_url, args.tenant_id, args.username, args.password
+    )
     i = 0
     batch = []
-    with open(args.data_source, 'r') as file:
+    with open(args.data_source, "r") as file:
         for row in file:
             json_rec = json.loads(row)
-            if 'copyNumber' in json_rec:
-                del json_rec['copyNumber']
+            if "copyNumber" in json_rec:
+                del json_rec["copyNumber"]
             i += 1
             try:
                 batch.append(json_rec)
                 if len(batch) == int(args.batch_size):
-                    data = {"items": batch}
-                    path = "/item-storage/batch/synchronous"
-                    url = folio_client.okapi_url + path
-                    response = requests.post(url,
-                                             data=json.dumps(data),
-                                             headers=folio_client.okapi_headers)
-                    if response.status_code != 201:
-                        print("Error Posting Item")
-                        print(response.status_code)
-                        print(response.text)
-                        # print(json.dumps(data))
-                    else:
-                        print(
-                            f'Posting successfull! {i} {response.elapsed.total_seconds()}s', flush=True)
+                    post_batch(folio_client, batch, i, failed_ids)
                     batch = []
             except Exception as exception:
                 print(exception, flush=True)
                 traceback.print_exc()
+        post_batch(folio_client, batch, i, failed_ids)
+        print(json.dumps(failed_ids, indent=4), flush=True)
 
 
-if __name__ == '__main__':
+def handle_failed_batch(folio_client, batch, i, failed_ids):
+    new_list = list([it for it in batch if it["holdingsRecordId"] not in failed_ids])
+    print(
+        f"reposting new batch {len(failed_ids)} {len(batch)} {len(new_list)}",
+        flush=True,
+    )
+    post_batch(folio_client, new_list, i, failed_ids, True)
+
+
+def post_batch(folio_client, batch, i, failed_ids: list, repost=False):
+    data = {"items": batch}
+    path = "/item-storage/batch/synchronous"
+    url = folio_client.okapi_url + path
+    response = requests.post(
+        url, data=json.dumps(data), headers=folio_client.okapi_headers
+    )
+    if response.status_code != 201:
+        print("Error Posting Item")
+        print(response.status_code)
+        print(response.text, flush=True)
+        resp = json.loads(response.text)
+        for error in resp["errors"]:
+            failed_ids.append(error["parameters"][0]["value"])
+        if not repost:
+            handle_failed_batch(folio_client, batch, i, failed_ids)
+        # print(json.dumps(data))
+    else:
+        print(
+            f"Posting successfull! {i} {response.elapsed.total_seconds()}s {len(batch)}",
+            flush=True,
+        )
+
+
+if __name__ == "__main__":
     main()

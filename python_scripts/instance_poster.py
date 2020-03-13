@@ -1,4 +1,4 @@
-'''Posts a file of Instances to OKAPI'''
+"""Posts a file of Instances to OKAPI"""
 import argparse
 import json
 import time
@@ -9,8 +9,6 @@ from folioclient.FolioClient import FolioClient
 
 
 def main():
-    start = time.time()
-    failed_files = []
     parser = argparse.ArgumentParser()
     parser.add_argument("data_source", help="path to marc records folder")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
@@ -24,37 +22,53 @@ def main():
     print("\tUsername:   \t", args.username)
     print("\tPassword:   \tSecret")
     print("\tRecord source:\t", args.data_source, flush=True)
-    folio_client = FolioClient(args.okapi_url,
-                               args.tenant_id,
-                               args.username,
-                               args.password)
+    folio_client = FolioClient(
+        args.okapi_url, args.tenant_id, args.username, args.password
+    )
     i = 0
     batch = []
-    with open(args.data_source, 'r') as file:
+    with open(args.data_source, "r") as file:
         for row in file:
-            json_rec = json.loads(row.split('\t')[1])
+            json_rec = json.loads(row.split("\t")[-1])
             i += 1
             try:
                 batch.append(json_rec)
                 if len(batch) == int(args.batch_size):
-                    data = {"instances": batch}
-                    path = "/instance-storage/batch/synchronous"
-                    url = folio_client.okapi_url + path
-                    response = requests.post(url,
-                                             data=json.dumps(data),
-                                             headers=folio_client.okapi_headers)
-                    if response.status_code != 201:
-                        print("Error Posting Instance")
-                        print(response.status_code)
-                        print(response.text)
-                    else:
-                        print(
-                            f'Posting successfull! {i} {response.elapsed.total_seconds()}s', flush=True)
+                    post_batch(folio_client, batch, i)
                     batch = []
             except Exception as exception:
                 print(exception, flush=True)
                 traceback.print_exc()
+        print("Posting last batch")
+        post_batch(folio_client, batch, i)
 
 
-if __name__ == '__main__':
+def post_batch(folio_client, batch, i):
+    batch_size = len(batch)
+    data = {"instances": batch}
+    path = "/instance-storage/batch/synchronous"
+    url = folio_client.okapi_url + path
+    response = requests.post(
+        url, data=json.dumps(data), headers=folio_client.okapi_headers
+    )
+    if response.status_code != 201:
+        print("Error Posting Batch")
+        print(response.status_code)
+        print(response.text)
+        if batch_size > 1:
+            handle_failed_batch(folio_client, batch)
+    else:
+        print(
+            f"Posting successfull! {i} {response.elapsed.total_seconds()}s", flush=True
+        )
+
+
+def handle_failed_batch(folio_client, batch):
+    i = 0
+    for item in batch:
+        i += 1
+        post_batch(folio_client, [item], i)
+
+
+if __name__ == "__main__":
     main()
