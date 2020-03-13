@@ -76,7 +76,7 @@
         }
     },
     "materialTypeMap": "/md/alabama/loan_type_map.tsv",
-    "itemsFileType": "TSV",
+    "itemsFileType": "TSVQ",
     "itemsFileDelimiter": "\t",
     "mapOnLocationField": "code",
     "metadataUserId": "d916e883-f8f1-4188-bc1d-f0dce1511b50"
