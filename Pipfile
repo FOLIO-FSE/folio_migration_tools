@@ -8,6 +8,7 @@ pytest = "*"
 autopep8 = "*"
 flake8 = "*"
 pep8 = "*"
+black = "*"
 
 [packages]
 jsonschema = "*"
@@ -17,6 +18,11 @@ lxml = "*"
 folioclient = "*"
 python-jsonschema-objects = "*"
 pylint = "*"
+black = "*"
+deprecated = "*"
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
