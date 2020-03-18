@@ -380,34 +380,34 @@ class RulesMapper(DefaultMapper):
                         res.append(v)
                 rec[key] = res
 
-
-def get_srs_strings(my_tuple):
-    json_string = StringIO()
-    writer = JSONWriter(json_string)
-    writer.write(my_tuple[0])
-    writer.close(close_fh=False)
-    marc_uuid = str(uuid.uuid4())
-    raw_uuid = str(uuid.uuid4())
-    record = {
-        "id": str(uuid.uuid4()),
-        "deleted": False,
-        "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
-        "matchedProfileId": str(uuid.uuid4()),
-        "matchedId": str(uuid.uuid4()),
-        "generation": 1,
-        "recordType": "MARC",
-        "rawRecordId": raw_uuid,
-        "parsedRecordId": marc_uuid,
-        "additionalInfo": {"suppressDiscovery": False},
-        "externalIdsHolder": {"instanceId": my_tuple[1]},
-    }
-    raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
-    marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
-    return (
-        f"{record['id']}\t{json.dumps(record)}\n",
-        f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
-        f"{marc_record['id']}\t{json.dumps(marc_record)}\n",
-    )
+    def get_srs_strings(self, my_tuple):
+        json_string = StringIO()
+        writer = JSONWriter(json_string)
+        writer.write(my_tuple[0])
+        writer.close(close_fh=False)
+        marc_uuid = str(uuid.uuid4())
+        raw_uuid = str(uuid.uuid4())
+        record = {
+            "id": str(uuid.uuid4()),
+            "deleted": False,
+            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
+            "matchedProfileId": str(uuid.uuid4()),
+            "matchedId": str(uuid.uuid4()),
+            "generation": 1,
+            "recordType": "MARC",
+            "rawRecordId": raw_uuid,
+            "parsedRecordId": marc_uuid,
+            "additionalInfo": {"suppressDiscovery": False},
+            "externalIdsHolder": {"instanceId": my_tuple[1]},
+            "metadata": self.folio.get_metadata_construct()
+        }
+        raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
+        marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
+        return (
+            f"{record['id']}\t{json.dumps(record)}\n",
+            f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
+            f"{marc_record['id']}\t{json.dumps(marc_record)}\n",
+        )
 
 
 def grouped(iterable, n):

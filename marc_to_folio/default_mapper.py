@@ -642,11 +642,7 @@ class DefaultMapper:
                         )
                     )
 
-
-# Wrapping corouting which waits for return from process pool.
-
-
-def get_srs_strings(my_tuple):
+    def get_srs_strings(self, my_tuple):
     json_string = StringIO()
     writer = JSONWriter(json_string)
     writer.write(my_tuple[0])
@@ -665,6 +661,7 @@ def get_srs_strings(my_tuple):
         "parsedRecordId": marc_uuid,
         "additionalInfo": {"suppressDiscovery": False},
         "externalIdsHolder": {"instanceId": my_tuple[1]},
+        "metadata": self.folio.get_metadata_construct()
     }
     raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
     marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
