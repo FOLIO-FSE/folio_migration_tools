@@ -20,7 +20,6 @@ class ItemsDefaultMapper:
         print("init")
         csv.register_dialect("tsv", delimiter="\t")
         csv.register_dialect("tsvq", delimiter="\t", quotechar='"')
-
         csv.register_dialect("pipe", delimiter="|")
         self.folio = folio
         self.stats = {"missing_location_codes": 0, "unmapped item types": 0}
@@ -123,6 +122,8 @@ class ItemsDefaultMapper:
         reader = None
         if self.map["itemsFileType"] == "TSV":
             reader = csv.DictReader(file, dialect="tsv")
+        if self.map["itemsFileType"] == "PIPE":
+            reader = csv.DictReader(file, dialect="pipe")
         if self.map["itemsFileType"] == "TSVQ":
             reader = csv.DictReader(file, dialect="tsvq")
         if self.map["itemsFileType"] == "CSV":
@@ -146,7 +147,7 @@ class ItemsDefaultMapper:
                 "status": {"name": "Available"},
                 "metadata": self.folio.get_metadata_construct(),
             }
-            legacy_id = json.dumps(legacy_item)
+            legacy_id = legacy_item.get("Z30_REC_KEY", "")
             self.count_mapped("id", "")
             self.count_mapped("status", "")
             self.count_mapped("metadata", "")

@@ -262,7 +262,7 @@
         }
     },
     "materialTypeMap": "/md/five_colleges/loan_type_map.tsv",
-    "itemsFileType": "CSV",
+    "itemsFileType": "PIPE",
     "itemsFileDelimiter": "|",
     "mapOnLocationField": "code"
 }
