@@ -1,6 +1,7 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
 import json
+import os.path
 from textwrap import wrap
 import uuid
 import xml.etree.ElementTree as ET
@@ -32,6 +33,7 @@ class RulesMapper(DefaultMapper):
         self.results_path = results_path
         # TODO: Move SRS Handling to somewhere more central
         self.id_map = {}
+        self.srs_recs = []
         print("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
         self.contrib_name_types = {}
@@ -39,10 +41,18 @@ class RulesMapper(DefaultMapper):
         self.alt_title_map = {}
         self.identifier_types = []
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
+        self.srs_records_file = open(os.path.join(self.results_path, "srs.json"), "w+")
+        self.srs_raw_records_file = open(
+            os.path.join(self.results_path, "srs_raw_records.json"), "w+"
+        )
+        self.srs_marc_records_file = open(
+            os.path.join(self.results_path, "srs_marc_records.json"), "w+"
+        )
         # with open('/mnt/c/code/folio-fse/MARC21-To-FOLIO/maps/mapping_rules_default.json') as map_f:
         #    self.mappings = json.load(map_f)
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
+        self.metadata_contstruct = self.folio.get_metadata_construct()
 
     def parse_bib(self, marc_record, record_source):
         """ Parses a bib recod into a FOLIO Inventory instance object
@@ -82,7 +92,7 @@ class RulesMapper(DefaultMapper):
         #     marc_record)
         # self.validate(folio_instance)
         self.dedupe_rec(folio_instance)
-        super().save_source_record(marc_record, folio_instance["id"])
+        self.save_source_record(marc_record, folio_instance["id"])
 
         """
         raise Exception("trim away multiple whitespace and newlines..")
@@ -91,7 +101,11 @@ class RulesMapper(DefaultMapper):
         return folio_instance
 
     def wrap_up(self):
-        super().wrap_up()
+        # super().wrap_up()
+        self.flush_srs_recs()
+        self.srs_records_file.close()
+        self.srs_marc_records_file.close()
+        self.srs_raw_records_file.close()
         print(json.dumps(self.unmapped_tags, indent=4))
         print(json.dumps(self.unmapped_conditions, indent=4))
 
@@ -273,28 +287,21 @@ class RulesMapper(DefaultMapper):
             Field(tag="999", indicators=["f", "f"], subfields=["i", instance_id])
         )
         self.srs_recs.append((marc_record, instance_id))
-        if len(self.srs_recs) > 1000:
+        if len(self.srs_recs) == 1000:
             self.flush_srs_recs()
             self.srs_recs = []
 
     def flush_srs_recs(self):
-        pool = ProcessPoolExecutor(max_workers=4)
-        results = list(pool.map(get_srs_strings, self.srs_recs))
-        self.srs_records_file.write("".join(r[0] for r in results))
-        self.srs_marc_records_file.write("".join(r[2] for r in results))
-        self.srs_raw_records_file.write("".join(r[1] for r in results))
-
-    def post_new_source_storage_record(self, loan):
-        okapi_headers = self.folio.okapi_headers
-        host = self.folio.okapi_url
-        path = "{}/source-storage/records".format(host)
-        response = requests.post(path, data=loan, headers=okapi_headers)
-        if response.status_code != 201:
-            print(
-                "Something went wrong. HTTP {}\nMessage:\t{}".format(
-                    response.status_code, response.text
-                )
-            )
+        # pool = ProcessPoolExecutor(max_workers=4)
+        # results = list(pool.map(get_srs_strings, self.srs_recs))
+        for srs_rec in self.srs_recs:
+            r = get_srs_strings(srs_rec, self.metadata_contstruct)
+            self.srs_records_file.write(r[0])
+            self.srs_marc_records_file.write(r[2])
+            self.srs_raw_records_file.write(r[1])
+        # self.srs_records_file.write("".join(r[0] for r in results))
+        # self.srs_marc_records_file.write("".join(r[2] for r in results))
+        #self.srs_raw_records_file.write("".join(r[1] for r in results))
 
     def get_nature_of_content(self, marc_record):
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
@@ -380,7 +387,8 @@ class RulesMapper(DefaultMapper):
                         res.append(v)
                 rec[key] = res
 
-    def get_srs_strings(self, my_tuple):
+
+def get_srs_strings(my_tuple, metadata_construct):
         json_string = StringIO()
         writer = JSONWriter(json_string)
         writer.write(my_tuple[0])
@@ -399,7 +407,7 @@ class RulesMapper(DefaultMapper):
             "parsedRecordId": marc_uuid,
             "additionalInfo": {"suppressDiscovery": False},
             "externalIdsHolder": {"instanceId": my_tuple[1]},
-            "metadata": self.folio.get_metadata_construct()
+            "metadata": metadata_construct
         }
         raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
         marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
