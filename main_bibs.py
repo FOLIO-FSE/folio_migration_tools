@@ -28,6 +28,12 @@ def main():
     parser.add_argument("data_source", help=("name of this data set"))
     parser.add_argument("-mapper", "-m", help=("The mapper of choice"))
     parser.add_argument(
+        "-force_utf_8",
+        "-utf8",
+        help=("forcing UTF8 when pasing marc records"),
+        action="store_true",
+    )
+    parser.add_argument(
         "-postgres_dump",
         "-p",
         help=("results will be written out for Postgres" "ingestion. Default is JSON"),
@@ -81,7 +87,9 @@ def main():
             try:
                 with open(join(sys.argv[1], file_name), "rb") as marc_file:
                     reader = MARCReader(marc_file, "rb", permissive=True)
-                    reader.force_utf8 = True
+                    if args.force_utf_8:
+                        print("FORCE UTF-8 is set to TRUE")
+                        reader.force_utf8 = True
                     print("running {}".format(file_name))
                     for record in reader:
                         if record is None:
