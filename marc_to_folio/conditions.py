@@ -57,6 +57,16 @@ class Conditions:
     def condition_clean_isbn(self, value, parameter, marc_field):
         return value
 
+    def condition_set_issuance_mode_id(self, value, parameter, marc_field):
+        seventh = marc_field.format_field()[6]
+        m_o_i_s = {
+            "m": "Monograph",
+            "s": "Serial",
+            "i": "Integrating Resource",
+        }
+        name = m_o_i_s.get(seventh, "Other")
+        return next(i["id"] for i in self.folio.modes_of_issuance if name == i["name"])
+
     def condition_set_publisher_role(self, value, parameter, marc_field):
         roles = {
             "0": "Production",
@@ -105,7 +115,7 @@ class Conditions:
             (
                 f["id"]
                 for f in self.instance_note_types
-                if f["name"] == parameter["name"]
+                if f["name"].casefold() == parameter["name"].casefold()
             ),
             "",
         )
@@ -140,7 +150,7 @@ class Conditions:
             (
                 f["id"]
                 for f in self.folio.identifier_types
-                if f["name"] == parameter["name"]
+                if f["name"].casefold() == parameter["name"].casefold()
             ),
             "",
         )
