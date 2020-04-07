@@ -18,8 +18,6 @@ class RulesMapper(DefaultMapper):
     """Maps a MARC record to inventory instance format according to
     the FOLIO community convention"""
 
-    # Bootstrapping (loads data needed later in the script.)
-
     def __init__(self, folio, results_path):
         super().__init__(folio, results_path)
         self.folio = folio
@@ -48,8 +46,6 @@ class RulesMapper(DefaultMapper):
         self.srs_marc_records_file = open(
             os.path.join(self.results_path, "srs_marc_records.json"), "w+"
         )
-        # with open('/mnt/c/code/folio-fse/MARC21-To-FOLIO/maps/mapping_rules_default.json') as map_f:
-        #    self.mappings = json.load(map_f)
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
         self.metadata_contstruct = self.folio.get_metadata_construct()
@@ -63,18 +59,38 @@ class RulesMapper(DefaultMapper):
             "metadata": self.folio.get_metadata_construct(),
         }
         temp_inst_type = ""
+        ignored_subsequent_fields = set()
         for marc_field in marc_record:
-            if marc_field.tag not in self.mappings:
+            if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
                 add_stats(self.unmapped_tags, marc_field.tag)
             else:
-                mappings = self.mappings[marc_field.tag]
-                self.map_field_according_to_mapping(
-                    marc_field, mappings, folio_instance
-                )
+                if marc_field.tag not in ignored_subsequent_fields:
+                    mappings = self.mappings[marc_field.tag]
+                    self.map_field_according_to_mapping(
+                        marc_field, mappings, folio_instance
+                    )
+                    if any(m.get("ignoreSubsequentFields", False) for m in mappings):
+                        print(f"adding ignoreSubsequentFields for {marc_field.tag}")
+                        ignored_subsequent_fields.add(marc_field.tag)
+
             if marc_field.tag == "008":
                 temp_inst_type = folio_instance["instanceTypeId"]
 
-        # Do stuff not easily captured by the mapping rules
+        self.perform_additional_parsing(folio_instance, temp_inst_type, marc_record)
+        # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
+        #     marc_record)
+        # self.validate(folio_instance)
+        self.dedupe_rec(folio_instance)
+        self.save_source_record(marc_record, folio_instance["id"])
+
+        """
+        raise Exception("trim away multiple whitespace and newlines..")
+        raise Exception('createDate and update date and catalogeddate')"""
+        self.id_map[get_source_id(marc_record)] = {"id": folio_instance["id"]}
+        return folio_instance
+
+    def perform_additional_parsing(self, folio_instance, temp_inst_type, marc_record):
+        """Do stuff not easily captured by the mapping rules"""
         folio_instance["source"] = "MARC"
         if temp_inst_type and not folio_instance["instanceTypeId"]:
             folio_instance["instanceTypeId"] = temp_inst_type
@@ -91,14 +107,6 @@ class RulesMapper(DefaultMapper):
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
         # self.validate(folio_instance)
-        self.dedupe_rec(folio_instance)
-        self.save_source_record(marc_record, folio_instance["id"])
-
-        """
-        raise Exception("trim away multiple whitespace and newlines..")
-        raise Exception('createDate and update date and catalogeddate')"""
-        self.id_map[get_source_id(marc_record)] = {"id": folio_instance["id"]}
-        return folio_instance
 
     def wrap_up(self):
         # super().wrap_up()
@@ -185,13 +193,21 @@ class RulesMapper(DefaultMapper):
                 value = self.apply_rule(value, condition_types, marc_field, parameter)
             else:
                 if mapping.get("subfield", []):
-                    subfields = marc_field.get_subfields(*mapping["subfield"])
-                    value = " ".join(
-                        [
-                            self.apply_rule(x, condition_types, marc_field, parameter)
-                            for x in subfields
-                        ]
-                    )
+                    if mapping.get("ignoreSubsequentFields", False):
+                        sfs = []
+                        for sf in mapping["subfield"]:
+                            sfs.append(next(marc_field.get_subfields(sf), ""))
+                        value = " ".join(sfs)
+                    else:
+                        subfields = marc_field.get_subfields(*mapping["subfield"])
+                        value = " ".join(
+                            [
+                                self.apply_rule(
+                                    x, condition_types, marc_field, parameter
+                                )
+                                for x in subfields
+                            ]
+                        )
                 else:
                     value1 = marc_field.format_field() if marc_field else ""
                     value = self.apply_rule(
@@ -301,7 +317,7 @@ class RulesMapper(DefaultMapper):
             self.srs_raw_records_file.write(r[1])
         # self.srs_records_file.write("".join(r[0] for r in results))
         # self.srs_marc_records_file.write("".join(r[2] for r in results))
-        #self.srs_raw_records_file.write("".join(r[1] for r in results))
+        # self.srs_raw_records_file.write("".join(r[1] for r in results))
 
     def get_nature_of_content(self, marc_record):
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
@@ -389,33 +405,33 @@ class RulesMapper(DefaultMapper):
 
 
 def get_srs_strings(my_tuple, metadata_construct):
-        json_string = StringIO()
-        writer = JSONWriter(json_string)
-        writer.write(my_tuple[0])
-        writer.close(close_fh=False)
-        marc_uuid = str(uuid.uuid4())
-        raw_uuid = str(uuid.uuid4())
-        record = {
-            "id": str(uuid.uuid4()),
-            "deleted": False,
-            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
-            "matchedProfileId": str(uuid.uuid4()),
-            "matchedId": str(uuid.uuid4()),
-            "generation": 1,
-            "recordType": "MARC",
-            "rawRecordId": raw_uuid,
-            "parsedRecordId": marc_uuid,
-            "additionalInfo": {"suppressDiscovery": False},
-            "externalIdsHolder": {"instanceId": my_tuple[1]},
-            "metadata": metadata_construct
-        }
-        raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
-        marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
-        return (
-            f"{record['id']}\t{json.dumps(record)}\n",
-            f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
-            f"{marc_record['id']}\t{json.dumps(marc_record)}\n",
-        )
+    json_string = StringIO()
+    writer = JSONWriter(json_string)
+    writer.write(my_tuple[0])
+    writer.close(close_fh=False)
+    marc_uuid = str(uuid.uuid4())
+    raw_uuid = str(uuid.uuid4())
+    record = {
+        "id": str(uuid.uuid4()),
+        "deleted": False,
+        "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
+        "matchedProfileId": str(uuid.uuid4()),
+        "matchedId": str(uuid.uuid4()),
+        "generation": 1,
+        "recordType": "MARC",
+        "rawRecordId": raw_uuid,
+        "parsedRecordId": marc_uuid,
+        "additionalInfo": {"suppressDiscovery": False},
+        "externalIdsHolder": {"instanceId": my_tuple[1]},
+        "metadata": metadata_construct,
+    }
+    raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
+    marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
+    return (
+        f"{record['id']}\t{json.dumps(record)}\n",
+        f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
+        f"{marc_record['id']}\t{json.dumps(marc_record)}\n",
+    )
 
 
 def grouped(iterable, n):
@@ -449,9 +465,10 @@ def has_value_to_add(mapping):
 
 def get_source_id(marc_record):
     """Gets the system Id from sierra"""
-    if "907" in marc_record and "a" in marc_record["907"]:
+    """if "907" in marc_record and "a" in marc_record["907"]:
         return marc_record["907"]["a"].replace(".b", "")[:-1]
-    elif "001" in marc_record:
+    el"""
+    if "001" in marc_record:
         return marc_record["001"].format_field()
     else:
         raise ValueError("No 001 present")
