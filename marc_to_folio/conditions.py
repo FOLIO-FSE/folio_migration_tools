@@ -226,7 +226,18 @@ class Conditions:
             (f["id"] for f in self.folio.instance_types if f["code"] == value[:3]), ""
         )
         if not v:
-            raise ValueError(f"no matching instance_types {value[:3]} {marc_field}")
+            if "a" in marc_field:
+                w = next(
+                    (
+                        f["id"]
+                        for f in self.folio.instance_types
+                        if f["name"] == marc_field["a"]
+                    ),
+                    "",
+                )
+            if not w:
+                raise ValueError(f"no matching instance_types {value[:3]} {marc_field}")
+            return w
         return v
 
     def condition_set_instance_format_id(self, value, parameter, marc_field):
