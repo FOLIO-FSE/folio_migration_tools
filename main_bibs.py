@@ -87,6 +87,7 @@ def main():
             try:
                 with open(join(sys.argv[1], file_name), "rb") as marc_file:
                     reader = MARCReader(marc_file, "rb", permissive=True)
+                    reader.hide_utf8_warnings = True
                     if args.force_utf_8:
                         print("FORCE UTF-8 is set to TRUE")
                         reader.force_utf8 = True
