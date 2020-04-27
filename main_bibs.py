@@ -9,15 +9,13 @@ from os.path import isfile, join
 
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
+from marc_to_folio import RulesMapper
 
-from marc_to_folio import DefaultMapper
 from marc_to_folio.marc_processor import MarcProcessor
 
 
 def main():
     logging.basicConfig(level=logging.CRITICAL)
-    mappers = [cls.__name__ for cls in DefaultMapper.__subclasses__()]
-    module = __import__("marc_to_folio")
     parser = argparse.ArgumentParser()
     parser.add_argument("source_folder", help="path to marc records folder")
     parser.add_argument("results_folder", help="path to Instance results folder")
@@ -66,17 +64,7 @@ def main():
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
-    try:
-        mapper_name = next(
-            (m for m in mappers if args.mapper and args.mapper in m), "DefaultMapper"
-        )
-        print(mapper_name)
-        class_ = getattr(module, mapper_name)
-        mapper = class_(folio_client, args.results_folder)
-    except Exception as ee:
-        print("could not instantiate mapper")
-        raise ee
-
+    mapper = RulesMapper(folio_client, args.results_folder)
     print("Starting")
     print("Rec./s\t\tTot. recs\t\t")
     failed_records = list()

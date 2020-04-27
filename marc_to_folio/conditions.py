@@ -37,7 +37,7 @@ class Conditions:
     def condition_remove_ending_punc(self, value, parameter, marc_field):
         v = value
         chars = ".;:,/+=- "
-        while len(v) > 0 and v[-1] in chars:
+        while any(v) > 0 and v[-1] in chars:
             v = v.rstrip(v[-1])
         return v
 
@@ -226,7 +226,7 @@ class Conditions:
             (f["id"] for f in self.folio.instance_types if f["code"] == value[:3]), ""
         )
         if not v:
-            raise ValueError(f"no matching instance_types {value} {marc_field}")
+            raise ValueError(f"no matching instance_types {value[:3]} {marc_field}")
         return v
 
     def condition_set_instance_format_id(self, value, parameter, marc_field):

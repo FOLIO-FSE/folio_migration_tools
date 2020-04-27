@@ -2,24 +2,23 @@
 FOLIO community specifications"""
 import json
 import os.path
-from textwrap import wrap
 import uuid
 import xml.etree.ElementTree as ET
 from concurrent.futures import ProcessPoolExecutor
 from io import StringIO
+from textwrap import wrap
 
 import requests
-from pymarc import Field, JSONWriter
+from pymarc import Field, JSONWriter, XMLWriter
+
 from marc_to_folio.conditions import Conditions
-from marc_to_folio.default_mapper import DefaultMapper
 
 
-class RulesMapper(DefaultMapper):
+class RulesMapper:
     """Maps a MARC record to inventory instance format according to
     the FOLIO community convention"""
 
     def __init__(self, folio, results_path):
-        super().__init__(folio, results_path)
         self.folio = folio
         self.conditions = Conditions(folio)
         self.migration_user_id = "d916e883-f8f1-4188-bc1d-f0dce1511b50"
@@ -46,8 +45,13 @@ class RulesMapper(DefaultMapper):
         self.srs_marc_records_file = open(
             os.path.join(self.results_path, "srs_marc_records.json"), "w+"
         )
+        self.marc_xml_writer = XMLWriter(
+            open(os.path.join(self.results_path, "marc_xml_dump.xml"), "wb+")
+        )
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
+        self.instance_relationships = {}
+        self.instance_relationship_types = {}
         self.metadata_contstruct = self.folio.get_metadata_construct()
 
     def parse_bib(self, marc_record, record_source):
@@ -60,7 +64,10 @@ class RulesMapper(DefaultMapper):
         }
         temp_inst_type = ""
         ignored_subsequent_fields = set()
+        bad_tags = set()
         for marc_field in marc_record:
+            if (not marc_field.tag.isnumeric()) and marc_field.tag != "LDR":
+                bad_tags.add(marc_field.tag)
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
                 add_stats(self.unmapped_tags, marc_field.tag)
             else:
@@ -70,7 +77,6 @@ class RulesMapper(DefaultMapper):
                         marc_field, mappings, folio_instance
                     )
                     if any(m.get("ignoreSubsequentFields", False) for m in mappings):
-                        print(f"adding ignoreSubsequentFields for {marc_field.tag}")
                         ignored_subsequent_fields.add(marc_field.tag)
 
             if marc_field.tag == "008":
@@ -81,6 +87,7 @@ class RulesMapper(DefaultMapper):
         #     marc_record)
         # self.validate(folio_instance)
         self.dedupe_rec(folio_instance)
+        marc_record.remove_fields(*list(bad_tags))
         self.save_source_record(marc_record, folio_instance["id"])
 
         """
@@ -109,12 +116,13 @@ class RulesMapper(DefaultMapper):
         # self.validate(folio_instance)
 
     def wrap_up(self):
-        # super().wrap_up()
+        self.marc_xml_writer.close()
         self.flush_srs_recs()
         self.srs_records_file.close()
         self.srs_marc_records_file.close()
         self.srs_raw_records_file.close()
-        print(json.dumps(self.unmapped_tags, indent=4))
+        sorted_tags = {k: self.unmapped_tags[k] for k in sorted(self.unmapped_tags)}
+        print(json.dumps(sorted_tags, indent=4))
         print(json.dumps(self.unmapped_conditions, indent=4))
 
     def map_field_according_to_mapping(self, marc_field, mappings, rec):
@@ -196,8 +204,15 @@ class RulesMapper(DefaultMapper):
                     if mapping.get("ignoreSubsequentFields", False):
                         sfs = []
                         for sf in mapping["subfield"]:
-                            sfs.append(next(marc_field.get_subfields(sf), ""))
-                        value = " ".join(sfs)
+                            sfs.append(next(iter(marc_field.get_subfields(sf)), ""))
+                        value = " ".join(
+                            [
+                                self.apply_rule(
+                                    x, condition_types, marc_field, parameter
+                                )
+                                for x in sfs
+                            ]
+                        )
                     else:
                         subfields = marc_field.get_subfields(*mapping["subfield"])
                         value = " ".join(
@@ -286,7 +301,7 @@ class RulesMapper(DefaultMapper):
 
     def validate(self, folio_rec):
         if folio_rec["title"].strip() == "":
-            print(f"No title for {folio_rec['hrid']}")
+            raise ValueError(f"No title for {folio_rec['hrid']}")
         for key, value in folio_rec.items():
             if isinstance(value, str) and any(value):
                 self.mapped_folio_fields["key]"] = (
@@ -302,22 +317,23 @@ class RulesMapper(DefaultMapper):
         marc_record.add_field(
             Field(tag="999", indicators=["f", "f"], subfields=["i", instance_id])
         )
-        self.srs_recs.append((marc_record, instance_id))
+        self.srs_recs.append((marc_record, instance_id, self.metadata_contstruct))
+        self.marc_xml_writer.write(marc_record)
         if len(self.srs_recs) == 1000:
             self.flush_srs_recs()
             self.srs_recs = []
 
     def flush_srs_recs(self):
-        # pool = ProcessPoolExecutor(max_workers=4)
-        # results = list(pool.map(get_srs_strings, self.srs_recs))
-        for srs_rec in self.srs_recs:
-            r = get_srs_strings(srs_rec, self.metadata_contstruct)
+        pool = ProcessPoolExecutor(max_workers=4)
+        results = list(pool.map(get_srs_strings, self.srs_recs))
+        """for srs_rec in self.srs_recs:
+            r = get_srs_strings(srs_rec)
             self.srs_records_file.write(r[0])
             self.srs_marc_records_file.write(r[2])
-            self.srs_raw_records_file.write(r[1])
-        # self.srs_records_file.write("".join(r[0] for r in results))
-        # self.srs_marc_records_file.write("".join(r[2] for r in results))
-        # self.srs_raw_records_file.write("".join(r[1] for r in results))
+            self.srs_raw_records_file.write(r[1])"""
+        self.srs_records_file.write("".join(r[0] for r in results))
+        self.srs_marc_records_file.write("".join(r[2] for r in results))
+        self.srs_raw_records_file.write("".join(r[1] for r in results))
 
     def get_nature_of_content(self, marc_record):
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
@@ -404,7 +420,7 @@ class RulesMapper(DefaultMapper):
                 rec[key] = res
 
 
-def get_srs_strings(my_tuple, metadata_construct):
+def get_srs_strings(my_tuple):
     json_string = StringIO()
     writer = JSONWriter(json_string)
     writer.write(my_tuple[0])
@@ -423,7 +439,7 @@ def get_srs_strings(my_tuple, metadata_construct):
         "parsedRecordId": marc_uuid,
         "additionalInfo": {"suppressDiscovery": False},
         "externalIdsHolder": {"instanceId": my_tuple[1]},
-        "metadata": metadata_construct,
+        "metadata": my_tuple[2],
     }
     raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
     marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
@@ -465,10 +481,9 @@ def has_value_to_add(mapping):
 
 def get_source_id(marc_record):
     """Gets the system Id from sierra"""
-    """if "907" in marc_record and "a" in marc_record["907"]:
+    if "907" in marc_record and "a" in marc_record["907"]:
         return marc_record["907"]["a"].replace(".b", "")[:-1]
-    el"""
-    if "001" in marc_record:
+    elif "001" in marc_record:
         return marc_record["001"].format_field()
     else:
         raise ValueError("No 001 present")
