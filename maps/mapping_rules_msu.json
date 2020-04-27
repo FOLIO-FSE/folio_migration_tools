@@ -5,6 +5,41 @@
             "description": "The human readable ID",
             "subfield": [],
             "rules": []
+        },
+        {
+            "entity": [
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_identifier_type_id_by_name",
+                                    "parameter": {
+                                        "name": "OCLC"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "identifiers.identifierTypeId",
+                    "description": "OCLC Control Number Cross-Reference"
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "identifiers.value",
+                    "description": "OCLC Control Number Cross-Reference",
+                    "applyRulesOnConcatenatedData": true
+                }
+            ],
+            "entityPerRepeatedSubfield": true
         }
     ],
     "008": [
@@ -14,14 +49,8 @@
             "subfield": [],
             "rules": [
                 {
-                    "conditions": [
-                        {
-                            "type": "set_instance_type_id",
-                            "parameter": {
-                                "unspecifiedInstanceTypeCode": "zzz"
-                            }
-                        }
-                    ]
+                    "conditions": [],
+                    "value": "30fffe0e-e985-4144-b2e2-1e8179bdb41f"
                 }
             ]
         },
@@ -208,6 +237,52 @@
                         "z"
                     ],
                     "description": "Copyright or Legal Deposit Number"
+                }
+            ],
+            "entityPerRepeatedSubfield": true
+        }
+    ],
+    "019": [
+        {
+            "entity": [
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_identifier_type_id_by_name",
+                                    "parameter": {
+                                        "name": "OCLC"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "identifiers.identifierTypeId",
+                    "subfield": [
+                        "a"
+                    ],
+                    "description": "OCLC Control Number Cross-Reference"
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "identifiers.value",
+                    "subfield": [
+                        "a"
+                    ],
+                    "description": "OCLC Control Number Cross-Reference",
+                    "requiredSubfield": [
+                        "a"
+                    ],
+                    "applyRulesOnConcatenatedData": true
                 }
             ],
             "entityPerRepeatedSubfield": true
@@ -1738,6 +1813,26 @@
         }
     ],
     "250": [
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "remove_ending_punc, trim"
+                        }
+                    ]
+                }
+            ],
+            "target": "editions",
+            "subfield": [
+                "a",
+                "b"
+            ],
+            "description": "Edition",
+            "applyRulesOnConcatenatedData": true
+        }
+    ],
+    "254": [
         {
             "rules": [
                 {
@@ -6392,6 +6487,51 @@
                     "value": "--",
                     "subfields": [
                         "a",
+                        "e",
+                        "g",
+                        "v",
+                        "x",
+                        "y",
+                        "z"
+                    ]
+                }
+            ],
+            "applyRulesOnConcatenatedData": true
+        }
+    ],
+    "690": [
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "trim_period, trim"
+                        }
+                    ]
+                }
+            ],
+            "target": "subjects",
+            "subfield": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "g",
+                "v",
+                "x",
+                "y",
+                "z"
+            ],
+            "description": "Subject Headings",
+            "subFieldDelimiter": [
+                {
+                    "value": "--",
+                    "subfields": [
+                        "a",
+                        "b",
+                        "c",
+                        "d",
                         "e",
                         "g",
                         "v",

@@ -9,7 +9,7 @@
             "description": ""
         },
         "Z30_SUB_LIBRARY": {
-            "target": "",
+            "target": "loanTypeId",
             "description": ""
         },
         "Z30_MATERIAL": {
@@ -89,7 +89,7 @@
             "description": ""
         },
         "Z30_NOTE_CIRCULATION": {
-            "target": "notes",
+            "target": "circulationNotes",
             "description": ""
         },
         "Z30_NOTE_INTERNAL": {
@@ -261,7 +261,8 @@
             "description": ""
         }
     },
-    "materialTypeMap": "/md/five_colleges/loan_type_map.tsv",
+    "materialTypeMap": "/md/five_colleges/maps/item_material_type_map.tsv",
+    "loanTypeMap": "/md/five_colleges/maps/loan_type_map.tsv",
     "itemsFileType": "PIPE",
     "itemsFileDelimiter": "|",
     "mapOnLocationField": "code"
