@@ -51,7 +51,22 @@ def post_batch(folio_client, batch, i):
     response = requests.post(
         url, data=json.dumps(data), headers=folio_client.okapi_headers
     )
-    if response.status_code != 201:
+    if response.status_code == 422:
+        ex = json.loads(response.text)
+        new_batch = []
+        for error in ex["errors"]:
+            print(error["message"])
+            if "instance_hrid_idx_unique" in error["message"]:
+                hrid = error["parameters"][0]["value"]
+                for rec in batch:
+                    if rec["hrid"] != hrid:
+                        new_batch.append(rec)
+                    else:
+                        print(f"removed error record with hrid {hrid}")
+        if len(new_batch) != len(batch):
+            print("reposting batch with error records removed")
+            post_batch(folio_client, new_batch, 0)
+    elif response.status_code != 201:
         print("Error Posting Batch")
         print(response.status_code)
         print(response.text)
