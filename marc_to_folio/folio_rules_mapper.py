@@ -52,7 +52,6 @@ class RulesMapper:
         self.unmapped_conditions = {}
         self.instance_relationships = {}
         self.instance_relationship_types = {}
-        self.metadata_contstruct = self.folio.get_metadata_construct()
 
     def parse_bib(self, marc_record, record_source):
         """ Parses a bib recod into a FOLIO Inventory instance object
@@ -64,7 +63,7 @@ class RulesMapper:
         }
         temp_inst_type = ""
         ignored_subsequent_fields = set()
-        bad_tags = set()
+        bad_tags = {"039", "263", "229", "922", "945"}  # "907"
         for marc_field in marc_record:
             if (not marc_field.tag.isnumeric()) and marc_field.tag != "LDR":
                 bad_tags.add(marc_field.tag)
@@ -111,6 +110,7 @@ class RulesMapper:
         folio_instance["languages"] = list(
             self.filter_langs(folio_instance["languages"], marc_record)
         )
+
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
         # self.validate(folio_instance)
@@ -317,7 +317,9 @@ class RulesMapper:
         marc_record.add_field(
             Field(tag="999", indicators=["f", "f"], subfields=["i", instance_id])
         )
-        self.srs_recs.append((marc_record, instance_id, self.metadata_contstruct))
+        self.srs_recs.append(
+            (marc_record, instance_id, self.folio.get_metadata_construct())
+        )
         self.marc_xml_writer.write(marc_record)
         if len(self.srs_recs) == 1000:
             self.flush_srs_recs()

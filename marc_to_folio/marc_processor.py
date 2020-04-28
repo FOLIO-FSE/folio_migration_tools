@@ -25,7 +25,6 @@ class MarcProcessor:
         """processes a marc record and saves it"""
         folio_rec = None
         try:
-            self.filter_fields(marc_record)
             self.stats["bibs_processed"] += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_bib(marc_record, self.args.data_source)
@@ -88,10 +87,6 @@ class MarcProcessor:
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     write_to_file(holdings_file, False, holding)
-
-    def filter_fields(self, marc_record):
-        fields = ["039", "263", "229", "922"]
-        marc_record.remove_fields(*fields)
 
 
 def write_to_file(file, pg_dump, folio_record):

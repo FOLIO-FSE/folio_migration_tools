@@ -96,7 +96,10 @@ def main():
             print(f"running {file_name}")
             try:
                 with open(
-                    join(args.records_file, file_name), "r+", errors="replace"
+                    join(args.records_file, file_name),
+                    "r+",
+                    errors="replace",
+                    encoding="utf-8-sig",
                 ) as items_file:
                     for rec in mapper.get_records(items_file):
                         i += 1
@@ -106,6 +109,8 @@ def main():
                 print("UnicodeDecodeError in {}:\t {}".format(file_name, decode_error))
                 print("File {} needs fixing".format(file_name))
                 failed_files.append(file_name)
+            except Exception as ee:
+                raise ee
     # wrap up
     print("Done. Wrapping up...")
     processor.wrap_up()
