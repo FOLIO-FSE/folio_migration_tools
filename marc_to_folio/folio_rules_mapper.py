@@ -9,7 +9,7 @@ from io import StringIO
 from textwrap import wrap
 
 import requests
-from pymarc import Field, JSONWriter, XMLWriter
+from pymarc import Field, JSONWriter, XMLWriter, MARCWriter
 
 from marc_to_folio.conditions import Conditions
 
@@ -45,8 +45,11 @@ class RulesMapper:
         self.srs_marc_records_file = open(
             os.path.join(self.results_path, "srs_marc_records.json"), "w+"
         )
-        self.marc_xml_writer = XMLWriter(
+        """self.marc_xml_writer = XMLWriter(
             open(os.path.join(self.results_path, "marc_xml_dump.xml"), "wb+")
+        )"""
+        self.marc_writer = MARCWriter(
+            open(os.path.join(self.results_path, "marc_dump.mrc"), "wb+")
         )
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
@@ -116,7 +119,7 @@ class RulesMapper:
         # self.validate(folio_instance)
 
     def wrap_up(self):
-        self.marc_xml_writer.close()
+        self.marc_writer.close()
         self.flush_srs_recs()
         self.srs_records_file.close()
         self.srs_marc_records_file.close()
@@ -320,13 +323,13 @@ class RulesMapper:
         self.srs_recs.append(
             (marc_record, instance_id, self.folio.get_metadata_construct())
         )
-        self.marc_xml_writer.write(marc_record)
+        self.marc_writer.write(marc_record)
         if len(self.srs_recs) == 1000:
             self.flush_srs_recs()
             self.srs_recs = []
 
     def flush_srs_recs(self):
-        pool = ProcessPoolExecutor(max_workers=4)
+        pool = ProcessPoolExecutor(max_workers=2)
         results = list(pool.map(get_srs_strings, self.srs_recs))
         """for srs_rec in self.srs_recs:
             r = get_srs_strings(srs_rec)
