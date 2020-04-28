@@ -63,7 +63,7 @@ def post_batch(folio_client, batch, i):
                         new_batch.append(rec)
                     else:
                         print(f"removed error record with hrid {hrid}")
-        if len(new_batch) != len(batch):
+        if len(new_batch) != len(batch) and len(new_batch) > 0:
             print("reposting batch with error records removed")
             post_batch(folio_client, new_batch, 0)
     elif response.status_code != 201:
