@@ -55,7 +55,7 @@ def post_batch(folio_client, batch, i):
         ex = json.loads(response.text)
         new_batch = []
         for error in ex["errors"]:
-            print(error["message"])
+            print(error)
             if "instance_hrid_idx_unique" in error["message"]:
                 hrid = error["parameters"][0]["value"]
                 for rec in batch:
