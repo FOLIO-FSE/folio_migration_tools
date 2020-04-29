@@ -30,7 +30,7 @@ def main():
     batch = []
     with open(args.data_source, "r") as file:
         for row in file:
-            json_rec = json.loads(row)
+            json_rec = json.loads(row.split("\t")[-1])
             if "copyNumber" in json_rec:
                 del json_rec["copyNumber"]
             i += 1
@@ -62,8 +62,8 @@ def post_batch(folio_client, batch, i, failed_ids: list, repost=False):
     response = requests.post(
         url, data=json.dumps(data), headers=folio_client.okapi_headers
     )
-    if response.status_code != 201:
-        print("Error Posting Item")
+    if response.status_code != 201 and response.status_code < 500:
+        print("Error Posting Items")
         print(response.status_code)
         print(response.text, flush=True)
         resp = json.loads(response.text)
@@ -72,6 +72,11 @@ def post_batch(folio_client, batch, i, failed_ids: list, repost=False):
         if not repost:
             handle_failed_batch(folio_client, batch, i, failed_ids)
         # print(json.dumps(data))
+    elif response.status_code < 599 and response.status_code > 499:
+        print("Error Posting Items")
+        print(response.status_code)
+        print(response.text)
+        print(batch, flush=True)
     else:
         print(
             f"Posting successfull! {i} {response.elapsed.total_seconds()}s {len(batch)}",
