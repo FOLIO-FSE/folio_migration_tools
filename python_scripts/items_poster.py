@@ -62,7 +62,12 @@ def post_batch(folio_client, batch, i, failed_ids: list, repost=False):
     response = requests.post(
         url, data=json.dumps(data), headers=folio_client.okapi_headers
     )
-    if response.status_code != 201 and response.status_code < 500:
+    if response.status_code == 201:
+        print(
+            f"Posting successfull! {i} {response.elapsed.total_seconds()}s {len(batch)}",
+            flush=True,
+        )
+    elif response.status_code == 422:
         print("Error Posting Items")
         print(response.status_code)
         print(response.text, flush=True)
@@ -71,17 +76,16 @@ def post_batch(folio_client, batch, i, failed_ids: list, repost=False):
             failed_ids.append(error["parameters"][0]["value"])
         if not repost:
             handle_failed_batch(folio_client, batch, i, failed_ids)
-        # print(json.dumps(data))
-    elif response.status_code < 599 and response.status_code > 499:
+    elif response.status_code in [413, 500]:
         print("Error Posting Items")
         print(response.status_code)
         print(response.text)
         print(batch, flush=True)
     else:
-        print(
-            f"Posting successfull! {i} {response.elapsed.total_seconds()}s {len(batch)}",
-            flush=True,
-        )
+        print("Error Posting Items")
+        print(response.status_code)
+        print(response.text)
+        print(batch, flush=True)
 
 
 if __name__ == "__main__":
