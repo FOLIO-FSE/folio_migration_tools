@@ -17,6 +17,7 @@ def main():
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
     parser.add_argument("batch_size", help=("batch size"))
+
     args = parser.parse_args()
     print("\tOkapi URL:\t", args.okapi_url)
     print("\tTenanti Id:\t", args.tenant_id)
@@ -76,16 +77,20 @@ def post_batch(folio_client, batch, i, failed_ids: list, repost=False):
             failed_ids.append(error["parameters"][0]["value"])
         if not repost:
             handle_failed_batch(folio_client, batch, i, failed_ids)
-    elif response.status_code in [413, 500]:
+    elif response.status_code in [500, 413]:
         print("Error Posting Items")
         print(response.status_code)
         print(response.text)
-        print(batch, flush=True)
+        if not len(batch) == 1:
+            for rec in batch:
+                print(f"reposting item {rec['id']}")
+                post_batch(folio_client, [rec], i, failed_ids, True)
+
     else:
         print("Error Posting Items")
         print(response.status_code)
         print(response.text)
-        print(batch, flush=True)
+        print(json.dumps(batch), flush=True)
 
 
 if __name__ == "__main__":
