@@ -48,7 +48,7 @@ def main():
     print("\tTenanti Id:\t", args.tenant_id)
     print("\tUsername:\t", args.username)
     print("\tPassword:\tSecret")
-    print("File to process: {}".format(args.records_file))
+    print(f"File to process: {args.records_file}")
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
@@ -77,7 +77,7 @@ def main():
     except Exception as ee:
         print("could not instantiate mapper")
         raise ee
-    print("Number of instances in ID map: {}".format(len(instance_id_map)))
+    print(f"Number of instances in ID map: {len(instance_id_map)}")
     print("Rec./s\t\tTot. recs\t\t")
 
     with open(

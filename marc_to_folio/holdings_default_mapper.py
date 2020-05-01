@@ -19,10 +19,15 @@ class HoldingsDefaultMapper:
         self.folio_locations = {}
         self.legacy_locations = {}
         self.unmapped_locations = {}
+        self.tags = {}
         self.unmapped_location_id = ""
         self.locations = self.folio.folio_get_all("/locations", "locations")
         print(f"LOCATIONS: {len(self.locations)}")
-        self.stats = {"number of bib id not in map": 0, "multiple 852s": 0}
+        self.stats = {
+            "number of bib id not in map": 0,
+            "multiple 852s": 0,
+            "tailing_zeroes_match": 0,
+        }
         self.locations_map = {}
         if any(location_map):
             for item in location_map:
@@ -65,6 +70,7 @@ class HoldingsDefaultMapper:
         """ removes the ID from the map in case parsing failed"""
         id_key = marc_record["001"].format_field()
         if id_key in self.instance_id_map:
+            print(f"removing Holdings id {id_key} from map")
             del self.instance_id_map[id_key]
 
     def get_loc_id(self, loc_code):
@@ -86,15 +92,8 @@ class HoldingsDefaultMapper:
         print(json.dumps(self.folio_locations, indent=4))
         print("UNMAPPED LOCATION CODES:")
         print(json.dumps(self.unmapped_locations, indent=4))
-
-    def get_metadata_construct(self, user_id):
-        df = "%Y-%m-%dT%H:%M:%S.%f+0000"
-        return {
-            "createdDate": datetime.now().strftime(df),
-            "createdByUserId": user_id,
-            "updatedDate": datetime.now().strftime(df),
-            "updatedByUserId": user_id,
-        }
+        sorted_tags = {k: self.tags[k] for k in sorted(self.tags)}
+        print(json.dumps(sorted_tags, indent=4))
 
     def parse_hold(self, marc_record):
         """Parses a holdings record into a FOLIO Inventory Holdings object
@@ -140,23 +139,24 @@ class HoldingsDefaultMapper:
             old_instance_id = marc_record["LKR"]["b"]
             if old_instance_id in self.instance_id_map:
                 return self.instance_id_map[old_instance_id]["id"]
+            elif old_instance_id.lstrip("0") in self.instance_id_map:
+                self.stats["tailing_zeroes_match"] += 1
+                return self.instance_id_map[old_instance_id.lstrip("0")]["id"]
             else:
-                logging.warn("Old instance id not in map: {}".format(old_instance_id))
+                logging.warn(f"Old instance id not in map: {old_instance_id}")
                 raise Exception(
-                    "Old instance id not in map: {}".format(old_instance_id)
+                    f"Old instance id not in mapp: {old_instance_id} {old_instance_id.lstrip('0')}"
                 )
         except Exception as ee:
             self.stats["number of bib id not in map"] += 1
             raise ValueError(
-                "Error getting new FOLIO Instance {} - {}".format(
-                    marc_record["001"], ee
-                )
+                f'Error getting new FOLIO Instance {marc_record["001"]} - {ee}'
             )
 
     def get_callnumber_data(self, marc_record):
         # read and implement http://www.loc.gov/marc/holdings/hd852.html
         if "852" not in marc_record:
-            raise ValueError("852 missing for {}".format(marc_record["001"]))
+            raise ValueError(f'852 missing for {marc_record["001"]}')
         f852 = marc_record.get_fields("852")
         if len(f852) > 1:
             self.stats["multiple 852s"] += 1
@@ -218,3 +218,10 @@ class HoldingsDefaultMapper:
     def get_holdingsStatements(self, marc_record):
         """returns the various holdings statements"""
         yield {"statement": "Some statement", "note": "some note"}
+
+
+def add_stats(stats, a):
+    if a not in stats:
+        stats[a] = 1
+    else:
+        stats[a] += 1

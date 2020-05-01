@@ -22,7 +22,11 @@ class ItemsDefaultMapper:
         csv.register_dialect("tsvq", delimiter="\t", quotechar='"')
         csv.register_dialect("pipe", delimiter="|")
         self.folio = folio
-        self.stats = {"missing_location_codes": 0, "unmapped item types": 0}
+        self.stats = {
+            "missing_location_codes": 0,
+            "unmapped item material types": 0,
+            "unmapped item loan types": 0,
+        }
         self.item_schema = folio.get_item_schema()
         self.item_id_map = {}
         self.map = item_map
@@ -32,17 +36,22 @@ class ItemsDefaultMapper:
         for key in self.item_schema["properties"].keys():
             self.mapped_folio_fields[key] = 0
         self.mapped_legacy_field = {}
+        self.unmapped_legacy_field = {}
 
         """Locations stuff"""
         self.failed_items = []
         self.locations_map = {}
         self.missing_location_codes = {}
         self.setup_locations(location_map)
+        self.unmapped_location_items = {}
 
         """Loan types, material types"""
         self.loan_type_map = {}
+        self.material_type_map = {}
         self.unmapped_loan_types = {}
-        self.setup_m_and_l_types()
+        self.unmapped_material_types = {}
+        self.setup_l_types()
+        self.setup_m_types()
 
         """Note types"""
         self.item_note_types = self.folio.folio_get_all(
@@ -52,33 +61,42 @@ class ItemsDefaultMapper:
             x["id"] for x in self.item_note_types if "Note" == x["name"]
         )
 
-    def setup_m_and_l_types(self,):
+    def setup_m_types(self,):
         with open(self.map["materialTypeMap"]) as material_type_f:
             mt_map = list(csv.DictReader(material_type_f, dialect="tsv"))
-            loan_types = self.folio.folio_get_all("/loan-types", "loantypes")
+            print(json.dumps(mt_map, indent=4))
             material_types = self.folio.folio_get_all("/material-types", "mtypes")
             for b in mt_map:
-                lt_id = next(
-                    (x["id"] for x in loan_types if b["loan_type"] == x["name"]),
-                    "Unmapped",
-                )
                 mt_id = next(
                     (
                         x["id"]
                         for x in material_types
-                        if b["material_type"] == x["name"]
+                        if b["folio_name"].casefold() == x["name"].casefold()
                     ),
                     "Unmapped",
                 )
-                if lt_id == "Unmapped":
-                    print(b["loan_type"])
+                self.material_type_map[b["legacy_code"]] = mt_id
                 if mt_id == "Unmapped":
-                    print(b["material_type"])
-                self.loan_type_map[b["legacy_type"]] = {
-                    "loan_type": lt_id,
-                    "material_type": mt_id,
-                }
-        print(f"set up LoanTypeMap: {len(self.loan_type_map)} rows.")
+                    print(b["legacy_code"])
+            print(f"set up Material Type Map: {len(self.material_type_map)} rows.")
+
+    def setup_l_types(self,):
+        with open(self.map["loanTypeMap"]) as loan_type_f:
+            lt_map = list(csv.DictReader(loan_type_f, dialect="tsv"))
+            loan_types = self.folio.folio_get_all("/loan-types", "loantypes")
+            for b in lt_map:
+                lt_id = next(
+                    (
+                        x["id"]
+                        for x in loan_types
+                        if b["folio_name"].casefold() == x["name"].casefold()
+                    ),
+                    "Unmapped",
+                )
+                self.loan_type_map[b["legacy_code"]] = lt_id
+            if lt_id == "Unmapped":
+                print(b["legacy_code"])
+            print(f"set up LoanTypeMap: {len(self.loan_type_map)} rows.")
 
     def setup_locations(self, location_map):
         temp_map = {}
@@ -100,15 +118,21 @@ class ItemsDefaultMapper:
 
     def wrap_up(self):
         # print(json.dumps(self.failed_items, indent=4))
+        print("strange location codes")
+        print(json.dumps(self.unmapped_location_items, indent=4))
         print("mapped FOLIO fields")
-        print(json.dumps(self.mapped_folio_fields, indent=4))
+        print(json.dumps(self.mapped_folio_fields, indent=4, sort_keys=True))
         print("Mapped legacy fields")
-        print(json.dumps(self.mapped_legacy_field, indent=4))
+        print(json.dumps(self.mapped_legacy_field, indent=4, sort_keys=True))
+        print("Unmapped legacy fields")
+        print(json.dumps(self.unmapped_legacy_field, indent=4))
         print("Missing location codes")
-        print(json.dumps(self.missing_location_codes, indent=4))
+        print(json.dumps(self.missing_location_codes, indent=4, sort_keys=True))
         print("unmapped loan types")
-        print(json.dumps(self.unmapped_loan_types, indent=4))
-        print(json.dumps(self.stats, indent=4))
+        print(json.dumps(self.unmapped_loan_types, indent=4, sort_keys=True))
+        print("unmapped material types")
+        print(json.dumps(self.unmapped_material_types, indent=4, sort_keys=True))
+        print(json.dumps(self.stats, indent=4, sort_keys=True))
 
     def get_loc_id(self, loc_code):
         folio_loc_id = next(
@@ -133,12 +157,11 @@ class ItemsDefaultMapper:
         i = 0
         try:
             for row in reader:
-                i += 1
                 yield row
         except Exception as ee:
             print(f"row:{i}")
             print(ee)
-            # raise ee
+            raise ee
 
     def parse_item(self, legacy_item):
         try:
@@ -151,20 +174,45 @@ class ItemsDefaultMapper:
             self.count_mapped("id", "")
             self.count_mapped("status", "")
             self.count_mapped("metadata", "")
-            for legacy_key, value in self.map["fields"].items():
-                folio_field = value["target"]
-                legacy_value = legacy_item.get(legacy_key, "")
-                if legacy_value:
-                    legacy_value = legacy_value.strip()
-                if legacy_value and folio_field:
+            for legacy_key, legacy_value in legacy_item.items():
+                folio_field = self.map["fields"].get(legacy_key, {}).get("target", "")
+                legacy_value = str(legacy_value).strip()
+                if folio_field:
+                    self.mapped_legacy_field[legacy_key] = (
+                        self.unmapped_legacy_field.get(legacy_key, 0) + 1
+                    )
+                else:
+                    self.unmapped_legacy_field[legacy_key] = (
+                        self.unmapped_legacy_field.get(legacy_key, 0) + 1
+                    )
+                if folio_field and legacy_value.strip():
                     if folio_field == "formerIds":
                         legacy_id = legacy_value
                     elif folio_field in ["permanentLocationId", "temporaryLocationId"]:
+                        if legacy_value in [
+                            "Y",
+                            "N" "005533822",
+                            "001185601",
+                            "005450213",
+                            "004531192",
+                            "004325292",
+                            "004586946",
+                            "001187250",
+                            "011510025",
+                            "001113614",
+                            "000863653",
+                            "001188351",
+                            "004328133",
+                            "007465215",
+                        ]:
+                            self.unmapped_location_items[legacy_id] = legacy_value
                         code = self.get_location_code(legacy_value)
                         if code:
                             item[folio_field] = code
                     elif folio_field == "materialTypeId":
                         self.handle_material_types(legacy_value, item)
+                    elif folio_field == "loanTypeId":
+                        self.handle_loan_types(legacy_value, item)
                     elif folio_field == "holdingsRecordId":
                         if legacy_value not in self.holdings_id_map:
                             raise ValueError(f"Holdings id {legacy_value} not in map")
@@ -183,11 +231,7 @@ class ItemsDefaultMapper:
                     self.count_mapped(folio_field, legacy_key)
 
             for req in self.item_schema["required"]:
-                if req not in item.keys():
-                    raise ValueError(f"{req} is required")
-                if "permanentLoanTypeId" not in item.keys():
-                    raise ValueError(f"{req} is required")
-                if "materialTypeId" not in item.keys():
+                if req not in item:
                     raise ValueError(f"{req} is required")
             self.item_id_map[legacy_id] = item["id"]
             return item
@@ -219,7 +263,10 @@ class ItemsDefaultMapper:
 
     def count_mapped(self, target, legacy_key):
         if target:
-            self.mapped_folio_fields[target] += 1
+            if target in self.mapped_folio_fields:
+                self.mapped_folio_fields[target] += 1
+            else:
+                self.mapped_folio_fields[target] = 1
         if legacy_key:
             self.mapped_legacy_field[legacy_key] = (
                 self.mapped_legacy_field.get(legacy_key, 0) + 1
@@ -248,18 +295,33 @@ class ItemsDefaultMapper:
             cost = v.replace("DigitalEquip_", "")
             self.add_note(cost, item, "Replacement Cost (USD)", True)
             print(f"adding Cost note: {cost}")
-        if "*" in self.loan_type_map:
-            item["permanentLoanTypeId"] = self.loan_type_map["*"]["loan_type"]
-            item["materialTypeId"] = self.loan_type_map["*"]["material_type"]
+        if "*" in self.material_type_map:
+            item["materialTypeId"] = self.material_type_map["*"]
             self.count_mapped("materialTypeId", "")
-            self.count_mapped("permanentLoanTypeId", "")
+        elif v not in self.material_type_map:
+            self.unmapped_material_types[v] = self.unmapped_material_types.get(v, 0) + 1
+            self.stats["unmapped item material types"] += 1
+            print(f"legacy item material type {legacy_value} not mapped")
+        else:
+            mapped_id = self.material_type_map[v]
+            item["materialTypeId"] = mapped_id
+            self.count_mapped("materialTypeId", "")
+
+    def handle_loan_types(self, legacy_value, item):
+        v = legacy_value
+        if v.startswith("DigitalEquip"):
+            v = "DigitalEquipment"
+            # TODO: map value!
+            cost = v.replace("DigitalEquip_", "")
+            self.add_note(cost, item, "Replacement Cost (USD)", True)
+            print(f"adding Cost note: {cost}")
+        if "*" in self.loan_type_map:
+            item["permanentLoanTypeId"] = self.loan_type_map["*"]
+            self.count_mapped("permanentLoanTypeId", "*")
         elif v not in self.loan_type_map:
             self.unmapped_loan_types[v] = self.unmapped_loan_types.get(v, 0) + 1
-            self.stats["unmapped item types"] += 1
-            print(f"legacy item type {legacy_value} not mapped")
+            self.stats["unmapped item loan types"] += 1
+            print(f"legacy item loan type {legacy_value} not mapped")
         else:
-            t = self.loan_type_map[v]
-            item["permanentLoanTypeId"] = t["loan_type"]
-            item["materialTypeId"] = t["material_type"]
-            self.count_mapped("materialTypeId", "")
-            self.count_mapped("permanentLoanTypeId", "")
+            item["permanentLoanTypeId"] = self.loan_type_map[v]
+            self.count_mapped("permanentLoanTypeId", legacy_value)
