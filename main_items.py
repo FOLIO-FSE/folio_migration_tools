@@ -54,7 +54,7 @@ def main():
     files = [
         f for f in listdir(args.records_file) if isfile(join(args.records_file, f))
     ]
-    print("File to process: {}".format(args.records_file))
+    print(f"File to process: {args.records_file}")
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
@@ -63,7 +63,7 @@ def main():
     location_map = {}
     with open(args.holdings_id_dict_path, "r") as json_file:
         holdings_id_map = json.load(json_file)
-    print("Number of holdings in ID map: {}".format(len(holdings_id_map)))
+    print(f"Number of holdings in ID map: {len(holdings_id_map)}")
 
     if args.location_map_path:
         with open(args.location_map_path) as location_map_f:
@@ -106,8 +106,8 @@ def main():
                         processor.process_record(rec)
             except UnicodeDecodeError as decode_error:
                 print(f"UnicodeDecodeError in {file_name} for index")
-                print("UnicodeDecodeError in {}:\t {}".format(file_name, decode_error))
-                print("File {} needs fixing".format(file_name))
+                print(f"UnicodeDecodeError in {file_name}:\t {decode_error}")
+                print(f"File {file_name} needs fixing")
                 failed_files.append(file_name)
             except Exception as ee:
                 raise ee

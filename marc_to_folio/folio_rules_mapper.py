@@ -406,9 +406,7 @@ class RulesMapper:
                     continue
                 elif language_value not in forbidden_values:
                     print(
-                        "Illegal language code: {} for {}".format(
-                            language_value, get_legacy_id(marc_record)
-                        )
+                        f"Illegal language code: {language_value} for {get_legacy_id(marc_record)}"
                     )
 
     def dedupe_rec(self, rec):

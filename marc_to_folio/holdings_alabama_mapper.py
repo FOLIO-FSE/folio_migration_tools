@@ -85,14 +85,14 @@ class HoldingsAlabamaMapper(HoldingsDefaultMapper):
 
     def handle_852s(self, marc_record):
         if "852" not in marc_record:
-            raise ValueError("852 missing for {}".format(marc_record["001"]))
+            raise ValueError(f'852 missing for {marc_record["001"]}')
         f852s = marc_record.get_fields("852")
         if len(f852s) > 1:
             self.stats["multiple 852s"] += 1
         if "a" in f852s[0]:
             print(f"852$a in {marc_record['001']} - {f852s[0]['a']}")
         if "b" not in f852s[0]:
-            raise ValueError("No 852$b in {}".format(marc_record["001"]))
+            raise ValueError(f'No 852$b in {marc_record["001"]}')
         # Holler if j or k or m is apparent
         if "k" in f852s[0]:
             print(f"852$k in {marc_record['001']} - {f852s[0]['k']}")
@@ -144,8 +144,8 @@ class HoldingsAlabamaMapper(HoldingsDefaultMapper):
             return self.instance_id_map[old_instance_id]["id"]
         else:
             self.stats["bib id not in map"] += 1
-            logging.warn("Old instance id not in map: {}".format(old_instance_id))
-            raise Exception("Old instance id not in map: {}".format(old_instance_id))
+            logging.warn(f"Old instance id not in map: {old_instance_id}")
+            raise Exception(f"Old instance id not in map: {old_instance_id}")
 
     def get_callnumber_data(self, f852):
         # TODO: handle repeated 852s
