@@ -314,11 +314,16 @@ class RulesMapper:
 
     def save_source_record(self, marc_record, instance_id):
         """Saves the source Marc_record to the Source record Storage module"""
+        srs_id = str(uuid.uuid4())
         marc_record.add_field(
-            Field(tag="999", indicators=["f", "f"], subfields=["i", instance_id])
+            Field(
+                tag="999",
+                indicators=["f", "f"],
+                subfields=["i", instance_id, "s", srs_id],
+            )
         )
         self.srs_recs.append(
-            (marc_record, instance_id, self.folio.get_metadata_construct())
+            (marc_record, instance_id, srs_id, self.folio.get_metadata_construct())
         )
         self.marc_xml_writer.write(marc_record)
         if len(self.srs_recs) == 1000:
@@ -428,7 +433,7 @@ def get_srs_strings(my_tuple):
     marc_uuid = str(uuid.uuid4())
     raw_uuid = str(uuid.uuid4())
     record = {
-        "id": str(uuid.uuid4()),
+        "id": my_tuple[2],
         "deleted": False,
         "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
         "matchedProfileId": str(uuid.uuid4()),
@@ -439,7 +444,7 @@ def get_srs_strings(my_tuple):
         "parsedRecordId": marc_uuid,
         "additionalInfo": {"suppressDiscovery": False},
         "externalIdsHolder": {"instanceId": my_tuple[1]},
-        "metadata": my_tuple[2],
+        "metadata": my_tuple[3],
     }
     raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
     marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}

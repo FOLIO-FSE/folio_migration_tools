@@ -21,7 +21,7 @@ class MarcProcessor:
         self.args = args
         self.start = time.time()
 
-    def process_record(self, marc_record):
+    def process_record(self, marc_record, num_filtered):
         """processes a marc record and saves it"""
         folio_rec = None
         try:
@@ -35,9 +35,9 @@ class MarcProcessor:
             # Print progress
             if self.stats["bibs_processed"] % 10000 == 0:
                 elapsed = self.stats["bibs_processed"] / (time.time() - self.start)
-                elapsed_formatted = "{0:.3g}".format(elapsed)
+                elapsed_formatted = int(elapsed)
                 print(
-                    "{}\t\t{}".format(elapsed_formatted, self.stats["bibs_processed"]),
+                    f'{elapsed_formatted}\t{self.stats["bibs_processed"]}\tFiltered:{num_filtered}',
                     flush=True,
                 )
             self.stats["successful_bibs"] += 1
