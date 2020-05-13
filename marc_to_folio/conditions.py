@@ -58,14 +58,21 @@ class Conditions:
         return value
 
     def condition_set_issuance_mode_id(self, value, parameter, marc_field):
-        seventh = marc_field.format_field()[6]
-        m_o_i_s = {
-            "m": "Monograph",
-            "s": "Serial",
-            "i": "Integrating Resource",
-        }
-        name = m_o_i_s.get(seventh, "Other")
-        return next(i["id"] for i in self.folio.modes_of_issuance if name == i["name"])
+        try:
+            seventh = marc_field.format_field()[6]
+            m_o_i_s = {
+                "m": "Monograph",
+                "s": "Serial",
+                "i": "Integrating Resource",
+            }
+            name = m_o_i_s.get(seventh, "Other")
+            if not name:
+                raise Exception(f"{name} is not a valid mode of issuance")
+            return next(
+                i["id"] for i in self.folio.modes_of_issuance if name == i["name"]
+            )
+        except IndexError:
+            raise ValueError(f"No seven in {marc_field}")
 
     def condition_set_publisher_role(self, value, parameter, marc_field):
         roles = {
@@ -235,9 +242,11 @@ class Conditions:
                     ),
                     "",
                 )
-            if not w:
-                raise ValueError(f"no matching instance_types {value[:3]} {marc_field}")
-            return w
+                if not w:
+                    raise ValueError(
+                        f"no matching instance_types {value[:3]} {marc_field}"
+                    )
+                return w
         return v
 
     def condition_set_instance_format_id(self, value, parameter, marc_field):

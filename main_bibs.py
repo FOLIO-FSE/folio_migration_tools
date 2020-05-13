@@ -23,6 +23,7 @@ class Worker:
         self.args = args
         self.results_file_path = results_file
         self.allowed_locs = self.setup_allowed(args)
+        self.num_filtered = 0
         self.files = [
             f
             for f in listdir(args.source_folder)
@@ -37,6 +38,7 @@ class Worker:
         self.failed_records = list()
         self.failed_files = list()
         self.filtered_out_locations = {}
+        self.bibids = set()
         print("Init done")
 
     def work(self):
@@ -63,6 +65,7 @@ class Worker:
             self.wrap_up(processor)
 
     def read_records(self, reader, processor):
+        unf = 0
         for record in reader:
             if record is None:
                 print(
@@ -72,39 +75,51 @@ class Worker:
                 )
                 self.failed_records.append(reader.current_chunk)
             else:
-                if not self.allowed_locs or not self.msu_filter(record):
-                    processor.process_record(record)
+                if self.keep_for_msu(record):
+                    processor.process_record(record, self.num_filtered)
+                    unf += 1
+                else:
+                    self.num_filtered += 1
 
     def wrap_up(self, processor):
         print("Done. Wrapping up...")
         processor.wrap_up()
         print("Failed files:")
         print(json.dumps(self.failed_files, sort_keys=True, indent=4))
-        print(f"Failed records ({len(self.failed_records)}):")
-        print(json.dumps(self.failed_records, indent=4))
+        # print(f"Failed records ({len(self.failed_records)}):")
+        # print(json.dumps(self.failed_records, indent=4))
         print("filter_by_location_results:")
         print(json.dumps(self.filtered_out_locations, indent=4))
+        print(f"Filtered out: {self.num_filtered}")
         print("done")
 
-    def msu_filter(self, record):
-        f945s = record.get_fields("945")
-        marc_locs = []
-        for f in f945s:
-            for sf in f.get_subfields("l"):
-                marc_locs.append(sf)
-        has_allowed = any(
-            marc_loc for marc_loc in marc_locs if marc_loc in self.allowed_locs
-        )
-        for loc in marc_locs:
-            if loc in self.allowed_locs:
-                add_stats(self.filtered_out_locations, f"{loc} - ALLOWED")
+    def keep_for_msu(self, record):
+        bib_id = record["907"]["a"]
+        if bib_id not in self.bibids:
+            self.bibids.add(bib_id)
+            f945s = record.get_fields("945")
+            if not any(f945s):
+                add_stats(self.filtered_out_locations, "NO ITEMS")
+                return True
+            marc_locs = get_subfield_contents(record, "945", "l")
+            has_allowed = any(
+                marc_loc
+                for marc_loc in marc_locs
+                if marc_loc in self.allowed_locs and marc_loc
+            )
+            for loc in marc_locs:
+                if loc in self.allowed_locs:
+                    add_stats(self.filtered_out_locations, f"{loc} - ALLOWED")
+                else:
+                    add_stats(self.filtered_out_locations, f"{loc} - FILTERED OUT")
+            if has_allowed:
+                return True
             else:
-                add_stats(self.filtered_out_locations, f"{loc} - FILTERED OUT")
-        if has_allowed:
-            return False
+                add_stats(self.filtered_out_locations, "TOTAL FILTERED OUT")
+                return False
         else:
-            add_stats(self.filtered_out_locations, "TOTAL FILTERED OUT")
-            return True
+            add_stats(self.filtered_out_locations, "DUPLICATES")
+            return False
 
     def setup_allowed(self, args):
         if args.msu_locations_path:
@@ -117,7 +132,7 @@ class Worker:
                     if l["folio_code"] != "remove" and l["iii_code"]
                 )
                 print(
-                    f"{len(allowed_locs)} allowed locations fetched:\n{json.dumps(allowed_locs)}"
+                    f"{len(allowed_locs)} allowed locations fetched:\n{json.dumps(allowed_locs, sort_keys=True, indent=4)}"
                 )
                 return allowed_locs
         else:
@@ -183,6 +198,15 @@ def main():
     # Iniiate Worker
     worker = Worker(folio_client, results_file, args)
     worker.work()
+
+
+def get_subfield_contents(record, marc_tag, subfield_code):
+    fields = record.get_fields(marc_tag)
+    res = []
+    for f in fields:
+        for sf in f.get_subfields(subfield_code):
+            res.append(sf)
+    return res
 
 
 def add_stats(stats, a):
