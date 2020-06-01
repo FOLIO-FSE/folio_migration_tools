@@ -37,6 +37,7 @@ class RulesMapper:
         self.mapped_folio_fields = {}
         self.alt_title_map = {}
         self.identifier_types = []
+        self.misc_stats = {}
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
         self.srs_records_file = open(os.path.join(self.results_path, "srs.json"), "w+")
         self.srs_raw_records_file = open(
@@ -53,7 +54,7 @@ class RulesMapper:
         self.instance_relationships = {}
         self.instance_relationship_types = {}
 
-    def parse_bib(self, marc_record, record_source):
+    def parse_bib(self, marc_record, record_source, inventory_only=False):
         """ Parses a bib recod into a FOLIO Inventory instance object
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function"""
@@ -64,6 +65,10 @@ class RulesMapper:
         temp_inst_type = ""
         ignored_subsequent_fields = set()
         bad_tags = {"039", "263", "229", "922", "945"}  # "907"
+        raise Exception("Ta fram alla ok 945")
+        raise Exception("Räkna utan 945")
+        raise Exception("Undanhåll sådant som ska suppressas")
+        raise Exception("lägg in FOLIO-locations:arna")
         for marc_field in marc_record:
             if (not marc_field.tag.isnumeric()) and marc_field.tag != "LDR":
                 bad_tags.add(marc_field.tag)
@@ -87,7 +92,10 @@ class RulesMapper:
         # self.validate(folio_instance)
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
-        self.save_source_record(marc_record, folio_instance["id"])
+        if not inventory_only:
+            self.save_source_record(marc_record, folio_instance["id"])
+        else:
+            add_stats(self.misc_stats, "inventory_only")
 
         """
         raise Exception("trim away multiple whitespace and newlines..")
@@ -346,10 +354,21 @@ class RulesMapper:
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
 
     def get_mode_of_issuance_id(self, marc_record):
-        mode_of_issuance = marc_record.leader[7]
-        table = {"m": "Monograph", "s": "Serial"}
-        name = table.get(mode_of_issuance, "Other")
-        return next(i["id"] for i in self.folio.modes_of_issuance if name == i["name"])
+        try:
+            seventh = marc_record.leader[7]
+            m_o_i_s = {
+                "m": "Monograph",
+                "s": "Serial",
+                "i": "Integrating Resource",
+            }
+            name = m_o_i_s.get(seventh, "Other")
+            if not name:
+                raise Exception(f"{name} is not a valid mode of issuance")
+            return next(
+                i["id"] for i in self.folio.modes_of_issuance if name == i["name"]
+            )
+        except IndexError:
+            raise ValueError(f"No seven in {marc_record.leader}")
 
     def get_languages(self, marc_record):
         """Get languages and tranforms them to correct codes"""

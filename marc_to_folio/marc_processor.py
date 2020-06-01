@@ -21,13 +21,15 @@ class MarcProcessor:
         self.args = args
         self.start = time.time()
 
-    def process_record(self, marc_record, num_filtered):
+    def process_record(self, marc_record, inventory_only, num_filtered):
         """processes a marc record and saves it"""
         folio_rec = None
         try:
             self.stats["bibs_processed"] += 1
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.mapper.parse_bib(marc_record, self.args.data_source)
+            folio_rec = self.mapper.parse_bib(
+                marc_record, self.args.data_source, inventory_only
+            )
             if self.args.validate:
                 validate(folio_rec, self.instance_schema)
             # write record to file
@@ -44,7 +46,7 @@ class MarcProcessor:
         except ValueError as value_error:
             self.stats["failed_bibs"] += 1
             #  print(marc_record)
-            print(value_error)
+            print(f"{value_error} for {marc_record['001']} ")
             print("Removing record from idMap")
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
@@ -76,11 +78,13 @@ class MarcProcessor:
         print(self.stats)
         print("Saving map of old and new IDs")
         print("Number of Instances in map:\t{}".format(len(self.mapper.id_map)))
+        if self.mapper.misc_stats:
+            print("Misc stats:")
+            print(json.dumps(self.mapper.misc_stats, sort_keys=True, indent=4))
         if self.mapper.id_map:
             map_path = self.results_folder + "/instance_id_map.json"
             with open(map_path, "w+") as id_map_file:
                 json.dump(self.mapper.id_map, id_map_file, sort_keys=True, indent=4)
-
         print("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
             holdings_path = self.results_folder + "/folio_holdings.json"

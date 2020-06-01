@@ -59,7 +59,7 @@ class Conditions:
 
     def condition_set_issuance_mode_id(self, value, parameter, marc_field):
         try:
-            seventh = marc_field.format_field()[6]
+            seventh = marc_field[6]
             m_o_i_s = {
                 "m": "Monograph",
                 "s": "Serial",

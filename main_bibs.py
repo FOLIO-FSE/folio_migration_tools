@@ -23,6 +23,7 @@ class Worker:
         self.args = args
         self.results_file_path = results_file
         self.allowed_locs = self.setup_allowed(args)
+        self.inventory_only = self.setup_inventory_only(args)
         self.num_filtered = 0
         self.files = [
             f
@@ -75,8 +76,9 @@ class Worker:
                 )
                 self.failed_records.append(reader.current_chunk)
             else:
-                if self.keep_for_msu(record):
-                    processor.process_record(record, self.num_filtered)
+                if self.keep_and_clean_for_msu(record):
+                    inventory_only = self.check_inventory_only(record)
+                    processor.process_record(record, False, self.num_filtered)
                     unf += 1
                 else:
                     self.num_filtered += 1
@@ -89,37 +91,62 @@ class Worker:
         # print(f"Failed records ({len(self.failed_records)}):")
         # print(json.dumps(self.failed_records, indent=4))
         print("filter_by_location_results:")
-        print(json.dumps(self.filtered_out_locations, indent=4))
+        print(json.dumps(self.filtered_out_locations, sort_keys=True, indent=4))
         print(f"Filtered out: {self.num_filtered}")
         print("done")
 
-    def keep_for_msu(self, record):
-        bib_id = record["907"]["a"]
-        if bib_id not in self.bibids:
-            self.bibids.add(bib_id)
-            f945s = record.get_fields("945")
-            if not any(f945s):
-                add_stats(self.filtered_out_locations, "NO ITEMS")
-                return True
+    def check_inventory_only(self, record):
+        f945s = record.get_fields("945")
+        if any(f945s):
             marc_locs = get_subfield_contents(record, "945", "l")
-            has_allowed = any(
+            inventory_only = any(
                 marc_loc
                 for marc_loc in marc_locs
-                if marc_loc in self.allowed_locs and marc_loc
+                if marc_loc in self.inventory_only and marc_loc
             )
-            for loc in marc_locs:
-                if loc in self.allowed_locs:
-                    add_stats(self.filtered_out_locations, f"{loc} - ALLOWED")
-                else:
-                    add_stats(self.filtered_out_locations, f"{loc} - FILTERED OUT")
-            if has_allowed:
-                return True
-            else:
-                add_stats(self.filtered_out_locations, "TOTAL FILTERED OUT")
-                return False
-        else:
-            add_stats(self.filtered_out_locations, "DUPLICATES")
+            if inventory_only:
+                add_stats(self.filtered_out_locations, "Inventory only")
+            return inventory_only
+        return False
+
+    def keep_and_clean_for_msu(self, record):
+        bib_id = record["907"]["a"]
+        # report on duplicates
+        if bib_id in self.bibids:
+            add_stats(self.filtered_out_locations, "TOTAL FILTERED OUT")
             return False
+        self.bibids.add(bib_id)
+
+        # if no items are attached, return the record
+        f945s = record.get_fields("945")
+        if not any(f945s):
+            add_stats(self.filtered_out_locations, "NO ITEMS")
+            return True
+
+        f856s = record.get_fields("856")
+        for f856 in f856s:
+            for sf in f856.get_subfields("5"):
+                if sf and sf[1:] not in self.allowed_locs:
+                    record.remove_field(f856)
+                    add_stats(self.filtered_out_locations, f"856 REMOVED - {sf}")
+                else:
+                    add_stats(self.filtered_out_locations, f"856 PRESERVED - {sf}")
+
+        marc_locs = get_subfield_contents(record, "945", "l")
+
+        # report on locations in records
+        for loc in marc_locs:
+            if loc in self.allowed_locs:
+                add_stats(self.filtered_out_locations, f"{loc} - ALLOWED")
+            else:
+                add_stats(self.filtered_out_locations, f"{loc} - FILTERED OUT")
+
+        has_allowed = any(
+            marc_loc
+            for marc_loc in marc_locs
+            if marc_loc in self.allowed_locs and marc_loc
+        )
+        return has_allowed
 
     def setup_allowed(self, args):
         if args.msu_locations_path:
@@ -129,12 +156,33 @@ class Worker:
                 allowed_locs = list(
                     l["iii_code"]
                     for l in self.locations_map
-                    if l["folio_code"] != "remove" and l["iii_code"]
+                    if l["barcode_handling"]
+                    != "Do not import instances/holdings/or item records"
+                    and l["iii_code"]
                 )
                 print(
                     f"{len(allowed_locs)} allowed locations fetched:\n{json.dumps(allowed_locs, sort_keys=True, indent=4)}"
                 )
                 return allowed_locs
+        else:
+            return []
+
+    def setup_inventory_only(self, args):
+        if args.msu_locations_path:
+            csv.register_dialect("tsv", delimiter="\t")
+            with open(args.msu_locations_path) as loc_file:
+                self.locations_map = list(csv.DictReader(loc_file, dialect="tsv"))
+                inventory_only = list(
+                    l["iii_code"]
+                    for l in self.locations_map
+                    if l["barcode_handling"] == "Inventory only plus holdings, items"
+                    and l["iii_code"]
+                )
+                print(
+                    f"{len(inventory_only)} inventory only locations fetched:"
+                    f"\n{json.dumps(inventory_only, sort_keys=True, indent=4)}"
+                )
+                return inventory_only
         else:
             return []
 
