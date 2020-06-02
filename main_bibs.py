@@ -21,8 +21,13 @@ class Worker:
     def __init__(self, folio_client, results_file, args):
         # msu special case
         self.args = args
+        self.stats = {}
+        self.migration_report = {}
         self.results_file_path = results_file
         self.allowed_locs = self.setup_allowed(args)
+        self.discovery_suppress_locations = self.setup_discovery_suppress_locations(
+            args
+        )
         self.inventory_only = self.setup_inventory_only(args)
         self.num_filtered = 0
         self.files = [
@@ -34,7 +39,13 @@ class Worker:
         print(f"Files to process: {len(self.files)}")
         print(json.dumps(self.files, sort_keys=True, indent=4))
 
-        self.mapper = RulesMapper(folio_client, args.results_folder)
+        self.mapper = RulesMapper(
+            folio_client,
+            args.results_folder,
+            self.stats,
+            self.migration_report,
+            self.discovery_suppress_locations,
+        )
         print("Rec./s\t\tTot. recs\t\t")
         self.failed_records = list()
         self.failed_files = list()
@@ -46,7 +57,12 @@ class Worker:
         print("Starting....")
         with open(self.results_file_path, "w+") as results_file:
             processor = MarcProcessor(
-                self.mapper, self.folio_client, results_file, self.args
+                self.mapper,
+                self.folio_client,
+                results_file,
+                self.args,
+                self.stats,
+                self.migration_report,
             )
             for file_name in self.files:
                 try:
@@ -66,7 +82,6 @@ class Worker:
             self.wrap_up(processor)
 
     def read_records(self, reader, processor):
-        unf = 0
         for record in reader:
             if record is None:
                 print(
@@ -74,14 +89,15 @@ class Worker:
                     " was ignored because the following exception: ",
                     f"{reader.current_exception}",
                 )
+                add_stats(self.stats, "MARC21 Records with encoding errors")
                 self.failed_records.append(reader.current_chunk)
             else:
                 if self.keep_and_clean_for_msu(record):
                     inventory_only = self.check_inventory_only(record)
-                    processor.process_record(record, False, self.num_filtered)
-                    unf += 1
+                    processor.process_record(record, False)
+                    add_stats(self.stats, "Records after filtering")
                 else:
-                    self.num_filtered += 1
+                    add_stats(self.stats, "Records filtered")
 
     def wrap_up(self, processor):
         print("Done. Wrapping up...")
@@ -92,7 +108,6 @@ class Worker:
         # print(json.dumps(self.failed_records, indent=4))
         print("filter_by_location_results:")
         print(json.dumps(self.filtered_out_locations, sort_keys=True, indent=4))
-        print(f"Filtered out: {self.num_filtered}")
         print("done")
 
     def check_inventory_only(self, record):
@@ -105,7 +120,7 @@ class Worker:
                 if marc_loc in self.inventory_only and marc_loc
             )
             if inventory_only:
-                add_stats(self.filtered_out_locations, "Inventory only")
+                add_stats(self.stats, "Inventory only")
             return inventory_only
         return False
 
@@ -113,34 +128,50 @@ class Worker:
         bib_id = record["907"]["a"]
         # report on duplicates
         if bib_id in self.bibids:
-            add_stats(self.filtered_out_locations, "TOTAL FILTERED OUT")
+            add_stats(self.stats, "Completely filtered out records")
+            add_stats(self.stats, "Duplicate MARC21 records")
             return False
+
+        # Not a dupe, add to list
         self.bibids.add(bib_id)
 
         # if no items are attached, return the record
         f945s = record.get_fields("945")
         if not any(f945s):
-            add_stats(self.filtered_out_locations, "NO ITEMS")
+            add_stats(self.stats, "Bibs without any 945s")
             return True
 
-        f856s = record.get_fields("856")
-        for f856 in f856s:
+        for f856 in record.get_fields("856"):
             for sf in f856.get_subfields("5"):
                 if sf and sf[1:] not in self.allowed_locs:
                     record.remove_field(f856)
-                    add_stats(self.filtered_out_locations, f"856 REMOVED - {sf}")
+                    add_stats(self.stats, f"856 Removed - {sf}")
+                    add_stats(self.stats, f"856 Removed Total")
                 else:
-                    add_stats(self.filtered_out_locations, f"856 PRESERVED - {sf}")
+                    add_stats(self.stats, f"856 Preserved Total")
+                    add_stats(self.stats, f"856 Preserved - {sf}")
+
+        for f945 in record.get_fields("945"):
+            for l in f945.get_subfields("l"):
+                if l in self.allowed_locs:
+                    add_stats(
+                        self.stats, "945 in allowed location. Updating to FOLIO one"
+                    )
+                    l = self.allowed_locs[l]
+
+                else:
+                    add_stats(self.stats, "945 not in allowed location, removed")
+                    record.remove_field(f945)
 
         marc_locs = get_subfield_contents(record, "945", "l")
-
         # report on locations in records
         for loc in marc_locs:
             if loc in self.allowed_locs:
-                add_stats(self.filtered_out_locations, f"{loc} - ALLOWED")
+                add_stats(self.stats, f"Location allowed - {loc}")
             else:
-                add_stats(self.filtered_out_locations, f"{loc} - FILTERED OUT")
+                add_stats(self.stats, f"Location filtered out - {loc}")
 
+        # has record any of the allowed locations? If yes, migrate
         has_allowed = any(
             marc_loc
             for marc_loc in marc_locs
@@ -148,21 +179,40 @@ class Worker:
         )
         return has_allowed
 
+    def setup_discovery_suppress_locations(self, args):
+        if args.msu_locations_path:
+            csv.register_dialect("tsv", delimiter="\t")
+            with open(args.msu_locations_path) as loc_file:
+                self.locations_map = list(csv.DictReader(loc_file, dialect="tsv"))
+                locs = [
+                    l["folio_code"]
+                    for l in self.locations_map
+                    if l["suppress_from_discovery"]
+                ]
+                print(
+                    f"{len(locs)} Discovery suppress locations fetched:\n{json.dumps(locs, sort_keys=True, indent=4)}"
+                )
+                self.stats["Discovery Suppress Locations"] = len(locs)
+                return locs
+
     def setup_allowed(self, args):
         if args.msu_locations_path:
             csv.register_dialect("tsv", delimiter="\t")
             with open(args.msu_locations_path) as loc_file:
                 self.locations_map = list(csv.DictReader(loc_file, dialect="tsv"))
-                allowed_locs = list(
-                    l["iii_code"]
-                    for l in self.locations_map
-                    if l["barcode_handling"]
-                    != "Do not import instances/holdings/or item records"
-                    and l["iii_code"]
+                allowed_locs = dict(
+                    [
+                        (l["iii_code"], l["folio_code"])
+                        for l in self.locations_map
+                        if l["barcode_handling"]
+                        != "Do not import instances/holdings/or item records"
+                        and l["iii_code"]
+                    ]
                 )
                 print(
                     f"{len(allowed_locs)} allowed locations fetched:\n{json.dumps(allowed_locs, sort_keys=True, indent=4)}"
                 )
+                self.stats["Allowed Locations"] = len(allowed_locs)
                 return allowed_locs
         else:
             return []
@@ -182,6 +232,7 @@ class Worker:
                     f"{len(inventory_only)} inventory only locations fetched:"
                     f"\n{json.dumps(inventory_only, sort_keys=True, indent=4)}"
                 )
+                self.stats["Inventory-only Locations"] = len(inventory_only)
                 return inventory_only
         else:
             return []

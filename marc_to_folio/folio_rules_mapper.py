@@ -18,8 +18,18 @@ class RulesMapper:
     """Maps a MARC record to inventory instance format according to
     the FOLIO community convention"""
 
-    def __init__(self, folio, results_path):
+    def __init__(
+        self,
+        folio,
+        results_path,
+        stats,
+        migration_report,
+        discovery_suppress_locations: None,
+    ):
         self.folio = folio
+        self.discovery_suppress_locations = discovery_suppress_locations
+        self.stats = stats
+        self.migration_report = migration_report
         self.conditions = Conditions(folio)
         self.migration_user_id = "d916e883-f8f1-4188-bc1d-f0dce1511b50"
         instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json"
@@ -37,7 +47,6 @@ class RulesMapper:
         self.mapped_folio_fields = {}
         self.alt_title_map = {}
         self.identifier_types = []
-        self.misc_stats = {}
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
         self.srs_records_file = open(os.path.join(self.results_path, "srs.json"), "w+")
         self.srs_raw_records_file = open(
@@ -64,11 +73,8 @@ class RulesMapper:
         }
         temp_inst_type = ""
         ignored_subsequent_fields = set()
-        bad_tags = {"039", "263", "229", "922", "945"}  # "907"
-        raise Exception("Ta fram alla ok 945")
-        raise Exception("Räkna utan 945")
-        raise Exception("Undanhåll sådant som ska suppressas")
-        raise Exception("lägg in FOLIO-locations:arna")
+        bad_tags = {"039", "263", "229", "922"}  # "907"
+
         for marc_field in marc_record:
             if (not marc_field.tag.isnumeric()) and marc_field.tag != "LDR":
                 bad_tags.add(marc_field.tag)
@@ -87,13 +93,15 @@ class RulesMapper:
                 temp_inst_type = folio_instance["instanceTypeId"]
 
         self.perform_additional_parsing(folio_instance, temp_inst_type, marc_record)
+        suppress = self.suppress_from_discovery(marc_record)
+        folio_instance["discoverySuppress"] = suppress
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
         # self.validate(folio_instance)
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         if not inventory_only:
-            self.save_source_record(marc_record, folio_instance["id"])
+            self.save_source_record(marc_record, folio_instance["id"], suppress)
         else:
             add_stats(self.misc_stats, "inventory_only")
 
@@ -320,7 +328,7 @@ class RulesMapper:
                     self.mapped_folio_fields.get(key, 0) + 1
                 )
 
-    def save_source_record(self, marc_record, instance_id):
+    def save_source_record(self, marc_record, instance_id, suppress):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(uuid.uuid4())
         marc_record.add_field(
@@ -333,10 +341,32 @@ class RulesMapper:
         self.srs_recs.append(
             (marc_record, instance_id, srs_id, self.folio.get_metadata_construct())
         )
-        self.marc_xml_writer.write(marc_record)
+        if not suppress:
+            self.marc_xml_writer.write(marc_record)
         if len(self.srs_recs) == 1000:
             self.flush_srs_recs()
             self.srs_recs = []
+
+    def suppress_from_discovery(self, marc_record):
+        if not self.discovery_suppress_locations:
+            add_stats(
+                self.stats, "Suppress from discovery - no locations, not suppressed"
+            )
+            return False
+        locs = self.discovery_suppress_locations
+        for f945 in marc_record.get_fields("945"):
+            for l in f945.get_subfields("l"):
+                if l in locs:
+                    add_stats(
+                        self.stats,
+                        "Suppress from discovery - 945 in location. Suppressed",
+                    )
+                    return True
+                else:
+                    add_stats(
+                        self.stats, "Suppress from discovery - 945 not suppressed"
+                    )
+        return False
 
     def flush_srs_recs(self):
         pool = ProcessPoolExecutor(max_workers=4)

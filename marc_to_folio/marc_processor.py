@@ -1,31 +1,32 @@
 """ Class that processes each MARC record """
 import time
 import json
+from datetime import datetime as dt
+import os.path
 from jsonschema import ValidationError, validate
 
 
 class MarcProcessor:
     """the processor"""
 
-    def __init__(self, mapper, folio_client, results_file, args):
+    def __init__(
+        self, mapper, folio_client, results_file, args, stats, migration_report
+    ):
+        self.migration_report = {}
+        self.stats = {}
         self.results_folder = args.results_folder
         self.results_file = results_file
         self.instance_schema = folio_client.get_instance_json_schema()
-        self.stats = {
-            "bibs_processed": 0,
-            "failed_bibs": 0,
-            "successful_bibs": 0,
-            "holdings": 0,
-        }
         self.mapper = mapper
         self.args = args
         self.start = time.time()
 
-    def process_record(self, marc_record, inventory_only, num_filtered):
+    def process_record(self, marc_record, inventory_only):
         """processes a marc record and saves it"""
         folio_rec = None
         try:
-            self.stats["bibs_processed"] += 1
+            add_stats(self.stats, "Bibs processed")
+
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_bib(
                 marc_record, self.args.data_source, inventory_only
@@ -34,17 +35,14 @@ class MarcProcessor:
                 validate(folio_rec, self.instance_schema)
             # write record to file
             write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
+
             # Print progress
-            if self.stats["bibs_processed"] % 10000 == 0:
-                elapsed = self.stats["bibs_processed"] / (time.time() - self.start)
-                elapsed_formatted = int(elapsed)
-                print(
-                    f'{elapsed_formatted}\t{self.stats["bibs_processed"]}\tFiltered:{num_filtered}',
-                    flush=True,
-                )
-            self.stats["successful_bibs"] += 1
+            self.print_progress()
+
+            add_stats(self.stats, "Successfully transformed bibs")
         except ValueError as value_error:
-            self.stats["failed_bibs"] += 1
+            add_stats(self.stats, "Value Errors")
+            add_stats(self.stats, "failed_bibs")
             #  print(marc_record)
             print(f"{value_error} for {marc_record['001']} ")
             print("Removing record from idMap")
@@ -53,20 +51,20 @@ class MarcProcessor:
                 self.mapper.remove_from_id_map(marc_record)
             # raise value_error
         except ValidationError as validation_error:
-            self.stats["failed_bibs"] += 1
+            add_stats(self.stats, "Validation Errors")
+            add_stats(self.stats, "failed_bibs")
             print("Error validating record. Halting...")
             raise validation_error
         except Exception as inst:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
-            self.stats["failed_bibs"] += 1
+            add_stats(self.stats, "failed_bibs")
             print(type(inst))
             print(inst.args)
             print(inst)
             if folio_rec:
                 print(folio_rec)
-            # print(marc_record)
             raise inst
 
     def wrap_up(self):
@@ -77,20 +75,59 @@ class MarcProcessor:
             print(f"error when flushing last srs recs {exception}")
         print(self.stats)
         print("Saving map of old and new IDs")
-        print("Number of Instances in map:\t{}".format(len(self.mapper.id_map)))
-        if self.mapper.misc_stats:
-            print("Misc stats:")
-            print(json.dumps(self.mapper.misc_stats, sort_keys=True, indent=4))
+        self.stats["Number of Instances in map"] = len(self.mapper.id_map)
         if self.mapper.id_map:
-            map_path = self.results_folder + "/instance_id_map.json"
+            map_path = os.path.join(self.results_folder, "instance_id_map.json")
             with open(map_path, "w+") as id_map_file:
                 json.dump(self.mapper.id_map, id_map_file, sort_keys=True, indent=4)
         print("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
-            holdings_path = self.results_folder + "/folio_holdings.json"
+            holdings_path = os.path.join(self.results_folder, "folio_holdings.json")
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     write_to_file(holdings_file, False, holding)
+        print("# Bibliographic records migration")
+        print(f"Time Run: {dt.isoformat(dt.now())}")
+        print("## Bibliographic records migration counters")
+        print_dict_to_md_table(self.stats, "", "Count")
+        self.write_migration_report()
+
+    def add_to_migration_report(self, header, messageString):
+        # TODO: Move to interface or parent class
+        if header not in self.migration_report:
+            self.migration_report[header] = list()
+        self.migration_report[header].append(messageString)
+
+    def write_migration_report(self):
+        for a in self.migration_report:
+            print(f"## {a}")
+            for b in self.migration_report[a]:
+                print(f"{b}\\")
+
+    def print_progress(self):
+        i = self.stats["Bibs processed"]
+        if i % 10000 == 0:
+            elapsed = i / (time.time() - self.start)
+            elapsed_formatted = int(elapsed)
+            print(
+                f"{elapsed_formatted}\t{i}", flush=True,
+            )
+
+
+def add_stats(stats, a):
+    # TODO: Move to interface or parent class
+    if a not in stats:
+        stats[a] = 1
+    else:
+        stats[a] += 1
+
+
+def print_dict_to_md_table(my_dict, h1, h2):
+    # TODO: Move to interface or parent class
+    print(f"{h1} | {h2}")
+    print("--- | ---:")
+    for k, v in my_dict.items():
+        print(f"{k} | {v}")
 
 
 def write_to_file(file, pg_dump, folio_record):
