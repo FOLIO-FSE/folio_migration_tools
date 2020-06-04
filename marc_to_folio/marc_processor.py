@@ -9,9 +9,7 @@ from jsonschema import ValidationError, validate
 class MarcProcessor:
     """the processor"""
 
-    def __init__(
-        self, mapper, folio_client, results_file, args, stats, migration_report
-    ):
+    def __init__(self, mapper, folio_client, results_file, args):
         self.migration_report = {}
         self.stats = {}
         self.results_folder = args.results_folder
@@ -41,15 +39,15 @@ class MarcProcessor:
 
             add_stats(self.stats, "Successfully transformed bibs")
         except ValueError as value_error:
+            self.add_to_migration_report(
+                "Records failed to migrate due to Value errors found in Transformation",
+                f"{value_error} for {marc_record['001']} ",
+            )
             add_stats(self.stats, "Value Errors")
             add_stats(self.stats, "failed_bibs")
-            #  print(marc_record)
-            print(f"{value_error} for {marc_record['001']} ")
-            print("Removing record from idMap")
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
-            # raise value_error
         except ValidationError as validation_error:
             add_stats(self.stats, "Validation Errors")
             add_stats(self.stats, "failed_bibs")
@@ -73,7 +71,6 @@ class MarcProcessor:
             self.mapper.wrap_up()
         except Exception as exception:
             print(f"error when flushing last srs recs {exception}")
-        print(self.stats)
         print("Saving map of old and new IDs")
         self.stats["Number of Instances in map"] = len(self.mapper.id_map)
         if self.mapper.id_map:
@@ -86,11 +83,6 @@ class MarcProcessor:
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     write_to_file(holdings_file, False, holding)
-        print("# Bibliographic records migration")
-        print(f"Time Run: {dt.isoformat(dt.now())}")
-        print("## Bibliographic records migration counters")
-        print_dict_to_md_table(self.stats, "", "Count")
-        self.write_migration_report()
 
     def add_to_migration_report(self, header, messageString):
         # TODO: Move to interface or parent class
@@ -106,7 +98,7 @@ class MarcProcessor:
 
     def print_progress(self):
         i = self.stats["Bibs processed"]
-        if i % 10000 == 0:
+        if i % 1000 == 0:
             elapsed = i / (time.time() - self.start)
             elapsed_formatted = int(elapsed)
             print(
@@ -120,14 +112,6 @@ def add_stats(stats, a):
         stats[a] = 1
     else:
         stats[a] += 1
-
-
-def print_dict_to_md_table(my_dict, h1, h2):
-    # TODO: Move to interface or parent class
-    print(f"{h1} | {h2}")
-    print("--- | ---:")
-    for k, v in my_dict.items():
-        print(f"{k} | {v}")
 
 
 def write_to_file(file, pg_dump, folio_record):

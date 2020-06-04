@@ -19,17 +19,12 @@ class RulesMapper:
     the FOLIO community convention"""
 
     def __init__(
-        self,
-        folio,
-        results_path,
-        stats,
-        migration_report,
-        discovery_suppress_locations: None,
+        self, folio, results_path, discovery_suppress_locations: None,
     ):
         self.folio = folio
         self.discovery_suppress_locations = discovery_suppress_locations
-        self.stats = stats
-        self.migration_report = migration_report
+        self.stats = {}
+        self.migration_report = {}
         self.conditions = Conditions(folio)
         self.migration_user_id = "d916e883-f8f1-4188-bc1d-f0dce1511b50"
         instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json"
@@ -76,6 +71,7 @@ class RulesMapper:
         bad_tags = {"039", "263", "229", "922"}  # "907"
 
         for marc_field in marc_record:
+            add_stats(self.stats, "Total number of Tags processed")
             if (not marc_field.tag.isnumeric()) and marc_field.tag != "LDR":
                 bad_tags.add(marc_field.tag)
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
@@ -353,10 +349,10 @@ class RulesMapper:
                 self.stats, "Suppress from discovery - no locations, not suppressed"
             )
             return False
-        locs = self.discovery_suppress_locations
-        for f945 in marc_record.get_fields("945"):
+        f945s = marc_record.get_fields("945")
+        for f945 in f945s:
             for l in f945.get_subfields("l"):
-                if l in locs:
+                if l in self.discovery_suppress_locations:
                     add_stats(
                         self.stats,
                         "Suppress from discovery - 945 in location. Suppressed",
@@ -366,6 +362,8 @@ class RulesMapper:
                     add_stats(
                         self.stats, "Suppress from discovery - 945 not suppressed"
                     )
+        if not any(f945s):
+            add_stats(self.stats, "Suppress from discovery - No 945s")
         return False
 
     def flush_srs_recs(self):

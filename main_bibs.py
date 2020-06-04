@@ -3,10 +3,13 @@ import argparse
 import json
 import logging
 import csv
+import copy
 import sys
 import traceback
 from os import listdir
 from os.path import isfile, join
+from datetime import datetime as dt
+import time
 
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
@@ -28,6 +31,7 @@ class Worker:
         self.discovery_suppress_locations = self.setup_discovery_suppress_locations(
             args
         )
+
         self.inventory_only = self.setup_inventory_only(args)
         self.num_filtered = 0
         self.files = [
@@ -40,14 +44,10 @@ class Worker:
         print(json.dumps(self.files, sort_keys=True, indent=4))
 
         self.mapper = RulesMapper(
-            folio_client,
-            args.results_folder,
-            self.stats,
-            self.migration_report,
-            self.discovery_suppress_locations,
+            folio_client, args.results_folder, self.discovery_suppress_locations,
         )
+        self.processor = None
         print("Rec./s\t\tTot. recs\t\t")
-        self.failed_records = list()
         self.failed_files = list()
         self.filtered_out_locations = {}
         self.bibids = set()
@@ -56,14 +56,10 @@ class Worker:
     def work(self):
         print("Starting....")
         with open(self.results_file_path, "w+") as results_file:
-            processor = MarcProcessor(
-                self.mapper,
-                self.folio_client,
-                results_file,
-                self.args,
-                self.stats,
-                self.migration_report,
+            self.processor = MarcProcessor(
+                self.mapper, self.folio_client, results_file, self.args,
             )
+            self.start = time.time()
             for file_name in self.files:
                 try:
                     with open(join(sys.argv[1], file_name), "rb") as marc_file:
@@ -73,42 +69,75 @@ class Worker:
                             print("FORCE UTF-8 is set to TRUE")
                             reader.force_utf8 = True
                         print(f"running {file_name}")
-                        self.read_records(reader, processor)
+                        self.read_records(reader)
                 except Exception as exception:
                     print(exception)
                     traceback.print_exc()
                     print(file_name)
             # wrap up
-            self.wrap_up(processor)
+            self.wrap_up()
 
-    def read_records(self, reader, processor):
+    def read_records(self, reader):
         for record in reader:
+            add_stats(self.stats, "MARC21 records in file before parsing")
             if record is None:
-                print(
-                    f"Current chunk: {reader.current_chunk} "
-                    " was ignored because the following exception: ",
-                    f"{reader.current_exception}",
+                self.add_to_migration_report(
+                    "Bib records that failed to parse. -",
+                    f"{reader.current_exception} {reader.current_chunk}",
                 )
-                add_stats(self.stats, "MARC21 Records with encoding errors")
-                self.failed_records.append(reader.current_chunk)
+                add_stats(
+                    self.stats, "MARC21 Records with encoding errors - parsing failed"
+                )
             else:
+                add_stats(self.stats, "MARC21 Records successfully parsed")
                 if self.keep_and_clean_for_msu(record):
                     inventory_only = self.check_inventory_only(record)
-                    processor.process_record(record, False)
-                    add_stats(self.stats, "Records after filtering")
+                    self.processor.process_record(record, False)
+                    add_stats(self.stats, "MARC21 Records filtering - remaining")
                 else:
-                    add_stats(self.stats, "Records filtered")
+                    add_stats(self.stats, "MARC21 Records filtering - filtered out")
 
-    def wrap_up(self, processor):
+    def wrap_up(self):
         print("Done. Wrapping up...")
-        processor.wrap_up()
+        self.processor.wrap_up()
         print("Failed files:")
-        print(json.dumps(self.failed_files, sort_keys=True, indent=4))
-        # print(f"Failed records ({len(self.failed_records)}):")
-        # print(json.dumps(self.failed_records, indent=4))
-        print("filter_by_location_results:")
-        print(json.dumps(self.filtered_out_locations, sort_keys=True, indent=4))
+        self.stats = {**self.stats, **self.mapper.stats, **self.processor.stats}
+
+        print("# Bibliographic records migration")
+        print(f"Time Run: {dt.isoformat(dt.now())}")
+        print("## Bibliographic records migration counters")
+        print_dict_to_md_table(
+            {k: self.stats[k] for k in sorted(self.stats)}, "    ", "Count"
+        )
+        print("## filter_by_location_results")
+        print_dict_to_md_table(
+            {
+                k: self.filtered_out_locations[k]
+                for k in sorted(self.filtered_out_locations)
+            },
+            "Location",
+            "Count",
+        )
+        print("## Unmapped MARC tags")
+        print_dict_to_md_table(
+            {
+                k: self.mapper.unmapped_tags[k]
+                for k in sorted(self.mapper.unmapped_tags)
+            },
+            "Tag",
+            "Count",
+        )
+
+        self.write_migration_report(self.mapper.migration_report)
+        self.write_migration_report(self.processor.migration_report)
+        self.write_migration_report()
         print("done")
+
+    def add_to_migration_report(self, header, messageString):
+        # TODO: Move to interface or parent class
+        if header not in self.migration_report:
+            self.migration_report[header] = list()
+        self.migration_report[header].append(messageString)
 
     def check_inventory_only(self, record):
         f945s = record.get_fields("945")
@@ -126,57 +155,74 @@ class Worker:
 
     def keep_and_clean_for_msu(self, record):
         bib_id = record["907"]["a"]
+
+        # filter out or not?
+        # has record any of the allowed locations? If yes, migrate
+        marc_locs = get_subfield_contents(record, "945", "l")
+        has_allowed = any(
+            marc_loc
+            for marc_loc in marc_locs
+            if marc_loc in self.allowed_locs and marc_loc
+        )
         # report on duplicates
         if bib_id in self.bibids:
-            add_stats(self.stats, "Completely filtered out records")
             add_stats(self.stats, "Duplicate MARC21 records")
             return False
-
         # Not a dupe, add to list
         self.bibids.add(bib_id)
 
         # if no items are attached, return the record
         f945s = record.get_fields("945")
         if not any(f945s):
-            add_stats(self.stats, "Bibs without any 945s")
+            add_stats(self.stats, "Bibs without any Items")
             return True
 
         for f856 in record.get_fields("856"):
             for sf in f856.get_subfields("5"):
-                if sf and sf[1:] not in self.allowed_locs:
-                    record.remove_field(f856)
+                if sf and sf.strip() != "6mosu":
+                    try:
+                        record.remove_field(f856)
+                    except Exception as ee:
+                        print(f"could not delete {f856} from {record['001']} - {ee}")
                     add_stats(self.stats, f"856 Removed - {sf}")
                     add_stats(self.stats, f"856 Removed Total")
                 else:
                     add_stats(self.stats, f"856 Preserved Total")
                     add_stats(self.stats, f"856 Preserved - {sf}")
+            if "5" not in f856:
+                add_stats(self.stats, f"856 Preserved Total")
+                add_stats(self.stats, "856 without $5. Preserving")
 
         for f945 in record.get_fields("945"):
-            for l in f945.get_subfields("l"):
-                if l in self.allowed_locs:
-                    add_stats(
-                        self.stats, "945 in allowed location. Updating to FOLIO one"
-                    )
-                    l = self.allowed_locs[l]
-
-                else:
-                    add_stats(self.stats, "945 not in allowed location, removed")
-                    record.remove_field(f945)
-
-        marc_locs = get_subfield_contents(record, "945", "l")
-        # report on locations in records
-        for loc in marc_locs:
-            if loc in self.allowed_locs:
-                add_stats(self.stats, f"Location allowed - {loc}")
+            ls = f945.get_subfields("l")
+            if not any(l for l in ls if l in self.allowed_locs):
+                add_stats(self.stats, "945 not in allowed location, removed")
+                record.remove_field(f945)
+                # print(f"{l} - {[str(f) for f in record.get_fields('945')]}")
             else:
-                add_stats(self.stats, f"Location filtered out - {loc}")
+                add_stats(self.stats, "945 in allowed location. Updating to FOLIO one")
+                allowed = ""
+                run = True
+                while run:
+                    l = f945.delete_subfield("l")
+                    if not l:
+                        run = False
+                    if l in self.allowed_locs:
+                        allowed = l
+                f945.add_subfield("l", self.allowed_locs[allowed])
 
-        # has record any of the allowed locations? If yes, migrate
-        has_allowed = any(
-            marc_loc
-            for marc_loc in marc_locs
-            if marc_loc in self.allowed_locs and marc_loc
-        )
+        # report on locations in records
+        for loc in set(marc_locs):
+            if loc in self.allowed_locs:
+                add_stats(
+                    self.filtered_out_locations, f"Items w/ location allowed - {loc}"
+                )
+            else:
+                add_stats(
+                    self.filtered_out_locations,
+                    f"Items w/ location filtered out - {loc}",
+                )
+
         return has_allowed
 
     def setup_discovery_suppress_locations(self, args):
@@ -187,7 +233,7 @@ class Worker:
                 locs = [
                     l["folio_code"]
                     for l in self.locations_map
-                    if l["suppress_from_discovery"]
+                    if l["suppress_from_discovery"] and l["folio_code"]
                 ]
                 print(
                     f"{len(locs)} Discovery suppress locations fetched:\n{json.dumps(locs, sort_keys=True, indent=4)}"
@@ -236,6 +282,18 @@ class Worker:
                 return inventory_only
         else:
             return []
+
+    def write_migration_report(self, other_report=None):
+        if other_report:
+            for a in other_report:
+                print(f"## {a}")
+                for b in other_report[a]:
+                    print(f"{b}\\")
+        else:
+            for a in self.migration_report:
+                print(f"## {a}")
+                for b in self.migration_report[a]:
+                    print(f"{b}\\")
 
 
 def parse_args():
@@ -313,6 +371,14 @@ def add_stats(stats, a):
         stats[a] = 1
     else:
         stats[a] += 1
+
+
+def print_dict_to_md_table(my_dict, h1, h2):
+    # TODO: Move to interface or parent class
+    print(f"{h1} | {h2}")
+    print("--- | ---:")
+    for k, v in my_dict.items():
+        print(f"{k} | {v}")
 
 
 if __name__ == "__main__":
