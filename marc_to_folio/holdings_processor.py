@@ -29,6 +29,7 @@ class HoldingsProcessor:
                 validate(folio_rec, self.holdings_schema)
             # write record to file
             write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
+            add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
             if self.records_count % 10000 == 0:
                 print(self.mapper.stats)
@@ -77,3 +78,11 @@ def write_to_file(file, pg_dump, folio_record):
         file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
     else:
         file.write("{}\n".format(json.dumps(folio_record)))
+
+
+def add_stats(stats, a):
+    # TODO: Move to interface or parent class
+    if a not in stats:
+        stats[a] = 1
+    else:
+        stats[a] += 1
