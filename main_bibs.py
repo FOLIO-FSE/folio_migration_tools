@@ -373,7 +373,7 @@ def add_stats(stats, a):
         stats[a] += 1
 
 
-def print_dict_to_md_table(my_dict, h1, h2):
+def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
     # TODO: Move to interface or parent class
     print(f"{h1} | {h2}")
     print("--- | ---:")
