@@ -1799,6 +1799,26 @@
             "applyRulesOnConcatenatedData": true
         }
     ],
+    "254": [
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "remove_ending_punc, trim"
+                        }
+                    ]
+                }
+            ],
+            "target": "editions",
+            "subfield": [
+                "a",
+                "b"
+            ],
+            "description": "Edition",
+            "applyRulesOnConcatenatedData": true
+        }
+    ],
     "255": [
         {
             "entity": [
@@ -6434,6 +6454,51 @@
                     "value": "--",
                     "subfields": [
                         "a",
+                        "e",
+                        "g",
+                        "v",
+                        "x",
+                        "y",
+                        "z"
+                    ]
+                }
+            ],
+            "applyRulesOnConcatenatedData": true
+        }
+    ],
+    "690": [
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "trim_period, trim"
+                        }
+                    ]
+                }
+            ],
+            "target": "subjects",
+            "subfield": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "g",
+                "v",
+                "x",
+                "y",
+                "z"
+            ],
+            "description": "Subject Headings",
+            "subFieldDelimiter": [
+                {
+                    "value": "--",
+                    "subfields": [
+                        "a",
+                        "b",
+                        "c",
+                        "d",
                         "e",
                         "g",
                         "v",
