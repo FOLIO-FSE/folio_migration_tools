@@ -1,7 +1,7 @@
 import re
 
 
-class Conditions:
+class BibsConditions:
     def __init__(self, folio):
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"

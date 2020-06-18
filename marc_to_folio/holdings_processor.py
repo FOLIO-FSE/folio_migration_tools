@@ -5,7 +5,7 @@ import os
 from jsonschema import ValidationError, validate
 
 
-class HoldingsMarcProcessor:
+class HoldingsProcessor:
     """the processor"""
 
     def __init__(self, mapper, folio_client, results_file, args):

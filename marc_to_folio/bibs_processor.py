@@ -6,7 +6,7 @@ import os.path
 from jsonschema import ValidationError, validate
 
 
-class MarcProcessor:
+class BibsProcessor:
     """the processor"""
 
     def __init__(self, mapper, folio_client, results_file, args):

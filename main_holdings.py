@@ -6,9 +6,8 @@ import logging
 import json
 import pymarc
 from folioclient.FolioClient import FolioClient
-from marc_to_folio.holdings_marc_processor import HoldingsMarcProcessor
+from marc_to_folio.holdings_processor import HoldingsProcessor
 from marc_to_folio import HoldingsDefaultMapper
-from marc_to_folio import HoldingsAlabamaMapper
 
 
 def main():
@@ -31,16 +30,9 @@ def main():
         help=("results will be written out for Postgres" "ingestion. Default is JSON"),
         action="store_true",
     )
-    parser.add_argument("-mapper", "-m", help=("The mapper of choice"))
-    parser.add_argument("-location_map_path", "-l", help=("path of location map"))
+    parser.add_argument("-map_path", "-m", help=("path of location map"))
     parser.add_argument(
         "-marcxml", "-x", help=("DATA is in MARCXML format"), action="store_true"
-    )
-    parser.add_argument(
-        "-validate",
-        "-v",
-        help=("Validate JSON data against JSON Schema"),
-        action="store_true",
     )
     args = parser.parse_args()
     print("\tresults are stored at:\t", args.result_folder)
@@ -57,7 +49,9 @@ def main():
     print(f"Locations in FOLIO: {len(folio_client.locations)}")
     csv.register_dialect("tsv", delimiter="\t")
     if args.location_map_path:
-        with open(args.location_map_path) as location_map_f:
+        with open(
+            os.path.join(args.location_map_path, "locations.tsv")
+        ) as location_map_f:
             location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
         print(f"Locations in map: {len(location_map)}")
     with open(
@@ -65,25 +59,14 @@ def main():
     ) as json_file:
         instance_id_map = json.load(json_file)
     print(len(instance_id_map))
-    try:
-        mapper_name = next(
-            (m for m in mappers if args.mapper and args.mapper in m),
-            "HoldingsDefaultMapper",
-        )
-        print(mapper_name)
-        class_ = getattr(module, mapper_name)
-        mapper = class_(folio_client, instance_id_map, location_map)
-
-    except Exception as ee:
-        print("could not instantiate mapper")
-        raise ee
+    mapper = HoldingsDefaultMapper(folio_client, instance_id_map, location_map)
     print(f"Number of instances in ID map: {len(instance_id_map)}")
     print("Rec./s\t\tTot. recs\t\t")
 
     with open(
         os.path.join(args.result_folder, "folio_holdings.json"), "w+"
     ) as results_file:
-        processor = HoldingsMarcProcessor(mapper, folio_client, results_file, args)
+        processor = HoldingsProcessor(mapper, folio_client, results_file, args)
         if args.marcxml:
             pymarc.map_xml(processor.process_record, args.records_file)
         else:

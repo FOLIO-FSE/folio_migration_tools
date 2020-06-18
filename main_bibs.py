@@ -15,7 +15,7 @@ from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
 from marc_to_folio import RulesMapper
 
-from marc_to_folio.marc_processor import MarcProcessor
+from marc_to_folio.bibs_processor import BibsProcessor
 
 
 class Worker:

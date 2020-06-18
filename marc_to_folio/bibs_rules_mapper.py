@@ -11,10 +11,10 @@ from textwrap import wrap
 import requests
 from pymarc import Field, JSONWriter, XMLWriter
 
-from marc_to_folio.conditions import Conditions
+from marc_to_folio.conditions import BibsConditions
 
 
-class RulesMapper:
+class BibsRulesMapper:
     """Maps a MARC record to inventory instance format according to
     the FOLIO community convention"""
 
@@ -25,7 +25,7 @@ class RulesMapper:
         self.discovery_suppress_locations = discovery_suppress_locations
         self.stats = {}
         self.migration_report = {}
-        self.conditions = Conditions(folio)
+        self.conditions = BibsConditions(folio)
         self.migration_user_id = "d916e883-f8f1-4188-bc1d-f0dce1511b50"
         instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json"
         schema_request = requests.get(instance_url)
