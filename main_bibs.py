@@ -56,7 +56,7 @@ class Worker:
     def work(self):
         print("Starting....")
         with open(self.results_file_path, "w+") as results_file:
-            self.processor = MarcProcessor(
+            self.processor = BibsProcessor(
                 self.mapper, self.folio_client, results_file, self.args,
             )
             self.start = time.time()
