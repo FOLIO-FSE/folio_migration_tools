@@ -67,6 +67,7 @@
                     </datafield>
                     <datafield ind1="3" ind2="0" tag="246">
                         <subfield code="a">Engineering identities, epistemologies and values</subfield>
+                        <subfield code="b">remainder title</subfield>
                     </datafield>
                     <datafield ind1=" " ind2="1" tag="264">
                         <subfield code="c">2015</subfield>
@@ -167,7 +168,7 @@
                 </record>
             </metadata>
             <about>
-                <agent name="unknown"/>
+                <agent name="unknown" />
             </about>
         </record>
     </ListRecords>
