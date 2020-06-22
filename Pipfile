@@ -15,11 +15,11 @@ jsonschema = "*"
 requests = "*"
 pymarc = "*"
 lxml = "*"
-folioclient = "*"
 python-jsonschema-objects = "*"
 pylint = "*"
 black = "*"
-deprecated = "*"
+Deprecated = "*"
+folioclient = "*"
 
 [requires]
 python_version = "3.7"

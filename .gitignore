@@ -103,3 +103,4 @@ ENV/
 results/
 # own stuff
 tests/test_config.json
+tests/test_config_rules.json

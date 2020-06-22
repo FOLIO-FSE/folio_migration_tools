@@ -13,7 +13,7 @@ import time
 
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
-from marc_to_folio import RulesMapper
+from marc_to_folio import BibsRulesMapper
 
 from marc_to_folio.bibs_processor import BibsProcessor
 
@@ -27,13 +27,7 @@ class Worker:
         self.stats = {}
         self.migration_report = {}
         self.results_file_path = results_file
-        self.allowed_locs = self.setup_allowed(args)
-        self.discovery_suppress_locations = self.setup_discovery_suppress_locations(
-            args
-        )
 
-        self.inventory_only = self.setup_inventory_only(args)
-        self.num_filtered = 0
         self.files = [
             f
             for f in listdir(args.source_folder)
@@ -42,14 +36,9 @@ class Worker:
         self.folio_client = folio_client
         print(f"Files to process: {len(self.files)}")
         print(json.dumps(self.files, sort_keys=True, indent=4))
-
-        self.mapper = RulesMapper(
-            folio_client, args.results_folder, self.discovery_suppress_locations,
-        )
+        self.mapper = BibsRulesMapper(self.folio_client, args.results_folder)
         self.processor = None
-        print("Rec./s\t\tTot. recs\t\t")
         self.failed_files = list()
-        self.filtered_out_locations = {}
         self.bibids = set()
         print("Init done")
 
@@ -90,12 +79,7 @@ class Worker:
                 )
             else:
                 add_stats(self.stats, "MARC21 Records successfully parsed")
-                if self.keep_and_clean_for_msu(record):
-                    inventory_only = self.check_inventory_only(record)
-                    self.processor.process_record(record, False)
-                    add_stats(self.stats, "MARC21 Records filtering - remaining")
-                else:
-                    add_stats(self.stats, "MARC21 Records filtering - filtered out")
+                self.processor.process_record(record, False)
 
     def wrap_up(self):
         print("Done. Wrapping up...")
@@ -106,27 +90,21 @@ class Worker:
         print("# Bibliographic records migration")
         print(f"Time Run: {dt.isoformat(dt.now())}")
         print("## Bibliographic records migration counters")
-        print_dict_to_md_table(
-            {k: self.stats[k] for k in sorted(self.stats)}, "    ", "Count"
-        )
-        print("## filter_by_location_results")
-        print_dict_to_md_table(
-            {
-                k: self.filtered_out_locations[k]
-                for k in sorted(self.filtered_out_locations)
-            },
-            "Location",
-            "Count",
-        )
+        print_dict_to_md_table(self.stats, "    ", "Count")
         print("## Unmapped MARC tags")
         print_dict_to_md_table(
-            {
-                k: self.mapper.unmapped_tags[k]
-                for k in sorted(self.mapper.unmapped_tags)
-            },
-            "Tag",
-            "Count",
+            self.mapper.unmapped_tags, "Tag", "Count",
         )
+        print("## Mapped FOLIO fields")
+        print_dict_to_md_table(
+            self.mapper.mapped_folio_fields, "Tag", "Count",
+        )
+        print("## Unmapped FOLIO fields")
+        print_dict_to_md_table(
+            self.mapper.unmapped_folio_fields, "Tag", "Count",
+        )
+        print("## Unmapped conditions in rules")
+        print_dict_to_md_table(self.mapper.unmapped_conditions)
 
         self.write_migration_report(self.mapper.migration_report)
         self.write_migration_report(self.processor.migration_report)
@@ -139,159 +117,15 @@ class Worker:
             self.migration_report[header] = list()
         self.migration_report[header].append(messageString)
 
-    def check_inventory_only(self, record):
-        f945s = record.get_fields("945")
-        if any(f945s):
-            marc_locs = get_subfield_contents(record, "945", "l")
-            inventory_only = any(
-                marc_loc
-                for marc_loc in marc_locs
-                if marc_loc in self.inventory_only and marc_loc
-            )
-            if inventory_only:
-                add_stats(self.stats, "Inventory only")
-            return inventory_only
-        return False
-
-    def keep_and_clean_for_msu(self, record):
-        bib_id = record["907"]["a"]
-
-        # filter out or not?
-        # has record any of the allowed locations? If yes, migrate
-        marc_locs = get_subfield_contents(record, "945", "l")
-        has_allowed = any(
-            marc_loc
-            for marc_loc in marc_locs
-            if marc_loc in self.allowed_locs and marc_loc
-        )
-        # report on duplicates
-        if bib_id in self.bibids:
-            add_stats(self.stats, "Duplicate MARC21 records")
-            return False
-        # Not a dupe, add to list
-        self.bibids.add(bib_id)
-
-        # if no items are attached, return the record
-        f945s = record.get_fields("945")
-        if not any(f945s):
-            add_stats(self.stats, "Bibs without any Items")
-            return True
-
-        for f856 in record.get_fields("856"):
-            for sf in f856.get_subfields("5"):
-                if sf and sf.strip() != "6mosu":
-                    try:
-                        record.remove_field(f856)
-                    except Exception as ee:
-                        print(f"could not delete {f856} from {record['001']} - {ee}")
-                    add_stats(self.stats, f"856 Removed - {sf}")
-                    add_stats(self.stats, f"856 Removed Total")
-                else:
-                    add_stats(self.stats, f"856 Preserved Total")
-                    add_stats(self.stats, f"856 Preserved - {sf}")
-            if "5" not in f856:
-                add_stats(self.stats, f"856 Preserved Total")
-                add_stats(self.stats, "856 without $5. Preserving")
-
-        for f945 in record.get_fields("945"):
-            ls = f945.get_subfields("l")
-            if not any(l for l in ls if l in self.allowed_locs):
-                add_stats(self.stats, "945 not in allowed location, removed")
-                record.remove_field(f945)
-                # print(f"{l} - {[str(f) for f in record.get_fields('945')]}")
-            else:
-                add_stats(self.stats, "945 in allowed location. Updating to FOLIO one")
-                allowed = ""
-                run = True
-                while run:
-                    l = f945.delete_subfield("l")
-                    if not l:
-                        run = False
-                    if l in self.allowed_locs:
-                        allowed = l
-                f945.add_subfield("l", self.allowed_locs[allowed])
-
-        # report on locations in records
-        for loc in set(marc_locs):
-            if loc in self.allowed_locs:
-                add_stats(
-                    self.filtered_out_locations, f"Items w/ location allowed - {loc}"
-                )
-            else:
-                add_stats(
-                    self.filtered_out_locations,
-                    f"Items w/ location filtered out - {loc}",
-                )
-
-        return has_allowed
-
-    def setup_discovery_suppress_locations(self, args):
-        if args.msu_locations_path:
-            csv.register_dialect("tsv", delimiter="\t")
-            with open(args.msu_locations_path) as loc_file:
-                self.locations_map = list(csv.DictReader(loc_file, dialect="tsv"))
-                locs = [
-                    l["folio_code"]
-                    for l in self.locations_map
-                    if l["suppress_from_discovery"] and l["folio_code"]
-                ]
-                print(
-                    f"{len(locs)} Discovery suppress locations fetched:\n{json.dumps(locs, sort_keys=True, indent=4)}"
-                )
-                self.stats["Discovery Suppress Locations"] = len(locs)
-                return locs
-
-    def setup_allowed(self, args):
-        if args.msu_locations_path:
-            csv.register_dialect("tsv", delimiter="\t")
-            with open(args.msu_locations_path) as loc_file:
-                self.locations_map = list(csv.DictReader(loc_file, dialect="tsv"))
-                allowed_locs = dict(
-                    [
-                        (l["iii_code"], l["folio_code"])
-                        for l in self.locations_map
-                        if l["barcode_handling"]
-                        != "Do not import instances/holdings/or item records"
-                        and l["iii_code"]
-                    ]
-                )
-                print(
-                    f"{len(allowed_locs)} allowed locations fetched:\n{json.dumps(allowed_locs, sort_keys=True, indent=4)}"
-                )
-                self.stats["Allowed Locations"] = len(allowed_locs)
-                return allowed_locs
-        else:
-            return []
-
-    def setup_inventory_only(self, args):
-        if args.msu_locations_path:
-            csv.register_dialect("tsv", delimiter="\t")
-            with open(args.msu_locations_path) as loc_file:
-                self.locations_map = list(csv.DictReader(loc_file, dialect="tsv"))
-                inventory_only = list(
-                    l["iii_code"]
-                    for l in self.locations_map
-                    if l["barcode_handling"] == "Inventory only plus holdings, items"
-                    and l["iii_code"]
-                )
-                print(
-                    f"{len(inventory_only)} inventory only locations fetched:"
-                    f"\n{json.dumps(inventory_only, sort_keys=True, indent=4)}"
-                )
-                self.stats["Inventory-only Locations"] = len(inventory_only)
-                return inventory_only
-        else:
-            return []
-
     def write_migration_report(self, other_report=None):
         if other_report:
             for a in other_report:
-                print(f"## {a}")
+                print(f"## {a} - {len(other_report[a])} things")
                 for b in other_report[a]:
                     print(f"{b}\\")
         else:
             for a in self.migration_report:
-                print(f"## {a}")
+                print(f"## {a} - {len(self.migration_report[a])} things")
                 for b in self.migration_report[a]:
                     print(f"{b}\\")
 
@@ -305,8 +139,6 @@ def parse_args():
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
-    parser.add_argument("data_source", help=("name of this data set"))
-    parser.add_argument("-mapper", "-m", help=("The mapper of choice"))
     parser.add_argument(
         "-force_utf_8",
         "-utf8",
@@ -348,7 +180,6 @@ def main():
     print("\tTenanti Id:\t", args.tenant_id)
     print("\tUsername:   \t", args.username)
     print("\tPassword:   \tSecret")
-    print("\tRecord source:\t", args.data_source)
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
@@ -375,9 +206,10 @@ def add_stats(stats, a):
 
 def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
     # TODO: Move to interface or parent class
+    d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
     print(f"{h1} | {h2}")
     print("--- | ---:")
-    for k, v in my_dict.items():
+    for k, v in d_sorted.items():
         print(f"{k} | {v}")
 
 
