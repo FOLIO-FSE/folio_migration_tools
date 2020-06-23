@@ -5,11 +5,10 @@ import requests
 import logging
 import json
 import pymarc
-from marc_to_folio.holdings_default_mapper import HoldingsDefaultMapper
 from datetime import datetime
 
 
-class HoldingsAlabamaMapper(HoldingsDefaultMapper):
+class HoldingsDefaultMapper:
     """Maps a MARC record to inventory instance format according to
     the FOLIO community convention"""
 
@@ -260,9 +259,10 @@ def add_stats(stats, a):
 
 def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
     # TODO: Move to interface or parent class
+    d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
     print(f"{h1} | {h2}")
     print("--- | ---:")
-    for k, v in my_dict.items():
+    for k, v in d_sorted.items():
         print(f"{k} | {v}")
 
 

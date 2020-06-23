@@ -2,6 +2,7 @@
 FOLIO community specifications"""
 import json
 import os.path
+import copy
 import uuid
 import xml.etree.ElementTree as ET
 from concurrent.futures import ProcessPoolExecutor
@@ -11,7 +12,7 @@ from textwrap import wrap
 import requests
 from pymarc import Field, JSONWriter, XMLWriter
 
-from marc_to_folio.conditions import BibsConditions
+from marc_to_folio.bibs_conditions import BibsConditions
 
 
 class BibsRulesMapper:
@@ -19,27 +20,22 @@ class BibsRulesMapper:
     the FOLIO community convention"""
 
     def __init__(
-        self, folio, results_path, discovery_suppress_locations: None,
+        self, folio, results_path,
     ):
         self.folio = folio
-        self.discovery_suppress_locations = discovery_suppress_locations
         self.stats = {}
         self.migration_report = {}
         self.conditions = BibsConditions(folio)
-        self.migration_user_id = "d916e883-f8f1-4188-bc1d-f0dce1511b50"
-        instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json"
-        schema_request = requests.get(instance_url)
-        schema_text = schema_request.text
-        self.instance_schema = json.loads(schema_text)
+        self.instance_schema = get_instance_schema()
         self.holdings_map = {}
         self.results_path = results_path
-        # TODO: Move SRS Handling to somewhere more central
         self.id_map = {}
         self.srs_recs = []
         print("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
         self.contrib_name_types = {}
         self.mapped_folio_fields = {}
+        self.unmapped_folio_fields = {}
         self.alt_title_map = {}
         self.identifier_types = []
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
@@ -58,7 +54,7 @@ class BibsRulesMapper:
         self.instance_relationships = {}
         self.instance_relationship_types = {}
 
-    def parse_bib(self, marc_record, record_source, inventory_only=False):
+    def parse_bib(self, marc_record, inventory_only=False):
         """ Parses a bib recod into a FOLIO Inventory instance object
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function"""
@@ -87,24 +83,21 @@ class BibsRulesMapper:
 
             if marc_field.tag == "008":
                 temp_inst_type = folio_instance["instanceTypeId"]
-
         self.perform_additional_parsing(folio_instance, temp_inst_type, marc_record)
-        suppress = self.suppress_from_discovery(marc_record)
-        folio_instance["discoverySuppress"] = suppress
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
         # self.validate(folio_instance)
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
-        if not inventory_only:
-            self.save_source_record(marc_record, folio_instance["id"], suppress)
-        else:
-            add_stats(self.misc_stats, "inventory_only")
-
+        count_unmapped_fields(
+            self.unmapped_folio_fields, self.instance_schema, folio_instance
+        )
+        count_mapped_fields(self.mapped_folio_fields, folio_instance)
+        self.save_source_record(marc_record, folio_instance["id"])
         """
         raise Exception("trim away multiple whitespace and newlines..")
         raise Exception('createDate and update date and catalogeddate')"""
-        self.id_map[get_source_id(marc_record)] = {"id": folio_instance["id"]}
+        self.id_map[get_legacy_id(marc_record)] = {"id": folio_instance["id"]}
         return folio_instance
 
     def perform_additional_parsing(self, folio_instance, temp_inst_type, marc_record):
@@ -114,7 +107,7 @@ class BibsRulesMapper:
             folio_instance["instanceTypeId"] = temp_inst_type
         elif not temp_inst_type and not folio_instance.get("instanceTypeId", ""):
             raise ValueError("No Instance type ID")
-        folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record)
+        # folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record)
         if "languages" in folio_instance:
             folio_instance["languages"].extend(self.get_languages(marc_record))
         else:
@@ -133,9 +126,6 @@ class BibsRulesMapper:
         self.srs_records_file.close()
         self.srs_marc_records_file.close()
         self.srs_raw_records_file.close()
-        sorted_tags = {k: self.unmapped_tags[k] for k in sorted(self.unmapped_tags)}
-        print(json.dumps(sorted_tags, indent=4))
-        print(json.dumps(self.unmapped_conditions, indent=4))
 
     def map_field_according_to_mapping(self, marc_field, mappings, rec):
         for mapping in mappings:
@@ -261,42 +251,41 @@ class BibsRulesMapper:
     def add_value_to_target(self, rec, target_string, value):
         if value:
             targets = target_string.split(".")
-            sch = self.instance_schema["properties"]
-            prop = rec
-            sc_prop = sch
-            sc_parent = None
-            parent = None
             if len(targets) == 1:
-                # print(f"{target_string} {value} {rec}")
-                if (
-                    sch[target_string]["type"] == "array"
-                    and sch[target_string]["items"]["type"] == "string"
-                ):
-                    if target_string not in rec:
-                        rec[target_string] = value
-                    else:
-                        rec[target_string].extend(value)
-                elif sch[target_string]["type"] == "string":
-                    rec[target_string] = value[0]
-                else:
-                    raise Exception(
-                        f"Edge! {target_string} {sch[target_string]['type']}"
-                    )
+                self.add_value_to_first_level_target(rec, target_string, value)
             else:
-                for target in targets:
-                    if target in sc_prop:
-                        sc_prop = sc_prop[target]
-                    else:
+                sc_parent = None
+                parent = None
+                sch = self.instance_schema["properties"]
+                sc_prop = sch
+                prop = copy.deepcopy(rec)
+                for target in targets:  # Iterate over names in hierarcy
+                    if target in sc_prop:  # property is on this level
+                        sc_prop = sc_prop[target]  # set current property
+                    else:  # next level. take the properties from the items
                         sc_prop = sc_parent["items"]["properties"][target]
-                    if target not in rec:
-                        sc_prop_type = sc_prop.get("type", "string")
-                        if sc_prop_type == "array":
-                            prop[target] = []
-                            break
+                    if (
+                        target not in rec and not sc_parent
+                    ):  # have we added this already?
+                        if is_array_of_strings(sc_prop):
+                            rec[target] = []
+                            # break
                             # prop[target].append({})
-                        elif sc_parent["type"] == "array" and sc_prop_type == "string":
-                            print(f"break! {target} {sc_prop} {sc_parent} {prop}")
-                            break
+                        elif is_array_of_objects(sc_prop):
+                            rec[target] = [{}]
+                            # break
+                        elif (
+                            sc_parent
+                            and is_array_of_objects(sc_parent)
+                            and sc_prop.get("type", "string") == "string"
+                        ):
+                            # print(f"break! {target} {prop} {value}")
+                            if len(rec[parent][-1]) > 0:
+                                rec[parent][-1][target] = value[0]
+                            else:
+                                rec[parent][-1] = {target: value[0]}
+                            # print(parent)
+                            # break
                         else:
                             if sc_parent["type"] == "array":
                                 prop[target] = {}
@@ -305,11 +294,53 @@ class BibsRulesMapper:
                                 raise Exception(
                                     f"Edge! {target_string} {sch[target_string]}"
                                 )
-                    if target == targets[-1]:
-                        prop[target] = value[0]
-                    prop = prop[target]
+                    else:  # We already have stuff in here
+                        if is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
+                            sc_prop["items"]["properties"]
+                        ):
+                            rec[target].append({})
+                        elif sc_parent and target in rec[parent][-1]:
+                            rec[parent].append({})
+                            if len(rec[parent][-1]) > 0:
+                                rec[parent][-1][target] = value[0]
+                            else:
+                                rec[parent][-1] = {target: value[0]}
+                        elif (
+                            sc_parent
+                            and is_array_of_objects(sc_parent)
+                            and sc_prop.get("type", "string") == "string"
+                        ):
+                            # print(f"break! {target} {prop} {value}")
+                            if len(rec[parent][-1]) > 0:
+                                rec[parent][-1][target] = value[0]
+                                # print(rec[parent])
+                            else:
+                                rec[parent][-1] = {target: value[0]}
+                                # print(rec[parent])
+                        # break
+
+                    # if target == targets[-1]:
+                    # print(f"HIT {target} {value[0]}")
+                    # prop[target] = value[0]
+                    # prop = rec[target]
                     sc_parent = sc_prop
                     parent = target
+
+    def add_value_to_first_level_target(self, rec, target_string, value):
+        # print(f"{target_string} {value} {rec}")
+        sch = self.instance_schema["properties"]
+        if (
+            sch[target_string]["type"] == "array"
+            and sch[target_string]["items"]["type"] == "string"
+        ):
+            if target_string not in rec:
+                rec[target_string] = value
+            else:
+                rec[target_string].extend(value)
+        elif sch[target_string]["type"] == "string":
+            rec[target_string] = value[0]
+        else:
+            raise Exception(f"Edge! {target_string} {sch[target_string]['type']}")
 
     def validate(self, folio_rec):
         if folio_rec["title"].strip() == "":
@@ -324,7 +355,7 @@ class BibsRulesMapper:
                     self.mapped_folio_fields.get(key, 0) + 1
                 )
 
-    def save_source_record(self, marc_record, instance_id, suppress):
+    def save_source_record(self, marc_record, instance_id, suppress=False):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(uuid.uuid4())
         marc_record.add_field(
@@ -343,60 +374,15 @@ class BibsRulesMapper:
             self.flush_srs_recs()
             self.srs_recs = []
 
-    def suppress_from_discovery(self, marc_record):
-        if not self.discovery_suppress_locations:
-            add_stats(
-                self.stats, "Suppress from discovery - no locations, not suppressed"
-            )
-            return False
-        f945s = marc_record.get_fields("945")
-        for f945 in f945s:
-            for l in f945.get_subfields("l"):
-                if l in self.discovery_suppress_locations:
-                    add_stats(
-                        self.stats,
-                        "Suppress from discovery - 945 in location. Suppressed",
-                    )
-                    return True
-                else:
-                    add_stats(
-                        self.stats, "Suppress from discovery - 945 not suppressed"
-                    )
-        if not any(f945s):
-            add_stats(self.stats, "Suppress from discovery - No 945s")
-        return False
-
     def flush_srs_recs(self):
         pool = ProcessPoolExecutor(max_workers=4)
         results = list(pool.map(get_srs_strings, self.srs_recs))
-        """for srs_rec in self.srs_recs:
-            r = get_srs_strings(srs_rec)
-            self.srs_records_file.write(r[0])
-            self.srs_marc_records_file.write(r[2])
-            self.srs_raw_records_file.write(r[1])"""
         self.srs_records_file.write("".join(r[0] for r in results))
         self.srs_marc_records_file.write("".join(r[2] for r in results))
         self.srs_raw_records_file.write("".join(r[1] for r in results))
 
     def get_nature_of_content(self, marc_record):
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
-
-    def get_mode_of_issuance_id(self, marc_record):
-        try:
-            seventh = marc_record.leader[7]
-            m_o_i_s = {
-                "m": "Monograph",
-                "s": "Serial",
-                "i": "Integrating Resource",
-            }
-            name = m_o_i_s.get(seventh, "Other")
-            if not name:
-                raise Exception(f"{name} is not a valid mode of issuance")
-            return next(
-                i["id"] for i in self.folio.modes_of_issuance if name == i["name"]
-            )
-        except IndexError:
-            raise ValueError(f"No seven in {marc_record.leader}")
 
     def get_languages(self, marc_record):
         """Get languages and tranforms them to correct codes"""
@@ -457,9 +443,15 @@ class BibsRulesMapper:
                 elif not language_value.strip():
                     continue
                 elif language_value not in forbidden_values:
-                    print(
-                        f"Illegal language code: {language_value} for {get_legacy_id(marc_record)}"
+                    self.add_to_migration_report(
+                        "Unrecognized language codes in records",
+                        f"{language_value} not recognized for {get_legacy_id(marc_record)}",
                     )
+
+    def add_to_migration_report(self, header, messageString):
+        if header not in self.migration_report:
+            self.migration_report[header] = list()
+        self.migration_report[header].append(messageString)
 
     def dedupe_rec(self, rec):
         # remove duplicates
@@ -515,12 +507,10 @@ def add_stats(stats, a):
 
 
 def get_legacy_id(marc_record):
-    if "001" in marc_record and marc_record["001"]:
-        return marc_record["001"].format_field()
-    elif "907" in marc_record and "a" in marc_record["907"] and marc_record["907"]["a"]:
-        return marc_record["907"]["a"]
-    else:
-        return marc_record.title()
+    # TODO: handle various legacy systems (Sierra 907a etc)
+    if "001" not in marc_record:
+        raise Exception("No 001 in record. Implement legacy_id_handling")
+    return marc_record["001"].format_field()
 
 
 def has_conditions(mapping):
@@ -531,11 +521,33 @@ def has_value_to_add(mapping):
     return mapping.get("rules", []) and mapping["rules"][0].get("value", "")
 
 
-def get_source_id(marc_record):
-    """Gets the system Id from sierra"""
-    if "907" in marc_record and "a" in marc_record["907"]:
-        return marc_record["907"]["a"].replace(".b", "")[:-1]
-    elif "001" in marc_record:
-        return marc_record["001"].format_field()
-    else:
-        raise ValueError("No 001 present")
+def get_instance_schema():
+    instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json"
+    schema_request = requests.get(instance_url)
+    schema_text = schema_request.text
+    return json.loads(schema_text)
+
+
+def is_array_of_strings(schema_property):
+    sc_prop_type = schema_property.get("type", "string")
+    return sc_prop_type == "array" and schema_property["items"]["type"] == "string"
+
+
+def is_array_of_objects(schema_property):
+    sc_prop_type = schema_property.get("type", "string")
+    return sc_prop_type == "array" and schema_property["items"]["type"] == "object"
+
+
+def count_unmapped_fields(stats_map, schema, folio_object):
+    schema_properties = schema["properties"].keys()
+    unmatched_properties = (
+        p for p in schema_properties if p not in folio_object.keys()
+    )
+    for p in unmatched_properties:
+        add_stats(stats_map, p)
+
+
+def count_mapped_fields(stats_map, folio_object):
+    for key, value in folio_object.items():
+        if value or any(value):
+            add_stats(stats_map, key)

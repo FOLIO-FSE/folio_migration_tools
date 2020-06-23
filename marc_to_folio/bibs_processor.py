@@ -26,9 +26,7 @@ class BibsProcessor:
             add_stats(self.stats, "Bibs processed")
 
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.mapper.parse_bib(
-                marc_record, self.args.data_source, inventory_only
-            )
+            folio_rec = self.mapper.parse_bib(marc_record, inventory_only)
             if self.args.validate:
                 validate(folio_rec, self.instance_schema)
             # write record to file
@@ -44,20 +42,21 @@ class BibsProcessor:
                 f"{value_error} for {marc_record['001']} ",
             )
             add_stats(self.stats, "Value Errors")
-            add_stats(self.stats, "failed_bibs")
+            add_stats(self.stats, "Bib records that faile transformation")
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
         except ValidationError as validation_error:
             add_stats(self.stats, "Validation Errors")
-            add_stats(self.stats, "failed_bibs")
+            add_stats(self.stats, "Bib records that faile transformation")
             print("Error validating record. Halting...")
             raise validation_error
         except Exception as inst:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
-            add_stats(self.stats, "failed_bibs")
+            add_stats(self.stats, "Bib records that faile transformation")
+            add_stats(self.stats, "Transformation exceptions")
             print(type(inst))
             print(inst.args)
             print(inst)
@@ -70,13 +69,13 @@ class BibsProcessor:
         try:
             self.mapper.wrap_up()
         except Exception as exception:
-            print(f"error when flushing last srs recs {exception}")
+            print(f"error during wrap up {exception}")
         print("Saving map of old and new IDs")
-        self.stats["Number of Instances in map"] = len(self.mapper.id_map)
         if self.mapper.id_map:
             map_path = os.path.join(self.results_folder, "instance_id_map.json")
             with open(map_path, "w+") as id_map_file:
                 json.dump(self.mapper.id_map, id_map_file, sort_keys=True, indent=4)
+            self.stats["Number of Instances in map"] = len(self.mapper.id_map)
         print("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
             holdings_path = os.path.join(self.results_folder, "folio_holdings.json")

@@ -4,6 +4,7 @@ import re
 class BibsConditions:
     def __init__(self, folio):
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
+        self.stats = {}
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
         self.filter_last_chars = r",$"
         self.folio = folio
@@ -67,10 +68,27 @@ class BibsConditions:
             }
             name = m_o_i_s.get(seventh, "Other")
             if not name:
-                raise Exception(f"{name} is not a valid mode of issuance")
-            return next(
-                i["id"] for i in self.folio.modes_of_issuance if name == i["name"]
+                add_stats(self.stats, f"Unmatched Modes of issuance code {seventh}")
+                raise ValueError(f"{name} is not a valid mode of issuance")
+            ret = next(
+                (
+                    i["id"]
+                    for i in self.folio.modes_of_issuance
+                    if str(name).lower() == i["name"].lower()
+                ),
+                "",
             )
+            if not ret:
+                add_stats(self.stats, f"Unmatched Modes of issuance code {seventh}")
+                return next(
+                    (
+                        i["id"]
+                        for i in self.folio.modes_of_issuance
+                        if "unspecified" == i["name"].lower()
+                    ),
+                    "",
+                )
+            return ret
         except IndexError:
             raise ValueError(f"No seven in {marc_field}")
 
@@ -229,25 +247,34 @@ class BibsConditions:
     def condition_set_instance_type_id(self, value, parameter, marc_field):
         if not self.folio.instance_types:
             raise ValueError("No instance_types setup in tenant")
-        v = next(
-            (f["id"] for f in self.folio.instance_types if f["code"] == value[:3]), ""
-        )
-        if not v:
-            if "a" in marc_field:
-                w = next(
-                    (
-                        f["id"]
-                        for f in self.folio.instance_types
-                        if f["name"] == marc_field["a"]
-                    ),
-                    "",
+        if marc_field.tag == "008":
+            v = next(
+                (f["id"] for f in self.folio.instance_types if f["code"] == value[:3]),
+                "",
+            )
+            if not v:
+                return next(
+                    f["id"] for f in self.folio.instance_types if f["code"] == "zzz"
                 )
-                if not w:
-                    raise ValueError(
-                        f"no matching instance_types {value[:3]} {marc_field}"
-                    )
-                return w
-        return v
+            return v
+        elif marc_field.tag == "336" and "b" in marc_field:
+            w = next(
+                (
+                    f["id"]
+                    for f in self.folio.instance_types
+                    if f["name"] == marc_field["b"]
+                ),
+                "",
+            )
+            if not w:
+                return next(
+                    f["id"] for f in self.folio.instance_types if f["code"] == "zzz"
+                )
+            return w
+        else:
+            raise ValueError(
+                f"Something went wrong when trying to parse Instance type from {marc_field}"
+            )
 
     def condition_set_instance_format_id(self, value, parameter, marc_field):
         if not self.folio.instance_formats:
@@ -292,3 +319,11 @@ class BibsConditions:
                 f"no matching electronic_access_relationships {name} {marc_field}"
             )
         return v
+
+
+def add_stats(stats, a):
+    # TODO: Move to interface or parent class
+    if a not in stats:
+        stats[a] = 1
+    else:
+        stats[a] += 1

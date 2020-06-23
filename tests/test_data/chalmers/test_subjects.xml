@@ -65,9 +65,6 @@
                         <subfield code="p">Engineering identities, epistemologies and values. /</subfield>
                         <subfield code="c">Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors.</subfield>
                     </datafield>
-                    <datafield ind1="3" ind2="0" tag="246">
-                        <subfield code="a">Engineering identities, epistemologies and values</subfield>
-                    </datafield>
                     <datafield ind1=" " ind2="1" tag="264">
                         <subfield code="c">2015</subfield>
                     </datafield>
@@ -210,7 +207,7 @@
                 </record>
             </metadata>
             <about>
-                <agent name="unknown"/>
+                <agent name="unknown" />
             </about>
         </record>
     </ListRecords>
