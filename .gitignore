@@ -104,3 +104,7 @@ results/
 # own stuff
 tests/test_config.json
 tests/test_config_rules.json
+marc_xml_dump.xml
+srs.json
+srs_marc_records.json
+srs_raw_records.json
