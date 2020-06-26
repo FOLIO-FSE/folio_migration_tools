@@ -59,7 +59,7 @@ class HoldingsDefaultMapper:
             "845": ("abcdu3568", "Note", False, " "),
             "852": ("x", "Note", False, " "),
             "852": ("z", "Note", False, " "),
-            # "876": ("p3", "bound with item data", False, " | "),
+            "876": ("p3", "bound with item data", False, " | "),
         }
 
     def parse_hold(self, marc_record):
@@ -180,7 +180,7 @@ class HoldingsDefaultMapper:
                 ret["callNumberTypeId"] = self.get_call_number_type_id(
                     f852.indicator1, sf2
                 )
-            if "c" in f852 and f852["c"]:
+            if "b" in f852 and f852["b"]:
                 ret["permanentLocationId"] = self.get_location(f852)
         return ret
 
@@ -244,9 +244,9 @@ class HoldingsDefaultMapper:
 
     def get_location(self, f852):
         """returns the location mapped and translated"""
-        if "c" in f852 and f852["c"]:
+        if "b" in f852 and f852["b"]:
             try:
-                legacy_code = f852["c"].strip()
+                legacy_code = f852["b"].strip()
                 add_stats(self.legacy_locations, legacy_code)
                 if self.location_map:
                     mapped_code = next(
