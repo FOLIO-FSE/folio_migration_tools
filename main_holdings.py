@@ -32,11 +32,11 @@ def parse_args():
         "-marcxml", "-x", help=("DATA is in MARCXML format"), action="store_true"
     )
     args = parser.parse_args()
-    print("\tresults are stored at:\t", args.result_folder)
-    print("\tOkapi URL:\t", args.okapi_url)
-    print("\tTenanti Id:\t", args.tenant_id)
-    print("\tUsername:\t", args.username)
-    print("\tPassword:\tSecret")
+    logging.info("\tresults are stored at:\t", args.result_folder)
+    logging.info("\tOkapi URL:\t", args.okapi_url)
+    logging.info("\tTenanti Id:\t", args.tenant_id)
+    logging.info("\tUsername:\t", args.username)
+    logging.info("\tPassword:\tSecret")
     return args
 
 
@@ -46,7 +46,7 @@ def main():
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
-    print(f"Locations in FOLIO: {len(folio_client.locations)}")
+    logging.warning(f"Locations in FOLIO: {len(folio_client.locations)}")
     csv.register_dialect("tsv", delimiter="\t")
     files = [
         os.path.join(args.source_folder, f)
@@ -62,8 +62,8 @@ def main():
     ) as results_file:
         instance_id_map = json.load(json_file)
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
-        print(f"Locations in map: {len(location_map)}")
-        print(f"{len(instance_id_map)} Instance ids in map")
+        logging.warning(f"Locations in map: {len(location_map)}")
+        logging.warning(f"{len(instance_id_map)} Instance ids in map")
         mapper = HoldingsDefaultMapper(folio_client, instance_id_map, location_map)
         processor = HoldingsProcessor(mapper, folio_client, results_file, args)
         for records_file in files:

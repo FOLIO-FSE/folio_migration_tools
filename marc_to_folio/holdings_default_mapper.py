@@ -16,7 +16,7 @@ class HoldingsDefaultMapper:
 
     def __init__(self, folio_client, instance_id_map, location_map=None):
 
-        print("init Default Holdings mapper!")
+        logging.info("init Default Holdings mapper!")
         self.stats = {}
         self.tags_occurrences = {}
         self.location_map = location_map
@@ -37,7 +37,7 @@ class HoldingsDefaultMapper:
         self.holdings_note_types = self.folio_client.folio_get_all(
             "/holdings-note-types", "holdingsNoteTypes"
         )
-        print(f"{len(self.holdings_note_types)} note types")
+        logging.info(f"{len(self.holdings_note_types)} note types")
         self.call_number_types = self.folio_client.folio_get_all(
             "/call-number-types", "callNumberTypes"
         )
@@ -290,7 +290,7 @@ class HoldingsDefaultMapper:
             "",
         )
         if not nid:
-            print(f"Note type name not found {note_type_name}")
+            logging.warning(f"Note type name not found {note_type_name}")
             return next(
                 t["id"] for t in self.holdings_note_types if t["name"] == "Note"
             )
@@ -331,14 +331,14 @@ def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
 
 
 def fetch_holdings_schema():
-    print("Fetching holdings schema...", end="")
+    logging.info("Fetching holdings schema...", end="")
     holdings_url = (
         "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/"
         "master/ramls/holdingsrecord.json"
     )
     schema_request = requests.get(holdings_url)
     schema_text = schema_request.text
-    print("done")
+    logging.info("done")
     return json.loads(schema_text)
 
 
@@ -371,7 +371,7 @@ def count_mapped_fields(stats_map, folio_object):
                 keys_to_delete.append(key)
 
         else:
-            print(type(value))
+            logging.info(type(value))
 
     for mykey in keys_to_delete:
         del folio_object[mykey]
