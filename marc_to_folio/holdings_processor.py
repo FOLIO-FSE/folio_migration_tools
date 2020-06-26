@@ -1,6 +1,7 @@
 """ Class that processes each MARC record """
 import time
 import json
+import traceback
 import os
 from jsonschema import ValidationError, validate
 
@@ -25,8 +26,8 @@ class HoldingsProcessor:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record)
-            if self.args.validate:
-                validate(folio_rec, self.holdings_schema)
+            # if self.args.validate:
+            #    validate(folio_rec, self.holdings_schema)
             # write record to file
             write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
@@ -39,6 +40,8 @@ class HoldingsProcessor:
                     "{}\t\t{}".format(elapsed_formatted, self.records_count), flush=True
                 )
         except ValueError as value_error:
+            add_stats(self.mapper.stats, "Value errors")
+            add_stats(self.mapper.stats, "Failed records")
             # print(marc_record)
             print(value_error)
             # print(marc_record)
@@ -48,16 +51,22 @@ class HoldingsProcessor:
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
         except ValidationError as validation_error:
-            print("Error validating record. Halting...")
-            raise validation_error
+            add_stats(self.mapper.stats, "Validation errors")
+            add_stats(self.mapper.stats, "Failed records")
+            print(validation_error)
+            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
+            if callable(remove_from_id_map):
+                self.mapper.remove_from_id_map(marc_record)
         except Exception as inst:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
+            traceback.print_exc()
             print(type(inst))
             print(inst.args)
             print(inst)
             print(marc_record)
+
             raise inst
 
     def wrap_up(self):
