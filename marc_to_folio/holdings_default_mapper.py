@@ -59,7 +59,7 @@ class HoldingsDefaultMapper:
             "845": ("abcdu3568", "Note", False, " "),
             "852": ("x", "Note", False, " "),
             "852": ("z", "Note", False, " "),
-            "876": ("p3", "bound with item data", False, " | "),
+            # "876": ("p3", "bound with item data", False, " | "),
         }
 
     def parse_hold(self, marc_record):
@@ -258,6 +258,9 @@ class HoldingsDefaultMapper:
                         "",
                     )
                     if not mapped_code:
+                        add_stats(
+                            self.unmapped_locations, f"Legacy code - {legacy_code}"
+                        )
                         raise ValueError(f"Legacy location not mapped: {legacy_code}")
                 else:
                     mapped_code = legacy_code
@@ -267,6 +270,9 @@ class HoldingsDefaultMapper:
                     if mapped_code == l["code"]
                 )
                 if not loc:
+                    add_stats(
+                        self.unmapped_locations, f"Loc not in FOLIO - {mapped_code}"
+                    )
                     raise ValueError("Location code {mapped_code} not found in FOLIO")
                 add_stats(self.folio_locations, mapped_code)
                 return loc

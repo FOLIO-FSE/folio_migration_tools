@@ -34,15 +34,16 @@ class HoldingsProcessor:
             add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
             if self.records_count % 10000 == 0:
-                logging.warning(self.mapper.stats)
+                logging.error(self.mapper.stats)
+                logging.error(self.mapper.unmapped_locations)
                 elapsed = self.records_count / (time.time() - self.start)
                 elapsed_formatted = "{0:.4g}".format(elapsed)
-                logging.warning(f"{elapsed_formatted}\t\t{self.records_count}")
+                logging.error(f"{elapsed_formatted}\t\t{self.records_count}")
         except ValueError as value_error:
             add_stats(self.mapper.stats, "Value errors")
             add_stats(self.mapper.stats, "Failed records")
             # print(marc_record)
-            logging.warning(value_error)
+            logging.error(value_error)
             # print(marc_record)
             # print("Removing record from idMap")
             # raise value_error
@@ -52,7 +53,7 @@ class HoldingsProcessor:
         except ValidationError as validation_error:
             add_stats(self.mapper.stats, "Validation errors")
             add_stats(self.mapper.stats, "Failed records")
-            logging.warning(validation_error)
+            logging.error(validation_error)
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
