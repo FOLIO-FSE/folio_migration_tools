@@ -80,6 +80,17 @@ class Worker:
             else:
                 add_stats(self.stats, "MARC21 Records successfully parsed")
                 self.processor.process_record(record, False)
+            add_stats(self.stats, "Bibs processed")
+            self.print_progress()
+
+    def print_progress(self):
+        i = self.stats["Bibs processed"]
+        if i % 1000 == 0:
+            elapsed = i / (time.time() - self.start)
+            elapsed_formatted = int(elapsed)
+            print(
+                f"{elapsed_formatted}\t{i}", flush=True,
+            )
 
     def wrap_up(self):
         print("Done. Wrapping up...")
@@ -210,7 +221,7 @@ def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
     print(f"{h1} | {h2}")
     print("--- | ---:")
     for k, v in d_sorted.items():
-        print(f"{k} | {v}")
+        print(f"{k} | {v:,}")
 
 
 if __name__ == "__main__":
