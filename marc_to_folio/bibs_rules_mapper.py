@@ -87,7 +87,7 @@ class BibsRulesMapper:
         self.perform_additional_parsing(folio_instance, temp_inst_type, marc_record)
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
-        # self.validate(folio_instance)
+        self.validate(folio_instance)
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         count_unmapped_fields(
@@ -344,17 +344,10 @@ class BibsRulesMapper:
             raise Exception(f"Edge! {target_string} {sch[target_string]['type']}")
 
     def validate(self, folio_rec):
-        if folio_rec["title"].strip() == "":
+        """if not folio_rec.get("title", ""):
             raise ValueError(f"No title for {folio_rec['hrid']}")
-        for key, value in folio_rec.items():
-            if isinstance(value, str) and any(value):
-                self.mapped_folio_fields["key]"] = (
-                    self.mapped_folio_fields.get(key, 0) + 1
-                )
-            if isinstance(value, list) and any(value):
-                self.mapped_folio_fields["key]"] = (
-                    self.mapped_folio_fields.get(key, 0) + 1
-                )
+        if not folio_rec.get("indanceTypeId", ""):
+            raise ValueError(f"No Instance Type Id for {folio_rec['hrid']}")"""
 
     def save_source_record(self, marc_record, instance_id, suppress=False):
         """Saves the source Marc_record to the Source record Storage module"""
@@ -509,6 +502,7 @@ def add_stats(stats, a):
 
 def get_legacy_id(marc_record):
     # TODO: handle various legacy systems (Sierra 907a etc)
+    return marc_record["035"]["a"]
     if "001" not in marc_record:
         raise Exception("No 001 in record. Implement legacy_id_handling")
     return marc_record["001"].format_field()
