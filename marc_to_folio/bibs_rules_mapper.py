@@ -21,15 +21,16 @@ class BibsRulesMapper:
     the FOLIO community convention"""
 
     def __init__(
-        self, folio, results_path,
+        self, folio, args,
     ):
         self.folio = folio
         self.stats = {}
         self.migration_report = {}
         self.conditions = BibsConditions(folio)
         self.instance_schema = get_instance_schema()
+        self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
-        self.results_path = results_path
+        self.results_path = args.results_path
         self.id_map = {}
         self.srs_recs = []
         print("Fetching valid language codes...")
@@ -69,8 +70,10 @@ class BibsRulesMapper:
 
         for marc_field in marc_record:
             add_stats(self.stats, "Total number of Tags processed")
+
             if (not marc_field.tag.isnumeric()) and marc_field.tag != "LDR":
                 bad_tags.add(marc_field.tag)
+
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
                 add_stats(self.unmapped_tags, marc_field.tag)
             else:
@@ -84,6 +87,7 @@ class BibsRulesMapper:
 
             if marc_field.tag == "008":
                 temp_inst_type = folio_instance["instanceTypeId"]
+
         self.perform_additional_parsing(folio_instance, temp_inst_type, marc_record)
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
@@ -344,10 +348,10 @@ class BibsRulesMapper:
             raise Exception(f"Edge! {target_string} {sch[target_string]['type']}")
 
     def validate(self, folio_rec):
-        """if not folio_rec.get("title", ""):
+        if not folio_rec.get("title", ""):
             raise ValueError(f"No title for {folio_rec['hrid']}")
         if not folio_rec.get("indanceTypeId", ""):
-            raise ValueError(f"No Instance Type Id for {folio_rec['hrid']}")"""
+            raise ValueError(f"No Instance Type Id for {folio_rec['hrid']}")
 
     def save_source_record(self, marc_record, instance_id, suppress=False):
         """Saves the source Marc_record to the Source record Storage module"""
@@ -500,12 +504,15 @@ def add_stats(stats, a):
         stats[a] += 1
 
 
-def get_legacy_id(marc_record):
-    # TODO: handle various legacy systems (Sierra 907a etc)
-    return marc_record["035"]["a"]
-    if "001" not in marc_record:
-        raise Exception("No 001 in record. Implement legacy_id_handling")
-    return marc_record["001"].format_field()
+def get_legacy_id(marc_record, ils_flavour):
+    if ils_flavour == "iii":
+        return marc_record["907"]["a"]
+    elif ils_flavour == "voyager":
+        return marc_record["035"]["a"]
+    elif ils_flavour == "aleph":
+        return marc_record["001"].format_field()
+    else:
+        raise Exception(f"ILS {ils_flavour} not configured")
 
 
 def has_conditions(mapping):

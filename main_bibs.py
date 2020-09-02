@@ -36,7 +36,7 @@ class Worker:
         self.folio_client = folio_client
         print(f"Files to process: {len(self.files)}")
         print(json.dumps(self.files, sort_keys=True, indent=4))
-        self.mapper = BibsRulesMapper(self.folio_client, args.results_folder)
+        self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
         self.failed_files = list()
         self.bibids = set()
@@ -150,6 +150,15 @@ def parse_args():
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
+    parser.add_argument(
+        "ils_flavour", help="The kind of ILS the records are created in"
+    )
+    parser.add_argument(
+        "-holdings_records",
+        "hold",
+        "Create holdings records based on relevant MARC fields",
+        action="store_true",
+    )
     parser.add_argument(
         "-force_utf_8",
         "-utf8",

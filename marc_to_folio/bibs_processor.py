@@ -12,6 +12,7 @@ class BibsProcessor:
     def __init__(self, mapper, folio_client, results_file, args):
         self.migration_report = {}
         self.stats = {}
+        self.ils_flavour = args.ils_flavour
         self.results_folder = args.results_folder
         self.results_file = results_file
         self.instance_schema = folio_client.get_instance_json_schema()
@@ -23,7 +24,6 @@ class BibsProcessor:
         """processes a marc record and saves it"""
         folio_rec = None
         try:
-
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_bib(marc_record, inventory_only)
             if self.args.validate:
