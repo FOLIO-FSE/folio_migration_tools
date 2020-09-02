@@ -99,9 +99,8 @@ class BibsRulesMapper:
         )
         count_mapped_fields(self.mapped_folio_fields, folio_instance)
         self.save_source_record(marc_record, folio_instance["id"])
-        """
-        raise Exception("trim away multiple whitespace and newlines..")
-        raise Exception('createDate and update date and catalogeddate')"""
+        # TODO: trim away multiple whitespace and newlines..
+        # TODO: createDate and update date and catalogeddate
         self.id_map[get_legacy_id(marc_record)] = {"id": folio_instance["id"]}
         return folio_instance
 
@@ -469,26 +468,28 @@ def get_srs_strings(my_tuple):
     writer.close(close_fh=False)
     marc_uuid = str(uuid.uuid4())
     raw_uuid = str(uuid.uuid4())
+    raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
+    parsed_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
     record = {
         "id": my_tuple[2],
         "deleted": False,
         "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
         "matchedProfileId": str(uuid.uuid4()),
-        "matchedId": str(uuid.uuid4()),
-        "generation": 1,
+        "matchedId": my_tuple[2],
+        "generation": 0,
         "recordType": "MARC",
-        "rawRecordId": raw_uuid,
-        "parsedRecordId": marc_uuid,
+        "rawRecord": raw_record,
+        "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": False},
         "externalIdsHolder": {"instanceId": my_tuple[1]},
         "metadata": my_tuple[3],
+        "state": "ACTUAL",
+        "leaderRecordStatus": " ",
     }
-    raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
-    marc_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
     return (
         f"{record['id']}\t{json.dumps(record)}\n",
         f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
-        f"{marc_record['id']}\t{json.dumps(marc_record)}\n",
+        f"{parsed_record['id']}\t{json.dumps(parsed_record)}\n",
     )
 
 
