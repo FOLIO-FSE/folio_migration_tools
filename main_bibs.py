@@ -155,8 +155,8 @@ def parse_args():
     )
     parser.add_argument(
         "-holdings_records",
-        "hold",
-        "Create holdings records based on relevant MARC fields",
+        "-hold",
+        help="Create holdings records based on relevant MARC fields",
         action="store_true",
     )
     parser.add_argument(
