@@ -30,7 +30,7 @@ class BibsRulesMapper:
         self.instance_schema = get_instance_schema()
         self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
-        self.results_path = args.results_path
+        self.results_folder = args.results_folder
         self.id_map = {}
         self.srs_recs = []
         print("Fetching valid language codes...")
@@ -41,15 +41,17 @@ class BibsRulesMapper:
         self.alt_title_map = {}
         self.identifier_types = []
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
-        self.srs_records_file = open(os.path.join(self.results_path, "srs.json"), "w+")
+        self.srs_records_file = open(
+            os.path.join(self.results_folder, "srs.json"), "w+"
+        )
         self.srs_raw_records_file = open(
-            os.path.join(self.results_path, "srs_raw_records.json"), "w+"
+            os.path.join(self.results_folder, "srs_raw_records.json"), "w+"
         )
         self.srs_marc_records_file = open(
-            os.path.join(self.results_path, "srs_marc_records.json"), "w+"
+            os.path.join(self.results_folder, "srs_marc_records.json"), "w+"
         )
         self.marc_xml_writer = XMLWriter(
-            open(os.path.join(self.results_path, "marc_xml_dump.xml"), "wb+")
+            open(os.path.join(self.results_folder, "marc_xml_dump.xml"), "wb+")
         )
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
@@ -91,7 +93,7 @@ class BibsRulesMapper:
         self.perform_additional_parsing(folio_instance, temp_inst_type, marc_record)
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
-        self.validate(folio_instance)
+        self.validate(folio_instance, get_legacy_id(marc_record, self.ils_flavour))
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         count_unmapped_fields(
@@ -101,7 +103,9 @@ class BibsRulesMapper:
         self.save_source_record(marc_record, folio_instance["id"])
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
-        self.id_map[get_legacy_id(marc_record)] = {"id": folio_instance["id"]}
+        self.id_map[get_legacy_id(marc_record, self.ils_flavour)] = {
+            "id": folio_instance["id"]
+        }
         return folio_instance
 
     def perform_additional_parsing(self, folio_instance, temp_inst_type, marc_record):
@@ -346,11 +350,11 @@ class BibsRulesMapper:
         else:
             raise Exception(f"Edge! {target_string} {sch[target_string]['type']}")
 
-    def validate(self, folio_rec):
+    def validate(self, folio_rec, legacy_id):
         if not folio_rec.get("title", ""):
-            raise ValueError(f"No title for {folio_rec['hrid']}")
-        if not folio_rec.get("indanceTypeId", ""):
-            raise ValueError(f"No Instance Type Id for {folio_rec['hrid']}")
+            raise ValueError(f"No title for {legacy_id}")
+        if not folio_rec.get("instanceTypeId", ""):
+            raise ValueError(f"No Instance Type Id for {legacy_id}")
 
     def save_source_record(self, marc_record, instance_id, suppress=False):
         """Saves the source Marc_record to the Source record Storage module"""
@@ -442,7 +446,7 @@ class BibsRulesMapper:
                 elif language_value not in forbidden_values:
                     self.add_to_migration_report(
                         "Unrecognized language codes in records",
-                        f"{language_value} not recognized for {get_legacy_id(marc_record)}",
+                        f"{language_value} not recognized for {get_legacy_id(marc_record, self.ils_flavour)}",
                     )
 
     def add_to_migration_report(self, header, messageString):
