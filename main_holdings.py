@@ -31,6 +31,12 @@ def parse_args():
     parser.add_argument(
         "-marcxml", "-x", help=("DATA is in MARCXML format"), action="store_true"
     )
+    parser.add_argument(
+        "-suppress",
+        "-ds",
+        help=("This batch of records are to be suppressed in FOLIO."),
+        action="store_true",
+    )
     args = parser.parse_args()
     logging.info("\tresults are stored at:\t", args.result_folder)
     logging.info("\tOkapi URL:\t", args.okapi_url)
@@ -64,7 +70,9 @@ def main():
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
         logging.warning(f"Locations in map: {len(location_map)}")
         logging.warning(f"{len(instance_id_map)} Instance ids in map")
-        mapper = HoldingsDefaultMapper(folio_client, instance_id_map, location_map)
+        mapper = HoldingsDefaultMapper(
+            folio_client, instance_id_map, args, location_map, 
+        )
         processor = HoldingsProcessor(mapper, folio_client, results_file, args)
         for records_file in files:
             if args.marcxml:

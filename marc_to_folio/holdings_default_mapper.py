@@ -14,8 +14,8 @@ class HoldingsDefaultMapper:
 
     # Bootstrapping (loads data needed later in the script.)
 
-    def __init__(self, folio_client, instance_id_map, location_map=None):
-
+    def __init__(self, folio_client, instance_id_map, args, location_map=None):
+        self.suppress = args.suppress
         logging.info("init Default Holdings mapper!")
         self.stats = {}
         self.tags_occurrences = {}
@@ -43,7 +43,7 @@ class HoldingsDefaultMapper:
         )
         # Send out a list of note types that should be either public or private
         self.note_tags = {
-            "506": ("3abcdefgqu", "Restriction", False, " "),
+            "506": ("3abcdefgqu", "Note", False, " "),  # Was: Restriction
             "538": ("aiu3568", "Note", False, " "),
             "541": ("3abcdefhno568", "Note", False, " "),
             "561": ("3au", "Provenance", False, " "),
@@ -59,7 +59,7 @@ class HoldingsDefaultMapper:
             "845": ("abcdu3568", "Note", False, " "),
             "852": ("x", "Note", False, " "),
             "852": ("z", "Note", False, " "),
-            "876": ("p3", "bound with item data", False, " | "),
+            "876": ("p3", "Note", False, " | "),  # Was: bound with item data
         }
 
     def parse_hold(self, marc_record):
@@ -82,6 +82,7 @@ class HoldingsDefaultMapper:
             "holdingsStatementsForIndexes": list(
                 self.get_holdingsStatements(marc_record, "868")
             ),
+            "discoverySuppress": self.suppress,
         }
         rec.update(self.handle_852s(f852s))
         self.holdings_id_map[marc_record["001"].format_field()] = rec["id"]
