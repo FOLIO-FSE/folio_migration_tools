@@ -98,24 +98,41 @@ class Worker:
         print("Failed files:")
         self.stats = {**self.stats, **self.mapper.stats, **self.processor.stats}
 
-        print("# Bibliographic records migration")
+        print("# Bibliographic records transformation results")
         print(f"Time Run: {dt.isoformat(dt.now())}")
-        print("## Bibliographic records migration counters")
-        print_dict_to_md_table(self.stats, "    ", "Count")
+        print("## Bibliographic records transformation counters")
+        print_dict_to_md_table(self.stats, "  Measure  ", "Count")
         print("## Unmapped MARC tags")
+        print(
+            "A list of the records not covered by the mapping rules. "
+            "These rules can be customized to cover more fields. "
+            "The counts next to the field name is the number of records with this field."
+        )
         print_dict_to_md_table(
             self.mapper.unmapped_tags, "Tag", "Count",
         )
         print("## Mapped FOLIO fields")
+        print("The number of times a certain FOLIO field was filled with information")
         print_dict_to_md_table(
-            self.mapper.mapped_folio_fields, "Tag", "Count",
+            self.mapper.mapped_folio_fields, "Fielname", "Count",
         )
         print("## Unmapped FOLIO fields")
+        print("The number of records missing certain FOLIO fields")
         print_dict_to_md_table(
             self.mapper.unmapped_folio_fields, "Tag", "Count",
         )
         print("## Unmapped conditions in rules")
+        print("Conditions from the mapping-rules never covered by the transformation")
         print_dict_to_md_table(self.mapper.unmapped_conditions)
+
+        print("## Record status counts")
+        print(
+            "Record status in the records from Leader in position 05   "
+            "Valid values are a - Increase in encoding level, c - Corrected or revised, "
+            "d - Deleted, n - New, p - Increase in encoding level from prepublication"
+        )
+
+        print_dict_to_md_table(self.mapper.record_status)
 
         self.write_migration_report(self.mapper.migration_report)
         self.write_migration_report(self.processor.migration_report)
@@ -167,6 +184,12 @@ def parse_args():
     )
     parser.add_argument(
         "-msu_locations_path", "-f", help=("filter records based on MSU rules")
+    )
+    parser.add_argument(
+        "-suppress",
+        "-ds",
+        help=("This batch of records are to be suppressed in FOLIO."),
+        action="store_true",
     )
     parser.add_argument(
         "-postgres_dump",

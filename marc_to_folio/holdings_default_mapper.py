@@ -112,7 +112,8 @@ class HoldingsDefaultMapper:
         return f852s
 
     def wrap_up(self):
-        print("## Holdings transformation stats")
+        print("# Holdings transformation results")
+        print("## Stats")
         print_dict_to_md_table(self.stats)
         print("## Legacy locations")
         print_dict_to_md_table(self.legacy_locations)
