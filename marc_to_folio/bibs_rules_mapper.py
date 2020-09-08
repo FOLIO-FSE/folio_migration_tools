@@ -24,8 +24,11 @@ class BibsRulesMapper:
         self, folio, args,
     ):
         self.folio = folio
+        self.suppress = args.suppress
         self.stats = {}
+        self.record_status = {}
         self.migration_report = {}
+        self.suppress = args.suppress
         self.conditions = BibsConditions(folio)
         self.instance_schema = get_instance_schema()
         self.ils_flavour = args.ils_flavour
@@ -66,6 +69,7 @@ class BibsRulesMapper:
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
         }
+        add_stats(self.record_status, marc_record.leader[5])
         temp_inst_type = ""
         ignored_subsequent_fields = set()
         bad_tags = {"039", "263", "229", "922"}  # "907"
@@ -99,7 +103,10 @@ class BibsRulesMapper:
         count_unmapped_fields(
             self.unmapped_folio_fields, self.instance_schema, folio_instance
         )
-        count_mapped_fields(self.mapped_folio_fields, folio_instance)
+        try:
+            count_mapped_fields(self.mapped_folio_fields, folio_instance)
+        except:
+            print(folio_instance)
         self.save_source_record(marc_record, folio_instance["id"])
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
@@ -123,6 +130,8 @@ class BibsRulesMapper:
         folio_instance["languages"] = list(
             self.filter_langs(folio_instance["languages"], marc_record)
         )
+        folio_instance["discoverySuppress"] = bool(self.suppress)
+        folio_instance["staffSuppress"] = bool(self.suppress)
 
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
@@ -367,7 +376,13 @@ class BibsRulesMapper:
             )
         )
         self.srs_recs.append(
-            (marc_record, instance_id, srs_id, self.folio.get_metadata_construct())
+            (
+                marc_record,
+                instance_id,
+                srs_id,
+                self.folio.get_metadata_construct(),
+                self.suppress,
+            )
         )
         # if not suppress:
         # self.marc_xml_writer.write(marc_record)
@@ -379,8 +394,8 @@ class BibsRulesMapper:
         pool = ProcessPoolExecutor(max_workers=4)
         results = list(pool.map(get_srs_strings, self.srs_recs))
         self.srs_records_file.write("".join(r[0] for r in results))
-        self.srs_marc_records_file.write("".join(r[2] for r in results))
-        self.srs_raw_records_file.write("".join(r[1] for r in results))
+        # self.srs_marc_records_file.write("".join(r[2] for r in results))
+        # self.srs_raw_records_file.write("".join(r[1] for r in results))
 
     def get_nature_of_content(self, marc_record):
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
@@ -472,24 +487,27 @@ def get_srs_strings(my_tuple):
     writer.close(close_fh=False)
     marc_uuid = str(uuid.uuid4())
     raw_uuid = str(uuid.uuid4())
-    raw_record = {"id": raw_uuid, "content": my_tuple[0].as_json()}
-    parsed_record = {"id": marc_uuid, "content": json.loads(my_tuple[0].as_json())}
+    raw_record = {"id": my_tuple[2], "content": my_tuple[0].as_json()}
+    parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple[0].as_json())}
     record = {
         "id": my_tuple[2],
         "deleted": False,
         "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
-        "matchedProfileId": str(uuid.uuid4()),
         "matchedId": my_tuple[2],
         "generation": 0,
         "recordType": "MARC",
         "rawRecord": raw_record,
         "parsedRecord": parsed_record,
-        "additionalInfo": {"suppressDiscovery": False},
+        "additionalInfo": {"suppressDiscovery": my_tuple[4]},
         "externalIdsHolder": {"instanceId": my_tuple[1]},
         "metadata": my_tuple[3],
         "state": "ACTUAL",
-        "leaderRecordStatus": " ",
+        "leaderRecordStatus": parsed_record["content"]["leader"][5],
     }
+    if parsed_record["content"]["leader"][5] in [*"acdnposx"]:
+        record["leaderRecordStatus"] = parsed_record["content"]["leader"][5]
+    else:
+        record["leaderRecordStatus"] = "d"
     return (
         f"{record['id']}\t{json.dumps(record)}\n",
         f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
@@ -512,9 +530,9 @@ def add_stats(stats, a):
 def get_legacy_id(marc_record, ils_flavour):
     if ils_flavour == "iii":
         return marc_record["907"]["a"]
-    elif ils_flavour == "voyager":
+    elif ils_flavour == "035":
         return marc_record["035"]["a"]
-    elif ils_flavour == "aleph":
+    elif ils_flavour in ["aleph", "voyager"]:
         return marc_record["001"].format_field()
     else:
         raise Exception(f"ILS {ils_flavour} not configured")
@@ -556,5 +574,5 @@ def count_unmapped_fields(stats_map, schema, folio_object):
 
 def count_mapped_fields(stats_map, folio_object):
     for key, value in folio_object.items():
-        if value or any(value):
+        if isinstance(value, bool) or value or any(value):
             add_stats(stats_map, key)

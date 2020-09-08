@@ -70,6 +70,7 @@ class BibsProcessor:
             print(type(inst))
             print(inst.args)
             print(inst)
+            print(marc_record)
             if folio_rec:
                 print(folio_rec)
             raise inst
