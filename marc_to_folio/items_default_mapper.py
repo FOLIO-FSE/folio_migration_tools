@@ -25,7 +25,9 @@ class ItemsDefaultMapper:
         holdings_id_map: Dict,
         location_map: Dict,
         other_maps,
+        args,
     ):
+        self.args = args
         self.legacy_item_type_map = other_maps[0]
         self.duplicate_item_ids = {}
         self.legacy_material_type_map = other_maps[1]
@@ -56,6 +58,7 @@ class ItemsDefaultMapper:
         self.material_type_map: Dict[str, int] = {}
         self.unmapped_loan_types: Dict[str, int] = {}
         self.unmapped_material_types: Dict[str, int] = {}
+        self.mapped_material_types: Dict[str, int] = {}
         self.setup_l_types()
         self.setup_m_types()
 
@@ -209,6 +212,8 @@ class ItemsDefaultMapper:
         print_dict_to_md_table(self.unmapped_loan_types)
         print("## Unmapped material types")
         print_dict_to_md_table(self.unmapped_material_types)
+        print("## Mapped material types")
+        print_dict_to_md_table(self.mapped_material_types)
         # self.write_migration_report()
 
     def write_migration_report(self, other_report=None):
@@ -273,6 +278,7 @@ class ItemsDefaultMapper:
             add_stats(self.mapped_folio_fields, "metadata")
             add_stats(self.mapped_folio_fields, "status")
             for legacy_key, legacy_value in legacy_item.items():
+                legacy_key = legacy_key.strip() if legacy_key else legacy_key
                 folio_field = self.map["fields"].get(legacy_key, {}).get("target", "")
                 legacy_value = str(legacy_value).strip()
                 if folio_field:
@@ -289,8 +295,10 @@ class ItemsDefaultMapper:
                         add_stats(self.stats, f"Temp location code: {legacy_value}")
                     elif folio_field == "materialTypeId":
                         self.handle_material_types(legacy_value, item)
-                        # if "loanTypeId" not in self.map["fields"]:
-                        #    self.handle_loan_types(legacy_value, item)
+                        if (
+                            self.args.loan_type_from_mat_type
+                        ):  # if "loanTypeId" not in self.map["fields"]:
+                            self.handle_loan_types(legacy_value, item)
 
                     elif folio_field == "loanTypeId":
                         self.handle_loan_types(legacy_value, item)
@@ -398,6 +406,7 @@ class ItemsDefaultMapper:
                 add_stats(self.stats, "Unmapped material types")
         else:
             mapped_id = self.material_type_map[v]
+            add_stats(self.mapped_material_types, v)
             item["materialTypeId"] = mapped_id
 
     def handle_loan_types(self, legacy_value, item):
@@ -417,7 +426,7 @@ class ItemsDefaultMapper:
                 self.unmapped_loan_types[v] = self.unmapped_loan_types.get(v, 0) + 1
                 add_stats(self.stats, f"Unmapped item loan type")
         else:
-            item["permanentLoanTypeId"] = self.loan_type_map[v]
+            item["permanentLoanTypeId"] = self.loan_type_map[v.strip()]
 
     def add_to_migration_report(self, header, messageString):
         # TODO: Move to interface or parent class

@@ -90,6 +90,12 @@ def parse_args():
     parser.add_argument("password", help=("the api users password"))
     parser.add_argument("-map_path", "-it", help=(""))
     parser.add_argument(
+        "-loan_type_from_mat_type",
+        "-l",
+        help="Map loan type to material type field",
+        action="store_true",
+    )
+    parser.add_argument(
         "-postgres_dump",
         "-p",
         help=("results will be written out for Postgres" "ingestion. Default is JSON"),
@@ -131,7 +137,7 @@ def main():
     material_type_map_path = os.path.join(args.map_path, "material_types.tsv")
     # Item Type map trumps the others. That has mappings to both LT and MT
     if isfile(items_type_map_path):
-        print("Item type map. leaning on this file for mapping")
+        print("Item type map found. leaning on this file for mapping")
         with open(items_type_map_path) as item_types_file:
             item_type_map = list(csv.DictReader(item_types_file, dialect="tsv"))
     elif isfile(loans_type_map_path) and isfile(material_type_map_path):
@@ -161,6 +167,7 @@ def main():
             holdings_id_map,
             location_map,
             [item_type_map, material_type_map, loan_type_map],
+            args,
         )
         processor = ItemsProcessor(mapper, folio_client, results_f, args)
         worker = Worker(folio_client, results_f, processor, files)
