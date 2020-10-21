@@ -14,8 +14,8 @@ class HoldingsDefaultMapper:
 
     # Bootstrapping (loads data needed later in the script.)
 
-    def __init__(self, folio_client, instance_id_map, location_map=None):
-
+    def __init__(self, folio_client, instance_id_map, args, location_map=None):
+        self.suppress = args.suppress
         logging.info("init Default Holdings mapper!")
         self.stats = {}
         self.tags_occurrences = {}
@@ -43,7 +43,7 @@ class HoldingsDefaultMapper:
         )
         # Send out a list of note types that should be either public or private
         self.note_tags = {
-            "506": ("3abcdefgqu", "Restriction", False, " "),
+            "506": ("3abcdefgqu", "Note", False, " "),  # Was: Restriction
             "538": ("aiu3568", "Note", False, " "),
             "541": ("3abcdefhno568", "Note", False, " "),
             "561": ("3au", "Provenance", False, " "),
@@ -59,7 +59,7 @@ class HoldingsDefaultMapper:
             "845": ("abcdu3568", "Note", False, " "),
             "852": ("x", "Note", False, " "),
             "852": ("z", "Note", False, " "),
-            # "876": ("p3", "bound with item data", False, " | "),
+            "876": ("p3", "Note", False, " | "),  # Was: bound with item data
         }
 
     def parse_hold(self, marc_record):
@@ -82,6 +82,7 @@ class HoldingsDefaultMapper:
             "holdingsStatementsForIndexes": list(
                 self.get_holdingsStatements(marc_record, "868")
             ),
+            "discoverySuppress": self.suppress,
         }
         rec.update(self.handle_852s(f852s))
         self.holdings_id_map[marc_record["001"].format_field()] = rec["id"]
@@ -111,7 +112,8 @@ class HoldingsDefaultMapper:
         return f852s
 
     def wrap_up(self):
-        print("## Holdings transformation stats")
+        print("# Holdings transformation results")
+        print("## Stats")
         print_dict_to_md_table(self.stats)
         print("## Legacy locations")
         print_dict_to_md_table(self.legacy_locations)
@@ -146,8 +148,8 @@ class HoldingsDefaultMapper:
                     print(f"{b}\\")
 
     def get_instance_id(self, marc_record):
-        # old_instance_id = marc_record["004"].format_field()
-        old_instance_id = marc_record["LKR"]["b"]
+        old_instance_id = marc_record["004"].format_field()
+        # old_instance_id = marc_record["LKR"]["b"]
         if old_instance_id in self.instance_id_map:
             return self.instance_id_map[old_instance_id]["id"]
         else:
@@ -180,7 +182,7 @@ class HoldingsDefaultMapper:
                 ret["callNumberTypeId"] = self.get_call_number_type_id(
                     f852.indicator1, sf2
                 )
-            if "c" in f852 and f852["c"]:
+            if "b" in f852 and f852["b"]:
                 ret["permanentLocationId"] = self.get_location(f852)
         return ret
 
@@ -233,51 +235,44 @@ class HoldingsDefaultMapper:
                     "",
                 )
                 if c_id:
-                    add_stats(self.call_number_types_2, cnts[str(ind1)])
+                    add_stats(self.call_number_types_2, cnts.get(ind1, ""))
                     return c_id
 
         # add_stats(self.stats, f"Unhandled scheme in 852$2: {sf2} added other scheme")
-        add_stats(self.call_number_types_2, f"{cnts[str(8)]} ({sf2})")
+        add_stats(self.call_number_types_2, f"{cnts.get('8')} ({sf2})")
         return next(
             t["id"] for t in self.call_number_types if t["name"] == "Other scheme"
         )
 
     def get_location(self, f852):
         """returns the location mapped and translated"""
-        if "c" in f852 and f852["c"]:
-            try:
-                legacy_code = f852["c"].strip()
-                add_stats(self.legacy_locations, legacy_code)
-                if self.location_map:
-                    mapped_code = next(
-                        (
-                            l["folio_code"]
-                            for l in self.location_map
-                            if legacy_code == l["legacy_code"]
-                        ),
-                        "",
-                    )
-                    if not mapped_code:
-                        add_stats(
-                            self.unmapped_locations, f"Legacy code - {legacy_code}"
-                        )
-                        raise ValueError(f"Legacy location not mapped: {legacy_code}")
-                else:
-                    mapped_code = legacy_code
-                loc = next(
-                    l["id"]
-                    for l in self.folio_client.locations
-                    if mapped_code == l["code"]
+        try:
+            legacy_code = f852["b"].strip()
+            add_stats(self.legacy_locations, legacy_code)
+            if self.location_map and any(self.location_map):
+                mapped_code = next(
+                    (
+                        l["folio_code"]
+                        for l in self.location_map
+                        if legacy_code == l["legacy_code"]
+                    ),
+                    "",
                 )
-                if not loc:
-                    add_stats(
-                        self.unmapped_locations, f"Loc not in FOLIO - {mapped_code}"
-                    )
-                    raise ValueError("Location code {mapped_code} not found in FOLIO")
-                add_stats(self.folio_locations, mapped_code)
-                return loc
-            except Exception as ee:
-                add_stats(self.stats, ee)
+                if not mapped_code:
+                    add_stats(self.unmapped_locations, f"Legacy code - {legacy_code}")
+                    raise ValueError(f"Legacy location not mapped: {legacy_code}")
+            else:
+                mapped_code = legacy_code
+            loc = next(
+                l["id"] for l in self.folio_client.locations if mapped_code == l["code"]
+            )
+            if not loc:
+                add_stats(self.unmapped_locations, f"Loc not in FOLIO - {mapped_code}")
+                raise ValueError("Location code {mapped_code} not found in FOLIO")
+            add_stats(self.folio_locations, mapped_code)
+            return loc
+        except Exception as ee:
+            return ""
         return ""
 
     def get_holdingsStatements(self, marc_record, tag):
@@ -333,7 +328,7 @@ def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
     print(f"{h1} | {h2}")
     print("--- | ---:")
     for k, v in d_sorted.items():
-        print(f"{k} | {v}")
+        print(f"{k} | {v:,}")
 
 
 def fetch_holdings_schema():
