@@ -70,6 +70,7 @@ class BibsConditions:
             if not name:
                 add_stats(self.stats, f"Unmatched Modes of issuance code {seventh}")
                 raise ValueError(f"{name} is not a valid mode of issuance")
+
             ret = next(
                 (
                     i["id"]
@@ -90,6 +91,9 @@ class BibsConditions:
             return ret
         except IndexError:
             raise ValueError(f"No seven in {marc_field}")
+        except StopIteration as ee:
+            print(f"StopIteration {marc_field} {list(self.folio.modes_of_issuance)}")
+            raise ee
 
     def condition_set_publisher_role(self, value, parameter, marc_field):
         roles = {
@@ -132,11 +136,9 @@ class BibsConditions:
         return my_id
 
     def condition_set_note_type_id(self, value, parameter, marc_field):
-        if not any(self.instance_note_types):
-            self.instance_note_types = self.folio.folio_get_all(
-                "/instance-note-types", "instanceNoteTypes", "?query=cql.allRecords=1"
-            )
-        return get_ref_data_id_by_name(self.instance_note_types, parameter["name"])
+        return get_ref_data_id_by_name(
+            self.folio.instance_note_types, parameter["name"]
+        )
 
     def condition_set_classification_type_id(self, value, parameter, marc_field):
         # undef = next((f['id'] for f in self.folio.class_types
@@ -255,10 +257,12 @@ class BibsConditions:
         name = enum.get(ind2, enum["3"])
 
         if not any(self.electronic_access_relationships):
-            self.electronic_access_relationships = self.folio.folio_get_all(
-                "/electronic-access-relationships",
-                "electronicAccessRelationships",
-                "?query=cql.allRecords=1 sortby name",
+            self.electronic_access_relationships = list(
+                self.folio.folio_get_all(
+                    "/electronic-access-relationships",
+                    "electronicAccessRelationships",
+                    "?query=cql.allRecords=1 sortby name",
+                )
             )
         if not self.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
@@ -291,7 +295,7 @@ def get_ref_data_id(ref_data, key_value, key_type):
         "",
     )
     if not ref_id:
-        raise Exception(f"No matching element for {key_value} in {ref_data}")
+        raise Exception(f"No matching element for {key_value} in {list(ref_data)}")
     if validate_uuid(ref_id):
         return ref_id
     else:
