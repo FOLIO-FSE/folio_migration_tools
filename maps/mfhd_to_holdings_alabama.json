@@ -1,0 +1,488 @@
+{
+    "506": [
+        {
+            "entity": [
+                {
+                    "target": "notes.note",
+                    "description": "",
+                    "subfield": [
+                        "3",
+                        "a",
+                        "b",
+                        "c",
+                        "d",
+                        "e",
+                        "f",
+                        "g",
+                        "q",
+                        "u"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "notes.holdingsNoteTypeId",
+                    "description": "",
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_note_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Note"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "target": "notes.staffOnly",
+                    "description": "",
+                    "value": false,
+                    "rules": []
+                }
+            ]
+        }
+    ],
+    "561": [
+        {
+            "entity": [
+                {
+                    "target": "notes.note",
+                    "description": "",
+                    "subfield": [
+                        "3",
+                        "a",
+                        "u"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "notes.holdingsNoteTypeId",
+                    "description": "",
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_note_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Provenance"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "target": "notes.staffOnly",
+                    "description": "",
+                    "value": false,
+                    "rules": []
+                }
+            ]
+        }
+    ],
+    "562": [
+        {
+            "entity": [
+                {
+                    "target": "notes.note",
+                    "description": "",
+                    "subfield": [
+                        "3",
+                        "a",
+                        "b",
+                        "c",
+                        "d",
+                        "e"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "notes.holdingsNoteTypeId",
+                    "description": "",
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_note_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Copy note"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "target": "notes.staffOnly",
+                    "description": "",
+                    "value": false,
+                    "rules": []
+                }
+            ]
+        }
+    ],
+    "563": [
+        {
+            "entity": [
+                {
+                    "target": "notes.note",
+                    "description": "",
+                    "subfield": [
+                        "3",
+                        "a",
+                        "u"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "notes.holdingsNoteTypeId",
+                    "description": "",
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_note_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Binding"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "target": "notes.staffOnly",
+                    "description": "",
+                    "value": false,
+                    "rules": []
+                }
+            ]
+        }
+    ],
+    "583": [
+        {
+            "entity": [
+                {
+                    "target": "notes.note",
+                    "description": "",
+                    "subfield": [
+                        "3",
+                        "a",
+                        "b",
+                        "c",
+                        "d",
+                        "e",
+                        "f",
+                        "h",
+                        "i",
+                        "j",
+                        "k",
+                        "l",
+                        "n",
+                        "o",
+                        "u",
+                        "x",
+                        "z"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "notes.holdingsNoteTypeId",
+                    "description": "",
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_note_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Action note"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "target": "notes.staffOnly",
+                    "description": "",
+                    "value": false,
+                    "rules": []
+                }
+            ]
+        }
+    ],
+    "843": [
+        {
+            "entity": [
+                {
+                    "target": "notes.note",
+                    "description": "",
+                    "subfield": [
+                        "3",
+                        "a",
+                        "b",
+                        "c",
+                        "d",
+                        "e",
+                        "f",
+                        "m",
+                        "n"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "notes.holdingsNoteTypeId",
+                    "description": "",
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_note_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Reproduction"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "target": "notes.staffOnly",
+                    "description": "",
+                    "value": false,
+                    "rules": []
+                }
+            ]
+        }
+    ],
+    "852": [
+        {
+            "target": "callNumberTypeId",
+            "description": "",
+            "subfield": [],
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "set_call_number_type_by_indicator"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "target": "holdingsTypeId",
+            "description": "special case? if serv or remo, set electronic as holdingstype",
+            "subfield": [
+                "b"
+            ],
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "set_electronic_if_serv,remo"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "target": "permanentLocationId",
+            "description": "",
+            "subfield": [
+                "b"
+            ],
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "set_location_id_by_code"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "target": "callNumberPrefix",
+            "description": "",
+            "subfield": [
+                "k"
+            ],
+            "rules": []
+        },
+        {
+            "target": "callNumber",
+            "description": "",
+            "subfield": [
+                "h",
+                "i"
+            ],
+            "rules": [],
+            "applyRulesOnConcatenatedData": true
+        },
+        {
+            "target": "callNumberSuffix",
+            "description": "",
+            "subfield": [
+                "m"
+            ],
+            "rules": []
+        },
+        {
+            "target": "shelvingTitle",
+            "description": "",
+            "subfield": [
+                "l"
+            ],
+            "rules": []
+        },
+        {
+            "entity": [
+                {
+                    "target": "notes.note",
+                    "description": "",
+                    "subfield": [
+                        "x"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "notes.holdingsNoteTypeId",
+                    "description": "",
+                    "subfield": [
+                        "x"
+                    ],
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_note_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Note"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "target": "notes.staffOnly",
+                    "description": "",
+                    "value": true,
+                    "rules": [],
+                    "subfield": [
+                        "x"
+                    ]
+                }
+            ]
+        },
+        {
+            "entity": [
+                {
+                    "target": "notes.note",
+                    "description": "",
+                    "subfield": [
+                        "y"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "notes.holdingsNoteTypeId",
+                    "description": "",
+                    "subfield": [
+                        "y"
+                    ],
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_note_type_id_by_name",
+                                    "parameter": {
+                                        "name": "Note"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "target": "notes.staffOnly",
+                    "description": "",
+                    "value": true,
+                    "rules": [],
+                    "subfield": [
+                        "y"
+                    ]
+                }
+            ]
+        }
+    ],
+    "866": [
+        {
+            "entity": [
+                {
+                    "target": "holdingsStatements.statement",
+                    "description": "",
+                    "subfield": [
+                        "a"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "holdingsStatements.note",
+                    "description": "",
+                    "subfield": [
+                        "z"
+                    ],
+                    "rules": []
+                }
+            ]
+        }
+    ],
+    "867": [
+        {
+            "entity": [
+                {
+                    "target": "holdingsStatementsForIndexes.statement",
+                    "description": "",
+                    "subfield": [
+                        "a"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "holdingsStatementsForIndexes.note",
+                    "description": "",
+                    "subfield": [
+                        "z"
+                    ],
+                    "rules": []
+                }
+            ]
+        }
+    ],
+    "868": [
+        {
+            "entity": [
+                {
+                    "target": "holdingsStatementsForSupplements.statement",
+                    "description": "",
+                    "subfield": [
+                        "a"
+                    ],
+                    "rules": []
+                },
+                {
+                    "target": "holdingsStatementsForSupplements.note",
+                    "description": "",
+                    "subfield": [
+                        "z"
+                    ],
+                    "rules": []
+                }
+            ]
+        }
+    ]
+}

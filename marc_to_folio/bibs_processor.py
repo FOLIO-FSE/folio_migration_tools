@@ -12,6 +12,7 @@ class BibsProcessor:
     def __init__(self, mapper, folio_client, results_file, args):
         self.migration_report = {}
         self.stats = {}
+        self.ils_flavour = args.ils_flavour
         self.results_folder = args.results_folder
         self.results_file = results_file
         self.instance_schema = folio_client.get_instance_json_schema()
@@ -23,8 +24,6 @@ class BibsProcessor:
         """processes a marc record and saves it"""
         folio_rec = None
         try:
-            add_stats(self.stats, "Bibs processed")
-
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_bib(marc_record, inventory_only)
             if self.args.validate:
@@ -45,7 +44,6 @@ class BibsProcessor:
                 add_stats(self.stats, "Successfully transformed bibs")
 
             # Print progress
-            self.print_progress()
 
         except ValueError as value_error:
             self.add_to_migration_report(
@@ -67,11 +65,12 @@ class BibsProcessor:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
-            add_stats(self.stats, "Bib records that faile transformation")
+            add_stats(self.stats, "Bib records that failed transformation")
             add_stats(self.stats, "Transformation exceptions")
             print(type(inst))
             print(inst.args)
             print(inst)
+            print(marc_record)
             if folio_rec:
                 print(folio_rec)
             raise inst
@@ -106,15 +105,6 @@ class BibsProcessor:
             print(f"## {a}")
             for b in self.migration_report[a]:
                 print(f"{b}\\")
-
-    def print_progress(self):
-        i = self.stats["Bibs processed"]
-        if i % 1000 == 0:
-            elapsed = i / (time.time() - self.start)
-            elapsed_formatted = int(elapsed)
-            print(
-                f"{elapsed_formatted}\t{i}", flush=True,
-            )
 
 
 def add_stats(stats, a):
