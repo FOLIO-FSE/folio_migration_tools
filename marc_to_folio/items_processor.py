@@ -12,8 +12,9 @@ class ItemsProcessor:
     def __init__(self, mapper, folio_client, results_file, args):
         self.results_file = results_file
         self.item_schema = folio_client.get_item_schema()
+        self.stats = {}
+        self.migration_report = {}
         self.records_count = 0
-        self.written_items = 0
         self.mapper = mapper
         self.instance_id_map = {}
         self.holdings_id_map = {}
@@ -31,6 +32,7 @@ class ItemsProcessor:
             # write record to file
             if folio_rec:
                 write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
+                add_stats(self.stats, "Number of Items written to disk")
             # Print progress
             if self.records_count % 10000 == 0:
                 elapsed = self.records_count / (time.time() - self.start)
@@ -58,13 +60,18 @@ class ItemsProcessor:
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
         id_map = self.mapper.item_id_map
+        self.mapper.stats = {**self.stats, **self.mapper.stats}
         path = os.path.join(self.args.result_path, "item_id_map.json")
         print("Saving map of {} old and new IDs to {}".format(len(id_map), path))
         with open(path, "w+") as id_map_file:
             json.dump(id_map, id_map_file, indent=4)
-        print(self.mapper.folio.missing_location_codes)
         self.mapper.wrap_up()
-        print(f"{self.written_items} written")
+
+    def add_to_migration_report(self, header, messageString):
+        # TODO: Move to interface or parent class
+        if header not in self.migration_report:
+            self.migration_report[header] = list()
+        self.migration_report[header].append(messageString)
 
 
 def write_to_file(file, pg_dump, folio_record):
@@ -74,3 +81,19 @@ def write_to_file(file, pg_dump, folio_record):
         file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
     else:
         file.write("{}\n".format(json.dumps(folio_record)))
+
+
+def add_stats(stats, a):
+    if a not in stats:
+        stats[a] = 1
+    else:
+        stats[a] += 1
+
+
+def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
+    # TODO: Move to interface or parent class
+    d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
+    print(f"{h1} | {h2}")
+    print("--- | ---:")
+    for k, v in d_sorted.items():
+        print(f"{k} | {v:,}")

@@ -17,6 +17,7 @@ class HoldingsProcessor:
         self.mapper = mapper
         self.args = args
         self.start = time.time()
+        self.suppress = args.suppress
         logging.warning(
             f'map will be saved to {os.path.join(self.args.result_folder, "holdings_id_map.json")}'
         )

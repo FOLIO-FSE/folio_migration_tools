@@ -36,7 +36,7 @@ class Worker:
         self.folio_client = folio_client
         print(f"Files to process: {len(self.files)}")
         print(json.dumps(self.files, sort_keys=True, indent=4))
-        self.mapper = BibsRulesMapper(self.folio_client, args.results_folder)
+        self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
         self.failed_files = list()
         self.bibids = set()
@@ -80,6 +80,17 @@ class Worker:
             else:
                 add_stats(self.stats, "MARC21 Records successfully parsed")
                 self.processor.process_record(record, False)
+            add_stats(self.stats, "Bibs processed")
+            self.print_progress()
+
+    def print_progress(self):
+        i = self.stats["Bibs processed"]
+        if i % 1000 == 0:
+            elapsed = i / (time.time() - self.start)
+            elapsed_formatted = int(elapsed)
+            print(
+                f"{elapsed_formatted}\t{i}", flush=True,
+            )
 
     def wrap_up(self):
         print("Done. Wrapping up...")
@@ -87,24 +98,41 @@ class Worker:
         print("Failed files:")
         self.stats = {**self.stats, **self.mapper.stats, **self.processor.stats}
 
-        print("# Bibliographic records migration")
+        print("# Bibliographic records transformation results")
         print(f"Time Run: {dt.isoformat(dt.now())}")
-        print("## Bibliographic records migration counters")
-        print_dict_to_md_table(self.stats, "    ", "Count")
+        print("## Bibliographic records transformation counters")
+        print_dict_to_md_table(self.stats, "  Measure  ", "Count")
         print("## Unmapped MARC tags")
+        print(
+            "A list of the records not covered by the mapping rules. "
+            "These rules can be customized to cover more fields. "
+            "The counts next to the field name is the number of records with this field."
+        )
         print_dict_to_md_table(
             self.mapper.unmapped_tags, "Tag", "Count",
         )
         print("## Mapped FOLIO fields")
+        print("The number of times a certain FOLIO field was filled with information")
         print_dict_to_md_table(
-            self.mapper.mapped_folio_fields, "Tag", "Count",
+            self.mapper.mapped_folio_fields, "Fielname", "Count",
         )
         print("## Unmapped FOLIO fields")
+        print("The number of records missing certain FOLIO fields")
         print_dict_to_md_table(
             self.mapper.unmapped_folio_fields, "Tag", "Count",
         )
         print("## Unmapped conditions in rules")
+        print("Conditions from the mapping-rules never covered by the transformation")
         print_dict_to_md_table(self.mapper.unmapped_conditions)
+
+        print("## Record status counts")
+        print(
+            "Record status in the records from Leader in position 05   "
+            "Valid values are a - Increase in encoding level, c - Corrected or revised, "
+            "d - Deleted, n - New, p - Increase in encoding level from prepublication"
+        )
+
+        print_dict_to_md_table(self.mapper.record_status)
 
         self.write_migration_report(self.mapper.migration_report)
         self.write_migration_report(self.processor.migration_report)
@@ -140,6 +168,15 @@ def parse_args():
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
     parser.add_argument(
+        "ils_flavour", help="The kind of ILS the records are created in"
+    )
+    parser.add_argument(
+        "-holdings_records",
+        "-hold",
+        help="Create holdings records based on relevant MARC fields",
+        action="store_true",
+    )
+    parser.add_argument(
         "-force_utf_8",
         "-utf8",
         help=("forcing UTF8 when pasing marc records"),
@@ -147,6 +184,12 @@ def parse_args():
     )
     parser.add_argument(
         "-msu_locations_path", "-f", help=("filter records based on MSU rules")
+    )
+    parser.add_argument(
+        "-suppress",
+        "-ds",
+        help=("This batch of records are to be suppressed in FOLIO."),
+        action="store_true",
     )
     parser.add_argument(
         "-postgres_dump",
@@ -210,7 +253,7 @@ def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
     print(f"{h1} | {h2}")
     print("--- | ---:")
     for k, v in d_sorted.items():
-        print(f"{k} | {v}")
+        print(f"{k} | {v:,}")
 
 
 if __name__ == "__main__":
