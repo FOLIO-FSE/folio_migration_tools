@@ -85,8 +85,7 @@ class BibsConditions:
                         i["id"]
                         for i in self.folio.modes_of_issuance
                         if "unspecified" == i["name"].lower()
-                    ),
-                    "",
+                    )
                 )
             return ret
         except IndexError:
@@ -105,65 +104,46 @@ class BibsConditions:
     def condition_set_identifier_type_id_by_value(self, value, parameter, marc_field):
         if not self.folio.identifier_types:
             raise ValueError("No identifier_types setup in tenant")
-
-        try:
-            if "oclc_regex" in parameter:
-                if re.match(parameter["oclc_regex"], value):
-                    return next(
-                        f["id"]
-                        for f in self.folio.identifier_types
-                        if f["name"] in parameter["names"][1]
-                    )
-                else:
-                    return next(
-                        f["id"]
-                        for f in self.folio.identifier_types
-                        if f["name"] in parameter["names"][0]
-                    )
-
-            return next(
+        if "oclc_regex" in parameter:
+            if re.match(parameter["oclc_regex"], value):
+                return get_ref_data_id_by_name(
+                    self.folio.identifier_types, parameter["names"][1]
+                )
+            else:
+                return get_ref_data_id_by_name(
+                    self.folio.identifier_types, parameter["names"][0]
+                )
+        my_id = next(
+            (
                 f["id"]
                 for f in self.folio.identifier_types
                 if f["name"] in parameter["names"]
+            ),
+            "",
+        )
+        if not my_id:
+            raise Exception(
+                f"no matching identifier_types in {parameter['names']} {marc_field}"
             )
-        except Exception as exception:
-            raise ValueError(
-                f"no matching identifier_types in {parameter['names']} {marc_field} {exception}"
+        if not validate_uuid(my_id):
+            raise Exception(
+                f"UUID validation failed for {my_id} identifier_types in {parameter['names']} {marc_field}"
             )
+        return my_id
 
     def condition_set_note_type_id(self, value, parameter, marc_field):
         if not any(self.instance_note_types):
             self.instance_note_types = self.folio.folio_get_all(
                 "/instance-note-types", "instanceNoteTypes", "?query=cql.allRecords=1"
             )
-        v = next(
-            (
-                f["id"]
-                for f in self.instance_note_types
-                if f["name"].casefold() == parameter["name"].casefold()
-            ),
-            "",
-        )
-        if not v:
-            raise ValueError(
-                f"no matching instance_note_types {parameter['name']} {marc_field}"
-            )
-        return v
+        return get_ref_data_id_by_name(self.instance_note_types, parameter["name"])
 
     def condition_set_classification_type_id(self, value, parameter, marc_field):
         # undef = next((f['id'] for f in self.folio.class_types
         #             if f['name'] == 'No type specified'), '')
         if not self.folio.class_types:
             raise ValueError("No class_types setup in tenant")
-        v = next(
-            (f["id"] for f in self.folio.class_types if f["name"] == parameter["name"]),
-            "",
-        )
-        if not v:
-            raise ValueError(
-                f'no matching classification_type {parameter["name"]} {marc_field}'
-            )
-        return v
+        return get_ref_data_id_by_name(self.folio.class_types, parameter["name"])
 
     def condition_char_select(self, value, parameter, marc_field):
         return value[parameter["from"] : parameter["to"]]
@@ -171,28 +151,12 @@ class BibsConditions:
     def condition_set_identifier_type_id_by_name(self, value, parameter, marc_field):
         if not self.folio.identifier_types:
             raise ValueError("No identifier_types setup in tenant")
-        v = next(
-            (
-                f["id"]
-                for f in self.folio.identifier_types
-                if f["name"].casefold() == parameter["name"].casefold()
-            ),
-            "",
-        )
-        if not v:
-            raise ValueError(
-                f'no matching identifier_type_id {parameter["name"]} {marc_field}'
-            )
-        return v
+        return get_ref_data_id_by_name(self.folio.identifier_types, parameter["name"])
 
     def condition_set_contributor_name_type_id(self, value, parameter, marc_field):
-        if not any(self.contrib_name_types):
-            self.contrib_name_types = {
-                f["name"]: f["id"] for f in self.folio.contrib_name_types
-            }
         if not self.folio.contrib_name_types:
             raise ValueError("No contrib_name_types setup in tenant")
-        return self.contrib_name_types[parameter["name"]]
+        return get_ref_data_id_by_name(self.folio.contrib_name_types, parameter["name"])
 
     def condition_set_contributor_type_id(self, value, parameter, marc_field):
         if not self.folio.contributor_types:
@@ -227,19 +191,7 @@ class BibsConditions:
     def condition_set_alternative_title_type_id(self, value, parameter, marc_field):
         if not self.folio.alt_title_types:
             raise ValueError("No alt_title_types setup in tenant")
-        v = next(
-            (
-                f["id"]
-                for f in self.folio.alt_title_types
-                if f["name"] == parameter["name"]
-            ),
-            "",
-        )
-        if not v:
-            raise ValueError(
-                f"no matching alt_title_types {parameter['name']}  {marc_field}"
-            )
-        return v
+        return get_ref_data_id_by_name(self.folio.alt_title_types, parameter["name"])
 
     def condition_remove_substring(self, value, parameter, marc_field):
         return value.replace(parameter["substring"], "")
@@ -272,9 +224,13 @@ class BibsConditions:
                 )
             return w
         else:
-            raise ValueError(
-                f"Something went wrong when trying to parse Instance type from {marc_field}"
+            # TODO Remove later. Corenell specific
+            return next(
+                f["id"] for f in self.folio.instance_types if f["code"] == "txt"
             )
+            """raise ValueError(
+                f"Something went wrong when trying to parse Instance type from {marc_field}"
+            )"""
 
     def condition_set_instance_format_id(self, value, parameter, marc_field):
         if not self.folio.instance_formats:
@@ -306,19 +262,7 @@ class BibsConditions:
             )
         if not self.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
-        v = next(
-            (
-                f["id"]
-                for f in self.electronic_access_relationships
-                if f["name"].lower() == name
-            ),
-            "",
-        )
-        if not v:
-            raise ValueError(
-                f"no matching electronic_access_relationships {name} {marc_field}"
-            )
-        return v
+        return get_ref_data_id_by_name(self.electronic_access_relationships, name)
 
 
 def add_stats(stats, a):
@@ -327,3 +271,38 @@ def add_stats(stats, a):
         stats[a] = 1
     else:
         stats[a] += 1
+
+
+def get_ref_data_id_by_code(ref_data, code):
+    return get_ref_data_id(ref_data, code, "code")
+
+
+def get_ref_data_id_by_name(ref_data, name):
+    return get_ref_data_id(ref_data, name, "name")
+
+
+def get_ref_data_id(ref_data, key_value, key_type):
+    ref_id = next(
+        (
+            f["id"]
+            for f in ref_data
+            if str(f[key_type]).casefold() == str(key_value).casefold()
+        ),
+        "",
+    )
+    if not ref_id:
+        raise Exception(f"No matching element for {key_value} in {ref_data}")
+    if validate_uuid(ref_id):
+        return ref_id
+    else:
+        raise Exception(f"UUID Validation error for {key_value} in {ref_data}")
+
+
+def validate_uuid(my_uuid):
+    return True
+    """reg = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    pattern = re.compile(reg)
+    if pattern.match(my_uuid):
+        return True
+    else:
+        return False"""

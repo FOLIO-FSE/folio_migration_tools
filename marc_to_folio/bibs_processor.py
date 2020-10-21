@@ -30,12 +30,23 @@ class BibsProcessor:
             if self.args.validate:
                 validate(folio_rec, self.instance_schema)
             # write record to file
-            write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
+            if not folio_rec.get("title", ""):
+                s = f"No title in {marc_record['001'].format_field()}"
+                self.add_to_migration_report("Records without titles", s)
+                print(s)
+                add_stats(self.stats, "Bib records that faile transformation")
+            if not folio_rec.get("instanceTypeId", ""):
+                s = f"No Instance Type Id in {marc_record['001'].format_field()}"
+                self.add_to_migration_report("Records without Instance Type Ids", s)
+                print(s)
+                add_stats(self.stats, "Bib records that faile transformation")
+            else:
+                write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
+                add_stats(self.stats, "Successfully transformed bibs")
 
             # Print progress
             self.print_progress()
 
-            add_stats(self.stats, "Successfully transformed bibs")
         except ValueError as value_error:
             self.add_to_migration_report(
                 "Records failed to migrate due to Value errors found in Transformation",
@@ -48,9 +59,10 @@ class BibsProcessor:
                 self.mapper.remove_from_id_map(marc_record)
         except ValidationError as validation_error:
             add_stats(self.stats, "Validation Errors")
-            add_stats(self.stats, "Bib records that faile transformation")
-            print("Error validating record. Halting...")
-            raise validation_error
+            add_stats(self.stats, "Bib records that failed transformation")
+            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
+            if callable(remove_from_id_map):
+                self.mapper.remove_from_id_map(marc_record)
         except Exception as inst:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):

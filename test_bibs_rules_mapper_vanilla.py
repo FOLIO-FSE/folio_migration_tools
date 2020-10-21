@@ -52,6 +52,14 @@ class TestRulesMapperVanilla(unittest.TestCase):
         )
         # TODO: test abcense of / for chalmers
 
+    def test_strange_isbn(self):
+        xpath = "//marc:datafield[@tag='020']"
+        record = self.default_map("isbn_c.xml", xpath)
+        identifiers = list(f["identifierTypeId"] for f in record[0]["identifiers"])
+        self.assertTrue(all(identifiers))
+        for i in identifiers:
+            self.assertEqual(1, len(str.split(i)))
+
     def test_composed_title(self):
         message = (
             "Should create a composed title (245) with the [a, b, k, n, p] subfields"
@@ -222,6 +230,10 @@ class TestRulesMapperVanilla(unittest.TestCase):
         self.assertIn("(OCoLC)898162644", identifier_values, m)
 
         self.assertIn("0027-3473", identifier_values, m)
+        identifiers = list(f["identifierTypeId"] for f in record[0]["identifiers"])
+        self.assertTrue(all(identifiers))
+        for i in identifiers:
+            self.assertEqual(1, len(str.split(i)))
         # self.assertIn('62874189', identifier_values, m)
         # self.assertIn('244170452', identifier_values, m)
         # self.assertIn('677051564', identifier_values, m)

@@ -2,6 +2,7 @@
 FOLIO community specifications"""
 import json
 import os.path
+import pymarc
 import copy
 import uuid
 import xml.etree.ElementTree as ET
@@ -165,8 +166,10 @@ class BibsRulesMapper:
                     self.add_entity_to_record(entity, e_parent, rec)
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
-            if any(entity.values()):
+            if all(entity.values()) or e_parent == "electronicAccess":
                 self.add_entity_to_record(entity, e_parent, rec)
+            else:
+                add_stats(self.stats, f"Incomplete entity mapping - {marc_field.tag}")
 
     def create_entity(self, entity_mappings, marc_field, entity_parent_key):
         entity = {}
@@ -206,7 +209,8 @@ class BibsRulesMapper:
                     if mapping.get("ignoreSubsequentFields", False):
                         sfs = []
                         for sf in mapping["subfield"]:
-                            sfs.append(next(iter(marc_field.get_subfields(sf)), ""))
+                            next_subfield = next(iter(marc_field.get_subfields(sf)), "")
+                            sfs.append(next_subfield)
                         value = " ".join(
                             [
                                 self.apply_rule(
@@ -217,14 +221,11 @@ class BibsRulesMapper:
                         )
                     else:
                         subfields = marc_field.get_subfields(*mapping["subfield"])
-                        value = " ".join(
-                            [
-                                self.apply_rule(
-                                    x, condition_types, marc_field, parameter
-                                )
-                                for x in subfields
-                            ]
-                        )
+                        x = [
+                            self.apply_rule(x, condition_types, marc_field, parameter)
+                            for x in subfields
+                        ]
+                        value = " ".join(set(x))
                 else:
                     value1 = marc_field.format_field() if marc_field else ""
                     value = self.apply_rule(
@@ -368,8 +369,8 @@ class BibsRulesMapper:
         self.srs_recs.append(
             (marc_record, instance_id, srs_id, self.folio.get_metadata_construct())
         )
-        if not suppress:
-            self.marc_xml_writer.write(marc_record)
+        # if not suppress:
+        # self.marc_xml_writer.write(marc_record)
         if len(self.srs_recs) == 1000:
             self.flush_srs_recs()
             self.srs_recs = []

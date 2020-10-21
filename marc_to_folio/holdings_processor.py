@@ -1,6 +1,8 @@
 """ Class that processes each MARC record """
 import time
 import json
+import traceback
+import logging
 import os
 from jsonschema import ValidationError, validate
 
@@ -15,7 +17,7 @@ class HoldingsProcessor:
         self.mapper = mapper
         self.args = args
         self.start = time.time()
-        print(
+        logging.warning(
             f'map will be saved to {os.path.join(self.args.result_folder, "holdings_id_map.json")}'
         )
 
@@ -25,22 +27,23 @@ class HoldingsProcessor:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record)
-            if self.args.validate:
-                validate(folio_rec, self.holdings_schema)
+            # if self.args.validate:
+            #    validate(folio_rec, self.holdings_schema)
             # write record to file
             write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
             if self.records_count % 10000 == 0:
-                print(self.mapper.stats)
+                logging.error(self.mapper.stats)
+                logging.error(self.mapper.unmapped_locations)
                 elapsed = self.records_count / (time.time() - self.start)
                 elapsed_formatted = "{0:.4g}".format(elapsed)
-                print(
-                    "{}\t\t{}".format(elapsed_formatted, self.records_count), flush=True
-                )
+                logging.error(f"{elapsed_formatted}\t\t{self.records_count}")
         except ValueError as value_error:
+            add_stats(self.mapper.stats, "Value errors")
+            add_stats(self.mapper.stats, "Failed records")
             # print(marc_record)
-            print(value_error)
+            logging.error(value_error)
             # print(marc_record)
             # print("Removing record from idMap")
             # raise value_error
@@ -48,27 +51,35 @@ class HoldingsProcessor:
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
         except ValidationError as validation_error:
-            print("Error validating record. Halting...")
-            raise validation_error
+            add_stats(self.mapper.stats, "Validation errors")
+            add_stats(self.mapper.stats, "Failed records")
+            logging.error(validation_error)
+            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
+            if callable(remove_from_id_map):
+                self.mapper.remove_from_id_map(marc_record)
         except Exception as inst:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
-            print(type(inst))
-            print(inst.args)
-            print(inst)
-            print(marc_record)
+            traceback.print_exc()
+            logging.error(type(inst))
+            logging.error(inst.args)
+            logging.error(inst)
+            logging.error(marc_record)
+
             raise inst
 
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
         id_map = self.mapper.holdings_id_map
         path = os.path.join(self.args.result_folder, "holdings_id_map.json")
-        print("Saving map of {} old and new IDs to {}".format(len(id_map), path))
+        logging.warning(
+            "Saving map of {} old and new IDs to {}".format(len(id_map), path)
+        )
         with open(path, "w+") as id_map_file:
             json.dump(id_map, id_map_file, indent=4)
         self.mapper.wrap_up()
-        print(f"{self.records_count} records processed")
+        logging.warning(f"{self.records_count} records processed")
 
 
 def write_to_file(file, pg_dump, folio_record):
