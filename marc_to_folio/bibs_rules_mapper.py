@@ -359,11 +359,11 @@ class BibsRulesMapper:
         else:
             raise Exception(f"Edge! {target_string} {sch[target_string]['type']}")
 
-    def validate(self, folio_rec, legacy_id):
+    def validate(self, folio_rec, legacy_ids):
         if not folio_rec.get("title", ""):
-            raise ValueError(f"No title for {legacy_id}")
+            raise ValueError(f"No title for {legacy_ids}")
         if not folio_rec.get("instanceTypeId", ""):
-            raise ValueError(f"No Instance Type Id for {legacy_id}")
+            raise ValueError(f"No Instance Type Id for {legacy_ids}")
 
     def save_source_record(self, marc_record, instance_id, suppress=False):
         """Saves the source Marc_record to the Source record Storage module"""
@@ -529,11 +529,16 @@ def add_stats(stats, a):
 
 def get_legacy_id(marc_record, ils_flavour):
     if ils_flavour == "iii":
-        return marc_record["907"]["a"]
+        return [marc_record["907"]["a"]]
     elif ils_flavour == "035":
-        return marc_record["035"]["a"]
-    elif ils_flavour in ["aleph", "voyager"]:
-        return marc_record["001"].format_field()
+        return [marc_record["035"]["a"][]
+    elif ils_flavour == "aleph":
+        res = set()
+        for f in marc_record.get_fields("998"):
+            res.add(f['b'])
+        return list(res)
+    elif ils_flavour in ["voyager"]:
+        return [marc_record["001"].format_field()]
     else:
         raise Exception(f"ILS {ils_flavour} not configured")
 
