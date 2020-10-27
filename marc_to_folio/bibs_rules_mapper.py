@@ -110,9 +110,8 @@ class BibsRulesMapper:
         self.save_source_record(marc_record, folio_instance["id"])
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
-        self.id_map[get_legacy_id(marc_record, self.ils_flavour)] = {
-            "id": folio_instance["id"]
-        }
+        for legacy_id in get_legacy_id(marc_record, self.ils_flavour):
+            self.id_map[legacy_id] = {"id": folio_instance["id"]}
         return folio_instance
 
     def perform_additional_parsing(self, folio_instance, temp_inst_type, marc_record):
@@ -531,11 +530,11 @@ def get_legacy_id(marc_record, ils_flavour):
     if ils_flavour == "iii":
         return [marc_record["907"]["a"]]
     elif ils_flavour == "035":
-        return [marc_record["035"]["a"][]
+        return [marc_record["035"]["a"]]
     elif ils_flavour == "aleph":
         res = set()
         for f in marc_record.get_fields("998"):
-            res.add(f['b'])
+            res.add(f["b"])
         return list(res)
     elif ils_flavour in ["voyager"]:
         return [marc_record["001"].format_field()]
