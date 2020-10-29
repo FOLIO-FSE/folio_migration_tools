@@ -121,7 +121,7 @@ class BibsRulesMapper:
             folio_instance["instanceTypeId"] = temp_inst_type
         elif not temp_inst_type and not folio_instance.get("instanceTypeId", ""):
             raise ValueError("No Instance type ID")
-        # folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record)
+        folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record)
         if "languages" in folio_instance:
             folio_instance["languages"].extend(self.get_languages(marc_record))
         else:
@@ -551,7 +551,8 @@ def has_value_to_add(mapping):
 
 
 def get_instance_schema():
-    instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json"
+    # instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json"
+    instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory/master/ramls/instance.json"
     schema_request = requests.get(instance_url)
     schema_text = schema_request.text
     return json.loads(schema_text)

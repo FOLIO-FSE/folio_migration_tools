@@ -13,6 +13,25 @@ class BibsConditions:
         self.electronic_access_relationships = {}
         self.cache = {}
         self.default_contributor_type = {}
+        print(f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances")
+        print(f"Fetched {len(self.folio.identifier_types)} identifier types")
+        print(f"Fetched {len(self.folio.instance_note_types)} note types")
+        print(f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances")
+        print(f"Fetched {len(self.folio.contrib_name_types)} contrib_name_types")
+        print(f"Fetched {len(self.folio.contributor_types)} contributor_types")
+        print(f"Fetched {len(self.folio.alt_title_types)} alt_title_types")
+        print(f"Fetched {len(self.folio.instance_types)} instance_types")
+        print(f"Fetched {len(self.folio.instance_formats)} instance_formats")
+        self.electronic_access_relationships = list(
+            self.folio.folio_get_all(
+                "/electronic-access-relationships",
+                "electronicAccessRelationships",
+                "?query=cql.allRecords=1 sortby name",
+            )
+        )
+        print(
+            f"Fetched {len(self.electronic_access_relationships)} electronic_access_relationships"
+        )
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
         # try:
@@ -256,14 +275,6 @@ class BibsConditions:
         ind2 = marc_field.indicator2
         name = enum.get(ind2, enum["3"])
 
-        if not any(self.electronic_access_relationships):
-            self.electronic_access_relationships = list(
-                self.folio.folio_get_all(
-                    "/electronic-access-relationships",
-                    "electronicAccessRelationships",
-                    "?query=cql.allRecords=1 sortby name",
-                )
-            )
         if not self.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
         return get_ref_data_id_by_name(self.electronic_access_relationships, name)
