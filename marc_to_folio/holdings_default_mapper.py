@@ -27,19 +27,21 @@ class HoldingsDefaultMapper:
         self.call_number_types_2 = {}
         self.call_number_types_ind1 = {}
         self.unmapped_holdings_fields = {}
+        self.ils_flavour = args.ils_flavour
         self.mapped_folio_fields = {}
         self.call_number_types_ind2 = {}
         self.f852as = {}
-        self.folio_locations = {}
+        self.folio_matched_locations = {}
+        self.folio_locations = list(self.folio_client.locations)
         self.legacy_locations = {}
         self.unmapped_locations = {}
         self.holdings_schema = fetch_holdings_schema()
-        self.holdings_note_types = self.folio_client.folio_get_all(
-            "/holdings-note-types", "holdingsNoteTypes"
+        self.holdings_note_types = list(
+            self.folio_client.folio_get_all("/holdings-note-types", "holdingsNoteTypes")
         )
         logging.info(f"{len(self.holdings_note_types)} note types")
-        self.call_number_types = self.folio_client.folio_get_all(
-            "/call-number-types", "callNumberTypes"
+        self.call_number_types = list(
+            self.folio_client.folio_get_all("/call-number-types", "callNumberTypes")
         )
         # Send out a list of note types that should be either public or private
         self.note_tags = {
@@ -118,7 +120,7 @@ class HoldingsDefaultMapper:
         print("## Legacy locations")
         print_dict_to_md_table(self.legacy_locations)
         print("## FOLIO locations")
-        print_dict_to_md_table(self.folio_locations)
+        print_dict_to_md_table(self.folio_matched_locations)
         print("## Unmapped location codes")
         print_dict_to_md_table(self.unmapped_locations)
         print("## Call number types (852 $2) values")
@@ -148,8 +150,14 @@ class HoldingsDefaultMapper:
                     print(f"{b}\\")
 
     def get_instance_id(self, marc_record):
-        old_instance_id = marc_record["004"].format_field()
-        # old_instance_id = marc_record["LKR"]["b"]
+        old_instance_id = ""
+        if self.ils_flavour == "aleph":
+            old_instance_id = marc_record["LKR"]["b"]
+        elif self.ils_flavour == "voyager":
+            old_instance_id = marc_record["004"].format_field()
+        else:
+            raise Exception("Ils flavour not found!")
+        #
         if old_instance_id in self.instance_id_map:
             return self.instance_id_map[old_instance_id]["id"]
         else:
@@ -246,8 +254,12 @@ class HoldingsDefaultMapper:
 
     def get_location(self, f852):
         """returns the location mapped and translated"""
-        try:
+        legacy_code = ""
+        if self.ils_flavour == "aleph":
+            legacy_code = f852["c"].strip()
+        elif self.ils_flavour == "voyager":
             legacy_code = f852["b"].strip()
+        try:
             add_stats(self.legacy_locations, legacy_code)
             if self.location_map and any(self.location_map):
                 mapped_code = next(
@@ -260,16 +272,17 @@ class HoldingsDefaultMapper:
                 )
                 if not mapped_code:
                     add_stats(self.unmapped_locations, f"Legacy code - {legacy_code}")
-                    raise ValueError(f"Legacy location not mapped: {legacy_code}")
+                    mapped_code = "tech"
+                    # raise ValueError(f"Legacy location not mapped: {legacy_code}")
             else:
                 mapped_code = legacy_code
             loc = next(
-                l["id"] for l in self.folio_client.locations if mapped_code == l["code"]
+                l["id"] for l in self.folio_locations if mapped_code == l["code"]
             )
             if not loc:
                 add_stats(self.unmapped_locations, f"Loc not in FOLIO - {mapped_code}")
                 raise ValueError("Location code {mapped_code} not found in FOLIO")
-            add_stats(self.folio_locations, mapped_code)
+            add_stats(self.folio_matched_locations, mapped_code)
             return loc
         except Exception as ee:
             return ""

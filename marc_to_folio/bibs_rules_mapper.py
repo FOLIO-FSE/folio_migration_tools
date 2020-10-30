@@ -534,10 +534,10 @@ def get_legacy_id(marc_record, ils_flavour):
     elif ils_flavour == "aleph":
         res = set()
         for f in marc_record.get_fields("998"):
-            res.add(f["b"])
+            res.add(f["b"].strip())
         return list(res)
     elif ils_flavour in ["voyager"]:
-        return [marc_record["001"].format_field()]
+        return [marc_record["001"].format_field().strip()]
     else:
         raise Exception(f"ILS {ils_flavour} not configured")
 

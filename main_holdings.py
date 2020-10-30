@@ -21,6 +21,7 @@ def parse_args():
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
+    parser.add_argument("ils_flavour", help=("The ILS migrating from"))
     parser.add_argument(
         "-postgres_dump",
         "-p",
@@ -59,6 +60,11 @@ def main():
         for f in listdir(args.source_folder)
         if isfile(os.path.join(args.source_folder, f))
     ]
+    logging.basicConfig(
+        filename=os.path.join(args.result_folder, "holdings_transform_log.log"),
+        filemode="w",
+        level=logging.ERROR,
+    )
     with open(
         os.path.join(args.result_folder, "instance_id_map.json"), "r"
     ) as json_file, open(
@@ -71,7 +77,7 @@ def main():
         logging.warning(f"Locations in map: {len(location_map)}")
         logging.warning(f"{len(instance_id_map)} Instance ids in map")
         mapper = HoldingsDefaultMapper(
-            folio_client, instance_id_map, args, location_map, 
+            folio_client, instance_id_map, args, location_map,
         )
         processor = HoldingsProcessor(mapper, folio_client, results_file, args)
         for records_file in files:
