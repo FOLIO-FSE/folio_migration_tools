@@ -131,7 +131,7 @@ def main():
     print(f"Files to process: {files}")
     holdings_id_dict_path = os.path.join(args.result_path, "holdings_id_map.json")
     items_map_path = os.path.join(args.map_path, "item_to_item.json")
-    location_map_path = os.path.join(args.map_path, "location_map.tsv")
+    location_map_path = os.path.join(args.map_path, "locations.tsv")
     items_type_map_path = os.path.join(args.map_path, "item_types.tsv")
     loans_type_map_path = os.path.join(args.map_path, "loan_types.tsv")
     material_type_map_path = os.path.join(args.map_path, "material_types.tsv")
@@ -146,8 +146,13 @@ def main():
         )
         with open(material_type_map_path) as material_type_file:
             material_type_map = list(csv.DictReader(material_type_file, dialect="tsv"))
+            print(f"Found {len(material_type_map)} rows in material type map")
         with open(loans_type_map_path) as loans_type_file:
             loan_type_map = list(csv.DictReader(loans_type_file, dialect="tsv"))
+            print(f"Found {len(loan_type_map)} rows in loan type map")
+            print(
+                f'{",".join(loan_type_map[0].keys())} will be used for determinig loan type'
+            )
     else:
         raise Exception(
             "Not enough mapping files present for mapping to be performed. Check documentation"
@@ -160,7 +165,9 @@ def main():
     ) as results_f:
         holdings_id_map = json.load(holdings_id_map_file)
         items_map = json.load(items_mapper_f)
+        print(f'{len(items_map["fields"])} fields in item to item map')
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
+        print(f"Found {len(location_map)} rows in location map")
         mapper = ItemsDefaultMapper(
             folio_client,
             items_map,

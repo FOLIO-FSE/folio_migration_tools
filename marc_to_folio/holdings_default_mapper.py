@@ -151,10 +151,13 @@ class HoldingsDefaultMapper:
 
     def get_instance_id(self, marc_record):
         old_instance_id = ""
+        marc_field = ""
         if self.ils_flavour == "aleph":
             old_instance_id = marc_record["LKR"]["b"]
+            marc_field = marc_record["LKR"]
         elif self.ils_flavour == "voyager":
             old_instance_id = marc_record["004"].format_field()
+            marc_field = marc_record["004"]
         else:
             raise Exception("Ils flavour not found!")
         #
@@ -162,7 +165,9 @@ class HoldingsDefaultMapper:
             return self.instance_id_map[old_instance_id]["id"]
         else:
             add_stats(self.stats, "bib id not in map")
-            raise ValueError(f"Old instance id not in map: {old_instance_id}")
+            raise ValueError(
+                f"Old instance id not in map: {old_instance_id} Field: {marc_field}"
+            )
 
     def handle_852s(self, f852s):
         ret = {
@@ -190,8 +195,7 @@ class HoldingsDefaultMapper:
                 ret["callNumberTypeId"] = self.get_call_number_type_id(
                     f852.indicator1, sf2
                 )
-            if "b" in f852 and f852["b"]:
-                ret["permanentLocationId"] = self.get_location(f852)
+            ret["permanentLocationId"] = self.get_location(f852)
         return ret
 
     def get_notes(self, marc_record):
@@ -254,11 +258,11 @@ class HoldingsDefaultMapper:
 
     def get_location(self, f852):
         """returns the location mapped and translated"""
-        legacy_code = ""
-        if self.ils_flavour == "aleph":
-            legacy_code = f852["c"].strip()
-        elif self.ils_flavour == "voyager":
-            legacy_code = f852["b"].strip()
+        loc_subfield = {"aleph": "c", "voyager": "b"}.get(self.ils_flavour)
+        if loc_subfield not in f852:
+            add_stats(self.stats, f"Records without ${loc_subfield} in 852")
+            return ""
+        legacy_code = f852[loc_subfield]
         try:
             add_stats(self.legacy_locations, legacy_code)
             if self.location_map and any(self.location_map):
@@ -285,8 +289,8 @@ class HoldingsDefaultMapper:
             add_stats(self.folio_matched_locations, mapped_code)
             return loc
         except Exception as ee:
+            logging.error(f"location not found: {ee}")
             return ""
-        return ""
 
     def get_holdingsStatements(self, marc_record, tag):
         """returns the various holdings statements"""
