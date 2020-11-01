@@ -1,5 +1,6 @@
 """The Alabama mapper, responsible for parsing Items acording to the
 FOLIO community specifications"""
+from marc_to_folio.migration_helper import MigrationBase
 import uuid
 import json
 import csv
@@ -12,7 +13,7 @@ from typing import Set, Dict, List
 csv.field_size_limit(sys.maxsize)
 
 
-class ItemsDefaultMapper:
+class ItemsDefaultMapper(MigrationBase):
     """Maps an Item to inventory Item format according to
     the FOLIO community convention"""
 
@@ -27,6 +28,7 @@ class ItemsDefaultMapper:
         other_maps,
         args,
     ):
+        super().__init__()
         self.args = args
         self.legacy_item_type_map = other_maps[0]
         self.duplicate_item_ids = {}
@@ -36,16 +38,11 @@ class ItemsDefaultMapper:
         csv.register_dialect("tsvq", delimiter="\t", quotechar='"')
         csv.register_dialect("pipe", delimiter="|")
         self.folio = folio
-        self.stats: Dict[str, int] = {}
-        self.missing_holdings_ids: Dict[str, int] = {}
-        self.migration_report: Dict[str, List[str]] = {}
+        self.missing_holdings_ids = {}
         self.item_schema = folio.get_item_schema()
         self.item_id_map: Dict[str, str] = {}
         self.item_to_item_map = item_map
         self.holdings_id_map = holdings_id_map
-        self.mapped_folio_fields: Dict[str, int] = {}
-        self.mapped_legacy_field: Dict[str, int] = {}
-        self.unmapped_legacy_field: Dict[str, int] = {}
         self.loan_types = list(self.folio.folio_get_all("/loan-types", "loantypes"))
         print(f"{len(self.loan_types)} loan types set up in tenant")
         self.material_types = list(
@@ -98,7 +95,7 @@ class ItemsDefaultMapper:
         for s, v in sorted_hlids.items():
             i += 1
             print(f"{s} - {v}")
-            if i > 10:
+            if i > 5:
                 break
         sorted_item_ids = {
             k: v
@@ -111,11 +108,12 @@ class ItemsDefaultMapper:
         for s, v in sorted_item_ids.items():
             i += 1
             print(f"{s} - {v}")
-            if i > 10:
+            if i > 5:
                 break
         print("## Item transformation counters")
-        print_dict_to_md_table(self.stats)
+        self.print_dict_to_md_table(self.stats)
         self.write_migration_report()
+        self.print_mapping_report()
 
     def get_loc_id(self, loc_code):
         folio_loc_id = next(
@@ -127,7 +125,7 @@ class ItemsDefaultMapper:
             "",
         )
         if not folio_loc_id:
-            add_stats(self.stats, "Location code not found in FOLIO")
+            self.add_stats(self.stats, "Location code not found in FOLIO")
             raise ValueError(f"Location code not found in FOLIO: {loc_code}")
         return folio_loc_id
 
@@ -149,7 +147,7 @@ class ItemsDefaultMapper:
         try:
             for row in reader:
                 i += 1
-                add_stats(self.stats, "Number of records in file(s)")
+                self.add_stats(self.stats, "Number of records in file(s)")
                 # if i < 3:
                 yield row
                 # else:
@@ -166,9 +164,9 @@ class ItemsDefaultMapper:
             "status": {"name": "Available"},
             "metadata": self.folio.get_metadata_construct(),
         }
-        self.add_to_migration_report("Mapped FOLIO Fields", "id")
-        self.add_to_migration_report("Mapped FOLIO Fields", "metadata")
-        self.add_to_migration_report("Mapped FOLIO Fields", "status")
+        self.report_folio_mapping("id", True, False)
+        self.report_folio_mapping("metaData", True, False)
+        self.report_folio_mapping("status", True, False)
         return item
 
     def parse_item(self, legacy_item: Dict):
@@ -187,13 +185,14 @@ class ItemsDefaultMapper:
                 )
                 legacy_value = str(legacy_value).strip()
                 if folio_field:
-                    self.add_to_migration_report("Mapped FOLIO Fields", folio_field)
-                    self.add_to_migration_report(
-                        "Mapped Legacy Fields", legacy_key or ""
-                    )
-                elif legacy_value:
-                    self.add_to_migration_report(
-                        "Mapped Legacy Fields", legacy_key or ""
+                    self.report_folio_mapping(folio_field, True, not bool(legacy_value))
+                    if legacy_key:
+                        self.report_legacy_mapping(
+                            legacy_key, True, not bool(legacy_value)
+                        )
+                elif legacy_key:
+                    self.report_legacy_mapping(
+                        legacy_key, False, not bool(legacy_value)
                     )
 
                 if folio_field and legacy_value:
@@ -202,7 +201,9 @@ class ItemsDefaultMapper:
                         if code:
                             item[folio_field] = code
                     elif folio_field in ["temporaryLocationId"]:
-                        add_stats(self.stats, f"Temp location code: {legacy_value}")
+                        self.add_stats(
+                            self.stats, f"Temp location code: {legacy_value}"
+                        )
                         # TODO: set temporary location?
                     elif folio_field == "materialTypeId":
                         item[folio_field] = self.handle_material_types(legacy_item)
@@ -212,7 +213,7 @@ class ItemsDefaultMapper:
 
                     elif folio_field == "holdingsRecordId":
                         if legacy_value not in self.holdings_id_map:
-                            add_stats(self.stats, "Holdings id not in map")
+                            self.add_stats(self.stats, "Holdings id not in map")
                             # self.add_to_migration_report(
                             #    "Missing holdings ids", legacy_value
                             # )
@@ -238,31 +239,31 @@ class ItemsDefaultMapper:
             has_failed: Set[str] = set()
             for f in self.item_schema["properties"]:
                 if f not in item:
-                    self.add_to_migration_report("Unmapped FOLIO Fields", f)
+                    self.report_folio_mapping(f, False, False)
 
             for req in self.item_schema["required"]:
                 if req not in item:
                     has_failed.add(req)
-                    add_stats(
+                    self.add_stats(
                         self.stats, f"Missing required field(s): {req}",
                     )
             if any(has_failed):
                 raise ValueError(f"{list(has_failed)} is required")
-            add_stats(self.stats, "Sucessfully transformed items")
+            self.add_stats(self.stats, "Sucessfully transformed items")
             if not legacy_id.strip():
-                add_stats(self.stats, "Empty legacy id")
+                self.add_stats(self.stats, "Empty legacy id")
             if legacy_id in self.item_id_map:
-                self.add_to_migration_report("Duplicate item ids", legacy_id)
-                add_stats(self.stats, "Duplicate item ids")
+                self.add_stats(self.duplicate_item_ids, legacy_id)
+                self.add_stats(self.stats, "Duplicate item ids")
             else:
                 self.item_id_map[legacy_id] = item["id"]
             return item
         except ValueError as ve:
-            add_stats(self.stats, f"Total failed items with Value errors")
+            self.add_stats(self.stats, f"Total failed items with Value errors")
             # self.add_to_migration_report("ValueErrors", f"{ve} for {legacy_id}")
             return None
         except Exception as ee:
-            add_stats(self.stats, "Exception")
+            self.add_stats(self.stats, "Exception")
             self.add_to_migration_report("Exceptions", f"{ee} for {legacy_id}")
             print(f"{ee} for {legacy_id}")
             traceback.print_exc()
@@ -272,7 +273,7 @@ class ItemsDefaultMapper:
         location_id = self.locations_map.get(legacy_value.strip().strip("^"), "")
         if location_id == "":
             self.add_to_migration_report("Missing location codes", legacy_value)
-            add_stats(self.stats, 'Missing location codes, adding "tech"')
+            self.add_stats(self.stats, 'Missing location codes, adding "tech"')
             location_id = self.locations_map.get("tech", "")
         return location_id
 
@@ -382,46 +383,3 @@ class ItemsDefaultMapper:
                 if x["name"].casefold() == "Non-Circulating".casefold()
             )
         )
-
-    def add_to_migration_report(self, header, measure_to_add):
-        if header not in self.migration_report:
-            self.migration_report[header] = {}
-        if measure_to_add not in self.migration_report[header]:
-            self.migration_report[header][measure_to_add] = 1
-        else:
-            self.migration_report[header][measure_to_add] += 1
-
-    def write_migration_report(self, other_report=None):
-        for a in self.migration_report:
-            print("")
-            print(f"## {a} - {len(self.migration_report[a])} things")
-            print(f"Measure | Count")
-            print("--- | ---:")
-            b = self.migration_report[a]
-            sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
-            for b in sortedlist:
-                print(f"{b[0]} | {b[1]}")
-
-
-def add_stats(stats, a):
-    if a not in stats:
-        stats[a] = 1
-    else:
-        stats[a] += 1
-
-
-def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
-    # TODO: Move to interface or parent class
-    d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
-    print(f"{h1} | {h2}")
-    print("--- | ---:")
-    for k, v in d_sorted.items():
-        print(f"{k} | {v:,}")
-
-
-def as_str(s):
-    try:
-        return str(s), ""
-    except ValueError:
-        return "", s
-

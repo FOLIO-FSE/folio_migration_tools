@@ -1,3 +1,7 @@
+import time
+from typing import Dict, List
+
+
 class MigrationBase:
     def __init__(self):
         self.migration_report = {}
@@ -19,7 +23,8 @@ class MigrationBase:
             self.mapped_folio_fields[field_name][0] += int(was_mapped)
             self.mapped_folio_fields[field_name][1] += int(was_empty)
 
-    def print_mapping_report(self, total_records):
+    def print_mapping_report(self):
+        total_records = self.stats["Number of records in file(s)"]
         print("\n## Mapped FOLIO fields")
         d_sorted = {
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
@@ -69,6 +74,29 @@ class MigrationBase:
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
             for b in sortedlist:
                 print(f"{b[0]} | {b[1]}")
+
+    def print_progress(self):
+        i = self.stats["Records processed"]
+        if i % 1000 == 0:
+            elapsed = i / (time.time() - self.start)
+            elapsed_formatted = int(elapsed)
+            print(
+                f"{elapsed_formatted}\t{i}", flush=True,
+            )
+
+    def print_dict_to_md_table(self, my_dict, h1="Measure", h2="Number"):
+        # TODO: Move to interface or parent class
+        d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
+        print(f"{h1} | {h2}")
+        print("--- | ---:")
+        for k, v in d_sorted.items():
+            print(f"{k} | {v:,}")
+
+    def add_stats(self, stats, a):
+        if a not in stats:
+            stats[a] = 1
+        else:
+            stats[a] += 1
 
 
 def as_str(s):
