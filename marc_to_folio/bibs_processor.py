@@ -129,9 +129,12 @@ class BibsProcessor:
     def save_source_record(self, marc_record, instance):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(uuid.uuid4())
-        new_001 = Field(tag="001", data=instance["hrid"])
-        marc_record.remove_fields("100")
-        marc_record.add_ordered_field(new_001)
+        if "hrid" in instance:
+            new_001 = Field(tag="001", data=instance["hrid"])
+            marc_record.remove_fields("001")
+            marc_record.add_ordered_field(new_001)
+        else:
+            self.mapper.add_stats(self.mapper.stats, "Records without HRID")
         marc_record.add_ordered_field(
             Field(
                 tag="999",
