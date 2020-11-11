@@ -2,7 +2,7 @@ import re
 
 
 class BibsConditions:
-    def __init__(self, folio):
+    def __init__(self, folio, mapper):
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
         self.stats = {}
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
@@ -11,6 +11,7 @@ class BibsConditions:
         self.instance_note_types = {}
         self.contrib_name_types = {}
         self.electronic_access_relationships = {}
+        self.mapper = mapper
         self.cache = {}
         self.default_contributor_type = {}
         print(f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances")
@@ -87,7 +88,9 @@ class BibsConditions:
             }
             name = m_o_i_s.get(seventh, "Other")
             if not name:
-                add_stats(self.stats, f"Unmatched Modes of issuance code {seventh}")
+                self.mapper.add_to_migration_report(
+                    "Unmatched Modes of issuance code", seventh
+                )
                 raise ValueError(f"{name} is not a valid mode of issuance")
 
             ret = next(
@@ -98,8 +101,13 @@ class BibsConditions:
                 ),
                 "",
             )
+            self.mapper.add_to_migration_report(
+                "Matched Modes of issuance code", f"{ret} - {name}"
+            )
             if not ret:
-                add_stats(self.stats, f"Unmatched Modes of issuance code {seventh}")
+                self.mapper.add_to_migration_report(
+                    "Unmatched Modes of issuance code", seventh
+                )
                 return next(
                     (
                         i["id"]
@@ -254,13 +262,24 @@ class BibsConditions:
             )"""
 
     def condition_set_instance_format_id(self, value, parameter, marc_field):
+        legacy_value = value
         if not self.folio.instance_formats:
             raise ValueError("No instance_formats setup in tenant")
+        if len(legacy_value) == 1:
+            legacy_value = legacy_value + "z"
         v = next(
-            (f["id"] for f in self.folio.instance_formats if f["code"] == value), ""
+            (f["id"] for f in self.folio.instance_formats if f["code"] == legacy_value),
+            "",
         )
         if not v:
-            raise ValueError(f"no matching instance_formats {value} {marc_field}")
+            self.mapper.add_to_migration_report(
+                "Unmatched Instance formats - orginal (concatenated)",
+                f"{value} ({legacy_value})",
+            )
+            if len(legacy_value) == 2:
+                raise ValueError(
+                    f"no matching instance_formats {value} - ({legacy_value}) {marc_field}"
+                )
         return v
 
     def condition_set_electronic_access_relations_id(
@@ -278,14 +297,6 @@ class BibsConditions:
         if not self.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
         return get_ref_data_id_by_name(self.electronic_access_relationships, name)
-
-
-def add_stats(stats, a):
-    # TODO: Move to interface or parent class
-    if a not in stats:
-        stats[a] = 1
-    else:
-        stats[a] += 1
 
 
 def get_ref_data_id_by_code(ref_data, code):

@@ -1,6 +1,7 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
 import json
+from marc_to_folio.migration_base import MigrationBase
 import os.path
 import pymarc
 import copy
@@ -16,20 +17,20 @@ from pymarc import Field, JSONWriter, XMLWriter
 from marc_to_folio.bibs_conditions import BibsConditions
 
 
-class BibsRulesMapper:
+class BibsRulesMapper(MigrationBase):
     """Maps a MARC record to inventory instance format according to
     the FOLIO community convention"""
 
     def __init__(
         self, folio, args,
     ):
+        super().__init__()
         self.folio = folio
-        self.suppress = args.suppress
         self.stats = {}
         self.record_status = {}
         self.migration_report = {}
         self.suppress = args.suppress
-        self.conditions = BibsConditions(folio)
+        self.conditions = BibsConditions(folio, self)
         self.instance_schema = get_instance_schema()
         self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
@@ -43,19 +44,9 @@ class BibsRulesMapper:
         self.unmapped_folio_fields = {}
         self.alt_title_map = {}
         self.identifier_types = []
+        print("Fetching mapping rules from the tenant")
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
-        self.srs_records_file = open(
-            os.path.join(self.results_folder, "srs.json"), "w+"
-        )
-        self.srs_raw_records_file = open(
-            os.path.join(self.results_folder, "srs_raw_records.json"), "w+"
-        )
-        self.srs_marc_records_file = open(
-            os.path.join(self.results_folder, "srs_marc_records.json"), "w+"
-        )
-        self.marc_xml_writer = XMLWriter(
-            open(os.path.join(self.results_folder, "marc_xml_dump.xml"), "wb+")
-        )
+
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
         self.instance_relationships = {}
@@ -69,19 +60,21 @@ class BibsRulesMapper:
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
         }
-        add_stats(self.record_status, marc_record.leader[5])
+        self.add_to_migration_report(
+            "Record status (leader pos 5)", marc_record.leader[5]
+        )
         temp_inst_type = ""
         ignored_subsequent_fields = set()
-        bad_tags = {"039", "263", "229", "922"}  # "907"
+        bad_tags = {}  # "907"
 
         for marc_field in marc_record:
-            add_stats(self.stats, "Total number of Tags processed")
+            self.add_stats(self.stats, "Total number of Tags processed")
 
             if (not marc_field.tag.isnumeric()) and marc_field.tag != "LDR":
                 bad_tags.add(marc_field.tag)
 
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
-                add_stats(self.unmapped_tags, marc_field.tag)
+                self.report_legacy_mapping(marc_field.tag, False, False)
             else:
                 if marc_field.tag not in ignored_subsequent_fields:
                     mappings = self.mappings[marc_field.tag]
@@ -100,14 +93,11 @@ class BibsRulesMapper:
         self.validate(folio_instance, get_legacy_id(marc_record, self.ils_flavour))
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
-        count_unmapped_fields(
-            self.unmapped_folio_fields, self.instance_schema, folio_instance
-        )
+        self.count_unmapped_fields(self.instance_schema, folio_instance)
         try:
-            count_mapped_fields(self.mapped_folio_fields, folio_instance)
+            self.count_mapped_fields(folio_instance)
         except:
             print(folio_instance)
-        self.save_source_record(marc_record, folio_instance["id"])
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         for legacy_id in get_legacy_id(marc_record, self.ils_flavour):
@@ -121,7 +111,7 @@ class BibsRulesMapper:
             folio_instance["instanceTypeId"] = temp_inst_type
         elif not temp_inst_type and not folio_instance.get("instanceTypeId", ""):
             raise ValueError("No Instance type ID")
-        folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record)
+        # folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record)
         if "languages" in folio_instance:
             folio_instance["languages"].extend(self.get_languages(marc_record))
         else:
@@ -137,11 +127,7 @@ class BibsRulesMapper:
         # self.validate(folio_instance)
 
     def wrap_up(self):
-        self.marc_xml_writer.close()
-        self.flush_srs_recs()
-        self.srs_records_file.close()
-        self.srs_marc_records_file.close()
-        self.srs_raw_records_file.close()
+        print("Mapper wrapping up")
 
     def map_field_according_to_mapping(self, marc_field, mappings, rec):
         for mapping in mappings:
@@ -184,7 +170,9 @@ class BibsRulesMapper:
             if all(entity.values()) or e_parent == "electronicAccess":
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
-                add_stats(self.stats, f"Incomplete entity mapping - {marc_field.tag}")
+                self.add_to_migration_report(
+                    "Incomplete entity mapping (a code issue)", marc_field.tag
+                )
 
     def create_entity(self, entity_mappings, marc_field, entity_parent_key):
         entity = {}
@@ -364,38 +352,6 @@ class BibsRulesMapper:
         if not folio_rec.get("instanceTypeId", ""):
             raise ValueError(f"No Instance Type Id for {legacy_ids}")
 
-    def save_source_record(self, marc_record, instance_id, suppress=False):
-        """Saves the source Marc_record to the Source record Storage module"""
-        srs_id = str(uuid.uuid4())
-        marc_record.add_field(
-            Field(
-                tag="999",
-                indicators=["f", "f"],
-                subfields=["i", instance_id, "s", srs_id],
-            )
-        )
-        self.srs_recs.append(
-            (
-                marc_record,
-                instance_id,
-                srs_id,
-                self.folio.get_metadata_construct(),
-                self.suppress,
-            )
-        )
-        # if not suppress:
-        # self.marc_xml_writer.write(marc_record)
-        if len(self.srs_recs) == 1000:
-            self.flush_srs_recs()
-            self.srs_recs = []
-
-    def flush_srs_recs(self):
-        pool = ProcessPoolExecutor(max_workers=4)
-        results = list(pool.map(get_srs_strings, self.srs_recs))
-        self.srs_records_file.write("".join(r[0] for r in results))
-        # self.srs_marc_records_file.write("".join(r[2] for r in results))
-        # self.srs_raw_records_file.write("".join(r[1] for r in results))
-
     def get_nature_of_content(self, marc_record):
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
 
@@ -463,11 +419,6 @@ class BibsRulesMapper:
                         f"{language_value} not recognized for {get_legacy_id(marc_record, self.ils_flavour)}",
                     )
 
-    def add_to_migration_report(self, header, messageString):
-        if header not in self.migration_report:
-            self.migration_report[header] = list()
-        self.migration_report[header].append(messageString)
-
     def dedupe_rec(self, rec):
         # remove duplicates
         for key, value in rec.items():
@@ -479,55 +430,13 @@ class BibsRulesMapper:
                 rec[key] = res
 
 
-def get_srs_strings(my_tuple):
-    json_string = StringIO()
-    writer = JSONWriter(json_string)
-    writer.write(my_tuple[0])
-    writer.close(close_fh=False)
-    marc_uuid = str(uuid.uuid4())
-    raw_uuid = str(uuid.uuid4())
-    raw_record = {"id": my_tuple[2], "content": my_tuple[0].as_json()}
-    parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple[0].as_json())}
-    record = {
-        "id": my_tuple[2],
-        "deleted": False,
-        "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
-        "matchedId": my_tuple[2],
-        "generation": 0,
-        "recordType": "MARC",
-        "rawRecord": raw_record,
-        "parsedRecord": parsed_record,
-        "additionalInfo": {"suppressDiscovery": my_tuple[4]},
-        "externalIdsHolder": {"instanceId": my_tuple[1]},
-        "metadata": my_tuple[3],
-        "state": "ACTUAL",
-        "leaderRecordStatus": parsed_record["content"]["leader"][5],
-    }
-    if parsed_record["content"]["leader"][5] in [*"acdnposx"]:
-        record["leaderRecordStatus"] = parsed_record["content"]["leader"][5]
-    else:
-        record["leaderRecordStatus"] = "d"
-    return (
-        f"{record['id']}\t{json.dumps(record)}\n",
-        f"{raw_record['id']}\t{json.dumps(raw_record)}\n",
-        f"{parsed_record['id']}\t{json.dumps(parsed_record)}\n",
-    )
-
-
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
     return zip(*[iter(iterable)] * n)
 
 
-def add_stats(stats, a):
-    if a not in stats:
-        stats[a] = 1
-    else:
-        stats[a] += 1
-
-
 def get_legacy_id(marc_record, ils_flavour):
-    if ils_flavour == "iii":
+    if ils_flavour in ["iii", "sierra"]:
         return [marc_record["907"]["a"]]
     elif ils_flavour == "035":
         return [marc_record["035"]["a"]]
@@ -567,17 +476,3 @@ def is_array_of_objects(schema_property):
     sc_prop_type = schema_property.get("type", "string")
     return sc_prop_type == "array" and schema_property["items"]["type"] == "object"
 
-
-def count_unmapped_fields(stats_map, schema, folio_object):
-    schema_properties = schema["properties"].keys()
-    unmatched_properties = (
-        p for p in schema_properties if p not in folio_object.keys()
-    )
-    for p in unmatched_properties:
-        add_stats(stats_map, p)
-
-
-def count_mapped_fields(stats_map, folio_object):
-    for key, value in folio_object.items():
-        if isinstance(value, bool) or value or any(value):
-            add_stats(stats_map, key)

@@ -21,11 +21,10 @@ from marc_to_folio.bibs_processor import BibsProcessor
 class Worker:
     """Class that is responsible for the acutal work"""
 
-    def __init__(self, folio_client, results_file, args):
+    def __init__(self, folio_client, results_file, migration_report_file, args):
         # msu special case
         self.args = args
-        self.stats = {}
-        self.migration_report = {}
+        self.migration_report_file = migration_report_file
         self.results_file_path = results_file
 
         self.files = [
@@ -68,23 +67,28 @@ class Worker:
 
     def read_records(self, reader):
         for record in reader:
-            add_stats(self.stats, "MARC21 records in file before parsing")
+            self.mapper.add_stats(
+                self.mapper.stats, "MARC21 records in file before parsing"
+            )
             if record is None:
-                self.add_to_migration_report(
+                self.mapper.add_to_migration_report(
                     "Bib records that failed to parse. -",
                     f"{reader.current_exception} {reader.current_chunk}",
                 )
-                add_stats(
-                    self.stats, "MARC21 Records with encoding errors - parsing failed"
+                self.mapper.add_stats(
+                    self.mapper.stats,
+                    "MARC21 Records with encoding errors - parsing failed",
                 )
             else:
-                add_stats(self.stats, "MARC21 Records successfully parsed")
+                self.mapper.add_stats(
+                    self.mapper.stats, "MARC21 Records successfully parsed"
+                )
                 self.processor.process_record(record, False)
-            add_stats(self.stats, "Bibs processed")
+            self.mapper.add_stats(self.mapper.stats, "Bibs processed")
             self.print_progress()
 
     def print_progress(self):
-        i = self.stats["Bibs processed"]
+        i = self.mapper.stats["Bibs processed"]
         if i % 1000 == 0:
             elapsed = i / (time.time() - self.start)
             elapsed_formatted = int(elapsed)
@@ -95,67 +99,16 @@ class Worker:
     def wrap_up(self):
         print("Done. Wrapping up...")
         self.processor.wrap_up()
-        print("Failed files:")
-        self.stats = {**self.stats, **self.mapper.stats, **self.processor.stats}
+        with open(self.migration_report_file, "w+") as report_file:
+            report_file.write(f"# Bibliographic records transformation results   \n")
 
-        print("# Bibliographic records transformation results")
-        print(f"Time Run: {dt.isoformat(dt.now())}")
-        print("## Bibliographic records transformation counters")
-        print_dict_to_md_table(self.stats, "  Measure  ", "Count")
-        print("## Unmapped MARC tags")
-        print(
-            "A list of the records not covered by the mapping rules. "
-            "These rules can be customized to cover more fields. "
-            "The counts next to the field name is the number of records with this field."
-        )
-        print_dict_to_md_table(
-            self.mapper.unmapped_tags, "Tag", "Count",
-        )
-        print("## Mapped FOLIO fields")
-        print("The number of times a certain FOLIO field was filled with information")
-        print_dict_to_md_table(
-            self.mapper.mapped_folio_fields, "Fielname", "Count",
-        )
-        print("## Unmapped FOLIO fields")
-        print("The number of records missing certain FOLIO fields")
-        print_dict_to_md_table(
-            self.mapper.unmapped_folio_fields, "Tag", "Count",
-        )
-        print("## Unmapped conditions in rules")
-        print("Conditions from the mapping-rules never covered by the transformation")
-        print_dict_to_md_table(self.mapper.unmapped_conditions)
-
-        print("## Record status counts")
-        print(
-            "Record status in the records from Leader in position 05   "
-            "Valid values are a - Increase in encoding level, c - Corrected or revised, "
-            "d - Deleted, n - New, p - Increase in encoding level from prepublication"
-        )
-
-        print_dict_to_md_table(self.mapper.record_status)
-
-        self.write_migration_report(self.mapper.migration_report)
-        self.write_migration_report(self.processor.migration_report)
-        self.write_migration_report()
-        print("done")
-
-    def add_to_migration_report(self, header, messageString):
-        # TODO: Move to interface or parent class
-        if header not in self.migration_report:
-            self.migration_report[header] = list()
-        self.migration_report[header].append(messageString)
-
-    def write_migration_report(self, other_report=None):
-        if other_report:
-            for a in other_report:
-                print(f"## {a} - {len(other_report[a])} things")
-                for b in other_report[a]:
-                    print(f"{b}\\")
-        else:
-            for a in self.migration_report:
-                print(f"## {a} - {len(self.migration_report[a])} things")
-                for b in self.migration_report[a]:
-                    print(f"{b}\\")
+            report_file.write(f"Time Run: {dt.isoformat(dt.now())}   \n")
+            report_file.write(f"## Bibliographic records transformation counters   \n")
+            self.mapper.print_dict_to_md_table(
+                self.mapper.stats, report_file, "  Measure  ", "Count   \n",
+            )
+            self.mapper.write_migration_report(report_file)
+        print(f"Done. Transformation report written to {self.migration_report_file}")
 
 
 def parse_args():
@@ -213,11 +166,15 @@ def parse_args():
 def main():
     """Main Method. Used for bootstrapping. """
     # Parse CLI Arguments
+    print("Bootstrapping", flush=True)
     args = parse_args()
 
     logging.basicConfig(level=logging.CRITICAL)
 
     results_file = join(args.results_folder, "folio_instances.json")
+    migration_report_file = join(
+        args.results_folder, "instance_transformation_report.md"
+    )
     print("\tresults will be saved at:\t", args.results_folder)
     print("\tOkapi URL:\t", args.okapi_url)
     print("\tTenanti Id:\t", args.tenant_id)
@@ -227,7 +184,7 @@ def main():
         args.okapi_url, args.tenant_id, args.username, args.password
     )
     # Iniiate Worker
-    worker = Worker(folio_client, results_file, args)
+    worker = Worker(folio_client, results_file, migration_report_file, args)
     worker.work()
 
 
@@ -238,22 +195,6 @@ def get_subfield_contents(record, marc_tag, subfield_code):
         for sf in f.get_subfields(subfield_code):
             res.append(sf)
     return res
-
-
-def add_stats(stats, a):
-    if a not in stats:
-        stats[a] = 1
-    else:
-        stats[a] += 1
-
-
-def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
-    # TODO: Move to interface or parent class
-    d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
-    print(f"{h1} | {h2}")
-    print("--- | ---:")
-    for k, v in d_sorted.items():
-        print(f"{k} | {v:,}")
 
 
 if __name__ == "__main__":

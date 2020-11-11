@@ -1,6 +1,6 @@
 """The Alabama mapper, responsible for parsing Items acording to the
 FOLIO community specifications"""
-from marc_to_folio.migration_helper import MigrationBase
+from marc_to_folio.migration_base import MigrationBase
 import uuid
 import json
 import csv
@@ -208,15 +208,23 @@ class ItemsDefaultMapper(MigrationBase):
                     elif folio_field == "materialTypeId":
                         item[folio_field] = self.handle_material_types(legacy_item)
 
+                    elif folio_field == "status.name":
+                        item[folio_field] = self.handle_status(legacy_value)
                     elif folio_field == "permanentLoanTypeId":
                         item[folio_field] = self.handle_loan_types(legacy_item)
 
+                    elif folio_field == "itemLevelCallNumberTypeId":
+                        item[folio_field] = self.handle_call_number_id(legacy_value)
+
+                    elif folio_field == "circulationNotes":
+                        item[folio_field] = self.handle_circulation_notes(legacy_value)
                     elif folio_field == "holdingsRecordId":
                         if legacy_value not in self.holdings_id_map:
                             self.add_stats(self.stats, "Holdings id not in map")
                             # self.add_to_migration_report(
                             #    "Missing holdings ids", legacy_value
                             # )
+
                             raise ValueError(f"Holdings id {legacy_value} not in map")
                         else:
                             item[folio_field] = self.holdings_id_map[legacy_value]
@@ -226,7 +234,9 @@ class ItemsDefaultMapper(MigrationBase):
 
                     else:
                         if self.is_string(folio_field):
-                            item[folio_field] = legacy_value
+                            item[folio_field] = " ".join(
+                                [item.get(folio_field, ""), legacy_value]
+                            )
                         elif self.is_string_array(folio_field):
                             if folio_field in item and any(item[folio_field]):
                                 item[folio_field].append(legacy_value)
@@ -305,6 +315,18 @@ class ItemsDefaultMapper(MigrationBase):
             item["notes"].append(note_to_add)
         else:
             item["notes"] = [note_to_add]
+
+    def handle_circulation_notes(self, legacy_value):
+        self.add_to_migration_report("Circulation notes", "Circ note")
+        return []
+
+    def handle_call_number_id(self, legacy_value):
+        self.add_to_migration_report("Call number legacy types", legacy_value)
+        return legacy_value
+
+    def handle_status(self, legacy_value):
+        self.add_to_migration_report("Legacy item status", legacy_value)
+        return legacy_value
 
     def handle_material_types(self, legacy_item: dict):
         m_keys = m_keys = list(

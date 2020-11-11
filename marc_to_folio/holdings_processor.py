@@ -36,7 +36,6 @@ class HoldingsProcessor:
             # Print progress
             if self.records_count % 10000 == 0:
                 logging.error(self.mapper.stats)
-                logging.error(self.mapper.unmapped_locations)
                 elapsed = self.records_count / (time.time() - self.start)
                 elapsed_formatted = "{0:.4g}".format(elapsed)
                 logging.error(f"{elapsed_formatted}\t\t{self.records_count}")

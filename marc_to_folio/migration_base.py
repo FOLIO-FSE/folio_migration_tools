@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Dict, List
 
@@ -64,16 +65,16 @@ class MigrationBase:
         else:
             self.migration_report[header][measure_to_add] += 1
 
-    def write_migration_report(self, other_report=None):
+    def write_migration_report(self, report_file):
         for a in self.migration_report:
-            print("")
-            print(f"## {a} - {len(self.migration_report[a])} things")
-            print(f"Measure | Count")
-            print("--- | ---:")
+            report_file.write(f"   \n")
+            report_file.write(f"## {a} - {len(self.migration_report[a])} things   \n")
+            report_file.write(f"Measure | Count   \n")
+            report_file.write(f"--- | ---:   \n")
             b = self.migration_report[a]
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
             for b in sortedlist:
-                print(f"{b[0]} | {b[1]}")
+                report_file.write(f"{b[0]} | {b[1]}   \n")
 
     def print_progress(self):
         i = self.stats["Records processed"]
@@ -84,19 +85,47 @@ class MigrationBase:
                 f"{elapsed_formatted}\t{i}", flush=True,
             )
 
-    def print_dict_to_md_table(self, my_dict, h1="Measure", h2="Number"):
+    def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
         # TODO: Move to interface or parent class
         d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
-        print(f"{h1} | {h2}")
-        print("--- | ---:")
+        report_file.write(f"{h1} | {h2}   \n")
+        report_file.write(f"--- | ---:   \n")
         for k, v in d_sorted.items():
-            print(f"{k} | {v:,}")
+            report_file.write(f"{k} | {v:,}   \n")
 
     def add_stats(self, stats, a):
         if a not in stats:
             stats[a] = 1
         else:
             stats[a] += 1
+
+    def count_unmapped_fields(self, schema, folio_object):
+        schema_properties = schema["properties"].keys()
+        unmatched_properties = (
+            p for p in schema_properties if p not in folio_object.keys()
+        )
+        for p in unmatched_properties:
+            self.report_folio_mapping(p, False, True)
+
+    def count_mapped_fields(self, folio_object):
+        keys_to_delete = []
+        for key, value in folio_object.items():
+            if isinstance(value, str):
+                self.report_folio_mapping(key, True, not value)
+                if not value:
+                    keys_to_delete.append(key)
+            elif isinstance(value, list):
+                self.report_folio_mapping(key, True, any(value))
+                if not any(value):
+                    keys_to_delete.append(key)
+            elif isinstance(value, dict):
+                self.report_folio_mapping(key, True, any(value))
+                if not any(value):
+                    keys_to_delete.append(key)
+            else:
+                logging.info(type(value))
+        for mykey in keys_to_delete:
+            del folio_object[mykey]
 
 
 def as_str(s):

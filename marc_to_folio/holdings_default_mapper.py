@@ -1,5 +1,6 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
+from marc_to_folio.migration_base import MigrationBase
 import uuid
 import requests
 import logging
@@ -8,33 +9,26 @@ import pymarc
 from datetime import datetime
 
 
-class HoldingsDefaultMapper:
+class HoldingsDefaultMapper(MigrationBase):
     """Maps a MARC record to inventory instance format according to
     the FOLIO community convention"""
 
     # Bootstrapping (loads data needed later in the script.)
 
     def __init__(self, folio_client, instance_id_map, args, location_map=None):
-        self.suppress = args.suppress
         logging.info("init Default Holdings mapper!")
-        self.stats = {}
+        super().__init__()
+        self.suppress = args.suppress
         self.tags_occurrences = {}
         self.location_map = location_map
-        self.migration_report = {}
         self.folio_client = folio_client
         self.instance_id_map = instance_id_map
         self.holdings_id_map = {}
-        self.call_number_types_2 = {}
-        self.call_number_types_ind1 = {}
         self.unmapped_holdings_fields = {}
         self.ils_flavour = args.ils_flavour
-        self.mapped_folio_fields = {}
         self.call_number_types_ind2 = {}
         self.f852as = {}
-        self.folio_matched_locations = {}
         self.folio_locations = list(self.folio_client.locations)
-        self.legacy_locations = {}
-        self.unmapped_locations = {}
         self.holdings_schema = fetch_holdings_schema()
         self.holdings_note_types = list(
             self.folio_client.folio_get_all("/holdings-note-types", "holdingsNoteTypes")
@@ -67,8 +61,9 @@ class HoldingsDefaultMapper:
     def parse_hold(self, marc_record):
         """Parses a holdings record into a FOLIO Inventory Holdings object
         community mapping suggestion: """
+        self.add_stats(self.stats, "Number of records in file(s)")
         for f in marc_record:
-            add_stats(self.tags_occurrences, f.tag)
+            self.add_stats(self.tags_occurrences, f.tag)
 
         f852s = self.report_on_852s(marc_record)
         rec = {
@@ -88,10 +83,10 @@ class HoldingsDefaultMapper:
         }
         rec.update(self.handle_852s(f852s))
         self.holdings_id_map[marc_record["001"].format_field()] = rec["id"]
-        count_unmapped_fields(
-            self.unmapped_holdings_fields, self.holdings_schema, rec,
+        self.count_unmapped_fields(
+            self.holdings_schema, rec,
         )
-        count_mapped_fields(self.mapped_folio_fields, rec)
+        self.count_mapped_fields(rec)
         self.validate(rec, marc_record)
         return rec
 
@@ -103,39 +98,22 @@ class HoldingsDefaultMapper:
 
     def report_on_852s(self, marc_record):
         if "852" not in marc_record:
-            add_stats(self.stats, "Records missing 852")
+            self.add_stats(self.stats, "Records missing 852")
             raise ValueError(f'852 missing for {marc_record["001"]}')
         f852s = marc_record.get_fields("852")
         if len(f852s) > 1:
-            add_stats(self.stats, "Records with multiple 852 fields")
+            self.add_stats(self.stats, "Records with multiple 852 fields")
             for f852 in f852s:
                 for sf in f852.get_subfields():
-                    add_stats(self.stats, f"852 - {sf}")
+                    self.add_stats(self.stats, f"852 - {sf}")
         return f852s
 
     def wrap_up(self):
         print("# Holdings transformation results")
         print("## Stats")
-        print_dict_to_md_table(self.stats)
-        print("## Legacy locations")
-        print_dict_to_md_table(self.legacy_locations)
-        print("## FOLIO locations")
-        print_dict_to_md_table(self.folio_matched_locations)
-        print("## Unmapped location codes")
-        print_dict_to_md_table(self.unmapped_locations)
-        print("## Call number types (852 $2) values")
-        print_dict_to_md_table(self.call_number_types_2)
-        print("## Unmapped FOLIO fields")
-        print_dict_to_md_table(self.unmapped_holdings_fields)
-        print("## Mapped FOLIO Fields")
-        print_dict_to_md_table(self.mapped_folio_fields)
+        self.print_dict_to_md_table(self.stats)
         self.write_migration_report()
-
-    def add_to_migration_report(self, header, messageString):
-        # TODO: Move to interface or parent class
-        if header not in self.migration_report:
-            self.migration_report[header] = list()
-        self.migration_report[header].append(messageString)
+        self.print_mapping_report()
 
     def write_migration_report(self, other_report=None):
         if other_report:
@@ -164,7 +142,7 @@ class HoldingsDefaultMapper:
         if old_instance_id in self.instance_id_map:
             return self.instance_id_map[old_instance_id]["id"]
         else:
-            add_stats(self.stats, "bib id not in map")
+            self.add_stats(self.stats, "bib id not in map")
             raise ValueError(
                 f"Old instance id not in map: {old_instance_id} Field: {marc_field}"
             )
@@ -228,9 +206,7 @@ class HoldingsDefaultMapper:
         }
         if ind1 == "7":
             if sf2 == "lcc":
-                add_stats(
-                    self.call_number_types_2, "Library of Congress classification"
-                )
+                self.add_to_migration_report("Call number types values (852 $2)", sf2)
                 return next(
                     t["id"]
                     for t in self.call_number_types
@@ -247,11 +223,14 @@ class HoldingsDefaultMapper:
                     "",
                 )
                 if c_id:
-                    add_stats(self.call_number_types_2, cnts.get(ind1, ""))
+                    self.add_to_migration_report(
+                        "Call number types values ind1", cnts.get(ind1, "")
+                    )
                     return c_id
 
-        # add_stats(self.stats, f"Unhandled scheme in 852$2: {sf2} added other scheme")
-        add_stats(self.call_number_types_2, f"{cnts.get('8')} ({sf2})")
+        self.add_to_migration_report(
+            "Call number types values (852 $2)", f"{cnts.get('8')} ({sf2})"
+        )
         return next(
             t["id"] for t in self.call_number_types if t["name"] == "Other scheme"
         )
@@ -260,11 +239,11 @@ class HoldingsDefaultMapper:
         """returns the location mapped and translated"""
         loc_subfield = {"aleph": "c", "voyager": "b"}.get(self.ils_flavour)
         if loc_subfield not in f852:
-            add_stats(self.stats, f"Records without ${loc_subfield} in 852")
+            self.add_stats(self.stats, f"Records without ${loc_subfield} in 852")
             return ""
         legacy_code = f852[loc_subfield]
         try:
-            add_stats(self.legacy_locations, legacy_code)
+            self.add_to_migration_report("Legacy location codes", legacy_code)
             if self.location_map and any(self.location_map):
                 mapped_code = next(
                     (
@@ -275,7 +254,9 @@ class HoldingsDefaultMapper:
                     "",
                 )
                 if not mapped_code:
-                    add_stats(self.unmapped_locations, f"Legacy code - {legacy_code}")
+                    self.add_to_migration_report(
+                        "Locations - Unmapped legacy locations", legacy_code
+                    )
                     mapped_code = "tech"
                     # raise ValueError(f"Legacy location not mapped: {legacy_code}")
             else:
@@ -284,9 +265,13 @@ class HoldingsDefaultMapper:
                 l["id"] for l in self.folio_locations if mapped_code == l["code"]
             )
             if not loc:
-                add_stats(self.unmapped_locations, f"Loc not in FOLIO - {mapped_code}")
+                self.add_to_migration_report(
+                    "Locations - Mapped location not in FOLIO", mapped_code
+                )
                 raise ValueError("Location code {mapped_code} not found in FOLIO")
-            add_stats(self.folio_matched_locations, mapped_code)
+            self.add_to_migration_report(
+                "Locations - Successfully Mapped locations", mapped_code
+            )
             return loc
         except Exception as ee:
             logging.error(f"location not found: {ee}")
@@ -325,27 +310,11 @@ class HoldingsDefaultMapper:
                     f"Required field {req} is missing from {marc_record['001'].format_field()}",
                 )
         if len(failures) > 0:
-            add_stats(self.stats, "Records that failed validation")
-            add_stats(self.stats, f"Records that failed validation {failures}")
+            self.add_stats(self.stats, "Records that failed validation")
+            self.add_stats(self.stats, f"Records that failed validation {failures}")
             raise ValueError(
                 f"Record {marc_record['001'].format_field()} failed validation {failures}"
             )
-
-
-def add_stats(stats, a):
-    if a not in stats:
-        stats[a] = 1
-    else:
-        stats[a] += 1
-
-
-def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
-    # TODO: Move to interface or parent class
-    d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
-    print(f"{h1} | {h2}")
-    print("--- | ---:")
-    for k, v in d_sorted.items():
-        print(f"{k} | {v:,}")
 
 
 def fetch_holdings_schema():
@@ -359,37 +328,3 @@ def fetch_holdings_schema():
     logging.info("done")
     return json.loads(schema_text)
 
-
-def count_unmapped_fields(stats_map, schema, folio_object):
-    schema_properties = schema["properties"].keys()
-    unmatched_properties = (
-        p for p in schema_properties if p not in folio_object.keys()
-    )
-    for p in unmatched_properties:
-        add_stats(stats_map, p)
-
-
-def count_mapped_fields(stats_map, folio_object):
-    keys_to_delete = []
-    for key, value in folio_object.items():
-        if isinstance(value, str):
-            if value:
-                add_stats(stats_map, key)
-            else:
-                keys_to_delete.append(key)
-        elif isinstance(value, list):
-            if any(value):
-                add_stats(stats_map, key)
-            else:
-                keys_to_delete.append(key)
-        elif isinstance(value, dict):
-            if any(value):
-                add_stats(stats_map, key)
-            else:
-                keys_to_delete.append(key)
-
-        else:
-            logging.info(type(value))
-
-    for mykey in keys_to_delete:
-        del folio_object[mykey]
