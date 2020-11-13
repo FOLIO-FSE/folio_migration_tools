@@ -2,6 +2,7 @@ import unittest
 from lxml import etree
 import pymarc
 import json
+from types import SimpleNamespace
 from collections import namedtuple
 from jsonschema import validate
 from marc_to_folio.bibs_rules_mapper import BibsRulesMapper
@@ -22,7 +23,8 @@ class TestRulesMapperVanilla(unittest.TestCase):
                 cls.config.username,
                 cls.config.password,
             )
-            cls.mapper = BibsRulesMapper(cls.folio, "")
+            args_dict = {"suppress": False, "ils_flavour": "voyager"}
+            cls.mapper = BibsRulesMapper(cls.folio, SimpleNamespace(**args_dict))
             cls.instance_schema = cls.folio.get_instance_json_schema()
 
     def default_map(self, file_name, xpath):
@@ -594,6 +596,21 @@ class TestRulesMapperVanilla(unittest.TestCase):
                 m,
             )
 
+    def test_modes_of_issuance(self):
+        message = "Should parse Mode of issuance correctly"
+        xpath = "//marc:leader"
+        with self.subTest("m"):
+            record = self.default_map("test1.xml", xpath)
+            moi = record[0]["modeOfIssuanceId"]
+            m = message + "\n" + record[1]
+            self.assertIn("0345dbb6-2c22-40ca-b556-a52a3104d402", moi)
+
+        with self.subTest("s"):
+            record = self.default_map("test4.xml", xpath)
+            moi = record[0]["modeOfIssuanceId"]
+            m = message + "\n" + record[1]
+            self.assertIn("926ff973-ee50-4fb6-9e59-80947f5aca69", moi)
+
     def test_notes_56x(self):
         message = "Should add notes (561-567) to notes list"
         xpath = "//marc:datafield[@tag='561' or @tag='562' or @tag='563' or @tag='565' or @tag='567']"
@@ -655,6 +672,21 @@ class TestRulesMapperVanilla(unittest.TestCase):
         m = message + "\n" + record[1]
         with self.subTest("590$a"):
             self.assertIn("Labels reversed on library's copy", notes, m)
+
+    def test_format(self):
+        message = "Should parse Mode of issuance correctly"
+        xpath = "//marc:datafield[@tag='337' or @tag='338']"
+        with self.subTest("2-character code in 338"):
+            record = self.default_map("test_carrier_and_format.xml", xpath)
+            formats = record[0]["instanceFormatIds"]
+            m = message + "\n" + record[1]
+            self.assertIn("8d088179-d13a-425a-aff7-b7f9903aeabb", formats)
+
+        with self.subTest("337+338"):
+            record = self.default_map("test_carrier_and_format.xml", xpath)
+            formats = record[0]["instanceFormatIds"]
+            m = message + "\n" + record[1]
+            self.assertIn("73d9d810-8dce-45f1-b9dd-c0645024fee6", formats)
 
 
 if __name__ == "__main__":

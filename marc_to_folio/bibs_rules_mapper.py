@@ -34,7 +34,6 @@ class BibsRulesMapper(MigrationBase):
         self.instance_schema = get_instance_schema()
         self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
-        self.results_folder = args.results_folder
         self.id_map = {}
         self.srs_recs = []
         print("Fetching valid language codes...")
@@ -46,7 +45,13 @@ class BibsRulesMapper(MigrationBase):
         self.identifier_types = []
         print("Fetching mapping rules from the tenant")
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
-
+        self.other_mode_of_issuance_id = next(
+            (
+                i["id"]
+                for i in self.folio.modes_of_issuance
+                if "unspecified" == i["name"].lower()
+            )
+        )
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
         self.instance_relationships = {}
@@ -56,6 +61,7 @@ class BibsRulesMapper(MigrationBase):
         """ Parses a bib recod into a FOLIO Inventory instance object
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function"""
+        legacy_id = get_legacy_id(marc_record, self.ils_flavour)
         folio_instance = {
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
@@ -87,10 +93,12 @@ class BibsRulesMapper(MigrationBase):
             if marc_field.tag == "008":
                 temp_inst_type = folio_instance["instanceTypeId"]
 
-        self.perform_additional_parsing(folio_instance, temp_inst_type, marc_record)
+        self.perform_additional_parsing(
+            folio_instance, temp_inst_type, marc_record, legacy_id
+        )
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
-        self.validate(folio_instance, get_legacy_id(marc_record, self.ils_flavour))
+        self.validate(folio_instance, legacy_id)
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         self.count_unmapped_fields(self.instance_schema, folio_instance)
@@ -100,18 +108,25 @@ class BibsRulesMapper(MigrationBase):
             print(folio_instance)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
-        for legacy_id in get_legacy_id(marc_record, self.ils_flavour):
+        for legacy_id in legacy_id:
             self.id_map[legacy_id] = {"id": folio_instance["id"]}
         return folio_instance
 
-    def perform_additional_parsing(self, folio_instance, temp_inst_type, marc_record):
+    def perform_additional_parsing(
+        self, folio_instance, temp_inst_type, marc_record, legacy_id
+    ):
         """Do stuff not easily captured by the mapping rules"""
         folio_instance["source"] = "MARC"
+        folio_instance["instanceFormatIds"] = list(
+            self.get_instance_format_ids(marc_record, legacy_id)
+        )
         if temp_inst_type and not folio_instance["instanceTypeId"]:
             folio_instance["instanceTypeId"] = temp_inst_type
         elif not temp_inst_type and not folio_instance.get("instanceTypeId", ""):
             raise ValueError("No Instance type ID")
-        # folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record)
+        folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(
+            marc_record, legacy_id
+        )
         if "languages" in folio_instance:
             folio_instance["languages"].extend(self.get_languages(marc_record))
         else:
@@ -128,6 +143,52 @@ class BibsRulesMapper(MigrationBase):
 
     def wrap_up(self):
         print("Mapper wrapping up")
+
+    def get_instance_format_ids(self, marc_record, legacy_id):
+
+        all_337s = marc_record.get_fields("337")
+        all_338s = marc_record.get_fields("338")
+        for fidx, f in enumerate(all_337s):
+            source = f["2"] if "2" in f else "Not set"
+            self.add_to_migration_report(
+                "Instance format ids handling (337 + 338)",
+                f"Source ($2) is set to {source}",
+            )
+            corresponding_338 = all_338s[fidx] if fidx < len(all_338s) else None
+            if not corresponding_338:
+                self.add_to_migration_report(
+                    "Instance format ids handling (337 + 338))",
+                    "No corresponding 338 to 337",
+                )
+            else:
+                for sfidx, b in enumerate(f.get_subfields("b")):
+                    corresponding_b = (
+                        corresponding_338.get_subfields("b")[sfidx]
+                        if sfidx < len(corresponding_338.get_subfields("b"))
+                        else None
+                    )
+                    if not corresponding_b:
+                        self.add_to_migration_report(
+                            "Instance format ids handling (337 + 338))",
+                            "No corresponding $b in corresponding 338",
+                        )
+                    elif source == "rdamedia":
+                        code = f"{b}{corresponding_b}"
+                        id = next(
+                            (
+                                f["id"]
+                                for f in self.folio.instance_formats
+                                if f["code"] == code
+                            ),
+                            "",
+                        )
+                        if id:
+                            yield id
+                        else:
+                            self.add_to_migration_report(
+                                "Instance format ids handling (337 + 338)",
+                                f"No matching instance format code to {code} in FOLIO",
+                            )
 
     def map_field_according_to_mapping(self, marc_field, mappings, rec):
         for mapping in mappings:
@@ -185,6 +246,49 @@ class BibsRulesMapper(MigrationBase):
                 else:
                     entity[k] = values[0]
         return entity
+
+    def get_mode_of_issuance_id(self, marc_record, legacy_id):
+        level = marc_record.leader[7]
+        try:
+            name = "unspecified"
+            if level in ["a", "c", "d", "m"]:
+                name = "single unit"
+            if level in ["b", "s"]:
+                name = "serial"
+            if level == "i":
+                name = "integrating resource"
+            if name == "unspecified":
+                self.add_to_migration_report(
+                    "unspecified Modes of issuance code", level
+                )
+            ret = next(
+                (
+                    i["id"]
+                    for i in self.folio.modes_of_issuance
+                    if str(name).lower() == i["name"].lower()
+                ),
+                "",
+            )
+
+            self.add_to_migration_report(
+                "Matched Modes of issuance code", f"{ret} - {name}"
+            )
+            if not ret:
+                self.add_to_migration_report(
+                    "Unmatched Modes of issuance code", level,
+                )
+                return self.other_mode_of_issuance_id
+            return ret
+        except IndexError:
+            self.add_to_migration_report(
+                "Possible cleaning tasks" f"No Leader[7] in {legacy_id}"
+            )
+            return self.other_mode_of_issuance_id
+        except StopIteration as ee:
+            print(
+                f"StopIteration {marc_record.leader} {list(self.folio.modes_of_issuance)}"
+            )
+            raise ee
 
     def add_entity_to_record(self, entity, entity_parent_key, rec):
         sch = self.instance_schema["properties"]

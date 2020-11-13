@@ -35,19 +35,16 @@ class BibsConditions:
         )
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
-        # try:
-        if not self.cache.get(name, ""):
-            self.cache[name] = getattr(self, "condition_" + str(name))
-        return self.cache[name](value, parameter, marc_field)
-        # return getattr(self, 'condition_' + str(name))(value, parameter,
-        # marc_field)
-        # except AttributeError as attrib_error:
-        #     print(f'Unhandled condition: {name} {attrib_error} ')
-        #    return value
-        # except ValueError as value_error:
-        #     print(
-        #         f'Unhandled value: {name} {value_error} {type(value_error)} ')
-        #    return value
+        try:
+            if not self.cache.get(name, ""):
+                self.cache[name] = getattr(self, "condition_" + str(name))
+            return self.cache[name](value, parameter, marc_field)
+
+        except AttributeError as attrib_error:
+            self.mapper.add_to_migration_report(
+                "Undhandled condition defined in mapping rules", name
+            )
+            return ""
 
     def condition_trim_period(self, value, parameter, marc_field):
         return value.strip().rstrip(".").rstrip(",")
@@ -77,50 +74,6 @@ class BibsConditions:
 
     def condition_clean_isbn(self, value, parameter, marc_field):
         return value
-
-    def condition_set_issuance_mode_id(self, value, parameter, marc_field):
-        try:
-            seventh = marc_field[6]
-            m_o_i_s = {
-                "m": "Monograph",
-                "s": "Serial",
-                "i": "Integrating Resource",
-            }
-            name = m_o_i_s.get(seventh, "Other")
-            if not name:
-                self.mapper.add_to_migration_report(
-                    "Unmatched Modes of issuance code", seventh
-                )
-                raise ValueError(f"{name} is not a valid mode of issuance")
-
-            ret = next(
-                (
-                    i["id"]
-                    for i in self.folio.modes_of_issuance
-                    if str(name).lower() == i["name"].lower()
-                ),
-                "",
-            )
-            self.mapper.add_to_migration_report(
-                "Matched Modes of issuance code", f"{ret} - {name}"
-            )
-            if not ret:
-                self.mapper.add_to_migration_report(
-                    "Unmatched Modes of issuance code", seventh
-                )
-                return next(
-                    (
-                        i["id"]
-                        for i in self.folio.modes_of_issuance
-                        if "unspecified" == i["name"].lower()
-                    )
-                )
-            return ret
-        except IndexError:
-            raise ValueError(f"No seven in {marc_field}")
-        except StopIteration as ee:
-            print(f"StopIteration {marc_field} {list(self.folio.modes_of_issuance)}")
-            raise ee
 
     def condition_set_publisher_role(self, value, parameter, marc_field):
         roles = {
@@ -260,27 +213,6 @@ class BibsConditions:
             """raise ValueError(
                 f"Something went wrong when trying to parse Instance type from {marc_field}"
             )"""
-
-    def condition_set_instance_format_id(self, value, parameter, marc_field):
-        legacy_value = value
-        if not self.folio.instance_formats:
-            raise ValueError("No instance_formats setup in tenant")
-        if len(legacy_value) == 1:
-            legacy_value = legacy_value + "z"
-        v = next(
-            (f["id"] for f in self.folio.instance_formats if f["code"] == legacy_value),
-            "",
-        )
-        if not v:
-            self.mapper.add_to_migration_report(
-                "Unmatched Instance formats - orginal (concatenated)",
-                f"{value} ({legacy_value})",
-            )
-            if len(legacy_value) == 2:
-                raise ValueError(
-                    f"no matching instance_formats {value} - ({legacy_value}) {marc_field}"
-                )
-        return v
 
     def condition_set_electronic_access_relations_id(
         self, value, parameter, marc_field

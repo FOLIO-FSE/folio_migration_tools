@@ -9,6 +9,7 @@ Pipfile.lock
 
 # Distribution / packaging
 .Python
+.idea/
 env/
 build/
 develop-eggs/
