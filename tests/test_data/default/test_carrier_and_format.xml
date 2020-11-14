@@ -54,6 +54,7 @@
                     <datafield ind1=" " ind2=" " tag="338">
                         <subfield code="a">computer disc</subfield>
                         <subfield code="b">cd</subfield>
+                        <subfield code="b">cb</subfield>
                         <subfield code="2">rdacarrier</subfield>
                     </datafield>
                     <datafield ind1=" " ind2=" " tag="337">
@@ -73,7 +74,7 @@
                     </datafield>
                     <datafield ind1=" " ind2=" " tag="338">
                         <subfield code="a">volume</subfield>
-                        <subfield code="b">nc</subfield>
+                        <subfield code="b">c</subfield>
                         <subfield code="2">rdacarrier</subfield>
                     </datafield>
                     <datafield ind1=" " ind2=" " tag="599">

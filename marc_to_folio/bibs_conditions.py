@@ -1,3 +1,4 @@
+import logging
 import re
 
 
@@ -58,6 +59,13 @@ class BibsConditions:
         while any(v) > 0 and v[-1] in chars:
             v = v.rstrip(v[-1])
         return v
+
+    def condition_set_instance_format_id(self, value, parameter, marc_field):
+        # This method only handles the simple case of 2-character codes of RDA in the first 338$b
+        # Other cases are handled in performAddidtionalParsing in the mapper class
+        return next(
+            (f["id"] for f in self.folio.instance_formats if f["code"] == value), "",
+        )
 
     def condition_remove_prefix_by_indicator(self, value, parameter, marc_field):
         """Returns the index title according to the rules"""

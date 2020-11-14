@@ -1,6 +1,7 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
 import json
+import logging
 from marc_to_folio.migration_base import MigrationBase
 import os.path
 import pymarc
@@ -56,6 +57,12 @@ class BibsRulesMapper(MigrationBase):
         self.unmapped_conditions = {}
         self.instance_relationships = {}
         self.instance_relationship_types = {}
+        self.hrid_handling = self.folio.folio_get_single_object(
+            "/hrid-settings-storage/hrid-settings"
+        )
+        self.hrid_prefix = self.hrid_handling["instances"]["prefix"]
+        self.hrid_counter = self.hrid_handling["instances"]["startNumber"]
+        print(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
 
     def parse_bib(self, marc_record, inventory_only=False):
         """ Parses a bib recod into a FOLIO Inventory instance object
@@ -98,6 +105,7 @@ class BibsRulesMapper(MigrationBase):
         )
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
+
         self.validate(folio_instance, legacy_id)
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
@@ -118,7 +126,7 @@ class BibsRulesMapper(MigrationBase):
         """Do stuff not easily captured by the mapping rules"""
         folio_instance["source"] = "MARC"
         folio_instance["instanceFormatIds"] = list(
-            self.get_instance_format_ids(marc_record, legacy_id)
+            set(self.get_instance_format_ids(marc_record, legacy_id))
         )
         if temp_inst_type and not folio_instance["instanceTypeId"]:
             folio_instance["instanceTypeId"] = temp_inst_type
@@ -134,6 +142,7 @@ class BibsRulesMapper(MigrationBase):
         folio_instance["languages"] = list(
             self.filter_langs(folio_instance["languages"], marc_record)
         )
+        self.handle_hrid(folio_instance, marc_record)
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = bool(self.suppress)
 
@@ -145,50 +154,56 @@ class BibsRulesMapper(MigrationBase):
         print("Mapper wrapping up")
 
     def get_instance_format_ids(self, marc_record, legacy_id):
-
+        # Lambdas
+        get_folio_id = lambda code: next(
+            (f["id"] for f in self.folio.instance_formats if f["code"] == code), "",
+        )
         all_337s = marc_record.get_fields("337")
         all_338s = marc_record.get_fields("338")
-        for fidx, f in enumerate(all_337s):
+        for fidx, f in enumerate(all_338s):
             source = f["2"] if "2" in f else "Not set"
             self.add_to_migration_report(
                 "Instance format ids handling (337 + 338)",
                 f"Source ($2) is set to {source}",
             )
-            corresponding_338 = all_338s[fidx] if fidx < len(all_338s) else None
-            if not corresponding_338:
-                self.add_to_migration_report(
-                    "Instance format ids handling (337 + 338))",
-                    "No corresponding 338 to 337",
-                )
-            else:
+            if source == "rdacarrier":
+                logging.debug(f"Carrier is {source}")
                 for sfidx, b in enumerate(f.get_subfields("b")):
-                    corresponding_b = (
-                        corresponding_338.get_subfields("b")[sfidx]
-                        if sfidx < len(corresponding_338.get_subfields("b"))
-                        else None
-                    )
-                    if not corresponding_b:
-                        self.add_to_migration_report(
-                            "Instance format ids handling (337 + 338))",
-                            "No corresponding $b in corresponding 338",
+                    if len(b) == 2:  # Normal 338b. should be able to map this
+                        logging.debug(f"Length of 338 $b is 2")
+                        yield get_folio_id(b)
+                    elif len(b) == 1:
+                        logging.debug(f"Length of 338 $b is 1 ")
+                        corresponding_337 = (
+                            all_337s[fidx] if fidx < len(all_337s) else None
                         )
-                    elif source == "rdamedia":
-                        code = f"{b}{corresponding_b}"
-                        id = next(
-                            (
-                                f["id"]
-                                for f in self.folio.instance_formats
-                                if f["code"] == code
-                            ),
-                            "",
-                        )
-                        if id:
-                            yield id
-                        else:
+                        if not corresponding_337:
+                            logging.debug(f"No corresponding 337")
                             self.add_to_migration_report(
-                                "Instance format ids handling (337 + 338)",
-                                f"No matching instance format code to {code} in FOLIO",
+                                "Instance format ids handling (337 + 338))",
+                                "No corresponding 337 to 338 even though 338$b was one charachter code",
                             )
+                        else:
+                            logging.debug(f"Corresponding 337 found")
+                            corresponding_b = (
+                                corresponding_337.get_subfields("b")[sfidx]
+                                if sfidx < len(corresponding_337.get_subfields("b"))
+                                else None
+                            ).strip()
+                            if not corresponding_b:
+                                logging.debug(f"No corresponding $b found")
+                                self.add_to_migration_report(
+                                    "Instance format ids handling (337 + 338))",
+                                    "No corresponding $b in corresponding 338",
+                                )
+                            else:
+                                logging.debug(f"Corresponding $b found")
+                                combined_code = (corresponding_b + b).strip()
+                                if len(combined_code) == 2:
+                                    logging.debug(
+                                        f"Combined codes are 2 chars long. Returning FOLIO ID"
+                                    )
+                                    yield get_folio_id(combined_code)
 
     def map_field_according_to_mapping(self, marc_field, mappings, rec):
         for mapping in mappings:
@@ -234,6 +249,20 @@ class BibsRulesMapper(MigrationBase):
                 self.add_to_migration_report(
                     "Incomplete entity mapping (a code issue)", marc_field.tag
                 )
+
+    def handle_hrid(self, folio_instance, marc_record):
+        """Create HRID if not mapped. Add hrid as MARC record 001"""
+        if "hrid" not in folio_instance:
+            self.add_stats(self.stats, "Records without HRID from rules. Created HRID")
+            folio_instance["hrid"] = f"{self.hrid_prefix}{self.hrid_counter}"
+            self.hrid_counter += 1
+        else:
+            self.add_stats(self.stats, "Records with HRID from Rules")
+        new_001 = Field(tag="001", data=folio_instance["hrid"])
+        print(new_001)
+
+        marc_record.remove_fields("001")
+        marc_record.add_ordered_field(new_001)
 
     def create_entity(self, entity_mappings, marc_field, entity_parent_key):
         entity = {}

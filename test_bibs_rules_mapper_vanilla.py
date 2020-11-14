@@ -678,6 +678,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
         xpath = "//marc:datafield[@tag='337' or @tag='338']"
         with self.subTest("2-character code in 338"):
             record = self.default_map("test_carrier_and_format.xml", xpath)
+            # print(json.dumps(record, sort_keys=True, indent=4))
             formats = record[0]["instanceFormatIds"]
             m = message + "\n" + record[1]
             self.assertIn("8d088179-d13a-425a-aff7-b7f9903aeabb", formats)
@@ -686,7 +687,13 @@ class TestRulesMapperVanilla(unittest.TestCase):
             record = self.default_map("test_carrier_and_format.xml", xpath)
             formats = record[0]["instanceFormatIds"]
             m = message + "\n" + record[1]
-            self.assertIn("73d9d810-8dce-45f1-b9dd-c0645024fee6", formats)
+            self.assertIn("4e7fe4f2-fcce-41a4-ad82-0d3963c71aa3", formats)
+
+        with self.subTest("2 338$b"):
+            record = self.default_map("test_carrier_and_format.xml", xpath)
+            formats = record[0]["instanceFormatIds"]
+            m = message + "\n" + record[1]
+            self.assertEqual(4, len(formats))
 
 
 if __name__ == "__main__":
