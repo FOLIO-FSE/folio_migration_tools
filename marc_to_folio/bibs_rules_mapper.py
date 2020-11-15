@@ -27,7 +27,7 @@ class BibsRulesMapper(MigrationBase):
     ):
         super().__init__()
         self.folio = folio
-        self.stats = {}
+        self.processed = 0
         self.record_status = {}
         self.migration_report = {}
         self.suppress = args.suppress
@@ -68,6 +68,8 @@ class BibsRulesMapper(MigrationBase):
         """ Parses a bib recod into a FOLIO Inventory instance object
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function"""
+        self.processed += 1
+        self.print_progress(self.processed)
         legacy_id = get_legacy_id(marc_record, self.ils_flavour)
         folio_instance = {
             "id": str(uuid.uuid4()),
@@ -259,7 +261,6 @@ class BibsRulesMapper(MigrationBase):
         else:
             self.add_stats(self.stats, "Records with HRID from Rules")
         new_001 = Field(tag="001", data=folio_instance["hrid"])
-        print(new_001)
 
         marc_record.remove_fields("001")
         marc_record.add_ordered_field(new_001)

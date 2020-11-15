@@ -32,3 +32,14 @@ pipenv run python3 main_bibs.py PATH_TO_FOLDER_WITH_MARC_FILES RESULTS_FOLDER OK
 
 The above will fetch the mapping-rules from the FOLIO tenant specified and transform the supplied MARC21 record files into FOLIO Instance
 
+# Bib records mapping
+## HRID handling
+### Current implementation:   
+Download the HRID handling settings from the tenant. 
+**If there are HRID handling in the mapping rules:**
+- The HRID is set on the Instance
+- The 001 in the MARC21 record (bound for SRS) is replaced with this HRID.
+
+**If the mapping-rules specify no HRID handling or the field designated for HRID contains no value:**
+- The HRID is being constructed from the HRID settings
+- The 001 in the MARC21 record (bound for SRS) is replaced with this HRID.

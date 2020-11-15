@@ -47,7 +47,6 @@ class Worker:
             self.processor = BibsProcessor(
                 self.mapper, self.folio_client, results_file, self.args,
             )
-            self.start = time.time()
             for file_name in self.files:
                 try:
                     with open(join(sys.argv[1], file_name), "rb") as marc_file:
@@ -84,17 +83,6 @@ class Worker:
                     self.mapper.stats, "MARC21 Records successfully parsed"
                 )
                 self.processor.process_record(record, False)
-            self.mapper.add_stats(self.mapper.stats, "Bibs processed")
-            self.print_progress()
-
-    def print_progress(self):
-        i = self.mapper.stats["Bibs processed"]
-        if i % 1000 == 0:
-            elapsed = i / (time.time() - self.start)
-            elapsed_formatted = int(elapsed)
-            print(
-                f"{elapsed_formatted}\t{i}", flush=True,
-            )
 
     def wrap_up(self):
         print("Done. Wrapping up...")

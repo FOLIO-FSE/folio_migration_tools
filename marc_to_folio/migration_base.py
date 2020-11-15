@@ -6,9 +6,10 @@ from typing import Dict, List
 class MigrationBase:
     def __init__(self):
         self.migration_report = {}
-        self.stats = {}
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
+        self.start = time.time()
+        self.stats = {}
 
     def report_legacy_mapping(self, field_name, was_mapped, was_empty=False):
         if field_name not in self.mapped_legacy_fields:
@@ -76,14 +77,11 @@ class MigrationBase:
             for b in sortedlist:
                 report_file.write(f"{b[0]} | {b[1]}   \n")
 
-    def print_progress(self):
-        i = self.stats["Records processed"]
+    def print_progress(self, i):
         if i % 1000 == 0:
             elapsed = i / (time.time() - self.start)
-            elapsed_formatted = int(elapsed)
-            print(
-                f"{elapsed_formatted}\t{i}", flush=True,
-            )
+            elapsed_formatted = "{0:.4g}".format(elapsed)
+            print(f"{elapsed_formatted} records/sec.\t\t{i:,} records processed")
 
     def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
         # TODO: Move to interface or parent class
