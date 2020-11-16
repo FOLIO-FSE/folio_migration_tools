@@ -90,12 +90,13 @@ class Worker:
         with open(self.migration_report_file, "w+") as report_file:
             report_file.write(f"# Bibliographic records transformation results   \n")
 
-            report_file.write(f"Time Run: {dt.isoformat(dt.now())}   \n")
+            report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
             report_file.write(f"## Bibliographic records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
                 self.mapper.stats, report_file, "  Measure  ", "Count   \n",
             )
             self.mapper.write_migration_report(report_file)
+            self.mapper.print_mapping_report(report_file)
         print(f"Done. Transformation report written to {self.migration_report_file}")
 
 

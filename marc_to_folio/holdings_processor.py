@@ -4,6 +4,7 @@ import json
 import traceback
 import logging
 import os
+from datetime import datetime as dt
 from jsonschema import ValidationError, validate
 
 
@@ -12,13 +13,12 @@ class HoldingsProcessor:
 
     def __init__(self, mapper, folio_client, results_file, args):
         self.results_file = results_file
-        self.holdings_schema = folio_client.get_holdings_schema()
         self.records_count = 0
         self.mapper = mapper
         self.args = args
         self.start = time.time()
         self.suppress = args.suppress
-        logging.warning(
+        print(
             f'map will be saved to {os.path.join(self.args.result_folder, "holdings_id_map.json")}'
         )
 
@@ -28,9 +28,6 @@ class HoldingsProcessor:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record)
-            # if self.args.validate:
-            #    validate(folio_rec, self.holdings_schema)
-            # write record to file
             write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
@@ -66,7 +63,6 @@ class HoldingsProcessor:
             logging.error(inst.args)
             logging.error(inst)
             logging.error(marc_record)
-
             raise inst
 
     def wrap_up(self):
@@ -78,8 +74,18 @@ class HoldingsProcessor:
         )
         with open(path, "w+") as id_map_file:
             json.dump(id_map, id_map_file, indent=4)
-        self.mapper.wrap_up()
         logging.warning(f"{self.records_count} records processed")
+        mrf = os.path.join(self.args.result_folder, "holdings_transformation_report.md")
+        with open(mrf, "w+") as report_file:
+            report_file.write(f"# MFHD records transformation results   \n")
+            report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
+            report_file.write(f"## MFHD records transformation counters   \n")
+            self.mapper.print_dict_to_md_table(
+                self.mapper.stats, report_file, "  Measure  ", "Count   \n",
+            )
+            self.mapper.write_migration_report(report_file)
+            self.mapper.print_mapping_report(report_file)
+        print(f"Done. Transformation report written to {report_file}")
 
 
 def write_to_file(file, pg_dump, folio_record):

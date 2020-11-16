@@ -1,6 +1,6 @@
 """The Alabama mapper, responsible for parsing Items acording to the
 FOLIO community specifications"""
-from marc_to_folio.migration_base import MigrationBase
+from marc_to_folio.rules_mapper_base import RulesMapperBase
 import uuid
 import json
 import csv
@@ -13,7 +13,7 @@ from typing import Set, Dict, List
 csv.field_size_limit(sys.maxsize)
 
 
-class ItemsDefaultMapper(MigrationBase):
+class ItemsDefaultMapper(RulesMapperBase):
     """Maps an Item to inventory Item format according to
     the FOLIO community convention"""
 
