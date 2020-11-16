@@ -18,7 +18,7 @@ class HoldingsProcessor:
         self.args = args
         self.start = time.time()
         self.suppress = args.suppress
-        logging.warning(
+        print(
             f'map will be saved to {os.path.join(self.args.result_folder, "holdings_id_map.json")}'
         )
 
@@ -75,10 +75,7 @@ class HoldingsProcessor:
         with open(path, "w+") as id_map_file:
             json.dump(id_map, id_map_file, indent=4)
         logging.warning(f"{self.records_count} records processed")
-        self.wrap_up()
-        mrf = os.path.join(
-            self.args.results_folder, "instance_transformation_report.md"
-        )
+        mrf = os.path.join(self.args.result_folder, "holdings_transformation_report.md")
         with open(mrf, "w+") as report_file:
             report_file.write(f"# MFHD records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
@@ -88,7 +85,7 @@ class HoldingsProcessor:
             )
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)
-        print(f"Done. Transformation report written to {self.migration_report_file}")
+        print(f"Done. Transformation report written to {report_file}")
 
 
 def write_to_file(file, pg_dump, folio_record):

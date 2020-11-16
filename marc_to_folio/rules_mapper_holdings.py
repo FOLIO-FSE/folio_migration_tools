@@ -6,7 +6,7 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(self, folio, instance_id_map, location_map, args):
-        super().__init__(folio, args)
+        super().__init__(folio)
         print("Init RulesMapperHoldings")
         self.instance_id_map = instance_id_map
         self.location_map = location_map
@@ -46,6 +46,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     self.map_field_according_to_mapping(
                         marc_field, mappings, folio_holding
                     )
+                    self.report_legacy_mapping(marc_field.tag, True, False)
                     if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                         ignored_subsequent_fields.add(marc_field.tag)
 

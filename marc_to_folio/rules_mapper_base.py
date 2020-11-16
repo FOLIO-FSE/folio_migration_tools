@@ -14,7 +14,6 @@ import requests
 class RulesMapperBase:
     def __init__(self, folio_client):
         self.migration_report = {}
-
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
         self.start = time.time()
@@ -26,6 +25,7 @@ class RulesMapperBase:
         self.conditions = Conditions(folio_client, self)
         self.item_json_schema = ""
         self.mappings = None
+        print(f"Current user id is {self.folio_client.current_user}")
 
     def report_legacy_mapping(self, field_name, was_mapped, was_empty=False):
         if field_name not in self.mapped_legacy_fields:

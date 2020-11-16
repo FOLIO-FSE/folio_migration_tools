@@ -22,7 +22,7 @@ class Conditions:
         print(
             f"Fetched {len(self.electronic_access_relationships)} electronic_access_relationships"
         )
-
+        self.ref_data_dicts = {}
         self.holding_note_types = list(
             self.folio.folio_get_all(
                 "/holdings-note-types",
@@ -117,14 +117,18 @@ class Conditions:
             raise ValueError("No identifier_types setup in tenant")
         if "oclc_regex" in parameter:
             if re.match(parameter["oclc_regex"], value):
-                t = get_ref_data_tuple_by_name(
-                    self.folio.identifier_types, parameter["names"][1]
+                t = self.get_ref_data_tuple_by_name(
+                    self.folio.identifier_types,
+                    "identifier_types",
+                    parameter["names"][1],
                 )
                 self.mapper.add_to_migration_report("Mapped identifier types", t[1])
                 return t[0]
             else:
-                t = get_ref_data_tuple_by_name(
-                    self.folio.identifier_types, parameter["names"][0]
+                t = self.get_ref_data_tuple_by_name(
+                    self.folio.identifier_types,
+                    "identifier_types",
+                    parameter["names"][0],
                 )
                 self.mapper.add_to_migration_report("Mapped identifier types", t[1])
                 return t[0]
@@ -147,7 +151,9 @@ class Conditions:
         return my_id
 
     def condition_set_holding_note_type_id_by_name(self, value, parameter, marc_field):
-        t = get_ref_data_tuple_by_name(self.holding_note_types, parameter["name"])
+        t = self.get_ref_data_tuple_by_name(
+            self.holding_note_types, "holding_note_types", parameter["name"]
+        )
         self.mapper.add_to_migration_report("Mapped note types", t[1])
         return t[0]
 
@@ -164,7 +170,9 @@ class Conditions:
     def condition_set_identifier_type_id_by_name(self, value, parameter, marc_field):
         if not self.folio.identifier_types:
             raise ValueError("No identifier_types setup in tenant")
-        t = get_ref_data_tuple_by_name(self.folio.identifier_types, parameter["name"])
+        t = self.get_ref_data_tuple_by_name(
+            self.folio.identifier_types, "identifier_types", parameter["name"]
+        )
         self.mapper.add_to_migration_report("Mapped identifier types", t[1])
         return t[0]
 
@@ -217,7 +225,11 @@ class Conditions:
         name = enum.get(ind2, enum["8"])
         if not self.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
-        t = get_ref_data_tuple_by_name(self.electronic_access_relationships, name)
+        t = self.get_ref_data_tuple_by_name(
+            self.electronic_access_relationships,
+            "electronic_access_relationships",
+            name,
+        )
         self.mapper.add_to_migration_report(
             "Mapped electronic access relationships types", t[1]
         )
@@ -241,22 +253,22 @@ class Conditions:
     def condition_set_alternative_title_type_id(self, value, parameter, marc_field):
         if not self.folio.alt_title_types:
             raise ValueError("No alt_title_types setup in tenant")
-        t = get_ref_data_tuple_by_name(self.folio.alt_title_types, parameter["name"])
+        t = self.get_ref_data_tuple_by_name(
+            self.folio.alt_title_types, "alt_title_types", parameter["name"]
+        )
         self.mapper.add_to_migration_report("Mapped Alternative title types", t[1])
         return t[0]
 
     def condition_set_location_id_by_code(self, value, parameter, marc_field):
         self.mapper.add_to_migration_report("Legacy location codes", value)
+        if "legacy_locations" not in self.ref_data_dicts:
+            d = {}
+            for lm in self.mapper.location_map:
+                d[lm["legacy_code"]] = lm["folio_code"]
+            self.ref_data_dicts["legacy_locations"] = d
 
         if self.mapper.location_map and any(self.mapper.location_map):
-            mapped_code = next(
-                (
-                    l["folio_code"]
-                    for l in self.mapper.location_map
-                    if value == l["legacy_code"]
-                ),
-                "",
-            )
+            mapped_code = self.ref_data_dicts["legacy_locations"].get(value, "")
             if not mapped_code:
                 self.mapper.add_to_migration_report(
                     "Locations - Unmapped legacy codes", value
@@ -264,13 +276,39 @@ class Conditions:
         else:
             mapped_code = value
 
-        t = get_ref_data_tuple_code(self.locations, mapped_code)
+        t = self.get_ref_data_tuple_code(self.locations, "locations", mapped_code)
         if not t:
-            t = get_ref_data_tuple_code(
-                self.locations, parameter["unspecifiedLocationCode"]
+            t = self.get_ref_data_tuple_code(
+                self.locations, "locations", parameter["unspecifiedLocationCode"]
             )
         self.mapper.add_to_migration_report("Mapped Locations", t[1])
         return t[0]
+
+    def get_ref_data_tuple_code(self, ref_data, ref_name, code):
+        return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
+
+    def get_ref_data_tuple_by_name(self, ref_data, ref_name, name):
+        return self.get_ref_data_tuple(ref_data, ref_name, name, "name")
+
+    def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
+        dict_key = f"{ref_name}{key_type}"
+        if dict_key not in self.ref_data_dicts:
+            d = {}
+            for r in ref_data:
+                d[r[key_type].lower()] = (r["id"], r["name"])
+            self.ref_data_dicts[dict_key] = d
+        ref_object = (
+            self.ref_data_dicts[dict_key][key_value.lower()]
+            if key_value.lower() in self.ref_data_dicts[dict_key]
+            else None
+        )
+        if not ref_object:
+            logging.debug(f"No matching element for {key_value} in {list(ref_data)}")
+            return None
+        if validate_uuid(ref_object[0]):
+            return ref_object
+        else:
+            raise Exception(f"UUID Validation error for {key_value} in {ref_data}")
 
     def condition_remove_substring(self, value, parameter, marc_field):
         return value.replace(parameter["substring"], "")
@@ -279,20 +317,30 @@ class Conditions:
         if not self.folio.instance_types:
             raise ValueError("No instance_types setup in tenant")
         if marc_field.tag == "008":
-            t = get_ref_data_tuple_code(self.folio.instance_types, value[:3])
+            t = self.get_ref_data_tuple_code(
+                self.folio.instance_types, "instance_types", value[:3]
+            )
             if not t:
-                t = get_ref_data_tuple_code(self.folio.instance_types, "zzz")
+                t = self.get_ref_data_tuple_code(
+                    self.folio.instance_types, "instance_types", "zzz"
+                )
             self.mapper.add_to_migration_report("Mapped Instance types", t[1])
             return t[0]
         elif marc_field.tag == "336" and "b" in marc_field:
-            t = get_ref_data_tuple_by_name(self.folio.instance_types, marc_field["b"])
+            t = self.get_ref_data_tuple_by_name(
+                self.folio.instance_types, "instance_types", marc_field["b"]
+            )
             if not t:
-                t = get_ref_data_tuple_code(self.folio.instance_types, "zzz")
+                t = self.get_ref_data_tuple_code(
+                    self.folio.instance_types, "instance_types", "zzz"
+                )
             self.mapper.add_to_migration_report("Mapped Instance types", t[1])
             return t[0]
         else:
             # TODO Remove later. Corenell specific
-            t = get_ref_data_tuple_code(self.folio.instance_types, "txt")
+            t = self.get_ref_data_tuple_code(
+                self.folio.instance_types, "instance_types", "txt"
+            )
             self.mapper.add_to_migration_report("Mapped Instance types", t[1])
             return t[0]
         raise ValueError(
@@ -313,37 +361,15 @@ class Conditions:
 
         if not self.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
-        t = get_ref_data_tuple_by_name(self.electronic_access_relationships, name)
+        t = self.get_ref_data_tuple_by_name(
+            self.electronic_access_relationships,
+            "electronic_access_relationships",
+            name,
+        )
         self.mapper.add_to_migration_report(
             "Mapped electronic access relationships types", t[1]
         )
         return t[0]
-
-
-def get_ref_data_tuple_code(ref_data, code):
-    return get_ref_data_tuple(ref_data, code, "code")
-
-
-def get_ref_data_tuple_by_name(ref_data, name):
-    return get_ref_data_tuple(ref_data, name, "name")
-
-
-def get_ref_data_tuple(ref_data, key_value, key_type):
-    ref_object = next(
-        (
-            f
-            for f in ref_data
-            if str(f[key_type]).casefold() == str(key_value).casefold()
-        ),
-        None,
-    )
-    if not ref_object:
-        logging.debug(f"No matching element for {key_value} in {list(ref_data)}")
-        return None
-    if validate_uuid(ref_object["id"]):
-        return (ref_object["id"], ref_object["name"])
-    else:
-        raise Exception(f"UUID Validation error for {key_value} in {ref_data}")
 
 
 def validate_uuid(my_uuid):
