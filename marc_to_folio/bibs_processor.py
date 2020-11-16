@@ -1,11 +1,10 @@
 """ Class that processes each MARC record """
-from concurrent.futures.process import ProcessPoolExecutor
 from io import StringIO
+from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
 
 from pymarc.writer import JSONWriter, XMLWriter
-from marc_to_folio import bibs_rules_mapper
 import time
 import json
 from datetime import datetime as dt
@@ -23,7 +22,7 @@ class BibsProcessor:
         self.results_file = results_file
         self.folio_client = folio_client
         self.instance_schema = folio_client.get_instance_json_schema()
-        self.mapper = mapper
+        self.mapper: BibsRulesMapper = mapper
         self.args = args
         self.marc_xml_writer = XMLWriter(
             open(os.path.join(self.results_folder, "marc_xml_dump.xml"), "wb+")
@@ -35,7 +34,7 @@ class BibsProcessor:
 
     def process_record(self, marc_record, inventory_only):
         """processes a marc record and saves it"""
-        legacy_id = bibs_rules_mapper.get_legacy_id(marc_record, self.ils_flavour)
+        legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
@@ -129,12 +128,7 @@ class BibsProcessor:
     def save_source_record(self, marc_record, instance):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(uuid.uuid4())
-        if "hrid" in instance:
-            new_001 = Field(tag="001", data=instance["hrid"])
-            marc_record.remove_fields("001")
-            marc_record.add_ordered_field(new_001)
-        else:
-            self.mapper.add_stats(self.mapper.stats, "Records without HRID")
+
         marc_record.add_ordered_field(
             Field(
                 tag="999",
