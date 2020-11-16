@@ -1,15 +1,16 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
-from marc_to_folio.migration_base import MigrationBase
-import uuid
-import requests
-import logging
+
 import json
-import pymarc
+import logging
+import uuid
 from datetime import datetime
+from marc_to_folio.rules_mapper_base import RulesMapperBase
+import pymarc
+import requests
 
 
-class HoldingsDefaultMapper(MigrationBase):
+class HoldingsDefaultMapper(RulesMapperBase):
     """Maps a MARC record to inventory instance format according to
     the FOLIO community convention"""
 
@@ -29,7 +30,6 @@ class HoldingsDefaultMapper(MigrationBase):
         self.call_number_types_ind2 = {}
         self.f852as = {}
         self.folio_locations = list(self.folio_client.locations)
-        self.holdings_schema = fetch_holdings_schema()
         self.holdings_note_types = list(
             self.folio_client.folio_get_all("/holdings-note-types", "holdingsNoteTypes")
         )
@@ -315,16 +315,4 @@ class HoldingsDefaultMapper(MigrationBase):
             raise ValueError(
                 f"Record {marc_record['001'].format_field()} failed validation {failures}"
             )
-
-
-def fetch_holdings_schema():
-    logging.info("Fetching holdings schema...", end="")
-    holdings_url = (
-        "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/"
-        "master/ramls/holdingsrecord.json"
-    )
-    schema_request = requests.get(holdings_url)
-    schema_text = schema_request.text
-    logging.info("done")
-    return json.loads(schema_text)
 
