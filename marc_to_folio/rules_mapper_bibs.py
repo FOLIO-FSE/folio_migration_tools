@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 from io import StringIO
 
 import pymarc
+from pymarc.record import Record
 import requests
 from pymarc import Field, JSONWriter, XMLWriter
 
@@ -344,7 +345,7 @@ class BibsRulesMapper(RulesMapperBase):
                         f"{language_value} not recognized for {self.get_legacy_id(marc_record, self.ils_flavour)}",
                     )
 
-    def get_legacy_id(self, marc_record, ils_flavour):
+    def get_legacy_id(self, marc_record: Record, ils_flavour):
         if ils_flavour in ["iii", "sierra"]:
             return [marc_record["907"]["a"]]
         elif ils_flavour == "035":
@@ -366,7 +367,6 @@ class BibsRulesMapper(RulesMapperBase):
                         self.stats, "Legacy id and 001 not found. Failing record "
                     )
                     raise ValueError("Legacy id and 001 not found. Failing record ")
-
         elif ils_flavour in ["voyager"]:
             return [marc_record["001"].format_field().strip()]
         else:
