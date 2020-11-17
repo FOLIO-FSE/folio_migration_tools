@@ -3,9 +3,7 @@ from io import StringIO
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
-import queue
-import threading
-import time
+
 from pymarc.writer import JSONWriter, XMLWriter
 import time
 import json
@@ -14,72 +12,12 @@ import os.path
 from jsonschema import ValidationError, validate
 
 
-class myThread(threading.Thread):
-    def __init__(
-        self, threadID, name, q, suppress, folio_client, srs_records_file, processor
-    ):
-        self.processor = processor
-        self.srs_records_file = srs_records_file
-        self.folio_client = folio_client
-        self.suppress = suppress
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.q = q
-
-    def run(self):
-        print("Starting " + self.name)
-        self.process_data(self.name, self.q)
-        print("Exiting " + self.name)
-
-    def process_data(self, threadName, q):
-        while not self.processor.exit_flag:
-            self.processor.queueLock.acquire()
-            if not self.processor.workQueue.empty():
-                data = q.get()
-                self.processor.queueLock.release()
-                self.save_source_record(**data)
-            else:
-                self.processor.queueLock.release()
-                time.sleep(1)
-
-    def save_source_record(self, marc_record, instance):
-        """Saves the source Marc_record to the Source record Storage module"""
-        srs_id = str(uuid.uuid4())
-
-        marc_record.add_ordered_field(
-            Field(
-                tag="999",
-                indicators=["f", "f"],
-                subfields=["i", instance["id"], "s", srs_id],
-            )
-        )
-        srs_record_string = get_srs_string(
-            (
-                marc_record,
-                instance["id"],
-                srs_id,
-                self.folio_client.get_metadata_construct(),
-                self.suppress,
-            )
-        )
-        self.srs_records_file.write(f"{srs_record_string}\n")
-        # if not self.suppress:
-        #    self.marc_xml_writer.write(marc_record)
-
-
 class BibsProcessor:
     """the processor"""
 
     def __init__(self, mapper, folio_client, results_file, args):
         self.ils_flavour = args.ils_flavour
         self.suppress = args.suppress
-        self.exit_flag = 0
-        self.queueLock = threading.Lock()
-        self.workQueue = queue.Queue(10)
-        self.threads = []
-        self.threadID = 1
-
         self.results_folder = args.results_folder
         self.results_file = results_file
         self.folio_client = folio_client
@@ -93,36 +31,17 @@ class BibsProcessor:
             os.path.join(self.results_folder, "srs.json"), "w+"
         )
         self.start = time.time()
-        threadList = ["Thread-1"]
-        for tName in threadList:
-            thread = myThread(
-                self.threadID,
-                tName,
-                self.workQueue,
-                self.suppress,
-                self.folio_client,
-                self.srs_records_file,
-                self,
-            )
-            thread.start()
-            self.threads.append(thread)
-            self.threadID += 1
 
     def process_record(self, marc_record, inventory_only):
         """processes a marc record and saves it"""
-        try:
-            legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
-        except Exception as ee:
-            legacy_id = ["unknown"]
-
+        legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_bib(marc_record, inventory_only)
             if self.validate_instance(folio_rec, marc_record):
                 write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
-                self.workQueue.put([marc_record, folio_rec])
-
+                self.save_source_record(marc_record, folio_rec)
                 self.mapper.add_stats(
                     self.mapper.stats, "Successfully transformed bibs"
                 )
@@ -205,6 +124,30 @@ class BibsProcessor:
                     write_to_file(holdings_file, False, holding)
         self.marc_xml_writer.close()
         self.srs_records_file.close()
+
+    def save_source_record(self, marc_record, instance):
+        """Saves the source Marc_record to the Source record Storage module"""
+        srs_id = str(uuid.uuid4())
+
+        marc_record.add_ordered_field(
+            Field(
+                tag="999",
+                indicators=["f", "f"],
+                subfields=["i", instance["id"], "s", srs_id],
+            )
+        )
+        srs_record_string = get_srs_string(
+            (
+                marc_record,
+                instance["id"],
+                srs_id,
+                self.folio_client.get_metadata_construct(),
+                self.suppress,
+            )
+        )
+        self.srs_records_file.write(f"{srs_record_string}\n")
+        if not self.suppress:
+            self.marc_xml_writer.write(marc_record)
 
 
 def write_to_file(file, pg_dump, folio_record):

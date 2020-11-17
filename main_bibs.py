@@ -65,7 +65,6 @@ class Worker:
             self.wrap_up()
 
     def read_records(self, reader):
-        self.processor.queueLock.acquire()
         for record in reader:
             self.mapper.add_stats(
                 self.mapper.stats, "MARC21 records in file before parsing"
@@ -83,21 +82,7 @@ class Worker:
                 self.mapper.add_stats(
                     self.mapper.stats, "MARC21 Records successfully parsed"
                 )
-
                 self.processor.process_record(record, False)
-
-        self.processor.queueLock.release()
-        # Wait for queue to empty
-        while not self.processor.workQueue.empty():
-            pass
-
-        # Notify threads it's time to exit
-        self.processor.exit_flag = 1
-
-        # Wait for all threads to complete
-        for t in self.processor.threads:
-            t.join()
-        print("Exiting Main Thread")
 
     def wrap_up(self):
         print("Done. Wrapping up...")

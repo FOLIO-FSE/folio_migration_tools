@@ -357,16 +357,8 @@ class BibsRulesMapper(RulesMapperBase):
             if any(res):
                 return list(res)
             else:
-                try:
-                    ret = [marc_record["001"].format_field().strip()]
-                    self.add_stats(self.stats, "Legacy id not found. 001 returned")
-                    return ret
-                except AttributeError:
-                    self.add_stats(
-                        self.stats, "Legacy id and 001 not found. Failing record "
-                    )
-                    raise ValueError("Legacy id and 001 not found. Failing record ")
-
+                self.add_stats(self.stats, "Legacy id not found. Trying 001 instead")
+                return [marc_record["001"].format_field().strip()]
         elif ils_flavour in ["voyager"]:
             return [marc_record["001"].format_field().strip()]
         else:
