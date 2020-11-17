@@ -34,7 +34,10 @@ class BibsProcessor:
 
     def process_record(self, marc_record, inventory_only):
         """processes a marc record and saves it"""
-        legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
+        try:
+            legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
+        except Exception as ee:
+            legacy_id = ["unknown"]
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
