@@ -164,9 +164,9 @@ class BibsConditions:
     def condition_set_contributor_name_type_id(self, value, parameter, marc_field):
         if not self.folio.contrib_name_types:
             raise ValueError("No contrib_name_types setup in tenant")
-        return get_ref_data_tuple_by_name(
-            self.folio.contrib_name_types, parameter["name"]
-        )
+        t = get_ref_data_tuple_by_name(self.folio.contrib_name_types, parameter["name"])
+        self.mapper.add_to_migration_report("Mapped Contributor name types", t[1])
+        return t[0]
 
     def condition_set_contributor_type_id(self, value, parameter, marc_field):
         if not self.folio.contributor_types:
