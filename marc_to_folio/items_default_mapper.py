@@ -28,7 +28,7 @@ class ItemsDefaultMapper(RulesMapperBase):
         other_maps,
         args,
     ):
-        super().__init__()
+        super().__init__(folio)
         self.args = args
         self.legacy_item_type_map = other_maps[0]
         self.duplicate_item_ids = {}
@@ -185,14 +185,16 @@ class ItemsDefaultMapper(RulesMapperBase):
                 )
                 legacy_value = str(legacy_value).strip()
                 if folio_field:
-                    self.report_folio_mapping(folio_field, True, not bool(legacy_value))
+                    self.report_folio_mapping(
+                        folio_field, True, True, not bool(legacy_value)
+                    )
                     if legacy_key:
                         self.report_legacy_mapping(
-                            legacy_key, True, not bool(legacy_value)
+                            legacy_key, True, True, not bool(legacy_value)
                         )
                 elif legacy_key:
                     self.report_legacy_mapping(
-                        legacy_key, False, not bool(legacy_value)
+                        legacy_key, True, False, not bool(legacy_value)
                     )
 
                 if folio_field and legacy_value:

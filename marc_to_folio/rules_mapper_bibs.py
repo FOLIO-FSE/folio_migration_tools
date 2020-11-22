@@ -94,16 +94,16 @@ class BibsRulesMapper(RulesMapperBase):
                 bad_tags.add(marc_field.tag)
 
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
-                self.report_legacy_mapping(marc_field.tag, False, False)
+                self.report_legacy_mapping(marc_field.tag, True, False, False)
             else:
                 if marc_field.tag not in ignored_subsequent_fields:
-                    self.report_legacy_mapping(marc_field.tag, True, False)
+                    self.report_legacy_mapping(marc_field.tag, True, True, False)
                     mappings = self.mappings[marc_field.tag]
                     self.map_field_according_to_mapping(
                         marc_field, mappings, folio_instance
                     )
                     if any(m.get("ignoreSubsequentFields", False) for m in mappings):
-                        self.report_legacy_mapping(marc_field.tag, False, False)
+                        self.report_legacy_mapping(marc_field.tag, True, False, False)
                         ignored_subsequent_fields.add(marc_field.tag)
 
             if marc_field.tag == "008":
