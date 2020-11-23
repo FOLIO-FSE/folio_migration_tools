@@ -1,5 +1,6 @@
 """The Alabama mapper, responsible for parsing Items acording to the
 FOLIO community specifications"""
+import logging
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 import uuid
 import json
@@ -53,7 +54,6 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.locations_map: Dict[str, str] = {}
         self.setup_locations(location_map)
         print(f"Location map set up with FOLIO locations")
-
         """Note types"""
         self.item_note_types = list(
             self.folio.folio_get_all("/item-note-types", "itemNoteTypes")
@@ -62,6 +62,30 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.note_id = next(
             x["id"] for x in self.item_note_types if "Note" == x["name"]
         )
+
+        print(f"Default Loan type is {self.item_to_item_map['defaultLoantypeName']}")
+        self.default_loan_type = self.get_ref_data_tuple_by_name(
+            self.loan_types, "loan_types", self.item_to_item_map["defaultLoantypeName"]
+        )
+        print(f"Default Loan type UUID is {self.default_loan_type}")
+
+        print(
+            f"Default Location code is {self.item_to_item_map['defaultLocationCode']}"
+        )
+        self.default_location = self.locations_map.get(
+            self.item_to_item_map["defaultLocationCode"],
+        )
+        print(f"Default Location UUID is {self.default_location}")
+
+        print(
+            f"Default Material type code is {self.item_to_item_map['defaultMaterialTypeName']}"
+        )
+        self.default_material_type = self.get_ref_data_tuple_by_name(
+            self.material_types,
+            "material_types",
+            self.item_to_item_map["defaultMaterialTypeName"],
+        )
+        print(f"Default Material type UUID is {self.default_material_type}")
 
     def setup_locations(self, location_map):
         temp_map = {}
@@ -185,9 +209,7 @@ class ItemsDefaultMapper(RulesMapperBase):
                 )
                 legacy_value = str(legacy_value).strip()
                 if folio_field:
-                    self.report_folio_mapping(
-                        folio_field, True, True, not bool(legacy_value)
-                    )
+                    self.report_folio_mapping(folio_field, True, not bool(legacy_value))
                     if legacy_key:
                         self.report_legacy_mapping(
                             legacy_key, True, True, not bool(legacy_value)
@@ -211,7 +233,8 @@ class ItemsDefaultMapper(RulesMapperBase):
                         item[folio_field] = self.handle_material_types(legacy_item)
 
                     elif folio_field == "status.name":
-                        item[folio_field] = self.handle_status(legacy_value)
+                        a = self.handle_status(legacy_value)
+                        item["status"] = {"name": "Available"}
                     elif folio_field == "permanentLoanTypeId":
                         item[folio_field] = self.handle_loan_types(legacy_item)
 
@@ -283,11 +306,14 @@ class ItemsDefaultMapper(RulesMapperBase):
 
     def get_location_code(self, legacy_value: str):
         location_id = self.locations_map.get(legacy_value.strip().strip("^"), "")
-        if location_id == "":
+        if location_id != "":
+            return location_id
+        else:
             self.add_to_migration_report("Missing location codes", legacy_value)
-            self.add_stats(self.stats, 'Missing location codes, adding "tech"')
-            location_id = self.locations_map.get("tech", "")
-        return location_id
+            self.add_stats(
+                self.stats, f'Missing location codes, adding "{self.default_location}"'
+            )
+            return self.default_location
 
     def is_string(self, target: str):
         folio_prop = self.item_schema["properties"][target]["type"]
@@ -323,12 +349,16 @@ class ItemsDefaultMapper(RulesMapperBase):
         return []
 
     def handle_call_number_id(self, legacy_value):
-        self.add_to_migration_report("Call number legacy types", legacy_value)
-        return legacy_value
+        self.add_to_migration_report(
+            "Call number legacy typesName - Not yet mapped", legacy_value
+        )
+        # return legacy_value
+        return ""
 
     def handle_status(self, legacy_value):
-        self.add_to_migration_report("Legacy item status", legacy_value)
-        return legacy_value
+        self.add_to_migration_report("Legacy item status - Not mapped", legacy_value)
+        # return legacy_value
+        return ""
 
     def handle_material_types(self, legacy_item: dict):
         m_keys = m_keys = list(
@@ -339,71 +369,70 @@ class ItemsDefaultMapper(RulesMapperBase):
             ]
         )
         fieldvalues = [legacy_item[k].strip() for k in m_keys]
-        folio_id = None
         for row in self.legacy_material_type_map:
             all_good = []
             for k in m_keys:
                 all_good.append(legacy_item[k].strip().casefold() in row[k].casefold())
             if all(all_good):
                 folio_name = row["folio_name"]
-                self.add_to_migration_report(
-                    "Mapped Material Types", f'{folio_name} - {" - ".join(fieldvalues)}'
+
+                t = self.get_ref_data_tuple_by_name(
+                    self.material_types, "material_types", folio_name
                 )
-                folio_id = next(
-                    (
-                        x["id"]
-                        for x in self.material_types
-                        if folio_name.casefold() == x["name"].casefold()
-                    ),
-                    "unspecified",
-                )
-                if folio_id != "unspecified":
-                    return folio_id
+                if t:
+                    self.add_to_migration_report(
+                        "Mapped Material Types", f'{t[1]} - {" - ".join(fieldvalues)}'
+                    )
+                return t[0]
         self.add_to_migration_report(
             "Unapped Material Types", f'unspecified - {" - ".join(fieldvalues)}'
         )
-        return next(
-            (
-                x["id"]
-                for x in self.material_types
-                if x["name"].casefold() == "unspecified".casefold()
-            )
-        )
+        return self.default_material_type
 
     def handle_loan_types(self, legacy_item: dict):
         m_keys = m_keys = list(
             [k for k in dict(self.legacy_loan_type_map[0]).keys() if k != "folio_name"]
         )
         fieldvalues = [legacy_item[k] for k in m_keys]
-        folio_id = None
         for row in self.legacy_loan_type_map:
             all_good = []
             for k in m_keys:
                 all_good.append(legacy_item[k] in row[k])
             if all(all_good):
                 folio_name = row["folio_name"]
-                self.add_to_migration_report(
-                    "Mapped loan types", f'{folio_name} - {" - ".join(fieldvalues)}'
+                t = self.get_ref_data_tuple_by_name(
+                    self.loan_types, "loan_types", folio_name
                 )
-
-                folio_id = next(
-                    (
-                        x["id"]
-                        for x in self.loan_types
-                        if folio_name.casefold() == x["name"].casefold()
-                    ),
-                    "Non-Circulating",
-                )
-                if folio_id != "Non-Circulating":
-                    return folio_id
+                if t:
+                    self.add_to_migration_report(
+                        "Mapped loan types", f'{t[1]}: {" - ".join(fieldvalues)}'
+                    )
+                    return t[0]
 
         self.add_to_migration_report(
             "Unmapped loan types", f'Non-Circulating - {" - ".join(fieldvalues)}'
         )
-        return next(
-            (
-                x["id"]
-                for x in self.loan_types
-                if x["name"].casefold() == "Non-Circulating".casefold()
-            )
+        return self.default_loan_type
+
+    def get_ref_data_tuple_code(self, ref_data, ref_name, code):
+        return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
+
+    def get_ref_data_tuple_by_name(self, ref_data, ref_name, name):
+        return self.get_ref_data_tuple(ref_data, ref_name, name, "name")
+
+    def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
+        dict_key = f"{ref_name}{key_type}"
+        if dict_key not in self.ref_data_dicts:
+            d = {}
+            for r in ref_data:
+                d[r[key_type].lower()] = (r["id"], r["name"])
+            self.ref_data_dicts[dict_key] = d
+        ref_object = (
+            self.ref_data_dicts[dict_key][key_value.lower()]
+            if key_value.lower() in self.ref_data_dicts[dict_key]
+            else None
         )
+        if not ref_object:
+            logging.debug(f"No matching element for {key_value} in {list(ref_data)}")
+            return None
+        return ref_object
