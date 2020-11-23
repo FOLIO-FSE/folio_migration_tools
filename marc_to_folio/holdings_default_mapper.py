@@ -110,10 +110,10 @@ class HoldingsDefaultMapper(RulesMapperBase):
 
     def wrap_up(self):
         print("# Holdings transformation results")
-        print("## Stats")
-        self.print_dict_to_md_table(self.stats)
-        self.write_migration_report()
-        self.print_mapping_report()
+        # print("## Stats")
+        # self.print_dict_to_md_table(self.stats)
+        # self.write_migration_report()
+        # self.print_mapping_report()
 
     def write_migration_report(self, other_report=None):
         if other_report:

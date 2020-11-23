@@ -3,6 +3,7 @@ import time
 import traceback
 import json
 import os
+from datetime import datetime as dt
 from jsonschema import ValidationError, validate
 
 
@@ -65,7 +66,16 @@ class ItemsProcessor:
         print("Saving map of {} old and new IDs to {}".format(len(id_map), path))
         with open(path, "w+") as id_map_file:
             json.dump(id_map, id_map_file, indent=4)
-        self.mapper.wrap_up()
+        mrf = os.path.join(self.args.result_folder, "items_transformation_report.md")
+        with open(mrf, "w+") as report_file:
+            report_file.write(f"# Item records transformation results   \n")
+            report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
+            report_file.write(f"## Item records transformation counters   \n")
+            self.mapper.print_dict_to_md_table(
+                self.mapper.stats, report_file, "  Measure  ", "Count   \n",
+            )
+            self.mapper.write_migration_report(report_file)
+            self.mapper.print_mapping_report(report_file)
 
     def add_to_migration_report(self, header, messageString):
         # TODO: Move to interface or parent class

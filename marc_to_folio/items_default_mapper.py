@@ -115,12 +115,11 @@ class ItemsDefaultMapper(RulesMapperBase):
                 reverse=True,
             )
         }
-        print("## Top missing holdings ids ")
         i = 0
         for s, v in sorted_hlids.items():
             i += 1
-            print(f"{s} - {v}")
-            if i > 5:
+            self.add_to_migration_report("Top missing holdings ids", f"{s} - {v}")
+            if i > 15:
                 break
         sorted_item_ids = {
             k: v
@@ -129,16 +128,15 @@ class ItemsDefaultMapper(RulesMapperBase):
             )
         }
         i = 0
-        print("## Top duplicate item ids")
         for s, v in sorted_item_ids.items():
             i += 1
-            print(f"{s} - {v}")
+            self.add_to_migration_report("Top duplicate item ids", f"{s} - {v}")
             if i > 5:
                 break
-        print("## Item transformation counters")
-        self.print_dict_to_md_table(self.stats)
-        self.write_migration_report()
-        self.print_mapping_report()
+        # print("## Item transformation counters")
+        # self.print_dict_to_md_table(self.stats)
+        # self.write_migration_report()
+        # self.print_mapping_report()
 
     def get_loc_id(self, loc_code):
         folio_loc_id = next(
@@ -384,7 +382,7 @@ class ItemsDefaultMapper(RulesMapperBase):
                     self.add_to_migration_report(
                         "Mapped Material Types", f'{t[1]} - {" - ".join(fieldvalues)}'
                     )
-                return t[0]
+                    return t[0]
         self.add_to_migration_report(
             "Unapped Material Types", f'unspecified - {" - ".join(fieldvalues)}'
         )
