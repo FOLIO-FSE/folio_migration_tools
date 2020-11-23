@@ -31,6 +31,7 @@ class ItemsDefaultMapper(RulesMapperBase):
     ):
         super().__init__(folio)
         self.args = args
+        self.ref_data_dicts = {}
         self.legacy_item_type_map = other_maps[0]
         self.duplicate_item_ids = {}
         self.legacy_material_type_map = other_maps[1]
