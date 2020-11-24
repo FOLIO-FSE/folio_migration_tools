@@ -66,7 +66,7 @@ class ItemsProcessor:
         print("Saving map of {} old and new IDs to {}".format(len(id_map), path))
         with open(path, "w+") as id_map_file:
             json.dump(id_map, id_map_file, indent=4)
-        mrf = os.path.join(self.args.result_folder, "items_transformation_report.md")
+        mrf = os.path.join(self.args.result_path, "items_transformation_report.md")
         with open(mrf, "w+") as report_file:
             report_file.write(f"# Item records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
