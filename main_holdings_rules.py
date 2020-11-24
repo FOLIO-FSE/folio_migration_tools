@@ -82,9 +82,15 @@ def main():
         print(f"Locations in map: {len(location_map)}")
         print(any(location_map))
         print(f"{len(instance_id_map)} Instance ids in map")
-        mapper = RulesMapperHoldings(folio_client, instance_id_map, location_map, args)
+        mapper = RulesMapperHoldings(
+            folio_client,
+            instance_id_map,
+            location_map,
+            rules_file["defaultLocationCode"],
+            args,
+        )
         mapper.mappings = rules_file["rules"]
-        mapper.default_location_code = rules_file["defaultLocationCode"]
+
         processor = HoldingsProcessor(mapper, folio_client, results_file, args)
         for records_file in files:
             if args.marcxml:
