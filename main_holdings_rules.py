@@ -77,12 +77,14 @@ def main():
     ) as results_file:
         instance_id_map = json.load(json_file)
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
-        rules = json.load(mapping_rules_file)["rules"]
+        rules_file = json.load(mapping_rules_file)
+
         print(f"Locations in map: {len(location_map)}")
         print(any(location_map))
         print(f"{len(instance_id_map)} Instance ids in map")
         mapper = RulesMapperHoldings(folio_client, instance_id_map, location_map, args)
-        mapper.mappings = rules
+        mapper.mappings = rules_file["rules"]
+        mapper.default_location_code = rules_file["defaultLocationCode"]
         processor = HoldingsProcessor(mapper, folio_client, results_file, args)
         for records_file in files:
             if args.marcxml:

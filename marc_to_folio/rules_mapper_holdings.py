@@ -6,7 +6,9 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 
 class RulesMapperHoldings(RulesMapperBase):
-    def __init__(self, folio, instance_id_map, location_map, args):
+    def __init__(
+        self, folio, instance_id_map, location_map, default_location_code, args
+    ):
         super().__init__(folio)
         print("Init RulesMapperHoldings")
         self.instance_id_map = instance_id_map
@@ -23,6 +25,11 @@ class RulesMapperHoldings(RulesMapperBase):
         self.default_holdings_type_id = self.get_ref_data_tuple(
             self.holdings_types, "holdings_types", "unknown", "name"
         )[0]
+
+        self.default_location_id = self.get_ref_data_tuple(
+            self.conditions.locations, "locations", default_location_code, "code"
+        )[0]
+        print(f"Default location code is {self.default_location_id}")
 
     def parse_hold(self, marc_record, inventory_only=False):
         """ Parses a mfhd recod into a FOLIO Inventory instance object
@@ -79,6 +86,8 @@ class RulesMapperHoldings(RulesMapperBase):
         # type = type_map.get(ldr06, "Unknown")
         folio_holding["holdingsTypeId"] = self.default_holdings_type_id
         folio_holding["callNumberTypeId"] = self.default_call_number_type_id
+        if not folio_holding.get("permanentLocationId", ""):
+            folio_holding["permanentLocationId"] = self.default_location_id
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"

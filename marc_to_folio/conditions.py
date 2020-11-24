@@ -179,7 +179,7 @@ class Conditions:
     def condition_set_contributor_name_type_id(self, value, parameter, marc_field):
         if not self.folio.contrib_name_types:
             raise ValueError("No contrib_name_types setup in tenant")
-        return get_ref_data_tuple_by_name(
+        return self.get_ref_data_tuple_by_name(
             self.folio.contrib_name_types, parameter["name"]
         )
 
