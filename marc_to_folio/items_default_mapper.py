@@ -46,47 +46,54 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.item_to_item_map = item_map
         self.holdings_id_map = holdings_id_map
         self.loan_types = list(self.folio.folio_get_all("/loan-types", "loantypes"))
-        print(f"{len(self.loan_types)} loan types set up in tenant")
+        print(f"{len(self.loan_types)} loan types set up in tenant", flush=True)
         self.material_types = list(
             self.folio.folio_get_all("/material-types", "mtypes")
         )
-        print(f"{len(self.material_types)} material types set up in tenant")
+        print(f"{len(self.material_types)} material types set up in tenant", flush=True)
         """Locations stuff"""
         self.locations_map: Dict[str, str] = {}
         self.setup_locations(location_map)
-        print(f"Location map set up with FOLIO locations")
+        print(f"Location map set up with FOLIO locations", flush=True)
         """Note types"""
         self.item_note_types = list(
             self.folio.folio_get_all("/item-note-types", "itemNoteTypes")
         )
-        print(f"{len(self.item_note_types)} Item note types set up in tenant")
+        print(
+            f"{len(self.item_note_types)} Item note types set up in tenant", flush=True
+        )
         self.note_id = next(
             x["id"] for x in self.item_note_types if "Note" == x["name"]
         )
 
-        print(f"Default Loan type is {self.item_to_item_map['defaultLoantypeName']}")
+        print(
+            f"Default Loan type is {self.item_to_item_map['defaultLoantypeName']}",
+            flush=True,
+        )
         self.default_loan_type = self.get_ref_data_tuple_by_name(
             self.loan_types, "loan_types", self.item_to_item_map["defaultLoantypeName"]
         )
-        print(f"Default Loan type UUID is {self.default_loan_type}")
+        print(f"Default Loan type UUID is {self.default_loan_type}", flush=True)
 
         print(
-            f"Default Location code is {self.item_to_item_map['defaultLocationCode']}"
+            f"Default Location code is {self.item_to_item_map['defaultLocationCode']}",
+            flush=True,
         )
         self.default_location = self.locations_map.get(
             self.item_to_item_map["defaultLocationCode"],
         )
-        print(f"Default Location UUID is {self.default_location}")
+        print(f"Default Location UUID is {self.default_location}", flush=True)
 
         print(
-            f"Default Material type code is {self.item_to_item_map['defaultMaterialTypeName']}"
+            f"Default Material type code is {self.item_to_item_map['defaultMaterialTypeName']}",
+            flush=True,
         )
         self.default_material_type = self.get_ref_data_tuple_by_name(
             self.material_types,
             "material_types",
             self.item_to_item_map["defaultMaterialTypeName"],
         )
-        print(f"Default Material type UUID is {self.default_material_type}")
+        print(f"Default Material type UUID is {self.default_material_type}", flush=True)
 
     def parse_item(self, legacy_item: Dict):
         legacy_id = legacy_item[self.item_to_item_map["legacyIdField"]]
