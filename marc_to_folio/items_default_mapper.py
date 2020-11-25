@@ -398,7 +398,7 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.add_to_migration_report(
             "Unapped Material Types", f'unspecified - {" - ".join(fieldvalues)}'
         )
-        return self.default_material_type
+        return self.default_material_type[0]
 
     def handle_loan_types(self, legacy_item: dict):
         m_keys = m_keys = list(
