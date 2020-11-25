@@ -97,8 +97,8 @@ class ItemsDefaultMapper(RulesMapperBase):
             item = self.instantiate_item()
             for legacy_key, temp_legacy_value in legacy_item.items():
                 legacy_value = (
-                    temp_legacy_value
-                    if temp_legacy_value.lower() not in ["null", "none"]
+                    str(temp_legacy_value).strip()
+                    if str(temp_legacy_value).strip().lower() not in ["null", "none"]
                     else ""
                 )
                 legacy_key = legacy_key.strip() if legacy_key else legacy_key
@@ -414,7 +414,8 @@ class ItemsDefaultMapper(RulesMapperBase):
                     return t[0]
 
         self.add_to_migration_report(
-            "Unmapped loan types", f'Non-Circulating - {" - ".join(fieldvalues)}'
+            "Unmapped loan types",
+            f'{self.default_loan_type} - {" - ".join(fieldvalues)}',
         )
         return self.default_loan_type
 
