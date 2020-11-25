@@ -88,6 +88,122 @@ class ItemsDefaultMapper(RulesMapperBase):
         )
         print(f"Default Material type UUID is {self.default_material_type}")
 
+    def parse_item(self, legacy_item: Dict):
+        legacy_id = legacy_item[self.item_to_item_map["legacyIdField"]]
+        fields_contents_to_report = self.item_to_item_map[
+            "legacyFieldsToCountValuesFor"
+        ]
+        try:
+            item = self.instantiate_item()
+            for legacy_key, temp_legacy_value in legacy_item.items():
+                legacy_value = (
+                    temp_legacy_value
+                    if temp_legacy_value.lower() not in ["null", "none"]
+                    else ""
+                )
+                legacy_key = legacy_key.strip() if legacy_key else legacy_key
+                folio_field = (
+                    self.item_to_item_map["fields"]
+                    .get(legacy_key, {})
+                    .get("target", "")
+                )
+                legacy_value = str(legacy_value).strip()
+                if folio_field:
+                    self.report_folio_mapping(folio_field, True, not bool(legacy_value))
+                    if legacy_key:
+                        self.report_legacy_mapping(
+                            legacy_key, True, True, not bool(legacy_value)
+                        )
+                elif legacy_key:
+                    self.report_legacy_mapping(
+                        legacy_key, True, False, not bool(legacy_value)
+                    )
+
+                if folio_field and legacy_value:
+                    if folio_field in ["permanentLocationId"]:
+                        code = self.get_location_code(legacy_value)
+                        if code:
+                            item[folio_field] = code
+                    elif folio_field in ["temporaryLocationId"]:
+                        self.add_stats(
+                            self.stats, f"Temp location code: {legacy_value}"
+                        )
+                        # TODO: set temporary location?
+                    elif folio_field == "materialTypeId":
+                        item[folio_field] = self.handle_material_types(legacy_item)
+
+                    elif folio_field == "status.name":
+                        a = self.handle_status(legacy_value)
+                        item["status"] = {"name": "Available"}
+                    elif folio_field == "permanentLoanTypeId":
+                        item[folio_field] = self.handle_loan_types(legacy_item)
+
+                    elif folio_field == "itemLevelCallNumberTypeId":
+                        item[folio_field] = self.handle_call_number_id(legacy_value)
+
+                    elif folio_field == "circulationNotes":
+                        item[folio_field] = self.handle_circulation_notes(legacy_value)
+                    elif folio_field == "holdingsRecordId":
+                        if legacy_value not in self.holdings_id_map:
+                            self.add_stats(self.stats, "Holdings id not in map")
+                            # self.add_to_migration_report(
+                            #    "Missing holdings ids", legacy_value
+                            # )
+
+                            raise ValueError(f"Holdings id {legacy_value} not in map")
+                        else:
+                            item[folio_field] = self.holdings_id_map[legacy_value]["id"]
+
+                    elif folio_field == "notes":
+                        self.add_note(legacy_value, item)
+
+                    else:
+                        if self.is_string(folio_field):
+                            item[folio_field] = " ".join(
+                                [item.get(folio_field, ""), legacy_value]
+                            )
+                        elif self.is_string_array(folio_field):
+                            if folio_field in item and any(item[folio_field]):
+                                item[folio_field].append(legacy_value)
+                            else:
+                                item[folio_field] = [legacy_value]
+                if legacy_key in fields_contents_to_report:
+                    self.add_to_migration_report(
+                        f"Field Contents - {legacy_key}", legacy_value
+                    )
+            has_failed: Set[str] = set()
+            for f in self.item_schema["properties"]:
+                if f not in item:
+                    self.report_folio_mapping(f, False, False)
+
+            for req in self.item_schema["required"]:
+                if req not in item:
+                    has_failed.add(req)
+                    self.add_stats(
+                        self.stats, f"Missing required field(s): {req}",
+                    )
+            if any(has_failed):
+                raise ValueError(f"{list(has_failed)} is required")
+            self.add_stats(self.stats, "Sucessfully transformed items")
+            if not legacy_id.strip():
+                self.add_stats(self.stats, "Empty legacy id")
+            if legacy_id in self.item_id_map:
+                self.add_stats(self.duplicate_item_ids, legacy_id)
+                self.add_stats(self.stats, "Duplicate item ids")
+            else:
+                self.item_id_map[legacy_id] = item["id"]
+            return item
+        except ValueError as ve:
+            self.add_stats(self.stats, f"Total failed items with Value errors")
+            # self.add_to_migration_report("ValueErrors", f"{ve} for {legacy_id}")
+            return None
+        except Exception as ee:
+            self.add_stats(self.stats, "Exception")
+            self.add_to_migration_report("Exceptions", f"{ee} for {legacy_id}")
+            print(f"{ee} for {legacy_id}")
+            traceback.print_exc()
+            raise ee
+
     def setup_locations(self, location_map):
         temp_map = {}
         for loc in self.folio.locations:
@@ -191,117 +307,6 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.report_folio_mapping("metaData", True, False)
         self.report_folio_mapping("status", True, False)
         return item
-
-    def parse_item(self, legacy_item: Dict):
-        legacy_id = legacy_item[self.item_to_item_map["legacyIdField"]]
-        fields_contents_to_report = self.item_to_item_map[
-            "legacyFieldsToCountValuesFor"
-        ]
-        try:
-            item = self.instantiate_item()
-            for legacy_key, legacy_value in legacy_item.items():
-                legacy_key = legacy_key.strip() if legacy_key else legacy_key
-                folio_field = (
-                    self.item_to_item_map["fields"]
-                    .get(legacy_key, {})
-                    .get("target", "")
-                )
-                legacy_value = str(legacy_value).strip()
-                if folio_field:
-                    self.report_folio_mapping(folio_field, True, not bool(legacy_value))
-                    if legacy_key:
-                        self.report_legacy_mapping(
-                            legacy_key, True, True, not bool(legacy_value)
-                        )
-                elif legacy_key:
-                    self.report_legacy_mapping(
-                        legacy_key, True, False, not bool(legacy_value)
-                    )
-
-                if folio_field and legacy_value:
-                    if folio_field in ["permanentLocationId"]:
-                        code = self.get_location_code(legacy_value)
-                        if code:
-                            item[folio_field] = code
-                    elif folio_field in ["temporaryLocationId"]:
-                        self.add_stats(
-                            self.stats, f"Temp location code: {legacy_value}"
-                        )
-                        # TODO: set temporary location?
-                    elif folio_field == "materialTypeId":
-                        item[folio_field] = self.handle_material_types(legacy_item)
-
-                    elif folio_field == "status.name":
-                        a = self.handle_status(legacy_value)
-                        item["status"] = {"name": "Available"}
-                    elif folio_field == "permanentLoanTypeId":
-                        item[folio_field] = self.handle_loan_types(legacy_item)
-
-                    elif folio_field == "itemLevelCallNumberTypeId":
-                        item[folio_field] = self.handle_call_number_id(legacy_value)
-
-                    elif folio_field == "circulationNotes":
-                        item[folio_field] = self.handle_circulation_notes(legacy_value)
-                    elif folio_field == "holdingsRecordId":
-                        if legacy_value not in self.holdings_id_map:
-                            self.add_stats(self.stats, "Holdings id not in map")
-                            # self.add_to_migration_report(
-                            #    "Missing holdings ids", legacy_value
-                            # )
-
-                            raise ValueError(f"Holdings id {legacy_value} not in map")
-                        else:
-                            item[folio_field] = self.holdings_id_map[legacy_value]
-
-                    elif folio_field == "notes":
-                        self.add_note(legacy_value, item)
-
-                    else:
-                        if self.is_string(folio_field):
-                            item[folio_field] = " ".join(
-                                [item.get(folio_field, ""), legacy_value]
-                            )
-                        elif self.is_string_array(folio_field):
-                            if folio_field in item and any(item[folio_field]):
-                                item[folio_field].append(legacy_value)
-                            else:
-                                item[folio_field] = [legacy_value]
-                if legacy_key in fields_contents_to_report:
-                    self.add_to_migration_report(
-                        f"Field Contents - {legacy_key}", legacy_value
-                    )
-            has_failed: Set[str] = set()
-            for f in self.item_schema["properties"]:
-                if f not in item:
-                    self.report_folio_mapping(f, False, False)
-
-            for req in self.item_schema["required"]:
-                if req not in item:
-                    has_failed.add(req)
-                    self.add_stats(
-                        self.stats, f"Missing required field(s): {req}",
-                    )
-            if any(has_failed):
-                raise ValueError(f"{list(has_failed)} is required")
-            self.add_stats(self.stats, "Sucessfully transformed items")
-            if not legacy_id.strip():
-                self.add_stats(self.stats, "Empty legacy id")
-            if legacy_id in self.item_id_map:
-                self.add_stats(self.duplicate_item_ids, legacy_id)
-                self.add_stats(self.stats, "Duplicate item ids")
-            else:
-                self.item_id_map[legacy_id] = item["id"]
-            return item
-        except ValueError as ve:
-            self.add_stats(self.stats, f"Total failed items with Value errors")
-            # self.add_to_migration_report("ValueErrors", f"{ve} for {legacy_id}")
-            return None
-        except Exception as ee:
-            self.add_stats(self.stats, "Exception")
-            self.add_to_migration_report("Exceptions", f"{ee} for {legacy_id}")
-            print(f"{ee} for {legacy_id}")
-            traceback.print_exc()
-            raise ee
 
     def get_location_code(self, legacy_value: str):
         location_id = self.locations_map.get(legacy_value.strip().strip("^"), "")
