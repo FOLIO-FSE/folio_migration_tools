@@ -196,7 +196,7 @@ class Conditions:
 
     def condition_set_note_type_id(self, value, parameter, marc_field):
         t = self.get_ref_data_tuple_by_name(
-            self.folio.instance_note_types, parameter["name"]
+            self.folio.instance_note_types, "instance_not_types", parameter["name"]
         )
         self.mapper.add_to_migration_report("Mapped note types", t[1])
         return t[0]
