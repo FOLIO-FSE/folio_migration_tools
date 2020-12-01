@@ -12,6 +12,14 @@ class Conditions:
         self.electronic_access_relationships = {}
         self.mapper = mapper
         self.cache = {}
+        print(f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances")
+        print(f"Fetched {len(self.folio.identifier_types)} identifier types")
+        print(f"Fetched {len(self.folio.instance_note_types)} note types")
+        print(f"Fetched {len(self.folio.contrib_name_types)} contrib_name_types")
+        print(f"Fetched {len(self.folio.contributor_types)} contributor_types")
+        print(f"Fetched {len(self.folio.alt_title_types)} alt_title_types")
+        print(f"Fetched {len(self.folio.instance_types)} instance_types")
+        print(f"Fetched {len(self.folio.instance_formats)} instance_formats")
         self.electronic_access_relationships = list(
             self.folio.folio_get_all(
                 "/electronic-access-relationships",
@@ -43,6 +51,7 @@ class Conditions:
 
         self.locations = list(self.folio.folio_get_all("/locations", "locations",))
         print(f"Fetched {len(self.locations)} locations")
+        print(f"{len(self.folio.contrib_name_types)} contrib_name_types in tenant")
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
         try:
@@ -180,10 +189,17 @@ class Conditions:
 
     def condition_set_contributor_name_type_id(self, value, parameter, marc_field):
         if not self.folio.contrib_name_types:
-            raise ValueError("No contrib_name_types setup in tenant")
+            raise Exception("No contributor name types setup in tenant")
         return self.get_ref_data_tuple_by_name(
             self.folio.contrib_name_types, "contrib_name_types", parameter["name"]
         )
+
+    def condition_set_note_type_id(self, value, parameter, marc_field):
+        t = self.get_ref_data_tuple_by_name(
+            self.folio.instance_note_types, parameter["name"]
+        )
+        self.mapper.add_to_migration_report("Mapped note types", t[1])
+        return t[0]
 
     def condition_set_contributor_type_id(self, value, parameter, marc_field):
         if not self.folio.contributor_types:
