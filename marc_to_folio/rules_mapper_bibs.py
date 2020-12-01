@@ -140,7 +140,6 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["instanceFormatIds"] = list(
             set(self.get_instance_format_ids(marc_record, legacy_id))
         )
-        print(f'{temp_inst_type} - {folio_instance["instanceTypeId"]}')
         if temp_inst_type and not folio_instance["instanceTypeId"]:
             folio_instance["instanceTypeId"] = temp_inst_type
         elif not temp_inst_type and not folio_instance.get("instanceTypeId", ""):
