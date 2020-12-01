@@ -2,6 +2,7 @@
 FOLIO community specifications"""
 import json
 import logging
+from marc_to_folio.conditions import Conditions
 import traceback
 from logging import exception
 import os.path
@@ -14,7 +15,6 @@ from pymarc.record import Record
 import requests
 from pymarc import Field, JSONWriter, XMLWriter
 
-from marc_to_folio.bibs_conditions import BibsConditions
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 
@@ -30,7 +30,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.record_status = {}
         self.migration_report = {}
         self.suppress = args.suppress
-        self.conditions = BibsConditions(folio_client, self)
+        self.conditions = Conditions(folio_client, self)
         self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
         self.id_map = {}
@@ -94,7 +94,7 @@ class BibsRulesMapper(RulesMapperBase):
                 bad_tags.add(marc_field.tag)
 
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
-                self.report_legacy_mapping(marc_field.tag, True, False, False)
+                self.report_legacy_mapping(marc_field.tag, True, False, True)
             else:
                 if marc_field.tag not in ignored_subsequent_fields:
                     self.report_legacy_mapping(marc_field.tag, True, True, False)
@@ -103,8 +103,9 @@ class BibsRulesMapper(RulesMapperBase):
                         marc_field, mappings, folio_instance
                     )
                     if any(m.get("ignoreSubsequentFields", False) for m in mappings):
-                        self.report_legacy_mapping(marc_field.tag, True, False, False)
                         ignored_subsequent_fields.add(marc_field.tag)
+                else:
+                    self.report_legacy_mapping(marc_field.tag, True, False, True)
 
             if marc_field.tag == "008":
                 temp_inst_type = folio_instance["instanceTypeId"]
@@ -139,6 +140,7 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["instanceFormatIds"] = list(
             set(self.get_instance_format_ids(marc_record, legacy_id))
         )
+        print(f'{temp_inst_type} - {folio_instance["instanceTypeId"]}')
         if temp_inst_type and not folio_instance["instanceTypeId"]:
             folio_instance["instanceTypeId"] = temp_inst_type
         elif not temp_inst_type and not folio_instance.get("instanceTypeId", ""):

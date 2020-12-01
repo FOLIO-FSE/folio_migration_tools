@@ -1,3 +1,4 @@
+from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import unittest
 from lxml import etree
 import pymarc
@@ -5,7 +6,6 @@ import json
 from types import SimpleNamespace
 from collections import namedtuple
 from jsonschema import validate
-from marc_to_folio.bibs_rules_mapper import BibsRulesMapper
 from folioclient.FolioClient import FolioClient
 
 
@@ -53,6 +53,13 @@ class TestRulesMapperVanilla(unittest.TestCase):
             "Modern Electrosynthetic Methods in Organic Chemistry", record[0]["title"]
         )
         # TODO: test abcense of / for chalmers
+
+    def test_multiple336s(self):
+        xpath = "//marc:datafield[@tag='336']"
+        record = self.default_map("test_multiple_336.xml", xpath)
+        self.assertEquals(
+            "8105bd44-e7bd-487e-a8f2-b804a361d92f", record[0]["instanceTypeId"]
+        )
 
     def test_strange_isbn(self):
         xpath = "//marc:datafield[@tag='020']"

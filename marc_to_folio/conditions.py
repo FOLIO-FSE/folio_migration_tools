@@ -162,7 +162,9 @@ class Conditions:
         #             if f['name'] == 'No type specified'), '')
         if not self.folio.class_types:
             raise ValueError("No class_types setup in tenant")
-        return get_ref_data_tuple_by_name(self.folio.class_types, parameter["name"])[0]
+        return self.get_ref_data_tuple_by_name(
+            self.folio.class_types, "class_types", parameter["name"]
+        )[0]
 
     def condition_char_select(self, value, parameter, marc_field):
         return value[parameter["from"] : parameter["to"]]
@@ -180,7 +182,7 @@ class Conditions:
         if not self.folio.contrib_name_types:
             raise ValueError("No contrib_name_types setup in tenant")
         return self.get_ref_data_tuple_by_name(
-            self.folio.contrib_name_types, parameter["name"]
+            self.folio.contrib_name_types, "contrib_name_types", parameter["name"]
         )
 
     def condition_set_contributor_type_id(self, value, parameter, marc_field):
@@ -256,6 +258,11 @@ class Conditions:
         t = self.get_ref_data_tuple_by_name(
             self.folio.alt_title_types, "alt_title_types", parameter["name"]
         )
+        if not t:
+            raise Exception(
+                f"Alternative title type not found for {parameter['name']} {marc_field}"
+            )
+
         self.mapper.add_to_migration_report("Mapped Alternative title types", t[1])
         return t[0]
 
@@ -276,15 +283,15 @@ class Conditions:
         else:
             mapped_code = value
 
-        t = self.get_ref_data_tuple_code(self.locations, "locations", mapped_code)
+        t = self.get_ref_data_tuple_by_code(self.locations, "locations", mapped_code)
         if not t:
-            t = self.get_ref_data_tuple_code(
+            t = self.get_ref_data_tuple_by_code(
                 self.locations, "locations", parameter["unspecifiedLocationCode"]
             )
         self.mapper.add_to_migration_report("Mapped Locations", t[1])
         return t[0]
 
-    def get_ref_data_tuple_code(self, ref_data, ref_name, code):
+    def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
 
     def get_ref_data_tuple_by_name(self, ref_data, ref_name, name):
@@ -316,32 +323,35 @@ class Conditions:
     def condition_set_instance_type_id(self, value, parameter, marc_field):
         if not self.folio.instance_types:
             raise ValueError("No instance_types setup in tenant")
-        if marc_field.tag == "008":
-            t = self.get_ref_data_tuple_code(
-                self.folio.instance_types, "instance_types", value[:3]
+
+        if marc_field.tag == "336" and "b" in marc_field:
+            t = self.get_ref_data_tuple_by_code(
+                self.folio.instance_types, "instance_types", marc_field["b"]
             )
             if not t:
-                t = self.get_ref_data_tuple_code(
+                t = self.get_ref_data_tuple_by_code(
                     self.folio.instance_types, "instance_types", "zzz"
                 )
             self.mapper.add_to_migration_report("Mapped Instance types", t[1])
             return t[0]
-        elif marc_field.tag == "336" and "b" in marc_field:
-            t = self.get_ref_data_tuple_by_name(
-                self.folio.instance_types, "instance_types", marc_field["b"]
+        elif marc_field.tag == "008":
+            t = self.get_ref_data_tuple_by_code(
+                self.folio.instance_types, "instance_types", value[:3]
             )
             if not t:
-                t = self.get_ref_data_tuple_code(
+                t = self.get_ref_data_tuple_by_code(
                     self.folio.instance_types, "instance_types", "zzz"
                 )
             self.mapper.add_to_migration_report("Mapped Instance types", t[1])
             return t[0]
         else:
             # TODO Remove later. Corenell specific
-            t = self.get_ref_data_tuple_code(
+            t = self.get_ref_data_tuple_by_code(
                 self.folio.instance_types, "instance_types", "txt"
             )
-            self.mapper.add_to_migration_report("Mapped Instance types", t[1])
+            self.mapper.add_to_migration_report(
+                "Mapped Instance types (No 336$b)", t[1]
+            )
             return t[0]
         raise ValueError(
             f"Something went wrong when trying to parse Instance type from {marc_field}"

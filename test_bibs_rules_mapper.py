@@ -4,7 +4,6 @@ import pymarc
 import json
 from collections import namedtuple
 from jsonschema import validate
-from marc_to_folio.bibs_rules_mapper import BibsRulesMapper
 from folioclient.FolioClient import FolioClient
 
 
