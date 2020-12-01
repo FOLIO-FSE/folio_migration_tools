@@ -166,9 +166,9 @@ class ItemsDefaultMapper(RulesMapperBase):
 
                     else:
                         if self.is_string(folio_field):
-                            item[folio_field] = " ".join(
-                                [item.get(folio_field, ""), legacy_value]
-                            )
+                            item[folio_field] = str(
+                                " ".join([item.get(folio_field, ""), legacy_value])
+                            ).strip()
                         elif self.is_string_array(folio_field):
                             if folio_field in item and any(item[folio_field]):
                                 item[folio_field].append(legacy_value)
