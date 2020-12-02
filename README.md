@@ -28,18 +28,37 @@ MFHD-to-Inventory mapping will also rely on mapping based on a similar JSON stru
 ## Items-to-Inventory
 Items-to-Inventory mapping is based on a json structure where the CSV headers are matched against the target fields in the FOLIO items. The mapping is limited currently, but will be built out as work progresses.
 
-## Tests
+# Tests
 There is a test suite for Bibs-to-Instance mapping.
 ### Running the tests for the Rules mapper
 
 * Install the packages in the Pipfile
 * pipenv run python3 -m unittest test_rules_mapper.TestRulesMapper
 
-## Running the scripts
-pipenv run python3 main_bibs.py PATH_TO_FOLDER_WITH_MARC_FILES RESULTS_FOLDER OKAPI_URL TENANT_ID USERNAME PASSWORD RECORD_SOURCE_NAME -m PATH_TO_MAPS_FOLDER 
+# Running the scripts
+For actual examples of the output, go to the [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
+## main_bibs.py (Bib transformation)
+pipenv run python3 main_bibs.py PATH_TO_FOLDER_WITH_MARC_FILES RESULTS_FOLDER OKAPI_URL TENANT_ID USERNAME PASSWORD RECORD_SOURCE_NAME
 
 The above will fetch the mapping-rules from the FOLIO tenant specified and transform the supplied MARC21 record files into FOLIO Instance
 
+Example:
+```
+pipenv run python ~/code/MARC21-To-FOLIO/main_bibs.py ~/code/migration_repo_template/example_files/data/bibs ~/code/migration_repo_template/example_files/results/ https://okapi-bugfest-honeysuckle.folio.ebsco.com fs090000
+00 folio folio voyager
+```
+
+## main_holdings.py
+For actual examples of the output, go to the [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
+## main_bibs.py (Bib transformation)
+```
+ pipenv run python3 /codez/MARC21-To-FOLIO/main_holdings.py ~/code/migration_repo_template/example_files/data/holdings ~/code/migration_repo_template/example_files/results https://okapi-bugfest-honeysuckle.folio.ebsco.com fs09000000 folio folio voyager -m ~/code/migration_repo_template/mapping_files
+ ```
+ 
+ ## main_items.py
+ ```
+ pipenv run python3 /codez/MARC21-To-FOLIO/main_items.py ~/code/migration_repo_template/example_files/data/items ~/code/migration_repo_template/example_files/results https://okapi-bugfest-honeysuckle.folio.ebsco.com fs09000000 folio folio -m ~/code/migration_repo_template/mapping_files
+```
 # Bib records mapping
 ## HRID handling
 ### Current implementation:   
