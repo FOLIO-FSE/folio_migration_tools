@@ -68,7 +68,7 @@ class BibsRulesMapper(RulesMapperBase):
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function"""
         self.print_progress()
-        legacy_id = self.get_legacy_id(marc_record, self.ils_flavour)
+        legacy_ids = self.get_legacy_id(marc_record, self.ils_flavour)
         folio_instance = {
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
@@ -111,12 +111,12 @@ class BibsRulesMapper(RulesMapperBase):
                 temp_inst_type = folio_instance["instanceTypeId"]
 
         self.perform_additional_parsing(
-            folio_instance, temp_inst_type, marc_record, legacy_id
+            folio_instance, temp_inst_type, marc_record, legacy_ids
         )
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
 
-        self.validate(folio_instance, legacy_id)
+        self.validate(folio_instance, legacy_ids)
         self.dedupe_rec(folio_instance)
         # marc_record.remove_fields(*list(bad_tags))
         self.count_unmapped_fields(self.schema, folio_instance)
@@ -128,8 +128,11 @@ class BibsRulesMapper(RulesMapperBase):
             print(folio_instance)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
-        for legacy_id in legacy_id:
-            self.id_map[legacy_id] = {"id": folio_instance["id"]}
+        for legacy_id in legacy_ids:
+            if legacy_id:
+                self.id_map[legacy_id] = {"id": folio_instance["id"]}
+            else:
+                print(f"Legacy id is None {legacy_ids}")
         return folio_instance
 
     def perform_additional_parsing(

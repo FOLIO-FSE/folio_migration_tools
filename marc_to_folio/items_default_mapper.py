@@ -424,7 +424,7 @@ class ItemsDefaultMapper(RulesMapperBase):
             "Unmapped loan types",
             f'{self.default_loan_type} - {" - ".join(fieldvalues)}',
         )
-        return self.default_loan_type[0]
+        return self.default_loan_type
 
     def get_ref_data_tuple_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")

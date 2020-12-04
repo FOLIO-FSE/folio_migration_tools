@@ -46,7 +46,7 @@ class ItemsProcessor:
             print(value_error)
             # print(marc_record)
             print("Removing record from idMap")
-            # raise value_error
+            raise value_error
         except ValidationError as validation_error:
             print("Error validating record. Halting...")
             raise validation_error
