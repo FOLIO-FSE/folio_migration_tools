@@ -1,5 +1,6 @@
 import json
 import logging
+from marc_to_folio.conditions import Conditions
 import uuid
 import requests
 from marc_to_folio.rules_mapper_base import RulesMapperBase
@@ -9,7 +10,8 @@ class RulesMapperHoldings(RulesMapperBase):
     def __init__(
         self, folio, instance_id_map, location_map, default_location_code, args
     ):
-        super().__init__(folio)
+        super().__init__(folio, Conditions(folio,self)
+        )
         print("Init RulesMapperHoldings")
         self.instance_id_map = instance_id_map
         self.location_map = location_map

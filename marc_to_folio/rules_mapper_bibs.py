@@ -25,12 +25,11 @@ class BibsRulesMapper(RulesMapperBase):
     def __init__(
         self, folio_client, args,
     ):
-        super().__init__(folio_client)
+        super().__init__(folio_client,Conditions(folio_client,self))
         self.folio = folio_client
         self.record_status = {}
         self.migration_report = {}
         self.suppress = args.suppress
-        self.conditions = Conditions(folio_client, self)
         self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
         self.id_map = {}

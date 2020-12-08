@@ -1,4 +1,5 @@
 import logging
+import traceback
 import re
 
 
@@ -10,11 +11,13 @@ class Conditions:
         self.filter_last_chars = r",$"
         self.folio = folio
         self.electronic_access_relationships = {}
+        self.default_contributor_type = ""
         self.mapper = mapper
         self.cache = {}
         print(f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances")
         print(f"Fetched {len(self.folio.identifier_types)} identifier types")
         print(f"Fetched {len(self.folio.instance_note_types)} note types")
+        print(f"Fetched {len(self.folio.class_types)} Classification types")
         print(f"Fetched {len(self.folio.contrib_name_types)} contrib_name_types")
         print(f"Fetched {len(self.folio.contributor_types)} contributor_types")
         print(f"Fetched {len(self.folio.alt_title_types)} alt_title_types")
@@ -49,7 +52,12 @@ class Conditions:
         )
         print(f"Fetched {len(self.call_number_types)} call_number_types")
 
-        self.locations = list(self.folio.folio_get_all("/locations", "locations",))
+        self.locations = list(
+            self.folio.folio_get_all(
+                "/locations",
+                "locations",
+            )
+        )
         print(f"Fetched {len(self.locations)} locations")
         print(f"{len(self.folio.contrib_name_types)} contrib_name_types in tenant")
 
@@ -61,7 +69,7 @@ class Conditions:
 
         except AttributeError as attrib_error:
             self.mapper.add_to_migration_report(
-                "Undhandled condition defined in mapping rules", name
+                "Unhandled condition defined in mapping rules", name
             )
             return ""
 
@@ -82,7 +90,8 @@ class Conditions:
         # This method only handles the simple case of 2-character codes of RDA in the first 338$b
         # Other cases are handled in performAddidtionalParsing in the mapper class
         format = next(
-            (f for f in self.folio.instance_formats if f["code"] == value), None,
+            (f for f in self.folio.instance_formats if f["code"] == value),
+            None,
         )
         if format:
             self.mapper.add_to_migration_report(

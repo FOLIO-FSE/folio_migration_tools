@@ -12,7 +12,7 @@ import requests
 
 
 class RulesMapperBase:
-    def __init__(self, folio_client):
+    def __init__(self, folio_client, conditions = None):
         self.migration_report = {}
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
@@ -22,7 +22,7 @@ class RulesMapperBase:
         self.holdings_json_schema = fetch_holdings_schema()
         self.instance_json_schema = get_instance_schema()
         self.schema = {}
-        self.conditions = Conditions(folio_client, self)
+        self.conditions = conditions
         self.item_json_schema = ""
         self.mappings = None
         print(f"Current user id is {self.folio_client.current_user}")
@@ -350,7 +350,7 @@ class RulesMapperBase:
                     entity[k] = values[0]
         return entity
 
-    def handle_entity_mapping(self, marc_field, entity_mapping, rec, e_per_subfield):
+    def handle_entity_mapping(self, marc_field:pymarc.Field, entity_mapping, rec, e_per_subfield):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
             for sf_tuple in grouped(marc_field.subfields, 2):
@@ -369,8 +369,10 @@ class RulesMapperBase:
             if all(entity.values()) or e_parent == "electronicAccess":
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
+                sfs = "-".join(list([f[0] for f in marc_field]))
+                # print(sfs)
                 self.add_to_migration_report(
-                    "Incomplete entity mapping (a code issue)", marc_field.tag
+                    "Incomplete entity mapping (a code issue)", f"{marc_field.tag} {sfs}"
                 )
 
     def apply_rule(self, value, condition_types, marc_field, parameter):

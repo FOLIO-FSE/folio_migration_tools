@@ -29,6 +29,12 @@
                         <subfield code="z">9780307264766</subfield>
                         <subfield code="z">9780307264777</subfield>
                     </datafield>
+                    <datafield tag="020" ind1=" " ind2=" ">
+                        <subfield code="a">a only</subfield>
+                    </datafield>
+                    <datafield tag="020" ind1=" " ind2=" ">
+                        <subfield code="z">z only</subfield>
+                    </datafield>
                     <datafield ind1=" " ind2=" " tag="020">
                         <subfield code="a">9780071842013</subfield>
                         <subfield code="q">(paperback)</subfield>
@@ -213,7 +219,7 @@
                 </record>
             </metadata>
             <about>
-                <agent name="Z"/>
+                <agent name="Z" />
             </about>
         </record>
     </ListRecords>

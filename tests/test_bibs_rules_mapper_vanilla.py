@@ -235,9 +235,10 @@ class TestRulesMapperVanilla(unittest.TestCase):
         self.assertIn("0046-2254", identifier_values, m)
         self.assertIn("7822183031", identifier_values, m)
         self.assertIn("M011234564", identifier_values, m)
-        self.assertIn("PJC 222013", identifier_values, m)
+        # self.assertIn("PJC 222013", identifier_values, m)
         self.assertIn("(OCoLC)898162644", identifier_values, m)
-
+        self.assertIn("a only", identifier_values, m)
+        self.assertIn("z only", identifier_values, m)
         self.assertIn("0027-3473", identifier_values, m)
         identifiers = list(f["identifierTypeId"] for f in record[0]["identifiers"])
         self.assertTrue(all(identifiers))
