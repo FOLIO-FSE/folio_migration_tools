@@ -224,12 +224,12 @@ class BibsRulesMapper(RulesMapperBase):
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if "hrid" not in folio_instance:
             self.add_stats(self.stats, "Records without HRID from rules. Created HRID")
-            folio_instance["hrid"] = f"{self.hrid_prefix}{self.hrid_counter}"
+            num_part = str(self.hrid_counter).zfill(11)
+            folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
             self.hrid_counter += 1
         else:
             self.add_stats(self.stats, "Records with HRID from Rules")
         new_001 = Field(tag="001", data=folio_instance["hrid"])
-
         marc_record.remove_fields("001")
         marc_record.add_ordered_field(new_001)
 
