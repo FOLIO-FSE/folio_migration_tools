@@ -30,6 +30,8 @@ class Conditions:
                 "?query=cql.allRecords=1 sortby name",
             )
         )
+        self.default_contributor_name_type = self.folio.contrib_name_types[0]["id"]
+        print(f"Default contributor name type is {self.default_contributor_name_type}")
         print(
             f"Fetched {len(self.electronic_access_relationships)} electronic_access_relationships"
         )
@@ -199,9 +201,16 @@ class Conditions:
     def condition_set_contributor_name_type_id(self, value, parameter, marc_field):
         if not self.folio.contrib_name_types:
             raise Exception("No contributor name types setup in tenant")
-        return self.get_ref_data_tuple_by_name(
+        t = self.get_ref_data_tuple_by_name(
             self.folio.contrib_name_types, "contrib_name_types", parameter["name"]
         )
+        if not t:
+            self.mapper.add_to_migration_report(
+                "Unmapped contributor name types", parameter["name"]
+            )
+            return self.default_contributor_name_type
+        self.mapper.add_to_migration_report("Mapped contributor name types", t[1])
+        return t[0]
 
     def condition_set_note_type_id(self, value, parameter, marc_field):
         t = self.get_ref_data_tuple_by_name(
@@ -305,7 +314,7 @@ class Conditions:
                 self.mapper.add_to_migration_report(
                     "Locations - Unmapped legacy codes", value
                 )
-        else:
+        else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value
 
         t = self.get_ref_data_tuple_by_code(self.locations, "locations", mapped_code)
