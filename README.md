@@ -1,8 +1,6 @@
 # MARC21-To-FOLIO
 A set of Python3 script parsing MARC21 to FOLIO inventory format.
 
-The scripts requires a FOLIO tenant with reference data set. The script will throw messages telling what reference data is missing. 
-
 # Relevant FOLIO community documentation
 * [Instance Metadata Elements](https://docs.google.com/spreadsheets/d/1RCZyXUA5rK47wZqfFPbiRM0xnw8WnMCcmlttT7B3VlI/edit#gid=952741439)
 * [Recommended MARC mapping to Inventory Instances](https://docs.google.com/spreadsheets/d/11lGBiPoetHuC3u-onVVLN4Mj5KtVHqJaQe4RqCxgGzo/edit#gid=1891035698)
@@ -11,22 +9,49 @@ The scripts requires a FOLIO tenant with reference data set. The script will thr
 * [FOLIO Instance storage JSON Schema](https://github.com/folio-org/mod-inventory-storage/blob/master/ramls/instance.json)
 * [FOLIO Intance (BL) JSON Schema](https://github.com/folio-org/mod-inventory/blob/master/ramls/instance.json)
 
-## Part of a process
-The scripts rely on previous migrations steps, like the existance of a map file with legfacy system IDs and their FOLIO equivalents. 
+# FOLIO Inventory data migration process
+This template plays a vital part in a process together with other repos allowing you to perform bibliographic data migration from a legacy ILS into FOLIO. For more information on the process, head over to the linked repos below.
+In order to perform migrations according to this process, you need to clone the following repositories:   
+* [MARC21-to-FOLIO](https://github.com/FOLIO-FSE/MARC21-To-FOLIO)
+* [service_tools](https://github.com/FOLIO-FSE/service_tools)
+* [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
 
-## Map files
-The Scripts also relies on a Folder with a set of mapping files. Look in the map_folder_templade directory of this Repo to understand what is needed.
+## Setup reference data
+The scripts requires a FOLIO tenant with reference data setup properly. The script will throw messages telling what reference data is missing. 
+One way to set up reference data is to use [service_tools](https://github.com/FOLIO-FSE/service_tools) to download the reference data from one FOLIO tenant and then upload it to the target tenant.
 
+## Create mapping files
+The Scripts also relies on a Folder with a set of mapping files. Look in the [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) repo to understand what is needed.
+
+### Bib record mapping
 MARC mapping for Bib level records is based on the mapping-rules residing in a FOLIO tenant.
 Read more on this in the Readme in the [Source record manager Module repo](https://github.com/folio-org/mod-source-record-manager/blob/25283ebabf402b5870ae4b3846285230e785c17d/RuleProcessorApi.md).
 
-## MFHD-to-Inventory
+### MFHD-to-Inventory
+#### Mapping rules
 This processing does not store the MARC records anywhere since this is not available in FOLIO yet. Only FOLIO Holdings records are created.
+MFHD-to-Inventory mapping also relies on mapping based on a similar JSON structure. This is not stored in the tenant and must be maintained by you. A template/example is available in [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
 
-MFHD-to-Inventory mapping will also rely on mapping based on a similar JSON structure. This work will take place in August 2020. The community's JSON structure will likely be available in October 2020.
+#### Location mapping
+For holdings mapping, you also need to map legacy locations to FOLIO locations. An example map file is available at [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) 
 
 ## Items-to-Inventory
-Items-to-Inventory mapping is based on a json structure where the CSV headers are matched against the target fields in the FOLIO items. The mapping is limited currently, but will be built out as work progresses.
+#### Mapping rules
+Items-to-Inventory mapping is based on a json structure where the CSV headers are matched against the target fields in the FOLIO items. The mapping is limited currently, but will be built out as work progresses. For an example go to the [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) repository
+
+#### Location mapping
+For Item mapping, you also need to map legacy locations to FOLIO locations. An example map file is available at [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) 
+
+#### Material type mapping
+For Item mapping, you also need to map legacy item types to FOLIO equivalents. An example map file is available at [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) 
+In order to set this up, you need to have a concept of how the FOLI circulation rules will look like.
+
+#### Loan type mapping
+For Item mapping, you also need to map legacy loan types to FOLIO equivalents. An example map file is available at [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) 
+In order to set this up, you need to have a concept of how the FOLI circulation rules will look like.
+
+## Run the scripts
+
 
 # Tests
 There is a test suite for Bibs-to-Instance mapping.
