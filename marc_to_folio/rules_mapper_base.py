@@ -91,15 +91,18 @@ class RulesMapperBase:
             self.migration_report[header][measure_to_add] += 1
 
     def write_migration_report(self, report_file):
+
         for a in self.migration_report:
             report_file.write(f"   \n")
-            report_file.write(f"## {a} - {len(self.migration_report[a])} things   \n")
+            report_file.write(f"## {a}    \n")
+            report_file.write(f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n")
             report_file.write(f"Measure | Count   \n")
             report_file.write(f"--- | ---:   \n")
             b = self.migration_report[a]
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
             for b in sortedlist:
                 report_file.write(f"{b[0]} | {b[1]}   \n")
+            report_file.write("</details>   \n")
 
     def print_progress(self):
         self.add_stats(self.stats, "Number of records in file(s)")
