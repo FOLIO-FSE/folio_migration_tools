@@ -25,7 +25,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
         print(f"Fetched {len(self.holdings_types)} holdings types")
         self.default_holdings_type_id = self.get_ref_data_tuple(
-            self.holdings_types, "holdings_types", "Monograph", "name"
+            self.holdings_types, "holdings_types", "Monographic", "name"
         )[0]
 
         self.default_location_id = self.get_ref_data_tuple(
