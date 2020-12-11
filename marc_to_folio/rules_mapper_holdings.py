@@ -46,10 +46,8 @@ class RulesMapperHoldings(RulesMapperBase):
         self.add_to_migration_report(
             "Record status (leader pos 5)", marc_record.leader[5]
         )
-        temp_inst_type = ""
         ignored_subsequent_fields = set()
-        bad_tags = []  # "907"
-
+        
         for marc_field in marc_record:
             self.add_stats(self.stats, "Total number of Tags processed")
 
@@ -68,7 +66,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     self.report_legacy_mapping(marc_field.tag, True, True, False)
                     if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                         ignored_subsequent_fields.add(marc_field.tag)
-                    self.perform_additional_mapping(marc_record, folio_holding)
+                    self.perform_additional_mapping(marc_record, folio_holding, legacy_id)
         self.holdings_id_map[marc_record["001"].format_field()] = folio_holding["id"]
         self.dedupe_rec(folio_holding)
         self.count_unmapped_fields(self.schema, folio_holding)
@@ -81,7 +79,8 @@ class RulesMapperHoldings(RulesMapperBase):
 
         return folio_holding
 
-    def perform_additional_mapping(self, marc_record, folio_holding):
+    def perform_additional_mapping(self, marc_record, folio_holding, legacy_id):
+        """Perform additional tasks not easily handled in the mapping rules"""
         ldr06 = marc_record.leader[6]
         self.add_to_migration_report("Leader 06 (Holdings type)", ldr06)
         # TODO: map this better
@@ -90,6 +89,11 @@ class RulesMapperHoldings(RulesMapperBase):
         folio_holding["callNumberTypeId"] = self.default_call_number_type_id
         if not folio_holding.get("permanentLocationId", ""):
             folio_holding["permanentLocationId"] = self.default_location_id
+        
+        # special weird case. Likely needs fixing in the mapping rules.
+        if " " in folio_holding["permanentLocationId"]:
+            print(f'Space in permanentLocationId for {legacy_id} ({folio_holding["permanentLocationId"]}). Taking the first one')
+            folio_holding["permanentLocationId"] = folio_holding["permanentLocationId"].split(" ")[0]
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"
