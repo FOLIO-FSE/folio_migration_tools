@@ -373,7 +373,7 @@ class Conditions:
                 t = self.get_ref_data_tuple_by_code(
                     self.folio.instance_types, "instance_types", "zzz"
                 )
-                self.mapper.add_to_migration_report("Mapped Instance types", f"Code {marc_field["b"]} not found in FOLIO (from 336$b)")
+                self.mapper.add_to_migration_report("Mapped Instance types", f"Code {marc_field['b']} not found in FOLIO (from 336$b)")
             else:
                 self.mapper.add_to_migration_report("Mapped Instance types", f"{t[1]} (from 336$b)")
             return t[0]
