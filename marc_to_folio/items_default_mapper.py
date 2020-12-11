@@ -374,7 +374,7 @@ class ItemsDefaultMapper(RulesMapperBase):
     def handle_material_types(self, legacy_item: dict):
         m_keys = m_keys = list(
             [
-                k
+                k.strip()
                 for k in dict(self.legacy_material_type_map[0]).keys()
                 if k != "folio_name"
             ]
