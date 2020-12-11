@@ -302,12 +302,15 @@ class Conditions:
 
     def condition_set_location_id_by_code(self, value, parameter, marc_field):
         self.mapper.add_to_migration_report("Legacy location codes", value)
+        
+        # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
             d = {}
             for lm in self.mapper.location_map:
                 d[lm["legacy_code"]] = lm["folio_code"]
             self.ref_data_dicts["legacy_locations"] = d
 
+        # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
             mapped_code = self.ref_data_dicts["legacy_locations"].get(value, "")
             if not mapped_code:
@@ -317,6 +320,7 @@ class Conditions:
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value
 
+        # Get the FOLIO UUID for the code and return it
         t = self.get_ref_data_tuple_by_code(self.locations, "locations", mapped_code)
         if not t:
             t = self.get_ref_data_tuple_by_code(
@@ -356,7 +360,10 @@ class Conditions:
 
     def condition_set_instance_type_id(self, value, parameter, marc_field):
         if not self.folio.instance_types:
-            raise ValueError("No instance_types setup in tenant")
+            raise Exception("No instance_types setup in tenant")
+        
+        if marc_field.tag == "336" and "b" not in marc_field:
+             self.mapper.add_to_migration_report("Mapped Instance types", f"Subfield b not in 336")
 
         if marc_field.tag == "336" and "b" in marc_field:
             t = self.get_ref_data_tuple_by_code(
@@ -366,7 +373,9 @@ class Conditions:
                 t = self.get_ref_data_tuple_by_code(
                     self.folio.instance_types, "instance_types", "zzz"
                 )
-            self.mapper.add_to_migration_report("Mapped Instance types", t[1])
+                self.mapper.add_to_migration_report("Mapped Instance types", f"Code {marc_field["b"]} not found in FOLIO (from 336$b)")
+            else:
+                self.mapper.add_to_migration_report("Mapped Instance types", f"{t[1]} (from 336$b)")
             return t[0]
         elif marc_field.tag == "008":
             t = self.get_ref_data_tuple_by_code(
@@ -376,7 +385,10 @@ class Conditions:
                 t = self.get_ref_data_tuple_by_code(
                     self.folio.instance_types, "instance_types", "zzz"
                 )
-            self.mapper.add_to_migration_report("Mapped Instance types", t[1])
+                self.mapper.add_to_migration_report("Mapped Instance types",f"Code {value[:3]} in 008 not found in FOLIO)")
+            else:
+                self.mapper.add_to_migration_report("Mapped Instance types",f"{t[1]} (from 008)")
+            
             return t[0]
         else:
             # TODO Remove later. Corenell specific
