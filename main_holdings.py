@@ -40,11 +40,11 @@ def parse_args():
         action="store_true",
     )
     args = parser.parse_args()
-    logging.info("\tresults are stored at:\t", args.result_folder)
-    logging.info("\tOkapi URL:\t", args.okapi_url)
-    logging.info("\tTenanti Id:\t", args.tenant_id)
-    logging.info("\tUsername:\t", args.username)
-    logging.info("\tPassword:\tSecret")
+    logging.info(f"\tresults are stored at:\t{args.result_folder}")
+    logging.info(f"\tOkapi URL:\t{args.okapi_url}")
+    logging.info(f"\tTenanti Id:\t{args.tenant_id}")
+    logging.info(f"\tUsername:\t{args.username}")
+    logging.info(f"\tPassword:\tSecret")
     return args
 
 
