@@ -235,7 +235,7 @@ class ItemsDefaultMapper(RulesMapperBase):
                     temp_loc = temp_map.get(v["folio_code"], "")
                     if not temp_loc:
                         print((f'Folio location not found with code {v["folio_code"]}.'
-                               'Adding {self.item_to_item_map["defaultLocationCode"]} instead'))
+                               f'Adding {self.item_to_item_map["defaultLocationCode"]} instead'))
                         temp_loc = self.item_to_item_map["defaultLocationCode"]
                     self.locations_map[v["legacy_code"]] = temp_loc
         else:
