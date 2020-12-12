@@ -45,7 +45,8 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.item_id_map: Dict[str, str] = {}
         self.item_to_item_map = item_map
         self.holdings_id_map = holdings_id_map
-        self.loan_types = list(self.folio.folio_get_all("/loan-types", "loantypes"))
+        self.loan_types = list(
+            self.folio.folio_get_all("/loan-types", "loantypes"))
         print(f"{len(self.loan_types)} loan types set up in tenant", flush=True)
         self.material_types = list(
             self.folio.folio_get_all("/material-types", "mtypes")
@@ -73,7 +74,8 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.default_loan_type = self.get_ref_data_tuple_by_name(
             self.loan_types, "loan_types", self.item_to_item_map["defaultLoantypeName"]
         )
-        print(f"Default Loan type UUID is {self.default_loan_type}", flush=True)
+        print(
+            f"Default Loan type UUID is {self.default_loan_type}", flush=True)
 
         print(
             f"Default Location code is {self.item_to_item_map['defaultLocationCode']}",
@@ -93,7 +95,8 @@ class ItemsDefaultMapper(RulesMapperBase):
             "material_types",
             self.item_to_item_map["defaultMaterialTypeName"],
         )
-        print(f"Default Material type UUID is {self.default_material_type}", flush=True)
+        print(
+            f"Default Material type UUID is {self.default_material_type}", flush=True)
 
     def parse_item(self, legacy_item: Dict):
         legacy_id = legacy_item[self.item_to_item_map["legacyIdField"]]
@@ -116,7 +119,8 @@ class ItemsDefaultMapper(RulesMapperBase):
                 )
                 legacy_value = str(legacy_value).strip()
                 if folio_field:
-                    self.report_folio_mapping(folio_field, True, not bool(legacy_value))
+                    self.report_folio_mapping(
+                        folio_field, True, not bool(legacy_value))
                     if legacy_key:
                         self.report_legacy_mapping(
                             legacy_key, True, True, not bool(legacy_value)
@@ -137,27 +141,31 @@ class ItemsDefaultMapper(RulesMapperBase):
                         )
                         # TODO: set temporary location?
                     elif folio_field == "materialTypeId":
-                        item[folio_field] = self.handle_material_types(legacy_item)
+                        item[folio_field] = self.handle_material_types(
+                            legacy_item)
 
                     elif folio_field == "status.name":
-                        a = self.handle_status(legacy_value)
-                        item["status"] = {"name": "Available"}
+                        item["status"] = self.handle_status(legacy_value)
                     elif folio_field == "permanentLoanTypeId":
                         item[folio_field] = self.handle_loan_types(legacy_item)
 
                     elif folio_field == "itemLevelCallNumberTypeId":
-                        item[folio_field] = self.handle_call_number_id(legacy_value)
+                        item[folio_field] = self.handle_call_number_id(
+                            legacy_value)
 
                     elif folio_field == "circulationNotes":
-                        item[folio_field] = self.handle_circulation_notes(legacy_value)
+                        item[folio_field] = self.handle_circulation_notes(
+                            legacy_value)
                     elif folio_field == "holdingsRecordId":
                         if legacy_value not in self.holdings_id_map:
-                            self.add_stats(self.stats, "Holdings id not in map")
+                            self.add_stats(
+                                self.stats, "Holdings id not in map")
                             # self.add_to_migration_report(
                             #    "Missing holdings ids", legacy_value
                             # )
 
-                            raise ValueError(f"Holdings id {legacy_value} not in map")
+                            raise ValueError(
+                                f"Holdings id {legacy_value} not in map")
                         else:
                             item[folio_field] = self.holdings_id_map[legacy_value]["id"]
 
@@ -167,7 +175,8 @@ class ItemsDefaultMapper(RulesMapperBase):
                     else:
                         if self.is_string(folio_field):
                             item[folio_field] = str(
-                                " ".join([item.get(folio_field, ""), legacy_value])
+                                " ".join(
+                                    [item.get(folio_field, ""), legacy_value])
                             ).strip()
                         elif self.is_string_array(folio_field):
                             if folio_field in item and any(item[folio_field]):
@@ -201,11 +210,11 @@ class ItemsDefaultMapper(RulesMapperBase):
                 self.item_id_map[legacy_id] = item["id"]
             return item
         except ValueError as ve:
-            self.add_stats(self.stats, f"Total failed items with Value errors")
-            # self.add_to_migration_report("ValueErrors", f"{ve} for {legacy_id}")
+            self.add_stats(self.stats, f"Total failed items with Value errors. Items not migrated")
+            self.add_to_migration_report("ValueErrors", f"{ve}")
             return None
         except Exception as ee:
-            self.add_stats(self.stats, "Exception")
+            self.add_stats(self.stats, "Exception. Items not migrated")
             self.add_to_migration_report("Exceptions", f"{ee} for {legacy_id}")
             print(f"{ee} for {legacy_id}")
             traceback.print_exc()
@@ -220,9 +229,15 @@ class ItemsDefaultMapper(RulesMapperBase):
             for v in location_map:
                 if "," in v["legacy_code"]:
                     for k in v["legacy_code"].split(","):
-                        self.locations_map[k.strip()] = temp_map[v["folio_code"]]
+                        self.locations_map[k.strip(
+                        )] = temp_map[v["folio_code"]]
                 else:
-                    self.locations_map[v["legacy_code"]] = temp_map[v["folio_code"]]
+                    temp_loc = temp_map.get(v["folio_code"], "")
+                    if not temp_loc:
+                        print((f'Folio location not found with code {v["folio_code"]}.'
+                               'Adding {self.item_to_item_map["defaultLocationCode"]} instead'))
+                        temp_loc = self.item_to_item_map["defaultLocationCode"]
+                    self.locations_map[v["legacy_code"]] = temp_loc
         else:
             print("No location map supplied")
             self.locations_map = temp_map
@@ -241,7 +256,8 @@ class ItemsDefaultMapper(RulesMapperBase):
         i = 0
         for s, v in sorted_hlids.items():
             i += 1
-            self.add_to_migration_report("Top missing holdings ids", f"{s} - {v}")
+            self.add_to_migration_report(
+                "Top missing holdings ids", f"{s} - {v}")
             if i > 15:
                 break
         sorted_item_ids = {
@@ -253,7 +269,8 @@ class ItemsDefaultMapper(RulesMapperBase):
         i = 0
         for s, v in sorted_item_ids.items():
             i += 1
-            self.add_to_migration_report("Top duplicate item ids", f"{s} - {v}")
+            self.add_to_migration_report(
+                "Top duplicate item ids", f"{s} - {v}")
             if i > 5:
                 break
         # print("## Item transformation counters")
@@ -316,11 +333,13 @@ class ItemsDefaultMapper(RulesMapperBase):
         return item
 
     def get_location_code(self, legacy_value: str):
-        location_id = self.locations_map.get(legacy_value.strip().strip("^"), "")
+        location_id = self.locations_map.get(
+            legacy_value.strip().strip("^"), "")
         if location_id != "":
             return location_id
         else:
-            self.add_to_migration_report("Missing location codes", legacy_value)
+            self.add_to_migration_report(
+                "Missing location codes", legacy_value)
             self.add_stats(
                 self.stats, f'Missing location codes, adding "{self.default_location}"'
             )
@@ -342,7 +361,8 @@ class ItemsDefaultMapper(RulesMapperBase):
         staffOnly: bool = False,
     ):
         nt_id = next(
-            (x["id"] for x in self.item_note_types if note_type_name == x["name"]),
+            (x["id"]
+             for x in self.item_note_types if note_type_name == x["name"]),
             self.note_id,
         )
         note_to_add = {
@@ -367,9 +387,10 @@ class ItemsDefaultMapper(RulesMapperBase):
         return ""
 
     def handle_status(self, legacy_value):
-        self.add_to_migration_report("Legacy item status - Not mapped", legacy_value)
+        self.add_to_migration_report(
+            "Legacy item status - Not mapped", legacy_value)
         # return legacy_value
-        return ""
+        return {"name": "Available"}
 
     def handle_material_types(self, legacy_item: dict):
         m_keys = m_keys = list(
@@ -383,7 +404,8 @@ class ItemsDefaultMapper(RulesMapperBase):
         for row in self.legacy_material_type_map:
             all_good = []
             for k in m_keys:
-                all_good.append(legacy_item[k].strip().casefold() in row[k].casefold())
+                all_good.append(
+                    legacy_item[k].strip().casefold() in row[k].casefold())
             if all(all_good):
                 folio_name = row["folio_name"]
 
@@ -402,7 +424,8 @@ class ItemsDefaultMapper(RulesMapperBase):
 
     def handle_loan_types(self, legacy_item: dict):
         m_keys = m_keys = list(
-            [k for k in dict(self.legacy_loan_type_map[0]).keys() if k != "folio_name"]
+            [k for k in dict(self.legacy_loan_type_map[0]
+                             ).keys() if k != "folio_name"]
         )
         fieldvalues = [legacy_item[k] for k in m_keys]
         for row in self.legacy_loan_type_map:
@@ -445,6 +468,7 @@ class ItemsDefaultMapper(RulesMapperBase):
             else None
         )
         if not ref_object:
-            logging.debug(f"No matching element for {key_value} in {list(ref_data)}")
+            logging.debug(
+                f"No matching element for {key_value} in {list(ref_data)}")
             return None
         return ref_object
