@@ -73,7 +73,7 @@ class ItemsDefaultMapper(RulesMapperBase):
         )
         self.default_loan_type = self.get_ref_data_tuple_by_name(
             self.loan_types, "loan_types", self.item_to_item_map["defaultLoantypeName"]
-        )
+        )[0]
         print(
             f"Default Loan type UUID is {self.default_loan_type}", flush=True)
 
