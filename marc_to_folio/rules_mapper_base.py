@@ -82,6 +82,9 @@ class RulesMapperBase:
                 f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
 
+
+# This is where content is added to the migration report. 
+# In addition to a header and a measure_to_add, there should be a description.
     def add_to_migration_report(self, header, measure_to_add):
         if header not in self.migration_report:
             self.migration_report[header] = {}
@@ -90,8 +93,10 @@ class RulesMapperBase:
         else:
             self.migration_report[header][measure_to_add] += 1
 
-    def write_migration_report(self, report_file):
 
+# This is where the migration report is written. 
+# Under the header, the applicable description should be written out.
+    def write_migration_report(self, report_file):
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
