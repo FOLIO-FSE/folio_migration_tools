@@ -96,6 +96,7 @@ class RulesMapperBase:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
             report_file.write(f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n")
+            report_file.write(f"   \n")
             report_file.write(f"Measure | Count   \n")
             report_file.write(f"--- | ---:   \n")
             b = self.migration_report[a]
