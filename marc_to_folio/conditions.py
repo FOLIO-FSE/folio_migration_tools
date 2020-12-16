@@ -1,4 +1,5 @@
 import logging
+import traceback
 import re
 
 
@@ -10,8 +11,18 @@ class Conditions:
         self.filter_last_chars = r",$"
         self.folio = folio
         self.electronic_access_relationships = {}
+        self.default_contributor_type = ""
         self.mapper = mapper
         self.cache = {}
+        print(f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances")
+        print(f"Fetched {len(self.folio.identifier_types)} identifier types")
+        print(f"Fetched {len(self.folio.instance_note_types)} note types")
+        print(f"Fetched {len(self.folio.class_types)} Classification types")
+        print(f"Fetched {len(self.folio.contrib_name_types)} contrib_name_types")
+        print(f"Fetched {len(self.folio.contributor_types)} contributor_types")
+        print(f"Fetched {len(self.folio.alt_title_types)} alt_title_types")
+        print(f"Fetched {len(self.folio.instance_types)} instance_types")
+        print(f"Fetched {len(self.folio.instance_formats)} instance_formats")
         self.electronic_access_relationships = list(
             self.folio.folio_get_all(
                 "/electronic-access-relationships",
@@ -19,6 +30,8 @@ class Conditions:
                 "?query=cql.allRecords=1 sortby name",
             )
         )
+        self.default_contributor_name_type = self.folio.contrib_name_types[0]["id"]
+        print(f"Default contributor name type is {self.default_contributor_name_type}")
         print(
             f"Fetched {len(self.electronic_access_relationships)} electronic_access_relationships"
         )
@@ -41,8 +54,14 @@ class Conditions:
         )
         print(f"Fetched {len(self.call_number_types)} call_number_types")
 
-        self.locations = list(self.folio.folio_get_all("/locations", "locations",))
+        self.locations = list(
+            self.folio.folio_get_all(
+                "/locations",
+                "locations",
+            )
+        )
         print(f"Fetched {len(self.locations)} locations")
+        print(f"{len(self.folio.contrib_name_types)} contrib_name_types in tenant")
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
         try:
@@ -52,7 +71,7 @@ class Conditions:
 
         except AttributeError as attrib_error:
             self.mapper.add_to_migration_report(
-                "Undhandled condition defined in mapping rules", name
+                "Unhandled condition defined in mapping rules", name
             )
             return ""
 
@@ -73,7 +92,8 @@ class Conditions:
         # This method only handles the simple case of 2-character codes of RDA in the first 338$b
         # Other cases are handled in performAddidtionalParsing in the mapper class
         format = next(
-            (f for f in self.folio.instance_formats if f["code"] == value), None,
+            (f for f in self.folio.instance_formats if f["code"] == value),
+            None,
         )
         if format:
             self.mapper.add_to_migration_report(
@@ -162,7 +182,9 @@ class Conditions:
         #             if f['name'] == 'No type specified'), '')
         if not self.folio.class_types:
             raise ValueError("No class_types setup in tenant")
-        return get_ref_data_tuple_by_name(self.folio.class_types, parameter["name"])[0]
+        return self.get_ref_data_tuple_by_name(
+            self.folio.class_types, "class_types", parameter["name"]
+        )[0]
 
     def condition_char_select(self, value, parameter, marc_field):
         return value[parameter["from"] : parameter["to"]]
@@ -178,10 +200,24 @@ class Conditions:
 
     def condition_set_contributor_name_type_id(self, value, parameter, marc_field):
         if not self.folio.contrib_name_types:
-            raise ValueError("No contrib_name_types setup in tenant")
-        return get_ref_data_tuple_by_name(
-            self.folio.contrib_name_types, parameter["name"]
+            raise Exception("No contributor name types setup in tenant")
+        t = self.get_ref_data_tuple_by_name(
+            self.folio.contrib_name_types, "contrib_name_types", parameter["name"]
         )
+        if not t:
+            self.mapper.add_to_migration_report(
+                "Unmapped contributor name types", parameter["name"]
+            )
+            return self.default_contributor_name_type
+        self.mapper.add_to_migration_report("Mapped contributor name types", t[1])
+        return t[0]
+
+    def condition_set_note_type_id(self, value, parameter, marc_field):
+        t = self.get_ref_data_tuple_by_name(
+            self.folio.instance_note_types, "instance_not_types", parameter["name"]
+        )
+        self.mapper.add_to_migration_report("Mapped note types", t[1])
+        return t[0]
 
     def condition_set_contributor_type_id(self, value, parameter, marc_field):
         if not self.folio.contributor_types:
@@ -256,35 +292,44 @@ class Conditions:
         t = self.get_ref_data_tuple_by_name(
             self.folio.alt_title_types, "alt_title_types", parameter["name"]
         )
+        if not t:
+            raise Exception(
+                f"Alternative title type not found for {parameter['name']} {marc_field}"
+            )
+
         self.mapper.add_to_migration_report("Mapped Alternative title types", t[1])
         return t[0]
 
     def condition_set_location_id_by_code(self, value, parameter, marc_field):
         self.mapper.add_to_migration_report("Legacy location codes", value)
+        
+        # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
             d = {}
             for lm in self.mapper.location_map:
                 d[lm["legacy_code"]] = lm["folio_code"]
             self.ref_data_dicts["legacy_locations"] = d
 
+        # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
             mapped_code = self.ref_data_dicts["legacy_locations"].get(value, "")
             if not mapped_code:
                 self.mapper.add_to_migration_report(
                     "Locations - Unmapped legacy codes", value
                 )
-        else:
+        else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value
 
-        t = self.get_ref_data_tuple_code(self.locations, "locations", mapped_code)
+        # Get the FOLIO UUID for the code and return it
+        t = self.get_ref_data_tuple_by_code(self.locations, "locations", mapped_code)
         if not t:
-            t = self.get_ref_data_tuple_code(
+            t = self.get_ref_data_tuple_by_code(
                 self.locations, "locations", parameter["unspecifiedLocationCode"]
             )
         self.mapper.add_to_migration_report("Mapped Locations", t[1])
         return t[0]
 
-    def get_ref_data_tuple_code(self, ref_data, ref_name, code):
+    def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
 
     def get_ref_data_tuple_by_name(self, ref_data, ref_name, name):
@@ -315,33 +360,44 @@ class Conditions:
 
     def condition_set_instance_type_id(self, value, parameter, marc_field):
         if not self.folio.instance_types:
-            raise ValueError("No instance_types setup in tenant")
-        if marc_field.tag == "008":
-            t = self.get_ref_data_tuple_code(
-                self.folio.instance_types, "instance_types", value[:3]
-            )
-            if not t:
-                t = self.get_ref_data_tuple_code(
-                    self.folio.instance_types, "instance_types", "zzz"
-                )
-            self.mapper.add_to_migration_report("Mapped Instance types", t[1])
-            return t[0]
-        elif marc_field.tag == "336" and "b" in marc_field:
-            t = self.get_ref_data_tuple_by_name(
+            raise Exception("No instance_types setup in tenant")
+        
+        if marc_field.tag == "336" and "b" not in marc_field:
+             self.mapper.add_to_migration_report("Mapped Instance types", f"Subfield b not in 336")
+
+        if marc_field.tag == "336" and "b" in marc_field:
+            t = self.get_ref_data_tuple_by_code(
                 self.folio.instance_types, "instance_types", marc_field["b"]
             )
             if not t:
-                t = self.get_ref_data_tuple_code(
+                t = self.get_ref_data_tuple_by_code(
                     self.folio.instance_types, "instance_types", "zzz"
                 )
-            self.mapper.add_to_migration_report("Mapped Instance types", t[1])
+                self.mapper.add_to_migration_report("Mapped Instance types", f"Code {marc_field['b']} not found in FOLIO (from 336$b)")
+            else:
+                self.mapper.add_to_migration_report("Mapped Instance types", f"{t[1]} (from 336$b)")
+            return t[0]
+        elif marc_field.tag == "008":
+            t = self.get_ref_data_tuple_by_code(
+                self.folio.instance_types, "instance_types", value[:3]
+            )
+            if not t:
+                t = self.get_ref_data_tuple_by_code(
+                    self.folio.instance_types, "instance_types", "zzz"
+                )
+                self.mapper.add_to_migration_report("Mapped Instance types",f"Code {value[:3]} in 008 not found in FOLIO)")
+            else:
+                self.mapper.add_to_migration_report("Mapped Instance types",f"{t[1]} (from 008)")
+            
             return t[0]
         else:
             # TODO Remove later. Corenell specific
-            t = self.get_ref_data_tuple_code(
+            t = self.get_ref_data_tuple_by_code(
                 self.folio.instance_types, "instance_types", "txt"
             )
-            self.mapper.add_to_migration_report("Mapped Instance types", t[1])
+            self.mapper.add_to_migration_report(
+                "Mapped Instance types (No 336$b)", t[1]
+            )
             return t[0]
         raise ValueError(
             f"Something went wrong when trying to parse Instance type from {marc_field}"

@@ -45,7 +45,10 @@ class Worker:
         print("Starting....")
         with open(self.results_file_path, "w+") as results_file:
             self.processor = BibsProcessor(
-                self.mapper, self.folio_client, results_file, self.args,
+                self.mapper,
+                self.folio_client,
+                results_file,
+                self.args,
             )
             for file_name in self.files:
                 try:
@@ -93,7 +96,10 @@ class Worker:
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
             report_file.write(f"## Bibliographic records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
-                self.mapper.stats, report_file, "  Measure  ", "Count   \n",
+                self.mapper.stats,
+                report_file,
+                "  Measure  ",
+                "Count   \n",
             )
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)
@@ -146,6 +152,12 @@ def parse_args():
         "-validate",
         "-v",
         help=("Validate JSON data against JSON Schema"),
+        action="store_true",
+    )
+    parser.add_argument(
+        "-dump",
+        "-d",
+        help=("Create MARC_XML file for Discovery system indexing"),
         action="store_true",
     )
     args = parser.parse_args()

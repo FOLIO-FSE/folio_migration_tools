@@ -1,5 +1,6 @@
 '''Main "script."'''
 import argparse
+from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 import os
 import csv
 import logging
@@ -9,7 +10,6 @@ from os.path import isfile, join
 import pymarc
 from folioclient.FolioClient import FolioClient
 from marc_to_folio.holdings_processor import HoldingsProcessor
-from marc_to_folio import HoldingsDefaultMapper
 
 
 def parse_args():
@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("password", help=("the api users password"))
     parser.add_argument("ils_flavour", help=("The ILS migrating from"))
+
     parser.add_argument(
         "-postgres_dump",
         "-p",
@@ -39,11 +40,11 @@ def parse_args():
         action="store_true",
     )
     args = parser.parse_args()
-    logging.info("\tresults are stored at:\t", args.result_folder)
-    logging.info("\tOkapi URL:\t", args.okapi_url)
-    logging.info("\tTenanti Id:\t", args.tenant_id)
-    logging.info("\tUsername:\t", args.username)
-    logging.info("\tPassword:\tSecret")
+    logging.info(f"\tresults are stored at:\t{args.result_folder}")
+    logging.info(f"\tOkapi URL:\t{args.okapi_url}")
+    logging.info(f"\tTenanti Id:\t{args.tenant_id}")
+    logging.info(f"\tUsername:\t{args.username}")
+    logging.info(f"\tPassword:\tSecret")
     return args
 
 
@@ -55,11 +56,10 @@ def main():
         filemode="w",
     )
     log = logging.getLogger()
-    log.setLevel(logging.ERROR)
+    log.setLevel(logging.CRITICAL)
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
-    logging.warning(f"Locations in FOLIO: {len(folio_client.locations)}")
     csv.register_dialect("tsv", delimiter="\t")
     files = [
         os.path.join(args.source_folder, f)
@@ -71,15 +71,26 @@ def main():
     ) as json_file, open(
         os.path.join(args.map_path, "locations.tsv")
     ) as location_map_f, open(
+        os.path.join(args.map_path, "mfhd_rules.json")
+    ) as mapping_rules_file, open(
         os.path.join(args.result_folder, "folio_holdings.json"), "w+"
     ) as results_file:
         instance_id_map = json.load(json_file)
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
-        logging.warning(f"Locations in map: {len(location_map)}")
-        logging.warning(f"{len(instance_id_map)} Instance ids in map")
-        mapper = HoldingsDefaultMapper(
-            folio_client, instance_id_map, args, location_map,
+        rules_file = json.load(mapping_rules_file)
+
+        print(f"Locations in map: {len(location_map)}")
+        print(any(location_map))
+        print(f"{len(instance_id_map)} Instance ids in map")
+        mapper = RulesMapperHoldings(
+            folio_client,
+            instance_id_map,
+            location_map,
+            rules_file["defaultLocationCode"],
+            args,
         )
+        mapper.mappings = rules_file["rules"]
+
         processor = HoldingsProcessor(mapper, folio_client, results_file, args)
         for records_file in files:
             if args.marcxml:
@@ -87,6 +98,7 @@ def main():
             else:
                 with open(records_file, "rb") as marc_file:
                     pymarc.map_records(processor.process_record, marc_file)
+
     processor.wrap_up()
 
 

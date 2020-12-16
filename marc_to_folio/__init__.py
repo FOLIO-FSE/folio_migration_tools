@@ -1,4 +1,3 @@
-from marc_to_folio.holdings_default_mapper import HoldingsDefaultMapper
 from marc_to_folio.items_default_mapper import ItemsDefaultMapper
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 

@@ -29,15 +29,15 @@ class TestMFHDRulesMapper(unittest.TestCase):
                 "017372388": {"id": "1bcca4f8-6502-4659-9ad3-3eb952f663db"}
             }
             location_map = [{"folio_code": "UCOLB", "legacy_code": "SXSTK"}]
-            cls.mapper = RulesMapperHoldings(
-                cls.folio, instance_id_map, location_map, args
-            )
-
-            cls.holdings_schema = cls.mapper.holdings_json_schema
-            isFile = os.path.isfile("./maps/mfhd_to_holdings_five_colleges.json")
             with open("./maps/mfhd_to_holdings_five_colleges.json", "r") as f:
                 d = json.load(f)
-                cls.mapper.mappings = d["rules"]
+            cls.mapper = RulesMapperHoldings(
+                cls.folio, instance_id_map, location_map, d["defaultLocationCode"], args
+            )
+            cls.holdings_schema = cls.mapper.holdings_json_schema
+            isFile = os.path.isfile("./maps/mfhd_to_holdings_five_colleges.json")
+
+            cls.mapper.mappings = d["rules"]
 
     def default_map(self, file_name, xpath):
         ns = {
@@ -75,11 +75,20 @@ class TestMFHDRulesMapper(unittest.TestCase):
         self.assertEqual(
             "hss note", rec[0]["holdingsStatementsForSupplements"][0]["note"]
         )
+
         print(json.dumps(rec[0], indent=4))
 
     def test_missing_location(self):
         xpath = xpath = "//marc:controlfield[@tag='001']"
         rec = self.default_map("mfhd_test2.xml", xpath)
+        self.assertIsNotNone(rec[0]["metadata"])
+        self.assertEqual(
+            "e8c70705-0964-4911-9ddd-c3017367bed7", rec[0]["permanentLocationId"]
+        )
+
+    def test_no_location(self):
+        xpath = xpath = "//marc:controlfield[@tag='001']"
+        rec = self.default_map("mfhd_test_no_location.xml", xpath)
         self.assertIsNotNone(rec[0]["metadata"])
         self.assertEqual(
             "e8c70705-0964-4911-9ddd-c3017367bed7", rec[0]["permanentLocationId"]

@@ -94,4 +94,5 @@ Download the HRID handling settings from the tenant.
 
 **If the mapping-rules specify no HRID handling or the field designated for HRID contains no value:**
 - The HRID is being constructed from the HRID settings
+- Pad the number in the HRID Settings so length is 11
 - The 001 in the MARC21 record (bound for SRS) is replaced with this HRID.

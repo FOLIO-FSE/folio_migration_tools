@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">
+    <marc:record>
+        <marc:leader>00278nx  a22001211n 4500</marc:leader>
+        <marc:controlfield tag="001">013988497</marc:controlfield>
+        <marc:controlfield tag="004">017372388</marc:controlfield>
+        <marc:controlfield tag="005">20200617080900.0</marc:controlfield>
+        <marc:controlfield tag="008">2006172p    8   1001uuger1000000        </marc:controlfield>
+        <marc:datafield tag="OWN" ind1=" " ind2=" ">
+            <marc:subfield code="a">SM</marc:subfield>
+        </marc:datafield>
+        <marc:datafield tag="FMT" ind1=" " ind2=" "></marc:datafield>
+        <marc:datafield tag="LKR" ind1=" " ind2=" ">
+            <marc:subfield code="a">HOL</marc:subfield>
+            <marc:subfield code="l">FCL01</marc:subfield>
+            <marc:subfield code="b">017372388</marc:subfield>
+        </marc:datafield>
+        <marc:datafield tag="852" ind1="0" ind2=" ">
+            <marc:subfield code="b">SCANN</marc:subfield>
+            <marc:subfield code="h">Callnumber part 1</marc:subfield>
+            <marc:subfield code="i">Callnumber part 2</marc:subfield>
+            <marc:subfield code="k">Callnumber prefix</marc:subfield>
+            <marc:subfield code="m">Callnumber suffix</marc:subfield>
+            <marc:subfield code="l">Shelving title</marc:subfield>
+            <marc:subfield code="x">some note</marc:subfield>
+            <marc:subfield code="z">some other note</marc:subfield>
+        </marc:datafield>
+    </marc:record>
+</marc:collection>

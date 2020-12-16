@@ -12,7 +12,7 @@ import requests
 
 
 class RulesMapperBase:
-    def __init__(self, folio_client):
+    def __init__(self, folio_client, conditions = None):
         self.migration_report = {}
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
@@ -22,17 +22,22 @@ class RulesMapperBase:
         self.holdings_json_schema = fetch_holdings_schema()
         self.instance_json_schema = get_instance_schema()
         self.schema = {}
-        self.conditions = Conditions(folio_client, self)
+        self.conditions = conditions
         self.item_json_schema = ""
         self.mappings = None
         print(f"Current user id is {self.folio_client.current_user}")
 
-    def report_legacy_mapping(self, field_name, was_mapped, was_empty=False):
+    def report_legacy_mapping(self, field_name, present, mapped, empty=False):
         if field_name not in self.mapped_legacy_fields:
-            self.mapped_legacy_fields[field_name] = [int(was_mapped), int(was_empty)]
+            self.mapped_legacy_fields[field_name] = [
+                int(present),
+                int(mapped),
+                int(empty),
+            ]
         else:
-            self.mapped_legacy_fields[field_name][0] += int(was_mapped)
-            self.mapped_legacy_fields[field_name][1] += int(was_empty)
+            self.mapped_legacy_fields[field_name][0] += int(present)
+            self.mapped_legacy_fields[field_name][1] += int(mapped)
+            self.mapped_legacy_fields[field_name][2] += int(empty)
 
     def report_folio_mapping(self, field_name, was_mapped, was_empty=False):
         if field_name not in self.mapped_folio_fields:
@@ -52,26 +57,29 @@ class RulesMapperBase:
         for k, v in d_sorted.items():
             unmapped = total_records - v[0]
             mapped = v[0] - v[1]
-            unmapped_per = "{:.1%}".format(unmapped / total_records)
             mp = mapped / total_records
             mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
             report_file.write(
                 f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
+
+        # Legacy fields (like marc)
         report_file.write("\n## Mapped Legacy fields  \n")
         d_sorted = {
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
         }
-        report_file.write(f"Legacy Field | Mapped | Empty | Unmapped  \n")
-        report_file.write("--- | --- | --- | ---:  \n")
+        report_file.write(f"Legacy Field | Present | Mapped | Empty | Unmapped  \n")
+        report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
-            unmapped = total_records - v[0]
-            mapped = v[0] - v[1]
+            present = v[0]
+            present_per = "{:.1%}".format(present / total_records)
+            unmapped = present - v[1]
+            mapped = v[1]
             unmapped_per = "{:.1%}".format(unmapped / total_records)
             mp = mapped / total_records
             mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
             report_file.write(
-                f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
+                f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
 
     def add_to_migration_report(self, header, measure_to_add):
@@ -83,15 +91,19 @@ class RulesMapperBase:
             self.migration_report[header][measure_to_add] += 1
 
     def write_migration_report(self, report_file):
+
         for a in self.migration_report:
             report_file.write(f"   \n")
-            report_file.write(f"## {a} - {len(self.migration_report[a])} things   \n")
+            report_file.write(f"## {a}    \n")
+            report_file.write(f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n")
+            report_file.write(f"   \n")
             report_file.write(f"Measure | Count   \n")
             report_file.write(f"--- | ---:   \n")
             b = self.migration_report[a]
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
             for b in sortedlist:
                 report_file.write(f"{b[0]} | {b[1]}   \n")
+            report_file.write("</details>   \n")
 
     def print_progress(self):
         self.add_stats(self.stats, "Number of records in file(s)")
@@ -342,7 +354,7 @@ class RulesMapperBase:
                     entity[k] = values[0]
         return entity
 
-    def handle_entity_mapping(self, marc_field, entity_mapping, rec, e_per_subfield):
+    def handle_entity_mapping(self, marc_field:pymarc.Field, entity_mapping, rec, e_per_subfield):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
             for sf_tuple in grouped(marc_field.subfields, 2):
@@ -361,8 +373,10 @@ class RulesMapperBase:
             if all(entity.values()) or e_parent == "electronicAccess":
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
+                sfs = "-".join(list([f[0] for f in marc_field]))
+                # print(sfs)
                 self.add_to_migration_report(
-                    "Incomplete entity mapping (a code issue)", marc_field.tag
+                    "Incomplete entity mapping (a code issue)", f"{marc_field.tag} {sfs}"
                 )
 
     def apply_rule(self, value, condition_types, marc_field, parameter):

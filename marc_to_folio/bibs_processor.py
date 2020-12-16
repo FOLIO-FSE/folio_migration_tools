@@ -17,6 +17,7 @@ class BibsProcessor:
 
     def __init__(self, mapper, folio_client, results_file, args):
         self.ils_flavour = args.ils_flavour
+        self.create_marc_xml_dump = args.dump
         self.suppress = args.suppress
         self.results_folder = args.results_folder
         self.results_file = results_file
@@ -24,9 +25,10 @@ class BibsProcessor:
         self.instance_schema = folio_client.get_instance_json_schema()
         self.mapper: BibsRulesMapper = mapper
         self.args = args
-        self.marc_xml_writer = XMLWriter(
-            open(os.path.join(self.results_folder, "marc_xml_dump.xml"), "wb+")
-        )
+        if self.create_marc_xml_dump:
+            self.marc_xml_writer = XMLWriter(
+                open(os.path.join(self.results_folder, "marc_xml_dump.xml"), "wb+")
+            )
         self.srs_records_file = open(
             os.path.join(self.results_folder, "srs.json"), "w+"
         )
@@ -125,7 +127,8 @@ class BibsProcessor:
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     write_to_file(holdings_file, False, holding)
-        self.marc_xml_writer.close()
+        if self.create_marc_xml_dump:
+            self.marc_xml_writer.close()
         self.srs_records_file.close()
 
     def save_source_record(self, marc_record, instance):
@@ -149,7 +152,7 @@ class BibsProcessor:
             )
         )
         self.srs_records_file.write(f"{srs_record_string}\n")
-        if not self.suppress:
+        if not self.suppress and self.create_marc_xml_dump:
             self.marc_xml_writer.write(marc_record)
 
 

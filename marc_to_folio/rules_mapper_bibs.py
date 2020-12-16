@@ -2,6 +2,7 @@
 FOLIO community specifications"""
 import json
 import logging
+from marc_to_folio.conditions import Conditions
 import traceback
 from logging import exception
 import os.path
@@ -14,7 +15,6 @@ from pymarc.record import Record
 import requests
 from pymarc import Field, JSONWriter, XMLWriter
 
-from marc_to_folio.bibs_conditions import BibsConditions
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 
@@ -25,12 +25,11 @@ class BibsRulesMapper(RulesMapperBase):
     def __init__(
         self, folio_client, args,
     ):
-        super().__init__(folio_client)
+        super().__init__(folio_client, Conditions(folio_client, self))
         self.folio = folio_client
         self.record_status = {}
         self.migration_report = {}
         self.suppress = args.suppress
-        self.conditions = BibsConditions(folio_client, self)
         self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
         self.id_map = {}
@@ -68,11 +67,12 @@ class BibsRulesMapper(RulesMapperBase):
             Community mapping suggestion: https://bit.ly/2S7Gyp3
              This is the main function"""
         self.print_progress()
-        legacy_id = self.get_legacy_id(marc_record, self.ils_flavour)
+        legacy_ids = self.get_legacy_id(marc_record, self.ils_flavour)
         folio_instance = {
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
         }
+        
         self.add_to_migration_report(
             "Record status (leader pos 5)", marc_record.leader[5]
         )
@@ -94,28 +94,31 @@ class BibsRulesMapper(RulesMapperBase):
                 bad_tags.add(marc_field.tag)
 
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
-                self.report_legacy_mapping(marc_field.tag, False, False)
+                self.report_legacy_mapping(marc_field.tag, True, False, True)
             else:
                 if marc_field.tag not in ignored_subsequent_fields:
-                    self.report_legacy_mapping(marc_field.tag, True, False)
+                    self.report_legacy_mapping(
+                        marc_field.tag, True, True, False)
                     mappings = self.mappings[marc_field.tag]
                     self.map_field_according_to_mapping(
                         marc_field, mappings, folio_instance
                     )
                     if any(m.get("ignoreSubsequentFields", False) for m in mappings):
-                        self.report_legacy_mapping(marc_field.tag, False, False)
                         ignored_subsequent_fields.add(marc_field.tag)
+                else:
+                    self.report_legacy_mapping(
+                        marc_field.tag, True, False, True)
 
             if marc_field.tag == "008":
                 temp_inst_type = folio_instance["instanceTypeId"]
 
         self.perform_additional_parsing(
-            folio_instance, temp_inst_type, marc_record, legacy_id
+            folio_instance, temp_inst_type, marc_record, legacy_ids
         )
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
 
-        self.validate(folio_instance, legacy_id)
+        self.validate(folio_instance, legacy_ids)
         self.dedupe_rec(folio_instance)
         # marc_record.remove_fields(*list(bad_tags))
         self.count_unmapped_fields(self.schema, folio_instance)
@@ -127,8 +130,11 @@ class BibsRulesMapper(RulesMapperBase):
             print(folio_instance)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
-        for legacy_id in legacy_id:
-            self.id_map[legacy_id] = {"id": folio_instance["id"]}
+        for legacy_id in legacy_ids:
+            if legacy_id:
+                self.id_map[legacy_id] = {"id": folio_instance["id"]}
+            else:
+                print(f"Legacy id is None {legacy_ids}")
         return folio_instance
 
     def perform_additional_parsing(
@@ -166,8 +172,9 @@ class BibsRulesMapper(RulesMapperBase):
 
     def get_instance_format_ids(self, marc_record, legacy_id):
         # Lambdas
-        get_folio_id = lambda code: next(
-            (f["id"] for f in self.folio.instance_formats if f["code"] == code), "",
+        def get_folio_id(code): return next(
+            (f["id"]
+             for f in self.folio.instance_formats if f["code"] == code), "",
         )
         all_337s = marc_record.get_fields("337")
         all_338s = marc_record.get_fields("338")
@@ -219,13 +226,14 @@ class BibsRulesMapper(RulesMapperBase):
     def handle_hrid(self, folio_instance, marc_record):
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if "hrid" not in folio_instance:
-            self.add_stats(self.stats, "Records without HRID from rules. Created HRID")
-            folio_instance["hrid"] = f"{self.hrid_prefix}{self.hrid_counter}"
+            self.add_stats(
+                self.stats, "Records without HRID from rules. Created HRID")
+            num_part = str(self.hrid_counter).zfill(11)
+            folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
             self.hrid_counter += 1
         else:
             self.add_stats(self.stats, "Records with HRID from Rules")
         new_001 = Field(tag="001", data=folio_instance["hrid"])
-
         marc_record.remove_fields("001")
         marc_record.add_ordered_field(new_001)
 
@@ -296,12 +304,14 @@ class BibsRulesMapper(RulesMapperBase):
                         languages.add(lang_code.replace(" ", ""))
                     elif langlength > 3 and langlength % 3 == 0:
                         lc = lang_code.replace(" ", "")
-                        new_codes = [lc[i : i + 3] for i in range(0, len(lc), 3)]
+                        new_codes = [lc[i: i + 3]
+                                     for i in range(0, len(lc), 3)]
                         languages.update(new_codes)
                         languages.discard(lang_code)
 
                 languages.update()
-            languages = set(self.filter_langs(filter(None, languages), marc_record))
+            languages = set(self.filter_langs(
+                filter(None, languages), marc_record))
         elif "008" in marc_record and len(marc_record["008"].data) > 38:
             from_008 = "".join((marc_record["008"].data[35:38]))
             if from_008:
@@ -348,6 +358,8 @@ class BibsRulesMapper(RulesMapperBase):
     def get_legacy_id(self, marc_record: Record, ils_flavour):
         if ils_flavour in ["iii", "sierra"]:
             return [marc_record["907"]["a"]]
+        elif ils_flavour in ["907y"]:
+            return [marc_record["907"]["y"]]
         elif ils_flavour == "035":
             return [marc_record["035"]["a"]]
         elif ils_flavour == "aleph":
@@ -360,15 +372,16 @@ class BibsRulesMapper(RulesMapperBase):
             else:
                 try:
                     ret = [marc_record["001"].format_field().strip()]
-                    self.add_stats(self.stats, "Legacy id not found. 001 returned")
+                    self.add_stats(
+                        self.stats, "Legacy id not found. 001 returned")
                     return ret
                 except AttributeError:
                     self.add_stats(
                         self.stats, "Legacy id and 001 not found. Failing record "
                     )
-                    raise ValueError("Legacy id and 001 not found. Failing record ")
+                    raise ValueError(
+                        "Legacy id and 001 not found. Failing record ")
         elif ils_flavour in ["voyager"]:
             return [marc_record["001"].format_field().strip()]
         else:
             raise Exception(f"ILS {ils_flavour} not configured")
-
