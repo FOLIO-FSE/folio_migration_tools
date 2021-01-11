@@ -69,7 +69,22 @@ Example:
 pipenv run python ~/code/MARC21-To-FOLIO/main_bibs.py ~/code/migration_repo_template/example_files/data/bibs ~/code/migration_repo_template/example_files/results/ https://okapi-bugfest-honeysuckle.folio.ebsco.com fs090000
 00 folio folio voyager
 ```
+### Explanation
+**time** will write out some statistics about time elapsed and memory usage. This is optional but useful. 
 
+**pipenv run python** instructs to run the script in a virtual environment using python. 
+
+#### Arguments used within the script
+
+**~/code/MARC21-To-FOLIO/main_bibs.py** is the script we want to run. 
+
+**~/client_data/hogwartslibrary/goldenrod/data/bibs** is the folder where we’ll fetch the file with MARC records to transform. 
+
+**~/client_data/hogwartslibrary/goldenrod/results** is the folder where we’ll place the result files (created instances and transformation report). 
+
+**https://okapi-hogwartslibrary.folio.ebsco.com fs00000000 admin 'password' iii** is a string containing the okapi URL, tenant ID, username and password for the tenant, as well as a code indicating the legacy ILS. 
+
+**| tee ~/client_data/hogwartslibrary/goldenrod/results/instance_transformation.log** prints the log that is printed in the terminal during the running and also prints it to a file. This is optional but useful. 
 ## main_holdings.py
 For actual examples of the output, go to the [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
 ## main_bibs.py (Bib transformation)
