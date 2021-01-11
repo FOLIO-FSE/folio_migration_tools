@@ -50,9 +50,6 @@ In order to set this up, you need to have a concept of how the FOLI circulation 
 For Item mapping, you also need to map legacy loan types to FOLIO equivalents. An example map file is available at [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) 
 In order to set this up, you need to have a concept of how the FOLI circulation rules will look like.
 
-## Run the scripts
-
-
 # Tests
 There is a test suite for Bibs-to-Instance mapping.
 ### Running the tests for the Rules mapper
@@ -85,6 +82,28 @@ For actual examples of the output, go to the [migration_repo_template](https://g
  pipenv run python3 /codez/MARC21-To-FOLIO/main_items.py ~/code/migration_repo_template/example_files/data/items ~/code/migration_repo_template/example_files/results https://okapi-bugfest-honeysuckle.folio.ebsco.com fs09000000 folio folio -m ~/code/migration_repo_template/mapping_files
 ```
 # Bib records mapping
+## SRS record Loading
+In order for SRS record loading to run, you need a snapshot object in the FOLIO database. The snapshot ID (jobExecutionId) is hard coded into the SRS records by the transformation scripts. To do this, do the following:    
+Make a POST request to your FOLIO tenant to this endpoint:   
+```
+{{baseUrl}}/source-storage/snapshots
+```
+with the following payload:   
+```
+{ 
+
+    "jobExecutionId": "67dfac11-1caf-4470-9ad1-d533f6360bdd", 
+    "status": "PARSING_IN_PROGRESS", 
+    "processingStartedDate": "2020-12-30T14:33:50.478+0000", 
+    "metadata": { 
+        "createdDate": "2020-12-30T14:33:50.478+0000", 
+        "createdByUserId": "0280835d-b08d-4187-969d-9b4ecc247eae", 
+        "updatedDate": "2020-12-30T14:33:50.478+0000", 
+        "updatedByUserId": "0280835d-b08d-4187-969d-9b4ecc247eae" 
+    } 
+} 
+```
+
 ## HRID handling
 ### Current implementation:   
 Download the HRID handling settings from the tenant. 
