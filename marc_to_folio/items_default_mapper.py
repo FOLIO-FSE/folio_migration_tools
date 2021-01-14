@@ -4,6 +4,7 @@ import logging
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 import uuid
 import json
+import ctypes
 import csv
 import sys
 import traceback
@@ -11,7 +12,7 @@ from datetime import datetime
 from folioclient import FolioClient
 from typing import Set, Dict, List
 
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
 class ItemsDefaultMapper(RulesMapperBase):
