@@ -8,6 +8,7 @@ A set of Python3 script parsing MARC21 to FOLIO inventory format.
 * [Holdingsrecord JSON Schema](https://github.com/folio-org/mod-inventory-storage/blob/master/ramls/holdingsrecord.json)
 * [FOLIO Instance storage JSON Schema](https://github.com/folio-org/mod-inventory-storage/blob/master/ramls/instance.json)
 * [FOLIO Intance (BL) JSON Schema](https://github.com/folio-org/mod-inventory/blob/master/ramls/instance.json)
+* [Inventory elements - Beta](https://docs.google.com/spreadsheets/d/1RCZyXUA5rK47wZqfFPbiRM0xnw8WnMCcmlttT7B3VlI/edit#gid=901484405)
 
 # FOLIO Inventory data migration process
 This template plays a vital part in a process together with other repos allowing you to perform bibliographic data migration from a legacy ILS into FOLIO. For more information on the process, head over to the linked repos below.
