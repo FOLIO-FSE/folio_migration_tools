@@ -33,16 +33,16 @@ class Worker:
             if isfile(join(args.source_folder, f))
         ]
         self.folio_client = folio_client
-        print(f"Files to process: {len(self.files)}")
-        print(json.dumps(self.files, sort_keys=True, indent=4))
+        print(f"Files to process: {len(self.files)}", flush=True)
+        print(json.dumps(self.files, sort_keys=True, indent=4), flush=True)
         self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
         self.failed_files = list()
         self.bibids = set()
-        print("Init done")
+        print("Init done", flush=True)
 
     def work(self):
-        print("Starting....")
+        print("Starting....", flush=True)
         with open(self.results_file_path, "w+") as results_file:
             self.processor = BibsProcessor(
                 self.mapper,
@@ -56,14 +56,14 @@ class Worker:
                         reader = MARCReader(marc_file, "rb", permissive=True)
                         reader.hide_utf8_warnings = True
                         if self.args.force_utf_8:
-                            print("FORCE UTF-8 is set to TRUE")
+                            print("FORCE UTF-8 is set to TRUE", flush=True)
                             reader.force_utf8 = True
-                        print(f"running {file_name}")
+                        print(f"running {file_name}", flush=True)
                         self.read_records(reader)
                 except Exception as exception:
-                    print(exception)
+                    print(exception, flush=True)
                     traceback.print_exc()
-                    print(file_name)
+                    print(file_name, flush=True)
             # wrap up
             self.wrap_up()
 
@@ -88,7 +88,7 @@ class Worker:
                 self.processor.process_record(record, False)
 
     def wrap_up(self):
-        print("Done. Wrapping up...")
+        print("Done. Wrapping up...", flush=True)
         self.processor.wrap_up()
         with open(self.migration_report_file, "w+") as report_file:
             report_file.write(f"# Bibliographic records transformation results   \n")
@@ -103,7 +103,7 @@ class Worker:
             )
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)
-        print(f"Done. Transformation report written to {self.migration_report_file}")
+        print(f"Done. Transformation report written to {self.migration_report_file}", flush=True)
 
 
 def parse_args():
@@ -176,11 +176,11 @@ def main():
     migration_report_file = join(
         args.results_folder, "instance_transformation_report.md"
     )
-    print("\tresults will be saved at:\t", args.results_folder)
-    print("\tOkapi URL:\t", args.okapi_url)
-    print("\tTenanti Id:\t", args.tenant_id)
-    print("\tUsername:   \t", args.username)
-    print("\tPassword:   \tSecret")
+    print("\tresults will be saved at:\t", args.results_folder, flush=True)
+    print("\tOkapi URL:\t", args.okapi_url, flush=True)
+    print("\tTenanti Id:\t", args.tenant_id, flush=True)
+    print("\tUsername:   \t", args.username, flush=True)
+    print("\tPassword:   \tSecret", flush=True)
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )

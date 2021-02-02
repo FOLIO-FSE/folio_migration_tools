@@ -81,12 +81,12 @@ class BibsProcessor:
                 self.mapper.stats, "Bib records that failed transformation"
             )
             self.mapper.add_stats(self.mapper.stats, "Transformation exceptions")
-            print(type(inst))
-            print(inst.args)
-            print(inst)
-            print(marc_record)
+            print(type(inst), flush=True)
+            print(inst.args, flush=True)
+            print(inst, flush=True)
+            print(marc_record, flush=True)
             if folio_rec:
-                print(folio_rec)
+                print(folio_rec, flush=True)
             raise inst
 
     def validate_instance(self, folio_rec, marc_record):
@@ -115,13 +115,13 @@ class BibsProcessor:
             self.mapper.wrap_up()
         except Exception as exception:
             print(f"error during wrap up {exception}")
-        print("Saving map of old and new IDs")
+        print("Saving map of old and new IDs", flush=True)
         if self.mapper.id_map:
             map_path = os.path.join(self.results_folder, "instance_id_map.json")
             with open(map_path, "w+") as id_map_file:
                 json.dump(self.mapper.id_map, id_map_file, sort_keys=True, indent=4)
             self.mapper.stats["Number of Instances in map"] = len(self.mapper.id_map)
-        print("Saving holdings created from bibs")
+        print("Saving holdings created from bibs", flush=True)
         if any(self.mapper.holdings_map):
             holdings_path = os.path.join(self.results_folder, "folio_holdings.json")
             with open(holdings_path, "w+") as holdings_file:
