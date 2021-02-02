@@ -111,7 +111,7 @@ class RulesMapperBase:
         if i % 1000 == 0:
             elapsed = i / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            print(f"{elapsed_formatted} records/sec.\t\t{i:,} records processed")
+            print(f"{elapsed_formatted} records/sec.\t\t{i:,} records processed", flush=True)
 
     def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
         # TODO: Move to interface or parent class

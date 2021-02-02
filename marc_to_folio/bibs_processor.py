@@ -95,7 +95,7 @@ class BibsProcessor:
         if not folio_rec.get("title", ""):
             s = f"No title in {marc_record['001'].format_field()}"
             self.mapper.add_to_migration_report("Records without titles", s)
-            print(s)
+            print(s, flush=True)
             self.mapper.add_stats(
                 self.mapper.stats, "Bib records that failed transformation"
             )
