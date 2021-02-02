@@ -210,6 +210,10 @@ class Conditions:
         t = self.get_ref_data_tuple_by_name(
             self.folio.identifier_types, "identifier_types", parameter["name"]
         )
+        if not t:
+            print("Unmapped identifier name types", parameter["name"])
+            print(marc_field)     
+            raise Exception("Identifier mapping error")    
         self.mapper.add_to_migration_report("Mapped identifier types", t[1])
         return t[0]
 

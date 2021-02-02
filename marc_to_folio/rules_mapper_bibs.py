@@ -220,7 +220,7 @@ class BibsRulesMapper(RulesMapperBase):
                         corresponding_337 = (
                             all_337s[fidx] if fidx < len(all_337s) else None
                         )
-                        if "a" in corresponding_337:
+                        if corresponding_337 and "a" in corresponding_337:
                             fmt_id = get_folio_id_by_name(corresponding_337["a"], a)
                             if fmt_id:
                                 yield fmt_id
