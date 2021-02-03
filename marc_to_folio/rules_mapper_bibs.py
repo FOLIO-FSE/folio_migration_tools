@@ -93,14 +93,14 @@ class BibsRulesMapper(RulesMapperBase):
                     self.report_legacy_mapping(marc_field.tag, True, True, False)
                     if marc_field.tag == "880" and "6" in marc_field:
                         print(f"880 found! {marc_field} ")
-                        proxy_mapping = next(self.mappings.get("880", []))
+                        proxy_mapping = next(iter(self.mappings.get("880", [])))
                         print(f"880 proxy mapping:! {proxy_mapping} ")
                         if proxy_mapping and "fieldReplacementRule" in proxy_mapping:
-                            target_field = next(
+                            target_field = next((
                                 r["targetField"]
                                 for r in proxy_mapping["fieldReplacementRule"]
                                 if r["sourceDigits"] == marc_field["6"][:3]
-                            )
+                            ),"")
                             mappings = self.mappings.get(target_field, {})
                             self.add_to_migration_report("880 mappings", f"Source digits: {marc_field['6']} Target field: {target_field}")
                         else:
