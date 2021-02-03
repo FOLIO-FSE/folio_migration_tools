@@ -84,28 +84,35 @@ class BibsRulesMapper(RulesMapperBase):
 
         for marc_field in marc_record:
             self.add_stats(self.stats, "Total number of Tags processed")
-
-            if (
-                (not marc_field.tag.isnumeric())
-                and marc_field.tag != "LDR"
-                and marc_field.tag not in bad_tags
-            ):
-                self.add_to_migration_report(
-                    "Non-numeric tags in records", marc_field.tag
-                )
-                bad_tags.add(marc_field.tag)
+            self.report_bad_tags(marc_field, bad_tags)
 
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
                 self.report_legacy_mapping(marc_field.tag, True, False, True)
             else:
                 if marc_field.tag not in ignored_subsequent_fields:
                     self.report_legacy_mapping(marc_field.tag, True, True, False)
-                    mappings = self.mappings[marc_field.tag]
-                    self.map_field_according_to_mapping(
-                        marc_field, mappings, folio_instance
-                    )
-                    if any(m.get("ignoreSubsequentFields", False) for m in mappings):
-                        ignored_subsequent_fields.add(marc_field.tag)
+                    if marc_field.tag == "880" and "6" in marc_field:
+                        proxy_mapping = self.mappings.get("880", {})
+                        if proxy_mapping and "fieldReplacementRule" in proxy_mapping:
+                            target_field = next(
+                                r["targetField"]
+                                for r in proxy_mapping["fieldReplacementRule"]
+                                if r["sourceDigits"] == marc_field["6"]
+                            )
+                            mappings = self.mappings.get(target_field, {})
+                            self.add_to_migration_report("880 mappings", f"Source digits: {marc_field["6"]} Target field: {target_field}")
+                        else:
+                            mappings = {}
+                    else:
+                        mappings = self.mappings.get(marc_field.tag,{})
+                    if mappings:
+                        self.map_field_according_to_mapping(
+                            marc_field, mappings, folio_instance
+                        )
+                        if any(m.get("ignoreSubsequentFields", False) for m in mappings):
+                            ignored_subsequent_fields.add(marc_field.tag)
+                    else:
+                        self.add_to_migration_report("Mappings not found for field", marc_field.tag)
                 else:
                     self.report_legacy_mapping(marc_field.tag, True, False, True)
 
@@ -169,6 +176,15 @@ class BibsRulesMapper(RulesMapperBase):
 
     def wrap_up(self):
         print("Mapper wrapping up")
+
+    def report_bad_tags(self, marc_field, bad_tags):
+        if (
+            (not marc_field.tag.isnumeric())
+            and marc_field.tag != "LDR"
+            and marc_field.tag not in bad_tags
+        ):
+            self.add_to_migration_report("Non-numeric tags in records", marc_field.tag)
+            bad_tags.add(marc_field.tag)
 
     def get_instance_format_ids(self, marc_record, legacy_id):
         # Lambdas
