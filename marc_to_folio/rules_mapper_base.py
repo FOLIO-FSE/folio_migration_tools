@@ -12,7 +12,7 @@ import requests
 
 
 class RulesMapperBase:
-    def __init__(self, folio_client, conditions = None):
+    def __init__(self, folio_client, conditions=None):
         self.migration_report = {}
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
@@ -95,7 +95,9 @@ class RulesMapperBase:
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
-            report_file.write(f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n")
+            report_file.write(
+                f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
+            )
             report_file.write(f"   \n")
             report_file.write(f"Measure | Count   \n")
             report_file.write(f"--- | ---:   \n")
@@ -111,7 +113,10 @@ class RulesMapperBase:
         if i % 1000 == 0:
             elapsed = i / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            print(f"{elapsed_formatted} records/sec.\t\t{i:,} records processed", flush=True)
+            print(
+                f"{elapsed_formatted} records/sec.\t\t{i:,} records processed",
+                flush=True,
+            )
 
     def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
         # TODO: Move to interface or parent class
@@ -330,8 +335,8 @@ class RulesMapperBase:
         # print(f"{target_string} {value} {rec}")
         sch = self.schema["properties"]
         if (
-            sch[target_string]["type"] == "array"
-            and sch[target_string]["items"]["type"] == "string"
+            sch.get(target_string, {}).get("type", "") == "array"
+            and sch.get(target_string, {}).get("items", {}).get("type", "") == "string"
         ):
             if target_string not in rec:
                 rec[target_string] = value
@@ -340,7 +345,7 @@ class RulesMapperBase:
         elif sch[target_string]["type"] == "string":
             rec[target_string] = value[0]
         else:
-            raise Exception(f"Edge! {target_string} {sch[target_string]['type']}")
+            raise Exception(f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}")
 
     def create_entity(self, entity_mappings, marc_field, entity_parent_key):
         entity = {}
@@ -354,7 +359,9 @@ class RulesMapperBase:
                     entity[k] = values[0]
         return entity
 
-    def handle_entity_mapping(self, marc_field:pymarc.Field, entity_mapping, rec, e_per_subfield):
+    def handle_entity_mapping(
+        self, marc_field: pymarc.Field, entity_mapping, rec, e_per_subfield
+    ):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
             for sf_tuple in grouped(marc_field.subfields, 2):
@@ -376,7 +383,8 @@ class RulesMapperBase:
                 sfs = "-".join(list([f[0] for f in marc_field]))
                 # print(sfs)
                 self.add_to_migration_report(
-                    "Incomplete entity mapping (a code issue)", f"{marc_field.tag} {sfs}"
+                    "Incomplete entity mapping (a code issue)",
+                    f"{marc_field.tag} {sfs}",
                 )
 
     def apply_rule(self, value, condition_types, marc_field, parameter):
@@ -444,4 +452,3 @@ def is_array_of_objects(schema_property):
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
     return zip(*[iter(iterable)] * n)
-

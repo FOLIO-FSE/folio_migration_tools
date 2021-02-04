@@ -329,7 +329,7 @@ class BibsRulesMapper(RulesMapperBase):
             return ret
         except IndexError:
             self.add_to_migration_report(
-                "Possible cleaning tasks" f"No Leader[7] in {legacy_id}"
+                "Possible cleaning tasks", f"No Leader[7] in {legacy_id}"
             )
             return self.other_mode_of_issuance_id
         except StopIteration as ee:
