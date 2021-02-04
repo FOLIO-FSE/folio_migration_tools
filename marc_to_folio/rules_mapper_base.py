@@ -332,17 +332,23 @@ class RulesMapperBase:
                     parent = target
 
     def add_value_to_first_level_target(self, rec, target_string, value):
-        # print(f"{target_string} {value} {rec}")
+        # print(f"{target_string} {value} {rec}")        
         sch = self.schema["properties"]
-        if (
-            sch.get(target_string, {}).get("type", "") == "array"
-            and sch.get(target_string, {}).get("items", {}).get("type", "") == "string"
+        
+        if not target_string or target_string not in sch:
+            raise Exception(f"Target string {target_string} not in Schema! Target type: {sch.get(target_string,{}).get('type','')} Value: {value}")
+        
+        target_field = sch.get(target_string, {})
+        if (target_field.get("type", "") == "array"
+            and target_field.get("items", {}).get("type", "") == "string"
         ):
+            
             if target_string not in rec:
                 rec[target_string] = value
             else:
                 rec[target_string].extend(value)
-        elif sch[target_string]["type"] == "string":
+
+        elif target_field.get("type","") == "string":
             rec[target_string] = value[0]
         else:
             raise Exception(f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}")
