@@ -106,6 +106,7 @@ class BibsRulesMapper(RulesMapperBase):
                     else:
                         mappings = self.mappings.get(marc_field.tag,{})
                     if mappings:
+                        print(f"Mappings: {mappings}")
                         self.map_field_according_to_mapping(
                             marc_field, mappings, folio_instance
                         )
