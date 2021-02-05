@@ -345,6 +345,10 @@ class Conditions:
             t = self.get_ref_data_tuple_by_code(
                 self.locations, "locations", parameter["unspecifiedLocationCode"]
             )
+        if not t:
+            raise Exception(
+                f"Location not found: {parameter['unspecifiedLocationCode']} {marc_field}"
+            )
         self.mapper.add_to_migration_report("Mapped Locations", t[1])
         return t[0]
 

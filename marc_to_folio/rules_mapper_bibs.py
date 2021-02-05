@@ -100,7 +100,7 @@ class BibsRulesMapper(RulesMapperBase):
                                 if r["sourceDigits"] == marc_field["6"][:3]
                             ),"")
                             mappings = self.mappings.get(target_field, {})
-                            self.add_to_migration_report("880 mappings", f"Source digits: {marc_field['6']} Target field: {target_field}")
+                            self.add_to_migration_report("880 mappings", f"Source digits: {marc_field['6'][:3]} Target field: {target_field}")
                         else:
                             mappings = []
                     else:
