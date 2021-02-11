@@ -154,12 +154,6 @@ def parse_args():
         help=("Validate JSON data against JSON Schema"),
         action="store_true",
     )
-    parser.add_argument(
-        "-dump",
-        "-d",
-        help=("Create MARC_XML file for Discovery system indexing"),
-        action="store_true",
-    )
     args = parser.parse_args()
     return args
 

@@ -13,7 +13,7 @@ from io import StringIO
 import pymarc
 from pymarc.record import Record
 import requests
-from pymarc import Field, JSONWriter, XMLWriter
+from pymarc import Field, JSONWriter
 
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 
