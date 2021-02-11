@@ -255,7 +255,7 @@ class BibsRulesMapper(RulesMapperBase):
                 self.add_to_migration_report(
                     "Instance Type Mapping (336, 008)", f"{t[1]} (from 336$b)"
                 )
-            return_id = t[0]
+                return_id = t[0]
         
         if not return_id:
             t = self.conditions.get_ref_data_tuple_by_code(
