@@ -130,11 +130,8 @@ class BibsRulesMapper(RulesMapperBase):
                 else:
                     self.report_legacy_mapping(marc_field.tag, True, False, True)
 
-            if marc_field.tag == "008":
-                temp_inst_type = folio_instance["instanceTypeId"]
-
         self.perform_additional_parsing(
-            folio_instance, temp_inst_type, marc_record, legacy_ids
+            folio_instance, marc_record, legacy_ids
         )
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
@@ -170,17 +167,16 @@ class BibsRulesMapper(RulesMapperBase):
         return folio_instance
 
     def perform_additional_parsing(
-        self, folio_instance, temp_inst_type, marc_record, legacy_id
+        self, folio_instance, marc_record, legacy_id
     ):
         """Do stuff not easily captured by the mapping rules"""
         folio_instance["source"] = "MARC"
         folio_instance["instanceFormatIds"] = list(
             set(self.get_instance_format_ids(marc_record, legacy_id))
         )
-        if temp_inst_type and not folio_instance["instanceTypeId"]:
-            folio_instance["instanceTypeId"] = temp_inst_type
-        elif not temp_inst_type and not folio_instance.get("instanceTypeId", ""):
-            raise ValueError("No Instance type ID")
+
+        folio_instance["instanceTypeId"] = self.get_instance_type_id(marc_record)
+        
         folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(
             marc_record, legacy_id
         )
@@ -239,7 +235,7 @@ class BibsRulesMapper(RulesMapperBase):
             raise Exception("No instance_types setup in tenant")
 
         if "336" in marc_record and  "b" not in marc_record["336"]:
-            self.conditions.add_to_migration_report(
+            self.add_to_migration_report(
                 "Instance Type Mapping (336, 008)", f"Subfield b not in 336"
             )
             if "a" in marc_record["336"]:
