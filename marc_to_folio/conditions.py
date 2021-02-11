@@ -120,7 +120,7 @@ class Conditions:
             return format["id"]
         else:
             self.mapper.add_to_migration_report(
-                "Instance formats", f"338$b value {value} not found in FOLIO"
+                "Instance formats", f"338$b value \"{value}\" not found in FOLIO"
             )
             return ""
 
