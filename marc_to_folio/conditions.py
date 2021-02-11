@@ -120,7 +120,7 @@ class Conditions:
             return format["id"]
         else:
             self.mapper.add_to_migration_report(
-                "Instance formats", f"338$b value \"{value}\" not found in FOLIO"
+                "Instance formats", f'338$b value "{value}" not found in FOLIO'
             )
             return ""
 
@@ -242,27 +242,47 @@ class Conditions:
         return t[0]
 
     def condition_set_contributor_type_id(self, value, parameter, marc_field):
+
+        # Bootstrap stuff
         if not self.folio.contributor_types:
             raise ValueError("No contributor_types setup in tenant")
         if not self.default_contributor_type:
             self.default_contributor_type = next(
                 ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
             )
-        for subfield in marc_field.get_subfields("4", "e"):
-            for cont_type in self.folio.contributor_types:
-                if subfield == cont_type["code"]:
-                    self.mapper.add_to_migration_report(
-                        "Mapped contributor types", cont_type["name"]
-                    )
-                    return cont_type["id"]
-                elif subfield == cont_type["name"]:
-                    self.mapper.add_to_migration_report(
-                        "Mapped contributor types", cont_type["name"]
-                    )
-                    return cont_type["id"]
-        self.mapper.add_to_migration_report(
-            "Mapped contributor types", self.default_contributor_type["name"]
-        )
+
+        for subfield in marc_field.get_subfields("4"):
+            t = self.get_ref_data_tuple_by_code(
+                self.folio.contributor_types, "contrib_types_c", subfield
+            )
+            if not t:
+                self.mapper.add_to_migration_report(
+                    "Contributor type mapping",
+                    f"Contributor type code not found for {subfield} ",
+                )
+            else:
+                self.mapper.add_to_migration_report(
+                    "Contributor type mapping",
+                    f"Contributor type code {t} found for {subfield})",
+                )
+                return t[0]
+
+        for subfield in marc_field.get_subfields("e"):
+            t = self.get_ref_data_tuple_by_name(
+                self.folio.contributor_types, "contrib_types_n", subfield
+            )
+            
+            if not t:
+                self.mapper.add_to_migration_report(
+                    "Contributor type mapping",
+                    f"Contributor type name not found for {subfield} ",
+                )
+            else:
+                self.mapper.add_to_migration_report(
+                    "Contributor type mapping",
+                    f"Contributor type name {t} found for {subfield})",
+                )                
+                return t[0]
         return self.default_contributor_type["id"]
 
     def condition_set_instance_id_by_map(self, value, parameter, marc_field):
@@ -386,8 +406,11 @@ class Conditions:
 
     def condition_set_instance_type_id(self, value, parameter, marc_field):
         if marc_field.tag not in ["008", "336"]:
-            self.mapper.add_to_migration_report("Instance Type Mapping (336, 008)", f"Unhandled MARC tag {marc_field.tag} ")
-        return "" # functionality moved
+            self.mapper.add_to_migration_report(
+                "Instance Type Mapping (336, 008)",
+                f"Unhandled MARC tag {marc_field.tag} ",
+            )
+        return ""  # functionality moved
 
     def condition_set_electronic_access_relations_id(
         self, value, parameter, marc_field
