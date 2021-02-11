@@ -152,7 +152,7 @@ class BibsRulesMapper(RulesMapperBase):
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         for legacy_id in legacy_ids:
-            if legacy_id and self.ils_flavour in ["sierra", "iii"]:
+            if legacy_id and self.ils_flavour in ["sierra", "iii", "907y"]:
                 instance_level_call_number = (
                     marc_record["099"] if "099" in marc_record else ""
                 )
