@@ -138,7 +138,11 @@ class BibsRulesMapper(RulesMapperBase):
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         for legacy_id in legacy_ids:
-            if legacy_id:
+            if legacy_id and self.ils_flavour in ["sierra", "iii"]:
+                instance_level_call_number = marc_record["099"] if '099' in marc_record else ""
+                self.add_to_migration_report("Instance level callNumber", bool(instance_level_call_number))
+                self.id_map[legacy_id] = {"id": folio_instance["id"], "instanceLevelCallNumber": instance_level_call_number}
+            elif legacy_id:
                 self.id_map[legacy_id] = {"id": folio_instance["id"]}
             else:
                 print(f"Legacy id is None {legacy_ids}")
@@ -354,6 +358,8 @@ class BibsRulesMapper(RulesMapperBase):
         if any(lang_fields):
             subfields = "abdefghjkmn"
             for lang_tag in lang_fields:
+                if "2" in lang_tag:
+                    self.add_to_migration_report("Language coude sources in 041", lang_tag["2"])
                 lang_codes = lang_tag.get_subfields(*list(subfields))
                 for lang_code in lang_codes:
                     lang_code = str(lang_code).lower().replace(" ", "")
