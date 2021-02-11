@@ -290,7 +290,7 @@ class ItemsDefaultMapper(RulesMapperBase):
         )
         if not folio_loc_id:
             self.add_stats(self.stats, "Location code not found in FOLIO")
-            raise ValueError(f"Location code not found in FOLIO: {loc_code}")
+            raise ValueError(f"Location code not found in FOLIO: \"{loc_code}\"")
         return folio_loc_id
 
     def get_records(self, file):

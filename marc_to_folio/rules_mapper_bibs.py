@@ -94,25 +94,39 @@ class BibsRulesMapper(RulesMapperBase):
                     if marc_field.tag == "880" and "6" in marc_field:
                         proxy_mapping = next(iter(self.mappings.get("880", [])))
                         if proxy_mapping and "fieldReplacementRule" in proxy_mapping:
-                            target_field = next((
-                                r["targetField"]
-                                for r in proxy_mapping["fieldReplacementRule"]
-                                if r["sourceDigits"] == marc_field["6"][:3]
-                            ),"")
+                            target_field = next(
+                                (
+                                    r["targetField"]
+                                    for r in proxy_mapping["fieldReplacementRule"]
+                                    if r["sourceDigits"] == marc_field["6"][:3]
+                                ),
+                                "",
+                            )
                             mappings = self.mappings.get(target_field, {})
-                            self.add_to_migration_report("880 mappings", f"Source digits: {marc_field['6'][:3]} Target field: {target_field}")
+                            self.add_to_migration_report(
+                                "880 mappings",
+                                f"Source digits: {marc_field['6'][:3]} Target field: {target_field}",
+                            )
                         else:
                             mappings = []
                     else:
-                        mappings = self.mappings.get(marc_field.tag,{}) if marc_field.tag != "880" else []
+                        mappings = (
+                            self.mappings.get(marc_field.tag, {})
+                            if marc_field.tag != "880"
+                            else []
+                        )
                     if mappings:
                         self.map_field_according_to_mapping(
                             marc_field, mappings, folio_instance
                         )
-                        if any(m.get("ignoreSubsequentFields", False) for m in mappings):
+                        if any(
+                            m.get("ignoreSubsequentFields", False) for m in mappings
+                        ):
                             ignored_subsequent_fields.add(marc_field.tag)
                     else:
-                        self.add_to_migration_report("Mappings not found for field", marc_field.tag)
+                        self.add_to_migration_report(
+                            "Mappings not found for field", marc_field.tag
+                        )
                 else:
                     self.report_legacy_mapping(marc_field.tag, True, False, True)
 
@@ -139,9 +153,16 @@ class BibsRulesMapper(RulesMapperBase):
         # TODO: createDate and update date and catalogeddate
         for legacy_id in legacy_ids:
             if legacy_id and self.ils_flavour in ["sierra", "iii"]:
-                instance_level_call_number = marc_record["099"] if '099' in marc_record else ""
-                self.add_to_migration_report("Instance level callNumber", bool(instance_level_call_number))
-                self.id_map[legacy_id] = {"id": folio_instance["id"], "instanceLevelCallNumber": instance_level_call_number}
+                instance_level_call_number = (
+                    marc_record["099"] if "099" in marc_record else ""
+                )
+                self.add_to_migration_report(
+                    "Instance level callNumber", bool(instance_level_call_number)
+                )
+                self.id_map[legacy_id] = {
+                    "id": folio_instance["id"],
+                    "instanceLevelCallNumber": instance_level_call_number,
+                }
             elif legacy_id:
                 self.id_map[legacy_id] = {"id": folio_instance["id"]}
             else:
@@ -189,6 +210,63 @@ class BibsRulesMapper(RulesMapperBase):
         ):
             self.add_to_migration_report("Non-numeric tags in records", marc_field.tag)
             bad_tags.add(marc_field.tag)
+
+    def get_instance_type_id(self, marc_record):
+        return_id = ""
+        def get_folio_id_by_name(f336a: str):
+            match_template = f336a.lower().replace(" ", "")
+            match = next(
+                (
+                    f["id"]
+                    for f in self.folio.instance_types
+                    if f["name"].lower().replace(" ", "") == match_template
+                ),
+                "",
+            )
+            if match:
+                self.add_to_migration_report(
+                    "Instance Type Mapping (336, 008)",
+                    f"336$a -Successful matching on  {match_template} ({f336a})",
+                )
+            else:
+                self.add_to_migration_report(
+                    "Instance Type Mapping (336, 008)",
+                    f"336$a -Unsuccessful matching on  {match_template} ({f336a})",
+                )
+            return match
+
+        if not self.folio.instance_types:
+            raise Exception("No instance_types setup in tenant")
+
+        if "336" in marc_record and  "b" not in marc_record["336"]:
+            self.conditions.add_to_migration_report(
+                "Instance Type Mapping (336, 008)", f"Subfield b not in 336"
+            )
+            if "a" in marc_record["336"]:
+                return_id = get_folio_id_by_name(marc_record["336"]["a"])
+                
+
+        if "336" in marc_record and  "b" in marc_record["336"]:
+            t = self.conditions.get_ref_data_tuple_by_code(
+                self.folio.instance_types, "instance_types", marc_record["336"]["b"]
+            )
+            if not t:                
+                self.add_to_migration_report(
+                    "Instance Type Mapping (336, 008)",
+                    f'Code {marc_record["336"]["b"]} not found in FOLIO (from 336$b)',
+                )
+            else:
+                self.add_to_migration_report(
+                    "Instance Type Mapping (336, 008)", f"{t[1]} (from 336$b)"
+                )
+            return_id = t[0]
+        
+        if not return_id:
+            t = self.conditions.get_ref_data_tuple_by_code(
+                    self.folio.instance_types, "instance_types", "zzz"
+                )
+            return_id = t[0]
+        return return_id
 
     def get_instance_format_ids(self, marc_record, legacy_id):
         # Lambdas
@@ -359,7 +437,9 @@ class BibsRulesMapper(RulesMapperBase):
             subfields = "abdefghjkmn"
             for lang_tag in lang_fields:
                 if "2" in lang_tag:
-                    self.add_to_migration_report("Language coude sources in 041", lang_tag["2"])
+                    self.add_to_migration_report(
+                        "Language coude sources in 041", lang_tag["2"]
+                    )
                 lang_codes = lang_tag.get_subfields(*list(subfields))
                 for lang_code in lang_codes:
                     lang_code = str(lang_code).lower().replace(" ", "")

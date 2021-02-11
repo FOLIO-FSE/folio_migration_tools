@@ -77,7 +77,10 @@ class Conditions:
             )
         )
         print(f"Fetched {len(self.locations)} locations", flush=True)
-        print(f"{len(self.folio.contrib_name_types)} contrib_name_types in tenant", flush=True)
+        print(
+            f"{len(self.folio.contrib_name_types)} contrib_name_types in tenant",
+            flush=True,
+        )
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
         try:
@@ -212,8 +215,8 @@ class Conditions:
         )
         if not t:
             print("Unmapped identifier name types", parameter["name"])
-            print(marc_field)     
-            raise Exception("Identifier mapping error")    
+            print(marc_field)
+            raise Exception("Identifier mapping error")
         self.mapper.add_to_migration_report("Mapped identifier types", t[1])
         return t[0]
 
@@ -382,61 +385,9 @@ class Conditions:
         return value.replace(parameter["substring"], "")
 
     def condition_set_instance_type_id(self, value, parameter, marc_field):
-        if not self.folio.instance_types:
-            raise Exception("No instance_types setup in tenant")
-
-        if marc_field.tag == "336" and "b" not in marc_field:
-            self.mapper.add_to_migration_report(
-                "Mapped Instance types", f"Subfield b not in 336"
-            )
-
-        if marc_field.tag == "336" and "b" in marc_field:
-            t = self.get_ref_data_tuple_by_code(
-                self.folio.instance_types, "instance_types", marc_field["b"]
-            )
-            if not t:
-                t = self.get_ref_data_tuple_by_code(
-                    self.folio.instance_types, "instance_types", "zzz"
-                )
-                self.mapper.add_to_migration_report(
-                    "Mapped Instance types",
-                    f"Code {marc_field['b']} not found in FOLIO (from 336$b)",
-                )
-            else:
-                self.mapper.add_to_migration_report(
-                    "Mapped Instance types", f"{t[1]} (from 336$b)"
-                )
-            return t[0]
-        elif marc_field.tag == "008":
-            t = self.get_ref_data_tuple_by_code(
-                self.folio.instance_types, "instance_types", value[:3]
-            )
-            if not t:
-                t = self.get_ref_data_tuple_by_code(
-                    self.folio.instance_types, "instance_types", "zzz"
-                )
-                self.mapper.add_to_migration_report(
-                    "Mapped Instance types",
-                    f"Code {value[:3]} in 008 not found in FOLIO)",
-                )
-            else:
-                self.mapper.add_to_migration_report(
-                    "Mapped Instance types", f"{t[1]} (from 008)"
-                )
-
-            return t[0]
-        else:
-            # TODO Remove later. Corenell specific
-            t = self.get_ref_data_tuple_by_code(
-                self.folio.instance_types, "instance_types", "txt"
-            )
-            self.mapper.add_to_migration_report(
-                "Mapped Instance types (No 336$b)", t[1]
-            )
-            return t[0]
-        raise ValueError(
-            f"Something went wrong when trying to parse Instance type from {marc_field}"
-        )
+        if marc_field.tag not in ["008", "336"]:
+            self.mapper.add_to_migration_report("Instance Type Mapping (336, 008)", f"Unhandled MARC tag {marc_field.tag} ")
+        return "" # functionality moved
 
     def condition_set_electronic_access_relations_id(
         self, value, parameter, marc_field
