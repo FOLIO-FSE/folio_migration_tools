@@ -151,7 +151,7 @@ class BibsRulesMapper(RulesMapperBase):
         for legacy_id in legacy_ids:
             if legacy_id and self.ils_flavour in ["sierra", "iii", "907y"]:
                 instance_level_call_number = (
-                    marc_record["099"] if "099" in marc_record else ""
+                    marc_record["099"].format_field() if "099" in marc_record else ""
                 )
                 self.add_to_migration_report(
                     "Instance level callNumber", bool(instance_level_call_number)
