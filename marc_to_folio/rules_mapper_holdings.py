@@ -7,21 +7,14 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 
 class RulesMapperHoldings(RulesMapperBase):
-    def __init__(
-        self, folio, instance_id_map, location_map, default_location_code, args
-    ):
-        super().__init__(folio, Conditions(folio,self)
-        )
-        print("Init RulesMapperHoldings")
+    def __init__(self, folio, instance_id_map, location_map, default_location_code, args):
+        super().__init__(folio, Conditions(folio,self))
         self.instance_id_map = instance_id_map
         self.location_map = location_map
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        print(any(self.location_map))
-        self.holdings_types = list(
-            folio.folio_get_all("/holdings-types", "holdingsTypes")
-        )
+        self.holdings_types = list(folio.folio_get_all("/holdings-types", "holdingsTypes"))
         self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
         print(f"Fetched {len(self.holdings_types)} holdings types")
         self.default_holdings_type_id = self.get_ref_data_tuple(

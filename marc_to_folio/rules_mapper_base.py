@@ -24,7 +24,7 @@ class RulesMapperBase:
         self.schema = {}
         self.conditions = conditions
         self.item_json_schema = ""
-        self.mappings = None
+        self.mappings = {}
         print(f"Current user id is {self.folio_client.current_user}", flush=True)
 
     def report_legacy_mapping(self, field_name, present, mapped, empty=False):

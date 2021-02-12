@@ -73,7 +73,7 @@ class HoldingsProcessor:
             "Saving map of {} old and new IDs to {}".format(len(id_map), path)
         )
         with open(path, "w+") as id_map_file:
-            json.dump(id_map, id_map_file, indent=4)
+            json.dump(id_map, id_map_file)
         logging.warning(f"{self.records_count} records processed")
         mrf = os.path.join(self.args.result_folder, "holdings_transformation_report.md")
         with open(mrf, "w+") as report_file:
