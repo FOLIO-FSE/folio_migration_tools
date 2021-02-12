@@ -1,6 +1,7 @@
 import logging
 import traceback
 import re
+import pymarc
 
 
 class Conditions:
@@ -13,6 +14,7 @@ class Conditions:
         self.electronic_access_relationships = {}
         self.default_contributor_type = ""
         self.mapper = mapper
+        self.default_call_number_type ={}
         self.cache = {}
         print(
             f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances",
@@ -271,7 +273,7 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.contributor_types, "contrib_types_n", subfield
             )
-            
+
             if not t:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
@@ -281,7 +283,7 @@ class Conditions:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
                     f"Contributor type name {t} found for {subfield})",
-                )                
+                )
                 return t[0]
         return self.default_contributor_type["id"]
 
@@ -312,6 +314,48 @@ class Conditions:
             "Mapped electronic access relationships types", t[1]
         )
         return t[0]
+
+    def condition_set_call_number_type_by_indicator(self, value, parameter, marc_field:pymarc.Field):
+        if not self.call_number_types:
+            raise ValueError("No call_number_types setup in tenant")
+        
+        if not self.default_call_number_type:
+            self.default_call_number_type = next(
+                ct for ct in self.folio.default_call_number_types if ct["name"] == "Other scheme"
+            )
+        first_level_map = {
+            "1": "Dewey Decimal classification",
+            "0": "Library of Congress classification",
+            "2": "National Library of Medicine classification",
+            "8": "Other scheme",
+            "6": "Shelved separately",
+            "4": "Shelving control number",
+            "7": "Source specified in subfield $2",
+            "3": "Superintendent of Documents classification",
+            "5": "Title",
+        }
+
+        # CallNumber type specified in $2. This needs further mapping
+        if marc_field.indicator1 == "7" and "2" in marc_field:
+            self.mapper.add_to_migration_report("Callnumber types", 
+                f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}")
+            return self.default_call_number_type["id"]
+
+        # Normal way. Type in ind1
+        call_number_type_name_temp = first_level_map.get(marc_field.indicator1, "")
+        if not call_number_type_name_temp:
+            self.mapper.add_to_migration_report("Callnumber types", 
+                f"Unhandled call number type in ind1: \"{marc_field.indicator1}\"")
+            return self.default_call_number_type["id"]
+        t = self.get_ref_data_tuple_by_name(self.call_number_types,"cnt", call_number_type_name_temp)
+        if t:
+            self.mapper.add_to_migration_report("Callnumber types", 
+                f"Mapped from Indicator 1 {t[0]}")
+            return t[0]
+       
+        self.mapper.add_to_migration_report("Callnumber types", 
+            f"Mapping failed. Setting default CallNumber type.")        
+        return self.default_call_number_type["id"]
 
     def condition_set_contributor_type_text(self, value, parameter, marc_field):
         if not self.folio.contributor_types:
