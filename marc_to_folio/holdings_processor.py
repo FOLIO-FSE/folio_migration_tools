@@ -32,7 +32,8 @@ class HoldingsProcessor:
             if not folio_rec.get("instanceId", ""):
                 self.missing_instance_id_count += 1
                 if self.missing_instance_id_count > 1000:
-                    raise Exception("More than 1000 missing instance ids. Something is wrong")
+                    raise Exception(f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}")
+
 
             write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
