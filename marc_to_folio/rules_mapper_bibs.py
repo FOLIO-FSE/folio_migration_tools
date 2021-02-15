@@ -2,6 +2,7 @@
 FOLIO community specifications"""
 import json
 import logging
+import time
 from marc_to_folio.conditions import Conditions
 import traceback
 from logging import exception
@@ -63,6 +64,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.hrid_prefix = self.hrid_handling["instances"]["prefix"]
         self.hrid_counter = self.hrid_handling["instances"]["startNumber"]
         print(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
+        self.start = time.time()
 
     def parse_bib(self, marc_record: pymarc.Record, inventory_only=False):
         """Parses a bib recod into a FOLIO Inventory instance object
@@ -74,7 +76,7 @@ class BibsRulesMapper(RulesMapperBase):
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
         }
-
+        id_map_string = ""
         self.add_to_migration_report(
             "Record status (leader pos 5)", marc_record.leader[5]
         )
@@ -156,15 +158,12 @@ class BibsRulesMapper(RulesMapperBase):
                 self.add_to_migration_report(
                     "Instance level callNumber", bool(instance_level_call_number)
                 )
-                self.id_map[legacy_id] = {
-                    "id": folio_instance["id"],
-                    "instanceLevelCallNumber": instance_level_call_number,
-                }
+                id_map_string = json.dumps({"legacy_id": legacy_id, "folio_id": folio_instance["id"], "instanceLevelCallNumber": instance_level_call_number})
             elif legacy_id:
-                self.id_map[legacy_id] = {"id": folio_instance["id"]}
+                id_map_string = json.dumps({"legacy_id": legacy_id, "folio_id": folio_instance["id"] })
             else:
                 print(f"Legacy id is None {legacy_ids}")
-        return folio_instance
+        return folio_instance, id_map_string
 
     def perform_additional_parsing(
         self, folio_instance, marc_record, legacy_id

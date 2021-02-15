@@ -14,7 +14,7 @@ class Conditions:
         self.electronic_access_relationships = {}
         self.default_contributor_type = ""
         self.mapper = mapper
-        self.default_call_number_type ={}
+        self.default_call_number_type = {}
         self.cache = {}
         print(
             f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances",
@@ -86,14 +86,11 @@ class Conditions:
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
         try:
-            if not self.cache.get(name, ""):
-                self.cache[name] = getattr(self, "condition_" + str(name))
-            return self.cache[name](value, parameter, marc_field)
-        except AttributeError:
-            self.mapper.add_to_migration_report(
-                "Unhandled condition defined in mapping rules", name
-            )
-            return ""
+            return self.cache.get(name)(value, parameter, marc_field)           
+        except Exception:
+            attr = getattr(self, "condition_" + str(name))
+            self.cache[name] = attr
+            return attr(value, parameter, marc_field)
 
     def condition_trim_period(self, value, parameter, marc_field):
         return value.strip().rstrip(".").rstrip(",")
@@ -111,20 +108,12 @@ class Conditions:
     def condition_set_instance_format_id(self, value, parameter, marc_field):
         # This method only handles the simple case of 2-character codes of RDA in the first 338$b
         # Other cases are handled in performAddidtionalParsing in the mapper class
-        format = next(
-            (f for f in self.folio.instance_formats if f["code"] == value),
-            None,
-        )
-        if format:
-            self.mapper.add_to_migration_report(
-                "Instance formats", f"{format['name']} set by mapping rules"
-            )
-            return format["id"]
-        else:
-            self.mapper.add_to_migration_report(
-                "Instance formats", f'338$b value "{value}" not found in FOLIO'
-            )
+        t = self.get_ref_data_tuple_by_code(self.folio.instance_formats, "instance_formats_code", value)
+        if not t:
+            print("Unmapped Instance format code", value)
             return ""
+        self.mapper.add_to_migration_report("Mapped instance formats", t[1])
+        return t[0]
 
     def condition_remove_prefix_by_indicator(self, value, parameter, marc_field):
         """Returns the index title according to the rules"""
@@ -207,7 +196,7 @@ class Conditions:
         )[0]
 
     def condition_char_select(self, value, parameter, marc_field):
-        return value[parameter["from"] : parameter["to"]]
+        return value[parameter["from"]: parameter["to"]]
 
     def condition_set_identifier_type_id_by_name(self, value, parameter, marc_field):
         if not self.folio.identifier_types:
@@ -315,10 +304,10 @@ class Conditions:
         )
         return t[0]
 
-    def condition_set_call_number_type_by_indicator(self, value, parameter, marc_field:pymarc.Field):
+    def condition_set_call_number_type_by_indicator(self, value, parameter, marc_field: pymarc.Field):
         if not self.call_number_types:
             raise ValueError("No call_number_types setup in tenant")
-        
+
         if not self.default_call_number_type:
             self.default_call_number_type = next(
                 ct for ct in self.folio.default_call_number_types if ct["name"] == "Other scheme"
@@ -337,24 +326,24 @@ class Conditions:
 
         # CallNumber type specified in $2. This needs further mapping
         if marc_field.indicator1 == "7" and "2" in marc_field:
-            self.mapper.add_to_migration_report("Callnumber types", 
-                f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}")
+            self.mapper.add_to_migration_report("Callnumber types",
+                                                f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}")
             return self.default_call_number_type["id"]
 
         # Normal way. Type in ind1
         call_number_type_name_temp = first_level_map.get(marc_field.indicator1, "")
         if not call_number_type_name_temp:
-            self.mapper.add_to_migration_report("Callnumber types", 
-                f"Unhandled call number type in ind1: \"{marc_field.indicator1}\"")
+            self.mapper.add_to_migration_report("Callnumber types",
+                                                f"Unhandled call number type in ind1: \"{marc_field.indicator1}\"")
             return self.default_call_number_type["id"]
-        t = self.get_ref_data_tuple_by_name(self.call_number_types,"cnt", call_number_type_name_temp)
+        t = self.get_ref_data_tuple_by_name(self.call_number_types, "cnt", call_number_type_name_temp)
         if t:
-            self.mapper.add_to_migration_report("Callnumber types", 
-                f"Mapped from Indicator 1 {t[0]}")
+            self.mapper.add_to_migration_report("Callnumber types",
+                                                f"Mapped from Indicator 1 {t[0]}")
             return t[0]
-       
-        self.mapper.add_to_migration_report("Callnumber types", 
-            f"Mapping failed. Setting default CallNumber type.")        
+
+        self.mapper.add_to_migration_report("Callnumber types",
+                                            f"Mapping failed. Setting default CallNumber type.")
         return self.default_call_number_type["id"]
 
     def condition_set_contributor_type_text(self, value, parameter, marc_field):
@@ -427,23 +416,15 @@ class Conditions:
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"
-        if dict_key not in self.ref_data_dicts:
+        ref_object = self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())
+        if ref_object:
+            return ref_object
+        else:
             d = {}
             for r in ref_data:
                 d[r[key_type].lower()] = (r["id"], r["name"])
             self.ref_data_dicts[dict_key] = d
-        ref_object = (
-            self.ref_data_dicts[dict_key][key_value.lower()]
-            if key_value.lower() in self.ref_data_dicts[dict_key]
-            else None
-        )
-        if not ref_object:
-            logging.debug(f"No matching element for {key_value} in {list(ref_data)}")
-            return None
-        if validate_uuid(ref_object[0]):
-            return ref_object
-        else:
-            raise Exception(f"UUID Validation error for {key_value} in {ref_data}")
+        return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())
 
     def condition_remove_substring(self, value, parameter, marc_field):
         return value.replace(parameter["substring"], "")
@@ -457,7 +438,7 @@ class Conditions:
         return ""  # functionality moved
 
     def condition_set_electronic_access_relations_id(
-        self, value, parameter, marc_field
+            self, value, parameter, marc_field
     ):
         enum = {
             "0": "resource",

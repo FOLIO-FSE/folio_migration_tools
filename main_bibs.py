@@ -1,5 +1,6 @@
 '''Main "script."'''
 import argparse
+import asyncio
 import json
 import logging
 import csv
@@ -38,7 +39,7 @@ class Worker:
         self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
         self.failed_files = list()
-        self.bibids = set()
+        self.bib_ids = set()
         print("Init done", flush=True)
 
     def work(self):
@@ -111,10 +112,10 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("source_folder", help="path to marc records folder")
     parser.add_argument("results_folder", help="path to Instance results folder")
-    parser.add_argument("okapi_url", help=("OKAPI base url"))
-    parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
-    parser.add_argument("username", help=("the api user"))
-    parser.add_argument("password", help=("the api users password"))
+    parser.add_argument("okapi_url", help="OKAPI base url")
+    parser.add_argument("tenant_id", help="id of the FOLIO tenant.")
+    parser.add_argument("username", help="the api user")
+    parser.add_argument("password", help="the api users password")
     parser.add_argument(
         "ils_flavour", help="The kind of ILS the records are created in"
     )
@@ -127,31 +128,31 @@ def parse_args():
     parser.add_argument(
         "-force_utf_8",
         "-utf8",
-        help=("forcing UTF8 when pasing marc records"),
+        help="forcing UTF8 when pasing marc records",
         action="store_true",
     )
     parser.add_argument(
-        "-msu_locations_path", "-f", help=("filter records based on MSU rules")
+        "-msu_locations_path", "-f", help="filter records based on MSU rules"
     )
     parser.add_argument(
         "-suppress",
         "-ds",
-        help=("This batch of records are to be suppressed in FOLIO."),
+        help="This batch of records are to be suppressed in FOLIO.",
         action="store_true",
     )
     parser.add_argument(
         "-postgres_dump",
         "-p",
-        help=("results will be written out for Postgres" "ingestion. Default is JSON"),
+        help="results will be written out for Postgres" "ingestion. Default is JSON",
         action="store_true",
     )
     parser.add_argument(
-        "-marcxml", "-x", help=("DATA is in MARCXML format"), action="store_true"
+        "-marcxml", "-x", help="DATA is in MARCXML format", action="store_true"
     )
     parser.add_argument(
         "-validate",
         "-v",
-        help=("Validate JSON data against JSON Schema"),
+        help="Validate JSON data against JSON Schema",
         action="store_true",
     )
     args = parser.parse_args()
@@ -159,6 +160,7 @@ def parse_args():
 
 
 def main():
+    
     """Main Method. Used for bootstrapping. """
     # Parse CLI Arguments
     print("Bootstrapping", flush=True)
@@ -172,24 +174,15 @@ def main():
     )
     print("\tresults will be saved at:\t", args.results_folder, flush=True)
     print("\tOkapi URL:\t", args.okapi_url, flush=True)
-    print("\tTenanti Id:\t", args.tenant_id, flush=True)
+    print("\tTenant Id:\t", args.tenant_id, flush=True)
     print("\tUsername:   \t", args.username, flush=True)
     print("\tPassword:   \tSecret", flush=True)
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
-    # Iniiate Worker
+    # Initiate Worker
     worker = Worker(folio_client, results_file, migration_report_file, args)
     worker.work()
-
-
-def get_subfield_contents(record, marc_tag, subfield_code):
-    fields = record.get_fields(marc_tag)
-    res = []
-    for f in fields:
-        for sf in f.get_subfields(subfield_code):
-            res.append(sf)
-    return res
 
 
 if __name__ == "__main__":

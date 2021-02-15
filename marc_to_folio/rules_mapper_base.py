@@ -259,18 +259,18 @@ class RulesMapperBase:
                 self.add_value_to_first_level_target(rec, target_string, value)
 
             else:
-                sc_parent = None
+                schema_parent = None
                 parent = None
-                sch = self.schema["properties"]
-                sc_prop = sch
-                prop = copy.deepcopy(rec)
+                schema_properties = self.schema["properties"]
+                sc_prop = schema_properties
+                # prop = copy.deepcopy(rec)
                 for target in targets:  # Iterate over names in hierarcy
                     if target in sc_prop:  # property is on this level
                         sc_prop = sc_prop[target]  # set current property
                     else:  # next level. take the properties from the items
-                        sc_prop = sc_parent["items"]["properties"][target]
+                        sc_prop = schema_parent["items"]["properties"][target]
                     if (
-                        target not in rec and not sc_parent
+                        target not in rec and not schema_parent
                     ):  # have we added this already?
                         if is_array_of_strings(sc_prop):
                             rec[target] = []
@@ -280,8 +280,8 @@ class RulesMapperBase:
                             rec[target] = [{}]
                             # break
                         elif (
-                            sc_parent
-                            and is_array_of_objects(sc_parent)
+                            schema_parent
+                            and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
                             # print(f"break! {target} {prop} {value}")
@@ -292,27 +292,28 @@ class RulesMapperBase:
                             # print(parent)
                             # break
                         else:
-                            if sc_parent["type"] == "array":
-                                prop[target] = {}
-                                parent.append(prop[target])
+                            if schema_parent["type"] == "array":
+                                # prop[target] = {}
+                                # parent.append(prop[target])
+                                parent.append({})
                             else:
                                 raise Exception(
-                                    f"Edge! {target_string} {sch[target_string]}"
+                                    f"Edge! {target_string} {schema_properties[target_string]}"
                                 )
                     else:  # We already have stuff in here
                         if is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
                             sc_prop["items"]["properties"]
                         ):
                             rec[target].append({})
-                        elif sc_parent and target in rec[parent][-1]:
+                        elif schema_parent and target in rec[parent][-1]:
                             rec[parent].append({})
                             if len(rec[parent][-1]) > 0:
                                 rec[parent][-1][target] = value[0]
                             else:
                                 rec[parent][-1] = {target: value[0]}
                         elif (
-                            sc_parent
-                            and is_array_of_objects(sc_parent)
+                            schema_parent
+                            and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
                             # print(f"break! {target} {prop} {value}")
@@ -328,7 +329,7 @@ class RulesMapperBase:
                     # print(f"HIT {target} {value[0]}")
                     # prop[target] = value[0]
                     # prop = rec[target]
-                    sc_parent = sc_prop
+                    schema_parent = sc_prop
                     parent = target
 
     def add_value_to_first_level_target(self, rec, target_string, value):
