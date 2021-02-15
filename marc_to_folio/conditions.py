@@ -15,7 +15,7 @@ class Conditions:
         self.default_contributor_type = ""
         self.mapper = mapper
         self.default_call_number_type = {}
-        self.cache = {}
+        self.condition_cache = {}
         print(
             f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances",
             flush=True,
@@ -86,10 +86,10 @@ class Conditions:
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
         try:
-            return self.cache.get(name)(value, parameter, marc_field)           
+            return self.condition_cache.get(name)(value, parameter, marc_field)           
         except Exception:
             attr = getattr(self, "condition_" + str(name))
-            self.cache[name] = attr
+            self.condition_cache[name] = attr
             return attr(value, parameter, marc_field)
 
     def condition_trim_period(self, value, parameter, marc_field):
