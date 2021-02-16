@@ -211,7 +211,7 @@ class Conditions:
         if not t:
             print("Unmapped identifier name types", parameter["name"])
             print(marc_field)
-            raise Exception("Identifier mapping error")
+            raise Exception(f'Identifier mapping error.\n Parameter: {parameter.get("name", "")}\nMARC Field: {marc_field}')
         self.mapper.add_to_migration_report("Mapped identifier types", t[1])
         return t[0]
 
