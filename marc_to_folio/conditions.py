@@ -369,7 +369,7 @@ class Conditions:
         )
         return self.default_call_number_type["id"]
 
-    def set_electronic_if_serv_remo(self, value, parameter, marc_field):
+    def condition_set_electronic_if_serv_remo(self, value, parameter, marc_field):
         if value in ["serv", "remo"]:
             t = self.conditions.get_ref_data_tuple_by_name(self.holdings_types, "hold_types", "Electronic" )
             if t:
