@@ -86,7 +86,7 @@ class Conditions:
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
         try:
-            return self.condition_cache.get(name)(value, parameter, marc_field)           
+            return self.condition_cache.get(name)(value, parameter, marc_field)
         except Exception:
             attr = getattr(self, "condition_" + str(name))
             self.condition_cache[name] = attr
@@ -108,7 +108,9 @@ class Conditions:
     def condition_set_instance_format_id(self, value, parameter, marc_field):
         # This method only handles the simple case of 2-character codes of RDA in the first 338$b
         # Other cases are handled in performAddidtionalParsing in the mapper class
-        t = self.get_ref_data_tuple_by_code(self.folio.instance_formats, "instance_formats_code", value)
+        t = self.get_ref_data_tuple_by_code(
+            self.folio.instance_formats, "instance_formats_code", value
+        )
         if not t:
             print("Unmapped Instance format code", value)
             return ""
@@ -200,7 +202,7 @@ class Conditions:
         )[0]
 
     def condition_char_select(self, value, parameter, marc_field):
-        return value[parameter["from"]: parameter["to"]]
+        return value[parameter["from"] : parameter["to"]]
 
     def condition_set_identifier_type_id_by_name(self, value, parameter, marc_field):
         if not self.folio.identifier_types:
@@ -211,7 +213,9 @@ class Conditions:
         if not t:
             print("Unmapped identifier name types", parameter["name"])
             print(marc_field)
-            raise Exception(f'Identifier mapping error.\n Parameter: {parameter.get("name", "")}\nMARC Field: {marc_field}')
+            raise Exception(
+                f'Identifier mapping error.\n Parameter: {parameter.get("name", "")}\nMARC Field: {marc_field}'
+            )
         self.mapper.add_to_migration_report("Mapped identifier types", t[1])
         return t[0]
 
@@ -253,29 +257,30 @@ class Conditions:
             if not t:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Contributor type code not found for {subfield} ",
+                    f"Mapping failed for $4 {subfield} ",
                 )
             else:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Contributor type code {t} found for {subfield})",
+                    f"Contributor type code {t} found for $4 {subfield})",
                 )
                 return t[0]
 
         for subfield in marc_field.get_subfields("e"):
+            normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
             t = self.get_ref_data_tuple_by_name(
-                self.folio.contributor_types, "contrib_types_n", subfield
+                self.folio.contributor_types, "contrib_types_n", normalized_subfield
             )
 
             if not t:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Contributor type name not found for {subfield} ",
+                    f"Mapping failed for $e {normalized_subfield} ({subfield}) ",
                 )
             else:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Contributor type name {t} found for {subfield})",
+                    f"Contributor type name {t[1]} found for $e {normalized_subfield} ({subfield}) ",
                 )
                 return t[0]
         return self.default_contributor_type["id"]
@@ -308,13 +313,17 @@ class Conditions:
         )
         return t[0]
 
-    def condition_set_call_number_type_by_indicator(self, value, parameter, marc_field: pymarc.Field):
+    def condition_set_call_number_type_by_indicator(
+        self, value, parameter, marc_field: pymarc.Field
+    ):
         if not self.call_number_types:
             raise ValueError("No call_number_types setup in tenant")
 
         if not self.default_call_number_type:
             self.default_call_number_type = next(
-                ct for ct in self.folio.default_call_number_types if ct["name"] == "Other scheme"
+                ct
+                for ct in self.folio.default_call_number_types
+                if ct["name"] == "Other scheme"
             )
         first_level_map = {
             "1": "Dewey Decimal classification",
@@ -330,24 +339,32 @@ class Conditions:
 
         # CallNumber type specified in $2. This needs further mapping
         if marc_field.indicator1 == "7" and "2" in marc_field:
-            self.mapper.add_to_migration_report("Callnumber types",
-                                                f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}")
+            self.mapper.add_to_migration_report(
+                "Callnumber types",
+                f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}",
+            )
             return self.default_call_number_type["id"]
 
         # Normal way. Type in ind1
         call_number_type_name_temp = first_level_map.get(marc_field.indicator1, "")
         if not call_number_type_name_temp:
-            self.mapper.add_to_migration_report("Callnumber types",
-                                                f"Unhandled call number type in ind1: \"{marc_field.indicator1}\"")
+            self.mapper.add_to_migration_report(
+                "Callnumber types",
+                f'Unhandled call number type in ind1: "{marc_field.indicator1}"',
+            )
             return self.default_call_number_type["id"]
-        t = self.get_ref_data_tuple_by_name(self.call_number_types, "cnt", call_number_type_name_temp)
+        t = self.get_ref_data_tuple_by_name(
+            self.call_number_types, "cnt", call_number_type_name_temp
+        )
         if t:
-            self.mapper.add_to_migration_report("Callnumber types",
-                                                f"Mapped from Indicator 1 {t[0]}")
+            self.mapper.add_to_migration_report(
+                "Callnumber types", f"Mapped from Indicator 1 {t[0]}"
+            )
             return t[0]
 
-        self.mapper.add_to_migration_report("Callnumber types",
-                                            f"Mapping failed. Setting default CallNumber type.")
+        self.mapper.add_to_migration_report(
+            "Callnumber types", f"Mapping failed. Setting default CallNumber type."
+        )
         return self.default_call_number_type["id"]
 
     def condition_set_contributor_type_text(self, value, parameter, marc_field):
@@ -442,7 +459,7 @@ class Conditions:
         return ""  # functionality moved
 
     def condition_set_electronic_access_relations_id(
-            self, value, parameter, marc_field
+        self, value, parameter, marc_field
     ):
         enum = {
             "0": "resource",
