@@ -16,6 +16,8 @@ class Conditions:
         self.mapper = mapper
         self.default_call_number_type = {}
         self.condition_cache = {}
+        self.holdings_types = list(folio.folio_get_all("/holdings-types", "holdingsTypes"))
+        print(f"Fetched {len(self.holdings_types)} holdings types")
         print(
             f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances",
             flush=True,
@@ -322,7 +324,7 @@ class Conditions:
         if not self.default_call_number_type:
             self.default_call_number_type = next(
                 ct
-                for ct in self.call_number_types
+                for ct in self.call_number_typesg
                 if ct["name"] == "Other scheme"
             )
         first_level_map = {
@@ -367,6 +369,14 @@ class Conditions:
         )
         return self.default_call_number_type["id"]
 
+    def set_electronic_if_serv_remo(self, value, parameter, marc_field):
+        if value in ["serv", "remo"]:
+            t = self.conditions.get_ref_data_tuple_by_name(self.holdings_types, "hold_types", "Electronic" )
+            if t:
+                self.add_to_migration_report("Holdings type mapping", f"special cornell case {t[1]}")
+                return t[0]
+        return ""
+    
     def condition_set_contributor_type_text(self, value, parameter, marc_field):
         if not self.folio.contributor_types:
             raise ValueError("No contributor_types setup in tenant")
