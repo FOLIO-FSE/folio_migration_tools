@@ -131,6 +131,10 @@ class Conditions:
     def condition_clean_isbn(self, value, parameter, marc_field):
         return value
 
+    def condition_set_issuance_mode_id(self, value, parameter, marc_field):
+        # mode of issuance is handled elsewhere in the mapping.
+        return ""
+
     def condition_set_publisher_role(self, value, parameter, marc_field):
         roles = {
             "0": "Production",
