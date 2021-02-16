@@ -322,7 +322,7 @@ class Conditions:
         if not self.default_call_number_type:
             self.default_call_number_type = next(
                 ct
-                for ct in self.folio.default_call_number_types
+                for ct in self.call_number_types
                 if ct["name"] == "Other scheme"
             )
         first_level_map = {
