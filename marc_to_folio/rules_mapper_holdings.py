@@ -84,8 +84,6 @@ class RulesMapperHoldings(RulesMapperBase):
             htype_map = {"u":"Unknown", "v":"Multi-part monograph", "x":"Monographic", "y":"Serial"}
             htype = htype_map.get(ldr06, "")
             t = self.conditions.get_ref_data_tuple_by_name(self.holdings_types, "hold_types", htype)
-            if "b" in marc_record["852"] and marc_record["852"]["b"] in ["serv", "remo"]:
-                t = self.conditions.get_ref_data_tuple_by_name(self.holdings_types, "hold_types", "Electronic" )
             if t:
                 folio_holding["holdingsTypeId"] = t[0]
                 self.add_to_migration_report("Holdings type mapping", t[1])

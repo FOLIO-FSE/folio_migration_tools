@@ -152,12 +152,8 @@ def write_to_file(file, pg_dump, folio_record):
 
 
 def get_srs_string(my_tuple):
-    '''json_string = StringIO()
-    writer = JSONWriter(json_string)
-    writer.write(my_tuple[0])
-    writer.close(close_fh=False)'''
-    rec_json_string = my_tuple[0].as_json()
-    rec_json = json.loads(rec_json_string)
+    raw_record = {"id": my_tuple[2], "content": my_tuple[0].as_json()}
+    parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple[0].as_json())}
     record = {
         "id": my_tuple[2],
         "deleted": False,
@@ -165,16 +161,16 @@ def get_srs_string(my_tuple):
         "matchedId": my_tuple[2],
         "generation": 0,
         "recordType": "MARC",
-        "rawRecord": {"id": my_tuple[2], "content": rec_json_string},
-        "parsedRecord": {"id": my_tuple[2], "content": rec_json },
+        "rawRecord": raw_record,
+        "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": my_tuple[4]},
         "externalIdsHolder": {"instanceId": my_tuple[1]},
         "metadata": my_tuple[3],
         "state": "ACTUAL",
-        "leaderRecordStatus": rec_json["leader"][5],
+        "leaderRecordStatus": parsed_record["content"]["leader"][5],
     }
-    if  rec_json["leader"][5] in [*"acdnposx"]:
-        record["leaderRecordStatus"] = rec_json["leader"][5]
+    if parsed_record["content"]["leader"][5] in [*"acdnposx"]:
+        record["leaderRecordStatus"] = parsed_record["content"]["leader"][5]
     else:
         record["leaderRecordStatus"] = "d"
-    return f"{record['id']}\t{json.dumps(record)}\n"
+    return f"{record['id']}\t{json.dumps(record)}"

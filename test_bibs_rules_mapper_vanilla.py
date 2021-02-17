@@ -1,3 +1,4 @@
+import types
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import unittest
 from lxml import etree
@@ -430,6 +431,11 @@ class TestRulesMapperVanilla(unittest.TestCase):
         record = self.default_map("test_notes_50x.xml", xpath)
         m = message + "\n" + record[1]
         notes = list([note["note"] for note in record[0]["notes"]])
+        so = list([note["staffOnly"] for note in record[0]["notes"]])
+        print(so)
+        with self.subTest("staffOnly"):
+            for s in so:
+                self.assertEqual(type(s),bool)
         with self.subTest("500$a"):
             self.assertIn(
                 '"Embedded application development for home and industry."--Cover',

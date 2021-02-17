@@ -91,7 +91,7 @@ class RulesMapperBase:
             self.migration_report[header][measure_to_add] += 1
 
     def write_migration_report(self, report_file):
-
+           
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
@@ -190,9 +190,14 @@ class RulesMapperBase:
                     if marc_field.tag == "655":
                         values[0] = f"Genre: {values[0]}"
                     self.add_value_to_target(rec, target, values)
-                elif has_value_to_add(mapping):
-                    value = [mapping["rules"][0]["value"]]
-                    self.add_value_to_target(rec, target, value)
+                elif has_value_to_add(mapping):                    
+                    value = mapping["rules"][0]["value"]
+                    if value == "true":
+                        self.add_value_to_target(rec, target, [True])
+                    elif value == "false":
+                        self.add_value_to_target(rec, target, [False])
+                    else:
+                        self.add_value_to_target(rec, target, [value])
                 else:
                     value = marc_field.format_field() if marc_field else ""
                     self.add_value_to_target(rec, target, [value])
@@ -241,7 +246,13 @@ class RulesMapperBase:
                         value1, condition_types, marc_field, parameter
                     )
         elif has_value_to_add(mapping):
-            return [mapping["rules"][0]["value"]]
+            value = mapping["rules"][0]["value"]
+            if value == "false":
+                return [False]
+            elif value == "true":
+                return [True]
+            else:
+                return [value]
         elif not mapping.get("rules", []) or not mapping["rules"][0].get(
             "conditions", []
         ):
@@ -269,9 +280,7 @@ class RulesMapperBase:
                         sc_prop = sc_prop[target]  # set current property
                     else:  # next level. take the properties from the items
                         sc_prop = schema_parent["items"]["properties"][target]
-                    if (
-                        target not in rec and not schema_parent
-                    ):  # have we added this already?
+                    if target not in rec and not schema_parent:  # have we added this already?
                         if is_array_of_strings(sc_prop):
                             rec[target] = []
                             # break
@@ -284,6 +293,7 @@ class RulesMapperBase:
                             and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
+                            print("This should be unreachable code")
                             raise Exception("This should be unreachable code")
                             # print(f"break! {target} {prop} {value}")
                             if len(rec[parent][-1]) > 0:
