@@ -152,8 +152,9 @@ def write_to_file(file, pg_dump, folio_record):
 
 
 def get_srs_string(my_tuple):
-    raw_record = {"id": my_tuple[2], "content": my_tuple[0].as_json()}
-    parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple[0].as_json())}
+    my_tuple_json = my_tuple[0].as_json()
+    raw_record = {"id": my_tuple[2], "content": my_tuple_json}
+    parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple_json)}
     record = {
         "id": my_tuple[2],
         "deleted": False,
