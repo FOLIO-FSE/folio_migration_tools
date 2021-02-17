@@ -284,6 +284,7 @@ class RulesMapperBase:
                             and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
+                            raise Exception("This should be unreachable code")
                             # print(f"break! {target} {prop} {value}")
                             if len(rec[parent][-1]) > 0:
                                 rec[parent][-1][target] = value[0]
@@ -333,26 +334,31 @@ class RulesMapperBase:
                     parent = target
 
     def add_value_to_first_level_target(self, rec, target_string, value):
-        # print(f"{target_string} {value} {rec}")        
+        # print(f"{target_string} {value} {rec}")
         sch = self.schema["properties"]
-        
+
         if not target_string or target_string not in sch:
-            raise Exception(f"Target string {target_string} not in Schema! Target type: {sch.get(target_string,{}).get('type','')} Value: {value}")
-        
+            raise Exception(
+                f"Target string {target_string} not in Schema! Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+            )
+
         target_field = sch.get(target_string, {})
-        if (target_field.get("type", "") == "array"
+        if (
+            target_field.get("type", "") == "array"
             and target_field.get("items", {}).get("type", "") == "string"
         ):
-            
+
             if target_string not in rec:
                 rec[target_string] = value
             else:
                 rec[target_string].extend(value)
 
-        elif target_field.get("type","") == "string":
+        elif target_field.get("type", "") == "string":
             rec[target_string] = value[0]
         else:
-            raise Exception(f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}")
+            raise Exception(
+                f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+            )
 
     def create_entity(self, entity_mappings, marc_field, entity_parent_key):
         entity = {}
@@ -387,12 +393,15 @@ class RulesMapperBase:
             if all(entity.values()) or e_parent == "electronicAccess":
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
-                sfs = "-".join(list([f[0] for f in marc_field]))
-                # print(sfs)
+                sfs = " - ".join(list([f[0] for f in marc_field]))
+
+                pattern = ' - '.join(f"{k}:{bool(v)}" for k,v in entity.items())
                 self.add_to_migration_report(
-                    "Incomplete entity mapping (a code issue)",
-                    f"{marc_field.tag} {sfs}",
-                )
+                    "Incomplete entity mapping (a code issue) adding entity",
+                    f"{marc_field.tag} {e_parent} {pattern} {sfs} ",
+                )                
+                # Experimental
+                self.add_entity_to_record(entity, e_parent, rec)
 
     def apply_rule(self, value, condition_types, marc_field, parameter):
         v = value

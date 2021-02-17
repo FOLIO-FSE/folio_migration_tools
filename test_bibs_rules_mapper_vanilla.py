@@ -34,7 +34,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
         }
         file_path = f"./tests/test_data/default/{file_name}"
         record = pymarc.parse_xml_to_array(file_path)[0]
-        result = self.mapper.parse_bib(record, "source")
+        (result, other) = self.mapper.parse_bib(record, "source")
         if self.config.validate_json_schema:
             validate(result, self.instance_schema)
         root = etree.parse(file_path)
