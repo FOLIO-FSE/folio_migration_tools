@@ -14,6 +14,7 @@ class HoldingsProcessor:
     def __init__(self, mapper, folio_client, results_file, args):
         self.results_file = results_file
         self.records_count = 0
+        self.missing_instance_id_count = 0
         self.mapper = mapper
         self.args = args
         self.start = time.time()
@@ -28,6 +29,12 @@ class HoldingsProcessor:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record)
+            if not folio_rec.get("instanceId", ""):
+                self.missing_instance_id_count += 1
+                if self.missing_instance_id_count > 1000:
+                    raise Exception(f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}")
+
+
             write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
@@ -73,7 +80,7 @@ class HoldingsProcessor:
             "Saving map of {} old and new IDs to {}".format(len(id_map), path)
         )
         with open(path, "w+") as id_map_file:
-            json.dump(id_map, id_map_file, indent=4)
+            json.dump(id_map, id_map_file)
         logging.warning(f"{self.records_count} records processed")
         mrf = os.path.join(self.args.result_folder, "holdings_transformation_report.md")
         with open(mrf, "w+") as report_file:

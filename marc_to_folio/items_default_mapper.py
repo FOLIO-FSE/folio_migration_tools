@@ -4,6 +4,7 @@ import logging
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 import uuid
 import json
+import ctypes
 import csv
 import sys
 import traceback
@@ -11,7 +12,7 @@ from datetime import datetime
 from folioclient import FolioClient
 from typing import Set, Dict, List
 
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
 class ItemsDefaultMapper(RulesMapperBase):
@@ -81,10 +82,10 @@ class ItemsDefaultMapper(RulesMapperBase):
             f"Default Location code is {self.item_to_item_map['defaultLocationCode']}",
             flush=True,
         )
-        self.default_location = self.locations_map.get(
-            self.item_to_item_map["defaultLocationCode"],
+        self.default_location_uuid = self.get_loc_id(
+            self.item_to_item_map["defaultLocationCode"]
         )
-        print(f"Default Location UUID is {self.default_location}", flush=True)
+        print(f"Default Location UUID is {self.default_location_uuid}", flush=True)
 
         print(
             f"Default Material type code is {self.item_to_item_map['defaultMaterialTypeName']}",
@@ -289,7 +290,7 @@ class ItemsDefaultMapper(RulesMapperBase):
         )
         if not folio_loc_id:
             self.add_stats(self.stats, "Location code not found in FOLIO")
-            raise ValueError(f"Location code not found in FOLIO: {loc_code}")
+            raise ValueError(f"Location code not found in FOLIO: \"{loc_code}\"")
         return folio_loc_id
 
     def get_records(self, file):
@@ -341,9 +342,9 @@ class ItemsDefaultMapper(RulesMapperBase):
             self.add_to_migration_report(
                 "Missing location codes", legacy_value)
             self.add_stats(
-                self.stats, f'Missing location codes, adding "{self.default_location}"'
+                self.stats, f'Missing location codes, adding "{self.default_location_uuid}"'
             )
-            return self.default_location
+            return self.default_location_uuid
 
     def is_string(self, target: str):
         folio_prop = self.item_schema["properties"][target]["type"]

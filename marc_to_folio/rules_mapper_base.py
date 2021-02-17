@@ -12,7 +12,7 @@ import requests
 
 
 class RulesMapperBase:
-    def __init__(self, folio_client, conditions = None):
+    def __init__(self, folio_client, conditions=None):
         self.migration_report = {}
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
@@ -24,8 +24,8 @@ class RulesMapperBase:
         self.schema = {}
         self.conditions = conditions
         self.item_json_schema = ""
-        self.mappings = None
-        print(f"Current user id is {self.folio_client.current_user}")
+        self.mappings = {}
+        print(f"Current user id is {self.folio_client.current_user}", flush=True)
 
     def report_legacy_mapping(self, field_name, present, mapped, empty=False):
         if field_name not in self.mapped_legacy_fields:
@@ -100,7 +100,10 @@ class RulesMapperBase:
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
-            report_file.write(f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n")
+            report_file.write(
+                f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
+            )
+            report_file.write(f"   \n")
             report_file.write(f"Measure | Count   \n")
             report_file.write(f"--- | ---:   \n")
             b = self.migration_report[a]
@@ -115,7 +118,10 @@ class RulesMapperBase:
         if i % 1000 == 0:
             elapsed = i / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            print(f"{elapsed_formatted} records/sec.\t\t{i:,} records processed")
+            print(
+                f"{elapsed_formatted} records/sec.\t\t{i:,} records processed",
+                flush=True,
+            )
 
     def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
         # TODO: Move to interface or parent class
@@ -258,18 +264,18 @@ class RulesMapperBase:
                 self.add_value_to_first_level_target(rec, target_string, value)
 
             else:
-                sc_parent = None
+                schema_parent = None
                 parent = None
-                sch = self.schema["properties"]
-                sc_prop = sch
-                prop = copy.deepcopy(rec)
+                schema_properties = self.schema["properties"]
+                sc_prop = schema_properties
+                # prop = copy.deepcopy(rec)
                 for target in targets:  # Iterate over names in hierarcy
                     if target in sc_prop:  # property is on this level
                         sc_prop = sc_prop[target]  # set current property
                     else:  # next level. take the properties from the items
-                        sc_prop = sc_parent["items"]["properties"][target]
+                        sc_prop = schema_parent["items"]["properties"][target]
                     if (
-                        target not in rec and not sc_parent
+                        target not in rec and not schema_parent
                     ):  # have we added this already?
                         if is_array_of_strings(sc_prop):
                             rec[target] = []
@@ -279,10 +285,11 @@ class RulesMapperBase:
                             rec[target] = [{}]
                             # break
                         elif (
-                            sc_parent
-                            and is_array_of_objects(sc_parent)
+                            schema_parent
+                            and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
+                            raise Exception("This should be unreachable code")
                             # print(f"break! {target} {prop} {value}")
                             if len(rec[parent][-1]) > 0:
                                 rec[parent][-1][target] = value[0]
@@ -291,27 +298,28 @@ class RulesMapperBase:
                             # print(parent)
                             # break
                         else:
-                            if sc_parent["type"] == "array":
-                                prop[target] = {}
-                                parent.append(prop[target])
+                            if schema_parent["type"] == "array":
+                                # prop[target] = {}
+                                # parent.append(prop[target])
+                                parent.append({})
                             else:
                                 raise Exception(
-                                    f"Edge! {target_string} {sch[target_string]}"
+                                    f"Edge! {target_string} {schema_properties[target_string]}"
                                 )
                     else:  # We already have stuff in here
                         if is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
                             sc_prop["items"]["properties"]
                         ):
                             rec[target].append({})
-                        elif sc_parent and target in rec[parent][-1]:
+                        elif schema_parent and target in rec[parent][-1]:
                             rec[parent].append({})
                             if len(rec[parent][-1]) > 0:
                                 rec[parent][-1][target] = value[0]
                             else:
                                 rec[parent][-1] = {target: value[0]}
                         elif (
-                            sc_parent
-                            and is_array_of_objects(sc_parent)
+                            schema_parent
+                            and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
                             # print(f"break! {target} {prop} {value}")
@@ -327,24 +335,35 @@ class RulesMapperBase:
                     # print(f"HIT {target} {value[0]}")
                     # prop[target] = value[0]
                     # prop = rec[target]
-                    sc_parent = sc_prop
+                    schema_parent = sc_prop
                     parent = target
 
     def add_value_to_first_level_target(self, rec, target_string, value):
         # print(f"{target_string} {value} {rec}")
         sch = self.schema["properties"]
+
+        if not target_string or target_string not in sch:
+            raise Exception(
+                f"Target string {target_string} not in Schema! Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+            )
+
+        target_field = sch.get(target_string, {})
         if (
-            sch[target_string]["type"] == "array"
-            and sch[target_string]["items"]["type"] == "string"
+            target_field.get("type", "") == "array"
+            and target_field.get("items", {}).get("type", "") == "string"
         ):
+
             if target_string not in rec:
                 rec[target_string] = value
             else:
                 rec[target_string].extend(value)
-        elif sch[target_string]["type"] == "string":
+
+        elif target_field.get("type", "") == "string":
             rec[target_string] = value[0]
         else:
-            raise Exception(f"Edge! {target_string} {sch[target_string]['type']}")
+            raise Exception(
+                f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+            )
 
     def create_entity(self, entity_mappings, marc_field, entity_parent_key):
         entity = {}
@@ -358,7 +377,9 @@ class RulesMapperBase:
                     entity[k] = values[0]
         return entity
 
-    def handle_entity_mapping(self, marc_field:pymarc.Field, entity_mapping, rec, e_per_subfield):
+    def handle_entity_mapping(
+        self, marc_field: pymarc.Field, entity_mapping, rec, e_per_subfield
+    ):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
             for sf_tuple in grouped(marc_field.subfields, 2):
@@ -377,11 +398,15 @@ class RulesMapperBase:
             if all(entity.values()) or e_parent == "electronicAccess":
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
-                sfs = "-".join(list([f[0] for f in marc_field]))
-                # print(sfs)
+                sfs = " - ".join(list([f[0] for f in marc_field]))
+
+                pattern = ' - '.join(f"{k}:{bool(v)}" for k,v in entity.items())
                 self.add_to_migration_report(
-                    "Incomplete entity mapping (a code issue)", f"{marc_field.tag} {sfs}"
-                )
+                    "Incomplete entity mapping (a code issue) adding entity",
+                    f"{marc_field.tag} {e_parent} {pattern} {sfs} ",
+                )                
+                # Experimental
+                self.add_entity_to_record(entity, e_parent, rec)
 
     def apply_rule(self, value, condition_types, marc_field, parameter):
         v = value
@@ -448,4 +473,3 @@ def is_array_of_objects(schema_property):
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
     return zip(*[iter(iterable)] * n)
-
