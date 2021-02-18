@@ -132,9 +132,7 @@ class BibsRulesMapper(RulesMapperBase):
                 else:
                     self.report_legacy_mapping(marc_field.tag, True, False, True)
 
-        self.perform_additional_parsing(
-            folio_instance, marc_record, legacy_ids
-        )
+        self.perform_additional_parsing(folio_instance, marc_record, legacy_ids)
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
 
@@ -159,16 +157,22 @@ class BibsRulesMapper(RulesMapperBase):
                     self.add_to_migration_report(
                         "Instance level callNumber", bool(instance_level_call_number)
                     )
-                id_map_string = json.dumps({"legacy_id": legacy_id, "folio_id": folio_instance["id"], "instanceLevelCallNumber": instance_level_call_number})
+                id_map_string = json.dumps(
+                    {
+                        "legacy_id": legacy_id,
+                        "folio_id": folio_instance["id"],
+                        "instanceLevelCallNumber": instance_level_call_number,
+                    }
+                )
             elif legacy_id:
-                id_map_string = json.dumps({"legacy_id": legacy_id, "folio_id": folio_instance["id"] })
+                id_map_string = json.dumps(
+                    {"legacy_id": legacy_id, "folio_id": folio_instance["id"]}
+                )
             else:
                 print(f"Legacy id is None {legacy_ids}")
         return folio_instance, id_map_string
 
-    def perform_additional_parsing(
-        self, folio_instance, marc_record, legacy_id
-    ):
+    def perform_additional_parsing(self, folio_instance, marc_record, legacy_id):
         """Do stuff not easily captured by the mapping rules"""
         folio_instance["source"] = "MARC"
         folio_instance["instanceFormatIds"] = list(
@@ -176,7 +180,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
 
         folio_instance["instanceTypeId"] = self.get_instance_type_id(marc_record)
-        
+
         folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(
             marc_record, legacy_id
         )
@@ -209,6 +213,7 @@ class BibsRulesMapper(RulesMapperBase):
 
     def get_instance_type_id(self, marc_record):
         return_id = ""
+
         def get_folio_id_by_name(f336a: str):
             match_template = f336a.lower().replace(" ", "")
             match = next(
@@ -234,19 +239,18 @@ class BibsRulesMapper(RulesMapperBase):
         if not self.folio.instance_types:
             raise Exception("No instance_types setup in tenant")
 
-        if "336" in marc_record and  "b" not in marc_record["336"]:
+        if "336" in marc_record and "b" not in marc_record["336"]:
             self.add_to_migration_report(
                 "Instance Type Mapping (336, 008)", f"Subfield b not in 336"
             )
             if "a" in marc_record["336"]:
                 return_id = get_folio_id_by_name(marc_record["336"]["a"])
-                
 
-        if "336" in marc_record and  "b" in marc_record["336"]:
+        if "336" in marc_record and "b" in marc_record["336"]:
             t = self.conditions.get_ref_data_tuple_by_code(
                 self.folio.instance_types, "instance_types", marc_record["336"]["b"]
             )
-            if not t:                
+            if not t:
                 self.add_to_migration_report(
                     "Instance Type Mapping (336, 008)",
                     f'Code {marc_record["336"]["b"]} not found in FOLIO (from 336$b)',
@@ -256,11 +260,11 @@ class BibsRulesMapper(RulesMapperBase):
                     "Instance Type Mapping (336, 008)", f"{t[1]} (from 336$b)"
                 )
                 return_id = t[0]
-        
+
         if not return_id:
             t = self.conditions.get_ref_data_tuple_by_code(
-                    self.folio.instance_types, "instance_types", "zzz"
-                )
+                self.folio.instance_types, "instance_types", "zzz"
+            )
             return_id = t[0]
         return return_id
 
@@ -359,7 +363,7 @@ class BibsRulesMapper(RulesMapperBase):
                                     )
                                     yield get_folio_id(combined_code)
 
-    def handle_hrid(self, folio_instance, marc_record):
+    def handle_hrid(self, folio_instance, marc_record:pymarc.record):
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if "hrid" not in folio_instance:
             self.add_stats(self.stats, "Records without HRID from rules. Created HRID")
@@ -368,9 +372,15 @@ class BibsRulesMapper(RulesMapperBase):
             self.hrid_counter += 1
         else:
             self.add_stats(self.stats, "Records with HRID from Rules")
-        new_001 = Field(tag="001", data=folio_instance["hrid"])
-        marc_record.remove_fields("001")
-        marc_record.add_ordered_field(new_001)
+            new_001 = Field(tag="001", data=folio_instance["hrid"])
+            new_035 = Field(
+                tag="035",
+                indicators=["0", "0"],
+                subfields=["a", marc_record["001"].value()],
+            )
+            marc_record.remove_fields("001")
+            marc_record.add_ordered_field(new_001)
+            marc_record.add_ordered_field(new_035)
 
     def get_mode_of_issuance_id(self, marc_record, legacy_id):
         level = marc_record.leader[7]
