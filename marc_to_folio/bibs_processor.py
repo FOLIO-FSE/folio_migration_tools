@@ -43,13 +43,21 @@ class BibsProcessor:
             (folio_rec, id_map_string)  = self.mapper.parse_bib(
                 marc_record, inventory_only
             )
+            prec_titles = folio_rec.get("precedingTitles",[])
+            if prec_titles:
+                self.mapper.add_to_migration_report("Preceeding and Succeeding titles", f"{len(prec_titles)}")
+                del folio_rec["precedingTitles"]
+            succ_titles = folio_rec.get("succeedingTitles",[])
+            if succ_titles:
+                del folio_rec["succeedingTitles"]
+                self.mapper.add_to_migration_report("Preceeding and Succeeding titles", f"{len(succ_titles)}")
             if self.validate_instance(folio_rec, marc_record):
                 write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
                 self.mapper.add_stats(
                     self.mapper.stats, "Successfully transformed bibs"
                 )
-                self.instance_id_map_file.write(id_map_string)
+                self.instance_id_map_file.write(f"{id_map_string}\n")
                 self.mapper.add_stats(self.mapper.stats, "Ids written to bib->instance id map")
 
         except ValueError as value_error:
