@@ -11,34 +11,11 @@ class Conditions:
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
         self.filter_last_chars = r",$"
         self.folio = folio
-        self.electronic_access_relationships = {}
         self.default_contributor_type = ""
         self.mapper = mapper
         self.default_call_number_type = {}
         self.condition_cache = {}
-        self.holdings_types = list(folio.folio_get_all("/holdings-types", "holdingsTypes"))
-        print(f"Fetched {len(self.holdings_types)} holdings types")
-        print(
-            f"Fetched {len(self.folio.modes_of_issuance)} modes of issuances",
-            flush=True,
-        )
-        print(
-            f"Fetched {len(self.folio.identifier_types)} identifier types", flush=True
-        )
-        print(f"Fetched {len(self.folio.instance_note_types)} note types", flush=True)
-        print(f"Fetched {len(self.folio.class_types)} Classification types", flush=True)
-        print(
-            f"Fetched {len(self.folio.contrib_name_types)} contrib_name_types",
-            flush=True,
-        )
-        print(
-            f"Fetched {len(self.folio.contributor_types)} contributor_types", flush=True
-        )
-        print(f"Fetched {len(self.folio.alt_title_types)} alt_title_types", flush=True)
-        print(f"Fetched {len(self.folio.instance_types)} instance_types", flush=True)
-        print(
-            f"Fetched {len(self.folio.instance_formats)} instance_formats", flush=True
-        )
+        self.holdings_types = []
         self.electronic_access_relationships = list(
             self.folio.folio_get_all(
                 "/electronic-access-relationships",
@@ -46,41 +23,22 @@ class Conditions:
                 "?query=cql.allRecords=1 sortby name",
             )
         )
+        print(
+            f"Fetched {len(self.electronic_access_relationships)} electronic_access_relationships",
+            flush=True,
+        )
         self.default_contributor_name_type = self.folio.contrib_name_types[0]["id"]
         print(
             f"Default contributor name type is {self.default_contributor_name_type}",
             flush=True,
         )
-        print(
-            f"Fetched {len(self.electronic_access_relationships)} electronic_access_relationships",
-            flush=True,
-        )
+       
         self.ref_data_dicts = {}
-        self.holding_note_types = list(
-            self.folio.folio_get_all(
-                "/holdings-note-types",
-                "holdingsNoteTypes",
-                "?query=cql.allRecords=1 sortby name",
-            )
-        )
-        print(f"Fetched {len(self.holding_note_types)} holding_note_types", flush=True)
+        self.holding_note_types = [] 
 
-        self.call_number_types = list(
-            self.folio.folio_get_all(
-                "/call-number-types",
-                "callNumberTypes",
-                "?query=cql.allRecords=1 sortby name",
-            )
-        )
-        print(f"Fetched {len(self.call_number_types)} call_number_types", flush=True)
+        self.call_number_types = []
 
-        self.locations = list(
-            self.folio.folio_get_all(
-                "/locations",
-                "locations",
-            )
-        )
-        print(f"Fetched {len(self.locations)} locations", flush=True)
+        self.locations = [] 
         print(
             f"{len(self.folio.contrib_name_types)} contrib_name_types in tenant",
             flush=True,
@@ -188,6 +146,15 @@ class Conditions:
         return my_id
 
     def condition_set_holding_note_type_id_by_name(self, value, parameter, marc_field):
+        if not self.holding_note_types:
+            self.holding_note_types = list(
+                self.folio.folio_get_all(
+                    "/holdings-note-types",
+                    "holdingsNoteTypes",
+                    "?query=cql.allRecords=1 sortby name",
+                )
+            )
+            print(f"Fetched {len(self.holding_note_types)} holding_note_types", flush=True)
         t = self.get_ref_data_tuple_by_name(
             self.holding_note_types, "holding_note_types", parameter["name"]
         )
@@ -304,7 +271,19 @@ class Conditions:
         ind2 = marc_field.indicator2
         name = enum.get(ind2, enum["8"])
         if not self.electronic_access_relationships:
-            raise ValueError("No electronic_access_relationships setup in tenant")
+            self.electronic_access_relationships = list(
+                self.folio.folio_get_all(
+                    "/electronic-access-relationships",
+                    "electronicAccessRelationships",
+                    "?query=cql.allRecords=1 sortby name",
+                )
+            )
+            print(
+                f"Fetched {len(self.electronic_access_relationships)} electronic_access_relationships",
+                flush=True,
+            )
+            if not self.electronic_access_relationships:
+                raise ValueError("No electronic_access_relationships setup in tenant")
         t = self.get_ref_data_tuple_by_name(
             self.electronic_access_relationships,
             "electronic_access_relationships",
@@ -319,7 +298,16 @@ class Conditions:
         self, value, parameter, marc_field: pymarc.Field
     ):
         if not self.call_number_types:
-            raise ValueError("No call_number_types setup in tenant")
+            self.call_number_types = list(
+                self.folio.folio_get_all(
+                    "/call-number-types",
+                    "callNumberTypes",
+                    "?query=cql.allRecords=1 sortby name",
+                )
+            )
+            print(f"Fetched {len(self.call_number_types)} call_number_types", flush=True)
+            if not self.call_number_types:
+                raise ValueError("No call_number_types setup in tenant")
 
         if not self.default_call_number_type:
             self.default_call_number_type = next(
@@ -370,6 +358,9 @@ class Conditions:
         return self.default_call_number_type["id"]
 
     def condition_set_electronic_if_serv_remo(self, value, parameter, marc_field):
+        if not self.holdings_types:
+            self.holdings_types = list(self.folio.folio_get_all("/holdings-types", "holdingsTypes"))
+            print(f"Fetched {len(self.holdings_types)} holdings types")
         if value in ["serv", "remo"]:
             t = self.conditions.get_ref_data_tuple_by_name(self.holdings_types, "hold_types", "Electronic" )
             if t:
@@ -407,6 +398,14 @@ class Conditions:
         return t[0]
 
     def condition_set_location_id_by_code(self, value, parameter, marc_field):
+        if not self.locations:
+            self.locations = list(
+                self.folio.folio_get_all(
+                    "/locations",
+                    "locations",
+                )
+            )
+            print(f"Fetched {len(self.locations)} locations", flush=True)
         self.mapper.add_to_migration_report("Legacy location codes", value)
 
         # Setup mapping if not already set up

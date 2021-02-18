@@ -400,7 +400,7 @@ class RulesMapperBase:
                     self.add_entity_to_record(entity, e_parent, rec)
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
-            if all(entity.values()) or e_parent == "electronicAccess":
+            if all(v for k,v in entity.items() if k not in ["staffOnly", "primary"]) or e_parent == "electronicAccess":
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
                 sfs = " - ".join(list([f[0] for f in marc_field]))
@@ -410,8 +410,8 @@ class RulesMapperBase:
                     "Incomplete entity mapping (a code issue) adding entity",
                     f"{marc_field.tag} {e_parent} {pattern} {sfs} ",
                 )                
-                # Experimental
-                self.add_entity_to_record(entity, e_parent, rec)
+                # Experimental                
+                # self.add_entity_to_record(entity, e_parent, rec)
 
     def apply_rule(self, value, condition_types, marc_field, parameter):
         v = value

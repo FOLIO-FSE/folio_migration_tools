@@ -181,9 +181,20 @@
                     <datafield ind1=" " ind2="0" tag="650">
                         <subfield code="a">Computer programming.</subfield>
                     </datafield>
-                    <datafield ind1="1" ind2=" " tag="700">
+                    <datafield ind1="1" ind2="0" tag="700">
                         <subfield code="a">Weaver, James L.</subfield>
-                        <subfield code="e">contributor.</subfield>
+                        <subfield code="e">contributor
+                        </subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2="0" tag="710">
+                        <subfield code="a">Organization</subfield>
+                        <subfield code="e">contributor
+                        </subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2="0" tag="711">
+                        <subfield code="a">Conference</subfield>
+                        <subfield code="e">contributor
+                        </subfield>
                     </datafield>
                     <datafield ind1="0" ind2=" " tag="730">
                         <subfield code="a">Oracle Press book.</subfield>

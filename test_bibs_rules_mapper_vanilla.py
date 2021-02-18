@@ -27,6 +27,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
             args_dict = {"suppress": False, "ils_flavour": "voyager"}
             cls.mapper = BibsRulesMapper(cls.folio, SimpleNamespace(**args_dict))
             cls.instance_schema = cls.folio.get_instance_json_schema()
+            print("Done setupclass in test")
 
     def default_map(self, file_name, xpath):
         ns = {
@@ -58,7 +59,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
     def test_multiple336s(self):
         xpath = "//marc:datafield[@tag='336']"
         record = self.default_map("test_multiple_336.xml", xpath)
-        self.assertEquals(
+        self.assertEqual(
             "8105bd44-e7bd-487e-a8f2-b804a361d92f", record[0]["instanceTypeId"]
         )
 
@@ -296,8 +297,9 @@ class TestRulesMapperVanilla(unittest.TestCase):
         record = self.default_map("test_series_duplicates.xml", xpath)
         m = message + "\n" + record[1]
         # self.assertIn("Oracle Press book", record[0]["series"], m)
+        self.assertIn("Oracle Press book", record[0]["series"], m)
         self.assertIn("McGraw-Hill technical education series", record[0]["series"], m)
-        self.assertEqual(1, len(record[0]["series"]), m)
+        self.assertEqual(2, len(record[0]["series"]), m)
 
     def test_contributors(self):
         message = "Should add contributors (100, 111 700) to the contributors list"
@@ -313,6 +315,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
             self.assertIn("Lous, Christian Carl, 1724-1804", contributors, m)
         with self.subTest("700$e (contributor)"):
             self.assertIn("Weaver, James L", contributors, m)
+        print(json.dumps(record[0]["contributors"],indent=4))
         with self.subTest("111$acde, no contrib type id"):
             self.assertIn("Wolfcon Durham 2018", contributors, m)
         with self.subTest("111$abbde4"):
@@ -617,13 +620,13 @@ class TestRulesMapperVanilla(unittest.TestCase):
             record = self.default_map("test1.xml", xpath)
             moi = record[0]["modeOfIssuanceId"]
             m = message + "\n" + record[1]
-            self.assertIn("0345dbb6-2c22-40ca-b556-a52a3104d402", moi)
+            self.assertIn("9d18a02f-5897-4c31-9106-c9abb5c7ae8b", moi)
 
         with self.subTest("s"):
             record = self.default_map("test4.xml", xpath)
             moi = record[0]["modeOfIssuanceId"]
             m = message + "\n" + record[1]
-            self.assertIn("926ff973-ee50-4fb6-9e59-80947f5aca69", moi)
+            self.assertIn("068b5344-e2a6-40df-9186-1829e13cd344", moi)
 
     def test_notes_56x(self):
         message = "Should add notes (561-567) to notes list"
@@ -693,15 +696,15 @@ class TestRulesMapperVanilla(unittest.TestCase):
         with self.subTest("2-character code in 338"):
             record = self.default_map("test_carrier_and_format.xml", xpath)
             # print(json.dumps(record, sort_keys=True, indent=4))
-            formats = record[0]["instanceFormatIds"]
+            moi = record[0]["modeOfIssuanceId"]
             m = message + "\n" + record[1]
-            self.assertIn("8d088179-d13a-425a-aff7-b7f9903aeabb", formats)
+            self.assertEqual("9d18a02f-5897-4c31-9106-c9abb5c7ae8b", moi)
 
         with self.subTest("337+338"):
             record = self.default_map("test_carrier_and_format.xml", xpath)
             formats = record[0]["instanceFormatIds"]
             m = message + "\n" + record[1]
-            self.assertIn("4e7fe4f2-fcce-41a4-ad82-0d3963c71aa3", formats)
+            self.assertIn("8d511d33-5e85-4c5d-9bce-6e3c9cd0c324", formats)
 
         with self.subTest("2 338$b"):
             record = self.default_map("test_carrier_and_format.xml", xpath)
