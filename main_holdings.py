@@ -75,7 +75,13 @@ def main():
     ) as mapping_rules_file, open(
         os.path.join(args.result_folder, "folio_holdings.json"), "w+"
     ) as results_file:
-        instance_id_map = json.load(json_file)
+        instance_id_map = {}
+        for index, json_string in enumerate(json_file):
+            # {"legacy_id", "folio_id","instanceLevelCallNumber"}
+            map_object = json.loads(json_string)
+            instance_id_map[map_object["legacy_id"]] = map_object
+        print(f"loaded {index} migrated instance IDs")
+        
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
         rules_file = json.load(mapping_rules_file)
 
