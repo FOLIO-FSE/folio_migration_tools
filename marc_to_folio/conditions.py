@@ -241,7 +241,7 @@ class Conditions:
                 self.folio.contributor_types, "contrib_types_n", normalized_subfield
             )
 
-            if not t:
+            if not t:   
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
                     f"Mapping failed for $e {normalized_subfield} ({subfield}) ",
@@ -376,10 +376,11 @@ class Conditions:
                 ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
             )
         for subfield in marc_field.get_subfields("4", "e"):
+            normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
             for cont_type in self.folio.contributor_types:
-                if subfield == cont_type["code"]:
+                if normalized_subfield == cont_type["code"]:
                     return cont_type["name"]
-                elif subfield == cont_type["name"]:
+                elif normalized_subfield == cont_type["name"]:
                     return cont_type["name"]
         return self.default_contributor_type["name"]
 
