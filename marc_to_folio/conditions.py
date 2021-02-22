@@ -6,6 +6,7 @@ import pymarc
 
 class Conditions:
     def __init__(self, folio, mapper):
+        print("Init conditions!")
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
         self.stats = {}
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
@@ -46,7 +47,6 @@ class Conditions:
 
         self.call_number_types = []
 
-        self.locations = [] 
         print(
             f"{len(self.folio.contrib_name_types)} contrib_name_types in tenant",
             flush=True,
