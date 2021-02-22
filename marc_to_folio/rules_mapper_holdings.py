@@ -17,7 +17,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.ref_data_dicts = {}
         self.conditions.holdings_types = list(folio.folio_get_all("/holdings-types", "holdingsTypes"))
         self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
-        print(f"Fetched {len(self.holdings_types)} holdings types")
+        print(f"Fetched {len(self.conditions.holdings_types)} holdings types")
         self.default_holdings_type_id = self.conditions.get_ref_data_tuple_by_name(
             self.conditions.holdings_types, "holdings_types", "Monographic"
         )[0]
