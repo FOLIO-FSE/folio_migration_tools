@@ -20,7 +20,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.default_holdings_type_id = self.get_ref_data_tuple(
             self.holdings_types, "holdings_types", "Monographic", "name"
         )[0]
-
+        print(len(self.conditions.locations))
         self.default_location_id = self.get_ref_data_tuple(
             self.conditions.locations, "locations", default_location_code, "code"
         )[0]
@@ -114,7 +114,7 @@ class RulesMapperHoldings(RulesMapperBase):
             else None
         )
         if not ref_object:
-            logging.debug(f"No matching element for {key_value} in {list(ref_data)}")
+            print(f"No matching element for {key_value} in {list(ref_data)}")
             return None
         return ref_object
 
