@@ -263,7 +263,7 @@ class Conditions:
 
     def condition_set_instance_id_by_map(self, value, parameter, marc_field):
         if value in self.mapper.instance_id_map:
-            return self.mapper.instance_id_map[value]["id"]
+            return self.mapper.instance_id_map[value]["folio_id"]
         else:
             self.mapper.add_stats(self.mapper.stats, "bib id not in map")
             raise ValueError(f"Old instance id not in map: {value} Field: {marc_field}")
