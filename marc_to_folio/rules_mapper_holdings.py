@@ -15,13 +15,13 @@ class RulesMapperHoldings(RulesMapperBase):
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        self.holdings_types = list(folio.folio_get_all("/holdings-types", "holdingsTypes"))
+        self.conditions.holdings_types = list(folio.folio_get_all("/holdings-types", "holdingsTypes"))
         self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
         print(f"Fetched {len(self.holdings_types)} holdings types")
-        self.default_holdings_type_id = self.get_ref_data_tuple(
-            self.holdings_types, "holdings_types", "Monographic", "name"
+        self.default_holdings_type_id = self.conditions.get_ref_data_tuple_by_name(
+            self.conditions.holdings_types, "holdings_types", "Monographic"
         )[0]
-        self.default_location_id =  self.get_ref_data_tuple_by_code(self.conditions.locations, "locations", default_location_code) [0]
+        self.default_location_id =  self.conditions.get_ref_data_tuple_by_code(self.conditions.locations, "locations", default_location_code) [0]
         print(f"Default location code is {self.default_location_id}")
 
     def parse_hold(self, marc_record, inventory_only=False):
