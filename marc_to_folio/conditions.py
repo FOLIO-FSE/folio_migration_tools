@@ -13,6 +13,7 @@ class Conditions:
         self.folio = folio
         self.default_contributor_type = ""
         self.mapper = mapper
+        print("Fetching locations")
         self.locations = list(
                 self.folio.folio_get_all(
                     "/locations",
