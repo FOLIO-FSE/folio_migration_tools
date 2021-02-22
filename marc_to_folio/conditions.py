@@ -13,6 +13,13 @@ class Conditions:
         self.folio = folio
         self.default_contributor_type = ""
         self.mapper = mapper
+        self.locations = list(
+                self.folio.folio_get_all(
+                    "/locations",
+                    "locations",
+                )
+            )
+        print(f"Fetched {len(self.locations)} locations", flush=True)
         self.default_call_number_type = {}
         self.condition_cache = {}
         self.holdings_types = []
