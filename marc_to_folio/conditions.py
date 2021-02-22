@@ -24,7 +24,6 @@ class Conditions:
         print(f"Fetched {len(self.locations)} locations", flush=True)
         self.default_call_number_type = {}
         self.condition_cache = {}
-        self.holdings_types = []
         self.electronic_access_relationships = list(
             self.folio.folio_get_all(
                 "/electronic-access-relationships",
