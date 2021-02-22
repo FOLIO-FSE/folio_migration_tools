@@ -8,7 +8,8 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(self, folio, instance_id_map, location_map, default_location_code, args):
-        super().__init__(folio, Conditions(folio,self))
+        self.conditions = Conditions(folio,self)
+        super().__init__(folio, self.conditions)
         self.instance_id_map = instance_id_map
         self.location_map = location_map
         self.schema = self.holdings_json_schema
@@ -20,10 +21,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.default_holdings_type_id = self.get_ref_data_tuple(
             self.holdings_types, "holdings_types", "Monographic", "name"
         )[0]
-        print(len(self.conditions.locations))
-        self.default_location_id = self.get_ref_data_tuple(
-            self.conditions.locations, "locations", default_location_code, "code"
-        )[0]
+        self.default_location_id =  self.get_ref_data_tuple_by_code(self.conditions.locations, "locations", default_location_code) [0]
         print(f"Default location code is {self.default_location_id}")
 
     def parse_hold(self, marc_record, inventory_only=False):
