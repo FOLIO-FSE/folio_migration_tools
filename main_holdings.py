@@ -87,7 +87,7 @@ def main():
 
         print(f"Locations in map: {len(location_map)}")
         print(any(location_map))
-        print(f'Dedaule location code {rules_file["defaultLocationCode"]}')
+        print(f'Default location code {rules_file["defaultLocationCode"]}')
         print(f"{len(instance_id_map)} Instance ids in map")
         mapper = RulesMapperHoldings(
             folio_client,
