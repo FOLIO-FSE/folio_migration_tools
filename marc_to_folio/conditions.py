@@ -3,7 +3,9 @@ import pymarc
 
 
 class Conditions:
-    def __init__(self, folio, mapper):
+    def __init__(self, folio, mapper, default_location_code = ""
+        ):
+        self.default_location_code = default_location_code
         print("Init conditions!")
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
         self.stats = {}
