@@ -98,12 +98,3 @@ def add_stats(stats, a):
         stats[a] = 1
     else:
         stats[a] += 1
-
-
-def print_dict_to_md_table(my_dict, h1="Measure", h2="Number"):
-    # TODO: Move to interface or parent class
-    d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
-    print(f"{h1} | {h2}")
-    print("--- | ---:")
-    for k, v in d_sorted.items():
-        print(f"{k} | {v:,}")

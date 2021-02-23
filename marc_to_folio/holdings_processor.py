@@ -88,7 +88,7 @@ class HoldingsProcessor:
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
             report_file.write(f"## MFHD records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
-                self.mapper.stats, report_file, "  Measure  ", "Count   \n",
+                self.mapper.stats, report_file, "Measure","Count",
             )
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)

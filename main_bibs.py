@@ -98,8 +98,8 @@ class Worker:
             self.mapper.print_dict_to_md_table(
                 self.mapper.stats,
                 report_file,
-                "  Measure  ",
-                "Count   \n",
+                "Measure",
+                "Count",
             )
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)

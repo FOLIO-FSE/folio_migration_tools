@@ -274,10 +274,6 @@ class ItemsDefaultMapper(RulesMapperBase):
                 "Top duplicate item ids", f"{s} - {v}")
             if i > 5:
                 break
-        # print("## Item transformation counters")
-        # self.print_dict_to_md_table(self.stats)
-        # self.write_migration_report()
-        # self.print_mapping_report()
 
     def get_loc_id(self, loc_code):
         folio_loc_id = next(
