@@ -9,21 +9,14 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(self, folio, instance_id_map, location_map, default_location_code, args):
         self.conditions = Conditions(folio,self)
+        self.folio = folio
         super().__init__(folio, self.conditions)
         self.instance_id_map = instance_id_map
         self.location_map = location_map
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        self.conditions.holdings_types = list(folio.folio_get_all("/holdings-types", "holdingsTypes"))
-        self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
-        print(f"Fetched {len(self.conditions.holdings_types)} holdings types")
-        self.default_holdings_type_id = self.conditions.get_ref_data_tuple_by_name(
-            self.conditions.holdings_types, "holdings_types", "Monographic"
-        )[0]
-        print(len(self.conditions.locations))
-        self.default_location_id =  self.conditions.get_ref_data_tuple_by_code(self.conditions.locations, "locations", default_location_code) [0]
-        print(f"Default location code is {self.default_location_id}")
+
 
     def parse_hold(self, marc_record, inventory_only=False):
         """ Parses a mfhd recod into a FOLIO Inventory instance object
@@ -82,7 +75,7 @@ class RulesMapperHoldings(RulesMapperBase):
         if not folio_holding.get("holdingsTypeId", ""):
             htype_map = {"u":"Unknown", "v":"Multi-part monograph", "x":"Monographic", "y":"Serial"}
             htype = htype_map.get(ldr06, "")
-            t = self.conditions.get_ref_data_tuple_by_name(self.conditions.holdings_types, "hold_types", htype)
+            t = self.conditions.get_ref_data_tuple_by_name(self.folio.holdings_types, "hold_types", htype)
             if t:
                 folio_holding["holdingsTypeId"] = t[0]
                 self.add_to_migration_report("Holdings type mapping", t[1])
