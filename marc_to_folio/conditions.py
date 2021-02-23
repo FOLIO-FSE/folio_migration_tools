@@ -3,8 +3,7 @@ import pymarc
 
 
 class Conditions:
-    def __init__(self, folio, mapper, default_location_code = ""
-        ):
+    def __init__(self, folio, mapper, default_location_code=""):
         self.default_location_code = default_location_code
         print("Init conditions!")
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
@@ -41,18 +40,21 @@ class Conditions:
         print(f"{len(self.folio.contributor_types)}\tcontributor_types", flush=True)
         print(f"{len(self.folio.class_types)}\tclass_types", flush=True)
         print(f"{len(self.folio.identifier_types)}\tidentifier_types", flush=True)
-        print(f"{len(self.folio.alt_title_types )}\talt_title_types", flush=True)        
+        print(f"{len(self.folio.alt_title_types )}\talt_title_types", flush=True)
         self.holdings_types = list(
             self.folio.folio_get_all("/holdings-types", "holdingsTypes")
         )
-                
+
         self.default_holdings_type_id = self.get_ref_data_tuple_by_name(
             self.holdings_types, "holdings_types", "Monographic"
         )[0]
-        self.default_location_id =  self.get_ref_data_tuple_by_code(self.folio.locations, "locations", self.default_location_code) [0]
-        print(f"Default location code is {self.default_location_id}")
+        if self.default_location_code:
+            self.default_location_id = self.get_ref_data_tuple_by_code(
+                self.folio.locations, "locations", self.default_location_code
+            )[0]
+            print(f"Default location code is {self.default_location_id}")
         print(f"{len(self.holdings_types)}\tholdings types")
-        
+
         # Raise for empty settings
         if not self.folio.contributor_types:
             raise Exception("No contributor_types setup in tenant")
@@ -88,17 +90,15 @@ class Conditions:
             flush=True,
         )
         self.default_contributor_type = next(
-                ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
-            )
+            ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
+        )
         print(
             f"contributor type\t{self.default_contributor_type}",
             flush=True,
         )
         self.default_call_number_type = next(
-                ct
-                for ct in self.folio.call_number_types
-                if ct["name"] == "Other scheme"
-            )
+            ct for ct in self.folio.call_number_types if ct["name"] == "Other scheme"
+        )
         print(
             f"call_number_type\t{self.default_call_number_type}",
             flush=True,
@@ -254,7 +254,9 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped note types", t[1])
             return t[0]
         except:
-            raise ValueError(f"Instance note type not found for {marc_field} {parameter}")
+            raise ValueError(
+                f"Instance note type not found for {marc_field} {parameter}"
+            )
 
     def condition_set_contributor_type_id(self, value, parameter, marc_field):
         for subfield in marc_field.get_subfields("4"):
@@ -399,7 +401,7 @@ class Conditions:
                 f"Alternative title type not found for {parameter['name']} {marc_field}"
             )
 
-    def condition_set_location_id_by_code(self, value, parameter, marc_field):       
+    def condition_set_location_id_by_code(self, value, parameter, marc_field):
         self.mapper.add_to_migration_report("Legacy location codes", value)
 
         # Setup mapping if not already set up
@@ -497,4 +499,3 @@ def validate_uuid(my_uuid):
     else:
         return False"""
     return True
-    
