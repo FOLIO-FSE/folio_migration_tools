@@ -46,10 +46,10 @@ class Conditions:
             self.folio.folio_get_all("/holdings-types", "holdingsTypes")
         )
                 
-        self.default_holdings_type_id = self.conditions.get_ref_data_tuple_by_name(
-            self.conditions.holdings_types, "holdings_types", "Monographic"
+        self.default_holdings_type_id = self.get_ref_data_tuple_by_name(
+            self.holdings_types, "holdings_types", "Monographic"
         )[0]
-        self.default_location_id =  self.get_ref_data_tuple_by_code(self.locations, "locations", default_location_code) [0]
+        self.default_location_id =  self.get_ref_data_tuple_by_code(self.locations, "locations", self.default_location_code) [0]
         print(f"Default location code is {self.default_location_id}")
         print(f"{len(self.holdings_types)}\tholdings types")
         
@@ -367,7 +367,7 @@ class Conditions:
 
     def condition_set_electronic_if_serv_remo(self, value, parameter, marc_field):
         if value in ["serv", "remo"]:
-            t = self.conditions.get_ref_data_tuple_by_name(
+            t = self.get_ref_data_tuple_by_name(
                 self.holdings_types, "hold_types", "Electronic"
             )
             if t:
