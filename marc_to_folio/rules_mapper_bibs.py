@@ -369,14 +369,16 @@ class BibsRulesMapper(RulesMapperBase):
             num_part = str(self.hrid_counter).zfill(11)
             folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
-            new_035 = Field(
-                tag="035",
-                indicators=["0", "0"],
-                subfields=["a", marc_record["001"].value()],
-            )
-            marc_record.remove_fields("001")
+            if "001" in marc_record:
+                new_035 = Field(
+                    tag="035",
+                    indicators=["0", "0"],
+                    subfields=["a", marc_record["001"].value()],
+                )
+                marc_record.remove_fields("001")
+                marc_record.add_ordered_field(new_035)
             marc_record.add_ordered_field(new_001)
-            marc_record.add_ordered_field(new_035)
+            
             self.hrid_counter += 1
         else:
             self.add_stats(self.stats, "Records with HRID from Rules")
