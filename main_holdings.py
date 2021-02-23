@@ -78,7 +78,7 @@ def main():
         instance_id_map = {}
         for index, json_string in enumerate(json_file):
             # {"legacy_id", "folio_id","instanceLevelCallNumber"}
-            if index % 1000 == 0:
+            if index % 100000 == 0:
                 print(f"{index} instance ids loaded to map", end='\r')            
             map_object = json.loads(json_string)
             instance_id_map[map_object["legacy_id"]] = map_object
