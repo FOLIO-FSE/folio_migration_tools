@@ -49,7 +49,7 @@ class Conditions:
         self.default_holdings_type_id = self.get_ref_data_tuple_by_name(
             self.holdings_types, "holdings_types", "Monographic"
         )[0]
-        self.default_location_id =  self.get_ref_data_tuple_by_code(self.locations, "locations", self.default_location_code) [0]
+        self.default_location_id =  self.get_ref_data_tuple_by_code(self.folio.locations, "locations", self.default_location_code) [0]
         print(f"Default location code is {self.default_location_id}")
         print(f"{len(self.holdings_types)}\tholdings types")
         
