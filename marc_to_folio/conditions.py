@@ -135,7 +135,7 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped instance formats", t[1])
             return t[0]
         except:
-            print("Unmapped Instance format code", value)
+            self.mapper.add_to_migration_report("Unmapped Instance format code", value)
             return ""
 
     def condition_remove_prefix_by_indicator(self, value, parameter, marc_field):
