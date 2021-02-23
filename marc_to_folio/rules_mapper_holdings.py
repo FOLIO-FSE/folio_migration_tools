@@ -8,7 +8,8 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(self, folio, instance_id_map, location_map, default_location_code, args):
-        self.conditions = Conditions(folio,self)
+        self.conditions = Conditions(folio,self, default_location_code)
+        self.conditions.default_location_code = default_location_code
         self.folio = folio
         super().__init__(folio, self.conditions)
         self.instance_id_map = instance_id_map

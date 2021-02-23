@@ -47,7 +47,7 @@ class Conditions:
         self.default_holdings_type_id = self.conditions.get_ref_data_tuple_by_name(
             self.conditions.holdings_types, "holdings_types", "Monographic"
         )[0]
-        self.default_location_id =  self.conditions.get_ref_data_tuple_by_code(self.conditions.locations, "locations", default_location_code) [0]
+        self.default_location_id =  self.get_ref_data_tuple_by_code(self.locations, "locations", default_location_code) [0]
         print(f"Default location code is {self.default_location_id}")
         print(f"{len(self.holdings_types)}\tholdings types")
         
