@@ -295,7 +295,7 @@ class Conditions:
     def condition_set_instance_id_by_map(self, value, parameter, marc_field):
         try:
             return self.mapper.instance_id_map[value]["folio_id"]
-        except Exception as ee:
+        except:
             self.mapper.add_stats(self.mapper.stats, "bib id not in map")
             raise ValueError(f"Old instance id not in map: {value} Field: {marc_field}")
 
@@ -311,7 +311,7 @@ class Conditions:
         if not self.folio.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
         t = self.get_ref_data_tuple_by_name(
-            self.electronic_access_relationships,
+            self.folio.electronic_access_relationships,
             "electronic_access_relationships",
             name,
         )
@@ -352,7 +352,7 @@ class Conditions:
             )
             return self.default_call_number_type["id"]
         t = self.get_ref_data_tuple_by_name(
-            self.call_number_types, "cnt", call_number_type_name_temp
+            self.folio.call_number_types, "cnt", call_number_type_name_temp
         )
         if t:
             self.mapper.add_to_migration_report(
@@ -371,7 +371,7 @@ class Conditions:
                 self.holdings_types, "hold_types", "Electronic"
             )
             if t:
-                self.add_to_migration_report(
+                self.mapper.add_to_migration_report(
                     "Holdings type mapping", f"special cornell case {t[1]}"
                 )
                 return t[0]
@@ -475,10 +475,10 @@ class Conditions:
         ind2 = marc_field.indicator2
         name = enum.get(ind2, enum["3"])
 
-        if not self.electronic_access_relationships:
+        if not self.folio.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
         t = self.get_ref_data_tuple_by_name(
-            self.electronic_access_relationships,
+            self.folio.electronic_access_relationships,
             "electronic_access_relationships",
             name,
         )
@@ -490,10 +490,11 @@ class Conditions:
 
 def validate_uuid(my_uuid):
     # removed for performance reasons
-    return True
     """reg = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
     pattern = re.compile(reg)
     if pattern.match(my_uuid):
         return True
     else:
         return False"""
+    return True
+    

@@ -75,7 +75,6 @@ class RulesMapperBase:
             present_per = "{:.1%}".format(present / total_records)
             unmapped = present - v[1]
             mapped = v[1]
-            unmapped_per = "{:.1%}".format(unmapped / total_records)
             mp = mapped / total_records
             mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
             report_file.write(

@@ -35,7 +35,7 @@ class BibsProcessor:
         """processes a marc record and saves it"""
         try:
             legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
-        except Exception as ee:
+        except:
             legacy_id = ["unknown"]
         folio_rec = None
         try:
@@ -72,7 +72,7 @@ class BibsProcessor:
                 self.mapper.stats, "Bib records that faile transformation"
             )
             # raise value_error
-        except ValidationError as validation_error:
+        except ValidationError:
             self.mapper.add_stats(self.mapper.stats, "Validation Errors")
             self.mapper.add_stats(
                 self.mapper.stats, "Bib records that failed transformation"

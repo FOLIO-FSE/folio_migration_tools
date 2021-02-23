@@ -80,7 +80,6 @@ class BibsRulesMapper(RulesMapperBase):
         self.add_to_migration_report(
             "Record status (leader pos 5)", marc_record.leader[5]
         )
-        temp_inst_type = ""
         ignored_subsequent_fields = set()
         bad_tags = set()  # "907"
 

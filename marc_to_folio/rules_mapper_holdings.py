@@ -80,13 +80,13 @@ class RulesMapperHoldings(RulesMapperBase):
                 folio_holding["holdingsTypeId"] = t[0]
                 self.add_to_migration_report("Holdings type mapping", t[1])
             else:
-                folio_holding["holdingsTypeId"] = self.default_holdings_type_id
+                folio_holding["holdingsTypeId"] = self.folio.default_holdings_type_id
                 self.add_to_migration_report("Holdings type mapping", "Unknown")
             
         
-        folio_holding["callNumberTypeId"] = self.default_call_number_type_id
+        folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type_id
         if not folio_holding.get("permanentLocationId", ""):
-            folio_holding["permanentLocationId"] = self.default_location_id
+            folio_holding["permanentLocationId"] = self.conditions.default_location_id
         
         # special weird case. Likely needs fixing in the mapping rules.
         if " " in folio_holding["permanentLocationId"]:
