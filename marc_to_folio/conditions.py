@@ -44,7 +44,10 @@ class Conditions:
         self.holdings_types = list(
             self.folio.folio_get_all("/holdings-types", "holdingsTypes")
         )
-
+        self.statistical_codes = list(
+            self.folio.folio_get_all("/statistical-codes", "statisticalCodes")
+        )
+        print(f"{len(self.statistical_codes)}\tclass_types", flush=True)
         self.default_holdings_type_id = self.get_ref_data_tuple_by_name(
             self.holdings_types, "holdings_types", "Monographic"
         )[0]

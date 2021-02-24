@@ -67,6 +67,7 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.note_id = next(
             x["id"] for x in self.item_note_types if "Note" == x["name"]
         )
+        self.unmapped_stat_code_note_type = next(            (x["id"] for x in self.item_note_types if "Unmapped item statistic" == x["name"]),            self.note_id)
 
         print(
             f"Default Loan type is {self.item_to_item_map['defaultLoantypeName']}",
@@ -153,6 +154,19 @@ class ItemsDefaultMapper(RulesMapperBase):
                     elif folio_field == "itemLevelCallNumberTypeId":
                         item[folio_field] = self.handle_call_number_id(
                             legacy_value)
+
+                    elif folio_field == "statisticalCodeIds":
+                        (code_id, note) = self.handle_statistical_codes(legacy_value)
+                        if code_id:
+                            if folio_field in item and any(item[folio_field]):
+                                item[folio_field].append(code_id)
+                            else:
+                                item[folio_field] = [code_id]
+                        elif note:
+                            if "notes" in item and any(item["notes"]):
+                                item["notes"].append(note)
+                            else:
+                                item["notes"] = [note]
 
                     elif folio_field == "circulationNotes":
                         item[folio_field] = self.handle_circulation_notes(
@@ -418,6 +432,24 @@ class ItemsDefaultMapper(RulesMapperBase):
             "Unapped Material Types", f'unspecified - {" - ".join(fieldvalues)}'
         )
         return self.default_material_type[0]
+
+    def handle_statistical_codes(self, legacy_value):
+        self.add_to_migration_report("Legacy Statistical codes", legacy_value)
+        try:
+            t = self.get_ref_data_tuple_code(self.conditions.statistical_codes, "stat_codes", legacy_value)
+            self.add_to_migration_report("Mapped Legacy Statistical codes", f"{legacy_value} -> {t[1]}")
+            return (t[0],None)
+        except Exception:
+            note_to_add = {
+            "itemNoteTypeId": self.unmapped_stat_code_note_type,
+            "note": legacy_value,
+            "staffOnly": True,
+            }
+            self.add_to_migration_report("Unmapped Legacy Statistical codes. Adding note", f"{legacy_value}")
+            return (None, note_to_add)
+            
+
+
 
     def handle_loan_types(self, legacy_item: dict):
         m_keys = m_keys = list(
