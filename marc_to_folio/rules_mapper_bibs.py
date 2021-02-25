@@ -28,7 +28,7 @@ class BibsRulesMapper(RulesMapperBase):
         folio_client,
         args,
     ):
-        super().__init__(folio_client, Conditions(folio_client, self))
+        super().__init__(folio_client, Conditions(folio_client, self, "bibs"))
         self.folio = folio_client
         self.record_status = {}
         self.migration_report = {}
@@ -38,22 +38,14 @@ class BibsRulesMapper(RulesMapperBase):
         self.id_map = {}
         self.srs_recs = []
         self.schema = self.instance_json_schema
-        print("Fetching valid language codes...")
-        self.language_codes = list(self.fetch_language_codes())
         self.contrib_name_types = {}
         self.mapped_folio_fields = {}
         self.unmapped_folio_fields = {}
         self.alt_title_map = {}
-        self.identifier_types = []
         print("Fetching mapping rules from the tenant")
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
-        self.other_mode_of_issuance_id = next(
-            (
-                i["id"]
-                for i in self.folio.modes_of_issuance
-                if "unspecified" == i["name"].lower()
-            )
-        )
+        print("Fetching valid language codes...")
+        self.language_codes = list(self.fetch_language_codes())
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
         self.instance_relationships = {}
@@ -63,8 +55,16 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.hrid_prefix = self.hrid_handling["instances"]["prefix"]
         self.hrid_counter = self.hrid_handling["instances"]["startNumber"]
-        print(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
-        self.start = time.time()
+        print(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")        
+        self.other_mode_of_issuance_id = next(
+            (
+                i["id"]
+                for i in self.folio.modes_of_issuance
+                if "unspecified" == i["name"].lower()
+            )
+        )
+        self.start = time.time()   
+
 
     def parse_bib(self, marc_record: pymarc.Record, inventory_only=False):
         """Parses a bib recod into a FOLIO Inventory instance object

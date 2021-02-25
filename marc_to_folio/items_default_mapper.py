@@ -447,9 +447,6 @@ class ItemsDefaultMapper(RulesMapperBase):
             }
             self.add_to_migration_report("Unmapped Legacy Statistical codes. Adding note", f"{legacy_value}")
             return (None, note_to_add)
-            
-
-
 
     def handle_loan_types(self, legacy_item: dict):
         m_keys = m_keys = list(

@@ -3,7 +3,7 @@ import pymarc
 
 
 class Conditions:
-    def __init__(self, folio, mapper, default_location_code=""):
+    def __init__(self, folio, mapper, object_type, default_location_code=""):
         self.default_location_code = default_location_code
         print("Init conditions!")
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
@@ -13,51 +13,23 @@ class Conditions:
         self.folio = folio
         self.default_contributor_type = ""
         self.mapper = mapper
-        self.setup_reference_data()
+        self.ref_data_dicts = {}
+        self.setup_reference_data_for_all()
+        if object_type == "bibs":
+            self.setup_reference_data_for_bibs()
+        else:
+            self.setup_reference_data_for_items_and_holdings()
         self.condition_cache = {}
 
-    def setup_reference_data(self):
-        self.ref_data_dicts = {}
-        print(f"{len(self.folio.locations)}\tlocations", flush=True)
-        self.default_call_number_type = {}
-        print(
-            f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships",
-            flush=True,
-        )
-        print(
-            f"{len(self.folio.holding_note_types)}\tholding_note_types",
-            flush=True,
-        )
-        print(
-            f"{len(self.folio.call_number_types)}\tcall_number_types",
-            flush=True,
-        )
+    def setup_reference_data_for_bibs(self):
+        print("Setting up reference data for bib transformation")        
         print(
             f"{len(self.folio.contrib_name_types)}\tcontrib_name_types",
             flush=True,
         )
-        print(f"{len(self.folio.holding_note_types)}\tholding_note_types", flush=True)
         print(f"{len(self.folio.contributor_types)}\tcontributor_types", flush=True)
-        print(f"{len(self.folio.class_types)}\tclass_types", flush=True)
-        print(f"{len(self.folio.identifier_types)}\tidentifier_types", flush=True)
         print(f"{len(self.folio.alt_title_types )}\talt_title_types", flush=True)
-        self.holdings_types = list(
-            self.folio.folio_get_all("/holdings-types", "holdingsTypes")
-        )
-        self.statistical_codes = list(
-            self.folio.folio_get_all("/statistical-codes", "statisticalCodes")
-        )
-        print(f"{len(self.statistical_codes)}\tclass_types", flush=True)
-        self.default_holdings_type_id = self.get_ref_data_tuple_by_name(
-            self.holdings_types, "holdings_types", "Monographic"
-        )[0]
-        if self.default_location_code:
-            self.default_location_id = self.get_ref_data_tuple_by_code(
-                self.folio.locations, "locations", self.default_location_code
-            )[0]
-            print(f"Default location code is {self.default_location_id}")
-        print(f"{len(self.holdings_types)}\tholdings types")
-
+        print(f"{len(self.folio.identifier_types)}\tidentifier_types", flush=True)
         # Raise for empty settings
         if not self.folio.contributor_types:
             raise Exception("No contributor_types setup in tenant")
@@ -65,28 +37,13 @@ class Conditions:
             raise Exception("No contributor name types setup in tenant")
         if not self.folio.identifier_types:
             raise Exception("No identifier_types setup in tenant")
-        if not self.folio.holding_note_types:
-            raise Exception("No holding_note_types setup in tenant")
-        if not self.folio.class_types:
-            raise Exception("No class_types setup in tenant")
         if not self.folio.identifier_types:
             raise Exception("No identifier_types setup in tenant")
-        if not self.folio.call_number_types:
-            raise Exception("No call_number_types setup in tenant")
-        if not self.holdings_types:
-            raise Exception("No holdings_types setup in tenant")
         if not self.folio.alt_title_types:
             raise Exception("No alt_title_types setup in tenant")
-        if not self.folio.locations:
-            raise Exception("No locations set up in tenant")
 
         # Set defaults
-        print("Defaults")
-        self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
-        print(
-            f"callnumber type\t{self.default_call_number_type_id}",
-            flush=True,
-        )
+        print("Setting defaults")
         self.default_contributor_name_type = self.folio.contrib_name_types[0]["id"]
         print(
             f"contributor name type\t{self.default_contributor_name_type}",
@@ -99,6 +56,39 @@ class Conditions:
             f"contributor type\t{self.default_contributor_type}",
             flush=True,
         )
+
+    def setup_reference_data_for_items_and_holdings(self):
+        print(f"{len(self.folio.locations)}\tlocations", flush=True)
+        self.default_call_number_type = {}
+        print(
+            f"{len(self.folio.holding_note_types)}\tholding_note_types",
+            flush=True,
+        )
+        print(
+            f"{len(self.folio.call_number_types)}\tcall_number_types",
+            flush=True,
+        )
+        self.holdings_types = list(
+            self.folio.folio_get_all("/holdings-types", "holdingsTypes")
+        )
+        print(f"{len(self.holdings_types)}\tholdings types")
+        # Raise for empty settings
+        if not self.folio.holding_note_types:
+            raise Exception("No holding_note_types setup in tenant")
+        if not self.folio.call_number_types:
+            raise Exception("No call_number_types setup in tenant")
+        if not self.holdings_types:
+            raise Exception("No holdings_types setup in tenant")
+        if not self.folio.locations:
+            raise Exception("No locations set up in tenant")
+
+        # Set defaults
+        print("Defaults")
+        self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
+        print(
+            f"callnumber type\t{self.default_call_number_type_id}",
+            flush=True,
+        )
         self.default_call_number_type = next(
             ct for ct in self.folio.call_number_types if ct["name"] == "Other scheme"
         )
@@ -106,6 +96,29 @@ class Conditions:
             f"call_number_type\t{self.default_call_number_type}",
             flush=True,
         )
+        self.default_holdings_type_id = self.get_ref_data_tuple_by_name(
+            self.holdings_types, "holdings_types", "Monographic"
+        )[0]
+        if self.default_location_code:
+            self.default_location_id = self.get_ref_data_tuple_by_code(
+                self.folio.locations, "locations", self.default_location_code
+            )[0]
+            print(f"Default location code is {self.default_location_id}")
+
+    def setup_reference_data_for_all(self):
+        print(
+            f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships",
+            flush=True,
+        )
+        print(f"{len(self.folio.class_types)}\tclass_types", flush=True)
+        self.statistical_codes = list(
+            self.folio.folio_get_all("/statistical-codes", "statisticalCodes")
+        )
+        print(f"{len(self.statistical_codes)} \tstatistical_codes", flush=True)
+
+        # Raise for empty settings
+        if not self.folio.class_types:
+            raise Exception("No class_types setup in tenant")
 
     def get_condition(self, name, value, parameter=None, marc_field=None):
         try:
