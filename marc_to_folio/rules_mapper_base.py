@@ -405,7 +405,7 @@ class RulesMapperBase:
                 all(
                     v
                     for k, v in entity.items()
-                    if k not in ["staffOnly", "primary", " isbnValue", "issnValue"]
+                    if k not in ["staffOnly", "primary", "isbnValue", "issnValue"]
                 )
                 or e_parent == "electronicAccess"
             ):
