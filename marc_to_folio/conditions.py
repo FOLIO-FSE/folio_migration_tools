@@ -4,6 +4,7 @@ import pymarc
 
 class Conditions:
     def __init__(self, folio, mapper, object_type, default_location_code=""):
+        print(f"default location code is still {default_location_code}")
         self.default_location_code = default_location_code
         print("Init conditions!")
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
@@ -104,7 +105,8 @@ class Conditions:
                 self.folio.locations, "locations", self.default_location_code
             )[0]
             print(f"Default location code is {self.default_location_id}")
-
+        else:
+            print("Default location code is not set up")
     def setup_reference_data_for_all(self):
         print(
             f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships",
