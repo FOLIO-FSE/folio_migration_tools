@@ -55,7 +55,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.hrid_prefix = self.hrid_handling["instances"]["prefix"]
         self.hrid_counter = self.hrid_handling["instances"]["startNumber"]
-        print(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")        
+        print(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
         self.other_mode_of_issuance_id = next(
             (
                 i["id"]
@@ -63,8 +63,7 @@ class BibsRulesMapper(RulesMapperBase):
                 if "unspecified" == i["name"].lower()
             )
         )
-        self.start = time.time()   
-
+        self.start = time.time()
 
     def parse_bib(self, marc_record: pymarc.Record, inventory_only=False):
         """Parses a bib recod into a FOLIO Inventory instance object
@@ -269,35 +268,37 @@ class BibsRulesMapper(RulesMapperBase):
 
     def get_instance_format_ids(self, marc_record, legacy_id):
         # Lambdas
-        def get_folio_id(code):
-            return next(
-                (f["id"] for f in self.folio.instance_formats if f["code"] == code),
-                "",
-            )
+        def get_folio_id(code: str):
+            try:
+                match = next(f for f in self.folio.instance_formats if f["code"] == code)
+                self.add_to_migration_report(
+                    "Instance format ids handling (337 + 338)",
+                    f"Successful matching on 338$a - {code}->{match['name']}",
+                )
+                return match["id"]
+            except Exception:
+                self.add_to_migration_report(
+                    "Instance format ids handling (337 + 338)",
+                    f"338$a - {code} Not found in FOLIO",
+                )
+                return ""
 
         def get_folio_id_by_name(f337a: str, f338a: str):
             f337a = f337a.lower().replace(" ", "")
             f338a = f338a.lower().replace(" ", "")
             match_template = f"{f337a} -- {f338a}"
-            match = next(
-                (
-                    f["id"]
-                    for f in self.folio.instance_formats
-                    if f["name"] == match_template
-                ),
-                "",
-            )
-            if match:
+            try:
+                match = next(f for f in self.folio.instance_formats if f["name"] == match_template)
                 self.add_to_migration_report(
-                    "Instance format ids handling (337 + 338)",
-                    f"Successful matching on 337$a and 338$a - {match_template}",
-                )
-            else:
+                        "Instance format ids handling (337 + 338)",
+                        f"Successful matching on 337$a & 338$a - {match_template}->{match['name']}")
+                return match['id']
+            except Exception:
                 self.add_to_migration_report(
                     "Instance format ids handling (337 + 338)",
                     f"Unsuccessful matching on 337$a and 338$a - {match_template}",
                 )
-            return match
+                return ""
 
         all_337s = marc_record.get_fields("337")
         all_338s = marc_record.get_fields("338")
@@ -354,15 +355,11 @@ class BibsRulesMapper(RulesMapperBase):
                                     "No corresponding $b in corresponding 338",
                                 )
                             else:
-                                logging.debug(f"Corresponding $b found")
                                 combined_code = (corresponding_b + b).strip()
                                 if len(combined_code) == 2:
-                                    logging.debug(
-                                        f"Combined codes are 2 chars long. Returning FOLIO ID"
-                                    )
                                     yield get_folio_id(combined_code)
 
-    def handle_hrid(self, folio_instance, marc_record:pymarc.record):
+    def handle_hrid(self, folio_instance, marc_record: pymarc.record):
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if "hrid" not in folio_instance:  #  HRID MAPPING FOLIO DEFAULT
             self.add_stats(self.stats, "Records without HRID from rules. Created HRID")
@@ -378,11 +375,10 @@ class BibsRulesMapper(RulesMapperBase):
                 marc_record.remove_fields("001")
                 marc_record.add_ordered_field(new_035)
             marc_record.add_ordered_field(new_001)
-            
+
             self.hrid_counter += 1
         else:
             self.add_stats(self.stats, "Records with HRID from Rules")
-           
 
     def get_mode_of_issuance_id(self, marc_record, legacy_id):
         level = marc_record.leader[7]
