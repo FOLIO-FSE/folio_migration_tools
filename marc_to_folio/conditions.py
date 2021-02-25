@@ -444,19 +444,23 @@ class Conditions:
             mapped_code = value
 
         # Get the FOLIO UUID for the code and return it
-        t = self.get_ref_data_tuple_by_code(
-            self.folio.locations, "locations", mapped_code
-        )
-        if not t:
+        try:
+            t = self.get_ref_data_tuple_by_code(
+                self.folio.locations, "locations", mapped_code
+            )
+            self.mapper.add_to_migration_report("Mapped Locations", f"{mapped_code}->{t[1]}")
+            return t[0]
+        except Exception:
             t = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", parameter["unspecifiedLocationCode"]
             )
-        if not t:
-            raise Exception(
-                f"Location not found: {parameter['unspecifiedLocationCode']} {marc_field}"
-            )
-        self.mapper.add_to_migration_report("Mapped Locations", t[1])
-        return t[0]
+            if not t:
+                raise Exception(
+                    f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
+                )
+            self.mapper.add_to_migration_report("Mapped Locations", 
+            f"Default loc returned {mapped_code}->{t[1]}")
+            return t[0]
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
