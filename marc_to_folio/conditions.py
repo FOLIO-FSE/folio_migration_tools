@@ -22,7 +22,7 @@ class Conditions:
         self.condition_cache = {}
 
     def setup_reference_data_for_bibs(self):
-        print("Setting up reference data for bib transformation")        
+        print("Setting up reference data for bib transformation")
         print(
             f"{len(self.folio.contrib_name_types)}\tcontrib_name_types",
             flush=True,
@@ -148,10 +148,16 @@ class Conditions:
             t = self.get_ref_data_tuple_by_code(
                 self.folio.instance_formats, "instance_formats_code", value
             )
-            self.mapper.add_to_migration_report("Mapped instance formats", t[1])
+            self.mapper.add_to_migration_report(
+                "Instance format ids handling (337 + 338)",
+                f"Successful match  - {value}->{t[1]}",
+            )
             return t[0]
         except:
-            self.mapper.add_to_migration_report("Unmapped Instance format code", value)
+            self.mapper.add_to_migration_report(
+                "Instance format ids handling (337 + 338)",
+                f"{value} not found in FOLIO",
+            )
             return ""
 
     def condition_remove_prefix_by_indicator(self, value, parameter, marc_field):

@@ -273,13 +273,13 @@ class BibsRulesMapper(RulesMapperBase):
                 match = next(f for f in self.folio.instance_formats if f["code"] == code)
                 self.add_to_migration_report(
                     "Instance format ids handling (337 + 338)",
-                    f"Successful matching on 338$a - {code}->{match['name']}",
+                    f"Successful match  - {code}->{match['name']}",
                 )
                 return match["id"]
             except Exception:
                 self.add_to_migration_report(
                     "Instance format ids handling (337 + 338)",
-                    f"338$a - {code} Not found in FOLIO",
+                    f"{code} not found in FOLIO",
                 )
                 return ""
 
