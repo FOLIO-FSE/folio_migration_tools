@@ -191,6 +191,7 @@ class RulesMapperBase:
                     self.add_value_to_target(rec, target, values)
                 elif has_value_to_add(mapping):
                     value = mapping["rules"][0]["value"]
+                    # Stupid construct to avoid bool("false") == True
                     if value == "true":
                         self.add_value_to_target(rec, target, [True])
                     elif value == "false":
@@ -198,7 +199,12 @@ class RulesMapperBase:
                     else:
                         self.add_value_to_target(rec, target, [value])
                 else:
-                    value = marc_field.format_field() if marc_field else ""
+                    # Adding stuff without rules/Conditions.
+                    # Might need more complex mapping for arrays etc
+                    if any(mapping["subfield"]):
+                        value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+                    else:
+                        value = marc_field.format_field() if marc_field else ""
                     self.add_value_to_target(rec, target, [value])
             else:
                 e_per_subfield = mapping.get("entityPerRepeatedSubfield", False)
