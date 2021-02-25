@@ -90,7 +90,7 @@ class RulesMapperBase:
             self.migration_report[header][measure_to_add] += 1
 
     def write_migration_report(self, report_file):
-           
+
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
@@ -189,7 +189,7 @@ class RulesMapperBase:
                     if marc_field.tag == "655":
                         values[0] = f"Genre: {values[0]}"
                     self.add_value_to_target(rec, target, values)
-                elif has_value_to_add(mapping):                    
+                elif has_value_to_add(mapping):
                     value = mapping["rules"][0]["value"]
                     if value == "true":
                         self.add_value_to_target(rec, target, [True])
@@ -279,7 +279,9 @@ class RulesMapperBase:
                         sc_prop = sc_prop[target]  # set current property
                     else:  # next level. take the properties from the items
                         sc_prop = schema_parent["items"]["properties"][target]
-                    if target not in rec and not schema_parent:  # have we added this already?
+                    if (
+                        target not in rec and not schema_parent
+                    ):  # have we added this already?
                         if is_array_of_strings(sc_prop):
                             rec[target] = []
                             # break
@@ -399,17 +401,24 @@ class RulesMapperBase:
                     self.add_entity_to_record(entity, e_parent, rec)
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
-            if all(v for k,v in entity.items() if k not in ["staffOnly", "primary"]) or e_parent == "electronicAccess":
+            if (
+                all(
+                    v
+                    for k, v in entity.items()
+                    if k not in ["staffOnly", "primary", " isbnValue", "issnValue"]
+                )
+                or e_parent == "electronicAccess"
+            ):
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
                 sfs = " - ".join(list([f[0] for f in marc_field]))
 
-                pattern = ' - '.join(f"{k}:{bool(v)}" for k,v in entity.items())
+                pattern = " - ".join(f"{k}:{bool(v)}" for k, v in entity.items())
                 self.add_to_migration_report(
                     "Incomplete entity mapping (a code issue) adding entity",
                     f"{marc_field.tag} {e_parent} {pattern} {sfs} ",
-                )                
-                # Experimental                
+                )
+                # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec)
 
     def apply_rule(self, value, condition_types, marc_field, parameter):
