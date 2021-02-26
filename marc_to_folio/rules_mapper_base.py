@@ -411,9 +411,19 @@ class RulesMapperBase:
                 all(
                     v
                     for k, v in entity.items()
-                    if k not in ["staffOnly", "primary", "isbnValue", "issnValue"]
+                    if k
+                    not in [
+                        "staffOnly",
+                        "primary",
+                        "isbnValue",
+                        "issnValue",
+                    ]
                 )
                 or e_parent == "electronicAccess"
+                or (
+                    e_parent.startswith("holdingsStatements")
+                    and any(v for k, v in entity.items())
+                )
             ):
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
