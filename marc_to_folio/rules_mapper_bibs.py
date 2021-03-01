@@ -75,7 +75,7 @@ class BibsRulesMapper(RulesMapperBase):
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
         }
-        id_map_string = ""
+        id_map_strings = ""
         self.add_to_migration_report(
             "Record status (leader pos 5)", marc_record.leader[5]
         )
@@ -146,6 +146,7 @@ class BibsRulesMapper(RulesMapperBase):
             print(folio_instance)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
+        id_map_strings = []
         for legacy_id in legacy_ids:
             if legacy_id and self.ils_flavour in ["sierra", "iii", "907y"]:
                 instance_level_call_number = (
@@ -155,20 +156,22 @@ class BibsRulesMapper(RulesMapperBase):
                     self.add_to_migration_report(
                         "Instance level callNumber", bool(instance_level_call_number)
                     )
-                id_map_string = json.dumps(
-                    {
-                        "legacy_id": legacy_id,
-                        "folio_id": folio_instance["id"],
-                        "instanceLevelCallNumber": instance_level_call_number,
-                    }
+                id_map_strings.append(
+                    json.dumps(
+                        {
+                            "legacy_id": legacy_id,
+                            "folio_id": folio_instance["id"],
+                            "instanceLevelCallNumber": instance_level_call_number,
+                        }
+                    )
                 )
             elif legacy_id:
-                id_map_string = json.dumps(
+                id_map_strings = json.dumps(
                     {"legacy_id": legacy_id, "folio_id": folio_instance["id"]}
                 )
             else:
                 print(f"Legacy id is None {legacy_ids}")
-        return folio_instance, id_map_string
+        return folio_instance, id_map_strings
 
     def perform_additional_parsing(self, folio_instance, marc_record, legacy_id):
         """Do stuff not easily captured by the mapping rules"""
@@ -270,7 +273,9 @@ class BibsRulesMapper(RulesMapperBase):
         # Lambdas
         def get_folio_id(code: str):
             try:
-                match = next(f for f in self.folio.instance_formats if f["code"] == code)
+                match = next(
+                    f for f in self.folio.instance_formats if f["code"] == code
+                )
                 self.add_to_migration_report(
                     "Instance format ids handling (337 + 338)",
                     f"Successful match  - {code}->{match['name']}",
@@ -288,11 +293,16 @@ class BibsRulesMapper(RulesMapperBase):
             f338a = f338a.lower().replace(" ", "")
             match_template = f"{f337a} -- {f338a}"
             try:
-                match = next(f for f in self.folio.instance_formats if f["name"] == match_template)
+                match = next(
+                    f
+                    for f in self.folio.instance_formats
+                    if f["name"] == match_template
+                )
                 self.add_to_migration_report(
-                        "Instance format ids handling (337 + 338)",
-                        f"Successful matching on 337$a & 338$a - {match_template}->{match['name']}")
-                return match['id']
+                    "Instance format ids handling (337 + 338)",
+                    f"Successful matching on 337$a & 338$a - {match_template}->{match['name']}",
+                )
+                return match["id"]
             except Exception:
                 self.add_to_migration_report(
                     "Instance format ids handling (337 + 338)",

@@ -40,7 +40,7 @@ class BibsProcessor:
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
-            (folio_rec, id_map_string)  = self.mapper.parse_bib(
+            (folio_rec, id_map_strings)  = self.mapper.parse_bib(
                 marc_record, inventory_only
             )
             prec_titles = folio_rec.get("precedingTitles",[])
@@ -57,8 +57,9 @@ class BibsProcessor:
                 self.mapper.add_stats(
                     self.mapper.stats, "Successfully transformed bibs"
                 )
-                self.instance_id_map_file.write(f"{id_map_string}\n")
-                self.mapper.add_stats(self.mapper.stats, "Ids written to bib->instance id map")
+                for id_map_string in id_map_strings:
+                    self.instance_id_map_file.write(f"{id_map_string}\n")
+                    self.mapper.add_stats(self.mapper.stats, "Ids written to bib->instance id map")
 
         except ValueError as value_error:
             self.mapper.add_to_migration_report(
