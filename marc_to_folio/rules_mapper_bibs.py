@@ -166,8 +166,10 @@ class BibsRulesMapper(RulesMapperBase):
                     )
                 )
             elif legacy_id:
-                id_map_strings = json.dumps(
-                    {"legacy_id": legacy_id, "folio_id": folio_instance["id"]}
+                id_map_strings.append(
+                    json.dumps(
+                        {"legacy_id": legacy_id, "folio_id": folio_instance["id"]}
+                    )
                 )
             else:
                 print(f"Legacy id is None {legacy_ids}")
