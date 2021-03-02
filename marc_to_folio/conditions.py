@@ -1,5 +1,6 @@
 import re
 import pymarc
+from pymarc import field
 
 
 class Conditions:
@@ -282,24 +283,25 @@ class Conditions:
                 f"Instance note type not found for {marc_field} {parameter}"
             )
 
-    def condition_set_contributor_type_id(self, value, parameter, marc_field):
+    def condition_set_contributor_type_id(self, value, parameter, marc_field: field):
         for subfield in marc_field.get_subfields("4"):
+            normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
             t = self.get_ref_data_tuple_by_code(
-                self.folio.contributor_types, "contrib_types_c", subfield
+                self.folio.contributor_types, "contrib_types_c", normalized_subfield
             )
             if not t:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Mapping failed for $4 {subfield} ",
+                    f"Mapping failed for $4 {subfield} ({normalized_subfield}) ",
                 )
             else:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Contributor type code {t} found for $4 {subfield})",
+                    f"Contributor type code {t} found for $4 {subfield} ({normalized_subfield}))",
                 )
                 return t[0]
-
-        for subfield in marc_field.get_subfields("e"):
+        subfield_code = 'j' if marc_field.tag in ['111', '711'] else 'e'
+        for subfield in marc_field.get_subfields(subfield_code):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
             t = self.get_ref_data_tuple_by_name(
                 self.folio.contributor_types, "contrib_types_n", normalized_subfield
