@@ -13,6 +13,7 @@ import time
 
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
+from pymarc.record import Record
 from marc_to_folio import BibsRulesMapper
 
 from marc_to_folio.bibs_processor import BibsProcessor
@@ -53,7 +54,7 @@ class Worker:
             for file_name in self.files:
                 try:
                     with open(join(sys.argv[1], file_name), "rb") as marc_file:
-                        reader = MARCReader(marc_file, "rb", permissive=True)
+                        reader = MARCReader(marc_file, to_unicode=True)
                         reader.hide_utf8_warnings = True
                         if self.args.force_utf_8:
                             print("FORCE UTF-8 is set to TRUE", flush=True)
@@ -69,6 +70,7 @@ class Worker:
 
     def read_records(self, reader):
         for record in reader:
+            self.set_leader(record)
             self.mapper.add_stats(
                 self.mapper.stats, "MARC21 records in file before parsing"
             )
@@ -86,6 +88,11 @@ class Worker:
                     self.mapper.stats, "MARC21 Records successfully parsed"
                 )
                 self.processor.process_record(record, False)
+
+    @staticmethod
+    def set_leader(marc_record:Record):
+        new_leader = marc_record.leader
+        marc_record.leader = new_leader[:9] + 'a' + new_leader[10:]
 
     def wrap_up(self):
         print("Done. Wrapping up...", flush=True)
@@ -156,6 +163,7 @@ def parse_args():
     )
     args = parser.parse_args()
     return args
+
 
 
 def main():
