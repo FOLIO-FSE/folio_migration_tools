@@ -374,11 +374,12 @@ class BibsRulesMapper(RulesMapperBase):
     def handle_hrid(self, folio_instance, marc_record: pymarc.record):
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if "hrid" not in folio_instance:  #  HRID MAPPING FOLIO DEFAULT
-            self.add_stats(self.stats, "Records without HRID from rules. Created HRID")
+            self.add_to_migration_report("HRID Handling", "Records without HRID from rules. Created HRID")
             num_part = str(self.hrid_counter).zfill(11)
             folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
-            if "001" in marc_record:
+            marc_record.add_ordered_field(new_001)
+            try:               
                 new_035 = Field(
                     tag="035",
                     indicators=["0", "0"],
@@ -386,11 +387,12 @@ class BibsRulesMapper(RulesMapperBase):
                 )
                 marc_record.remove_fields("001")
                 marc_record.add_ordered_field(new_035)
-            marc_record.add_ordered_field(new_001)
-
+                self.add_to_migration_report("HRID Handling", "Added 035 from 001")
+            except Exception:
+                self.add_to_migration_report("HRID Handling", "Failed to create 035 from 001")
             self.hrid_counter += 1
         else:
-            self.add_stats(self.stats, "Records with HRID from Rules")
+            self.add_to_migration_report("HRID Handling", "HRID created from mapping rules")
 
     def get_mode_of_issuance_id(self, marc_record, legacy_id):
         level = marc_record.leader[7]
