@@ -5,6 +5,8 @@ import time
 from typing import Dict, List
 import pymarc
 import copy
+import os
+import sys
 
 from textwrap import wrap
 
@@ -46,12 +48,16 @@ class RulesMapperBase:
             self.mapped_folio_fields[field_name][0] += int(was_mapped)
             self.mapped_folio_fields[field_name][1] += int(was_empty)
 
-    def print_mapping_report(self, report_file):
+    def print_mapping_report(self, report_file, guidance):
         total_records = self.stats["Number of records in file(s)"]
-        report_file.write("\n## Mapped FOLIO fields   \n")
+        header = "Mapped FOLIO fields"
+        report_file.write(f"\n## {header}\n{guidance[header]}\n")
         d_sorted = {
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
         }
+        report_file.write(
+                f"<details><summary>Click to expand field report</summary>     \n\n"
+            )
         report_file.write(f"FOLIO Field | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
@@ -62,12 +68,17 @@ class RulesMapperBase:
             report_file.write(
                 f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
+        report_file.write("</details>   \n")
 
         # Legacy fields (like marc)
-        report_file.write("\n## Mapped Legacy fields  \n")
+        header = "Mapped Legacy fields"
+        report_file.write(f"\n## {header}\n{guidance[header]}\n")
         d_sorted = {
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
         }
+        report_file.write(
+                f"<details><summary>Click to expand field report</summary>     \n\n"
+            )
         report_file.write(f"Legacy Field | Present | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
@@ -81,6 +92,7 @@ class RulesMapperBase:
             report_file.write(
                 f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
+        report_file.write("</details>   \n")
 
 
 # This is where content is added to the migration report. 
@@ -96,10 +108,14 @@ class RulesMapperBase:
 
 # This is where the migration report is written. 
 # Under the header, the applicable description should be written out.
-    def write_migration_report(self, report_file):
+    def write_migration_report(self, report_file, guidance):
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
+            try:
+                report_file.write(f"{guidance[a]}    \n")
+            except KeyError as e:
+                print("Uhoh. Please add this one to migration_report_descriptpns.json:", e)
             report_file.write(
                 f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
             )
