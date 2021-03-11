@@ -440,7 +440,7 @@ class RulesMapperBase:
                         "issnValue",
                     ]
                 )
-                or e_parent == "electronicAccess"
+                or e_parent in ["electronicAccess", "publication"]
                 or (
                     e_parent.startswith("holdingsStatements")
                     and any(v for k, v in entity.items())

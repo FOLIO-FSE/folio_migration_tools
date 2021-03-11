@@ -32,6 +32,7 @@ class ItemsDefaultMapper(RulesMapperBase):
     ):
         super().__init__(folio)
         self.args = args
+        self.item_schema = folio.get_item_schema()
         self.ref_data_dicts = {}
         self.legacy_item_type_map = other_maps[0]
         self.duplicate_item_ids = {}
@@ -42,7 +43,6 @@ class ItemsDefaultMapper(RulesMapperBase):
         csv.register_dialect("pipe", delimiter="|")
         self.folio = folio
         self.missing_holdings_ids = {}
-        self.item_schema = folio.get_item_schema()
         self.item_id_map: Dict[str, str] = {}
         self.item_to_item_map = item_map
         self.holdings_id_map = holdings_id_map
@@ -145,16 +145,13 @@ class ItemsDefaultMapper(RulesMapperBase):
                     elif folio_field == "materialTypeId":
                         item[folio_field] = self.handle_material_types(
                             legacy_item)
-
                     elif folio_field == "status.name":
                         item["status"] = self.handle_status(legacy_value)
                     elif folio_field == "permanentLoanTypeId":
                         item[folio_field] = self.handle_loan_types(legacy_item)
-
                     elif folio_field == "itemLevelCallNumberTypeId":
                         item[folio_field] = self.handle_call_number_id(
                             legacy_value)
-
                     elif folio_field == "statisticalCodeIds":
                         (code_id, note) = self.handle_statistical_codes(legacy_value)
                         if code_id:
@@ -167,7 +164,6 @@ class ItemsDefaultMapper(RulesMapperBase):
                                 item["notes"].append(note)
                             else:
                                 item["notes"] = [note]
-
                     elif folio_field == "circulationNotes":
                         item[folio_field] = self.handle_circulation_notes(
                             legacy_value)
@@ -183,7 +179,6 @@ class ItemsDefaultMapper(RulesMapperBase):
                                 f"Holdings id {legacy_value} not in map")
                         else:
                             item[folio_field] = self.holdings_id_map[legacy_value]["id"]
-
                     elif folio_field == "notes":
                         self.add_note(legacy_value, item)
 
@@ -234,6 +229,18 @@ class ItemsDefaultMapper(RulesMapperBase):
             print(f"{ee} for {legacy_id}")
             traceback.print_exc()
             raise ee
+
+    def get_location_code(self, legacy_value: str):
+        location_id = self.locations_map.get(legacy_value.strip().strip("^"), "")
+        if location_id != "":
+            return location_id
+        else:
+            self.add_to_migration_report("Missing location codes", legacy_value)
+            self.add_stats(
+                self.stats,
+                f'Missing location codes, adding "{self.default_location_uuid}"',
+            )
+            return self.default_location_uuid
 
     def setup_locations(self, location_map):
         temp_map = {}
@@ -343,18 +350,6 @@ class ItemsDefaultMapper(RulesMapperBase):
         self.report_folio_mapping("status", True, False)
         return item
 
-    def get_location_code(self, legacy_value: str):
-        location_id = self.locations_map.get(
-            legacy_value.strip().strip("^"), "")
-        if location_id != "":
-            return location_id
-        else:
-            self.add_to_migration_report(
-                "Missing location codes", legacy_value)
-            self.add_stats(
-                self.stats, f'Missing location codes, adding "{self.default_location_uuid}"'
-            )
-            return self.default_location_uuid
 
     def is_string(self, target: str):
         folio_prop = self.item_schema["properties"][target]["type"]

@@ -318,7 +318,7 @@ class BibsRulesMapper(RulesMapperBase):
             source = f["2"] if "2" in f else "Not set"
             self.add_to_migration_report(
                 "Instance format ids handling (337 + 338)",
-                f"Source ($2) is set to {source}.",
+                f"Source ($2) is set to {source}",
             )
             if source.strip().startswith("rdacarrier"):
                 logging.debug(f"Carrier is {source}")
@@ -376,7 +376,7 @@ class BibsRulesMapper(RulesMapperBase):
         if "hrid" not in folio_instance:  #  HRID MAPPING FOLIO DEFAULT
             self.add_to_migration_report("HRID Handling", "Records without HRID from rules. Created HRID")
             num_part = str(self.hrid_counter).zfill(11)
-            folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
+            folio_instance["hrid"] = f"mig{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             marc_record.add_ordered_field(new_001)
             try:               
