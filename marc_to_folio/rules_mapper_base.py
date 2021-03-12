@@ -48,10 +48,10 @@ class RulesMapperBase:
             self.mapped_folio_fields[field_name][0] += int(was_mapped)
             self.mapped_folio_fields[field_name][1] += int(was_empty)
 
-    def print_mapping_report(self, report_file, guidance):
+    def print_mapping_report(self, report_file, descriptions):
         total_records = self.stats["Number of records in file(s)"]
         header = "Mapped FOLIO fields"
-        report_file.write(f"\n## {header}\n{guidance[header]}\n")
+        report_file.write(f"\n## {header}\n{descriptions[header]}\n")
         d_sorted = {
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
         }
@@ -72,7 +72,7 @@ class RulesMapperBase:
 
         # Legacy fields (like marc)
         header = "Mapped Legacy fields"
-        report_file.write(f"\n## {header}\n{guidance[header]}\n")
+        report_file.write(f"\n## {header}\n{descriptions[header]}\n")
         d_sorted = {
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
         }
@@ -108,12 +108,12 @@ class RulesMapperBase:
 
 # This is where the migration report is written. 
 # Under the header, the applicable description should be written out.
-    def write_migration_report(self, report_file, guidance):
+    def write_migration_report(self, report_file, descriptions):
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
             try:
-                report_file.write(f"{guidance[a]}    \n")
+                report_file.write(f"{descriptions[a]}    \n")
             except KeyError as e:
                 print("Uhoh. Please add this one to migration_report_descriptpns.json:", e)
             report_file.write(

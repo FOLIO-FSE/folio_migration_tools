@@ -24,7 +24,7 @@ class Worker:
         # msu special case
         self.args = args
         self.migration_report_file = migration_report_file
-        self.migration_report_guidance = join(dirname(__file__), "marc_to_folio/migration_report_descriptions.json")
+        self.migration_report_descriptions = join(dirname(__file__), "marc_to_folio/migration_report_descriptions.json")
         self.results_file_path = results_file
 
         self.files = [
@@ -90,8 +90,9 @@ class Worker:
     def wrap_up(self):
         print("Done. Wrapping up...", flush=True)
         self.processor.wrap_up()
-        with open(self.migration_report_file, "w+") as report_file, open(self.migration_report_guidance, "r") as guidance_file:
-            guidance = json.load(guidance_file)["descriptions"]
+        # Open the file we'll write the migration report to, and the file containing brief descriptions for each of the report sections
+        with open(self.migration_report_file, "w+") as report_file, open(self.migration_report_descriptions, "r") as mrd:
+            descriptions = json.load(mrd)["descriptions"]
             report_file.write(f"# Bibliographic records transformation results   \n")
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
             report_file.write(f"## Bibliographic records transformation counters   \n")
@@ -101,8 +102,8 @@ class Worker:
                 "  Measure  ",
                 "Count   ",
             )
-            self.mapper.write_migration_report(report_file, guidance)
-            self.mapper.print_mapping_report(report_file, guidance)
+            self.mapper.write_migration_report(report_file, descriptions)
+            self.mapper.print_mapping_report(report_file, descriptions)
         print(f"Done. Transformation report written to {self.migration_report_file}", flush=True)
 
 
