@@ -406,7 +406,7 @@ class BibsRulesMapper(RulesMapperBase):
                 name = "integrating resource"
             if name == "unspecified":
                 self.add_to_migration_report(
-                    "unspecified Modes of issuance code", level
+                    "Unspecified Modes of issuance code", level
                 )
             ret = next(
                 (

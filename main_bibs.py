@@ -7,7 +7,7 @@ import copy
 import sys
 import traceback
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, dirname
 from datetime import datetime as dt
 import time
 
@@ -18,7 +18,6 @@ from marc_to_folio import BibsRulesMapper
 
 from marc_to_folio.bibs_processor import BibsProcessor
 
-
 class Worker:
     """Class that is responsible for the acutal work"""
 
@@ -26,6 +25,7 @@ class Worker:
         # msu special case
         self.args = args
         self.migration_report_file = migration_report_file
+        self.migration_report_descriptions = join(dirname(__file__), "marc_to_folio/migration_report_descriptions.json")
         self.results_file_path = results_file
 
         self.files = [
@@ -76,7 +76,7 @@ class Worker:
             )
             if record is None:
                 self.mapper.add_to_migration_report(
-                    "Bib records that failed to parse. -",
+                    "Bib records that failed to parse",
                     f"{reader.current_exception} {reader.current_chunk}",
                 )
                 self.mapper.add_stats(
@@ -97,9 +97,10 @@ class Worker:
     def wrap_up(self):
         print("Done. Wrapping up...", flush=True)
         self.processor.wrap_up()
-        with open(self.migration_report_file, "w+") as report_file:
+        # Open the file we'll write the migration report to, and the file containing brief descriptions for each of the report sections
+        with open(self.migration_report_file, "w+") as report_file, open(self.migration_report_descriptions, "r") as mrd:
+            descriptions = json.load(mrd)["descriptions"]
             report_file.write(f"# Bibliographic records transformation results   \n")
-
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
             report_file.write(f"## Bibliographic records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
@@ -108,8 +109,8 @@ class Worker:
                 "Measure",
                 "Count",
             )
-            self.mapper.write_migration_report(report_file)
-            self.mapper.print_mapping_report(report_file)
+            self.mapper.write_migration_report(report_file, descriptions)
+            self.mapper.print_mapping_report(report_file, descriptions)
         print(f"Done. Transformation report written to {self.migration_report_file}", flush=True)
 
 
@@ -179,6 +180,7 @@ def main():
     migration_report_file = join(
         args.results_folder, "instance_transformation_report.md"
     )
+    
     print("\tresults will be saved at:\t", args.results_folder, flush=True)
     print("\tOkapi URL:\t", args.okapi_url, flush=True)
     print("\tTenant Id:\t", args.tenant_id, flush=True)
