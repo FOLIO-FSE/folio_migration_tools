@@ -67,10 +67,10 @@ class BibsProcessor:
                 f"{value_error} for {legacy_id} ",
             )
             self.mapper.add_stats(
-                self.mapper.stats, "Value Errors (records that failed transformation"
+                self.mapper.stats, "Value Errors (records that failed transformation)"
             )
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that faile transformation"
+                self.mapper.stats, "Bib records that failed transformation"
             )
             # raise value_error
         except ValidationError:
@@ -108,7 +108,7 @@ class BibsProcessor:
             s = f"No Instance Type Id in {marc_record['001'].format_field()}"
             self.mapper.add_to_migration_report("Records without Instance Type Ids", s)
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that faile transformation"
+                self.mapper.stats, "Bib records that failed transformation"
             )
             return False
         return True
