@@ -102,6 +102,11 @@ class Worker:
             descriptions = json.load(mrd)["descriptions"]
             report_file.write(f"# Bibliographic records transformation results   \n")
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
+            try:
+                report_intro = descriptions["Overview"]
+                report_file.write(f"{report_intro}\n")
+            except KeyError as e:
+                print("Unable to access report section:", e)
             report_file.write(f"## Bibliographic records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
                 self.mapper.stats,
