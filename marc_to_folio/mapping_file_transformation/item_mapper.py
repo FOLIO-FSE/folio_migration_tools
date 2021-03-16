@@ -23,6 +23,7 @@ class ItemMapper(MapperBase):
         material_type_map,
         loan_type_map,
         location_map,
+        call_number_type_map,
         holdings_id_map,
         error_file,
     ):
@@ -36,6 +37,11 @@ class ItemMapper(MapperBase):
         self.legacy_id_map: Dict[str, str] = {}
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
+
+        self.call_number_type_map = call_number_type_map
+        self.call_number_type_keys = []
+        self.default_call_number_type_id = ""
+        self.setup_call_number_type_mappings()
 
         self.loan_type_map = loan_type_map
         self.default_loan_type_id = ""
@@ -70,6 +76,8 @@ class ItemMapper(MapperBase):
                 return self.get_location_id(legacy_item, index_or_id)
             elif folio_prop_name == "materialTypeId":
                 return self.get_material_type_id(legacy_item)
+            elif folio_prop_name == "itemLevelCallNumberTypeId":
+                return self.get_item_level_call_number_type_id(legacy_item)
             elif folio_prop_name == "status.name":
                 return self.transform_status(legacy_value)
             elif folio_prop_name == "status.date":
@@ -164,7 +172,7 @@ class ItemMapper(MapperBase):
             f'{" - ".join(fieldvalues)}',
         )
         return self.default_material_type_id
-
+    
     def get_location_id(self, legacy_item: dict, id_or_index):
         fieldvalues = [legacy_item[k] for k in self.location_keys]
         for row in self.location_map:
@@ -186,6 +194,80 @@ class ItemMapper(MapperBase):
     def transform_status(self, legacy_value):
         self.add_to_migration_report("Status mapping", f"{legacy_value} -> Available")
         return "Available"
+
+    def get_item_level_call_number_type_id(self, legacy_item):
+        for row in self.call_number_type_map:
+            all_good = []
+            for k in self.call_number_type_keys:
+                # print(f"{legacy_item} - {k}")
+                leg_item_prop = legacy_item[k].strip().casefold()
+                all_good.append(leg_item_prop in row[k].casefold())
+            fieldvalues = [legacy_item[k] for k in self.call_number_type_keys]
+            if all(all_good):
+                self.add_to_migration_report(
+                    "call_number_type mapping",
+                    f'{" - ".join(fieldvalues)} -> {row["folio_name"]}',
+                )
+                return row["folio_id"]
+        self.add_to_migration_report(
+            "Unmapped call_number_types",
+            f'{" - ".join(fieldvalues)}',
+        )
+        return self.default_call_number_type_id
+    
+    def setup_call_number_type_mappings(self):
+        # Loan types
+        print("Fetching Loan types...")
+        self.folio_call_number_types = list(
+            self.folio_client.folio_get_all("/call-number-types", "callNumberTypes")
+        )
+        for idx, call_number_type_mapping in enumerate(self.call_number_type_map):
+            try:
+                if idx == 1:
+                    self.call_number_type_keys = list(
+                        [
+                            k
+                            for k in call_number_type_mapping.keys()
+                            if k not in ["folio_code", "folio_id", "folio_name"]
+                        ]
+                    )
+                if any(m for m in call_number_type_mapping.values() if m == "*"):
+                    t = self.get_ref_data_tuple_by_name(
+                        self.folio_call_number_types,
+                        "callnumbers",
+                        call_number_type_mapping["folio_name"],
+                    )
+                    if t:
+                        self.default_call_number_type_id = t[0]
+                        print(
+                            f'Set {call_number_type_mapping["folio_name"]} as default call_numbertype mapping'
+                        )
+                    else:
+                        raise TransformationProcessError(
+                            "No Default call_number type set up in map."
+                            "Add a row to mapping file with *:s and a valid call_number type"
+                        )
+                else:
+                    call_number_type_mapping["folio_id"] = self.get_ref_data_tuple_by_name(
+                        self.folio_call_number_types,
+                        "callnumbers",
+                        call_number_type_mapping["folio_name"],
+                    )[0]
+            except TransformationProcessError as te:
+                raise te
+            except Exception:
+                print(json.dumps(self.call_number_type_map, indent=4))
+                raise TransformationProcessError(
+                    f"{call_number_type_mapping['folio_name']} could not be found in FOLIO"
+                )
+        if not self.default_call_number_type_id:
+            raise TransformationProcessError(
+                "No Default Callnumber type set up in map."
+                "Add a row to mapping file with *:s and a valid callnumber type"
+            )
+        print(
+            f"loaded {idx} mappings for {len(self.folio_call_number_types)} loan types in FOLIO"
+        )
 
     def setup_loan_type_mappings(self):
         # Loan types

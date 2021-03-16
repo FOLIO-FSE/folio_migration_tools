@@ -155,6 +155,7 @@ def main():
     error_file_path = os.path.join(args.result_path, "item_transform_errors.tsv")
     location_map_path = os.path.join(args.map_path, "locations.tsv")
     loans_type_map_path = os.path.join(args.map_path, "loan_types.tsv")
+    call_number_type_map_path = os.path.join(args.map_path, "call_number_type_mapping.tsv")
     material_type_map_path = os.path.join(args.map_path, "material_types.tsv")
     try:
         if not isfile(loans_type_map_path):
@@ -169,20 +170,26 @@ def main():
             )
 
         # Files found, let's go!
-        print(
-            "MaterialType & LoanType mapping files found. Relying on these for mapping"
-        )
         with open(material_type_map_path) as material_type_file:
             material_type_map = list(csv.DictReader(material_type_file, dialect="tsv"))
             print(f"Found {len(material_type_map)} rows in material type map")
             print(
                 f'{",".join(material_type_map[0].keys())} will be used for determinig Material type'
             )
+
         with open(loans_type_map_path) as loans_type_file:
             loan_type_map = list(csv.DictReader(loans_type_file, dialect="tsv"))
             print(f"Found {len(loan_type_map)} rows in loan type map")
             print(
                 f'{",".join(loan_type_map[0].keys())} will be used for determinig loan type'
+            )
+
+        with open(call_number_type_map_path) as call_number_type_map_file:
+            call_number_type_map = list(csv.DictReader(call_number_type_map_file, dialect="tsv"))
+            print(f"Found {len(call_number_type_map)} rows in callnumber type map")
+            print(
+                f'{",".join(call_number_type_map[0].keys())} '
+                'will be used for determinig callnumber type'
             )
 
         with open(holdings_id_dict_path, "r") as holdings_id_map_file, open(
@@ -211,6 +218,7 @@ def main():
                 material_type_map,
                 loan_type_map,
                 location_map,
+                call_number_type_map,
                 holdings_id_map,
                 error_file,
             )
