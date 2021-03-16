@@ -72,7 +72,9 @@ class ItemMapper(MapperBase):
                 return self.get_material_type_id(legacy_item)
             elif folio_prop_name == "status.name":
                 return self.transform_status(legacy_value)
-            elif folio_prop_name == "permanentLoanTypeId":
+            elif folio_prop_name == "status.date":
+                return datetime.utcnow().isoformat()
+            elif folio_prop_name in ["permanentLoanTypeId", "temporaryLoanTypeId"]:
                 return self.get_loan_type_id(legacy_item)
             elif folio_prop_name == "statisticalCodeIds":
                 return self.get_statistical_codes(vals)
@@ -122,7 +124,7 @@ class ItemMapper(MapperBase):
         self.add_to_migration_report("Circulation notes", "Circ note")
         return []
 
-    def get_statistical_codes(self, vals) -> List(str):
+    def get_statistical_codes(self, vals):
         # Mapping file with old values to FOLIO equivalents and then map that here.
         raise NotImplementedError("Statistical code mapping is not yet available")
     
@@ -183,7 +185,7 @@ class ItemMapper(MapperBase):
 
     def transform_status(self, legacy_value):
         self.add_to_migration_report("Status mapping", f"{legacy_value} -> Available")
-        return {"name": "Available"}
+        return "Available"
 
     def setup_loan_type_mappings(self):
         # Loan types

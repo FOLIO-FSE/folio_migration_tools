@@ -151,10 +151,10 @@ class MapperBase:
                 if prop.get("description", "") == "Deprecated":
                     self.report_folio_mapping(f"{prop_name} (deprecated)", False, True)
                     # continue
-                elif prop_name in ["metadata", "id"]:
+                elif prop_name in ["metadata", "id", "type", "holdingsRecord2"] or prop_name.startswith('effective'):
                     continue
                 elif prop["type"] == "object":
-                    folio_object[prop_name] = {}
+                    temp_object = {}
                     prop_key = prop_name
                     if "properties" in prop:
                         for sub_prop_name, sub_prop in prop["properties"].items():
@@ -167,7 +167,7 @@ class MapperBase:
                                     if sub_prop2["type"] == "array":
                                         print(f"Array: {sub_prop_key2} ")
                             elif sub_prop["type"] == "array":
-                                folio_object[prop_name][sub_prop_name] = []
+                                temp_object[sub_prop_name] = []
                                 for i in range(0, 5):
                                     if sub_prop["items"]["type"] == "object":
                                         temp = {}
@@ -188,7 +188,7 @@ class MapperBase:
                                                 f"{prop_name}.{sub_prop_name}",
                                             )
                                             continue
-                                        folio_object[prop_name][sub_prop_name].append(
+                                        temp_object[sub_prop_name].append(
                                             temp
                                         )
                                     else:
@@ -196,11 +196,16 @@ class MapperBase:
                                         a = self.get_prop(
                                             legacy_object, mkey, index_or_id, i
                                         )
-                                        folio_object[prop_name][sub_prop_name] = a
+                                        if a:
+                                            temp_object[sub_prop_name] = a
                             else:
-                                folio_object[prop_name][sub_prop_name] = self.get_prop(
+                                p = self.get_prop(
                                     legacy_object, sub_prop_key, index_or_id
                                 )
+                                if p:
+                                    temp_object[sub_prop_name] = p
+                        if temp_object:
+                            folio_object[prop_name] = temp_object
 
                 elif prop["type"] == "array":
                     # handle departments
@@ -217,6 +222,8 @@ class MapperBase:
             except TransformationDataError as data_error:
                 self.add_stats("Data issues found")
                 self.error_file.write(data_error)
+
+        del folio_object["type"]                
         return folio_object
 
     def map_objects_array_props(self, legacy_object, prop_name, properties, folio_object, index_or_id):
@@ -292,11 +299,11 @@ class MapperBase:
     def legacy_property(self, folio_prop):
         arr_re = r'\[[0-9]\]'
         if self.use_map:
-            return next(
+            return next((
                 k["legacy_field"]
                 for k in self.record_map["data"]
                 if re.sub(arr_re, '.', k["folio_field"]).strip('.') == folio_prop
-            )
+            ), "")
         else:
             return folio_prop
 

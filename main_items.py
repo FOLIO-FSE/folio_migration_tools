@@ -49,8 +49,6 @@ class Worker:
                 ) as results_file:
                     self.mapper.add_stats("Number of files processed")
                     for idx, record in enumerate(self.mapper.get_objects(records_file)):
-                        # if idx > 5:
-                        #    continue
                         try:
                             folio_rec = self.mapper.do_map(record, f"row {idx}")
                             write_to_file(results_file, False, folio_rec)
