@@ -99,7 +99,7 @@ class ItemMapper(MapperBase):
                 # print(folio_prop_name)
                 value = next((k.get("value","") for k in self.items_map["data"]
                         if k["folio_field"] == folio_prop_name),"")
-                if value:
+                if value not in [None, ""]:
                     return value
                 else:
                     return legacy_value
