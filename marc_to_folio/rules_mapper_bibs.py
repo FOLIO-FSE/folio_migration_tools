@@ -229,12 +229,12 @@ class BibsRulesMapper(RulesMapperBase):
             )
             if match:
                 self.add_to_migration_report(
-                    "Instance Type Mapping (336, 008)",
+                    "Resource Type Mapping (336, 008)",
                     f"336$a -Successful matching on  {match_template} ({f336a})",
                 )
             else:
                 self.add_to_migration_report(
-                    "Instance Type Mapping (336, 008)",
+                    "Resource Type Mapping (336, 008)",
                     f"336$a -Unsuccessful matching on  {match_template} ({f336a})",
                 )
             return match
@@ -244,7 +244,7 @@ class BibsRulesMapper(RulesMapperBase):
 
         if "336" in marc_record and "b" not in marc_record["336"]:
             self.add_to_migration_report(
-                "Instance Type Mapping (336, 008)", f"Subfield b not in 336"
+                "Resource Type Mapping (336, 008)", f"Subfield b not in 336"
             )
             if "a" in marc_record["336"]:
                 return_id = get_folio_id_by_name(marc_record["336"]["a"])
@@ -255,12 +255,12 @@ class BibsRulesMapper(RulesMapperBase):
             )
             if not t:
                 self.add_to_migration_report(
-                    "Instance Type Mapping (336, 008)",
+                    "Resource Type Mapping (336, 008)",
                     f'Code {marc_record["336"]["b"]} not found in FOLIO (from 336$b)',
                 )
             else:
                 self.add_to_migration_report(
-                    "Instance Type Mapping (336, 008)", f"{t[1]} (from 336$b)"
+                    "Resource Type Mapping (336, 008)", f"{t[1]} (from 336$b)"
                 )
                 return_id = t[0]
 

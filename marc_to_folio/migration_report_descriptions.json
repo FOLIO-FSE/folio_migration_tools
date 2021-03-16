@@ -17,7 +17,7 @@
         "Contributor type mapping": "**REVIEW** The created FOLIO instances contain the following Contributor type values. The library should review the total number for each value against what they would expect to see mapped.",
         "Mapped electronic access relationships types": "**REVIEW** The created FOLIO instances contain the following Electronic access relationship type values. The library should review the total number for each value against what they would expect to see mapped.",
         "Incomplete entity mapping (a code issue) adding entity": "This is a coding anomaly that FSE will look into. The library does not have to do anything about it.",
-        "Instance Type Mapping (336, 008)": "**REVIEW** The created FOLIO instances contain the following Instance type values. The library should review the total number for each value against what they would expect to see mapped.",
+        "Resource Type Mapping (336, 008)": "**REVIEW** The created FOLIO instances contain the following Instance type values. The library should review the total number for each value against what they would expect to see mapped.",
         "Mapped Alternative title types": "**REVIEW** The created FOLIO instances contain the following Alternative title type values. The library should review the total number for each value against what they would expect to see mapped.",
         "880 mappings": "This table shows how the 880 (Alternate Graphic Representation) has been mapped.",
         "880 mappings: mapped field not in mapping-rules": "**REVIEW** Fields that are referenced in the 880 mapping, but not configured in the mapping-rules.",
