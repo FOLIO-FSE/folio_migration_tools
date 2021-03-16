@@ -3,8 +3,7 @@ from io import StringIO
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
-
-from pymarc.writer import JSONWriter, XMLWriter
+from pymarc.writer import JSONWriter
 import time
 import json
 from datetime import datetime as dt
@@ -17,7 +16,6 @@ class BibsProcessor:
 
     def __init__(self, mapper, folio_client, results_file, args):
         self.ils_flavour = args.ils_flavour
-        self.create_marc_xml_dump = args.dump
         self.suppress = args.suppress
         self.results_folder = args.results_folder
         self.results_file = results_file
@@ -25,31 +23,43 @@ class BibsProcessor:
         self.instance_schema = folio_client.get_instance_json_schema()
         self.mapper: BibsRulesMapper = mapper
         self.args = args
-        if self.create_marc_xml_dump:
-            self.marc_xml_writer = XMLWriter(
-                open(os.path.join(self.results_folder, "marc_xml_dump.xml"), "wb+")
-            )
         self.srs_records_file = open(
             os.path.join(self.results_folder, "srs.json"), "w+"
         )
-        self.start = time.time()
+        self.instance_id_map_file = open(
+            os.path.join(self.results_folder, "instance_id_map.json"), "w+"
+        )
 
     def process_record(self, marc_record, inventory_only):
+        
         """processes a marc record and saves it"""
         try:
             legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
-        except Exception as ee:
+        except:
             legacy_id = ["unknown"]
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.mapper.parse_bib(marc_record, inventory_only)
+            (folio_rec, id_map_strings)  = self.mapper.parse_bib(
+                marc_record, inventory_only
+            )
+            prec_titles = folio_rec.get("precedingTitles",[])
+            if prec_titles:
+                self.mapper.add_to_migration_report("Preceeding and Succeeding titles", f"{len(prec_titles)}")
+                del folio_rec["precedingTitles"]
+            succ_titles = folio_rec.get("succeedingTitles",[])
+            if succ_titles:
+                del folio_rec["succeedingTitles"]
+                self.mapper.add_to_migration_report("Preceeding and Succeeding titles", f"{len(succ_titles)}")
             if self.validate_instance(folio_rec, marc_record):
                 write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
                 self.mapper.add_stats(
                     self.mapper.stats, "Successfully transformed bibs"
                 )
+                for id_map_string in id_map_strings:
+                    self.instance_id_map_file.write(f"{id_map_string}\n")
+                    self.mapper.add_stats(self.mapper.stats, "Ids written to bib->instance id map")
 
         except ValueError as value_error:
             self.mapper.add_to_migration_report(
@@ -57,36 +67,30 @@ class BibsProcessor:
                 f"{value_error} for {legacy_id} ",
             )
             self.mapper.add_stats(
-                self.mapper.stats, "Value Errors (records that failed transformation"
+                self.mapper.stats, "Value Errors (records that failed transformation)"
             )
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that faile transformation"
+                self.mapper.stats, "Bib records that failed transformation"
             )
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if callable(remove_from_id_map):
-                self.mapper.remove_from_id_map(marc_record)
-        except ValidationError as validation_error:
+            # raise value_error
+        except ValidationError:
             self.mapper.add_stats(self.mapper.stats, "Validation Errors")
             self.mapper.add_stats(
                 self.mapper.stats, "Bib records that failed transformation"
             )
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if callable(remove_from_id_map):
-                self.mapper.remove_from_id_map(marc_record)
-        except Exception as inst:
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if callable(remove_from_id_map):
-                self.mapper.remove_from_id_map(marc_record)
+            # raise validation_error
+
+        except Exception as inst:            
             self.mapper.add_stats(
                 self.mapper.stats, "Bib records that failed transformation"
             )
             self.mapper.add_stats(self.mapper.stats, "Transformation exceptions")
-            print(type(inst))
-            print(inst.args)
-            print(inst)
-            print(marc_record)
+            print(type(inst), flush=True)
+            print(inst.args, flush=True)
+            print(inst, flush=True)
+            print(marc_record, flush=True)
             if folio_rec:
-                print(folio_rec)
+                print(folio_rec, flush=True)
             raise inst
 
     def validate_instance(self, folio_rec, marc_record):
@@ -95,7 +99,7 @@ class BibsProcessor:
         if not folio_rec.get("title", ""):
             s = f"No title in {marc_record['001'].format_field()}"
             self.mapper.add_to_migration_report("Records without titles", s)
-            print(s)
+            print(s, flush=True)
             self.mapper.add_stats(
                 self.mapper.stats, "Bib records that failed transformation"
             )
@@ -104,7 +108,7 @@ class BibsProcessor:
             s = f"No Instance Type Id in {marc_record['001'].format_field()}"
             self.mapper.add_to_migration_report("Records without Instance Type Ids", s)
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that faile transformation"
+                self.mapper.stats, "Bib records that failed transformation"
             )
             return False
         return True
@@ -115,21 +119,14 @@ class BibsProcessor:
             self.mapper.wrap_up()
         except Exception as exception:
             print(f"error during wrap up {exception}")
-        print("Saving map of old and new IDs")
-        if self.mapper.id_map:
-            map_path = os.path.join(self.results_folder, "instance_id_map.json")
-            with open(map_path, "w+") as id_map_file:
-                json.dump(self.mapper.id_map, id_map_file, sort_keys=True, indent=4)
-            self.mapper.stats["Number of Instances in map"] = len(self.mapper.id_map)
-        print("Saving holdings created from bibs")
+        print("Saving holdings created from bibs", flush=True)
         if any(self.mapper.holdings_map):
             holdings_path = os.path.join(self.results_folder, "folio_holdings.json")
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     write_to_file(holdings_file, False, holding)
-        if self.create_marc_xml_dump:
-            self.marc_xml_writer.close()
         self.srs_records_file.close()
+        self.instance_id_map_file.close()
 
     def save_source_record(self, marc_record, instance):
         """Saves the source Marc_record to the Source record Storage module"""
@@ -152,8 +149,6 @@ class BibsProcessor:
             )
         )
         self.srs_records_file.write(f"{srs_record_string}\n")
-        if not self.suppress and self.create_marc_xml_dump:
-            self.marc_xml_writer.write(marc_record)
 
 
 def write_to_file(file, pg_dump, folio_record):
@@ -166,12 +161,9 @@ def write_to_file(file, pg_dump, folio_record):
 
 
 def get_srs_string(my_tuple):
-    json_string = StringIO()
-    writer = JSONWriter(json_string)
-    writer.write(my_tuple[0])
-    writer.close(close_fh=False)
-    raw_record = {"id": my_tuple[2], "content": my_tuple[0].as_json()}
-    parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple[0].as_json())}
+    my_tuple_json = my_tuple[0].as_json()
+    raw_record = {"id": my_tuple[2], "content": my_tuple_json}
+    parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple_json)}
     record = {
         "id": my_tuple[2],
         "deleted": False,
@@ -191,4 +183,4 @@ def get_srs_string(my_tuple):
         record["leaderRecordStatus"] = parsed_record["content"]["leader"][5]
     else:
         record["leaderRecordStatus"] = "d"
-    return f"{record['id']}\t{json.dumps(record)}\n"
+    return f"{record['id']}\t{json.dumps(record)}"

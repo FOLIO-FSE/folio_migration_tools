@@ -75,12 +75,21 @@ def main():
     ) as mapping_rules_file, open(
         os.path.join(args.result_folder, "folio_holdings.json"), "w+"
     ) as results_file:
-        instance_id_map = json.load(json_file)
+        instance_id_map = {}
+        for index, json_string in enumerate(json_file):
+            # {"legacy_id", "folio_id","instanceLevelCallNumber"}
+            if index % 100000 == 0:
+                print(f"{index} instance ids loaded to map", end='\r')            
+            map_object = json.loads(json_string)
+            instance_id_map[map_object["legacy_id"]] = map_object
+        print(f"loaded {index} migrated instance IDs")
+        
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
         rules_file = json.load(mapping_rules_file)
 
         print(f"Locations in map: {len(location_map)}")
         print(any(location_map))
+        print(f'Default location code {rules_file["defaultLocationCode"]}')
         print(f"{len(instance_id_map)} Instance ids in map")
         mapper = RulesMapperHoldings(
             folio_client,

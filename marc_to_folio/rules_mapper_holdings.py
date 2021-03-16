@@ -7,31 +7,17 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 
 class RulesMapperHoldings(RulesMapperBase):
-    def __init__(
-        self, folio, instance_id_map, location_map, default_location_code, args
-    ):
-        super().__init__(folio, Conditions(folio,self)
-        )
-        print("Init RulesMapperHoldings")
+    def __init__(self, folio, instance_id_map, location_map, default_location_code, args):
+        print(f"Default location code is {default_location_code}")
+        self.conditions = Conditions(folio,self, "holdings", default_location_code)
+        self.folio = folio
+        super().__init__(folio, self.conditions)
         self.instance_id_map = instance_id_map
         self.location_map = location_map
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        print(any(self.location_map))
-        self.holdings_types = list(
-            folio.folio_get_all("/holdings-types", "holdingsTypes")
-        )
-        self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
-        print(f"Fetched {len(self.holdings_types)} holdings types")
-        self.default_holdings_type_id = self.get_ref_data_tuple(
-            self.holdings_types, "holdings_types", "Monographic", "name"
-        )[0]
 
-        self.default_location_id = self.get_ref_data_tuple(
-            self.conditions.locations, "locations", default_location_code, "code"
-        )[0]
-        print(f"Default location code is {self.default_location_id}")
 
     def parse_hold(self, marc_record, inventory_only=False):
         """ Parses a mfhd recod into a FOLIO Inventory instance object
@@ -81,15 +67,27 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def perform_additional_mapping(self, marc_record, folio_holding, legacy_id):
         """Perform additional tasks not easily handled in the mapping rules"""
+        
+        # Holdings type mapping
         ldr06 = marc_record.leader[6]
         self.add_to_migration_report("Leader 06 (Holdings type)", ldr06)
         # TODO: map this better
         # type = type_map.get(ldr06, "Unknown")
-        folio_holding["holdingsTypeId"] = self.default_holdings_type_id
-        folio_holding["callNumberTypeId"] = self.default_call_number_type_id
+        if not folio_holding.get("holdingsTypeId", ""):
+            htype_map = {"u":"Unknown", "v":"Multi-part monograph", "x":"Monographic", "y":"Serial"}
+            htype = htype_map.get(ldr06, "")
+            t = self.conditions.get_ref_data_tuple_by_name(self.conditions.holdings_types, "hold_types", htype)
+            if t:
+                folio_holding["holdingsTypeId"] = t[0]
+                self.add_to_migration_report("Holdings type mapping", t[1])
+            else:
+                folio_holding["holdingsTypeId"] = self.conditions.default_holdings_type_id
+                self.add_to_migration_report("Holdings type mapping", "Unknown")
+            
+        if not folio_holding.get("callNumberTypeId", ""):
+            folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type_id
         if not folio_holding.get("permanentLocationId", ""):
-            folio_holding["permanentLocationId"] = self.default_location_id
-        
+            folio_holding["permanentLocationId"] = self.conditions.default_location_id        
         # special weird case. Likely needs fixing in the mapping rules.
         if " " in folio_holding["permanentLocationId"]:
             print(f'Space in permanentLocationId for {legacy_id} ({folio_holding["permanentLocationId"]}). Taking the first one')
@@ -108,7 +106,7 @@ class RulesMapperHoldings(RulesMapperBase):
             else None
         )
         if not ref_object:
-            logging.debug(f"No matching element for {key_value} in {list(ref_data)}")
+            print(f"No matching element for {key_value} in {list(ref_data)}")
             return None
         return ref_object
 
