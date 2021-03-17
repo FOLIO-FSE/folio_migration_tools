@@ -98,10 +98,14 @@ class Conditions:
             f"call_number_type\t{self.default_call_number_type}",
             flush=True,
         )
-        self.default_holdings_type_id = self.get_ref_data_tuple_by_name(
+        t = self.get_ref_data_tuple_by_name(
             self.holdings_types, "holdings_types", "Unmapped"
-        )[0]
-        #TODO: raise if not set
+        )
+        if t:
+            self.default_holdings_type_id =t[0]
+        else:
+            raise Exception("Holdings type Unmapped not set in client")
+        
         if self.default_location_code:
             self.default_location_id = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", self.default_location_code
