@@ -99,8 +99,9 @@ class Conditions:
             flush=True,
         )
         self.default_holdings_type_id = self.get_ref_data_tuple_by_name(
-            self.holdings_types, "holdings_types", "Monographic"
+            self.holdings_types, "holdings_types", "Unmapped"
         )[0]
+        #TODO: raise if not set
         if self.default_location_code:
             self.default_location_id = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", self.default_location_code
@@ -352,15 +353,15 @@ class Conditions:
         self, value, parameter, marc_field: pymarc.Field
     ):
         first_level_map = {
-            "1": "Dewey Decimal classification",
             "0": "Library of Congress classification",
+            "1": "Dewey Decimal classification",            
             "2": "National Library of Medicine classification",
-            "8": "Other scheme",
-            "6": "Shelved separately",
-            "4": "Shelving control number",
-            "7": "Source specified in subfield $2",
             "3": "Superintendent of Documents classification",
+            "4": "Shelving control number",
             "5": "Title",
+            "6": "Shelved separately",            
+            "7": "Source specified in subfield $2",
+            "8": "Other scheme"            
         }
 
         # CallNumber type specified in $2. This needs further mapping
@@ -384,7 +385,7 @@ class Conditions:
         )
         if t:
             self.mapper.add_to_migration_report(
-                "Callnumber types", f"Mapped from Indicator 1 {t[0]}"
+                "Callnumber types", f"Mapped from Indicator 1 {marc_field.indicator1} - {t[1]}"
             )
             return t[0]
 
@@ -394,7 +395,7 @@ class Conditions:
         return self.default_call_number_type["id"]
 
     def condition_set_electronic_if_serv_remo(self, value, parameter, marc_field):
-        if value in ["serv", "remo"]:
+        if value == "serv,remo":
             t = self.get_ref_data_tuple_by_name(
                 self.holdings_types, "hold_types", "Electronic"
             )
