@@ -90,15 +90,22 @@ class ItemMapper(MapperBase):
                 if legacy_value not in self.holdings_id_map:
                     self.add_stats("Holdings id not in map")
                     raise TransformationProcessError(
-                        index_or_id, f"Holdings id '{legacy_value}' not in list of mapped holdings."
+                        index_or_id,
+                        f"Holdings id '{legacy_value}' not in list of mapped holdings.",
                     )
                 else:
                     self.add_to_migration_report("Holdings IDs", f"Mapped")
                     return self.holdings_id_map[legacy_value]["id"]
             elif len(legacy_item_keys) == 1:
                 # print(folio_prop_name)
-                value = next((k.get("value","") for k in self.items_map["data"]
-                        if k["folio_field"] == folio_prop_name),"")
+                value = next(
+                    (
+                        k.get("value", "")
+                        for k in self.items_map["data"]
+                        if k["folio_field"] == folio_prop_name
+                    ),
+                    "",
+                )
                 if value not in [None, ""]:
                     return value
                 else:
@@ -135,89 +142,54 @@ class ItemMapper(MapperBase):
     def get_statistical_codes(self, vals):
         # Mapping file with old values to FOLIO equivalents and then map that here.
         raise NotImplementedError("Statistical code mapping is not yet available")
-    
-    def get_loan_type_id(self, legacy_item: dict):
-        fieldvalues = [legacy_item[k] for k in self.loan_type_keys]
-        for row in self.loan_type_map:
-            all_good = []
-            for k in self.loan_type_keys:
-                all_good.append(legacy_item[k] in row[k])
-            if all(all_good):
-                self.add_to_migration_report(
-                    "Mapped loan types",
-                    f'{" - ".join(fieldvalues)} -> {row["folio_name"]}',
-                )
-                return row["folio_id"]
 
-        self.add_to_migration_report(
-            "Unmapped loan types",
-            f'{" - ".join(fieldvalues)}',
+    def get_loan_type_id(self, legacy_item: dict):
+         return self.get_mapped_value(
+            "Loan type",
+            legacy_item,
+            self.loan_type_keys,
+            self.loan_type_map,
+            self.default_loan_type_id,
+            "folio_name"
         )
-        return self.default_loan_type_id
 
     def get_material_type_id(self, legacy_item: dict):
-        for row in self.material_type_map:
-            all_good = []
-            for k in self.material_type_keys:
-                all_good.append(legacy_item[k].strip().casefold() in row[k].casefold())
-            fieldvalues = [legacy_item[k] for k in self.material_type_keys]
-            if all(all_good):
-                self.add_to_migration_report(
-                    "Material type mapping",
-                    f'{" - ".join(fieldvalues)} -> {row["folio_name"]}',
-                )
-                return row["folio_id"]
-        self.add_to_migration_report(
-            "Unmapped material types",
-            f'{" - ".join(fieldvalues)}',
+        return self.get_mapped_value(
+            "Material type",
+            legacy_item,
+            self.material_type_keys,
+            self.material_type_map,
+            self.default_material_type_id,
+            "folio_name"
         )
-        return self.default_material_type_id
-    
+
     def get_location_id(self, legacy_item: dict, id_or_index):
-        fieldvalues = [legacy_item[k] for k in self.location_keys]
-        for row in self.location_map:
-            all_good = []
-            for k in self.location_keys:
-                all_good.append(legacy_item[k] in row[k])
-            if all(all_good):
-                self.add_to_migration_report(
-                    "Mapped locations",
-                    f'{" - ".join(fieldvalues)} -> {row["folio_code"]}',
-                )
-                return row["folio_id"]
-        self.add_to_migration_report(
-            "Unmapped locations",
-            f'{" - ".join(fieldvalues)}',
+        return self.get_mapped_value(
+            "Location",
+            legacy_item,
+            self.location_keys,
+            self.location_map,
+            self.default_location_id,
+            "folio_code"
         )
-        return self.default_location_id
+
+    def get_item_level_call_number_type_id(self, legacy_item):
+        return self.get_mapped_value(
+            "Callnumber type",
+            legacy_item,
+            self.call_number_type_keys,
+            self.call_number_type_map,
+            self.default_call_number_type_id,
+            "folio_name"
+        )
 
     def transform_status(self, legacy_value):
         self.add_to_migration_report("Status mapping", f"{legacy_value} -> Available")
         return "Available"
 
-    def get_item_level_call_number_type_id(self, legacy_item):
-        for row in self.call_number_type_map:
-            all_good = []
-            for k in self.call_number_type_keys:
-                # print(f"{legacy_item} - {k}")
-                leg_item_prop = legacy_item[k].strip().casefold()
-                all_good.append(leg_item_prop in row[k].casefold())
-            fieldvalues = [legacy_item[k] for k in self.call_number_type_keys]
-            if all(all_good):
-                self.add_to_migration_report(
-                    "call_number_type mapping",
-                    f'{" - ".join(fieldvalues)} -> {row["folio_name"]}',
-                )
-                return row["folio_id"]
-        self.add_to_migration_report(
-            "Unmapped call_number_types",
-            f'{" - ".join(fieldvalues)}',
-        )
-        return self.default_call_number_type_id
-    
     def setup_call_number_type_mappings(self):
         # Loan types
-        print("Fetching Loan types...")
+        print("Fetching Callnumber types...")
         self.folio_call_number_types = list(
             self.folio_client.folio_get_all("/call-number-types", "callNumberTypes")
         )
@@ -248,11 +220,15 @@ class ItemMapper(MapperBase):
                             "Add a row to mapping file with *:s and a valid call_number type"
                         )
                 else:
-                    call_number_type_mapping["folio_id"] = self.get_ref_data_tuple_by_name(
+                    call_number_type_mapping[
+                        "folio_id"
+                    ] = self.get_ref_data_tuple_by_name(
                         self.folio_call_number_types,
                         "callnumbers",
                         call_number_type_mapping["folio_name"],
-                    )[0]
+                    )[
+                        0
+                    ]
             except TransformationProcessError as te:
                 raise te
             except Exception:
@@ -381,13 +357,13 @@ class ItemMapper(MapperBase):
         print("Fetching locations...")
         for idx, loc_map in enumerate(location_map):
             if idx == 1:
-                    self.location_keys = list(
-                        [
-                            k
-                            for k in loc_map.keys()
-                            if k not in ["folio_code", "folio_id", "folio_name"]
-                        ]
-                    )
+                self.location_keys = list(
+                    [
+                        k
+                        for k in loc_map.keys()
+                        if k not in ["folio_code", "folio_id", "folio_name"]
+                    ]
+                )
             if any(m for m in loc_map.values() if m == "*"):
                 t = self.get_ref_data_tuple_by_code(
                     self.folio_client.locations, "locations", loc_map["folio_code"]

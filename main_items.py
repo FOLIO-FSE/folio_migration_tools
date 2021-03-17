@@ -4,10 +4,12 @@ import csv
 import ctypes
 import json
 import os
+import time
 import traceback
 from os import listdir
 from os.path import isfile, join
 from typing import Dict, List
+from datetime import datetime
 
 import pymarc
 from folioclient.FolioClient import FolioClient
@@ -48,6 +50,7 @@ class Worker:
                     os.path.join(self.results_path, "folio_items.json"), "w+"
                 ) as results_file:
                     self.mapper.add_stats("Number of files processed")
+                    start = time.time()
                     for idx, record in enumerate(self.mapper.get_objects(records_file)):
                         try:
                             folio_rec = self.mapper.do_map(record, f"row {idx}")
@@ -71,8 +74,14 @@ class Worker:
                                     f"{self.num_exeptions}. Stopping."
                                 )
                         self.mapper.add_stats("Number of Legacy items in file")
-                        if idx % 10000 == 0:
-                            print(f"{idx:,} records processed")
+                        if idx % 1000 == 0:
+                            elapsed = idx / (time.time() - start)
+                            elapsed_formatted = "{0:.4g}".format(elapsed)
+                            print(
+                                f"{idx:,} records processed. "
+                                f"Recs/sec: {elapsed_formatted} "
+                                f"{datetime.utcnow().isoformat()} UTC"
+                            )
                     total_records += idx
                     print(
                         f"Done processing {file_name} containing {idx:,} records. "
@@ -155,7 +164,9 @@ def main():
     error_file_path = os.path.join(args.result_path, "item_transform_errors.tsv")
     location_map_path = os.path.join(args.map_path, "locations.tsv")
     loans_type_map_path = os.path.join(args.map_path, "loan_types.tsv")
-    call_number_type_map_path = os.path.join(args.map_path, "call_number_type_mapping.tsv")
+    call_number_type_map_path = os.path.join(
+        args.map_path, "call_number_type_mapping.tsv"
+    )
     material_type_map_path = os.path.join(args.map_path, "material_types.tsv")
     try:
         if not isfile(loans_type_map_path):
@@ -185,11 +196,13 @@ def main():
             )
 
         with open(call_number_type_map_path) as call_number_type_map_file:
-            call_number_type_map = list(csv.DictReader(call_number_type_map_file, dialect="tsv"))
+            call_number_type_map = list(
+                csv.DictReader(call_number_type_map_file, dialect="tsv")
+            )
             print(f"Found {len(call_number_type_map)} rows in callnumber type map")
             print(
                 f'{",".join(call_number_type_map[0].keys())} '
-                'will be used for determinig callnumber type'
+                "will be used for determinig callnumber type"
             )
 
         with open(holdings_id_dict_path, "r") as holdings_id_map_file, open(
