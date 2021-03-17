@@ -82,7 +82,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 self.add_to_migration_report("Holdings type mapping", t[1])
             else:
                 folio_holding["holdingsTypeId"] = self.conditions.default_holdings_type_id
-                self.add_to_migration_report("Holdings type mapping", "Unknown")
+                self.add_to_migration_report("Holdings type mapping", "Unmapped")
             
         if not folio_holding.get("callNumberTypeId", ""):
             folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type_id

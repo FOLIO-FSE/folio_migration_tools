@@ -177,7 +177,7 @@ def main():
             )
         if not isfile(items_map_path):
             raise Exception(
-                f"No file called item_to_item.tsv present in {args.map_path}"
+                f"No file called item_mapping.json present in {args.map_path}"
             )
 
         # Files found, let's go!
