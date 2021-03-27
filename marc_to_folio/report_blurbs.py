@@ -1,7 +1,6 @@
-{ "descriptions" : 
-    {
-        "Overview": "<br/>Data errors preventing records from being migrated are marked **FIX BEFORE MIGRATION**. The library is advised to clean up these errors in the source data.<br/><br/> The sections related to field counts and mapping results are marked **REVIEW**. These do not indicate errors preventing records from being migrated, but may point to data anomalies or in the mappings. The library should review these to make sure that the numbers are what one would expect, knowing the source data. Is this the expected number of serials? Is this the expected number of cartographic materials?",
-        "Mapped Legacy fields": "**REVIEW** This table lists all the MARC fields instances in the source data, and whether it has been mapped to a FOLIO instance record field. The library should examine the MARC tags with a high 'Unmapped' figure and determine if these MARC tags contain data that you would like mapped to the FOLIO instance record.",
+blurbs = {
+        "Introduction": "<br/>Data errors preventing records from being migrated are marked **FIX BEFORE MIGRATION**. The library is advised to clean up these errors in the source data.<br/><br/> The sections related to field counts and mapping results are marked **REVIEW**. These do not indicate errors preventing records from being migrated, but may point to data anomalies or in the mappings. The library should review these to make sure that the numbers are what one would expect, knowing the source data. Is this the expected number of serials? Is this the expected number of cartographic materials?",
+        "Mapped Legacy fields": "**REVIEW** This table lists all the MARC fields in the source data, and whether it has been mapped to a FOLIO instance record field. The library should examine the MARC tags with a high 'Unmapped' figure and determine if these MARC tags contain data that you would like mapped to the FOLIO instance record.",
         "Mapped FOLIO fields": "**REVIEW** This table shows how many of the FOLIO instance instances created contain data in the different FOLIO fields. The library should review the mapped totals against what they would expect to see mapped.",
         "__Section 1: instances": "This entries below seem to be related to instances",
         "Record status (leader pos 5)":  "**REVIEW** An ovrview of the Record statuses (Leader position 5) present in your source data.",
@@ -50,4 +49,4 @@
         "Mapped loan types": "Section description to be added.",
         "Unmapped loan types": "Section description to be added."
     }
-}
+
