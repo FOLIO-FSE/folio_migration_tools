@@ -1,6 +1,7 @@
 import json
 import logging
 from marc_to_folio.conditions import Conditions
+from marc_to_folio.report_blurbs import blurbs
 import time
 from typing import Dict, List
 import pymarc
@@ -27,6 +28,7 @@ class RulesMapperBase:
         self.conditions = conditions
         self.item_json_schema = ""
         self.mappings = {}
+
         print(f"Current user id is {self.folio_client.current_user}", flush=True)
 
     def report_legacy_mapping(self, field_name, present, mapped, empty=False):
@@ -48,10 +50,14 @@ class RulesMapperBase:
             self.mapped_folio_fields[field_name][0] += int(was_mapped)
             self.mapped_folio_fields[field_name][1] += int(was_empty)
 
-    def print_mapping_report(self, report_file, descriptions):
+    def print_mapping_report(self, report_file):
+        
         total_records = self.stats["Number of records in file(s)"]
         header = "Mapped FOLIO fields"
-        report_file.write(f"\n## {header}\n{descriptions[header]}\n")
+
+        report_file.write(f"\n## {header}\n")
+        report_file.write(f"{blurbs[header]}\n")
+
         d_sorted = {
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
         }
@@ -72,7 +78,9 @@ class RulesMapperBase:
 
         # Legacy fields (like marc)
         header = "Mapped Legacy fields"
-        report_file.write(f"\n## {header}\n{descriptions[header]}\n")
+        report_file.write(f"\n## {header}\n")
+        report_file.write(f"{blurbs[header]}\n")
+
         d_sorted = {
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
         }
@@ -93,10 +101,9 @@ class RulesMapperBase:
             )
         report_file.write("</details>   \n")
 
-
-# This is where content is added to the migration report. 
-# In addition to a header and a measure_to_add, there should be a description.
     def add_to_migration_report(self, header, measure_to_add):
+        """Add section header and values to migration report."""
+    
         if header not in self.migration_report:
             self.migration_report[header] = {}
         if measure_to_add not in self.migration_report[header]:
@@ -104,17 +111,17 @@ class RulesMapperBase:
         else:
             self.migration_report[header][measure_to_add] += 1
 
+    def write_migration_report(self, report_file):
+        """Writes the migrstion report, including section headers, section blurbs, and values."""
+        report_file.write(f"{blurbs['Introduction']}\n")
 
-# This is where the migration report is written. 
-# Under the header, the applicable description should be written out.
-    def write_migration_report(self, report_file, descriptions):
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
             try:
-                report_file.write(f"{descriptions[a]}    \n")
+                report_file.write(f"{blurbs[a]}    \n")
             except KeyError as e:
-                print("Uhoh. Please add this one to migration_report_descriptpns.json:", e)
+                print("Uhoh. Please add this one to report_blurbs.py:", e)
             report_file.write(
                 f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
             )
