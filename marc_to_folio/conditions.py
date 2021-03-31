@@ -1,3 +1,4 @@
+import logging
 import re
 import pymarc
 from pymarc import field
@@ -5,9 +6,9 @@ from pymarc import field
 
 class Conditions:
     def __init__(self, folio, mapper, object_type, default_location_code=""):
-        print(f"default location code is still {default_location_code}")
+        logging.debug(f"default location code is still {default_location_code}")
         self.default_location_code = default_location_code
-        print("Init conditions!")
+        logging.debug("Init conditions!")
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
         self.stats = {}
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
@@ -24,14 +25,11 @@ class Conditions:
         self.condition_cache = {}
 
     def setup_reference_data_for_bibs(self):
-        print("Setting up reference data for bib transformation")
-        print(
-            f"{len(self.folio.contrib_name_types)}\tcontrib_name_types",
-            flush=True,
-        )
-        print(f"{len(self.folio.contributor_types)}\tcontributor_types", flush=True)
-        print(f"{len(self.folio.alt_title_types )}\talt_title_types", flush=True)
-        print(f"{len(self.folio.identifier_types)}\tidentifier_types", flush=True)
+        logging.info("Setting up reference data for bib transformation")
+        logging.info(f"{len(self.folio.contrib_name_types)}\tcontrib_name_types")
+        logging.info(f"{len(self.folio.contributor_types)}\tcontributor_types")
+        logging.info(f"{len(self.folio.alt_title_types )}\talt_title_types")
+        logging.info(f"{len(self.folio.identifier_types)}\tidentifier_types")
         # Raise for empty settings
         if not self.folio.contributor_types:
             raise Exception("No contributor_types setup in tenant")
@@ -45,35 +43,23 @@ class Conditions:
             raise Exception("No alt_title_types setup in tenant")
 
         # Set defaults
-        print("Setting defaults")
+        logging.info("Setting defaults")
         self.default_contributor_name_type = self.folio.contrib_name_types[0]["id"]
-        print(
-            f"contributor name type\t{self.default_contributor_name_type}",
-            flush=True,
-        )
+        logging.info(f"contributor name type\t{self.default_contributor_name_type}")
         self.default_contributor_type = next(
             ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
         )
-        print(
-            f"contributor type\t{self.default_contributor_type}",
-            flush=True,
-        )
+        logging.info(f"contributor type\t{self.default_contributor_type['id']}")
 
     def setup_reference_data_for_items_and_holdings(self):
-        print(f"{len(self.folio.locations)}\tlocations", flush=True)
+        logging.info(f"{len(self.folio.locations)}\tlocations")
         self.default_call_number_type = {}
-        print(
-            f"{len(self.folio.holding_note_types)}\tholding_note_types",
-            flush=True,
-        )
-        print(
-            f"{len(self.folio.call_number_types)}\tcall_number_types",
-            flush=True,
-        )
+        logging.info(f"{len(self.folio.holding_note_types)}\tholding_note_types")
+        logging.info(f"{len(self.folio.call_number_types)}\tcall_number_types")
         self.holdings_types = list(
             self.folio.folio_get_all("/holdings-types", "holdingsTypes")
         )
-        print(f"{len(self.holdings_types)}\tholdings types")
+        logging.info(f"{len(self.holdings_types)}\tholdings types")
         # Raise for empty settings
         if not self.folio.holding_note_types:
             raise Exception("No holding_note_types setup in tenant")
@@ -85,44 +71,39 @@ class Conditions:
             raise Exception("No locations set up in tenant")
 
         # Set defaults
-        print("Defaults")
+        logging.info("Defaults")
         self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
-        print(
-            f"callnumber type\t{self.default_call_number_type_id}",
-            flush=True,
-        )
+        logging.info(f"callnumber type\t{self.default_call_number_type_id}")
         self.default_call_number_type = next(
             ct for ct in self.folio.call_number_types if ct["name"] == "Other scheme"
         )
-        print(
-            f"call_number_type\t{self.default_call_number_type}",
-            flush=True,
-        )
+        logging.info(f"call_number_type\t{self.default_call_number_type}")
         t = self.get_ref_data_tuple_by_name(
             self.holdings_types, "holdings_types", "Unmapped"
         )
         if t:
-            self.default_holdings_type_id =t[0]
+            self.default_holdings_type_id = t[0]
         else:
             raise Exception("Holdings type Unmapped not set in client")
-        
+
         if self.default_location_code:
+            logging.info(f"Default location code is {self.default_location_code}")
             self.default_location_id = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", self.default_location_code
             )[0]
-            print(f"Default location code is {self.default_location_id}")
+            logging.info(f"Default location id is {self.default_location_id}")
         else:
-            print("Default location code is not set up")
+            raise Exception("Default location code is not set up")
+
     def setup_reference_data_for_all(self):
-        print(
-            f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships",
-            flush=True,
+        logging.info(
+            f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships"
         )
-        print(f"{len(self.folio.class_types)}\tclass_types", flush=True)
+        logging.info(f"{len(self.folio.class_types)}\tclass_types")
         self.statistical_codes = list(
             self.folio.folio_get_all("/statistical-codes", "statisticalCodes")
         )
-        print(f"{len(self.statistical_codes)} \tstatistical_codes", flush=True)
+        logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")
 
         # Raise for empty settings
         if not self.folio.class_types:
@@ -257,8 +238,9 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped identifier types", t[1])
             return t[0]
         except:
-            print("Unmapped identifier name types", parameter["name"])
-            print(marc_field)
+            logging.exception(
+                f'Unmapped identifier name types {parameter["name"]} {marc_field}'
+            )
             raise Exception(
                 f'Identifier mapping error.\n Parameter: {parameter.get("name", "")}\nMARC Field: {marc_field}'
             )
@@ -305,7 +287,7 @@ class Conditions:
                     f"Contributor type code {t} found for $4 {subfield} ({normalized_subfield}))",
                 )
                 return t[0]
-        subfield_code = 'j' if marc_field.tag in ['111', '711'] else 'e'
+        subfield_code = "j" if marc_field.tag in ["111", "711"] else "e"
         for subfield in marc_field.get_subfields(subfield_code):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
             t = self.get_ref_data_tuple_by_name(
@@ -358,14 +340,14 @@ class Conditions:
     ):
         first_level_map = {
             "0": "Library of Congress classification",
-            "1": "Dewey Decimal classification",            
+            "1": "Dewey Decimal classification",
             "2": "National Library of Medicine classification",
             "3": "Superintendent of Documents classification",
             "4": "Shelving control number",
             "5": "Title",
-            "6": "Shelved separately",            
+            "6": "Shelved separately",
             "7": "Source specified in subfield $2",
-            "8": "Other scheme"            
+            "8": "Other scheme",
         }
 
         # CallNumber type specified in $2. This needs further mapping
@@ -389,7 +371,8 @@ class Conditions:
         )
         if t:
             self.mapper.add_to_migration_report(
-                "Callnumber types", f"Mapped from Indicator 1 {marc_field.indicator1} - {t[1]}"
+                "Callnumber types",
+                f"Mapped from Indicator 1 {marc_field.indicator1} - {t[1]}",
             )
             return t[0]
 
@@ -457,7 +440,9 @@ class Conditions:
             t = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", mapped_code
             )
-            self.mapper.add_to_migration_report("Mapped Locations", f"{mapped_code}->{t[1]}")
+            self.mapper.add_to_migration_report(
+                "Mapped Locations", f"{mapped_code}->{t[1]}"
+            )
             return t[0]
         except Exception:
             t = self.get_ref_data_tuple_by_code(
@@ -467,8 +452,9 @@ class Conditions:
                 raise Exception(
                     f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
                 )
-            self.mapper.add_to_migration_report("Mapped Locations", 
-            f"Default loc returned {mapped_code}->{t[1]}")
+            self.mapper.add_to_migration_report(
+                "Mapped Locations", f"Default loc returned {mapped_code}->{t[1]}"
+            )
             return t[0]
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):

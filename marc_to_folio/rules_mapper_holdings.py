@@ -8,7 +8,7 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(self, folio, instance_id_map, location_map, default_location_code, args):
-        print(f"Default location code is {default_location_code}")
+        logging.debug(f"Default location code is {default_location_code}")
         self.conditions = Conditions(folio,self, "holdings", default_location_code)
         self.folio = folio
         super().__init__(folio, self.conditions)
@@ -45,7 +45,7 @@ class RulesMapperHoldings(RulesMapperBase):
             else:
                 if marc_field.tag not in ignored_subsequent_fields:
                     mappings = self.mappings[marc_field.tag]
-                    # print(mappings)
+                    # logging.debug(mappings)
                     self.map_field_according_to_mapping(
                         marc_field, mappings, folio_holding
                     )
@@ -59,7 +59,7 @@ class RulesMapperHoldings(RulesMapperBase):
         try:
             self.count_mapped_fields(folio_holding)
         except:
-            print(folio_holding)
+            logging.error(f"Error counting mapped folio fields for {folio_holding}")
         for id in legacy_id:
             self.holdings_id_map[id] = {"id": folio_holding["id"]}
 
@@ -82,7 +82,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 self.add_to_migration_report("Holdings type mapping", t[1])
             else:
                 folio_holding["holdingsTypeId"] = self.conditions.default_holdings_type_id
-                self.add_to_migration_report("Holdings type mapping", "Unknown")
+                self.add_to_migration_report("Holdings type mapping", "Unmapped")
             
         if not folio_holding.get("callNumberTypeId", ""):
             folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type_id
@@ -90,7 +90,7 @@ class RulesMapperHoldings(RulesMapperBase):
             folio_holding["permanentLocationId"] = self.conditions.default_location_id        
         # special weird case. Likely needs fixing in the mapping rules.
         if " " in folio_holding["permanentLocationId"]:
-            print(f'Space in permanentLocationId for {legacy_id} ({folio_holding["permanentLocationId"]}). Taking the first one')
+            logging.info(f'Space in permanentLocationId for {legacy_id} ({folio_holding["permanentLocationId"]}). Taking the first one')
             folio_holding["permanentLocationId"] = folio_holding["permanentLocationId"].split(" ")[0]
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
@@ -106,7 +106,7 @@ class RulesMapperHoldings(RulesMapperBase):
             else None
         )
         if not ref_object:
-            print(f"No matching element for {key_value} in {list(ref_data)}")
+            logging.error(f"No matching element for {key_value} in {list(ref_data)}")
             return None
         return ref_object
 

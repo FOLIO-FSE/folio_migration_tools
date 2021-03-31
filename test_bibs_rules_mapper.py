@@ -1,3 +1,5 @@
+import logging
+from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import unittest
 from lxml import etree
 import pymarc
@@ -40,7 +42,7 @@ class TestRulesMapper(unittest.TestCase):
             data = " ".join(
                 [data, str(etree.tostring(element, pretty_print=True), "utf-8")]
             )
-        # print(json.dumps(rec, indent=4, sort_keys=True))
+        logging.debug(json.dumps(record, indent=4, sort_keys=True))
         return [result, data]
 
     def test_simple_title(self):
