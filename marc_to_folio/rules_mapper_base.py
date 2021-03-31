@@ -28,8 +28,7 @@ class RulesMapperBase:
         self.conditions = conditions
         self.item_json_schema = ""
         self.mappings = {}
-
-        print(f"Current user id is {self.folio_client.current_user}", flush=True)
+        logging.info(f"Current user id is {self.folio_client.current_user}", flush=True)
 
     def report_legacy_mapping(self, field_name, present, mapped, empty=False):
         if field_name not in self.mapped_legacy_fields:
@@ -62,8 +61,8 @@ class RulesMapperBase:
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
         }
         report_file.write(
-                f"<details><summary>Click to expand field report</summary>     \n\n"
-            )
+            f"<details><summary>Click to expand field report</summary>     \n\n"
+        )
         report_file.write(f"FOLIO Field | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
@@ -85,8 +84,8 @@ class RulesMapperBase:
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
         }
         report_file.write(
-                f"<details><summary>Click to expand field report</summary>     \n\n"
-            )
+            f"<details><summary>Click to expand field report</summary>     \n\n"
+        )
         report_file.write(f"Legacy Field | Present | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
@@ -120,8 +119,9 @@ class RulesMapperBase:
             report_file.write(f"## {a}    \n")
             try:
                 report_file.write(f"{blurbs[a]}    \n")
-            except KeyError as e:
-                print("Uhoh. Please add this one to report_blurbs.py:", e)
+            except KeyError as key_error:
+                logging.exception(f"Uhoh. Please add this one to report_blurbs.py: {key_error}")
+
             report_file.write(
                 f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
             )
@@ -140,10 +140,8 @@ class RulesMapperBase:
         if i % 1000 == 0:
             elapsed = i / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            print(
-                f"{elapsed_formatted} records/sec.\t\t{i:,} records processed",
-                flush=True,
-            )
+            logging.info(
+                f"{elapsed_formatted} records/sec.\t\t{i:,} records processed")
 
     def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
         # TODO: Move to interface or parent class
@@ -192,7 +190,7 @@ class RulesMapperBase:
                     keys_to_delete.append(key)
             else:
                 self.report_folio_mapping(key, True, not any(value))
-                print(type(value))
+                logging.info(type(value))
                 # logging.info(type(value))
         for mykey in keys_to_delete:
             del folio_object[mykey]"""
@@ -247,7 +245,7 @@ class RulesMapperBase:
             c_type_def = mapping["rules"][0]["conditions"][0]["type"].split(",")
             condition_types = [x.strip() for x in c_type_def]
             parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
-            # print(f'conditions {condition_types}')
+            # logging.info(f'conditions {condition_types}')
             if mapping.get("applyRulesOnConcatenatedData", ""):
                 value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
                 value = self.apply_rule(value, condition_types, marc_field, parameter)
@@ -328,14 +326,14 @@ class RulesMapperBase:
                             and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
-                            print("This should be unreachable code")
+                            logging.error("This should be unreachable code")
                             raise Exception("This should be unreachable code")
-                            # print(f"break! {target} {prop} {value}")
+                            # logging.error(f"break! {target} {prop} {value}")
                             if len(rec[parent][-1]) > 0:
                                 rec[parent][-1][target] = value[0]
                             else:
                                 rec[parent][-1] = {target: value[0]}
-                            # print(parent)
+                            # logging.info(parent)
                             # break
                         else:
                             if schema_parent["type"] == "array":
@@ -362,24 +360,24 @@ class RulesMapperBase:
                             and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
-                            # print(f"break! {target} {prop} {value}")
+                            # logging.debug(f"break! {target} {prop} {value}")
                             if len(rec[parent][-1]) > 0:
                                 rec[parent][-1][target] = value[0]
-                                # print(rec[parent])
+                                logging.debug(rec[parent])
                             else:
                                 rec[parent][-1] = {target: value[0]}
-                                # print(rec[parent])
+                                logging.debug(rec[parent])
                         # break
 
                     # if target == targets[-1]:
-                    # print(f"HIT {target} {value[0]}")
+                    # logging.debug(f"HIT {target} {value[0]}")
                     # prop[target] = value[0]
                     # prop = rec[target]
                     schema_parent = sc_prop
                     parent = target
 
     def add_value_to_first_level_target(self, rec, target_string, value):
-        # print(f"{target_string} {value} {rec}")
+        logging.debug(f"{target_string} {value} {rec}")
         sch = self.schema["properties"]
 
         if not target_string or target_string not in sch:
@@ -490,7 +488,7 @@ def as_str(s):
 
 
 def fetch_holdings_schema():
-    logging.info("Fetching holdings schema...", end="")
+    logging.info("Fetching holdings schema...")
     holdings_url = (
         "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/"
         "master/ramls/holdingsrecord.json"

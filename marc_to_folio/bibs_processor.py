@@ -1,5 +1,6 @@
 """ Class that processes each MARC record """
 from io import StringIO
+import logging
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
@@ -85,12 +86,12 @@ class BibsProcessor:
                 self.mapper.stats, "Bib records that failed transformation"
             )
             self.mapper.add_stats(self.mapper.stats, "Transformation exceptions")
-            print(type(inst), flush=True)
-            print(inst.args, flush=True)
-            print(inst, flush=True)
-            print(marc_record, flush=True)
+            logging.error(type(inst))
+            logging.error(inst.args)
+            logging.error(inst)
+            logging.error(marc_record)
             if folio_rec:
-                print(folio_rec, flush=True)
+                logging.error(folio_rec)
             raise inst
 
     def validate_instance(self, folio_rec, marc_record):
@@ -99,7 +100,7 @@ class BibsProcessor:
         if not folio_rec.get("title", ""):
             s = f"No title in {marc_record['001'].format_field()}"
             self.mapper.add_to_migration_report("Records without titles", s)
-            print(s, flush=True)
+            logging.error(s)
             self.mapper.add_stats(
                 self.mapper.stats, "Bib records that failed transformation"
             )
@@ -117,9 +118,9 @@ class BibsProcessor:
         """Finalizes the mapping by writing things out."""
         try:
             self.mapper.wrap_up()
-        except Exception as exception:
-            print(f"error during wrap up {exception}")
-        print("Saving holdings created from bibs", flush=True)
+        except Exception:
+            logging.exception(f"error during wrap up")
+        logging.info("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
             holdings_path = os.path.join(self.results_folder, "folio_holdings.json")
             with open(holdings_path, "w+") as holdings_file:

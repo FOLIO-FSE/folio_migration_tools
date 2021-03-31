@@ -1,5 +1,6 @@
 import csv
 import json
+import logging
 from marc_to_folio.custom_exceptions import (
     TransformationDataError,
     TransformationProcessError,
@@ -32,7 +33,7 @@ class MapperBase:
         csv.register_dialect("tsv", delimiter="\t")
 
     def write_migration_report(self, report_file):
-        print("Writing migration report")
+        logging.info("Writing migration report")
         for a in self.migration_report:
             report_file.write(f"   \n")
             report_file.write(f"## {a}    \n")
@@ -49,7 +50,7 @@ class MapperBase:
             report_file.write("</details>   \n")
 
     def print_mapping_report(self, report_file, total_records):
-        print("Writing mapping report")
+        logging.info("Writing mapping report")
         report_file.write("\n## Mapped FOLIO fields   \n")
         d_sorted = {
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
@@ -203,7 +204,7 @@ class MapperBase:
                                 ].items():
                                     sub_prop_key2 = sub_prop_key + "." + sub_prop_name2
                                     if sub_prop2["type"] == "array":
-                                        print(f"Array: {sub_prop_key2} ")
+                                        logging.info(f"Array: {sub_prop_key2} ")
                             elif sub_prop["type"] == "array":
                                 temp_object[sub_prop_name] = []
                                 for i in range(0, 5):
@@ -339,7 +340,7 @@ class MapperBase:
                 ),
                 "",
             )
-            # print(f"{folio_prop_name} - {legacy_key}")
+            logging.debug(f"{folio_prop_name} - {legacy_key}")
             b = (
                 legacy_key
                 and legacy_key not in ["", "Not mapped"]
@@ -361,7 +362,7 @@ class MapperBase:
                 ),
                 "",
             )
-            # print(f"{folio_prop_name} - {legacy_key}")
+            logging.debug(f"{folio_prop_name} - {legacy_key}")
             b = (
                 legacy_key
                 and legacy_key not in ["", "Not mapped"]

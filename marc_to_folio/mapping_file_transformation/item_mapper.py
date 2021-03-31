@@ -1,5 +1,6 @@
 import csv
 import json
+import logging
 from marc_to_folio.custom_exceptions import (
     TransformationCriticalDataError,
     TransformationProcessError,
@@ -33,8 +34,6 @@ class ItemMapper(MapperBase):
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
 
-        self.loan_type_map = loan_type_map
-        self.legacy_id_map: Dict[str, str] = {}
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
 
@@ -88,16 +87,15 @@ class ItemMapper(MapperBase):
                 return self.get_statistical_codes(vals)
             elif folio_prop_name == "holdingsRecordId":
                 if legacy_value not in self.holdings_id_map:
-                    self.add_stats("Holdings id not in map")
-                    raise TransformationProcessError(
-                        index_or_id,
-                        f"Holdings id '{legacy_value}' not in list of mapped holdings.",
-                    )
+                    self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
+                    s = f"Holdings id '{legacy_value}' not in hold id map."
+                    logging.error(f"s\t{index_or_id}")
+                    raise TransformationProcessError(s, index_or_id)
                 else:
                     self.add_to_migration_report("Holdings IDs", f"Mapped")
                     return self.holdings_id_map[legacy_value]["id"]
             elif len(legacy_item_keys) == 1:
-                # print(folio_prop_name)
+                logging.debug(folio_prop_name)
                 value = next(
                     (
                         k.get("value", "")
@@ -144,13 +142,13 @@ class ItemMapper(MapperBase):
         raise NotImplementedError("Statistical code mapping is not yet available")
 
     def get_loan_type_id(self, legacy_item: dict):
-         return self.get_mapped_value(
+        return self.get_mapped_value(
             "Loan type",
             legacy_item,
             self.loan_type_keys,
             self.loan_type_map,
             self.default_loan_type_id,
-            "folio_name"
+            "folio_name",
         )
 
     def get_material_type_id(self, legacy_item: dict):
@@ -160,7 +158,7 @@ class ItemMapper(MapperBase):
             self.material_type_keys,
             self.material_type_map,
             self.default_material_type_id,
-            "folio_name"
+            "folio_name",
         )
 
     def get_location_id(self, legacy_item: dict, id_or_index):
@@ -170,7 +168,7 @@ class ItemMapper(MapperBase):
             self.location_keys,
             self.location_map,
             self.default_location_id,
-            "folio_code"
+            "folio_code",
         )
 
     def get_item_level_call_number_type_id(self, legacy_item):
@@ -180,7 +178,7 @@ class ItemMapper(MapperBase):
             self.call_number_type_keys,
             self.call_number_type_map,
             self.default_call_number_type_id,
-            "folio_name"
+            "folio_name",
         )
 
     def transform_status(self, legacy_value):
@@ -189,7 +187,7 @@ class ItemMapper(MapperBase):
 
     def setup_call_number_type_mappings(self):
         # Loan types
-        print("Fetching Callnumber types...")
+        logging.info("Fetching Callnumber types...")
         self.folio_call_number_types = list(
             self.folio_client.folio_get_all("/call-number-types", "callNumberTypes")
         )
@@ -211,7 +209,7 @@ class ItemMapper(MapperBase):
                     )
                     if t:
                         self.default_call_number_type_id = t[0]
-                        print(
+                        logging.info(
                             f'Set {call_number_type_mapping["folio_name"]} as default call_numbertype mapping'
                         )
                     else:
@@ -232,7 +230,7 @@ class ItemMapper(MapperBase):
             except TransformationProcessError as te:
                 raise te
             except Exception:
-                print(json.dumps(self.call_number_type_map, indent=4))
+                logging.info(json.dumps(self.call_number_type_map, indent=4))
                 raise TransformationProcessError(
                     f"{call_number_type_mapping['folio_name']} could not be found in FOLIO"
                 )
@@ -241,13 +239,13 @@ class ItemMapper(MapperBase):
                 "No Default Callnumber type set up in map."
                 "Add a row to mapping file with *:s and a valid callnumber type"
             )
-        print(
+        logging.info(
             f"loaded {idx} mappings for {len(self.folio_call_number_types)} loan types in FOLIO"
         )
 
     def setup_loan_type_mappings(self):
         # Loan types
-        print("Fetching Loan types...")
+        logging.info("Fetching Loan types...")
         self.folio_loan_types = list(
             self.folio_client.folio_get_all("/loan-types", "loantypes")
         )
@@ -269,7 +267,7 @@ class ItemMapper(MapperBase):
                     )
                     if t:
                         self.default_loan_type_id = t[0]
-                        print(
+                        logging.info(
                             f'Set {loan_type_mapping["folio_name"]} as default Loantype mapping'
                         )
                     else:
@@ -286,7 +284,7 @@ class ItemMapper(MapperBase):
             except TransformationProcessError as te:
                 raise te
             except Exception:
-                print(json.dumps(self.loan_type_map, indent=4))
+                logging.error(json.dumps(self.loan_type_map, indent=4))
                 raise TransformationProcessError(
                     f"{loan_type_mapping['folio_name']} could not be found in FOLIO"
                 )
@@ -295,13 +293,13 @@ class ItemMapper(MapperBase):
                 "No Default Loan type set up in map."
                 "Add a row to mapping file with *:s and a valid loan type"
             )
-        print(
+        logging.info(
             f"loaded {idx} mappings for {len(self.folio_loan_types)} loan types in FOLIO"
         )
 
     def setup_material_type_mappings(self):
         # Material types
-        print("Fetching Material types...")
+        logging.info("Fetching Material types...")
         self.folio_material_types = list(
             self.folio_client.folio_get_all("/material-types", "mtypes")
         )
@@ -323,7 +321,7 @@ class ItemMapper(MapperBase):
                     )
                     if t:
                         self.default_material_type_id = t[0]
-                        print(
+                        logging.info(
                             f'Set {mat_mapping["folio_name"]} as default material type mapping'
                         )
                     else:
@@ -348,13 +346,13 @@ class ItemMapper(MapperBase):
                 "No Default Material type set up in map."
                 "Add a row to mapping file with *:s and a valid Material type"
             )
-        print(
+        logging.info(
             f"loaded {idx} mappings for {len(self.folio_material_types)} material types in FOLIO"
         )
 
     def setup_location_mappings(self, location_map):
         # Locations
-        print("Fetching locations...")
+        logging.info("Fetching locations...")
         for idx, loc_map in enumerate(location_map):
             if idx == 1:
                 self.location_keys = list(
@@ -370,7 +368,7 @@ class ItemMapper(MapperBase):
                 )
                 if t:
                     self.default_location_id = t[0]
-                    print(f'Set {loc_map["folio_code"]} as default location')
+                    logging.info(f'Set {loc_map["folio_code"]} as default location')
                 else:
                     raise TransformationProcessError(
                         f"Default location {loc_map['folio_code']} not found in folio. "
@@ -392,6 +390,6 @@ class ItemMapper(MapperBase):
                 "No Default Location set up in map. "
                 "Add a row to mapping file with *:s and a valid Location code"
             )
-        print(
+        logging.info(
             f"loaded {idx} mappings for {len(self.folio_client.locations)} locations in FOLIO"
         )

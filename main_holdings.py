@@ -1,5 +1,6 @@
 '''Main "script."'''
 import argparse
+from marc_to_folio.main_base import MainBase
 from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 import os
 import csv
@@ -51,12 +52,9 @@ def parse_args():
 def main():
     """Main method. Magic starts here."""
     args = parse_args()
-    logging.basicConfig(
-        filename=os.path.join(args.result_folder, "holdings_transform_log.log"),
-        filemode="w",
+    MainBase.setup_logging(
+        os.path.join(args.result_folder, "holdings_transformation.log")
     )
-    log = logging.getLogger()
-    log.setLevel(logging.CRITICAL)
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
@@ -79,18 +77,18 @@ def main():
         for index, json_string in enumerate(json_file):
             # {"legacy_id", "folio_id","instanceLevelCallNumber"}
             if index % 100000 == 0:
-                print(f"{index} instance ids loaded to map", end='\r')            
+                print(f"{index} instance ids loaded to map", end="\r")
             map_object = json.loads(json_string)
             instance_id_map[map_object["legacy_id"]] = map_object
-        print(f"loaded {index} migrated instance IDs")
-        
+        logging.info(f"loaded {index} migrated instance IDs")
+
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
         rules_file = json.load(mapping_rules_file)
 
-        print(f"Locations in map: {len(location_map)}")
-        print(any(location_map))
-        print(f'Default location code {rules_file["defaultLocationCode"]}')
-        print(f"{len(instance_id_map)} Instance ids in map")
+        logging.info(f"Locations in map: {len(location_map)}")
+        logging.info(any(location_map))
+        logging.info(f'Default location code {rules_file["defaultLocationCode"]}')
+        logging.info(f"{len(instance_id_map)} Instance ids in map")
         mapper = RulesMapperHoldings(
             folio_client,
             instance_id_map,

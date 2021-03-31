@@ -19,7 +19,7 @@ class HoldingsProcessor:
         self.args = args
         self.start = time.time()
         self.suppress = args.suppress
-        print(
+        logging.info(
             f'map will be saved to {os.path.join(self.args.result_folder, "holdings_id_map.json")}'
         )
 
@@ -46,11 +46,8 @@ class HoldingsProcessor:
         except ValueError as value_error:
             add_stats(self.mapper.stats, "Value errors")
             add_stats(self.mapper.stats, "Failed records")
-            # print(marc_record)
+            logging.debug(marc_record)
             logging.error(value_error)
-            # print(marc_record)
-            # print("Removing record from idMap")
-            # raise value_error
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
@@ -92,7 +89,7 @@ class HoldingsProcessor:
             )
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)
-        print(f"Done. Transformation report written to {report_file}")
+        logging.info(f"Done. Transformation report written to {report_file}")
 
 
 def write_to_file(file, pg_dump, folio_record):
