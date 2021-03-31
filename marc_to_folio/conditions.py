@@ -49,7 +49,7 @@ class Conditions:
         self.default_contributor_type = next(
             ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
         )
-        logging.debug(f"contributor type\t{self.default_contributor_type}")
+        logging.info(f"contributor type\t{self.default_contributor_type['id']}")
 
     def setup_reference_data_for_items_and_holdings(self):
         logging.info(f"{len(self.folio.locations)}\tlocations")
@@ -87,10 +87,11 @@ class Conditions:
             raise Exception("Holdings type Unmapped not set in client")
 
         if self.default_location_code:
+            logging.info(f"Default location code is {self.default_location_code}")
             self.default_location_id = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", self.default_location_code
             )[0]
-            logging.info(f"Default location code is {self.default_location_id}")
+            logging.info(f"Default location id is {self.default_location_id}")
         else:
             raise Exception("Default location code is not set up")
 
