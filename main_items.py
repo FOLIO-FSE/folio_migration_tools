@@ -3,6 +3,8 @@ import argparse
 import csv
 import ctypes
 import json
+import logging
+from marc_to_folio.main_base import MainBase
 import os
 import time
 import traceback
@@ -19,8 +21,13 @@ from marc_to_folio.mapping_file_transformation.item_mapper import ItemMapper
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
+def setup_path(path, filename):
+    path = os.path.join(path, filename)
+    if not isfile(path):
+        raise Exception(f"No file called {filename} present in {path}")
+    return path
 
-class Worker:
+class Worker(MainBase):
     """Class that is responsible for the acutal work"""
 
     def __init__(
@@ -38,13 +45,13 @@ class Worker:
         self.failed_files: List[str] = list()
         self.num_exeptions = 0
         self.error_file = error_file
-        print("Init done")
+        logging.info("Init done")
 
     def work(self):
         total_records = 0
-        print("Starting....")
+        logging.info("Starting....")
         for file_name in self.files:
-            print(f"Processing {file_name}")
+            logging.info(f"Processing {file_name}")
             try:
                 with open(file_name, encoding="utf-8-sig") as records_file, open(
                     os.path.join(self.results_path, "folio_items.json"), "w+"
@@ -57,7 +64,7 @@ class Worker:
                             write_to_file(results_file, False, folio_rec)
                             self.mapper.add_stats("Number of records written to disk")
                         except TransformationProcessError as process_error:
-                            print(f"{idx}\t{process_error}")
+                            logging.error(f"{idx}\t{process_error}")
                             self.error_file.write(f"{str(process_error)}\n")
                         except Exception as excepion:
                             self.num_exeptions += 1
@@ -74,47 +81,44 @@ class Worker:
                                     f"{self.num_exeptions}. Stopping."
                                 )
                         self.mapper.add_stats("Number of Legacy items in file")
-                        if idx % 1000 == 0:
+                        if idx % 10000 == 0:
                             elapsed = idx / (time.time() - start)
                             elapsed_formatted = "{0:.4g}".format(elapsed)
-                            print(
+                            logging.info(
                                 f"{idx:,} records processed. "
                                 f"Recs/sec: {elapsed_formatted} "
-                                f"{datetime.utcnow().isoformat()} UTC"
                             )
                     total_records += idx
-                    print(
+                    logging.info(
                         f"Done processing {file_name} containing {idx:,} records. "
                         f"Total records processed: {total_records:,}"
                     )
 
             except Exception as ee:
-                print(f"Processing of {file_name} failed:\n{ee}.")
-                print(
-                    "Check source files for empty lines or missing reference data",
-                    flush=True,
+                error_str = (
+                    f"Processing of {file_name} failed:\n{ee}."
+                    "Check source files for empty lines or missing reference data"
                 )
+                logging.error(error_str)
                 self.mapper.add_to_migration_report(
                     "Failed files", f"{file_name} - {ee}"
                 )
-        print(
-            f"processed {total_records:,} records in {len(self.files)} files",
-            flush=True,
-        )
+        logging.info(
+            f"processed {total_records:,} records in {len(self.files)} files")
         self.total_records = total_records
 
     def wrap_up(self):
-        print("Done. Wrapping up...")
+        logging.info("Done. Wrapping up...")
         self.mapper.print_dict_to_md_table(self.mapper.stats)
         p = os.path.join(
             self.results_path,
             "item_transformation_report.md",
         )
         with open(p, "w") as migration_report_file:
-            print(f"Writing migration- and mapping report to {p}")
+            logging.info(f"Writing migration- and mapping report to {p}")
             self.mapper.write_migration_report(migration_report_file)
             self.mapper.print_mapping_report(migration_report_file, self.total_records)
-        print("All done!")
+        logging.info("All done!")
 
 
 def write_to_file(file, pg_dump, folio_record):
@@ -144,6 +148,8 @@ def main():
     """Main Method. Used for bootstrapping. """
     csv.register_dialect("tsv", delimiter="\t")
     args = parse_args()
+    Worker.setup_logging(os.path.join(args.result_path, "item_transformation.log"))
+    
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
@@ -154,44 +160,33 @@ def main():
         for f in listdir(args.records_path)
         if isfile(join(args.records_path, f))
     ]
-    print(f"Files to process:")
+    logging.info(f"Files to process:")
     for f in files:
-        print(f"\t{f}")
+        logging.info(f"\t{f}")
 
     # All the paths...
-    holdings_id_dict_path = os.path.join(args.result_path, "holdings_id_map.json")
-    items_map_path = os.path.join(args.map_path, "item_mapping.json")
-    error_file_path = os.path.join(args.result_path, "item_transform_errors.tsv")
-    location_map_path = os.path.join(args.map_path, "locations.tsv")
-    loans_type_map_path = os.path.join(args.map_path, "loan_types.tsv")
-    call_number_type_map_path = os.path.join(
-        args.map_path, "call_number_type_mapping.tsv"
-    )
-    material_type_map_path = os.path.join(args.map_path, "material_types.tsv")
     try:
-        if not isfile(loans_type_map_path):
-            raise Exception(f"No file called loan_types.tsv present in {args.map_path}")
-        if not isfile(material_type_map_path):
-            raise Exception(
-                f"No file called material_types.tsv present in {args.map_path}"
-            )
-        if not isfile(items_map_path):
-            raise Exception(
-                f"No file called item_mapping.json present in {args.map_path}"
-            )
+        holdings_id_dict_path = setup_path(args.result_path, "holdings_id_map.json")    
+        items_map_path = setup_path(args.map_path, "item_mapping.json")
+        # items_map_path = setup_path(args.map_path, "holdings_mapping.json")
+        error_file_path = setup_path(args.result_path, "item_transform_errors.tsv")
+        location_map_path = setup_path(args.map_path, "locations.tsv")
+        loans_type_map_path = setup_path(args.map_path, "loan_types.tsv")
+        call_number_type_map_path = setup_path(args.map_path, "call_number_type_mapping.tsv")
+        material_type_map_path = setup_path(args.map_path, "material_types.tsv")
 
         # Files found, let's go!
         with open(material_type_map_path) as material_type_file:
             material_type_map = list(csv.DictReader(material_type_file, dialect="tsv"))
-            print(f"Found {len(material_type_map)} rows in material type map")
-            print(
+            logging.info(f"Found {len(material_type_map)} rows in material type map")
+            logging.info(
                 f'{",".join(material_type_map[0].keys())} will be used for determinig Material type'
             )
 
         with open(loans_type_map_path) as loans_type_file:
             loan_type_map = list(csv.DictReader(loans_type_file, dialect="tsv"))
-            print(f"Found {len(loan_type_map)} rows in loan type map")
-            print(
+            logging.info(f"Found {len(loan_type_map)} rows in loan type map")
+            logging.info(
                 f'{",".join(loan_type_map[0].keys())} will be used for determinig loan type'
             )
 
@@ -199,8 +194,8 @@ def main():
             call_number_type_map = list(
                 csv.DictReader(call_number_type_map_file, dialect="tsv")
             )
-            print(f"Found {len(call_number_type_map)} rows in callnumber type map")
-            print(
+            logging.info(f"Found {len(call_number_type_map)} rows in callnumber type map")
+            logging.info(
                 f'{",".join(call_number_type_map[0].keys())} '
                 "will be used for determinig callnumber type"
             )
@@ -212,18 +207,18 @@ def main():
         ) as error_file:
             holdings_id_map = json.load(holdings_id_map_file)
             items_map = json.load(items_mapper_f)
-            print(f'{len(items_map["data"])} fields in item mapping file map')
+            logging.info(f'{len(items_map["data"])} fields in item mapping file map')
             mapped_fields = (
                 f
                 for f in items_map["data"]
                 if f["legacy_field"] and f["legacy_field"] != "Not mapped"
             )
-            print(f"{len(list(mapped_fields))} Mapped fields in item mapping file map")
+            logging.info(f"{len(list(mapped_fields))} Mapped fields in item mapping file map")
             location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
-            print(
+            logging.info(
                 f'{",".join(loan_type_map[0].keys())} will be used for determinig location'
             )
-            print(f"Found {len(location_map)} rows in location map")
+            logging.info(f"Found {len(location_map)} rows in location map")
 
             mapper = ItemMapper(
                 folio_client,
@@ -239,9 +234,9 @@ def main():
             worker.work()
             worker.wrap_up()
     except TransformationProcessError as process_error:
-        print("\n=======ERROR===========")
-        print(f"{process_error}")
-        print("\n=======Stack Trace===========")
+        logging.info("\n=======ERROR===========")
+        logging.info(f"{process_error}")
+        logging.info("\n=======Stack Trace===========")
         traceback.print_exc()
 
 

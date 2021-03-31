@@ -42,9 +42,9 @@ class BibsRulesMapper(RulesMapperBase):
         self.mapped_folio_fields = {}
         self.unmapped_folio_fields = {}
         self.alt_title_map = {}
-        print("Fetching mapping rules from the tenant")
+        logging.info("Fetching mapping rules from the tenant")
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
-        print("Fetching valid language codes...")
+        logging.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
@@ -55,7 +55,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.hrid_prefix = self.hrid_handling["instances"]["prefix"]
         self.hrid_counter = self.hrid_handling["instances"]["startNumber"]
-        print(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
+        logging.info(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
         self.other_mode_of_issuance_id = next(
             (
                 i["id"]
@@ -140,10 +140,8 @@ class BibsRulesMapper(RulesMapperBase):
         self.count_unmapped_fields(self.schema, folio_instance)
         try:
             self.count_mapped_fields(folio_instance)
-        except Exception as ee:
-            traceback.print_exc()
-            print(ee)
-            print(folio_instance)
+        except Exception:
+            logging.exception(folio_instance)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         id_map_strings = []
@@ -172,7 +170,7 @@ class BibsRulesMapper(RulesMapperBase):
                     )
                 )
             else:
-                print(f"Legacy id is None {legacy_ids}")
+                logging.info(f"Legacy id is None {legacy_ids}")
         return folio_instance, id_map_strings
 
     def perform_additional_parsing(self, folio_instance, marc_record, legacy_id):
@@ -203,7 +201,7 @@ class BibsRulesMapper(RulesMapperBase):
         # self.validate(folio_instance)
 
     def wrap_up(self):
-        print("Mapper wrapping up")
+        logging.info("Mapper wrapping up")
 
     def report_bad_tags(self, marc_field, bad_tags):
         if (
@@ -433,8 +431,8 @@ class BibsRulesMapper(RulesMapperBase):
             )
             return self.other_mode_of_issuance_id
         except StopIteration as ee:
-            print(
-                f"StopIteration {marc_record.leader} {list(self.folio.modes_of_issuance)}"
+            logging.exception(
+                f"{marc_record.leader} {list(self.folio.modes_of_issuance)}"
             )
             raise ee
 

@@ -14,11 +14,11 @@ import time
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
 from pymarc.record import Record
-from marc_to_folio import BibsRulesMapper
+from marc_to_folio import BibsRulesMapper, main_base
 
 from marc_to_folio.bibs_processor import BibsProcessor
 
-class Worker:
+class Worker(main_base.MainBase):
     """Class that is responsible for the acutal work"""
 
     def __init__(self, folio_client, results_file, migration_report_file, args):
@@ -34,16 +34,16 @@ class Worker:
             if isfile(join(args.source_folder, f))
         ]
         self.folio_client = folio_client
-        print(f"Files to process: {len(self.files)}", flush=True)
-        print(json.dumps(self.files, sort_keys=True, indent=4), flush=True)
+        logging.info(f"Files to process: {len(self.files)}")
+        logging.info(json.dumps(self.files, sort_keys=True, indent=4))
         self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
         self.failed_files = list()
         self.bib_ids = set()
-        print("Init done", flush=True)
+        logging.info("Init done")
 
     def work(self):
-        print("Starting....", flush=True)
+        logging.info("Starting....")
         with open(self.results_file_path, "w+") as results_file:
             self.processor = BibsProcessor(
                 self.mapper,
@@ -54,23 +54,21 @@ class Worker:
             for file_name in self.files:
                 try:
                     with open(join(sys.argv[1], file_name), "rb") as marc_file:
-                        reader = MARCReader(marc_file, to_unicode=True)
+                        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                         reader.hide_utf8_warnings = True
                         if self.args.force_utf_8:
-                            print("FORCE UTF-8 is set to TRUE", flush=True)
+                            logging.info("FORCE UTF-8 is set to TRUE")
                             reader.force_utf8 = True
-                        print(f"running {file_name}", flush=True)
+                        logging.info(f"running {file_name}")
                         self.read_records(reader)
                 except Exception as exception:
-                    print(exception, flush=True)
-                    traceback.print_exc()
-                    print(file_name, flush=True)
+                    logging.exception(exception)
+                    logging.error(file_name)
             # wrap up
             self.wrap_up()
 
     def read_records(self, reader):
         for record in reader:
-            self.set_leader(record)
             self.mapper.add_stats(
                 self.mapper.stats, "MARC21 records in file before parsing"
             )
@@ -83,7 +81,9 @@ class Worker:
                     self.mapper.stats,
                     "MARC21 Records with encoding errors - parsing failed",
                 )
+                logging.error("Marc record failed to parse")
             else:
+                self.set_leader(record)
                 self.mapper.add_stats(
                     self.mapper.stats, "MARC21 Records successfully parsed"
                 )
@@ -95,7 +95,7 @@ class Worker:
         marc_record.leader = new_leader[:9] + 'a' + new_leader[10:]
 
     def wrap_up(self):
-        print("Done. Wrapping up...", flush=True)
+        logging.info("Done. Wrapping up...")
         self.processor.wrap_up()
         # Open the file we'll write the migration report to, and the file containing brief descriptions for each of the report sections
         with open(self.migration_report_file, "w+") as report_file, open(self.migration_report_descriptions, "r") as mrd:
@@ -105,8 +105,8 @@ class Worker:
             try:
                 report_intro = descriptions["Overview"]
                 report_file.write(f"{report_intro}\n")
-            except KeyError as e:
-                print("Unable to access report section:", e)
+            except KeyError:
+                logging.exception("Unable to access report section:")
             report_file.write(f"## Bibliographic records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
                 self.mapper.stats,
@@ -116,7 +116,7 @@ class Worker:
             )
             self.mapper.write_migration_report(report_file, descriptions)
             self.mapper.print_mapping_report(report_file, descriptions)
-        print(f"Done. Transformation report written to {self.migration_report_file}", flush=True)
+        logging.info(f"Done. Transformation report written to {self.migration_report_file}")
 
 
 def parse_args():
@@ -173,30 +173,30 @@ def parse_args():
 
 
 def main():
-    
     """Main Method. Used for bootstrapping. """
-    # Parse CLI Arguments
-    print("Bootstrapping", flush=True)
-    args = parse_args()
+    try:
+        # Parse CLI Arguments
+        args = parse_args()
+        Worker.setup_logging(join(args.results_folder, "bib_transformation.log"))
+        results_file = join(args.results_folder, "folio_instances.json")
+        migration_report_file = join(
+            args.results_folder, "instance_transformation_report.md"
+        )
+        
+        logging.info(f"Results will be saved at:\t{args.results_folder}")
+        logging.info(f"Okapi URL:\t{args.okapi_url}")
+        logging.info(f"Tenant Id:\t{args.tenant_id}")
+        logging.info(f"Username:   \t{args.username}")
+        logging.info(f"Password:   \tSecret")
+        folio_client = FolioClient(
+            args.okapi_url, args.tenant_id, args.username, args.password
+        )
+        # Initiate Worker
+        worker = Worker(folio_client, results_file, migration_report_file, args)
+        worker.work()
+    except FileNotFoundError as fne:
+        print(f"{fne}")
 
-    logging.basicConfig(level=logging.CRITICAL)
-
-    results_file = join(args.results_folder, "folio_instances.json")
-    migration_report_file = join(
-        args.results_folder, "instance_transformation_report.md"
-    )
-    
-    print("\tresults will be saved at:\t", args.results_folder, flush=True)
-    print("\tOkapi URL:\t", args.okapi_url, flush=True)
-    print("\tTenant Id:\t", args.tenant_id, flush=True)
-    print("\tUsername:   \t", args.username, flush=True)
-    print("\tPassword:   \tSecret", flush=True)
-    folio_client = FolioClient(
-        args.okapi_url, args.tenant_id, args.username, args.password
-    )
-    # Initiate Worker
-    worker = Worker(folio_client, results_file, migration_report_file, args)
-    worker.work()
 
 
 if __name__ == "__main__":
