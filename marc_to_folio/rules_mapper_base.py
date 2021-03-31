@@ -28,7 +28,7 @@ class RulesMapperBase:
         self.conditions = conditions
         self.item_json_schema = ""
         self.mappings = {}
-        logging.info(f"Current user id is {self.folio_client.current_user}", flush=True)
+        logging.info(f"Current user id is {self.folio_client.current_user}")
 
     def report_legacy_mapping(self, field_name, present, mapped, empty=False):
         if field_name not in self.mapped_legacy_fields:
