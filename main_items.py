@@ -99,7 +99,7 @@ class Worker(MainBase):
                     f"Processing of {file_name} failed:\n{ee}."
                     "Check source files for empty lines or missing reference data"
                 )
-                logging.error(error_str)
+                logging.exception(error_str, stack_info=True)
                 self.mapper.add_to_migration_report(
                     "Failed files", f"{file_name} - {ee}"
                 )
@@ -169,7 +169,7 @@ def main():
         holdings_id_dict_path = setup_path(args.result_path, "holdings_id_map.json")    
         items_map_path = setup_path(args.map_path, "item_mapping.json")
         # items_map_path = setup_path(args.map_path, "holdings_mapping.json")
-        error_file_path = setup_path(args.result_path, "item_transform_errors.tsv")
+        error_file_path = os.path.join(args.result_path, "item_transform_errors.tsv")
         location_map_path = setup_path(args.map_path, "locations.tsv")
         loans_type_map_path = setup_path(args.map_path, "loan_types.tsv")
         call_number_type_map_path = setup_path(args.map_path, "call_number_type_mapping.tsv")

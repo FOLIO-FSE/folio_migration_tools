@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from marc_to_folio.custom_exceptions import TransformationProcessError
 from folioclient import FolioClient
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
@@ -91,11 +92,12 @@ class HoldingsMapper(MapperBase):
         print(json.dumps(self.call_number_type_map, indent=4))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
+        arr_re = r"\[[0-9]\]"
         if self.use_map:
             legacy_item_keys = list(
                 k["legacy_field"]
                 for k in self.holdings_map["data"]
-                if k["folio_field"] == folio_prop_name
+                if re.sub(arr_re, ".", k["folio_field"]).strip(".") == folio_prop_name
             )
             vals = list([v for k, v in legacy_item.items() if k in legacy_item_keys])
             legacy_value = " ".join(vals).strip()
@@ -119,19 +121,20 @@ class HoldingsMapper(MapperBase):
                 return self.get_statistical_codes(vals)
             elif folio_prop_name == "instanceId":
                 return self.get_instance_id(legacy_value, index_or_id)
-            elif len(legacy_item_keys) == 1:
+            elif len(legacy_item_keys) == 1:                
                 logging.debug(folio_prop_name)
                 value = next(
                     (
                         k.get("value", "")
                         for k in self.holdings_map["data"]
-                        if k["folio_field"] == folio_prop_name
+                        if re.sub(arr_re, ".", k["folio_field"]).strip(".") == folio_prop_name
                     ),
                     "",
                 )
                 if value not in [None, ""]:
                     return value
                 else:
+                    
                     return legacy_value
             elif any(legacy_item_keys):
                 return legacy_value

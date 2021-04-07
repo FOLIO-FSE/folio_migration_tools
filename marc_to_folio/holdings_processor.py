@@ -39,10 +39,10 @@ class HoldingsProcessor:
             add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
             if self.records_count % 10000 == 0:
-                logging.error(self.mapper.stats)
+                logging.info(self.mapper.stats)
                 elapsed = self.records_count / (time.time() - self.start)
                 elapsed_formatted = "{0:.4g}".format(elapsed)
-                logging.error(f"{elapsed_formatted}\t\t{self.records_count}")
+                logging.info(f"{elapsed_formatted}\t\t{self.records_count}")
         except ValueError as value_error:
             add_stats(self.mapper.stats, "Value errors")
             add_stats(self.mapper.stats, "Failed records")

@@ -284,7 +284,7 @@ class ItemMapper(MapperBase):
             except TransformationProcessError as te:
                 raise te
             except Exception:
-                logging.error(json.dumps(self.loan_type_map, indent=4))
+                logging.info(json.dumps(self.loan_type_map, indent=4))
                 raise TransformationProcessError(
                     f"{loan_type_mapping['folio_name']} could not be found in FOLIO"
                 )

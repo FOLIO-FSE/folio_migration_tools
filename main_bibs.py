@@ -18,6 +18,7 @@ from marc_to_folio import BibsRulesMapper, main_base
 
 from marc_to_folio.bibs_processor import BibsProcessor
 
+
 class Worker(main_base.MainBase):
     """Class that is responsible for the acutal work"""
 
@@ -60,9 +61,8 @@ class Worker(main_base.MainBase):
                             reader.force_utf8 = True
                         logging.info(f"running {file_name}")
                         self.read_records(reader)
-                except Exception as exception:
-                    logging.exception(exception)
-                    logging.error(file_name)
+                except Exception:
+                    logging.exception(file_name, stack_info=True)
             # wrap up
             self.wrap_up()
 
@@ -80,7 +80,10 @@ class Worker(main_base.MainBase):
                     self.mapper.stats,
                     "MARC21 Records with encoding errors - parsing failed",
                 )
-                logging.error("Marc record failed to parse")
+                logging.error(
+                    f"Bib records that failed to parse\t"
+                    f"{reader.current_exception}\t{reader.current_chunk}"
+                )
             else:
                 self.set_leader(record)
                 self.mapper.add_stats(
@@ -89,9 +92,9 @@ class Worker(main_base.MainBase):
                 self.processor.process_record(record, False)
 
     @staticmethod
-    def set_leader(marc_record:Record):
+    def set_leader(marc_record: Record):
         new_leader = marc_record.leader
-        marc_record.leader = new_leader[:9] + 'a' + new_leader[10:]
+        marc_record.leader = new_leader[:9] + "a" + new_leader[10:]
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
@@ -108,8 +111,10 @@ class Worker(main_base.MainBase):
             )
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)
-            
-        logging.info(f"Done. Transformation report written to {self.migration_report_file}")
+
+        logging.info(
+            f"Done. Transformation report written to {self.migration_report_file}"
+        )
 
 
 def parse_args():
@@ -164,7 +169,6 @@ def parse_args():
     return args
 
 
-
 def main():
     """Main Method. Used for bootstrapping. """
     try:
@@ -175,7 +179,7 @@ def main():
         migration_report_file = join(
             args.results_folder, "instance_transformation_report.md"
         )
-        
+
         logging.info(f"Results will be saved at:\t{args.results_folder}")
         logging.info(f"Okapi URL:\t{args.okapi_url}")
         logging.info(f"Tenant Id:\t{args.tenant_id}")
@@ -189,7 +193,6 @@ def main():
         worker.work()
     except FileNotFoundError as fne:
         print(f"{fne}")
-
 
 
 if __name__ == "__main__":

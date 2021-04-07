@@ -25,11 +25,14 @@ class MapperBase:
         self.record_map = record_map
         self.error_file = error_file
         self.ref_data_dicts = {}
+        arr_re = r"\[[0-9]\]"
         self.folio_keys = list(
-            k["folio_field"]
+            re.sub(arr_re, ".", k["folio_field"]).strip(".")
             for k in self.record_map["data"]
             if k["legacy_field"] not in ["", "Not mapped"]
         )
+        print("Mapped FOLIO Fields")
+        print(json.dumps(self.folio_keys, indent=4, sort_keys=True))
         csv.register_dialect("tsv", delimiter="\t")
 
     def write_migration_report(self, report_file):
@@ -169,7 +172,7 @@ class MapperBase:
                 if t:
                     loc_map["folio_id"] = t[0]
                 else:
-                    raise Exception(
+                    raise TransformationProcessError(
                         f"Location code {loc_map['folio_code']} from map not found in FOLIO"
                     )
 
@@ -208,6 +211,8 @@ class MapperBase:
                 f'{" - ".join(fieldvalues)} -> {default_value} (Unmapped)',
             )
             return default_value
+        except:
+            logging.exception()
 
     def add_to_migration_report(self, header, measure_to_add):
         if header not in self.migration_report:
@@ -343,8 +348,12 @@ class MapperBase:
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_property(legacy_object, prop):  # is there a match in the csv?
             mapped_prop = self.get_prop(legacy_object, prop, index_or_id).strip()
+            logging.debug(f"{prop} -> {mapped_prop}")
             if mapped_prop:
-                folio_object.get(prop, []).append(mapped_prop)
+                if prop in folio_object:
+                    folio_object.get(prop, []).append(mapped_prop)
+                else:
+                    folio_object[prop] = [mapped_prop]
                 self.report_legacy_mapping(self.legacy_property(prop), True, False)
                 self.report_folio_mapping(prop, True, False)
             else:  # Match but empty field. Lets report this
@@ -374,7 +383,7 @@ class MapperBase:
         for row in reader:
             yield row
 
-    def has_property(self, legacy_object, folio_prop_name):
+    def has_property(self, legacy_object, folio_prop_name:str):
         arr_re = r"\[[0-9]\]"
         if self.use_map:
             if folio_prop_name not in self.folio_keys:

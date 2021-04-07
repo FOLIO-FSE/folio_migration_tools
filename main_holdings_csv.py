@@ -68,7 +68,6 @@ class Worker(MainBase):
                                 self.merge_holding(folio_rec)
                         except TransformationProcessError as process_error:
                             logging.error(f"{idx}\t{process_error}")
-                            self.error_file.write(f"{str(process_error)}\n")
                         except Exception as excepion:
                             self.num_exeptions += 1
                             print("\n=======ERROR===========")
