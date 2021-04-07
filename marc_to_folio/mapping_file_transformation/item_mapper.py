@@ -350,46 +350,4 @@ class ItemMapper(MapperBase):
             f"loaded {idx} mappings for {len(self.folio_material_types)} material types in FOLIO"
         )
 
-    def setup_location_mappings(self, location_map):
-        # Locations
-        logging.info("Fetching locations...")
-        for idx, loc_map in enumerate(location_map):
-            if idx == 1:
-                self.location_keys = list(
-                    [
-                        k
-                        for k in loc_map.keys()
-                        if k not in ["folio_code", "folio_id", "folio_name"]
-                    ]
-                )
-            if any(m for m in loc_map.values() if m == "*"):
-                t = self.get_ref_data_tuple_by_code(
-                    self.folio_client.locations, "locations", loc_map["folio_code"]
-                )
-                if t:
-                    self.default_location_id = t[0]
-                    logging.info(f'Set {loc_map["folio_code"]} as default location')
-                else:
-                    raise TransformationProcessError(
-                        f"Default location {loc_map['folio_code']} not found in folio. "
-                        "Change default code"
-                    )
-            else:
-                t = self.get_ref_data_tuple_by_code(
-                    self.folio_client.locations, "locations", loc_map["folio_code"]
-                )
-                if t:
-                    loc_map["folio_id"] = t[0]
-                else:
-                    raise Exception(
-                        f"Location code {loc_map['folio_code']} from map not found in FOLIO"
-                    )
-
-        if not self.default_location_id:
-            raise TransformationProcessError(
-                "No Default Location set up in map. "
-                "Add a row to mapping file with *:s and a valid Location code"
-            )
-        logging.info(
-            f"loaded {idx} mappings for {len(self.folio_client.locations)} locations in FOLIO"
-        )
+    

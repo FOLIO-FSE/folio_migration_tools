@@ -138,11 +138,56 @@ class MapperBase:
         for k, v in d_sorted.items():
             print(f"{k} | {v}")
 
+    def setup_location_mappings(self, location_map):
+        # Locations
+        logging.info("Fetching locations...")
+        for idx, loc_map in enumerate(location_map):
+            if idx == 1:
+                self.location_keys = list(
+                    [
+                        k
+                        for k in loc_map.keys()
+                        if k not in ["folio_code", "folio_id", "folio_name"]
+                    ]
+                )
+            if any(m for m in loc_map.values() if m == "*"):
+                t = self.get_ref_data_tuple_by_code(
+                    self.folio_client.locations, "locations", loc_map["folio_code"]
+                )
+                if t:
+                    self.default_location_id = t[0]
+                    logging.info(f'Set {loc_map["folio_code"]} as default location')
+                else:
+                    raise TransformationProcessError(
+                        f"Default location {loc_map['folio_code']} not found in folio. "
+                        "Change default code"
+                    )
+            else:
+                t = self.get_ref_data_tuple_by_code(
+                    self.folio_client.locations, "locations", loc_map["folio_code"]
+                )
+                if t:
+                    loc_map["folio_id"] = t[0]
+                else:
+                    raise Exception(
+                        f"Location code {loc_map['folio_code']} from map not found in FOLIO"
+                    )
+
+        if not self.default_location_id:
+            raise TransformationProcessError(
+                "No Default Location set up in map. "
+                "Add a row to mapping file with *:s and a valid Location code"
+            )
+        logging.info(
+            f"loaded {idx} mappings for {len(self.folio_client.locations)} locations in FOLIO"
+        )
+    
+    
     def get_mapped_value(
         self, name_of_mapping, legacy_item, legacy_keys, map, default_value, map_key
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
-        fieldvalues = [legacy_item[k] for k in legacy_keys]
+        fieldvalues = [legacy_item.get(k) for k in legacy_keys]
         try:
             right_mapping = next(
                 mapping
@@ -310,7 +355,7 @@ class MapperBase:
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
-            mapped_prop = self.get_prop(legacy_object, prop, index_or_id).strip()
+            mapped_prop = self.get_prop(legacy_object, prop, index_or_id).strip()            
             if mapped_prop:
                 folio_object[prop] = mapped_prop
                 self.report_legacy_mapping(self.legacy_basic_property(prop), True, False)
@@ -321,8 +366,11 @@ class MapperBase:
         else:
             self.report_folio_mapping(prop, False)
 
-    def get_objects(self, source_file):
-        reader = csv.DictReader(source_file, dialect="tsv")
+    def get_objects(self, source_file, file_name:str):
+        if file_name.endswith("tsv"):
+            reader = csv.DictReader(source_file, dialect="tsv")
+        else:
+            reader = csv.DictReader(source_file)
         for row in reader:
             yield row
 

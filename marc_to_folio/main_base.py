@@ -6,8 +6,9 @@ from abc import abstractmethod
 
 class MainBase:
     @staticmethod
-    def setup_logging(log_file_path=None):
+    def setup_logging(log_file_path=None):        
         logger = logging.getLogger()
+        logger.handlers = []
         formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
         logger.setLevel(logging.INFO)
 

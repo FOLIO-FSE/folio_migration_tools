@@ -85,7 +85,6 @@ class BibsRulesMapper(RulesMapperBase):
         for marc_field in marc_record:
             self.add_stats(self.stats, "Total number of Tags processed")
             self.report_bad_tags(marc_field, bad_tags)
-
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
                 self.report_legacy_mapping(marc_field.tag, True, False, True)
             else:
@@ -196,9 +195,19 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = bool(self.suppress)
 
+        self.handle_holdings(marc_record)
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
         #     marc_record)
         # self.validate(folio_instance)
+
+    def handle_holdings(self, marc_record: Record):
+        if "852" in marc_record:
+            holdingsfields = marc_record.get_fields("852", "866")
+            f852s = list(f for f in holdingsfields if f.tag == "852")
+            f866s = list(f for f in holdingsfields if f.tag == "866")
+            self.add_to_migration_report("Holdings generation from bibs", f"{len(f852s)} 852:s and {len(f866s)} 866:s in record")
+        else:
+            self.add_to_migration_report("Holdings generation from bibs", f"0 852:s and 0 866:s in record")
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
