@@ -47,6 +47,7 @@ blurbs = {
         "Mapped Material Types": "Section description to be added.",
         "Unapped Material Types": "Section description to be added.",
         "Mapped loan types": "Section description to be added.",
-        "Unmapped loan types": "Section description to be added."
+        "Unmapped loan types": "Section description to be added.",
+        "HRID Handling": "Section description to be added."
     }
 
