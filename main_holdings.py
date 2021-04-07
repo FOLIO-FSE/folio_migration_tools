@@ -78,7 +78,7 @@ def main():
             # {"legacy_id", "folio_id","instanceLevelCallNumber"}
             map_object = json.loads(json_string)
             if index % 50000 == 0:
-                print(f"{index} instance ids loaded to map ", end="\r")
+                print(f"{index} instance ids loaded to map {map_object['legacy_id']}", end="\r")
             instance_id_map[map_object["legacy_id"]] = map_object
         logging.info(f"loaded {index} migrated instance IDs")
 

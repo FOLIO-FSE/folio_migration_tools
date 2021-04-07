@@ -88,10 +88,14 @@ class Conditions:
 
         if self.default_location_code:
             logging.info(f"Default location code is {self.default_location_code}")
-            self.default_location_id = self.get_ref_data_tuple_by_code(
+            t = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", self.default_location_code
-            )[0]
-            logging.info(f"Default location id is {self.default_location_id}")
+            )
+            if t:
+                self.default_location_id = t[0]
+                logging.info(f"Default location id is {self.default_location_id}")
+            else:
+                raise Exception(f"Default location for {self.default_location_code} is not set up")
         else:
             raise Exception("Default location code is not set up")
 
