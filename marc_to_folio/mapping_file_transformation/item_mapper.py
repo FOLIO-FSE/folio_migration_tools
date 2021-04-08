@@ -91,7 +91,6 @@ class ItemMapper(MapperBase):
                     logging.debug(f"{legacy_value} not in id map")
                     self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
                     s = f"Holdings id '{legacy_value}' not in hold id map."
-                    logging.error(f"s\t{index_or_id}")
                     raise TransformationProcessError(s, index_or_id)
                 else:
                     logging.debug(f"{legacy_value} in id map")
