@@ -410,6 +410,7 @@ class MapperBase:
     def has_basic_property(self, legacy_object, folio_prop_name):
         if self.use_map:
             if folio_prop_name not in self.folio_keys:
+                logging.debug(f"map_basic_props -> {folio_prop_name} {self.folio_keys}")
                 return False
             legacy_key = next(
                 (

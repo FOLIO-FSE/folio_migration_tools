@@ -86,12 +86,15 @@ class ItemMapper(MapperBase):
             elif folio_prop_name == "statisticalCodeIds":
                 return self.get_statistical_codes(vals)
             elif folio_prop_name == "holdingsRecordId":
+                logging.debug(folio_prop_name)
                 if legacy_value not in self.holdings_id_map:
+                    logging.debug(f"{legacy_value} not in id map")
                     self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
                     s = f"Holdings id '{legacy_value}' not in hold id map."
                     logging.error(f"s\t{index_or_id}")
                     raise TransformationProcessError(s, index_or_id)
                 else:
+                    logging.debug(f"{legacy_value} in id map")
                     self.add_to_migration_report("Holdings IDs", f"Mapped")
                     return self.holdings_id_map[legacy_value]["id"]
             elif len(legacy_item_keys) == 1:

@@ -58,7 +58,7 @@ class Worker(MainBase):
                 ) as results_file:
                     self.mapper.add_stats("Number of files processed")
                     start = time.time()
-                    for idx, record in enumerate(self.mapper.get_objects(records_file)):
+                    for idx, record in enumerate(self.mapper.get_objects(records_file, file_name)):
                         try:
                             folio_rec = self.mapper.do_map(record, f"row {idx}")
                             write_to_file(results_file, False, folio_rec)
@@ -206,6 +206,7 @@ def main():
             error_file_path, "w"
         ) as error_file:
             holdings_id_map = json.load(holdings_id_map_file)
+            logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
             items_map = json.load(items_mapper_f)
             logging.info(f'{len(items_map["data"])} fields in item mapping file map')
             mapped_fields = (
