@@ -150,7 +150,7 @@ class MapperBase:
                     [
                         k
                         for k in loc_map.keys()
-                        if k not in ["folio_code", "folio_id", "folio_name"]
+                        if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
                     ]
                 )
             if any(m for m in loc_map.values() if m == "*"):

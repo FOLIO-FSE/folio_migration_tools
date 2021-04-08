@@ -94,7 +94,7 @@ class ItemMapper(MapperBase):
                     raise TransformationProcessError(s, index_or_id)
                 else:
                     logging.debug(f"{legacy_value} in id map")
-                    self.add_to_migration_report("Holdings IDs", f"Mapped")
+                    self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
                     return self.holdings_id_map[legacy_value]["id"]
             elif len(legacy_item_keys) == 1:
                 logging.debug(folio_prop_name)
@@ -259,7 +259,7 @@ class ItemMapper(MapperBase):
                         [
                             k
                             for k in loan_type_mapping.keys()
-                            if k not in ["folio_code", "folio_id", "folio_name"]
+                            if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
                         ]
                     )
                 if any(m for m in loan_type_mapping.values() if m == "*"):
@@ -313,7 +313,7 @@ class ItemMapper(MapperBase):
                         [
                             k
                             for k in mat_mapping.keys()
-                            if k not in ["folio_code", "folio_id", "folio_name"]
+                            if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
                         ]
                     )
                 if any(m for m in mat_mapping.values() if m == "*"):
