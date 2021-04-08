@@ -212,7 +212,7 @@ class MapperBase:
             )
             return default_value
         except:
-            logging.exception()
+            logging.exception(f"{name_of_mapping} - {map_key} ({legacy_keys})")
 
     def add_to_migration_report(self, header, measure_to_add):
         if header not in self.migration_report:
