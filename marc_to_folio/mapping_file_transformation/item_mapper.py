@@ -216,8 +216,9 @@ class ItemMapper(MapperBase):
                             f'Set {call_number_type_mapping["folio_name"]} as default call_numbertype mapping'
                         )
                     else:
+                        x = call_number_type_mapping.get("folio_name", "")
                         raise TransformationProcessError(
-                            "No Default call_number type set up in map."
+                            f"No Default call_number type -{x}- set up in map. "
                             "Add a row to mapping file with *:s and a valid call_number type"
                         )
                 else:
