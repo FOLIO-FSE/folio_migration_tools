@@ -37,12 +37,24 @@ class Worker(MainBase):
         self.holdings = {}
         self.folio_client = folio_client
         self.files = files
+        self.legacy_map = {}
         self.results_path = results_path
         self.mapper = mapper
         self.failed_files: List[str] = list()
         self.num_exeptions = 0
         self.error_file = error_file
         logging.info("Init done")
+        self.holdings_types = list(
+                self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
+        )
+        logging.info(f"{len(self.holdings_types)}\tholdings types in tenant")
+
+        self.default_holdings_type = next(
+            (h["id"] for h in self.holdings_types if h["name"] == "Unmapped"), ""
+        )
+        if not self.default_holdings_type:
+            raise TransformationProcessError(f"Holdings type named Unmapped not found in FOLIO.")
+        
 
     def work(self):
         total_records = 0
@@ -58,11 +70,12 @@ class Worker(MainBase):
                     ):
                         try:
                             folio_rec = self.mapper.do_map(record, f"row {idx}")
+                            folio_rec["holdingsTypeId"] = self.default_holdings_type
                             holding_key = self.to_key(folio_rec)
                             existing_holding = self.holdings.get(holding_key, None)
                             if not existing_holding:
                                 self.mapper.add_stats("Unique Holdings created from Items")
-                                self.holdings[self.to_key(folio_rec)] = folio_rec
+                                self.holdings[self.to_key(folio_rec)] = folio_rec                                
                             else:
                                 self.mapper.add_stats("Holdings already created from Item")
                                 self.merge_holding(folio_rec)
@@ -115,12 +128,18 @@ class Worker(MainBase):
             print(f"Saving holdings created to {results_path}")            
             with open(results_path, "w+") as holdings_file:
                 for key, holding in self.holdings.items():
+                    for legacy_id in holding["formerIds"]:
+                        self.legacy_map[legacy_id] = {"id": holding["id"] }
                     write_to_file(holdings_file, False, holding)
                     self.mapper.add_stats("Holdings Records Written to disk")
+            legacy_path = os.path.join(self.results_path, "holdings_id_map.json")
+            with open(legacy_path, "w") as legacy_map_path_file:
+                json.dump(self.legacy_map, legacy_map_path_file)
+                logging.info(f"Wrote {len(self.legacy_map)} id:s to legacy map")
         self.mapper.print_dict_to_md_table(self.mapper.stats)
         p = os.path.join(
             self.results_path,
-            "item_transformation_report.md",
+            "holdings_transformation_report.md",
         )
         with open(p, "w") as migration_report_file:
             logging.info(f"Writing migration- and mapping report to {p}")
@@ -167,7 +186,7 @@ class Worker(MainBase):
 def parse_args():
     """Parse CLI Arguments"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("records_path", help="path to item records folder")
+    parser.add_argument("records_path", help="path to legacy item records folder")
     parser.add_argument("result_path", help="path to results folder")
     parser.add_argument("map_path", help=("path to mapping files"))
     parser.add_argument("okapi_url", help=("OKAPI base url"))
@@ -229,7 +248,7 @@ def main():
     """Main Method. Used for bootstrapping. """
     csv.register_dialect("tsv", delimiter="\t")
     args = parse_args()
-    Worker.setup_logging(os.path.join(args.result_path, "item_transformation.log"))
+    Worker.setup_logging(os.path.join(args.result_path, "holdings_transformation.log"))
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )

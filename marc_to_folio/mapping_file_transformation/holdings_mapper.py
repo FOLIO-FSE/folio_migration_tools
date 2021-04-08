@@ -27,12 +27,11 @@ class HoldingsMapper(MapperBase):
         self.call_number_type_keys = []
         self.default_call_number_type_id = ""
         self.setup_call_number_type_mappings()
-        
+
         self.location_map = location_map
         self.location_keys = []
         self.default_location_id = ""
         self.setup_location_mappings(location_map)
-
     def setup_call_number_type_mappings(self):
         logging.info("Fetching Callnumber types...")
         self.folio_call_number_types = list(
@@ -88,7 +87,7 @@ class HoldingsMapper(MapperBase):
             )
         logging.info(
             f"loaded {idx} mappings for {len(self.folio_call_number_types)} loan types in FOLIO"
-        ) 
+        )
         print(json.dumps(self.call_number_type_map, indent=4))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
@@ -121,20 +120,21 @@ class HoldingsMapper(MapperBase):
                 return self.get_statistical_codes(vals)
             elif folio_prop_name == "instanceId":
                 return self.get_instance_id(legacy_value, index_or_id)
-            elif len(legacy_item_keys) == 1:                
+            elif len(legacy_item_keys) == 1:
                 logging.debug(folio_prop_name)
                 value = next(
                     (
                         k.get("value", "")
                         for k in self.holdings_map["data"]
-                        if re.sub(arr_re, ".", k["folio_field"]).strip(".") == folio_prop_name
+                        if re.sub(arr_re, ".", k["folio_field"]).strip(".")
+                        == folio_prop_name
                     ),
                     "",
                 )
                 if value not in [None, ""]:
                     return value
                 else:
-                    
+
                     return legacy_value
             elif any(legacy_item_keys):
                 return legacy_value
@@ -158,7 +158,7 @@ class HoldingsMapper(MapperBase):
     def get_call_number_type_id(self, legacy_item):
         return self.default_call_number_type_id
 
-    def get_instance_id(self, legacy_value: str, index_or_id:str):
+    def get_instance_id(self, legacy_value: str, index_or_id: str):
         return_ids = []
         if legacy_value.startswith("["):
             try:
@@ -187,4 +187,6 @@ class HoldingsMapper(MapperBase):
         if any(return_ids):
             return return_ids[0]
         else:
-            raise TransformationProcessError(f"No instance id mapped from {legacy_value}")
+            raise TransformationProcessError(
+                f"No instance id mapped from {legacy_value}"
+            )

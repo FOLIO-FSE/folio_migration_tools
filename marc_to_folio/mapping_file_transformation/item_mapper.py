@@ -349,5 +349,3 @@ class ItemMapper(MapperBase):
         logging.info(
             f"loaded {idx} mappings for {len(self.folio_material_types)} material types in FOLIO"
         )
-
-    

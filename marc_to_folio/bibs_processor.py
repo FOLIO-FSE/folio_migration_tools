@@ -4,6 +4,7 @@ import logging
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
+from pymarc.leader import Leader
 from pymarc.writer import JSONWriter
 import time
 import json
@@ -132,6 +133,9 @@ class BibsProcessor:
     def save_source_record(self, marc_record, instance):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(uuid.uuid4())
+        temp_leader = Leader(marc_record.leader)
+        temp_leader[9] = 'a'
+        marc_record.leader = temp_leader
 
         marc_record.add_ordered_field(
             Field(
