@@ -67,8 +67,10 @@ class ItemMapper(MapperBase):
                 for k in self.items_map["data"]
                 if k["folio_field"] == folio_prop_name
             )
+            legacy_value = ""
             vals = list([v for k, v in legacy_item.items() if k in legacy_item_keys])
-            legacy_value = " ".join(vals).strip()
+            if vals:
+                legacy_value = " ".join(vals).strip()
             self.add_to_migration_report("Source fields with same target", len(vals))
             # legacy_value = legacy_item.get(legacy_item_key, "")
             if folio_prop_name in ["permanentLocationId", "temporaryLocationId"]:
