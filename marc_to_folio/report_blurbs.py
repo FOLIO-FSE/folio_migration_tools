@@ -49,6 +49,8 @@ blurbs = {
         "Mapped loan types": "Section description to be added.",
         "Unmapped loan types": "Section description to be added.",
         "HRID Handling": "Section description to be added.",
-        "Preceeding and Succeeding titles": "Section description to be added."
+        "Preceeding and Succeeding titles": "Section description to be added.",
+        "Holdings generation from bibs": "Section description to be added.",
+        "'Instance format ids handling (337 + 338))": "Section description to be added."
     }
 
