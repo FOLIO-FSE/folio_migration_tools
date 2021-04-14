@@ -33,7 +33,7 @@ class BibsProcessor:
         )
 
     def process_record(self, marc_record, inventory_only):
-        
+
         """processes a marc record and saves it"""
         try:
             legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
@@ -42,17 +42,21 @@ class BibsProcessor:
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
-            (folio_rec, id_map_strings)  = self.mapper.parse_bib(
+            (folio_rec, id_map_strings) = self.mapper.parse_bib(
                 marc_record, inventory_only
             )
-            prec_titles = folio_rec.get("precedingTitles",[])
+            prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
-                self.mapper.add_to_migration_report("Preceeding and Succeeding titles", f"{len(prec_titles)}")
+                self.mapper.add_to_migration_report(
+                    "Preceeding and Succeeding titles", f"{len(prec_titles)}"
+                )
                 del folio_rec["precedingTitles"]
-            succ_titles = folio_rec.get("succeedingTitles",[])
+            succ_titles = folio_rec.get("succeedingTitles", [])
             if succ_titles:
                 del folio_rec["succeedingTitles"]
-                self.mapper.add_to_migration_report("Preceeding and Succeeding titles", f"{len(succ_titles)}")
+                self.mapper.add_to_migration_report(
+                    "Preceeding and Succeeding titles", f"{len(succ_titles)}"
+                )
             if self.validate_instance(folio_rec, marc_record):
                 write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
@@ -61,7 +65,9 @@ class BibsProcessor:
                 )
                 for id_map_string in id_map_strings:
                     self.instance_id_map_file.write(f"{id_map_string}\n")
-                    self.mapper.add_stats(self.mapper.stats, "Ids written to bib->instance id map")
+                    self.mapper.add_stats(
+                        self.mapper.stats, "Ids written to bib->instance id map"
+                    )
 
         except ValueError as value_error:
             self.mapper.add_to_migration_report(
@@ -82,7 +88,7 @@ class BibsProcessor:
             )
             # raise validation_error
 
-        except Exception as inst:            
+        except Exception as inst:
             self.mapper.add_stats(
                 self.mapper.stats, "Bib records that failed transformation"
             )
@@ -134,7 +140,7 @@ class BibsProcessor:
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(uuid.uuid4())
         temp_leader = Leader(marc_record.leader)
-        temp_leader[9] = 'a'
+        temp_leader[9] = "a"
         marc_record.leader = temp_leader
 
         marc_record.add_ordered_field(
@@ -144,6 +150,10 @@ class BibsProcessor:
                 subfields=["i", instance["id"], "s", srs_id],
             )
         )
+        # Since they all should be UTF encoded, make the leader align.
+        temp_leader = Leader(marc_record.leader)
+        temp_leader[9] = "a"
+        marc_record.leader = temp_leader
         srs_record_string = get_srs_string(
             (
                 marc_record,
