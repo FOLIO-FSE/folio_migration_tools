@@ -151,9 +151,10 @@ class BibsProcessor:
             )
         )
         # Since they all should be UTF encoded, make the leader align.
-        temp_leader = Leader(marc_record.leader)
-        temp_leader[9] = "a"
-        marc_record.leader = temp_leader
+        if marc_record.leader:
+            temp_leader = Leader(marc_record.leader)
+            temp_leader[9] = "a"
+            marc_record.leader = temp_leader
         srs_record_string = get_srs_string(
             (
                 marc_record,
