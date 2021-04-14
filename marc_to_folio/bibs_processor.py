@@ -139,9 +139,6 @@ class BibsProcessor:
     def save_source_record(self, marc_record, instance):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(uuid.uuid4())
-        temp_leader = Leader(marc_record.leader)
-        temp_leader[9] = "a"
-        marc_record.leader = temp_leader
 
         marc_record.add_ordered_field(
             Field(
@@ -151,10 +148,12 @@ class BibsProcessor:
             )
         )
         # Since they all should be UTF encoded, make the leader align.
-        if marc_record.leader:
+        try:
             temp_leader = Leader(marc_record.leader)
             temp_leader[9] = "a"
             marc_record.leader = temp_leader
+        except:
+            logging.exception(f"Something is wrong with the marc records leader: {marc_record.leader}")
         srs_record_string = get_srs_string(
             (
                 marc_record,
