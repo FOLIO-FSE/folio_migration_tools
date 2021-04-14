@@ -238,7 +238,7 @@ class Conditions:
                 f'Unmapped Classification types {parameter["name"]} {marc_field}'
             )
             raise Exception(
-                f'Classification mapping error.\n Parameter: {parameter.get("name", "")}\nMARC Field: {marc_field}'
+                f'Classification mapping error.\tParameter: {parameter.get("name", "")}\tMARC Field: {marc_field}'
             )
        
 
