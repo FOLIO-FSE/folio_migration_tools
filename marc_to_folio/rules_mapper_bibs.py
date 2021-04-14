@@ -366,7 +366,7 @@ class BibsRulesMapper(RulesMapperBase):
                                 corresponding_337.get_subfields("b")[sfidx]
                                 if sfidx < len(corresponding_337.get_subfields("b"))
                                 else None
-                            ).strip()
+                            )
                             if not corresponding_b:
                                 logging.debug(f"No corresponding $b found")
                                 self.add_to_migration_report(
