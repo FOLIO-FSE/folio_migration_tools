@@ -227,9 +227,20 @@ class Conditions:
         return t[0]
 
     def condition_set_classification_type_id(self, value, parameter, marc_field):
-        return self.get_ref_data_tuple_by_name(
-            self.folio.class_types, "class_types", parameter["name"]
-        )[0]
+        try: 
+            t = self.get_ref_data_tuple_by_name(
+                self.folio.class_types, "class_types", parameter["name"]
+            )
+            self.mapper.add_to_migration_report("Mapped classification types", t[1])
+            return t[0]
+        except:
+            logging.exception(
+                f'Unmapped Classification types {parameter["name"]} {marc_field}'
+            )
+            raise Exception(
+                f'Classification mapping error.\n Parameter: {parameter.get("name", "")}\nMARC Field: {marc_field}'
+            )
+       
 
     def condition_char_select(self, value, parameter, marc_field):
         return value[parameter["from"] : parameter["to"]]
