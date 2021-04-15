@@ -66,7 +66,9 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.start = time.time()
 
-    def parse_bib(self, index_or_legacy_id, marc_record: pymarc.Record, inventory_only=False):
+    def parse_bib(
+        self, index_or_legacy_id, marc_record: pymarc.Record, inventory_only=False
+    ):
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function"""
@@ -547,23 +549,23 @@ class BibsRulesMapper(RulesMapperBase):
                 if "b" in f:
                     res.add(f["b"].strip())
             if any(res):
+                self.add_stats(self.stats, "legacy id from 998$b")
                 return list(res)
             else:
                 try:
                     ret = [marc_record["001"].format_field().strip()]
-                    self.add_stats(self.stats, "Legacy id not found. 001 returned")
+                    self.add_stats(self.stats, "legacy id from 001")
                     return ret
-                except AttributeError:
-                    self.add_stats(
-                        self.stats, "Legacy id and 001 not found. Failing record "
+                except:
+                    raise TransformationCriticalDataError(
+                        "unknown identifier", "001 is missing.", marc_record.as_json()
                     )
-                    raise ValueError("Legacy id and 001 not found. Failing record ")
         elif ils_flavour in ["voyager"]:
             try:
                 return [marc_record["001"].format_field().strip()]
             except:
                 raise TransformationCriticalDataError(
-                    "unknown", "001 is missing. Record failed", marc_record.as_json()
+                    "unknown identifier", "001 is missing.", marc_record.as_json()
                 )
         else:
             raise Exception(f"ILS {ils_flavour} not configured")
