@@ -247,7 +247,7 @@ class ItemMapper(MapperBase):
                 "Add a row to mapping file with *:s and a valid callnumber type"
             )
         logging.info(
-            f"loaded {idx} mappings for {len(self.folio_call_number_types)} loan types in FOLIO"
+            f"loaded {idx} mappings for {len(self.folio_call_number_types)} call number types in FOLIO"
         )
 
     def setup_loan_type_mappings(self):
