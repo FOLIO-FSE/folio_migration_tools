@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict
+from typing import Dict, List
 
 from pymarc.record import Record
 from marc_to_folio.conditions import Conditions

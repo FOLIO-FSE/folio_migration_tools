@@ -2,7 +2,7 @@
 FOLIO community specifications"""
 import json
 import logging
-from typing import Generator
+from typing import Generator, List
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import time
 from marc_to_folio.conditions import Conditions
