@@ -2,6 +2,7 @@
 FOLIO community specifications"""
 import json
 import logging
+from typing import Generator
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import time
 from marc_to_folio.conditions import Conditions
@@ -386,7 +387,7 @@ class BibsRulesMapper(RulesMapperBase):
                                 if len(combined_code) == 2:
                                     yield get_folio_id(combined_code)
 
-    def handle_hrid(self, folio_instance, marc_record: pymarc.record):
+    def handle_hrid(self, folio_instance, marc_record: Record) -> None:
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if "hrid" not in folio_instance:  #  HRID MAPPING FOLIO DEFAULT
             self.add_to_migration_report(
@@ -415,7 +416,7 @@ class BibsRulesMapper(RulesMapperBase):
                 "HRID Handling", "HRID created from mapping rules"
             )
 
-    def get_mode_of_issuance_id(self, marc_record, legacy_id):
+    def get_mode_of_issuance_id(self, marc_record :Record, legacy_id :str) -> str:
         level = marc_record.leader[7]
         try:
             name = "unspecified"
@@ -459,16 +460,16 @@ class BibsRulesMapper(RulesMapperBase):
             )
             raise ee
 
-    def validate(self, folio_rec, legacy_ids):
+    def validate(self, folio_rec, legacy_ids) -> None:
         if not folio_rec.get("title", ""):
             raise ValueError(f"No title for {legacy_ids}")
         if not folio_rec.get("instanceTypeId", ""):
             raise ValueError(f"No Instance Type Id for {legacy_ids}")
 
-    def get_nature_of_content(self, marc_record):
+    def get_nature_of_content(self, marc_record: Record) -> list[str]:
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
 
-    def get_languages(self, marc_record):
+    def get_languages(self, marc_record) -> list[str]:
         """Get languages and tranforms them to correct codes"""
         languages = set()
         lang_fields = marc_record.get_fields("041")
@@ -500,7 +501,7 @@ class BibsRulesMapper(RulesMapperBase):
         # TODO: test agianist valide language codes
         return list(languages)
 
-    def fetch_language_codes(self):
+    def fetch_language_codes(self) -> Generator[str, None, None]:
         """fetches the list of standardized language codes from LoC"""
         url = "https://www.loc.gov/standards/codelists/languages.xml"
         tree = ET.fromstring(requests.get(url).content)
@@ -509,7 +510,7 @@ class BibsRulesMapper(RulesMapperBase):
         for code in tree.findall(xpath_expr):
             yield code.text
 
-    def filter_langs(self, language_values, marc_record):
+    def filter_langs(self, language_values: list[str], marc_record: Record) -> None:
         forbidden_values = ["###", "zxx", "n/a", "N/A", "|||"]
         for language_value in language_values:
             if (
@@ -536,13 +537,34 @@ class BibsRulesMapper(RulesMapperBase):
                         f"{language_value} not recognized for {self.get_legacy_ids(marc_record, self.ils_flavour)}",
                     )
 
-    def get_legacy_ids(self, marc_record: Record, ils_flavour):
+    def get_legacy_ids(self, marc_record: Record, ils_flavour: str) -> list[str]:
         if ils_flavour in ["iii", "sierra"]:
-            return [marc_record["907"]["a"]]
+            try:
+                return [marc_record["907"]["a"]]
+            except:
+                raise TransformationCriticalDataError(
+                    "unknown identifier",
+                    "907 $a is missing, although it is required for Sierra/iii migrations",
+                    marc_record.as_json(),
+                )
         elif ils_flavour in ["907y"]:
-            return [marc_record["907"]["y"]]
+            try:
+                return [marc_record["907"]["y"]]
+            except:
+                raise TransformationCriticalDataError(
+                    "unknown identifier",
+                    "907 $y is missing, although it is required for this legacy ILS choice",
+                    marc_record.as_json(),
+                )
         elif ils_flavour == "035":
-            return [marc_record["035"]["a"]]
+            try:
+                return [marc_record["035"]["a"]]
+            except:
+                raise TransformationCriticalDataError(
+                    "unknown identifier",
+                    "035 $a is missing, although it is required for this legacy ILS choice",
+                    marc_record.as_json(),
+                )
         elif ils_flavour == "aleph":
             res = set()
             for f in marc_record.get_fields("998"):
@@ -558,14 +580,18 @@ class BibsRulesMapper(RulesMapperBase):
                     return ret
                 except:
                     raise TransformationCriticalDataError(
-                        "unknown identifier", "001 is missing.", marc_record.as_json()
+                        "unknown identifier",
+                        "001 is missing.although that or 998$b is required for Aleph migrations",
+                        marc_record.as_json(),
                     )
         elif ils_flavour in ["voyager"]:
             try:
                 return [marc_record["001"].format_field().strip()]
             except:
                 raise TransformationCriticalDataError(
-                    "unknown identifier", "001 is missing.", marc_record.as_json()
+                    "unknown identifier",
+                    "001 is missing.although it is required for Voyager migrations",
+                    marc_record.as_json(),
                 )
         else:
             raise Exception(f"ILS {ils_flavour} not configured")
