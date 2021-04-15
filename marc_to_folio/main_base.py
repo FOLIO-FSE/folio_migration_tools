@@ -20,7 +20,7 @@ class MainBase:
         if log_file_path:
             file_formatter = logging.Formatter("%(message)s")
             file_handler = logging.FileHandler(
-                filename=log_file_path
+                filename=log_file_path, 
             )
             # file_handler.addFilter(LevelFilter(0, 20))
             file_handler.setFormatter(file_formatter)

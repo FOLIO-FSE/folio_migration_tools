@@ -61,11 +61,12 @@ class ItemMapper(MapperBase):
         raise NotImplementedError()
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
+        arr_re = r"\[[0-9]\]"
         if self.use_map:
             legacy_item_keys = list(
                 k["legacy_field"]
                 for k in self.items_map["data"]
-                if k["folio_field"] == folio_prop_name
+                if re.sub(arr_re, ".", k["folio_field"]).strip(".") == folio_prop_name
             )
             legacy_value = ""
             vals = list([v for k, v in legacy_item.items() if k in legacy_item_keys])
@@ -104,7 +105,8 @@ class ItemMapper(MapperBase):
                     (
                         k.get("value", "")
                         for k in self.items_map["data"]
-                        if k["folio_field"] == folio_prop_name
+                        if re.sub(arr_re, ".", k["folio_field"]).strip(".")
+                        == folio_prop_name
                     ),
                     "",
                 )
