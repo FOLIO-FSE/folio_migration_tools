@@ -72,7 +72,7 @@ class RulesMapperHoldings(RulesMapperBase):
         return folio_holding
 
     def perform_additional_mapping(
-        self, marc_record: Record, folio_holding, legacy_ids: list[str]
+        self, marc_record: Record, folio_holding, legacy_ids: List[str]
     ):
         """Perform additional tasks not easily handled in the mapping rules"""
 

@@ -466,10 +466,10 @@ class BibsRulesMapper(RulesMapperBase):
         if not folio_rec.get("instanceTypeId", ""):
             raise ValueError(f"No Instance Type Id for {legacy_ids}")
 
-    def get_nature_of_content(self, marc_record: Record) -> list[str]:
+    def get_nature_of_content(self, marc_record: Record) -> List[str]:
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
 
-    def get_languages(self, marc_record) -> list[str]:
+    def get_languages(self, marc_record) -> List[str]:
         """Get languages and tranforms them to correct codes"""
         languages = set()
         lang_fields = marc_record.get_fields("041")
@@ -510,7 +510,7 @@ class BibsRulesMapper(RulesMapperBase):
         for code in tree.findall(xpath_expr):
             yield code.text
 
-    def filter_langs(self, language_values: list[str], marc_record: Record) -> None:
+    def filter_langs(self, language_values: List[str], marc_record: Record) -> None:
         forbidden_values = ["###", "zxx", "n/a", "N/A", "|||"]
         for language_value in language_values:
             if (
@@ -537,7 +537,7 @@ class BibsRulesMapper(RulesMapperBase):
                         f"{language_value} not recognized for {self.get_legacy_ids(marc_record, self.ils_flavour)}",
                     )
 
-    def get_legacy_ids(self, marc_record: Record, ils_flavour: str) -> list[str]:
+    def get_legacy_ids(self, marc_record: Record, ils_flavour: str) -> List[str]:
         if ils_flavour in ["iii", "sierra"]:
             try:
                 return [marc_record["907"]["a"]]
