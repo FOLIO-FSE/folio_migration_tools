@@ -120,7 +120,7 @@ class RulesMapperBase:
             try:
                 report_file.write(f"{blurbs[a]}    \n")
             except KeyError as key_error:
-                logging.exception(f"Uhoh. Please add this one to report_blurbs.py: {key_error}")
+                logging.error(f"Uhoh. Please add this one to report_blurbs.py: {key_error}")
 
             report_file.write(
                 f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
