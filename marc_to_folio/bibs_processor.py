@@ -33,17 +33,17 @@ class BibsProcessor:
             os.path.join(self.results_folder, "instance_id_map.json"), "w+"
         )
 
-    def process_record(self, marc_record, inventory_only):
+    def process_record(self, idx, marc_record, inventory_only):
 
         """processes a marc record and saves it"""
         try:
-            legacy_id = self.mapper.get_legacy_id(marc_record, self.ils_flavour)
+            index_or_legacy_id = self.mapper.get_legacy_ids(marc_record, self.ils_flavour)
         except:
-            legacy_id = ["unknown"]
+            index_or_legacy_id = [f"Index in file: {idx}"] # Only used for reporting purposes
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
-            (folio_rec, id_map_strings) = self.mapper.parse_bib(
+            (folio_rec, id_map_strings) = self.mapper.parse_bib(index_or_legacy_id,
                 marc_record, inventory_only
             )
             prec_titles = folio_rec.get("precedingTitles", [])

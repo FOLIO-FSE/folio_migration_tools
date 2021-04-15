@@ -4,6 +4,7 @@ import json
 import logging
 import csv
 import copy
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import sys
 import traceback
 from os import listdir
@@ -67,7 +68,7 @@ class Worker(main_base.MainBase):
             self.wrap_up()
 
     def read_records(self, reader):
-        for record in reader:
+        for idx, record in enumerate(reader):
             self.mapper.add_stats(
                 self.mapper.stats, "MARC21 records in file before parsing"
             )
@@ -80,16 +81,16 @@ class Worker(main_base.MainBase):
                     self.mapper.stats,
                     "MARC21 Records with encoding errors - parsing failed",
                 )
-                logging.error(
+                raise TransformationCriticalDataError(idx,
                     f"Bib records that failed to parse\t"
-                    f"{reader.current_exception}\t{reader.current_chunk}"
+                    f"{reader.current_exception}",reader.current_chunk
                 )
             else:
                 self.set_leader(record)
                 self.mapper.add_stats(
                     self.mapper.stats, "MARC21 Records successfully parsed"
                 )
-                self.processor.process_record(record, False)
+                self.processor.process_record(idx, record, False)
 
     @staticmethod
     def set_leader(marc_record: Record):
