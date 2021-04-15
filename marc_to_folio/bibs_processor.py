@@ -73,7 +73,7 @@ class BibsProcessor:
         except ValueError as value_error:
             self.mapper.add_to_migration_report(
                 "Records failed to migrate due to Value errors found in Transformation",
-                f"{value_error} for {legacy_id} ",
+                f"{value_error} for {index_or_legacy_id} ",
             )
             self.mapper.add_stats(
                 self.mapper.stats, "Value Errors (records that failed transformation)"

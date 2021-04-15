@@ -82,9 +82,11 @@ class Worker(main_base.MainBase):
                         self.mapper.stats,
                         "MARC21 Records with encoding errors - parsing failed",
                     )
-                    raise TransformationCriticalDataError(idx,
+                    raise TransformationCriticalDataError(
+                        f"Index file:{idx}",
                         f"Bib records that failed to parse\t"
-                        f"{reader.current_exception}",reader.current_chunk
+                        f"{reader.current_exception}",
+                        reader.current_chunk,
                     )
                 else:
                     self.set_leader(record)
