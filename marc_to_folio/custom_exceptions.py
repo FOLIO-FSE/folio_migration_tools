@@ -16,7 +16,7 @@ class TransformationDataError(TransfomationError):
 
 
 class TransformationCriticalDataError(TransfomationError):
-    """Raised when the a field mapping fails, Error is critical"""
+    """Raised when the a field mapping fails, Error is critical and means tranformation fails"""
 
     def __init__(self, id, message="Transformation failed", data_value=""):
         self.id = id

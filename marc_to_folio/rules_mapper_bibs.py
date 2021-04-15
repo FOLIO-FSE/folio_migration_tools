@@ -2,6 +2,7 @@
 FOLIO community specifications"""
 import json
 import logging
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import time
 from marc_to_folio.conditions import Conditions
 import traceback
@@ -205,9 +206,14 @@ class BibsRulesMapper(RulesMapperBase):
             holdingsfields = marc_record.get_fields("852", "866")
             f852s = list(f for f in holdingsfields if f.tag == "852")
             f866s = list(f for f in holdingsfields if f.tag == "866")
-            self.add_to_migration_report("Holdings generation from bibs", f"{len(f852s)} 852:s and {len(f866s)} 866:s in record")
+            self.add_to_migration_report(
+                "Holdings generation from bibs",
+                f"{len(f852s)} 852:s and {len(f866s)} 866:s in record",
+            )
         else:
-            self.add_to_migration_report("Holdings generation from bibs", f"0 852:s and 0 866:s in record")
+            self.add_to_migration_report(
+                "Holdings generation from bibs", f"0 852:s and 0 866:s in record"
+            )
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
@@ -381,12 +387,14 @@ class BibsRulesMapper(RulesMapperBase):
     def handle_hrid(self, folio_instance, marc_record: pymarc.record):
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if "hrid" not in folio_instance:  #  HRID MAPPING FOLIO DEFAULT
-            self.add_to_migration_report("HRID Handling", "Records without HRID from rules. Created HRID")
+            self.add_to_migration_report(
+                "HRID Handling", "Records without HRID from rules. Created HRID"
+            )
             num_part = str(self.hrid_counter).zfill(11)
             folio_instance["hrid"] = f"mig{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             marc_record.add_ordered_field(new_001)
-            try:               
+            try:
                 new_035 = Field(
                     tag="035",
                     indicators=["0", "0"],
@@ -396,10 +404,14 @@ class BibsRulesMapper(RulesMapperBase):
                 marc_record.add_ordered_field(new_035)
                 self.add_to_migration_report("HRID Handling", "Added 035 from 001")
             except Exception:
-                self.add_to_migration_report("HRID Handling", "Failed to create 035 from 001")
+                self.add_to_migration_report(
+                    "HRID Handling", "Failed to create 035 from 001"
+                )
             self.hrid_counter += 1
         else:
-            self.add_to_migration_report("HRID Handling", "HRID created from mapping rules")
+            self.add_to_migration_report(
+                "HRID Handling", "HRID created from mapping rules"
+            )
 
     def get_mode_of_issuance_id(self, marc_record, legacy_id):
         level = marc_record.leader[7]
@@ -547,6 +559,11 @@ class BibsRulesMapper(RulesMapperBase):
                     )
                     raise ValueError("Legacy id and 001 not found. Failing record ")
         elif ils_flavour in ["voyager"]:
-            return [marc_record["001"].format_field().strip()]
+            try:
+                return [marc_record["001"].format_field().strip()]
+            except:
+                raise TransformationCriticalDataError(
+                    "unknown", "001 is missing. Record failed", marc_record.as_json()
+                )
         else:
             raise Exception(f"ILS {ils_flavour} not configured")
