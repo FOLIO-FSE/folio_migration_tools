@@ -114,7 +114,7 @@ def main():
                     logging.info(f"Running {records_file}")
                     read_records(reader, processor)
             except Exception:
-                logging.exception(records_file, stack_info=True)
+                logging.exception(f"Failure in Main: {records_file}", stack_info=True)
 
 
 def read_records(reader, processor: HoldingsProcessor):
@@ -129,6 +129,8 @@ def read_records(reader, processor: HoldingsProcessor):
             else:
                 processor.process_record(record)
         except TransformationCriticalDataError as error:
+            logging.error(error)
+        except ValueError as error:
             logging.error(error)
     processor.wrap_up()
 
