@@ -72,25 +72,28 @@ class Worker(main_base.MainBase):
             self.mapper.add_stats(
                 self.mapper.stats, "MARC21 records in file before parsing"
             )
-            if record is None:
-                self.mapper.add_to_migration_report(
-                    "Bib records that failed to parse",
-                    f"{reader.current_exception} {reader.current_chunk}",
-                )
-                self.mapper.add_stats(
-                    self.mapper.stats,
-                    "MARC21 Records with encoding errors - parsing failed",
-                )
-                raise TransformationCriticalDataError(idx,
-                    f"Bib records that failed to parse\t"
-                    f"{reader.current_exception}",reader.current_chunk
-                )
-            else:
-                self.set_leader(record)
-                self.mapper.add_stats(
-                    self.mapper.stats, "MARC21 Records successfully parsed"
-                )
-                self.processor.process_record(idx, record, False)
+            try:
+                if record is None:
+                    self.mapper.add_to_migration_report(
+                        "Bib records that failed to parse",
+                        f"{reader.current_exception} {reader.current_chunk}",
+                    )
+                    self.mapper.add_stats(
+                        self.mapper.stats,
+                        "MARC21 Records with encoding errors - parsing failed",
+                    )
+                    raise TransformationCriticalDataError(idx,
+                        f"Bib records that failed to parse\t"
+                        f"{reader.current_exception}",reader.current_chunk
+                    )
+                else:
+                    self.set_leader(record)
+                    self.mapper.add_stats(
+                        self.mapper.stats, "MARC21 Records successfully parsed"
+                    )
+                    self.processor.process_record(idx, record, False)
+            except TransformationCriticalDataError as error:
+                logging.error(error)
 
     @staticmethod
     def set_leader(marc_record: Record):
