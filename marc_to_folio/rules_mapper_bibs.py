@@ -66,12 +66,12 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.start = time.time()
 
-    def parse_bib(self, marc_record: pymarc.Record, inventory_only=False):
+    def parse_bib(self, index_or_legacy_id, marc_record: pymarc.Record, inventory_only=False):
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function"""
         self.print_progress()
-        legacy_ids = self.get_legacy_id(marc_record, self.ils_flavour)
+        legacy_ids = self.get_legacy_ids(marc_record, self.ils_flavour)
         folio_instance = {
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
@@ -531,10 +531,10 @@ class BibsRulesMapper(RulesMapperBase):
                 elif language_value not in forbidden_values:
                     self.add_to_migration_report(
                         "Unrecognized language codes in records",
-                        f"{language_value} not recognized for {self.get_legacy_id(marc_record, self.ils_flavour)}",
+                        f"{language_value} not recognized for {self.get_legacy_ids(marc_record, self.ils_flavour)}",
                     )
 
-    def get_legacy_id(self, marc_record: Record, ils_flavour):
+    def get_legacy_ids(self, marc_record: Record, ils_flavour):
         if ils_flavour in ["iii", "sierra"]:
             return [marc_record["907"]["a"]]
         elif ils_flavour in ["907y"]:
