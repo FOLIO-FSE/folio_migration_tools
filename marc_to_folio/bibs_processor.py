@@ -1,6 +1,7 @@
 """ Class that processes each MARC record """
 from io import StringIO
 import logging
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
@@ -87,6 +88,12 @@ class BibsProcessor:
                 self.mapper.stats, "Bib records that failed transformation"
             )
             # raise validation_error
+        except TransformationCriticalDataError as error:
+            self.mapper.add_stats(self.mapper.stats, "TransformationCriticalDataErrors")
+            self.mapper.add_stats(
+                self.mapper.stats, "Bib records that failed transformation"
+            )
+            logging.critical(error)
 
         except Exception as inst:
             self.mapper.add_stats(

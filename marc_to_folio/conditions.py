@@ -1,4 +1,5 @@
 import logging
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import re
 import pymarc
 from pymarc import field
@@ -95,7 +96,9 @@ class Conditions:
                 self.default_location_id = t[0]
                 logging.info(f"Default location id is {self.default_location_id}")
             else:
-                raise Exception(f"Default location for {self.default_location_code} is not set up")
+                raise Exception(
+                    f"Default location for {self.default_location_code} is not set up"
+                )
         else:
             raise Exception("Default location code is not set up")
 
@@ -227,20 +230,19 @@ class Conditions:
         return t[0]
 
     def condition_set_classification_type_id(self, value, parameter, marc_field):
-        try: 
+        try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.class_types, "class_types", parameter["name"]
             )
             self.mapper.add_to_migration_report("Mapped classification types", t[1])
             return t[0]
         except:
-            logging.exception(
-                f'Unmapped Classification types {parameter["name"]} {marc_field}'
+            raise TransformationCriticalDataError(
+                "unknown",
+                f'Classification mapping error.\tParameter: {parameter.get("name", "")}\t'
+                f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
+                parameter.get("name", ""),
             )
-            raise Exception(
-                f'Classification mapping error.\tParameter: {parameter.get("name", "")}\tMARC Field: {marc_field}'
-            )
-       
 
     def condition_char_select(self, value, parameter, marc_field):
         return value[parameter["from"] : parameter["to"]]
@@ -253,11 +255,11 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped identifier types", t[1])
             return t[0]
         except:
-            logging.exception(
-                f'Unmapped identifier name types {parameter["name"]} {marc_field}'
-            )
-            raise Exception(
-                f'Identifier mapping error.\n Parameter: {parameter.get("name", "")}\nMARC Field: {marc_field}'
+            raise TransformationCriticalDataError(
+                "",
+                f'Unmapped identifier name type: {parameter["name"]}\tMARC Field: {marc_field}'
+                f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
+                {parameter["name"]},
             )
 
     def condition_set_contributor_name_type_id(self, value, parameter, marc_field):
