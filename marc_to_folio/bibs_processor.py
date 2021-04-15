@@ -58,7 +58,7 @@ class BibsProcessor:
                 self.mapper.add_to_migration_report(
                     "Preceeding and Succeeding titles", f"{len(succ_titles)}"
                 )
-            if self.validate_instance(folio_rec, marc_record):
+            if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
                 write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
                 self.mapper.add_stats(
@@ -108,11 +108,11 @@ class BibsProcessor:
                 logging.error(folio_rec)
             raise inst
 
-    def validate_instance(self, folio_rec, marc_record):
+    def validate_instance(self, folio_rec, marc_record, index_or_legacy_id: str):
         if self.args.validate:
             validate(folio_rec, self.instance_schema)
         if not folio_rec.get("title", ""):
-            s = f"No title in {marc_record['001'].format_field()}"
+            s = f"No title in {index_or_legacy_id}"
             self.mapper.add_to_migration_report("Records without titles", s)
             logging.error(s)
             self.mapper.add_stats(
@@ -120,7 +120,7 @@ class BibsProcessor:
             )
             return False
         if not folio_rec.get("instanceTypeId", ""):
-            s = f"No Instance Type Id in {marc_record['001'].format_field()}"
+            s = f"No Instance Type Id in {index_or_legacy_id}"
             self.mapper.add_to_migration_report("Records without Instance Type Ids", s)
             self.mapper.add_stats(
                 self.mapper.stats, "Bib records that failed transformation"
