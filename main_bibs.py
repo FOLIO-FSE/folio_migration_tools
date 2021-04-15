@@ -83,8 +83,8 @@ class Worker(main_base.MainBase):
                         "MARC21 Records with encoding errors - parsing failed",
                     )
                     raise TransformationCriticalDataError(
-                        f"Index file:{idx}",
-                        f"Bib records that failed to parse\t"
+                        f"Index in file:{idx}",
+                        f"MARC parsing error: "
                         f"{reader.current_exception}",
                         reader.current_chunk,
                     )
