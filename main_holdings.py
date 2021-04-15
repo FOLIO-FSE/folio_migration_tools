@@ -1,5 +1,8 @@
 '''Main "script."'''
 import argparse
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+
+from pymarc.reader import MARCReader
 from marc_to_folio.main_base import MainBase
 from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 import os
@@ -78,7 +81,10 @@ def main():
             # {"legacy_id", "folio_id","instanceLevelCallNumber"}
             map_object = json.loads(json_string)
             if index % 50000 == 0:
-                print(f"{index} instance ids loaded to map {map_object['legacy_id']}", end="\r")
+                print(
+                    f"{index} instance ids loaded to map {map_object['legacy_id']}",
+                    end="\r",
+                )
             instance_id_map[map_object["legacy_id"]] = map_object
         logging.info(f"loaded {index} migrated instance IDs")
 
@@ -100,12 +106,30 @@ def main():
 
         processor = HoldingsProcessor(mapper, folio_client, results_file, args)
         for records_file in files:
-            if args.marcxml:
-                pymarc.map_xml(processor.process_record, records_file)
-            else:
+            try:
                 with open(records_file, "rb") as marc_file:
-                    pymarc.map_records(processor.process_record, marc_file)
+                    reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+                    reader.hide_utf8_warnings = True
+                    reader.force_utf8 = True
+                    logging.info(f"Running {records_file}")
+                    read_records(reader, processor)
+            except Exception:
+                logging.exception(records_file, stack_info=True)
 
+
+def read_records(reader, processor: HoldingsProcessor):
+    for idx, record in enumerate(reader):
+        try:
+            if record is None:
+                raise TransformationCriticalDataError(
+                    f"Index in file:{idx}",
+                    f"MARC parsing error: " f"{reader.current_exception}",
+                    reader.current_chunk,
+                )
+            else:
+                processor.process_record(record)
+        except TransformationCriticalDataError as error:
+            logging.error(error)
     processor.wrap_up()
 
 

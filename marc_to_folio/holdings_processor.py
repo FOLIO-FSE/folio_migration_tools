@@ -1,4 +1,5 @@
 """ Class that processes each MARC record """
+from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 import time
 import json
 import traceback
@@ -15,7 +16,7 @@ class HoldingsProcessor:
         self.results_file = results_file
         self.records_count = 0
         self.missing_instance_id_count = 0
-        self.mapper = mapper
+        self.mapper : RulesMapperHoldings = mapper
         self.args = args
         self.start = time.time()
         self.suppress = args.suppress

@@ -53,7 +53,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                         ignored_subsequent_fields.add(marc_field.tag)
                     self.perform_additional_mapping(marc_record, folio_holding, legacy_id)
-        self.holdings_id_map[marc_record["001"].format_field()] = folio_holding["id"]
+        
         self.dedupe_rec(folio_holding)
         self.count_unmapped_fields(self.schema, folio_holding)
         try:
@@ -118,5 +118,8 @@ class RulesMapperHoldings(RulesMapperBase):
 
 
 def get_legacy_id(marc_record, ils_flavour=""):
-    return [marc_record["001"].format_field().strip()]
+    try:
+        return [marc_record["001"].format_field().strip()]
+    except:
+        raise Exception("could not find 001")
 
