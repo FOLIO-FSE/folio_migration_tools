@@ -150,7 +150,8 @@ class MapperBase:
                     [
                         k
                         for k in loc_map.keys()
-                        if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
+                        if k
+                        not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
                     ]
                 )
             if any(m for m in loc_map.values() if m == "*"):
@@ -184,8 +185,7 @@ class MapperBase:
         logging.info(
             f"loaded {idx} mappings for {len(self.folio_client.locations)} locations in FOLIO"
         )
-    
-    
+
     def get_mapped_value(
         self, name_of_mapping, legacy_item, legacy_keys, map, default_value, map_key
     ):
@@ -212,7 +212,9 @@ class MapperBase:
             )
             return default_value
         except:
-            logging.exception(f"{name_of_mapping} - {map_key} ({legacy_keys})", stack_info=True)
+            logging.exception(
+                f"{name_of_mapping} - {map_key} ({legacy_keys})", stack_info=True
+            )
 
     def add_to_migration_report(self, header, measure_to_add):
         if header not in self.migration_report:
@@ -340,7 +342,10 @@ class MapperBase:
                     temp_object[prop] = res
 
             if temp_object != {} and all(
-                (v or (isinstance(v, bool) and (not v or k == "staffOnly") for k, v in temp_object.items()
+                (
+                    v or (isinstance(v, bool) and (not v or k == "staffOnly"))
+                    for k, v in temp_object.items()
+                )
             ):
                 a.append(temp_object)
         if any(a):
@@ -365,10 +370,12 @@ class MapperBase:
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
-            mapped_prop = self.get_prop(legacy_object, prop, index_or_id).strip()            
+            mapped_prop = self.get_prop(legacy_object, prop, index_or_id).strip()
             if mapped_prop:
                 folio_object[prop] = mapped_prop
-                self.report_legacy_mapping(self.legacy_basic_property(prop), True, False)
+                self.report_legacy_mapping(
+                    self.legacy_basic_property(prop), True, False
+                )
                 self.report_folio_mapping(prop, True, False)
             else:  # Match but empty field. Lets report this
                 self.report_legacy_mapping(self.legacy_property(prop), True, True)
@@ -376,7 +383,7 @@ class MapperBase:
         else:
             self.report_folio_mapping(prop, False)
 
-    def get_objects(self, source_file, file_name:str):
+    def get_objects(self, source_file, file_name: str):
         if file_name.endswith("tsv"):
             reader = csv.DictReader(source_file, dialect="tsv")
         else:
@@ -384,7 +391,7 @@ class MapperBase:
         for row in reader:
             yield row
 
-    def has_property(self, legacy_object, folio_prop_name:str):
+    def has_property(self, legacy_object, folio_prop_name: str):
         arr_re = r"\[[0-9]\]"
         if self.use_map:
             if folio_prop_name not in self.folio_keys:
