@@ -340,7 +340,7 @@ class MapperBase:
                     temp_object[prop] = res
 
             if temp_object != {} and all(
-                (v or (isinstance(v, bool) and (not v or k == "staffOnly")) for k, v in temp_object.items()
+                (v or (isinstance(v, bool) and (not v or k == "staffOnly") for k, v in temp_object.items()
             ):
                 a.append(temp_object)
         if any(a):
