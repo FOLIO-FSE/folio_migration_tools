@@ -584,7 +584,7 @@ class BibsRulesMapper(RulesMapperBase):
                         "001 is missing.although that or 998$b is required for Aleph migrations",
                         marc_record.as_json(),
                     )
-        elif ils_flavour in ["voyager"]:
+        elif ils_flavour in ["voyager", "001"]:
             try:
                 return [marc_record["001"].format_field().strip()]
             except:

@@ -20,6 +20,7 @@ pylint = "*"
 black = "*"
 Deprecated = "*"
 folioclient = "*"
+argparse-prompt = "*"
 
 [requires]
 python_version = "3.9"
@@ -27,5 +28,5 @@ python_version = "3.9"
 [pipenv]
 allow_prereleases = true
 
-[packages.python-language-server]
-extras = [ "all",]
+[packages]
+python-language-server = {extras = [ "all",]}

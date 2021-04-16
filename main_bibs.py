@@ -4,11 +4,13 @@ import json
 import logging
 import csv
 import copy
+import os
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import sys
+from argparse_prompt import PromptParser
 import traceback
 from os import listdir
-from os.path import isfile, join, dirname
+from os.path import isfile,  dirname
 from datetime import datetime as dt
 import time
 
@@ -125,44 +127,36 @@ class Worker(main_base.MainBase):
 
 def parse_args():
     """Parse CLI Arguments"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("source_folder", help="path to marc records folder")
-    parser.add_argument("results_folder", help="path to Instance results folder")
+    # parser = argparse.ArgumentParser()
+    parser = PromptParser()
+    parser.add_argument("source_folder", help="path to marc records folder", type=str)
+    parser.add_argument("results_folder", help="path to Instance results folder", type=str)
     parser.add_argument("okapi_url", help="OKAPI base url")
     parser.add_argument("tenant_id", help="id of the FOLIO tenant.")
     parser.add_argument("username", help="the api user")
-    parser.add_argument("password", help="the api users password")
+    parser.add_argument("--password", help="the api users password", secure=True)
     parser.add_argument(
-        "ils_flavour", help="The kind of ILS the records are created in"
+        "--ils_flavour", default="001", help="The kind of ILS the records are coming from and how legacy bibliographic IDs are to be handled\nOptions:\n\taleph   \t- bib id in either 998$b or 001\n\tvoyager \t- bib id in 001\n\tsierra  \t- bib id in 907 $a\n\t907y    \t- bib id in 907 $y\n\tmillennium \t- bib id in 907 $a\n\t001      \t- bib id in 001\n "
     )
     parser.add_argument(
-        "-holdings_records",
+        "--holdings_records",
         "-hold",
         help="Create holdings records based on relevant MARC fields",
-        action="store_true",
+        default=False, type=bool
     )
     parser.add_argument(
-        "-force_utf_8",
+        "--force_utf_8",
         "-utf8",
         help="forcing UTF8 when pasing marc records",
-        action="store_true",
+         default=True, type=bool
     )
     parser.add_argument(
-        "-msu_locations_path", "-f", help="filter records based on MSU rules"
-    )
-    parser.add_argument(
-        "-suppress",
+        "--suppress",
         "-ds",
         help="This batch of records are to be suppressed in FOLIO.",
-        action="store_true",
+        default=False, type=bool
     )
-    parser.add_argument(
-        "-postgres_dump",
-        "-p",
-        help="results will be written out for Postgres" "ingestion. Default is JSON",
-        action="store_true",
-    )
-    parser.add_argument(
+    """parser.add_argument(
         "-marcxml", "-x", help="DATA is in MARCXML format", action="store_true"
     )
     parser.add_argument(
@@ -170,8 +164,9 @@ def parse_args():
         "-v",
         help="Validate JSON data against JSON Schema",
         action="store_true",
-    )
+    )"""
     args = parser.parse_args()
+    print(args)
     return args
 
 
@@ -180,9 +175,11 @@ def main():
     try:
         # Parse CLI Arguments
         args = parse_args()
-        Worker.setup_logging(join(args.results_folder, "bib_transformation.log"))
-        results_file = join(args.results_folder, "folio_instances.json")
-        migration_report_file = join(
+        print(args.results_folder)
+        p = os.path.join(args.results_folder, "bib_transformation.log")
+        Worker.setup_logging(p)
+        results_file = os.path.join(args.results_folder, "folio_instances.json")
+        migration_report_file = os.path.join(
             args.results_folder, "instance_transformation_report.md"
         )
 

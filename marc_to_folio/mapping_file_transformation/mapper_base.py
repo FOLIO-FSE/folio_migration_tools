@@ -333,13 +333,14 @@ class MapperBase:
             ):
                 prop_path = f"{prop_name}[{i}].{prop}"
                 if prop_path in self.folio_keys:
+                    logging.debug(f"{prop_path} is IN folio_keys")
                     res = self.get_prop(legacy_object, prop_path, index_or_id, i)
                     self.report_legacy_mapping(self.legacy_property(prop), True, True)
                     self.report_folio_mapping(prop_path, True, False)
                     temp_object[prop] = res
 
             if temp_object != {} and all(
-                (v or (isinstance(v, bool) and not v)) for k, v in temp_object.items()
+                (v or (isinstance(v, bool) and (not v or k == "staffOnly")) for k, v in temp_object.items()
             ):
                 a.append(temp_object)
         if any(a):
