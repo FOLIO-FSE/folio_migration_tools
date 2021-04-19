@@ -1,3 +1,4 @@
+import json
 import logging
 import logging.handlers
 import os
@@ -6,14 +7,18 @@ from abc import abstractmethod
 
 class MainBase:
     @staticmethod
-    def setup_logging(log_file_path=None):        
+    def setup_logging(log_file_path=None, debug=False):
         logger = logging.getLogger()
         logger.handlers = []
         formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
-        logger.setLevel(logging.INFO)
-
         stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.INFO)
+        
+        if debug:
+            logger.setLevel(logging.DEBUG)
+            stream_handler.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
+            stream_handler.setLevel(logging.INFO)
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 

@@ -25,9 +25,9 @@ class MapperBase:
         self.record_map = record_map
         self.error_file = error_file
         self.ref_data_dicts = {}
-        arr_re = r"\[[0-9]\]"
+        self.arr_re = r"\[[0-9]\]$"
         self.folio_keys = list(
-            re.sub(arr_re, ".", k["folio_field"]).strip(".")
+            re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
             for k in self.record_map["data"]
             if k["legacy_field"] not in ["", "Not mapped"]
         )
@@ -328,12 +328,15 @@ class MapperBase:
         self, legacy_object, prop_name, properties, folio_object, index_or_id
     ):
         a = []
-        for i in range(0, 15):
+
+        for i in range(0, 9):
             temp_object = {}
             for prop in (
                 k for k, p in properties.items() if not p.get("folio:isVirtual", False)
             ):
+
                 prop_path = f"{prop_name}[{i}].{prop}"
+                logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
                     logging.debug(f"{prop_path} is IN folio_keys")
                     res = self.get_prop(legacy_object, prop_path, index_or_id, i)
@@ -342,11 +345,9 @@ class MapperBase:
                     temp_object[prop] = res
 
             if temp_object != {} and all(
-                (
-                    v or (isinstance(v, bool) and (not v or k == "staffOnly"))
-                    for k, v in temp_object.items()
-                )
+                (v or (isinstance(v, bool) and not v) for k, v in temp_object.items())
             ):
+                logging.debug(f"temporary object {temp_object}")
                 a.append(temp_object)
         if any(a):
             folio_object[prop_name] = a
@@ -392,7 +393,6 @@ class MapperBase:
             yield row
 
     def has_property(self, legacy_object, folio_prop_name: str):
-        arr_re = r"\[[0-9]\]"
         if self.use_map:
             if folio_prop_name not in self.folio_keys:
                 return False
@@ -400,7 +400,7 @@ class MapperBase:
                 (
                     k["legacy_field"]
                     for k in self.record_map["data"]
-                    if re.sub(arr_re, ".", k["folio_field"]).strip(".")
+                    if re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
                     == folio_prop_name
                 ),
                 "",
@@ -418,7 +418,7 @@ class MapperBase:
     def has_basic_property(self, legacy_object, folio_prop_name):
         if self.use_map:
             if folio_prop_name not in self.folio_keys:
-                logging.debug(f"map_basic_props -> {folio_prop_name} {self.folio_keys}")
+                logging.debug(f"map_basic_props -> {folio_prop_name}")
                 return False
             legacy_key = next(
                 (

@@ -34,7 +34,7 @@ class Worker(main_base.MainBase):
         self.files = [
             f
             for f in listdir(args.source_folder)
-            if isfile(join(args.source_folder, f))
+            if isfile(os.path.join(args.source_folder, f))
         ]
         self.folio_client = folio_client
         logging.info(f"Files to process: {len(self.files)}")
@@ -56,7 +56,7 @@ class Worker(main_base.MainBase):
             )
             for file_name in self.files:
                 try:
-                    with open(join(sys.argv[1], file_name), "rb") as marc_file:
+                    with open(os.path.join(sys.argv[1], file_name), "rb") as marc_file:
                         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                         reader.hide_utf8_warnings = True
                         if self.args.force_utf_8:
@@ -166,7 +166,6 @@ def parse_args():
         action="store_true",
     )"""
     args = parser.parse_args()
-    print(args)
     return args
 
 

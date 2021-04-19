@@ -1,6 +1,7 @@
 """ Class that processes each MARC record """
 from io import StringIO
 import logging
+from marc_to_folio.helper import Helper
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
@@ -59,7 +60,7 @@ class BibsProcessor:
                     "Preceeding and Succeeding titles", f"{len(succ_titles)}"
                 )
             if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
-                write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
+                Helper.write_to_file(self.results_file, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
                 self.mapper.add_stats(
                     self.mapper.stats, "Successfully transformed bibs"
@@ -109,8 +110,8 @@ class BibsProcessor:
             raise inst
 
     def validate_instance(self, folio_rec, marc_record, index_or_legacy_id: str):
-        if self.args.validate:
-            validate(folio_rec, self.instance_schema)
+        # if self.args.validate:
+        #    validate(folio_rec, self.instance_schema)
         if not folio_rec.get("title", ""):
             s = f"No title in {index_or_legacy_id}"
             self.mapper.add_to_migration_report("Records without titles", s)
@@ -139,7 +140,7 @@ class BibsProcessor:
             holdings_path = os.path.join(self.results_folder, "folio_holdings.json")
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
-                    write_to_file(holdings_file, False, holding)
+                    Helper.write_to_file(holdings_file, holding)
         self.srs_records_file.close()
         self.instance_id_map_file.close()
 
@@ -171,15 +172,6 @@ class BibsProcessor:
             )
         )
         self.srs_records_file.write(f"{srs_record_string}\n")
-
-
-def write_to_file(file, pg_dump, folio_record):
-    """Writes record to file. pg_dump=true for importing directly via the
-    psql copy command"""
-    if pg_dump:
-        file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
-    else:
-        file.write("{}\n".format(json.dumps(folio_record)))
 
 
 def get_srs_string(my_tuple):

@@ -1,4 +1,5 @@
 """ Class that processes each MARC record """
+from marc_to_folio.helper import Helper
 from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 import time
 import json
@@ -36,7 +37,7 @@ class HoldingsProcessor:
                     raise Exception(f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}")
 
 
-            write_to_file(self.results_file, self.args.postgres_dump, folio_rec)
+            Helper.write_to_file(self.results_file, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
             if self.records_count % 10000 == 0:
@@ -91,15 +92,6 @@ class HoldingsProcessor:
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)
         logging.info(f"Done. Transformation report written to {report_file}")
-
-
-def write_to_file(file, pg_dump, folio_record):
-    """Writes record to file. pg_dump=true for importing directly via the
-    psql copy command"""
-    if pg_dump:
-        file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
-    else:
-        file.write("{}\n".format(json.dumps(folio_record)))
 
 
 def add_stats(stats, a):

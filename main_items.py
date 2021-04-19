@@ -4,6 +4,9 @@ import csv
 import ctypes
 import json
 import logging
+from marc_to_folio.helper import Helper
+
+from argparse_prompt import PromptParser
 from marc_to_folio.main_base import MainBase
 import os
 import time
@@ -68,7 +71,7 @@ class Worker(MainBase):
                         ):
                             try:
                                 folio_rec = self.mapper.do_map(record, f"row {idx}")
-                                write_to_file(results_file, False, folio_rec)
+                                Helper.write_to_file(results_file, folio_rec)
                                 self.mapper.add_to_migration_report(
                                     "General statistics",
                                     "Number of records written to disk",
@@ -136,25 +139,22 @@ class Worker(MainBase):
         logging.info("All done!")
 
 
-def write_to_file(file, pg_dump, folio_record):
-    """Writes record to file. pg_dump=true for importing directly via the
-    psql copy command"""
-    if pg_dump:
-        file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
-    else:
-        file.write("{}\n".format(json.dumps(folio_record)))
-
-
 def parse_args():
     """Parse CLI Arguments"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("records_path", help="path to items file")
-    parser.add_argument("result_path", help="path to Instance results file")
-    parser.add_argument("map_path", help=("Path of the mapping rules folder"))
-    parser.add_argument("okapi_url", help=("OKAPI base url"))
-    parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
-    parser.add_argument("username", help=("the api user"))
-    parser.add_argument("password", help=("the api users password"))
+    parser = PromptParser()
+    parser.add_argument("records_path", help="path to marc records folder", type=str)
+    parser.add_argument("result_path", help="path to Instance results folder", type=str)
+    parser.add_argument("map_path", help="Path to folder with mapping files", type=str)
+    parser.add_argument("okapi_url", help="OKAPI base url")
+    parser.add_argument("tenant_id", help="id of the FOLIO tenant.")
+    parser.add_argument("username", help="the api user")
+    parser.add_argument("--password", help="the api users password", secure=True)
+    parser.add_argument(
+        "--log_level_debug",
+        "-debug",
+        help="Set log level to debug",
+        default=False, type=bool
+    )
     args = parser.parse_args()
     return args
 
@@ -163,8 +163,7 @@ def main():
     """Main Method. Used for bootstrapping. """
     csv.register_dialect("tsv", delimiter="\t")
     args = parse_args()
-    Worker.setup_logging(os.path.join(args.result_path, "item_transformation.log"))
-
+    Worker.setup_logging(os.path.join(args.result_path, "item_transformation.log"), args.log_level_debug)
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )

@@ -4,6 +4,7 @@ import csv
 import ctypes
 import json
 import logging
+from marc_to_folio.helper import Helper
 import os
 import time
 from os import listdir
@@ -130,7 +131,7 @@ class Worker(MainBase):
                 for key, holding in self.holdings.items():
                     for legacy_id in holding["formerIds"]:
                         self.legacy_map[legacy_id] = {"id": holding["id"] }
-                    write_to_file(holdings_file, False, holding)
+                    Helper.write_to_file(holdings_file, holding)
                     self.mapper.add_stats("Holdings Records Written to disk")
             legacy_path = os.path.join(self.results_path, "holdings_id_map.json")
             with open(legacy_path, "w") as legacy_map_path_file:
@@ -215,15 +216,6 @@ def parse_args():
     logging.info(f"\tUsername:\t{args.username}")
     logging.info(f"\tPassword:\tSecret")
     return args
-
-
-def write_to_file(file, pg_dump, folio_record):
-    """Writes record to file. pg_dump=true for importing directly via the
-    psql copy command"""
-    if pg_dump:
-        file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
-    else:
-        file.write("{}\n".format(json.dumps(folio_record)))
 
 
 def setup_path(path, filename):

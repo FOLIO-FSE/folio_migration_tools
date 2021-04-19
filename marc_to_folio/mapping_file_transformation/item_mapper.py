@@ -61,7 +61,7 @@ class ItemMapper(MapperBase):
         raise NotImplementedError()
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
-        arr_re = r"\[[0-9]\]"
+        arr_re = r"\[[0-9]\]$"
         if self.use_map:
             legacy_item_keys = list(
                 k["legacy_field"]
@@ -71,6 +71,10 @@ class ItemMapper(MapperBase):
             legacy_value = ""
             vals = list([v for k, v in legacy_item.items() if k in legacy_item_keys])
             if vals:
+                logging.debug(f"found legacy values {vals}")
+                legacy_value = " ".join(vals).strip()
+            else:
+                logging.debug(f"found NO legacy values {legacy_item}")
                 legacy_value = " ".join(vals).strip()
             self.add_to_migration_report("Source fields with same target", len(vals))
             # legacy_value = legacy_item.get(legacy_item_key, "")
@@ -99,8 +103,8 @@ class ItemMapper(MapperBase):
                     logging.debug(f"{legacy_value} in id map")
                     self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
                     return self.holdings_id_map[legacy_value]["id"]
-            elif len(legacy_item_keys) == 1:
-                logging.debug(folio_prop_name)
+            elif len(legacy_item_keys) == 1:                
+                logging.debug(f"len(legacy_item_keys) == 1 {folio_prop_name} Legacy value: {legacy_value} {legacy_item_keys}")
                 value = next(
                     (
                         k.get("value", "")
@@ -115,8 +119,10 @@ class ItemMapper(MapperBase):
                 else:
                     return legacy_value
             elif any(legacy_item_keys):
+                logging.debug(f"any(legacy_item_keys) {vals}")
                 return legacy_value
             else:
+                logging.debug(f"End of the road: {legacy_item_keys}")
                 # self.report_folio_mapping(f"{folio_prop_name}", False, False)
                 return ""
         else:
