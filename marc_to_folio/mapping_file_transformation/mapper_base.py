@@ -27,7 +27,8 @@ class MapperBase:
         self.ref_data_dicts = {}
         self.arr_re = r"\[[0-9]\]$"
         self.folio_keys = list(
-            re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
+            # re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
+            k["folio_field"]
             for k in self.record_map["data"]
             if k["legacy_field"] not in ["", "Not mapped"]
         )
@@ -256,9 +257,10 @@ class MapperBase:
                                 ].items():
                                     sub_prop_key2 = sub_prop_key + "." + sub_prop_name2
                                     if sub_prop2["type"] == "array":
-                                        logging.info(f"Array: {sub_prop_key2} ")
-                            elif sub_prop["type"] == "array":
+                                        logging.debug(f"Array: {sub_prop_key2} ")
+                            elif sub_prop["type"] == "array": # Object with subprop array
                                 temp_object[sub_prop_name] = []
+                                logging.debug(f"Array Sub prop name: {sub_prop_name}")
                                 for i in range(0, 5):
                                     if sub_prop["items"]["type"] == "object":
                                         temp = {}
@@ -336,7 +338,7 @@ class MapperBase:
             ):
 
                 prop_path = f"{prop_name}[{i}].{prop}"
-                logging.debug(f"object array prop_path {prop_path}")
+                # logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
                     logging.debug(f"{prop_path} is IN folio_keys")
                     res = self.get_prop(legacy_object, prop_path, index_or_id, i)
@@ -353,19 +355,21 @@ class MapperBase:
             folio_object[prop_name] = a
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
+        logging.debug(f"String array {prop}")
         if self.has_property(legacy_object, prop):  # is there a match in the csv?
-            mapped_prop = self.get_prop(legacy_object, prop, index_or_id).strip()
-            logging.debug(f"{prop} -> {mapped_prop}")
-            if mapped_prop:
-                if prop in folio_object:
-                    folio_object.get(prop, []).append(mapped_prop)
-                else:
-                    folio_object[prop] = [mapped_prop]
-                self.report_legacy_mapping(self.legacy_property(prop), True, False)
-                self.report_folio_mapping(prop, True, False)
-            else:  # Match but empty field. Lets report this
-                self.report_legacy_mapping(self.legacy_property(prop), True, True)
-                self.report_folio_mapping(prop, True, True)
+            logging.debug(f"Has string array property! {prop}")
+            for i in range(0, 5):
+                mapped_prop = self.get_prop(legacy_object, prop, index_or_id, i).strip()           
+                if mapped_prop:
+                    if prop in folio_object:
+                        folio_object.get(prop, []).append(mapped_prop)
+                    else:
+                        folio_object[prop] = [mapped_prop]
+                    self.report_legacy_mapping(self.legacy_property(prop), True, False)
+                    self.report_folio_mapping(prop, True, False)
+                else:  # Match but empty field. Lets report this
+                    self.report_legacy_mapping(self.legacy_property(prop), True, True)
+                    self.report_folio_mapping(prop, True, True)
         else:
             self.report_folio_mapping(prop, False)
 
@@ -394,13 +398,14 @@ class MapperBase:
 
     def has_property(self, legacy_object, folio_prop_name: str):
         if self.use_map:
-            if folio_prop_name not in self.folio_keys:
-                return False
+            # if folio_prop_name not in self.folio_keys:
+            #     return False
             legacy_key = next(
                 (
                     k["legacy_field"]
                     for k in self.record_map["data"]
-                    if re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
+                    if k["folio_field"] == folio_prop_name
+                    or re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
                     == folio_prop_name
                 ),
                 "",
@@ -439,7 +444,6 @@ class MapperBase:
             return folio_prop_name in legacy_object
 
     def legacy_property(self, folio_prop):
-        arr_re = r"\[[0-9]\]"
         if self.use_map:
             if folio_prop not in self.folio_keys:
                 return ""
@@ -447,7 +451,7 @@ class MapperBase:
                 (
                     k["legacy_field"]
                     for k in self.record_map["data"]
-                    if re.sub(arr_re, ".", k["folio_field"]).strip(".") == folio_prop
+                    if k["folio_field"] == folio_prop
                 ),
                 "",
             )

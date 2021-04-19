@@ -61,23 +61,26 @@ class ItemMapper(MapperBase):
         raise NotImplementedError()
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
-        arr_re = r"\[[0-9]\]$"
+        logging.debug(f"get item prop {folio_prop_name}")
         if self.use_map:
+            formatted_prop_name = f"{folio_prop_name}[{i}]"
             legacy_item_keys = list(
                 k["legacy_field"]
                 for k in self.items_map["data"]
-                if re.sub(arr_re, ".", k["folio_field"]).strip(".") == folio_prop_name
+                if k["folio_field"] == folio_prop_name
+                or k["folio_field"] == formatted_prop_name
             )
             legacy_value = ""
             vals = list([v for k, v in legacy_item.items() if k in legacy_item_keys])
             if vals:
-                logging.debug(f"found legacy values {vals}")
+                logging.debug(f"Found legacy values {vals} {legacy_item_keys}")
                 legacy_value = " ".join(vals).strip()
             else:
-                logging.debug(f"found NO legacy values {legacy_item}")
+                logging.debug(
+                    f"Found NO legacy values {folio_prop_name} - {legacy_item_keys}"
+                )
                 legacy_value = " ".join(vals).strip()
             self.add_to_migration_report("Source fields with same target", len(vals))
-            # legacy_value = legacy_item.get(legacy_item_key, "")
             if folio_prop_name in ["permanentLocationId", "temporaryLocationId"]:
                 return self.get_location_id(legacy_item, index_or_id)
             elif folio_prop_name == "materialTypeId":
@@ -103,14 +106,15 @@ class ItemMapper(MapperBase):
                     logging.debug(f"{legacy_value} in id map")
                     self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
                     return self.holdings_id_map[legacy_value]["id"]
-            elif len(legacy_item_keys) == 1:                
-                logging.debug(f"len(legacy_item_keys) == 1 {folio_prop_name} Legacy value: {legacy_value} {legacy_item_keys}")
+            elif len(legacy_item_keys) == 1:
+                logging.debug(
+                    f"len(legacy_item_keys) == 1 {folio_prop_name} Legacy value: {legacy_value} {legacy_item_keys}"
+                )
                 value = next(
                     (
                         k.get("value", "")
                         for k in self.items_map["data"]
-                        if re.sub(arr_re, ".", k["folio_field"]).strip(".")
-                        == folio_prop_name
+                        if k["folio_field"] == folio_prop_name
                     ),
                     "",
                 )
@@ -122,8 +126,7 @@ class ItemMapper(MapperBase):
                 logging.debug(f"any(legacy_item_keys) {vals}")
                 return legacy_value
             else:
-                logging.debug(f"End of the road: {legacy_item_keys}")
-                # self.report_folio_mapping(f"{folio_prop_name}", False, False)
+                logging.debug(f"End of the road: {folio_prop_name} {legacy_item_keys}")
                 return ""
         else:
             self.report_folio_mapping(f"{folio_prop_name}", True, False)
@@ -269,7 +272,13 @@ class ItemMapper(MapperBase):
                         [
                             k
                             for k in loan_type_mapping.keys()
-                            if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
+                            if k
+                            not in [
+                                "folio_code",
+                                "folio_id",
+                                "folio_name",
+                                "legacy_code",
+                            ]
                         ]
                     )
                 if any(m for m in loan_type_mapping.values() if m == "*"):
@@ -323,7 +332,13 @@ class ItemMapper(MapperBase):
                         [
                             k
                             for k in mat_mapping.keys()
-                            if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
+                            if k
+                            not in [
+                                "folio_code",
+                                "folio_id",
+                                "folio_name",
+                                "legacy_code",
+                            ]
                         ]
                     )
                 if any(m for m in mat_mapping.values() if m == "*"):
