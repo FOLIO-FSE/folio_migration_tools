@@ -19,7 +19,7 @@ from datetime import datetime
 import pymarc
 from folioclient.FolioClient import FolioClient
 
-from marc_to_folio.custom_exceptions import TransformationProcessError
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError, TransformationProcessError
 from marc_to_folio.mapping_file_transformation.item_mapper import ItemMapper
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -78,7 +78,8 @@ class Worker(MainBase):
                                 )
                             except TransformationProcessError as process_error:
                                 logging.error(f"{idx}\t{process_error}")
-                                self.error_file.write(f"{str(process_error)}\n")
+                            except TransformationCriticalDataError as data_error:
+                                logging.error(f"{idx}\t{data_error}")
                             except Exception as excepion:
                                 self.num_exeptions += 1
                                 print("\n=======ERROR===========")

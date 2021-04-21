@@ -2,6 +2,7 @@ import csv
 import json
 import logging
 from marc_to_folio.custom_exceptions import (
+    TransformationCriticalDataError,
     TransformationDataError,
     TransformationProcessError,
 )
@@ -212,10 +213,8 @@ class MapperBase:
                 f'{" - ".join(fieldvalues)} -> {default_value} (Unmapped)',
             )
             return default_value
-        except:
-            logging.exception(
-                f"{name_of_mapping} - {map_key} ({legacy_keys})", stack_info=True
-            )
+        except Exception as ee:
+            raise TransformationCriticalDataError(f"{name_of_mapping} - {map_key} ({legacy_keys}) {ee}")
 
     def add_to_migration_report(self, header, measure_to_add):
         if header not in self.migration_report:
