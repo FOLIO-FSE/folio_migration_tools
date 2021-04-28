@@ -55,7 +55,7 @@ class MapperBase:
             report_file.write("</details>   \n")
 
     def print_mapping_report(self, report_file, total_records):
-        
+
         logging.info("Writing mapping report")
         report_file.write("\n## Mapped FOLIO fields   \n")
         d_sorted = {
@@ -81,7 +81,9 @@ class MapperBase:
         report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             present = v[0]
-            present_per = "{:.1%}".format(present / total_records if total_records else 0)
+            present_per = "{:.1%}".format(
+                present / total_records if total_records else 0
+            )
             unmapped = present - v[1]
             mapped = v[1]
             mp = mapped / total_records if total_records else 0
@@ -215,7 +217,10 @@ class MapperBase:
             )
             return default_value
         except Exception as ee:
-            raise TransformationCriticalDataError(f"{name_of_mapping} - {map_key} ({legacy_keys}) {ee}")
+            raise TransformationCriticalDataError(
+                f"{name_of_mapping} - {map_key} ({legacy_keys}) {ee}"
+            )
+        
 
     def add_to_migration_report(self, header, measure_to_add):
         if header not in self.migration_report:
@@ -233,6 +238,7 @@ class MapperBase:
 
     def do_map(self, legacy_object, index_or_id):
         folio_object = self.instantiate_record()
+        required = self.schema["required"]
         for prop_name, prop in self.schema["properties"].items():
             try:
                 if prop.get("description", "") == "Deprecated":
@@ -258,7 +264,9 @@ class MapperBase:
                                     sub_prop_key2 = sub_prop_key + "." + sub_prop_name2
                                     if sub_prop2["type"] == "array":
                                         logging.debug(f"Array: {sub_prop_key2} ")
-                            elif sub_prop["type"] == "array": # Object with subprop array
+                            elif (
+                                sub_prop["type"] == "array"
+                            ):  # Object with subprop array
                                 temp_object[sub_prop_name] = []
                                 logging.debug(f"Array Sub prop name: {sub_prop_name}")
                                 for i in range(0, 5):
@@ -322,7 +330,11 @@ class MapperBase:
             except TransformationDataError as data_error:
                 self.add_stats("Data issues found")
                 self.error_file.write(data_error)
-
+        for required_prop in required:
+            if required_prop not in folio_object:
+                raise TransformationCriticalDataError(f"Required property {required_prop} missing for {index_or_id}")
+            elif not folio_object[required_prop]:
+                raise TransformationCriticalDataError(f"Required property {required_prop} empty for {index_or_id}")
         del folio_object["type"]
         return folio_object
 
@@ -359,7 +371,7 @@ class MapperBase:
         if self.has_property(legacy_object, prop):  # is there a match in the csv?
             logging.debug(f"Has string array property! {prop}")
             for i in range(0, 5):
-                mapped_prop = self.get_prop(legacy_object, prop, index_or_id, i).strip()           
+                mapped_prop = self.get_prop(legacy_object, prop, index_or_id, i).strip()
                 if mapped_prop:
                     if prop in folio_object:
                         folio_object.get(prop, []).append(mapped_prop)
