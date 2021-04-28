@@ -19,7 +19,10 @@ from datetime import datetime
 import pymarc
 from folioclient.FolioClient import FolioClient
 
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError, TransformationProcessError
+from marc_to_folio.custom_exceptions import (
+    TransformationCriticalDataError,
+    TransformationProcessError,
+)
 from marc_to_folio.mapping_file_transformation.item_mapper import ItemMapper
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -143,18 +146,28 @@ class Worker(MainBase):
 def parse_args():
     """Parse CLI Arguments"""
     parser = PromptParser()
-    parser.add_argument("records_path", help="path to marc records folder", type=str)
-    parser.add_argument("result_path", help="path to Instance results folder", type=str)
+    parser.add_argument("records_path", help="path to source records folder", type=str)
+    parser.add_argument("result_path", help="path to results folder", type=str)
     parser.add_argument("map_path", help="Path to folder with mapping files", type=str)
     parser.add_argument("okapi_url", help="OKAPI base url")
     parser.add_argument("tenant_id", help="id of the FOLIO tenant.")
     parser.add_argument("username", help="the api user")
     parser.add_argument("--password", help="the api users password", secure=True)
+    callnumber_help = (
+        "If you have Item level callnumbers and callnumber type codes in your data, "
+        "you need to create a call_number_type_mappings.tsv file and set this "
+        "to true. More info at "
+        "https://github.com/FOLIO-FSE/migration_repo_template#call_number_type_mappingtsv"
+    )
+    parser.add_argument(
+        "--map_call_number_types", help=callnumber_help, default=False, type=bool
+    )
     parser.add_argument(
         "--log_level_debug",
         "-debug",
         help="Set log level to debug",
-        default=False, type=bool
+        default=False,
+        type=bool,
     )
     args = parser.parse_args()
     return args
@@ -164,7 +177,9 @@ def main():
     """Main Method. Used for bootstrapping. """
     csv.register_dialect("tsv", delimiter="\t")
     args = parse_args()
-    Worker.setup_logging(os.path.join(args.result_path, "item_transformation.log"), args.log_level_debug)
+    Worker.setup_logging(
+        os.path.join(args.result_path, "item_transformation.log"), args.log_level_debug
+    )
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
@@ -187,9 +202,10 @@ def main():
         error_file_path = os.path.join(args.result_path, "item_transform_errors.tsv")
         location_map_path = setup_path(args.map_path, "locations.tsv")
         loans_type_map_path = setup_path(args.map_path, "loan_types.tsv")
-        call_number_type_map_path = setup_path(
-            args.map_path, "call_number_type_mapping.tsv"
-        )
+        if args.map_call_number_types:
+            call_number_type_map_path = setup_path(
+                args.map_path, "call_number_type_mapping.tsv"
+            )
         material_type_map_path = setup_path(args.map_path, "material_types.tsv")
 
         # Files found, let's go!

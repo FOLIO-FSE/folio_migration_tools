@@ -36,11 +36,11 @@ class ItemMapper(MapperBase):
 
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
-
-        self.call_number_type_map = call_number_type_map
-        self.call_number_type_keys = []
-        self.default_call_number_type_id = ""
-        self.setup_call_number_type_mappings()
+        if call_number_type_map:
+            self.call_number_type_map = call_number_type_map
+            self.call_number_type_keys = []
+            self.default_call_number_type_id = ""
+            self.setup_call_number_type_mappings()
 
         self.loan_type_map = loan_type_map
         self.default_loan_type_id = ""
@@ -187,14 +187,21 @@ class ItemMapper(MapperBase):
         )
 
     def get_item_level_call_number_type_id(self, legacy_item):
-        return self.get_mapped_value(
-            "Callnumber type",
-            legacy_item,
-            self.call_number_type_keys,
-            self.call_number_type_map,
-            self.default_call_number_type_id,
-            "folio_name",
-        )
+        if self.call_number_type_map:
+            return self.get_mapped_value(
+                "Callnumber type",
+                legacy_item,
+                self.call_number_type_keys,
+                self.call_number_type_map,
+                self.default_call_number_type_id,
+                "folio_name",
+            )
+        else:
+            self.add_to_migration_report(
+                "Callnumber type mapping",
+                'Mapping not setup',
+            )            
+            return ""
 
     def transform_status(self, legacy_value):
         self.add_to_migration_report("Status mapping", f"{legacy_value} -> Available")
