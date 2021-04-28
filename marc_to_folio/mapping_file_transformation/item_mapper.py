@@ -100,7 +100,7 @@ class ItemMapper(MapperBase):
             elif folio_prop_name in ["permanentLoanTypeId", "temporaryLoanTypeId"]:
                 return self.get_loan_type_id(legacy_item)
             elif folio_prop_name == "statisticalCodeIds":
-                return self.get_statistical_codes(vals)
+                return self.get_statistical_codes(legacy_item)
             elif folio_prop_name == "holdingsRecordId":
                 logging.debug(folio_prop_name)
                 if legacy_value not in self.holdings_id_map:
@@ -251,8 +251,9 @@ class ItemMapper(MapperBase):
                     f"{statistical_codes_mapping['folio_code']} could not be found in FOLIO"
                 )
         logging.info(
-            f"loaded {idx} mappings for {len(self.statistical_codes)} call number types in FOLIO"
+            f"loaded {idx} mappings for {len(self.statistical_codes)} statistical codes in FOLIO"
         )
+        print(json.dumps(self.statistical_codes_mappings, indent=4))
 
     def setup_call_number_type_mappings(self):
         # Loan types
@@ -270,6 +271,7 @@ class ItemMapper(MapperBase):
                             if k not in ["folio_code", "folio_id", "folio_name"]
                         ]
                     )
+                    logging.info(json.dumps(self.call_number_type_keys, indent=4))
                 if any(m for m in call_number_type_mapping.values() if m == "*"):
                     t = self.get_ref_data_tuple_by_name(
                         self.folio_call_number_types,

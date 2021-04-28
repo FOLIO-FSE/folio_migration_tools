@@ -193,8 +193,9 @@ class MapperBase:
         self, name_of_mapping, legacy_item, legacy_keys, map, default_value, map_key
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
-        fieldvalues = [legacy_item.get(k) for k in legacy_keys]
+    
         try:
+            fieldvalues = [legacy_item.get(k) for k in legacy_keys]
             right_mapping = next(
                 mapping
                 for mapping in map
@@ -215,7 +216,7 @@ class MapperBase:
             )
             return default_value
         except Exception as ee:
-            raise TransformationCriticalDataError(f"{name_of_mapping} - {map_key} ({legacy_keys}) {ee}")
+            raise TransformationCriticalDataError(f"{name_of_mapping} - {map_key} {legacy_keys} {legacy_item} {ee}")
 
     def add_to_migration_report(self, header, measure_to_add):
         if header not in self.migration_report:
