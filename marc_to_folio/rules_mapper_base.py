@@ -68,7 +68,7 @@ class RulesMapperBase:
         for k, v in d_sorted.items():
             unmapped = total_records - v[0]
             mapped = v[0] - v[1]
-            mp = mapped / total_records
+            mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
             report_file.write(
                 f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
@@ -90,10 +90,10 @@ class RulesMapperBase:
         report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             present = v[0]
-            present_per = "{:.1%}".format(present / total_records)
+            present_per = "{:.1%}".format(present / total_records if total_records else 0)
             unmapped = present - v[1]
             mapped = v[1]
-            mp = mapped / total_records
+            mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
             report_file.write(
                 f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
