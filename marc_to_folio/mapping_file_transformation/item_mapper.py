@@ -250,11 +250,6 @@ class ItemMapper(MapperBase):
                 raise TransformationProcessError(
                     f"{statistical_codes_mapping['folio_code']} could not be found in FOLIO"
                 )
-        if not self.default_call_number_type_id:
-            raise TransformationProcessError(
-                "No Default Callnumber type set up in map."
-                "Add a row to mapping file with *:s and a valid callnumber type"
-            )
         logging.info(
             f"loaded {idx} mappings for {len(self.statistical_codes)} call number types in FOLIO"
         )
