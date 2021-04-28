@@ -199,8 +199,8 @@ class ItemMapper(MapperBase):
         else:
             self.add_to_migration_report(
                 "Callnumber type mapping",
-                'Mapping not setup',
-            )            
+                "Mapping not setup",
+            )
             return ""
 
     def transform_status(self, legacy_value):

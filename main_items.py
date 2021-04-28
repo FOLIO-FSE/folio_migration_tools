@@ -202,10 +202,7 @@ def main():
         error_file_path = os.path.join(args.result_path, "item_transform_errors.tsv")
         location_map_path = setup_path(args.map_path, "locations.tsv")
         loans_type_map_path = setup_path(args.map_path, "loan_types.tsv")
-        if args.map_call_number_types:
-            call_number_type_map_path = setup_path(
-                args.map_path, "call_number_type_mapping.tsv"
-            )
+        
         material_type_map_path = setup_path(args.map_path, "material_types.tsv")
 
         # Files found, let's go!
@@ -222,18 +219,23 @@ def main():
             logging.info(
                 f'{",".join(loan_type_map[0].keys())} will be used for determinig loan type'
             )
-
-        with open(call_number_type_map_path) as call_number_type_map_file:
-            call_number_type_map = list(
-                csv.DictReader(call_number_type_map_file, dialect="tsv")
+        if args.map_call_number_types:
+            call_number_type_map_path = setup_path(
+                args.map_path, "call_number_type_mapping.tsv"
             )
-            logging.info(
-                f"Found {len(call_number_type_map)} rows in callnumber type map"
-            )
-            logging.info(
-                f'{",".join(call_number_type_map[0].keys())} '
-                "will be used for determinig callnumber type"
-            )
+            with open(call_number_type_map_path) as call_number_type_map_file:
+                call_number_type_map = list(
+                    csv.DictReader(call_number_type_map_file, dialect="tsv")
+                )
+                logging.info(
+                    f"Found {len(call_number_type_map)} rows in callnumber type map"
+                )
+                logging.info(
+                    f'{",".join(call_number_type_map[0].keys())} '
+                    "will be used for determinig callnumber type"
+                )
+        else:
+            call_number_type_map = None
 
         with open(holdings_id_dict_path, "r") as holdings_id_map_file, open(
             items_map_path
