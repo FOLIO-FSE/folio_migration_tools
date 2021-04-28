@@ -283,6 +283,7 @@ def main():
                 location_map,
                 call_number_type_map,
                 holdings_id_map,
+                statcode_map,
                 error_file,
             )
             worker = Worker(folio_client, mapper, files, args.result_path, error_file)
