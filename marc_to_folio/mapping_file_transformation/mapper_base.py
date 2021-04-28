@@ -195,7 +195,7 @@ class MapperBase:
         self, name_of_mapping, legacy_item, legacy_keys, map, default_value, map_key
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
-    
+
         try:
             fieldvalues = [legacy_item.get(k) for k in legacy_keys]
             right_mapping = next(
@@ -221,7 +221,6 @@ class MapperBase:
             raise TransformationCriticalDataError(
                 f"{name_of_mapping} - {map_key} ({legacy_keys}) {ee}"
             )
-        
 
     def add_to_migration_report(self, header, measure_to_add):
         if header not in self.migration_report:
@@ -333,9 +332,13 @@ class MapperBase:
                 self.error_file.write(data_error)
         for required_prop in required:
             if required_prop not in folio_object:
-                raise TransformationCriticalDataError(f"Required property {required_prop} missing for {index_or_id}")
+                raise TransformationCriticalDataError(
+                    f"Required property {required_prop} missing for {index_or_id}"
+                )
             elif not folio_object[required_prop]:
-                raise TransformationCriticalDataError(f"Required property {required_prop} empty for {index_or_id}")
+                raise TransformationCriticalDataError(
+                    f"Required property {required_prop} empty for {index_or_id}"
+                )
         del folio_object["type"]
         return folio_object
 

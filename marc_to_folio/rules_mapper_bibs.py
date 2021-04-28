@@ -565,6 +565,16 @@ class BibsRulesMapper(RulesMapperBase):
                     "035 $a is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
                 )
+        elif ils_flavour == "990a":
+            res = set()
+            for f in marc_record.get_fields("990"):
+                if "a" in f:
+                    res.add(f["a"].strip())
+            if marc_record["001"].format_field().strip():
+                res.add(marc_record["001"].format_field().strip())
+            if any(res):
+                self.add_stats(self.stats, "legacy id from 990$a")
+                return list(res)
         elif ils_flavour == "aleph":
             res = set()
             for f in marc_record.get_fields("998"):

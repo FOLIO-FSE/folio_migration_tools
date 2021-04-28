@@ -136,7 +136,7 @@ def parse_args():
     parser.add_argument("username", help="the api user")
     parser.add_argument("--password", help="the api users password", secure=True)
     parser.add_argument(
-        "--ils_flavour", default="001", help="The kind of ILS the records are coming from and how legacy bibliographic IDs are to be handled\nOptions:\n\taleph   \t- bib id in either 998$b or 001\n\tvoyager \t- bib id in 001\n\tsierra  \t- bib id in 907 $a\n\t907y    \t- bib id in 907 $y\n\tmillennium \t- bib id in 907 $a\n\t001      \t- bib id in 001\n "
+        "--ils_flavour", default="001", help="The kind of ILS the records are coming from and how legacy bibliographic IDs are to be handled\nOptions:\n\taleph   \t- bib id in either 998$b or 001\n\tvoyager \t- bib id in 001\n\tsierra  \t- bib id in 907 $a\n\t907y    \t- bib id in 907 $y\n\tmillennium \t- bib id in 907 $a\n\t001      \t- bib id in 001\n\990a \t- bib id in 990 $a and 001\n "
     )
     parser.add_argument(
         "--holdings_records",
