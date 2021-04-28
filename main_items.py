@@ -153,15 +153,6 @@ def parse_args():
     parser.add_argument("tenant_id", help="id of the FOLIO tenant.")
     parser.add_argument("username", help="the api user")
     parser.add_argument("--password", help="the api users password", secure=True)
-    callnumber_help = (
-        "If you have Item level callnumbers and callnumber type codes in your data, "
-        "you need to create a call_number_type_mappings.tsv file and set this "
-        "to true. More info at "
-        "https://github.com/FOLIO-FSE/migration_repo_template#call_number_type_mappingtsv"
-    )
-    parser.add_argument(
-        "--map_call_number_types", help=callnumber_help, default=False, type=bool
-    )
     parser.add_argument(
         "--log_level_debug",
         "-debug",
@@ -196,8 +187,26 @@ def main():
 
     # All the paths...
     try:
-        holdings_id_dict_path = setup_path(args.result_path, "holdings_id_map.json")
         items_map_path = setup_path(args.map_path, "item_mapping.json")
+        with open(items_map_path) as items_mapper_f:
+            items_map = json.load(items_mapper_f)
+            folio_keys = list(
+                k["folio_field"]
+                for k in items_map["data"]
+                if k["legacy_field"] not in ["", "Not mapped"]
+            )        
+            logging.info(f'{len(items_map["data"])} fields in item mapping file map')
+            mapped_fields = (
+                f
+                for f in items_map["data"]
+                if f["legacy_field"] and f["legacy_field"] != "Not mapped"
+            )
+            logging.info(
+                f"{len(list(mapped_fields))} Mapped fields in item mapping file map"
+            )
+        
+        holdings_id_dict_path = setup_path(args.result_path, "holdings_id_map.json")
+       
         # items_map_path = setup_path(args.map_path, "holdings_mapping.json")
         error_file_path = os.path.join(args.result_path, "item_transform_errors.tsv")
         location_map_path = setup_path(args.map_path, "locations.tsv")
@@ -219,7 +228,24 @@ def main():
             logging.info(
                 f'{",".join(loan_type_map[0].keys())} will be used for determinig loan type'
             )
-        if args.map_call_number_types:
+
+        if "statisticalCodeIds" in folio_keys:
+            statcode_map_path = setup_path(
+                args.map_path, "statcodes.tsv"
+            )
+            with open(statcode_map_path) as statcode_map_file:
+                statcode_map = list(
+                    csv.DictReader(statcode_map_file, dialect="tsv")
+                )
+                logging.info(
+                    f"Found {len(statcode_map)} rows in statistical codes map"
+                )
+                logging.info(
+                    f'{",".join(statcode_map[0].keys())} '
+                    "will be used for determinig Statistical codes"
+                )
+        
+        if "itemLevelCallNumberTypeId" in folio_keys:
             call_number_type_map_path = setup_path(
                 args.map_path, "call_number_type_mapping.tsv"
             )
@@ -237,23 +263,12 @@ def main():
         else:
             call_number_type_map = None
 
-        with open(holdings_id_dict_path, "r") as holdings_id_map_file, open(
-            items_map_path
-        ) as items_mapper_f, open(location_map_path) as location_map_f, open(
+        with open(holdings_id_dict_path, "r") as holdings_id_map_file, open(location_map_path) as location_map_f, open(
             error_file_path, "w"
         ) as error_file:
             holdings_id_map = json.load(holdings_id_map_file)
             logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
-            items_map = json.load(items_mapper_f)
-            logging.info(f'{len(items_map["data"])} fields in item mapping file map')
-            mapped_fields = (
-                f
-                for f in items_map["data"]
-                if f["legacy_field"] and f["legacy_field"] != "Not mapped"
-            )
-            logging.info(
-                f"{len(list(mapped_fields))} Mapped fields in item mapping file map"
-            )
+            
             location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
             logging.info(
                 f'{",".join(loan_type_map[0].keys())} will be used for determinig location'

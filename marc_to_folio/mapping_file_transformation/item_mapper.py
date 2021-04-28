@@ -26,6 +26,7 @@ class ItemMapper(MapperBase):
         location_map,
         call_number_type_map,
         holdings_id_map,
+        statistical_codes_map,
         error_file,
     ):
         item_schema = folio_client.get_item_schema()
@@ -41,6 +42,11 @@ class ItemMapper(MapperBase):
             self.call_number_type_keys = []
             self.default_call_number_type_id = ""
             self.setup_call_number_type_mappings()
+
+        if statistical_codes_map:
+            self.statistical_codes_mappings = statistical_codes_map
+            self.statistical_codes_keys = []
+            self.setup_statistical_codes_mappings()
 
         self.loan_type_map = loan_type_map
         self.default_loan_type_id = ""
@@ -152,9 +158,15 @@ class ItemMapper(MapperBase):
         self.add_to_migration_report("Circulation notes", "Circ note")
         return []
 
-    def get_statistical_codes(self, vals):
-        # Mapping file with old values to FOLIO equivalents and then map that here.
-        raise NotImplementedError("Statistical code mapping is not yet available")
+    def get_statistical_codes(self, legacy_item: dict):
+        return self.get_mapped_value(
+            "Statistical codes",
+            legacy_item,
+            self.statistical_codes_keys,
+            self.statistical_codes_mappings,
+            "",
+            "folio_code",
+        )
 
     def get_loan_type_id(self, legacy_item: dict):
         return self.get_mapped_value(
@@ -206,6 +218,46 @@ class ItemMapper(MapperBase):
     def transform_status(self, legacy_value):
         self.add_to_migration_report("Status mapping", f"{legacy_value} -> Available")
         return "Available"
+
+    def setup_statistical_codes_mappings(self):
+        # Loan types
+        logging.info("Fetching statistical codes...")
+        self.statistical_codes = list(
+            self.folio_client.folio_get_all("/statistical-codes", "statisticalCodes")
+        )
+        for idx, statistical_codes_mapping in enumerate(
+            self.statistical_codes_mappings
+        ):
+            try:
+                if idx == 1:
+                    self.statistical_codes_keys = list(
+                        [
+                            k
+                            for k in statistical_codes_mapping.keys()
+                            if k not in ["folio_code", "folio_id", "folio_name"]
+                        ]
+                    )
+                # No default. Do  not return any if not set/mapped
+                statistical_codes_mapping["folio_id"] = self.get_ref_data_tuple_by_code(
+                    self.statistical_codes,
+                    "statistical_codes",
+                    statistical_codes_mapping["folio_code"],
+                )[0]
+            except TransformationProcessError as te:
+                raise te
+            except Exception:
+                logging.info(json.dumps(self.statistical_codes_mappings, indent=4))
+                raise TransformationProcessError(
+                    f"{statistical_codes_mapping['folio_code']} could not be found in FOLIO"
+                )
+        if not self.default_call_number_type_id:
+            raise TransformationProcessError(
+                "No Default Callnumber type set up in map."
+                "Add a row to mapping file with *:s and a valid callnumber type"
+            )
+        logging.info(
+            f"loaded {idx} mappings for {len(self.statistical_codes)} call number types in FOLIO"
+        )
 
     def setup_call_number_type_mappings(self):
         # Loan types
