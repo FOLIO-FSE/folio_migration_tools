@@ -195,8 +195,9 @@ class MapperBase:
         self, name_of_mapping, legacy_item, legacy_keys, map, default_value, map_key
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
-        fieldvalues = [legacy_item.get(k) for k in legacy_keys]
+    
         try:
+            fieldvalues = [legacy_item.get(k) for k in legacy_keys]
             right_mapping = next(
                 mapping
                 for mapping in map

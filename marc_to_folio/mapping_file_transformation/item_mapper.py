@@ -253,7 +253,6 @@ class ItemMapper(MapperBase):
         logging.info(
             f"loaded {idx} mappings for {len(self.statistical_codes)} statistical codes in FOLIO"
         )
-        print()
 
     def setup_call_number_type_mappings(self):
         # Loan types
@@ -271,6 +270,7 @@ class ItemMapper(MapperBase):
                             if k not in ["folio_code", "folio_id", "folio_name"]
                         ]
                     )
+                    logging.info(json.dumps(self.call_number_type_keys, indent=4))
                 if any(m for m in call_number_type_mapping.values() if m == "*"):
                     t = self.get_ref_data_tuple_by_name(
                         self.folio_call_number_types,
