@@ -48,7 +48,7 @@ class Worker(MainBase):
         self.error_file = error_file
         logging.info("Init done")
         self.holdings_types = list(
-                self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
+            self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
         )
         logging.info(f"{len(self.holdings_types)}\tholdings types in tenant")
 
@@ -56,8 +56,9 @@ class Worker(MainBase):
             (h["id"] for h in self.holdings_types if h["name"] == "Unmapped"), ""
         )
         if not self.default_holdings_type:
-            raise TransformationProcessError(f"Holdings type named Unmapped not found in FOLIO.")
-        
+            raise TransformationProcessError(
+                f"Holdings type named Unmapped not found in FOLIO."
+            )
 
     def work(self):
         total_records = 0
@@ -65,7 +66,10 @@ class Worker(MainBase):
         for file_name in self.files:
             logging.info(f"Processing {file_name}")
             try:
-                with open(file_name, encoding="utf-8-sig",) as records_file:
+                with open(
+                    file_name,
+                    encoding="utf-8-sig",
+                ) as records_file:
                     self.mapper.add_stats("Number of files processed")
                     start = time.time()
                     for idx, record in enumerate(
@@ -77,10 +81,14 @@ class Worker(MainBase):
                             holding_key = self.to_key(folio_rec)
                             existing_holding = self.holdings.get(holding_key, None)
                             if not existing_holding:
-                                self.mapper.add_stats("Unique Holdings created from Items")
-                                self.holdings[self.to_key(folio_rec)] = folio_rec                                
+                                self.mapper.add_stats(
+                                    "Unique Holdings created from Items"
+                                )
+                                self.holdings[self.to_key(folio_rec)] = folio_rec
                             else:
-                                self.mapper.add_stats("Holdings already created from Item")
+                                self.mapper.add_stats(
+                                    "Holdings already created from Item"
+                                )
                                 self.merge_holding(folio_rec)
                         except TransformationProcessError as process_error:
                             logging.error(f"{idx}\t{process_error}")
@@ -128,11 +136,11 @@ class Worker(MainBase):
         logging.info("Done. Wrapping up...")
         if any(self.holdings):
             results_path = os.path.join(self.results_path, "folio_holdings.json")
-            print(f"Saving holdings created to {results_path}")            
+            print(f"Saving holdings created to {results_path}")
             with open(results_path, "w+") as holdings_file:
                 for key, holding in self.holdings.items():
                     for legacy_id in holding["formerIds"]:
-                        self.legacy_map[legacy_id] = {"id": holding["id"] }
+                        self.legacy_map[legacy_id] = {"id": holding["id"]}
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.add_stats("Holdings Records Written to disk")
             legacy_path = os.path.join(self.results_path, "holdings_id_map.json")
@@ -149,7 +157,6 @@ class Worker(MainBase):
             self.mapper.write_migration_report(migration_report_file)
             self.mapper.print_mapping_report(migration_report_file, self.total_records)
         logging.info("All done!")
-
 
     @staticmethod
     def to_key(holding):
@@ -174,17 +181,18 @@ class Worker(MainBase):
         # TODO: Move to interface or parent class
         key = self.to_key(holdings_record)
         if self.holdings[key].get("notes", None):
-            self.holdings[key]["notes"].extend(holdings_record.get("notes",[]))
-            self.holdings[key]["notes"] = dedupe(self.holdings[key].get("notes",[]))
+            self.holdings[key]["notes"].extend(holdings_record.get("notes", []))
+            self.holdings[key]["notes"] = dedupe(self.holdings[key].get("notes", []))
         if self.holdings[key].get("holdingsStatements", None):
             self.holdings[key]["holdingsStatements"].extend(
-                holdings_record.get("holdingsStatements",[])
+                holdings_record.get("holdingsStatements", [])
             )
             self.holdings[key]["holdingsStatements"] = dedupe(
                 self.holdings[key]["holdingsStatements"]
             )
         if self.holdings[key].get("formerIds", None):
-            self.holdings[key]["formerIds"].extend(holdings_record.get("formerIds",[]))
+            self.holdings[key]["formerIds"].extend(holdings_record.get("formerIds", []))
+
 
 def parse_args():
     """Parse CLI Arguments"""
@@ -199,10 +207,11 @@ def parse_args():
     parser.add_argument("--password", help="the api users password", secure=True)
 
     parser.add_argument(
-        "-suppress",
+        "--suppress",
         "-ds",
-        help=("This batch of records are to be suppressed in FOLIO."),
-        action="store_true",
+        help="This batch of records are to be suppressed in FOLIO.",
+        default=False,
+        type=bool,
     )
     args = parser.parse_args()
     logging.info(f"\tresults are stored at:\t{args.result_path}")
