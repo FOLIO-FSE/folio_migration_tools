@@ -538,7 +538,7 @@ class BibsRulesMapper(RulesMapperBase):
                     )
 
     def get_legacy_ids(self, marc_record: Record, ils_flavour: str) -> List[str]:
-        if ils_flavour in ["iii", "sierra"]:
+        if ils_flavour in ["iii", "sierra", "millennium"]:
             try:
                 return [marc_record["907"]["a"]]
             except:

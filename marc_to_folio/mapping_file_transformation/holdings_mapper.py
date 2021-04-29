@@ -32,6 +32,7 @@ class HoldingsMapper(MapperBase):
         self.location_keys = []
         self.default_location_id = ""
         self.setup_location_mappings(location_map)
+
     def setup_call_number_type_mappings(self):
         logging.info("Fetching Callnumber types...")
         self.folio_call_number_types = list(
@@ -176,14 +177,22 @@ class HoldingsMapper(MapperBase):
                 new_legacy_value = f".{v}"
             else:
                 new_legacy_value = v
-            if new_legacy_value not in self.instance_id_map:
+            if (
+                new_legacy_value not in self.instance_id_map
+                or v not in self.instance_id_map
+            ):
                 self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
-                s = f"Bib id '.{new_legacy_value}' not in instance id map."
+                s = f"Bib id '{new_legacy_value}' not in instance id map."
                 logging.error(f"{s}\t{index_or_id}")
                 # raise TransformationProcessError(s, index_or_id)
             else:
                 self.add_to_migration_report("Holdings IDs", f"Mapped")
-                return_ids.append(self.instance_id_map[new_legacy_value]["folio_id"])
+                entry = (
+                    self.instance_id_map.get(new_legacy_value, "")
+                    if self.instance_id_map.get(new_legacy_value, "")
+                    else self.instance_id_map.get(v)
+                )
+                return_ids.append(entry["folio_id"])
         if any(return_ids):
             return return_ids[0]
         else:

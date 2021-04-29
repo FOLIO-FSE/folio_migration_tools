@@ -409,8 +409,12 @@ class MapperBase:
             reader = csv.DictReader(source_file, dialect="tsv")
         else:
             reader = csv.DictReader(source_file)
-        for row in reader:
-            yield row
+        try:
+            for idx,row in enumerate(reader):
+            
+                yield row
+        except Exception as ee:
+            logging.error(f"{ee} at row {idx}")
 
     def has_property(self, legacy_object, folio_prop_name: str):
         if self.use_map:
