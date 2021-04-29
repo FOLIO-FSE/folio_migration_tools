@@ -59,9 +59,12 @@ class Worker(main_base.MainBase):
                     with open(os.path.join(sys.argv[1], file_name), "rb") as marc_file:
                         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                         reader.hide_utf8_warnings = True
-                        if self.args.force_utf_8:
+                        if self.args.force_utf_8 == "True":
                             logging.info("FORCE UTF-8 is set to TRUE")
                             reader.force_utf8 = True
+                        else:
+                            logging.info("FORCE UTF-8 is set to FALSE")
+                            reader.force_utf8 = False
                         logging.info(f"running {file_name}")
                         self.read_records(reader)
                 except Exception:
