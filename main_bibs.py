@@ -10,7 +10,7 @@ import sys
 from argparse_prompt import PromptParser
 import traceback
 from os import listdir
-from os.path import isfile,  dirname
+from os.path import isfile, dirname
 from datetime import datetime as dt
 import time
 
@@ -89,8 +89,7 @@ class Worker(main_base.MainBase):
                     )
                     raise TransformationCriticalDataError(
                         f"Index in file:{idx}",
-                        f"MARC parsing error: "
-                        f"{reader.current_exception}",
+                        f"MARC parsing error: " f"{reader.current_exception}",
                         reader.current_chunk,
                     )
                 else:
@@ -133,19 +132,31 @@ def parse_args():
     # parser = argparse.ArgumentParser()
     parser = PromptParser()
     parser.add_argument("source_folder", help="path to marc records folder", type=str)
-    parser.add_argument("results_folder", help="path to Instance results folder", type=str)
+    parser.add_argument(
+        "results_folder", help="path to Instance results folder", type=str
+    )
     parser.add_argument("okapi_url", help="OKAPI base url")
     parser.add_argument("tenant_id", help="id of the FOLIO tenant.")
     parser.add_argument("username", help="the api user")
     parser.add_argument("--password", help="the api users password", secure=True)
-    parser.add_argument(
-        "--ils_flavour", default="001", help="The kind of ILS the records are coming from and how legacy bibliographic IDs are to be handled\nOptions:\n\taleph   \t- bib id in either 998$b or 001\n\tvoyager \t- bib id in 001\n\tsierra  \t- bib id in 907 $a\n\t907y    \t- bib id in 907 $y\n\tmillennium \t- bib id in 907 $a\n\t001      \t- bib id in 001\n\990a \t- bib id in 990 $a and 001\n "
+    flavourhelp = (
+        "The kind of ILS the records are coming from and how legacy bibliographic "
+        "IDs are to be handled\nOptions:\n"
+        "\taleph   \t- bib id in either 998$b or 001\n"
+        "\tvoyager \t- bib id in 001\n"
+        "\tsierra  \t- bib id in 907 $a\n"
+        "\t907y    \t- bib id in 907 $y\n"
+        "\tmillennium \t- bib id in 907 $a\n"
+        "\t001      \t- bib id in 001\n"
+        "\t990a \t- bib id in 990 $a and 001\n "
     )
+    parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
     parser.add_argument(
         "--holdings_records",
         "-hold",
         help="Create holdings records based on relevant MARC fields",
-        default=False, type=bool
+        default=False,
+        type=bool,
     )
     parser.add_argument(
         "--force_utf_8",
@@ -157,7 +168,8 @@ def parse_args():
         "--suppress",
         "-ds",
         help="This batch of records are to be suppressed in FOLIO.",
-        default=False, type=bool
+        default=False,
+        type=bool,
     )
     args = parser.parse_args()
     return args
