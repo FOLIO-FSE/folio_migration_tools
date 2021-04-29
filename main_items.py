@@ -244,6 +244,8 @@ def main():
                     f'{",".join(statcode_map[0].keys())} '
                     "will be used for determinig Statistical codes"
                 )
+        else:
+               	statcode_map = None 
         
         if "itemLevelCallNumberTypeId" in folio_keys:
             call_number_type_map_path = setup_path(
