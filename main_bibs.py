@@ -156,15 +156,6 @@ def parse_args():
         help="This batch of records are to be suppressed in FOLIO.",
         default=False, type=bool
     )
-    """parser.add_argument(
-        "-marcxml", "-x", help="DATA is in MARCXML format", action="store_true"
-    )
-    parser.add_argument(
-        "-validate",
-        "-v",
-        help="Validate JSON data against JSON Schema",
-        action="store_true",
-    )"""
     args = parser.parse_args()
     return args
 

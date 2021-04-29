@@ -1,5 +1,7 @@
 '''Main "script."'''
 import argparse
+
+from argparse_prompt import PromptParser
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 
 from pymarc.reader import MARCReader
@@ -18,30 +20,20 @@ from marc_to_folio.holdings_processor import HoldingsProcessor
 
 def parse_args():
     """Parse CLI Arguments"""
-    parser = argparse.ArgumentParser()
+    # parser = argparse.ArgumentParser()
+    parser = PromptParser()
     parser.add_argument("source_folder", help="path to marc records folder")
     parser.add_argument("result_folder", help="path to results folder")
+    parser.add_argument("map_path", help=("path to mapping files"))
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
-    parser.add_argument("password", help=("the api users password"))
-    parser.add_argument("ils_flavour", help=("The ILS migrating from"))
-
+    parser.add_argument("--password", help="the api users password", secure=True)
     parser.add_argument(
-        "-postgres_dump",
-        "-p",
-        help=("results will be written out for Postgres" "ingestion. Default is JSON"),
-        action="store_true",
-    )
-    parser.add_argument("-map_path", "-m", help=("path to mapping files"))
-    parser.add_argument(
-        "-marcxml", "-x", help=("DATA is in MARCXML format"), action="store_true"
-    )
-    parser.add_argument(
-        "-suppress",
+        "--suppress",
         "-ds",
-        help=("This batch of records are to be suppressed in FOLIO."),
-        action="store_true",
+        help="This batch of records are to be suppressed in FOLIO.",
+        default=False, type=bool
     )
     args = parser.parse_args()
     logging.info(f"\tresults are stored at:\t{args.result_folder}")

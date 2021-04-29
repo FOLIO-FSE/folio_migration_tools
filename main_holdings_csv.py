@@ -4,6 +4,8 @@ import csv
 import ctypes
 import json
 import logging
+
+from argparse_prompt import PromptParser
 from marc_to_folio.helper import Helper
 import os
 import time
@@ -186,22 +188,15 @@ class Worker(MainBase):
 
 def parse_args():
     """Parse CLI Arguments"""
-    parser = argparse.ArgumentParser()
+    # parser = argparse.ArgumentParser()
+    parser = PromptParser()
     parser.add_argument("records_path", help="path to legacy item records folder")
     parser.add_argument("result_path", help="path to results folder")
     parser.add_argument("map_path", help=("path to mapping files"))
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
-    parser.add_argument("password", help=("the api users password"))
-    parser.add_argument("ils_flavour", help=("The ILS migrating from"))
-
-    parser.add_argument(
-        "-postgres_dump",
-        "-p",
-        help=("results will be written out for Postgres" "ingestion. Default is JSON"),
-        action="store_true",
-    )
+    parser.add_argument("--password", help="the api users password", secure=True)
 
     parser.add_argument(
         "-suppress",
