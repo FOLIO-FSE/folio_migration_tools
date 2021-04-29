@@ -1,5 +1,5 @@
 # MARC21-To-FOLIO
-AA set of Python3 script transforming MARC21 and Items in delimited files to FOLIO inventory objects.
+A set of Python3 script transforming MARC21 and Items in delimited files to FOLIO inventory objects.
 
 The scripts requires a FOLIO tenant with reference data set. The script will throw messages telling what reference data is missing. 
 
