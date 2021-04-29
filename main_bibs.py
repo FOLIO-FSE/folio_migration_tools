@@ -150,8 +150,8 @@ def parse_args():
     parser.add_argument(
         "--force_utf_8",
         "-utf8",
-        help="forcing UTF8 when pasing marc records",
-         default=True, type=bool
+        help="forcing UTF8 when parsing marc records",
+         default="True"
     )
     parser.add_argument(
         "--suppress",
