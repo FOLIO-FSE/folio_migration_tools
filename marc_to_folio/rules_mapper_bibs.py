@@ -600,7 +600,16 @@ class BibsRulesMapper(RulesMapperBase):
             except:
                 raise TransformationCriticalDataError(
                     "unknown identifier",
-                    "001 is missing.although it is required for Voyager migrations",
+                    "001 is missing, although it is required for Voyager migrations",
+                    marc_record.as_json(),
+                )
+        elif ils_flavour in ["koha"]:
+            try:
+                return [marc_record["999"]["c"]]
+            except:
+                raise TransformationCriticalDataError(
+                    "unknown identifier",
+                    "999 $c is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
                 )
         else:

@@ -145,10 +145,12 @@ def parse_args():
         "\taleph   \t- bib id in either 998$b or 001\n"
         "\tvoyager \t- bib id in 001\n"
         "\tsierra  \t- bib id in 907 $a\n"
-        "\t907y    \t- bib id in 907 $y\n"
         "\tmillennium \t- bib id in 907 $a\n"
+        "\tkoha \t- bib id in 999 $c "
+        "\t907y    \t- bib id in 907 $y\n"
         "\t001      \t- bib id in 001\n"
         "\t990a \t- bib id in 990 $a and 001\n "
+
     )
     parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
     parser.add_argument(
