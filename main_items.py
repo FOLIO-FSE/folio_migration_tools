@@ -160,8 +160,7 @@ def parse_args():
         default=False,
         type=bool,
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
@@ -190,11 +189,8 @@ def main():
         items_map_path = setup_path(args.map_path, "item_mapping.json")
         with open(items_map_path) as items_mapper_f:
             items_map = json.load(items_mapper_f)
-            folio_keys = list(
-                k["folio_field"]
-                for k in items_map["data"]
-                if k["legacy_field"] not in ["", "Not mapped"]
-            )        
+            folio_keys = [k["folio_field"] for k in items_map["data"]
+                            if k["legacy_field"] not in ["", "Not mapped"]]
             logging.info(f'{len(items_map["data"])} fields in item mapping file map')
             mapped_fields = (
                 f
@@ -204,14 +200,14 @@ def main():
             logging.info(
                 f"{len(list(mapped_fields))} Mapped fields in item mapping file map"
             )
-        
+
         holdings_id_dict_path = setup_path(args.result_path, "holdings_id_map.json")
-       
+
         # items_map_path = setup_path(args.map_path, "holdings_mapping.json")
         error_file_path = os.path.join(args.result_path, "item_transform_errors.tsv")
         location_map_path = setup_path(args.map_path, "locations.tsv")
         loans_type_map_path = setup_path(args.map_path, "loan_types.tsv")
-        
+
         material_type_map_path = setup_path(args.map_path, "material_types.tsv")
 
         # Files found, let's go!
@@ -244,7 +240,8 @@ def main():
                     f'{",".join(statcode_map[0].keys())} '
                     "will be used for determinig Statistical codes"
                 )
-        
+        else:
+            statcode_map = None
         if "itemLevelCallNumberTypeId" in folio_keys:
             call_number_type_map_path = setup_path(
                 args.map_path, "call_number_type_mapping.tsv"
@@ -268,7 +265,7 @@ def main():
         ) as error_file:
             holdings_id_map = json.load(holdings_id_map_file)
             logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
-            
+
             location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
             logging.info(
                 f'{",".join(loan_type_map[0].keys())} will be used for determinig location'

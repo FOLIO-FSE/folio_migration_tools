@@ -33,6 +33,13 @@ class MapperBase:
             for k in self.record_map["data"]
             if k["legacy_field"] not in ["", "Not mapped"]
         )
+        self.e = {}
+        self.arr_re = r"\[[0-9]\]"
+        for k in self.record_map["data"]:
+            key = re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
+            self.e[key] = k["legacy_field"]
+            self.e[k["folio_field"]] = k["legacy_field"]
+        logging.info(f"Mapped keys:\n{json.dumps(self.e)}")
         print("Mapped FOLIO Fields")
         print(json.dumps(self.folio_keys, indent=4, sort_keys=True))
         csv.register_dialect("tsv", delimiter="\t")
@@ -132,7 +139,7 @@ class MapperBase:
                     "Failed records that needs to get fixed",
                     f"Required field {req} is missing from {legacy_id}",
                 )
-        if len(failures) > 0:
+        if failures:
             self.add_to_migration_report("User validation", "Total failed users")
             for failure in failures:
                 self.add_to_migration_report("Record validation", f"{failure}")
@@ -151,26 +158,23 @@ class MapperBase:
         logging.info("Fetching locations...")
         for idx, loc_map in enumerate(location_map):
             if idx == 1:
-                self.location_keys = list(
-                    [
-                        k
-                        for k in loc_map.keys()
-                        if k
-                        not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
-                    ]
-                )
+                self.location_keys = [
+                    k
+                    for k in loc_map.keys()
+                    if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
+                ]
+
             if any(m for m in loc_map.values() if m == "*"):
                 t = self.get_ref_data_tuple_by_code(
                     self.folio_client.locations, "locations", loc_map["folio_code"]
                 )
-                if t:
-                    self.default_location_id = t[0]
-                    logging.info(f'Set {loc_map["folio_code"]} as default location')
-                else:
+                if not t:
                     raise TransformationProcessError(
                         f"Default location {loc_map['folio_code']} not found in folio. "
                         "Change default code"
                     )
+                self.default_location_id = t[0]
+                logging.info(f'Set {loc_map["folio_code"]} as default location')
             else:
                 t = self.get_ref_data_tuple_by_code(
                     self.folio_client.locations, "locations", loc_map["folio_code"]
@@ -192,20 +196,26 @@ class MapperBase:
         )
 
     def get_mapped_value(
-        self, name_of_mapping, legacy_item, legacy_keys, map, default_value, map_key
+        self, name_of_mapping, legacy_object, legacy_keys, map, default_value, map_key
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
-
         try:
-            fieldvalues = [legacy_item.get(k) for k in legacy_keys]
+            # Get the values in the fields that will be used for mapping
+            fieldvalues = [legacy_object.get(k) for k in legacy_keys]
+            # logging.debug(f"fieldvalues are {fieldvalues}")
+
+            # Gets the first line in the map satisfying all legacy mapping values.
+            # Case insensitive, strips away whitespace
+            # TODO: add option for Wild card matching in individual columns
             right_mapping = next(
                 mapping
                 for mapping in map
                 if all(
-                    legacy_item[k].strip().casefold() in mapping[k].casefold()
+                    legacy_object[k].strip().casefold() in mapping[k].casefold()
                     for k in legacy_keys
                 )
             )
+            # logging.debug(f"Found mapping is {right_mapping}")
             self.add_to_migration_report(
                 f"{name_of_mapping} mapping",
                 f'{" - ".join(fieldvalues)} -> {right_mapping[map_key]}',
@@ -236,9 +246,8 @@ class MapperBase:
             "This method needs to be implemented in a implementing class"
         )
 
-    def do_map(self, legacy_object, index_or_id):
+    def do_map(self, legacy_object, index_or_id: str):
         folio_object = self.instantiate_record()
-        required = self.schema["required"]
         for prop_name, prop in self.schema["properties"].items():
             try:
                 if prop.get("description", "") == "Deprecated":
@@ -252,9 +261,9 @@ class MapperBase:
                         f"{prop_name} (Not to be mapped)", False, True
                     )
                 elif prop["type"] == "object":
-                    temp_object = {}
-                    prop_key = prop_name
                     if "properties" in prop:
+                        temp_object = {}
+                        prop_key = prop_name
                         for sub_prop_name, sub_prop in prop["properties"].items():
                             sub_prop_key = prop_key + "." + sub_prop_name
                             if "properties" in sub_prop:
@@ -268,19 +277,21 @@ class MapperBase:
                                 sub_prop["type"] == "array"
                             ):  # Object with subprop array
                                 temp_object[sub_prop_name] = []
-                                logging.debug(f"Array Sub prop name: {sub_prop_name}")
-                                for i in range(0, 5):
+
+                                for i in range(5):
                                     if sub_prop["items"]["type"] == "object":
-                                        temp = {}
-                                        for sub_prop_name2, sub_prop2 in sub_prop[
-                                            "items"
-                                        ]["properties"].items():
-                                            temp[sub_prop_name2] = self.get_prop(
+                                        # logging.debug(f"Array of objects: {sub_prop_name}")
+                                        temp = {
+                                            sub_prop_name2: self.get_prop(
                                                 folio_object,
                                                 sub_prop_key + "." + sub_prop_name2,
                                                 index_or_id,
                                                 i,
                                             )
+                                            for sub_prop_name2, sub_prop2 in sub_prop[
+                                                "items"
+                                            ]["properties"].items()
+                                        }
                                         if not all(
                                             value for key, value in temp.items()
                                         ):
@@ -292,6 +303,7 @@ class MapperBase:
                                         temp_object[sub_prop_name].append(temp)
                                     else:
                                         mkey = sub_prop_key + "." + sub_prop_name2
+                                        # logging.debug(f"Not an array of objects {mkey}")
                                         a = self.get_prop(
                                             legacy_object, mkey, index_or_id, i
                                         )
@@ -330,6 +342,11 @@ class MapperBase:
             except TransformationDataError as data_error:
                 self.add_stats("Data issues found")
                 self.error_file.write(data_error)
+        self.validate_object(folio_object, index_or_id)
+        return folio_object
+
+    def validate_object(self, folio_object, index_or_id):
+        required = self.schema["required"]
         for required_prop in required:
             if required_prop not in folio_object:
                 raise TransformationCriticalDataError(
@@ -340,14 +357,13 @@ class MapperBase:
                     f"Required property {required_prop} empty for {index_or_id}"
                 )
         del folio_object["type"]
-        return folio_object
 
     def map_objects_array_props(
         self, legacy_object, prop_name, properties, folio_object, index_or_id
     ):
         a = []
 
-        for i in range(0, 9):
+        for i in range(9):
             temp_object = {}
             for prop in (
                 k for k, p in properties.items() if not p.get("folio:isVirtual", False)
@@ -356,7 +372,6 @@ class MapperBase:
                 prop_path = f"{prop_name}[{i}].{prop}"
                 # logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
-                    logging.debug(f"{prop_path} is IN folio_keys")
                     res = self.get_prop(legacy_object, prop_path, index_or_id, i)
                     self.report_legacy_mapping(self.legacy_property(prop), True, True)
                     self.report_folio_mapping(prop_path, True, False)
@@ -365,22 +380,26 @@ class MapperBase:
             if temp_object != {} and all(
                 (v or (isinstance(v, bool) and not v) for k, v in temp_object.items())
             ):
-                logging.debug(f"temporary object {temp_object}")
+                # logging.debug(f"temporary object {temp_object}")
                 a.append(temp_object)
         if any(a):
             folio_object[prop_name] = a
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
-        logging.debug(f"String array {prop}")
+        # logging.debug(f"String array {prop}")
         if self.has_property(legacy_object, prop):  # is there a match in the csv?
-            logging.debug(f"Has string array property! {prop}")
-            for i in range(0, 5):
-                mapped_prop = self.get_prop(legacy_object, prop, index_or_id, i).strip()
+            # logging.debug(f"Has string array property! {prop}")
+            for i in range(5):
+                mapped_prop = self.get_prop(legacy_object, prop, index_or_id, i)
                 if mapped_prop:
-                    if prop in folio_object:
+                    # logging.debug(f"Mapped string array prop {mapped_prop}")
+                    if prop in folio_object and mapped_prop not in folio_object.get(
+                        prop, []
+                    ):
                         folio_object.get(prop, []).append(mapped_prop)
                     else:
                         folio_object[prop] = [mapped_prop]
+                    # logging.debug(f"Mapped string array prop {folio_object[prop]}")
                     self.report_legacy_mapping(self.legacy_property(prop), True, False)
                     self.report_folio_mapping(prop, True, False)
                 else:  # Match but empty field. Lets report this
@@ -391,7 +410,7 @@ class MapperBase:
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
-            mapped_prop = self.get_prop(legacy_object, prop, index_or_id).strip()
+            mapped_prop = self.get_prop(legacy_object, prop, index_or_id)
             if mapped_prop:
                 folio_object[prop] = mapped_prop
                 self.report_legacy_mapping(
@@ -409,18 +428,20 @@ class MapperBase:
             reader = csv.DictReader(source_file, dialect="tsv")
         else:
             reader = csv.DictReader(source_file)
+        idx = 0
         try:
-            for idx,row in enumerate(reader):
-            
+            for idx, row in enumerate(reader):
                 yield row
         except Exception as ee:
             logging.error(f"{ee} at row {idx}")
 
     def has_property(self, legacy_object, folio_prop_name: str):
-        if self.use_map:
-            # if folio_prop_name not in self.folio_keys:
-            #     return False
-            legacy_key = next(
+        if not self.use_map:
+            return folio_prop_name in legacy_object
+
+        # if folio_prop_name not in self.folio_keys:
+        #     return False
+        """legacy_key = next(
                 (
                     k["legacy_field"]
                     for k in self.record_map["data"]
@@ -429,69 +450,67 @@ class MapperBase:
                     == folio_prop_name
                 ),
                 "",
-            )
-            logging.debug(f"{folio_prop_name} - {legacy_key}")
-            b = (
-                legacy_key
-                and legacy_key not in ["", "Not mapped"]
-                and legacy_object.get(legacy_key, "")
-            )
-            return b
-        else:
-            return folio_prop_name in legacy_object
+            )"""
+        legacy_key = self.e.get(folio_prop_name, "")
+        # logging.debug(f"{folio_prop_name} - {legacy_key}")
+        return (
+            legacy_key
+            and legacy_key not in ["", "Not mapped"]
+            and legacy_object.get(legacy_key, "")
+        )
 
     def has_basic_property(self, legacy_object, folio_prop_name):
-        if self.use_map:
-            if folio_prop_name not in self.folio_keys:
-                logging.debug(f"map_basic_props -> {folio_prop_name}")
-                return False
-            legacy_key = next(
+        if not self.use_map:
+            return folio_prop_name in legacy_object
+
+        if folio_prop_name not in self.folio_keys:
+            # logging.debug(f"map_basic_props -> {folio_prop_name}")
+            return False
+        """legacy_key = next(
                 (
                     k["legacy_field"]
                     for k in self.record_map["data"]
                     if k["folio_field"] == folio_prop_name
                 ),
                 "",
-            )
-            logging.debug(f"{folio_prop_name} - {legacy_key}")
-            b = (
-                legacy_key
-                and legacy_key not in ["", "Not mapped"]
-                and legacy_object.get(legacy_key, "")
-            )
-            return b
-        else:
-            return folio_prop_name in legacy_object
+            )"""
+        legacy_key = self.e.get(folio_prop_name, "")
+        # logging.debug(f"{folio_prop_name} - {legacy_key}")
+        return (
+            legacy_key
+            and legacy_key not in ["", "Not mapped"]
+            and legacy_object.get(legacy_key, "")
+        )
 
     def legacy_property(self, folio_prop):
-        if self.use_map:
-            if folio_prop not in self.folio_keys:
-                return ""
-            return next(
-                (
-                    k["legacy_field"]
-                    for k in self.record_map["data"]
-                    if k["folio_field"] == folio_prop
-                ),
-                "",
-            )
-        else:
+        if not self.use_map:
             return folio_prop
 
+        if folio_prop not in self.folio_keys:
+            return ""
+        return next(
+            (
+                k["legacy_field"]
+                for k in self.record_map["data"]
+                if k["folio_field"] == folio_prop
+            ),
+            "",
+        )
+
     def legacy_basic_property(self, folio_prop):
-        if self.use_map:
-            if folio_prop not in self.folio_keys:
-                return ""
-            return next(
-                (
-                    k["legacy_field"]
-                    for k in self.record_map["data"]
-                    if k["folio_field"] == folio_prop
-                ),
-                "",
-            )
-        else:
+        if not self.use_map:
             return folio_prop
+
+        if folio_prop not in self.folio_keys:
+            return ""
+        return next(
+            (
+                k["legacy_field"]
+                for k in self.record_map["data"]
+                if k["folio_field"] == folio_prop
+            ),
+            "",
+        )
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
@@ -506,11 +525,8 @@ class MapperBase:
         )
         if ref_object:
             return ref_object
-        else:
-            d = {}
-            for r in ref_data:
-                d[r[key_type].lower()] = (r["id"], r["name"])
-            self.ref_data_dicts[dict_key] = d
+        d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
+        self.ref_data_dicts[dict_key] = d
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ())
 
 

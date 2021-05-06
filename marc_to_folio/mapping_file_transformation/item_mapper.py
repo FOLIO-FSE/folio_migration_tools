@@ -67,25 +67,18 @@ class ItemMapper(MapperBase):
         raise NotImplementedError()
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
-        logging.debug(f"get item prop {folio_prop_name}")
+        # logging.debug(f"get item prop {folio_prop_name}")
         if self.use_map:
             formatted_prop_name = f"{folio_prop_name}[{i}]"
-            legacy_item_keys = list(
+            legacy_item_keys = [
                 k["legacy_field"]
                 for k in self.items_map["data"]
-                if k["folio_field"] == folio_prop_name
-                or k["folio_field"] == formatted_prop_name
-            )
+                if k["folio_field"] in [folio_prop_name, formatted_prop_name]
+            ]
+
             legacy_value = ""
-            vals = list([v for k, v in legacy_item.items() if k in legacy_item_keys])
-            if vals:
-                logging.debug(f"Found legacy values {vals} {legacy_item_keys}")
-                legacy_value = " ".join(vals).strip()
-            else:
-                logging.debug(
-                    f"Found NO legacy values {folio_prop_name} - {legacy_item_keys}"
-                )
-                legacy_value = " ".join(vals).strip()
+            vals = [v for k, v in legacy_item.items() if k in legacy_item_keys]
+            legacy_value = " ".join(vals).strip()
             self.add_to_migration_report("Source fields with same target", len(vals))
             if folio_prop_name in ["permanentLocationId", "temporaryLocationId"]:
                 return self.get_location_id(legacy_item, index_or_id)
@@ -102,20 +95,14 @@ class ItemMapper(MapperBase):
             elif folio_prop_name == "statisticalCodeIds":
                 return self.get_statistical_codes(legacy_item)
             elif folio_prop_name == "holdingsRecordId":
-                logging.debug(folio_prop_name)
                 if legacy_value not in self.holdings_id_map:
-                    logging.debug(f"{legacy_value} not in id map")
                     self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
                     s = f"Holdings id '{legacy_value}' not in hold id map."
                     raise TransformationProcessError(s, index_or_id)
                 else:
-                    logging.debug(f"{legacy_value} in id map")
                     self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
                     return self.holdings_id_map[legacy_value]["id"]
             elif len(legacy_item_keys) == 1:
-                logging.debug(
-                    f"len(legacy_item_keys) == 1 {folio_prop_name} Legacy value: {legacy_value} {legacy_item_keys}"
-                )
                 value = next(
                     (
                         k.get("value", "")
@@ -129,10 +116,9 @@ class ItemMapper(MapperBase):
                 else:
                     return legacy_value
             elif any(legacy_item_keys):
-                logging.debug(f"any(legacy_item_keys) {vals}")
                 return legacy_value
             else:
-                logging.debug(f"End of the road: {folio_prop_name} {legacy_item_keys}")
+                self.add_to_migration_report("Unmapped properties", f"{folio_prop_name} {legacy_item_keys}")
                 return ""
         else:
             self.report_folio_mapping(f"{folio_prop_name}", True, False)
@@ -208,12 +194,11 @@ class ItemMapper(MapperBase):
                 self.default_call_number_type_id,
                 "folio_name",
             )
-        else:
-            self.add_to_migration_report(
-                "Callnumber type mapping",
-                "Mapping not setup",
-            )
-            return ""
+        self.add_to_migration_report(
+            "Callnumber type mapping",
+            "Mapping not setup",
+        )
+        return ""
 
     def transform_status(self, legacy_value):
         self.add_to_migration_report("Status mapping", f"{legacy_value} -> Available")
@@ -230,13 +215,8 @@ class ItemMapper(MapperBase):
         ):
             try:
                 if idx == 1:
-                    self.statistical_codes_keys = list(
-                        [
-                            k
-                            for k in statistical_codes_mapping.keys()
-                            if k not in ["folio_code", "folio_id", "folio_name"]
-                        ]
-                    )
+                    self.statistical_codes_keys = [k for k in statistical_codes_mapping.keys()
+                                            if k not in ["folio_code", "folio_id", "folio_name"]]
                 # No default. Do  not return any if not set/mapped
                 statistical_codes_mapping["folio_id"] = self.get_ref_data_tuple_by_code(
                     self.statistical_codes,
@@ -263,15 +243,11 @@ class ItemMapper(MapperBase):
         for idx, call_number_type_mapping in enumerate(self.call_number_type_map):
             try:
                 if idx == 1:
-                    self.call_number_type_keys = list(
-                        [
-                            k
-                            for k in call_number_type_mapping.keys()
-                            if k not in ["folio_code", "folio_id", "folio_name"]
-                        ]
-                    )
+                    self.call_number_type_keys = [k for k in call_number_type_mapping.keys()
+                                            if k not in ["folio_code", "folio_id", "folio_name"]]
                     logging.info(json.dumps(self.call_number_type_keys, indent=4))
                 if any(m for m in call_number_type_mapping.values() if m == "*"):
+                    # Set up default mapping if available
                     t = self.get_ref_data_tuple_by_name(
                         self.folio_call_number_types,
                         "callnumbers",
@@ -323,35 +299,30 @@ class ItemMapper(MapperBase):
         for idx, loan_type_mapping in enumerate(self.loan_type_map):
             try:
                 if idx == 1:
-                    self.loan_type_keys = list(
-                        [
-                            k
-                            for k in loan_type_mapping.keys()
-                            if k
-                            not in [
-                                "folio_code",
-                                "folio_id",
-                                "folio_name",
-                                "legacy_code",
-                            ]
-                        ]
-                    )
+                    self.loan_type_keys = [k for k in loan_type_mapping.keys()
+                                            if k
+                                            not in [
+                                                "folio_code",
+                                                "folio_id",
+                                                "folio_name",
+                                                "legacy_code",
+                                            ]]
                 if any(m for m in loan_type_mapping.values() if m == "*"):
+                    # Set up default mapping if available
                     t = self.get_ref_data_tuple_by_name(
                         self.folio_loan_types,
                         "loan_types",
                         loan_type_mapping["folio_name"],
                     )
-                    if t:
-                        self.default_loan_type_id = t[0]
-                        logging.info(
-                            f'Set {loan_type_mapping["folio_name"]} as default Loantype mapping'
-                        )
-                    else:
+                    if not t:
                         raise TransformationProcessError(
                             "No Default Loan type set up in map."
                             "Add a row to mapping file with *:s and a valid loan type"
                         )
+                    self.default_loan_type_id = t[0]
+                    logging.info(
+                        f'Set {loan_type_mapping["folio_name"]} as default Loantype mapping'
+                    )
                 else:
                     loan_type_mapping["folio_id"] = self.get_ref_data_tuple_by_name(
                         self.folio_loan_types,
@@ -383,35 +354,29 @@ class ItemMapper(MapperBase):
         for idx, mat_mapping in enumerate(self.material_type_map):
             try:
                 if idx == 1:
-                    self.material_type_keys = list(
-                        [
-                            k
-                            for k in mat_mapping.keys()
-                            if k
-                            not in [
-                                "folio_code",
-                                "folio_id",
-                                "folio_name",
-                                "legacy_code",
-                            ]
-                        ]
-                    )
+                    self.material_type_keys = [k for k in mat_mapping.keys()
+                                            if k
+                                            not in [
+                                                "folio_code",
+                                                "folio_id",
+                                                "folio_name",
+                                                "legacy_code",
+                                            ]]
                 if any(m for m in mat_mapping.values() if m == "*"):
                     t = self.get_ref_data_tuple_by_name(
                         self.folio_material_types,
                         "mat_types",
                         mat_mapping["folio_name"],
                     )
-                    if t:
-                        self.default_material_type_id = t[0]
-                        logging.info(
-                            f'Set {mat_mapping["folio_name"]} as default material type mapping'
-                        )
-                    else:
+                    if not t:
                         raise TransformationProcessError(
                             "No Default Material type set up in map."
                             "Add a row to mapping file with *:s and a valid Material type"
                         )
+                    self.default_material_type_id = t[0]
+                    logging.info(
+                        f'Set {mat_mapping["folio_name"]} as default material type mapping'
+                    )
                 else:
                     mat_mapping["folio_id"] = self.get_ref_data_tuple_by_name(
                         self.folio_material_types,

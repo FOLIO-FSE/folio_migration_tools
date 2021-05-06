@@ -32,6 +32,21 @@ class HoldingsMapper(MapperBase):
         self.location_keys = []
         self.default_location_id = ""
         self.setup_location_mappings(location_map)
+        self.d = {}
+        self.arr_re = r"\[[0-9]\]"
+        for k in self.holdings_map["data"]:
+            key = re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
+            if key in self.d:
+                self.d[key].append(k["legacy_field"])
+            else:
+                self.d[key] = [k["legacy_field"]]
+        logging.info(f"Mapped keys:\n{json.dumps(self.d)}")
+        self.c = {}
+        for k in self.holdings_map["data"]:
+            if k["value"] not in [None, ""]:
+                key = re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
+                self.c[key] = k["value"]
+        logging.info(f"Mapped values:\n{json.dumps(self.c)}")
 
     def setup_call_number_type_mappings(self):
         logging.info("Fetching Callnumber types...")
@@ -41,29 +56,23 @@ class HoldingsMapper(MapperBase):
         for idx, call_number_type_mapping in enumerate(self.call_number_type_map):
             try:
                 if idx == 1:
-                    self.call_number_type_keys = list(
-                        [
-                            k
-                            for k in call_number_type_mapping.keys()
-                            if k not in ["folio_code", "folio_id", "folio_name"]
-                        ]
-                    )
+                    self.call_number_type_keys = [k for k in call_number_type_mapping.keys()
+                                            if k not in ["folio_code", "folio_id", "folio_name"]]
                 if any(m for m in call_number_type_mapping.values() if m == "*"):
                     t = self.get_ref_data_tuple_by_name(
                         self.folio_call_number_types,
                         "callnumbers",
                         call_number_type_mapping["folio_name"],
                     )
-                    if t:
-                        self.default_call_number_type_id = t[0]
-                        logging.info(
-                            f'Set {call_number_type_mapping["folio_name"]} as default call_numbertype mapping'
-                        )
-                    else:
+                    if not t:
                         raise TransformationProcessError(
                             "No Default call_number type set up in map."
                             "Add a row to mapping file with *:s and a valid call_number type"
                         )
+                    self.default_call_number_type_id = t[0]
+                    logging.info(
+                        f'Set {call_number_type_mapping["folio_name"]} as default call_numbertype mapping'
+                    )
                 else:
                     call_number_type_mapping[
                         "folio_id"
@@ -92,14 +101,10 @@ class HoldingsMapper(MapperBase):
         print(json.dumps(self.call_number_type_map, indent=4))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
-        arr_re = r"\[[0-9]\]"
+        logging.debug(f"{folio_prop_name} {i}")
         if self.use_map:
-            legacy_item_keys = list(
-                k["legacy_field"]
-                for k in self.holdings_map["data"]
-                if re.sub(arr_re, ".", k["folio_field"]).strip(".") == folio_prop_name
-            )
-            vals = list([v for k, v in legacy_item.items() if k in legacy_item_keys])
+            legacy_item_keys = self.d.get(folio_prop_name, [])
+            vals = [v for k, v in legacy_item.items() if k in legacy_item_keys]
             legacy_value = " ".join(vals).strip()
             self.add_to_migration_report("Source fields with same target", len(vals))
             # legacy_value = legacy_item.get(legacy_item_key, "")
@@ -107,38 +112,37 @@ class HoldingsMapper(MapperBase):
                 return self.get_location_id(legacy_item, index_or_id)
             elif folio_prop_name == "callNumber":
                 if legacy_value.startswith("["):
-                    new_legacy_values = ast.literal_eval(legacy_value)
-                else:
-                    new_legacy_values = [legacy_value]
-                self.add_to_migration_report(
-                    "Bound-with mapping",
-                    f"Number of bib-level callnumbers referenced: {len(new_legacy_values)}",
-                )
-                return new_legacy_values[0]
+                    self.add_stats("Bound-with items callnumber identified")
+                    self.add_to_migration_report(
+                        "Bound-with mapping",
+                        f"Number of bib-level callnumbers: {len(legacy_value.split(','))}",
+                    )
+                return legacy_value
             elif folio_prop_name == "callNumberTypeId":
                 return self.get_call_number_type_id(legacy_item)
             elif folio_prop_name == "statisticalCodeIds":
                 return self.get_statistical_codes(vals)
             elif folio_prop_name == "instanceId":
-                return self.get_instance_id(legacy_value, index_or_id)
+                return self.get_instance_ids(legacy_value, index_or_id)
             elif len(legacy_item_keys) == 1:
-                logging.debug(folio_prop_name)
-                value = next(
-                    (
-                        k.get("value", "")
-                        for k in self.holdings_map["data"]
-                        if re.sub(arr_re, ".", k["folio_field"]).strip(".")
-                        == folio_prop_name
-                    ),
-                    "",
-                )
+                logging.debug(f"One value from one property to return{folio_prop_name} ")
+                value = self.c.get(folio_prop_name, "")
                 if value not in [None, ""]:
+                    self.add_to_migration_report(
+                        "Mapped values from mapping file",
+                        f"{folio_prop_name} set to mapped value {value}",
+                    )
                     return value
                 else:
-
+                    j = " and ".join(legacy_item_keys)
+                    self.add_to_migration_report(
+                        "Mapped values from mapping file",
+                        f"{folio_prop_name} set to legacy value from {j}",
+                    )
                     return legacy_value
             elif any(legacy_item_keys):
-                return legacy_value
+                logging.debug(f"Multiple values from multiple mappings to return{folio_prop_name} ")
+                return vals
             else:
                 # self.report_folio_mapping(f"{folio_prop_name}", False, False)
                 return ""
@@ -159,13 +163,18 @@ class HoldingsMapper(MapperBase):
     def get_call_number_type_id(self, legacy_item):
         return self.default_call_number_type_id
 
-    def get_instance_id(self, legacy_value: str, index_or_id: str):
+    def get_instance_ids(self, legacy_value: str, index_or_id: str):
+        # Returns a list of Id:s
         return_ids = []
         if legacy_value.startswith("["):
             try:
                 new_legacy_values = ast.literal_eval(legacy_value)
+                if len(new_legacy_values) > 1:
+                    self.add_stats("Bound-with items identified by bib id")
+                    for l in new_legacy_values:
+                        self.add_stats("Bib ids referenced in bound-with items")
             except:
-                print(legacy_value)
+                logging.error(f"{legacy_value} could not get parsed to array of strings")
         else:
             new_legacy_values = [legacy_value]
         self.add_to_migration_report(
@@ -173,13 +182,10 @@ class HoldingsMapper(MapperBase):
             f"Number of bibs referenced: {len(new_legacy_values)}",
         )
         for v in new_legacy_values:
-            if v.startswith("b"):
-                new_legacy_value = f".{v}"
-            else:
-                new_legacy_value = v
+            new_legacy_value = f".{v}" if v.startswith("b") else v
             if (
                 new_legacy_value not in self.instance_id_map
-                or v not in self.instance_id_map
+                and v not in self.instance_id_map
             ):
                 self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
                 s = f"Bib id '{new_legacy_value}' not in instance id map."
@@ -187,14 +193,13 @@ class HoldingsMapper(MapperBase):
                 # raise TransformationProcessError(s, index_or_id)
             else:
                 self.add_to_migration_report("Holdings IDs", f"Mapped")
-                entry = (
-                    self.instance_id_map.get(new_legacy_value, "")
-                    if self.instance_id_map.get(new_legacy_value, "")
-                    else self.instance_id_map.get(v)
-                )
+                entry = self.instance_id_map.get(
+                    new_legacy_value, ""
+                ) or self.instance_id_map.get(v)
+
                 return_ids.append(entry["folio_id"])
         if any(return_ids):
-            return return_ids[0]
+            return return_ids
         else:
             raise TransformationProcessError(
                 f"No instance id mapped from {legacy_value}"
