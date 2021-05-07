@@ -432,6 +432,8 @@ class MapperBase:
         try:
             for idx, row in enumerate(reader):
                 yield row
+                # if not all(not r for r in row.values()):
+                #     yield row
         except Exception as ee:
             logging.error(f"{ee} at row {idx}")
 
