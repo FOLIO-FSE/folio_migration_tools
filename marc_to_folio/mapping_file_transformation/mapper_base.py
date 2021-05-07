@@ -201,7 +201,7 @@ class MapperBase:
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
             # Get the values in the fields that will be used for mapping
-            fieldvalues = [legacy_object.get(k).strip() for k in legacy_keys]
+            fieldvalues = [legacy_object.get(k) for k in legacy_keys]
             # logging.debug(f"fieldvalues are {fieldvalues}")
 
             # Gets the first line in the map satisfying all legacy mapping values.
@@ -220,12 +220,6 @@ class MapperBase:
                 f"{name_of_mapping} mapping",
                 f'{" - ".join(fieldvalues)} -> {right_mapping[map_key]}',
             )
-            if not right_mapping["folio_id"]:
-                self.add_to_migration_report(
-                    f"{name_of_mapping} mapping",
-                    f'{" - ".join(fieldvalues)} -> {default_value} (Unmapped)',
-                )
-                return default_value
             return right_mapping["folio_id"]
         except StopIteration:
             self.add_to_migration_report(
@@ -438,8 +432,6 @@ class MapperBase:
         try:
             for idx, row in enumerate(reader):
                 yield row
-                # if not all(not r for r in row.values()):
-                #     yield row
         except Exception as ee:
             logging.error(f"{ee} at row {idx}")
 
