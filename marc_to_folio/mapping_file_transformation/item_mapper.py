@@ -83,7 +83,10 @@ class ItemMapper(MapperBase):
             if folio_prop_name in ["permanentLocationId", "temporaryLocationId"]:
                 return self.get_location_id(legacy_item, index_or_id)
             elif folio_prop_name == "materialTypeId":
-                return self.get_material_type_id(legacy_item)
+                mt = self.get_material_type_id(legacy_item)
+                if not mt:
+                    raise TransformationCriticalDataError(f"material Type id not mapped. {legacy_item_keys} - {vals}")            
+                return mt
             elif folio_prop_name == "itemLevelCallNumberTypeId":
                 return self.get_item_level_call_number_type_id(legacy_item)
             elif folio_prop_name == "status.name":

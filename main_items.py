@@ -52,6 +52,7 @@ class Worker(MainBase):
         self.mapper = mapper
         self.failed_files: List[str] = list()
         self.num_exeptions = 0
+        self.num_criticalerrors = 0
         self.error_file = error_file
         logging.info("Init done")
 
@@ -83,6 +84,10 @@ class Worker(MainBase):
                                 logging.error(f"{idx}\t{process_error}")
                             except TransformationCriticalDataError as data_error:
                                 logging.error(f"{idx}\t{data_error}")
+                                self.num_criticalerrors += 1
+                                if self.num_criticalerrors > 10000:
+                                    logging.fatal("Stopping. More than 10,000 critical data errors")
+                                    exit()
                             except Exception as excepion:
                                 self.num_exeptions += 1
                                 print("\n=======ERROR===========")
