@@ -273,7 +273,7 @@ def main():
 
             location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
             logging.info(
-                f'{",".join(loan_type_map[0].keys())} will be used for determinig location'
+                f'{",".join(location_map[0].keys())} will be used for determinig location'
             )
             logging.info(f"Found {len(location_map)} rows in location map")
 
