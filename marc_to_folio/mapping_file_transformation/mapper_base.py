@@ -430,7 +430,7 @@ class MapperBase:
             reader = csv.DictReader(source_file)
         idx = 0
         try:
-            for idx, row in enumerate(reader):
+            for idx, row in enumerate(reader):                
                 yield row
         except Exception as ee:
             logging.error(f"{ee} at row {idx}")
