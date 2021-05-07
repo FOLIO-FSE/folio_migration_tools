@@ -73,7 +73,7 @@ class Conditions:
 
         # Set defaults
         logging.info("Defaults")
-        self.default_call_number_type_id = "0b099785-75b4-4f6d-a027-4f113b58ee23"
+        self.default_call_number_type_id = "95467209-6d7b-468b-94df-0f5d7ad2747d"
         logging.info(f"callnumber type\t{self.default_call_number_type_id}")
         self.default_call_number_type = next(
             ct for ct in self.folio.call_number_types if ct["name"] == "Other scheme"
