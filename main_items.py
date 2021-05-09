@@ -126,13 +126,15 @@ class Worker(MainBase):
 
                 except Exception as ee:
                     error_str = (
-                        f"Processing of {file_name} failed:\n{ee}."
-                        "Check source files for empty lines or missing reference data"
+                        f"\n\nProcessing of {file_name} failed:\n{ee}."
+                        "Check source files for empty lines or missing reference data. Halting"
                     )
                     logging.exception(error_str, stack_info=True)
                     self.mapper.add_to_migration_report(
                         "Failed files", f"{file_name} - {ee}"
                     )
+                    logging.fatal(error_str)
+                    exit() 
         logging.info(f"processed {total_records:,} records in {len(self.files)} files")
         self.total_records = total_records
 
