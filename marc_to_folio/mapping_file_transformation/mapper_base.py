@@ -39,7 +39,7 @@ class MapperBase:
             key = re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
             self.e[key] = k["legacy_field"]
             self.e[k["folio_field"]] = k["legacy_field"]
-        logging.info(f"Mapped keys:\n{json.dumps(self.e)}")
+        # logging.info(f"Mapped keys:\n{json.dumps(self.e)}")
         print("Mapped FOLIO Fields")
         print(json.dumps(self.folio_keys, indent=4, sort_keys=True))
         csv.register_dialect("tsv", delimiter="\t")
@@ -434,6 +434,7 @@ class MapperBase:
                 yield row
         except Exception as ee:
             logging.error(f"{ee} at row {idx}")
+            raise ee
 
     def has_property(self, legacy_object, folio_prop_name: str):
         if not self.use_map:
