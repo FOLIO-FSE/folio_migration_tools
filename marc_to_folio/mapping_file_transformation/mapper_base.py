@@ -130,21 +130,6 @@ class MapperBase:
         else:
             self.stats[a] += 1
 
-    def validate(self, folio_record, legacy_id, required_fields):
-        failures = []
-        for req in required_fields:
-            if req not in folio_record:
-                failures.append(req)
-                self.add_to_migration_report(
-                    "Failed records that needs to get fixed",
-                    f"Required field {req} is missing from {legacy_id}",
-                )
-        if failures:
-            self.add_to_migration_report("User validation", "Total failed users")
-            for failure in failures:
-                self.add_to_migration_report("Record validation", f"{failure}")
-            raise ValueError(f"Record {legacy_id} failed validation {failures}")
-
     @staticmethod
     def print_dict_to_md_table(my_dict, h1="", h2=""):
         d_sorted = {k: my_dict[k] for k in sorted(my_dict)}

@@ -81,8 +81,10 @@ class Worker(MainBase):
                                     "Number of records written to disk",
                                 )
                             except TransformationProcessError as process_error:
+                                self.mapper.add_stats("Failed due to a process error")
                                 logging.error(f"{idx}\t{process_error}")
                             except TransformationCriticalDataError as data_error:
+                                self.add_stats("Failed due to a data error")
                                 logging.error(f"{idx}\t{data_error}")
                                 self.num_criticalerrors += 1
                                 if self.num_criticalerrors > 10000:
