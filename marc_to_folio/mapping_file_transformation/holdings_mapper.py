@@ -36,7 +36,7 @@ class HoldingsMapper(MapperBase):
         self.arr_re = r"\[[0-9]\]"
         for k in self.holdings_map["data"]:
             key = re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
-            if k["legacy_fields"] not in ["Not mapped", None, ""]:
+            if k["legacy_field"] not in ["Not mapped", None, ""]:
                 if key in self.d:
                     self.d[key].append(k["legacy_field"])
                 else:
