@@ -9,7 +9,7 @@ from typing import List
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
 from typing import Dict
 
@@ -85,7 +85,9 @@ class ItemMapper(MapperBase):
             elif folio_prop_name == "materialTypeId":
                 mt = self.get_material_type_id(legacy_item)
                 if not mt:
-                    raise TransformationCriticalDataError(f"material Type id not mapped. {legacy_item_keys} - {vals}")            
+                    raise TransformationCriticalDataError(
+                        f"material Type id not mapped. {legacy_item_keys} - {vals}"
+                    )
                 return mt
             elif folio_prop_name == "itemLevelCallNumberTypeId":
                 return self.get_item_level_call_number_type_id(legacy_item)
@@ -122,31 +124,13 @@ class ItemMapper(MapperBase):
             elif any(legacy_item_keys):
                 return legacy_value
             else:
-                self.add_to_migration_report("Unmapped properties", f"{folio_prop_name} {legacy_item_keys}")
+                self.add_to_migration_report(
+                    "Unmapped properties", f"{folio_prop_name} {legacy_item_keys}"
+                )
                 return ""
         else:
             self.report_folio_mapping(f"{folio_prop_name}", True, False)
             return legacy_item[folio_prop_name]
-
-    def get_note(
-        self,
-        note_string: str,
-        note_type_name: str = "",
-        staffOnly: bool = False,
-    ):
-        nt_id = next(
-            (x["id"] for x in self.item_note_types if note_type_name == x["name"]),
-            self.note_id,
-        )
-        return {
-            "itemNoteTypeId": nt_id,
-            "note": note_string,
-            "staffOnly": staffOnly,
-        }
-
-    def get_circulation_notes(self, legacy_value):
-        self.add_to_migration_report("Circulation notes", "Circ note")
-        return []
 
     def get_statistical_codes(self, legacy_item: dict):
         return self.get_mapped_value(
@@ -219,8 +203,11 @@ class ItemMapper(MapperBase):
         ):
             try:
                 if idx == 1:
-                    self.statistical_codes_keys = [k for k in statistical_codes_mapping.keys()
-                                            if k not in ["folio_code", "folio_id", "folio_name"]]
+                    self.statistical_codes_keys = [
+                        k
+                        for k in statistical_codes_mapping.keys()
+                        if k not in ["folio_code", "folio_id", "folio_name"]
+                    ]
                 # No default. Do  not return any if not set/mapped
                 statistical_codes_mapping["folio_id"] = self.get_ref_data_tuple_by_code(
                     self.statistical_codes,
@@ -247,8 +234,11 @@ class ItemMapper(MapperBase):
         for idx, call_number_type_mapping in enumerate(self.call_number_type_map):
             try:
                 if idx == 1:
-                    self.call_number_type_keys = [k for k in call_number_type_mapping.keys()
-                                            if k not in ["folio_code", "folio_id", "folio_name"]]
+                    self.call_number_type_keys = [
+                        k
+                        for k in call_number_type_mapping.keys()
+                        if k not in ["folio_code", "folio_id", "folio_name"]
+                    ]
                     logging.info(json.dumps(self.call_number_type_keys, indent=4))
                 if any(m for m in call_number_type_mapping.values() if m == "*"):
                     # Set up default mapping if available
@@ -303,14 +293,17 @@ class ItemMapper(MapperBase):
         for idx, loan_type_mapping in enumerate(self.loan_type_map):
             try:
                 if idx == 1:
-                    self.loan_type_keys = [k for k in loan_type_mapping.keys()
-                                            if k
-                                            not in [
-                                                "folio_code",
-                                                "folio_id",
-                                                "folio_name",
-                                                "legacy_code",
-                                            ]]
+                    self.loan_type_keys = [
+                        k
+                        for k in loan_type_mapping.keys()
+                        if k
+                        not in [
+                            "folio_code",
+                            "folio_id",
+                            "folio_name",
+                            "legacy_code",
+                        ]
+                    ]
                 if any(m for m in loan_type_mapping.values() if m == "*"):
                     # Set up default mapping if available
                     t = self.get_ref_data_tuple_by_name(
@@ -358,14 +351,17 @@ class ItemMapper(MapperBase):
         for idx, mat_mapping in enumerate(self.material_type_map):
             try:
                 if idx == 1:
-                    self.material_type_keys = [k for k in mat_mapping.keys()
-                                            if k
-                                            not in [
-                                                "folio_code",
-                                                "folio_id",
-                                                "folio_name",
-                                                "legacy_code",
-                                            ]]
+                    self.material_type_keys = [
+                        k
+                        for k in mat_mapping.keys()
+                        if k
+                        not in [
+                            "folio_code",
+                            "folio_id",
+                            "folio_name",
+                            "legacy_code",
+                        ]
+                    ]
                 if any(m for m in mat_mapping.values() if m == "*"):
                     t = self.get_ref_data_tuple_by_name(
                         self.folio_material_types,

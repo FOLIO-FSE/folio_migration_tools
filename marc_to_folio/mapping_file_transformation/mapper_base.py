@@ -346,7 +346,7 @@ class MapperBase:
     def map_objects_array_props(
         self, legacy_object, prop_name, properties, folio_object, index_or_id
     ):
-        a = []
+        resulting_array = []
 
         for i in range(9):
             temp_object = {}
@@ -358,17 +358,19 @@ class MapperBase:
                 # logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
                     res = self.get_prop(legacy_object, prop_path, index_or_id, i)
-                    self.report_legacy_mapping(self.legacy_property(prop), True, True)
-                    self.report_folio_mapping(prop_path, True, False)
+                    self.report_legacy_mapping(self.legacy_property(prop), True, not bool(res))
+                    self.report_folio_mapping(prop_path, True, not bool(res))
                     temp_object[prop] = res
 
             if temp_object != {} and all(
-                (v or (isinstance(v, bool) and not v) for k, v in temp_object.items())
+                (v or (isinstance(v, bool)) for k, v in temp_object.items())
             ):
                 # logging.debug(f"temporary object {temp_object}")
-                a.append(temp_object)
-        if any(a):
-            folio_object[prop_name] = a
+                resulting_array.append(temp_object)
+            else:
+                logging.debug(json.dumps(temp_object, indent=4))
+        if any(resulting_array):
+            folio_object[prop_name] = resulting_array
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
         # logging.debug(f"String array {prop}")

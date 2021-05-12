@@ -70,8 +70,7 @@ class Worker(MainBase):
                             "General statistics", "Number of files processed"
                         )
                         start = time.time()
-                        for idx, record in enumerate(
-                            self.mapper.get_objects(records_file, file_name)
+                        for idx, record in enumerate(self.mapper.get_objects(records_file, file_name)
                         ):
                             try:
                                 folio_rec = self.mapper.do_map(record, f"row {idx}")
