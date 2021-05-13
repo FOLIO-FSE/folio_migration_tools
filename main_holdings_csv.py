@@ -6,6 +6,7 @@ import ctypes
 import json
 import logging
 import copy
+from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 import uuid
 
 from argparse_prompt import PromptParser
@@ -115,7 +116,7 @@ class Worker(MainBase):
                             exit()
 
                         self.mapper.add_stats("Number of Legacy items in file")
-                        if idx % 10000 == 0:
+                        if idx > 1 and idx % 10000 == 0:
                             elapsed = idx / (time.time() - start)
                             elapsed_formatted = "{0:.4g}".format(elapsed)
                             logging.info(
@@ -159,7 +160,7 @@ class Worker(MainBase):
         note = {
             "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e", # Default binding note type
             "note": (
-                f"This Record is a Bound-with. It is bound-with the following "
+                f"This Record is a Bound-with. It is bound-with {len(folio_rec['instanceId'])} "
                 f"instances: {', '.join(folio_rec['instanceId'])}"
             ),
             "staffOnly": False,
@@ -386,11 +387,7 @@ def main():
             logging.info(
                 f'{len(holdings_map["data"])} fields in holdings mapping file map'
             )
-            mapped_fields = (
-                f
-                for f in holdings_map["data"]
-                if f["legacy_field"] and f["legacy_field"] != "Not mapped"
-            )
+            mapped_fields = MapperBase.get_mapped_folio_properties_from_map(holdings_map)
             logging.info(
                 f"{len(list(mapped_fields))} Mapped fields in holdings mapping file map"
             )

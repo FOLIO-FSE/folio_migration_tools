@@ -4,6 +4,7 @@ import csv
 import ctypes
 import json
 import logging
+from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 from marc_to_folio.helper import Helper
 
 from argparse_prompt import PromptParser
@@ -110,7 +111,7 @@ class Worker(MainBase):
                             self.mapper.add_to_migration_report(
                                 "General statistics", f"Number of Legacy items in total"
                             )
-                            if idx % 10000 == 0:
+                            if idx > 1 and idx % 10000 == 0:
                                 elapsed = idx / (time.time() - start)
                                 elapsed_formatted = "{0:.4g}".format(elapsed)
                                 logging.info(
@@ -197,8 +198,8 @@ def main():
         items_map_path = setup_path(args.map_path, "item_mapping.json")
         with open(items_map_path) as items_mapper_f:
             items_map = json.load(items_mapper_f)
-            folio_keys = [k["folio_field"] for k in items_map["data"]
-                            if k["legacy_field"] not in ["", "Not mapped"]]
+            folio_keys = MapperBase.get_mapped_folio_properties_from_map(items_map)
+            print(json.dumps(folio_keys))
             logging.info(f'{len(items_map["data"])} fields in item mapping file map')
             mapped_fields = (
                 f

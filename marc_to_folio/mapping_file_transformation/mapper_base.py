@@ -27,18 +27,19 @@ class MapperBase:
         self.error_file = error_file
         self.ref_data_dicts = {}
         self.arr_re = r"\[[0-9]\]$"
-        self.folio_keys = list(
-            # re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
-            k["folio_field"]
-            for k in self.record_map["data"]
-            if k["legacy_field"] not in ["", "Not mapped"]
-        )
+        self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
         self.e = {}
         self.arr_re = r"\[[0-9]\]"
         for k in self.record_map["data"]:
             key = re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
-            self.e[key] = k["legacy_field"]
-            self.e[k["folio_field"]] = k["legacy_field"]
+            if not self.e.get(key):
+                self.e[key] = [k["legacy_field"]]
+            else:
+                self.e[key].append(k["legacy_field"])
+            if not self.e.get(k["folio_field"]):
+                self.e[k["folio_field"]] = [k["legacy_field"]]
+            else:
+                self.e[k["folio_field"]].append(k["legacy_field"])
         # logging.info(f"Mapped keys:\n{json.dumps(self.e)}")
         print("Mapped FOLIO Fields")
         print(json.dumps(self.folio_keys, indent=4, sort_keys=True))
@@ -60,6 +61,15 @@ class MapperBase:
             for b in sortedlist:
                 report_file.write(f"{b[0]} | {b[1]}   \n")
             report_file.write("</details>   \n")
+
+    @staticmethod
+    def get_mapped_folio_properties_from_map(map):
+        return list(
+            # re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
+            k["folio_field"]
+            for k in map["data"]
+            if (k["legacy_field"] not in ["", "Not mapped"] or k.get("value", ""))
+        )
 
     def print_mapping_report(self, report_file, total_records):
 
@@ -358,7 +368,9 @@ class MapperBase:
                 # logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
                     res = self.get_prop(legacy_object, prop_path, index_or_id, i)
-                    self.report_legacy_mapping(self.legacy_property(prop), True, not bool(res))
+                    self.report_legacy_mapping(
+                        self.legacy_property(prop), True, not bool(res)
+                    )
                     self.report_folio_mapping(prop_path, True, not bool(res))
                     temp_object[prop] = res
 
@@ -417,7 +429,7 @@ class MapperBase:
             reader = csv.DictReader(source_file)
         idx = 0
         try:
-            for idx, row in enumerate(reader):                
+            for idx, row in enumerate(reader):
                 yield row
         except Exception as ee:
             logging.error(f"{ee} at row {idx}")
@@ -439,12 +451,12 @@ class MapperBase:
                 ),
                 "",
             )"""
-        legacy_key = self.e.get(folio_prop_name, "")
+        legacy_keys = self.e.get(folio_prop_name, [])
         # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
-            legacy_key
-            and legacy_key not in ["", "Not mapped"]
-            and legacy_object.get(legacy_key, "")
+            any(legacy_keys)
+            and any(k not in ["", "Not mapped"] for k in legacy_keys)
+            and any(legacy_object.get(legacy_key, "") for legacy_key in legacy_keys)
         )
 
     def has_basic_property(self, legacy_object, folio_prop_name):
@@ -462,12 +474,12 @@ class MapperBase:
                 ),
                 "",
             )"""
-        legacy_key = self.e.get(folio_prop_name, "")
+        legacy_keys = self.e.get(folio_prop_name, [])
         # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
-            legacy_key
-            and legacy_key not in ["", "Not mapped"]
-            and legacy_object.get(legacy_key, "")
+            any(legacy_keys)
+            and any(k not in ["", "Not mapped"] for k in legacy_keys)
+            and any(legacy_object.get(legacy_key, "") for legacy_key in legacy_keys)
         )
 
     def legacy_property(self, folio_prop):

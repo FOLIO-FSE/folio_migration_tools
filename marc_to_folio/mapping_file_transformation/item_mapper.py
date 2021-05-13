@@ -77,7 +77,8 @@ class ItemMapper(MapperBase):
             ]
 
             legacy_value = ""
-            vals = [v for k, v in legacy_item.items() if k in legacy_item_keys]
+            vals = [legacy_item[k] for k in legacy_item_keys if legacy_item.get(k, "") not in ["", None]]
+            # vals = [v for k, v in legacy_item.items() if k in legacy_item_keys]
             legacy_value = " ".join(vals).strip()
             self.add_to_migration_report("Source fields with same target", len(vals))
             if folio_prop_name in ["permanentLocationId", "temporaryLocationId"]:
@@ -93,6 +94,9 @@ class ItemMapper(MapperBase):
                 return self.get_item_level_call_number_type_id(legacy_item)
             elif folio_prop_name == "status.name":
                 return self.transform_status(legacy_value)
+            elif folio_prop_name == "barcode":
+                print(legacy_item_keys)
+                return next((v for v in vals if v), "")
             elif folio_prop_name == "status.date":
                 return datetime.utcnow().isoformat()
             elif folio_prop_name in ["permanentLoanTypeId", "temporaryLoanTypeId"]:
