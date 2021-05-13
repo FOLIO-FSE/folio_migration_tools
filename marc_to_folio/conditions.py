@@ -223,11 +223,19 @@ class Conditions:
         return my_id
 
     def condition_set_holding_note_type_id_by_name(self, value, parameter, marc_field):
-        t = self.get_ref_data_tuple_by_name(
-            self.folio.holding_note_types, "holding_note_types", parameter["name"]
-        )
-        self.mapper.add_to_migration_report("Mapped note types", t[1])
-        return t[0]
+        try:
+            t = self.get_ref_data_tuple_by_name(
+                self.folio.holding_note_types, "holding_note_types", parameter["name"]
+            )
+            self.mapper.add_to_migration_report("Mapped note types", t[1])
+            return t[0]
+        except:
+            raise TransformationCriticalDataError(
+                "unknown",
+                f'Holdings note type mapping error.\tParameter: {parameter.get("name", "")}\t'
+                f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
+                parameter.get("name", ""),
+            )
 
     def condition_set_classification_type_id(self, value, parameter, marc_field):
         try:
