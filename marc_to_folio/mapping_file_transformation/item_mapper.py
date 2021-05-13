@@ -95,7 +95,6 @@ class ItemMapper(MapperBase):
             elif folio_prop_name == "status.name":
                 return self.transform_status(legacy_value)
             elif folio_prop_name == "barcode":
-                print(legacy_item_keys)
                 return next((v for v in vals if v), "")
             elif folio_prop_name == "status.date":
                 return datetime.utcnow().isoformat()
