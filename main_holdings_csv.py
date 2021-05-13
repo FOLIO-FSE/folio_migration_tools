@@ -160,8 +160,8 @@ class Worker(MainBase):
         note = {
             "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e", # Default binding note type
             "note": (
-                f"This Record is a Bound-with. It is bound-with {len(folio_rec['instanceId'])} "
-                f"instances: {', '.join(folio_rec['instanceId'])}"
+                f'This Record is a Bound-with. It is bound-with {len(folio_rec["instanceId"])}\n'
+                f'instances. Search within this volume :<a href="{"&".join(folio_rec["instanceId"])}'
             ),
             "staffOnly": False,
         }
