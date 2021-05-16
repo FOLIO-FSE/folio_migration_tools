@@ -7,6 +7,7 @@ from marc_to_folio.custom_exceptions import (
     TransformationProcessError,
 )
 import uuid
+from marc_to_folio.report_blurbs import blurbs
 from abc import abstractmethod
 import requests
 import re
@@ -26,37 +27,54 @@ class MapperBase:
         self.record_map = record_map
         self.error_file = error_file
         self.ref_data_dicts = {}
-        self.arr_re = r"\[[0-9]\]$"
+        self.empty_vals = ["Not mapped", None, ""]
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
         self.e = {}
-        self.arr_re = r"\[[0-9]\]"
         for k in self.record_map["data"]:
-            key = re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
-            if not self.e.get(key):
-                self.e[key] = [k["legacy_field"]]
-            else:
-                self.e[key].append(k["legacy_field"])
             if not self.e.get(k["folio_field"]):
                 self.e[k["folio_field"]] = [k["legacy_field"]]
             else:
                 self.e[k["folio_field"]].append(k["legacy_field"])
-        # logging.info(f"Mapped keys:\n{json.dumps(self.e)}")
-        print("Mapped FOLIO Fields")
-        print(json.dumps(self.folio_keys, indent=4, sort_keys=True))
+
+        self.mapped_from_values = {}
+        for k in self.record_map["data"]:
+            if k["value"] not in [None, ""]:
+                self.mapped_from_values[k["folio_field"]] = k["value"]
+        logging.info(f"Mapped values:\n{json.dumps(self.mapped_from_values, indent=4, sort_keys=True)}")
+
+        self.mapped_from_legacy_data = {}
+        for k in self.record_map["data"]:
+            if k["legacy_field"] not in self.empty_vals or k["value"] not in self.empty_vals:
+                if not self.mapped_from_legacy_data.get(k["folio_field"]):
+                    self.mapped_from_legacy_data[k["folio_field"]] = {k["legacy_field"]}
+                else:
+                    self.mapped_from_legacy_data[k["folio_field"]].add(
+                        k["legacy_field"]
+                    )
+        logging.info(f"Mapped legacy fields:\n{json.dumps(list(self.mapped_from_legacy_data), indent=4, sort_keys=True)}")
+        logging.info(f"Mapped FOLIO fields:\n{json.dumps(self.folio_keys, indent=4, sort_keys=True)}")
         csv.register_dialect("tsv", delimiter="\t")
 
     def write_migration_report(self, report_file):
         logging.info("Writing migration report")
-        for a in self.migration_report:
+        report_file.write(f"{blurbs['Introduction']}\n")
+        for header in self.migration_report:
             report_file.write(f"   \n")
-            report_file.write(f"## {a}    \n")
+            report_file.write(f"## {header}    \n")
+            try:
+                report_file.write(f"{blurbs[header]}    \n")
+            except KeyError as key_error:
+                logging.error(
+                    f"Uhoh. Please add this one to report_blurbs.py: {key_error}"
+                )
+
             report_file.write(
-                f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
+                f"<details><summary>Click to expand all {len(self.migration_report[header])} things</summary>     \n"
             )
             report_file.write(f"   \n")
             report_file.write(f"Measure | Count   \n")
             report_file.write(f"--- | ---:   \n")
-            b = self.migration_report[a]
+            b = self.migration_report[header]
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
             for b in sortedlist:
                 report_file.write(f"{b[0]} | {b[1]}   \n")
@@ -64,12 +82,14 @@ class MapperBase:
 
     @staticmethod
     def get_mapped_folio_properties_from_map(map):
-        return list(
-            # re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
+        return [
             k["folio_field"]
             for k in map["data"]
-            if (k["legacy_field"] not in ["", "Not mapped"] or k.get("value", ""))
-        )
+            if (
+                k["legacy_field"] not in ["", "Not mapped"]
+                or k.get("value", "") not in ["", "Not mapped", None]
+            )
+        ]
 
     def print_mapping_report(self, report_file, total_records):
 
@@ -169,6 +189,7 @@ class MapperBase:
                         "Change default code"
                     )
                 self.default_location_id = t[0]
+                self.default_location_name = t[1]
                 logging.info(f'Set {loc_map["folio_code"]} as default location')
             else:
                 t = self.get_ref_data_tuple_by_code(
@@ -191,7 +212,14 @@ class MapperBase:
         )
 
     def get_mapped_value(
-        self, name_of_mapping, legacy_object, legacy_keys, map, default_value, map_key
+        self,
+        name_of_mapping,
+        legacy_object,
+        legacy_keys,
+        map,
+        default_value,
+        default_name,
+        map_key,
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
@@ -219,7 +247,7 @@ class MapperBase:
         except StopIteration:
             self.add_to_migration_report(
                 f"{name_of_mapping} mapping",
-                f'{" - ".join(fieldvalues)} -> {default_value} (Unmapped)',
+                f'Unmapped -- {" - ".join(fieldvalues)} -> {default_value}',
             )
             return default_value
         except Exception as ee:
@@ -227,7 +255,7 @@ class MapperBase:
                 f"{name_of_mapping} - {map_key} ({legacy_keys}) {ee}"
             )
 
-    def add_to_migration_report(self, header, measure_to_add):
+    def add_to_migration_report(self, header:str, measure_to_add: str):
         if header not in self.migration_report:
             self.migration_report[header] = {}
         if measure_to_add not in self.migration_report[header]:
@@ -235,110 +263,80 @@ class MapperBase:
         else:
             self.migration_report[header][measure_to_add] += 1
 
+    def set_to_migration_report(self, header:str, measure_to_add:str, number: int):
+        if header not in self.migration_report:
+            self.migration_report[header] = {}
+        self.migration_report[header][measure_to_add] = number
+
     @abstractmethod
-    def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
+    def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         raise NotImplementedError(
             "This method needs to be implemented in a implementing class"
         )
 
     def do_map(self, legacy_object, index_or_id: str):
         folio_object = self.instantiate_record()
-        for prop_name, prop in self.schema["properties"].items():
+        for property_name_level1, property_level1 in self.schema["properties"].items():
             try:
-                if prop.get("description", "") == "Deprecated":
-                    self.report_folio_mapping(f"{prop_name} (deprecated)", False, True)
-                elif (
-                    prop_name in ["metadata", "id", "type"]
-                    or prop_name.startswith("effective")
-                    or prop.get("folio:isVirtual", False)
-                ):
-                    self.report_folio_mapping(
-                        f"{prop_name} (Not to be mapped)", False, True
-                    )
-                elif prop["type"] == "object":
-                    if "properties" in prop:
-                        temp_object = {}
-                        prop_key = prop_name
-                        for sub_prop_name, sub_prop in prop["properties"].items():
-                            sub_prop_key = prop_key + "." + sub_prop_name
-                            if "properties" in sub_prop:
-                                for sub_prop_name2, sub_prop2 in sub_prop[
-                                    "properties"
-                                ].items():
-                                    sub_prop_key2 = sub_prop_key + "." + sub_prop_name2
-                                    if sub_prop2["type"] == "array":
-                                        logging.debug(f"Array: {sub_prop_key2} ")
-                            elif (
-                                sub_prop["type"] == "array"
-                            ):  # Object with subprop array
-                                temp_object[sub_prop_name] = []
-
-                                for i in range(5):
-                                    if sub_prop["items"]["type"] == "object":
-                                        # logging.debug(f"Array of objects: {sub_prop_name}")
-                                        temp = {
-                                            sub_prop_name2: self.get_prop(
-                                                folio_object,
-                                                sub_prop_key + "." + sub_prop_name2,
-                                                index_or_id,
-                                                i,
-                                            )
-                                            for sub_prop_name2, sub_prop2 in sub_prop[
-                                                "items"
-                                            ]["properties"].items()
-                                        }
-                                        if not all(
-                                            value for key, value in temp.items()
-                                        ):
-                                            self.add_to_migration_report(
-                                                "Skipped props since empty",
-                                                f"{prop_name}.{sub_prop_name}",
-                                            )
-                                            continue
-                                        temp_object[sub_prop_name].append(temp)
-                                    else:
-                                        mkey = sub_prop_key + "." + sub_prop_name2
-                                        # logging.debug(f"Not an array of objects {mkey}")
-                                        a = self.get_prop(
-                                            legacy_object, mkey, index_or_id, i
-                                        )
-                                        if a:
-                                            temp_object[sub_prop_name] = a
-                            else:
-                                p = self.get_prop(
-                                    legacy_object, sub_prop_key, index_or_id
-                                )
-                                if p:
-                                    temp_object[sub_prop_name] = p
-                        if temp_object:
-                            folio_object[prop_name] = temp_object
-                elif prop["type"] == "array":
-                    if prop["items"]["type"] == "object":
-                        self.map_objects_array_props(
-                            legacy_object,
-                            prop_name,
-                            prop["items"]["properties"],
-                            folio_object,
-                            index_or_id,
-                        )
-                    elif prop["items"]["type"] == "string":
-                        self.map_string_array_props(
-                            legacy_object, prop_name, folio_object, index_or_id
-                        )
-                    else:
-                        self.report_folio_mapping(
-                            f'Unhandled array of {prop["items"]["type"]}: {prop_name}',
-                            False,
-                        )
-                else:  # Basic property
-                    self.map_basic_props(
-                        legacy_object, prop_name, folio_object, index_or_id
-                    )
+                self.map_level1_property(
+                    property_name_level1,
+                    property_level1,
+                    folio_object,
+                    index_or_id,
+                    legacy_object,
+                )
             except TransformationDataError as data_error:
                 self.add_stats("Data issues found")
                 self.error_file.write(data_error)
         self.validate_object(folio_object, index_or_id)
         return folio_object
+
+    def map_level1_property(
+        self,
+        property_name_level1,
+        property_level1,
+        folio_object,
+        index_or_id,
+        legacy_object,
+    ):
+        if property_level1.get("description", "") == "Deprecated":
+            self.report_folio_mapping(f"{property_name_level1} (deprecated)", False)
+        elif skip_property(property_name_level1, property_level1):
+            self.report_folio_mapping(f"{property_name_level1} (skipped)", False)
+        elif property_level1["type"] == "object":
+            if "properties" in property_level1:
+                self.map_object_props(
+                    legacy_object,
+                    property_name_level1,
+                    property_level1,
+                    folio_object,
+                    index_or_id,
+                )
+        elif property_level1["type"] == "array":
+            if property_level1["items"]["type"] == "object":
+                self.map_objects_array_props(
+                    legacy_object,
+                    property_name_level1,
+                    property_level1["items"]["properties"],
+                    folio_object,
+                    index_or_id,
+                )
+            elif property_level1["items"]["type"] == "string":
+                self.map_string_array_props(
+                    legacy_object,
+                    property_name_level1,
+                    folio_object,
+                    index_or_id,
+                )
+            else:
+                self.report_folio_mapping(
+                    f'Unhandled array of {property_level1["items"]["type"]}: {property_name_level1}',
+                    False,
+                )
+        else:  # Basic property
+            self.map_basic_props(
+                legacy_object, property_name_level1, folio_object, index_or_id
+            )
 
     def validate_object(self, folio_object, index_or_id):
         required = self.schema["required"]
@@ -353,11 +351,81 @@ class MapperBase:
                 )
         del folio_object["type"]
 
+    @staticmethod
+    def get_legacy_vals(legacy_item, legacy_item_keys):
+        return {
+            legacy_item[k]
+            for k in legacy_item_keys
+            if legacy_item.get(k, "") not in ["", None]
+        }
+
+    def map_object_props(
+        self,
+        legacy_object,
+        property_name_level1,
+        property_level1,
+        folio_object,
+        index_or_id,
+    ):
+        temp_object = {}
+        prop_key = property_name_level1
+        for property_name_level2, property_level2 in property_level1[
+            "properties"
+        ].items():
+            sub_prop_key = prop_key + "." + property_name_level2
+            if "properties" in property_level2:
+                for property_name_level3, property_level3 in property_level2[
+                    "properties"
+                ].items():
+                    self.report_folio_mapping(
+                        f"{sub_prop_key}.{property_name_level3} (Unmapped {property_level3.get('type','')})",
+                        False,
+                    )
+            elif property_level2["type"] == "array":
+                self.report_folio_mapping(
+                    (
+                        f"{property_name_level2}"
+                        f" (Unmapped {property_level2['items']['type']})"
+                    ),
+                    False,
+                )
+                """
+                # Object with subprop array
+                temp_object[property_name_level2] = []
+                for i in range(5):
+                    prop_path = f"{sub_prop_key}.{sub_prop_name2}[{i}]"
+                    if property_level2["items"]["type"] == "object":
+                        # Array of objects
+                        temp = {
+                            sub_prop_name2: self.get_prop(
+                                folio_object,
+                                ,
+                                index_or_id,
+                            )
+                            for sub_prop_name2, sub_prop2 in property_level2["items"][
+                                "properties"
+                            ].items()
+                        }
+                        if not all(value for key, value in temp.items()):
+                            continue
+                        temp_object[property_name_level2].append(temp)
+                    else:
+                        
+                        mkey = sub_prop_key + "." + sub_prop_name2
+                        a = self.get_prop(legacy_object, mkey, index_or_id, i)
+                        if a:
+                            temp_object[property_name_level2] = a"""
+            else:
+                p = self.get_prop(legacy_object, sub_prop_key, index_or_id)
+                if p:
+                    temp_object[property_name_level2] = p
+        if temp_object:
+            folio_object[property_name_level1] = temp_object
+
     def map_objects_array_props(
         self, legacy_object, prop_name, properties, folio_object, index_or_id
     ):
         resulting_array = []
-
         for i in range(9):
             temp_object = {}
             for prop in (
@@ -367,11 +435,11 @@ class MapperBase:
                 prop_path = f"{prop_name}[{i}].{prop}"
                 # logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
-                    res = self.get_prop(legacy_object, prop_path, index_or_id, i)
+                    res = self.get_prop(legacy_object, prop_path, index_or_id)
                     self.report_legacy_mapping(
-                        self.legacy_property(prop), True, not bool(res)
+                        self.legacy_property(prop), True, res in ["", None, []]
                     )
-                    self.report_folio_mapping(prop_path, True, not bool(res))
+                    self.report_folio_mapping(prop_path, True, res in ["", None, []])
                     temp_object[prop] = res
 
             if temp_object != {} and all(
@@ -386,26 +454,31 @@ class MapperBase:
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
         # logging.debug(f"String array {prop}")
-        if self.has_property(legacy_object, prop):  # is there a match in the csv?
-            # logging.debug(f"Has string array property! {prop}")
-            for i in range(5):
-                mapped_prop = self.get_prop(legacy_object, prop, index_or_id, i)
-                if mapped_prop:
-                    # logging.debug(f"Mapped string array prop {mapped_prop}")
-                    if prop in folio_object and mapped_prop not in folio_object.get(
-                        prop, []
-                    ):
-                        folio_object.get(prop, []).append(mapped_prop)
-                    else:
-                        folio_object[prop] = [mapped_prop]
-                    # logging.debug(f"Mapped string array prop {folio_object[prop]}")
-                    self.report_legacy_mapping(self.legacy_property(prop), True, False)
-                    self.report_folio_mapping(prop, True, False)
-                else:  # Match but empty field. Lets report this
-                    self.report_legacy_mapping(self.legacy_property(prop), True, True)
-                    self.report_folio_mapping(prop, True, True)
-        else:
-            self.report_folio_mapping(prop, False)
+        for i in range(9):
+            prop_name = f"{prop}[{i}]"
+            if prop_name in self.folio_keys:
+                if self.has_property(legacy_object, prop_name):
+                    mapped_prop = self.get_prop(legacy_object, prop_name, index_or_id)
+                    if mapped_prop:
+                        # logging.debug(f"Mapped string array prop {mapped_prop}")
+                        if prop in folio_object and mapped_prop not in folio_object.get(
+                            prop, []
+                        ):
+                            folio_object.get(prop, []).append(mapped_prop)
+                        else:
+                            folio_object[prop] = [mapped_prop]
+                        # logging.debug(f"Mapped string array prop {folio_object[prop]}")
+                        self.report_legacy_mapping(
+                            self.legacy_property(prop_name), True, False
+                        )
+                        self.report_folio_mapping(prop_name, True, False)
+                    else:  # Match but empty field. Lets report this
+                        self.report_legacy_mapping(
+                            self.legacy_property(prop_name), True, True
+                        )
+                        self.report_folio_mapping(prop_name, True, True)
+                else:
+                    self.report_folio_mapping(prop_name, False)
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
@@ -528,6 +601,14 @@ class MapperBase:
         d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
         self.ref_data_dicts[dict_key] = d
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ())
+
+
+def skip_property(property_name_level1, property_level1):
+    return bool(
+        property_name_level1 in ["metadata", "id", "type", "lastCheckIn"]
+        or property_name_level1.startswith("effective")
+        or property_level1.get("folio:isVirtual", False)
+    )
 
 
 def as_str(s):

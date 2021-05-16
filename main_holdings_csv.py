@@ -83,7 +83,7 @@ class Worker(MainBase):
                     file_name,
                     encoding="utf-8-sig",
                 ) as records_file:
-                    self.mapper.add_stats("Number of files processed")
+                    self.mapper.add_to_migration_report("General numbers", "Number of files processed")
                     start = time.time()
                     for idx, record in enumerate(
                         self.mapper.get_objects(records_file, file_name)
@@ -115,7 +115,7 @@ class Worker(MainBase):
                             )
                             exit()
 
-                        self.mapper.add_stats("Number of Legacy items in file")
+                        self.mapper.add_to_migration_report("General numbers", "Number of Legacy items in file")
                         if idx > 1 and idx % 10000 == 0:
                             elapsed = idx / (time.time() - start)
                             elapsed_formatted = "{0:.4g}".format(elapsed)
@@ -181,7 +181,7 @@ class Worker(MainBase):
             c["callNumber"] = call_numbers[bwidx]
             c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
             c["id"] = str(uuid.uuid4())
-            self.mapper.add_stats("Bound-with holdings created")
+            self.mapper.add_to_migration_report("General numbers", "Bound-with holdings created")
             yield c
 
     def merge_holding_in(self, folio_holding):
@@ -192,10 +192,10 @@ class Worker(MainBase):
             and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
         )
         if exclude or not existing_holding:
-            self.mapper.add_stats("Unique Holdings created from Items")
+            self.mapper.add_to_migration_report("General numbers", "Unique Holdings created from Items")
             self.holdings[new_holding_key] = folio_holding
         else:
-            self.mapper.add_stats("Holdings already created from Item")
+            self.mapper.add_to_migration_report("General numbers", "Holdings already created from Item")
             self.merge_holding(new_holding_key, existing_holding, folio_holding)
 
     def wrap_up(self):
@@ -213,12 +213,11 @@ class Worker(MainBase):
                             self.legacy_map[legacy_id] = {"id": holding["id"]}
 
                     Helper.write_to_file(holdings_file, holding)
-                    self.mapper.add_stats("Holdings Records Written to disk")
+                    self.mapper.add_to_migration_report("General numbers", "Holdings Records Written to disk")
             legacy_path = os.path.join(self.results_path, "holdings_id_map.json")
             with open(legacy_path, "w") as legacy_map_path_file:
                 json.dump(self.legacy_map, legacy_map_path_file)
                 logging.info(f"Wrote {len(self.legacy_map)} id:s to legacy map")
-        self.mapper.print_dict_to_md_table(self.mapper.stats)
         p = os.path.join(
             self.results_path,
             "holdings_transformation_report.md",

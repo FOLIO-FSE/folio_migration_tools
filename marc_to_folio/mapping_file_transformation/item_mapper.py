@@ -34,7 +34,7 @@ class ItemMapper(MapperBase):
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
-
+        self.set_to_migration_report("Holdings IDs mapped", f"Unique holdings", len(self.holdings_id_map))
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         if call_number_type_map:
@@ -66,36 +66,28 @@ class ItemMapper(MapperBase):
     def perform_additional_mappings(self):
         raise NotImplementedError()
 
-    def get_prop(self, legacy_item, folio_prop_name, index_or_id, i=0):
+    def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         # logging.debug(f"get item prop {folio_prop_name}")
         if self.use_map:
-            formatted_prop_name = f"{folio_prop_name}[{i}]"
-            legacy_item_keys = [
-                k["legacy_field"]
-                for k in self.items_map["data"]
-                if k["folio_field"] in [folio_prop_name, formatted_prop_name]
-            ]
-
-            legacy_value = ""
-            vals = [legacy_item[k] for k in legacy_item_keys if legacy_item.get(k, "") not in ["", None]]
+            # legacy_item_keys = [k["legacy_field"] for k in self.items_map["data"]
+            #            if k["folio_field"] == folio_prop_name]
             # vals = [v for k, v in legacy_item.items() if k in legacy_item_keys]
-            legacy_value = " ".join(vals).strip()
-            self.add_to_migration_report("Source fields with same target", len(vals))
+            legacy_item_keys =self.mapped_from_legacy_data.get(
+                folio_prop_name, []
+            )
+            # legacy_value = ""
+            legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
+            legacy_value = " ".join(legacy_values).strip()
             if folio_prop_name in ["permanentLocationId", "temporaryLocationId"]:
                 return self.get_location_id(legacy_item, index_or_id)
             elif folio_prop_name == "materialTypeId":
-                mt = self.get_material_type_id(legacy_item)
-                if not mt:
-                    raise TransformationCriticalDataError(
-                        f"material Type id not mapped. {legacy_item_keys} - {vals}"
-                    )
-                return mt
+                return self.get_material_type_id(legacy_item)
             elif folio_prop_name == "itemLevelCallNumberTypeId":
                 return self.get_item_level_call_number_type_id(legacy_item)
             elif folio_prop_name == "status.name":
                 return self.transform_status(legacy_value)
             elif folio_prop_name == "barcode":
-                return next((v for v in vals if v), "")
+                return next((v for v in legacy_values if v), "")
             elif folio_prop_name == "status.date":
                 return datetime.utcnow().isoformat()
             elif folio_prop_name in ["permanentLoanTypeId", "temporaryLoanTypeId"]:
@@ -111,15 +103,8 @@ class ItemMapper(MapperBase):
                 else:
                     self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
                     return self.holdings_id_map[legacy_value]["id"]
-            elif len(legacy_item_keys) == 1:
-                value = next(
-                    (
-                        k.get("value", "")
-                        for k in self.items_map["data"]
-                        if k["folio_field"] == folio_prop_name
-                    ),
-                    "",
-                )
+            elif len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
+                value = self.mapped_from_values.get(folio_prop_name, "")
                 if value not in [None, ""]:
                     return value
                 else:
@@ -142,6 +127,7 @@ class ItemMapper(MapperBase):
             self.statistical_codes_keys,
             self.statistical_codes_mappings,
             "",
+            "",
             "folio_code",
         )
 
@@ -152,6 +138,7 @@ class ItemMapper(MapperBase):
             self.loan_type_keys,
             self.loan_type_map,
             self.default_loan_type_id,
+            self.default_loan_type_name,
             "folio_name",
         )
 
@@ -162,6 +149,7 @@ class ItemMapper(MapperBase):
             self.material_type_keys,
             self.material_type_map,
             self.default_material_type_id,
+            self.default_material_type_name,
             "folio_name",
         )
 
@@ -172,6 +160,7 @@ class ItemMapper(MapperBase):
             self.location_keys,
             self.location_map,
             self.default_location_id,
+            self.default_location_name,
             "folio_code",
         )
 
@@ -183,6 +172,7 @@ class ItemMapper(MapperBase):
                 self.call_number_type_keys,
                 self.call_number_type_map,
                 self.default_call_number_type_id,
+                self.default_call_number_type_name,
                 "folio_name",
             )
         self.add_to_migration_report(
@@ -252,6 +242,7 @@ class ItemMapper(MapperBase):
                     )
                     if t:
                         self.default_call_number_type_id = t[0]
+                        self.default_call_number_type_name = t[1]
                         logging.info(
                             f'Set {call_number_type_mapping["folio_name"]} as default call_numbertype mapping'
                         )
@@ -320,6 +311,7 @@ class ItemMapper(MapperBase):
                             "Add a row to mapping file with *:s and a valid loan type"
                         )
                     self.default_loan_type_id = t[0]
+                    self.default_loan_type_name = t[1]
                     logging.info(
                         f'Set {loan_type_mapping["folio_name"]} as default Loantype mapping'
                     )
@@ -377,6 +369,7 @@ class ItemMapper(MapperBase):
                             "Add a row to mapping file with *:s and a valid Material type"
                         )
                     self.default_material_type_id = t[0]
+                    self.default_material_type_name = t[1]
                     logging.info(
                         f'Set {mat_mapping["folio_name"]} as default material type mapping'
                     )

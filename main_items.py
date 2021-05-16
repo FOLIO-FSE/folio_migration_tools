@@ -199,7 +199,6 @@ def main():
         with open(items_map_path) as items_mapper_f:
             items_map = json.load(items_mapper_f)
             folio_keys = MapperBase.get_mapped_folio_properties_from_map(items_map)
-            print(json.dumps(folio_keys))
             logging.info(f'{len(items_map["data"])} fields in item mapping file map')
             mapped_fields = (
                 f
