@@ -58,7 +58,6 @@ class Worker(MainBase):
         logging.info("Init done")
 
     def work(self):
-        total_records = 0
         logging.info("Starting....")
         with open(
             os.path.join(self.results_path, "folio_items.json"), "w+"
@@ -66,64 +65,7 @@ class Worker(MainBase):
             for file_name in self.files:
                 logging.info(f"Processing {file_name}")
                 try:
-                    with open(file_name, encoding="utf-8-sig") as records_file:
-                        self.mapper.add_to_migration_report(
-                            "General statistics", "Number of files processed"
-                        )
-                        start = time.time()
-                        for idx, record in enumerate(self.mapper.get_objects(records_file, file_name)
-                        ):
-                            try:
-                                folio_rec = self.mapper.do_map(record, f"row {idx}")
-                                Helper.write_to_file(results_file, folio_rec)
-                                self.mapper.add_to_migration_report(
-                                    "General statistics",
-                                    "Number of records written to disk",
-                                )
-                            except TransformationProcessError as process_error:
-                                self.mapper.add_stats("Failed due to a process error")
-                                logging.error(f"{idx}\t{process_error}")
-                            except TransformationCriticalDataError as data_error:
-                                self.mapper.add_stats("Failed due to a data error")
-                                logging.error(f"{idx}\t{data_error}")
-                                self.num_criticalerrors += 1
-                                if self.num_criticalerrors > 10000:
-                                    logging.fatal("Stopping. More than 10,000 critical data errors")
-                                    exit()
-                            except Exception as excepion:
-                                self.num_exeptions += 1
-                                print("\n=======ERROR===========")
-                                print(
-                                    f"row {idx:,} failed with the following Exception: {excepion} "
-                                    f" of type {type(excepion).__name__}"
-                                )
-                                print("\n=======Stack Trace===========")
-                                traceback.print_exc()
-                                if self.num_exeptions > 10:
-                                    raise Exception(
-                                        f"Number of exceptions exceeded limit of "
-                                        f"{self.num_exeptions}. Stopping."
-                                    )
-                            self.mapper.add_to_migration_report(
-                                "General statistics",
-                                f"Number of Legacy items in {file_name}",
-                            )
-                            self.mapper.add_to_migration_report(
-                                "General statistics", f"Number of Legacy items in total"
-                            )
-                            if idx > 1 and idx % 10000 == 0:
-                                elapsed = idx / (time.time() - start)
-                                elapsed_formatted = "{0:.4g}".format(elapsed)
-                                logging.info(
-                                    f"{idx:,} records processed. "
-                                    f"Recs/sec: {elapsed_formatted} "
-                                )
-                        total_records += idx
-                        logging.info(
-                            f"Done processing {file_name} containing {idx:,} records. "
-                            f"Total records processed: {total_records:,}"
-                        )
-
+                    self.process_single_file(file_name, results_file)
                 except Exception as ee:
                     error_str = (
                         f"\n\nProcessing of {file_name} failed:\n{ee}."
@@ -134,9 +76,86 @@ class Worker(MainBase):
                         "Failed files", f"{file_name} - {ee}"
                     )
                     logging.fatal(error_str)
-                    exit() 
-        logging.info(f"processed {total_records:,} records in {len(self.files)} files")
+                    exit()
+        logging.info(
+            f"processed {self.total_records:,} records in {len(self.files)} files"
+        )
+
+    def process_single_file(self, file_name, results_file):
+        with open(file_name, encoding="utf-8-sig") as records_file:
+            self.mapper.add_to_migration_report(
+                "General statistics", "Number of files processed"
+            )
+            start = time.time()
+            for idx, record in enumerate(
+                self.mapper.get_objects(records_file, file_name)
+            ):
+                try:
+                    folio_rec = self.mapper.do_map(record, f"row {idx}")
+                    Helper.write_to_file(results_file, folio_rec)
+                    self.mapper.add_to_migration_report(
+                        "General statistics",
+                        "Number of records written to disk",
+                    )
+                except TransformationProcessError as process_error:
+                    self.mapper.add_to_migration_report(
+                        "General statistics",
+                        "Records failed due to a process error",
+                    )
+                    logging.error(f"{idx}\t{process_error}")
+                except TransformationCriticalDataError as data_error:
+                    self.handle_transformation_critical_error(idx, data_error)
+                except Exception as excepion:
+                    self.handle_generic_exception(idx, excepion)
+
+                self.mapper.add_to_migration_report(
+                    "General statistics",
+                    f"Number of Legacy items in {file_name}",
+                )
+                self.mapper.add_to_migration_report(
+                    "General statistics", f"Number of Legacy items in total"
+                )
+                if idx > 1 and idx % 10000 == 0:
+                    elapsed = idx / (time.time() - start)
+                    elapsed_formatted = "{0:.4g}".format(elapsed)
+                    logging.info(
+                        f"{idx:,} records processed. " f"Recs/sec: {elapsed_formatted} "
+                    )
+
+            total_records = 0
+            total_records += idx
+            logging.info(
+                f"Done processing {file_name} containing {idx:,} records. "
+                f"Total records processed: {total_records:,}"
+            )
         self.total_records = total_records
+
+    def handle_transformation_critical_error(
+        self, idx, data_error: TransformationCriticalDataError
+    ):
+        self.mapper.add_to_migration_report(
+            "General statistics", "Records failed due to a data error"
+        )
+        logging.error(f"{idx}\t{data_error}")
+        self.num_criticalerrors += 1
+        if self.num_criticalerrors > 10000:
+            logging.fatal("Stopping. More than 10,000 critical data errors")
+            exit()
+
+    def handle_generic_exception(self, idx, excepion: Exception):
+        self.num_exeptions += 1
+        print("\n=======ERROR===========")
+        print(
+            f"row {idx:,} failed with the following unhandled Exception: {excepion}  "
+            f"of type {type(excepion).__name__}"
+        )
+
+        print("\n=======Stack Trace===========")
+        traceback.print_exc()
+        if self.num_exeptions > 10:
+            raise Exception(
+                f"Number of exceptions exceeded limit of {self.num_exeptions}. Stopping."
+            )
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
@@ -234,16 +253,10 @@ def main():
             )
 
         if "statisticalCodeIds" in folio_keys:
-            statcode_map_path = setup_path(
-                args.map_path, "statcodes.tsv"
-            )
+            statcode_map_path = setup_path(args.map_path, "statcodes.tsv")
             with open(statcode_map_path) as statcode_map_file:
-                statcode_map = list(
-                    csv.DictReader(statcode_map_file, dialect="tsv")
-                )
-                logging.info(
-                    f"Found {len(statcode_map)} rows in statistical codes map"
-                )
+                statcode_map = list(csv.DictReader(statcode_map_file, dialect="tsv"))
+                logging.info(f"Found {len(statcode_map)} rows in statistical codes map")
                 logging.info(
                     f'{",".join(statcode_map[0].keys())} '
                     "will be used for determinig Statistical codes"
@@ -268,9 +281,9 @@ def main():
         else:
             call_number_type_map = None
 
-        with open(holdings_id_dict_path, "r") as holdings_id_map_file, open(location_map_path) as location_map_f, open(
-            error_file_path, "w"
-        ) as error_file:
+        with open(holdings_id_dict_path, "r") as holdings_id_map_file, open(
+            location_map_path
+        ) as location_map_f, open(error_file_path, "w") as error_file:
             holdings_id_map = json.load(holdings_id_map_file)
             logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
 
