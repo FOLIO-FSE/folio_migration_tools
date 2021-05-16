@@ -98,11 +98,7 @@ class Worker(MainBase):
                         "Number of records written to disk",
                     )
                 except TransformationProcessError as process_error:
-                    self.mapper.add_to_migration_report(
-                        "General statistics",
-                        "Records failed due to a process error",
-                    )
-                    logging.error(f"{idx}\t{process_error}")
+                    self.handle_transformation_process_error(idx, process_error)
                 except TransformationCriticalDataError as data_error:
                     self.handle_transformation_critical_error(idx, data_error)
                 except Exception as excepion:
@@ -129,6 +125,13 @@ class Worker(MainBase):
                 f"Total records processed: {total_records:,}"
             )
         self.total_records = total_records
+
+    def handle_transformation_process_error(self, idx, process_error: TransformationProcessError):
+        self.mapper.add_to_migration_report(
+                        "General statistics",
+                        "Records failed due to a process error",
+                    )
+        logging.error(f"{idx}\t{process_error}")
 
     def handle_transformation_critical_error(
         self, idx, data_error: TransformationCriticalDataError
