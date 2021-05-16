@@ -1,5 +1,6 @@
 import json
 import logging
+from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
 import re
 from marc_to_folio.custom_exceptions import TransformationProcessError
 from folioclient import FolioClient
@@ -16,88 +17,33 @@ class HoldingsMapper(MapperBase):
         location_map,
         call_number_type_map,
         instance_id_map,
-        error_file,
     ):
         holdings_schema = folio_client.get_holdings_schema()
         self.instance_id_map = instance_id_map
-        super().__init__(folio_client, holdings_schema, holdings_map, error_file)
+        super().__init__(folio_client, holdings_schema, holdings_map)
         self.holdings_map = holdings_map
 
-        self.call_number_type_map = call_number_type_map
-        self.call_number_type_keys = []
-        self.default_call_number_type_id = ""
-        self.setup_call_number_type_mappings()
-
-        self.location_map = location_map
-        self.location_keys = []
-        self.default_location_id = ""
-        self.default_location_name = ""
-        self.setup_location_mappings(location_map)
-
-    def setup_call_number_type_mappings(self):
-        logging.info("Fetching Callnumber types...")
-        self.folio_call_number_types = list(
-            self.folio_client.folio_get_all("/call-number-types", "callNumberTypes")
+        self.location_mapping = RefDataMapping(
+            self.folio_client, "/locations", "locations", location_map, "code"
         )
-        for idx, call_number_type_mapping in enumerate(self.call_number_type_map):
-            try:
-                if idx == 1:
-                    self.call_number_type_keys = [
-                        k
-                        for k in call_number_type_mapping.keys()
-                        if k not in ["folio_code", "folio_id", "folio_name"]
-                    ]
-                if any(m for m in call_number_type_mapping.values() if m == "*"):
-                    t = self.get_ref_data_tuple_by_name(
-                        self.folio_call_number_types,
-                        "callnumbers",
-                        call_number_type_mapping["folio_name"],
-                    )
-                    if not t:
-                        raise TransformationProcessError(
-                            "No Default call_number type set up in map."
-                            "Add a row to mapping file with *:s and a valid call_number type"
-                        )
-                    self.default_call_number_type_id = t[0]
-                    logging.info(
-                        f'Set {call_number_type_mapping["folio_name"]} as default call_numbertype mapping'
-                    )
-                else:
-                    call_number_type_mapping[
-                        "folio_id"
-                    ] = self.get_ref_data_tuple_by_name(
-                        self.folio_call_number_types,
-                        "callnumbers",
-                        call_number_type_mapping["folio_name"],
-                    )[
-                        0
-                    ]
-            except TransformationProcessError as te:
-                raise te
-            except Exception:
-                logging.info(json.dumps(self.call_number_type_map, indent=4))
-                raise TransformationProcessError(
-                    f"{call_number_type_mapping['folio_name']} could not be found in FOLIO"
-                )
-        if not self.default_call_number_type_id:
-            raise TransformationProcessError(
-                "No Default Callnumber type set up in map."
-                "Add a row to mapping file with *:s and a valid callnumber type"
+        if call_number_type_map:
+            self.call_number_mapping = RefDataMapping(
+                self.folio_client,
+                "/call-number-types",
+                "callNumberTypes",
+                call_number_type_map,
+                "name",
             )
-        logging.info(
-            f"loaded {idx} mappings for {len(self.folio_call_number_types)} loan types in FOLIO"
-        )
-        print(json.dumps(self.call_number_type_map, indent=4))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         if self.use_map:
-            legacy_item_keys =self.mapped_from_legacy_data.get(
-                folio_prop_name, []
-            )
+            legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
             legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
             legacy_value = " ".join(legacy_values).strip()
-            if folio_prop_name in ["permanentLocationId", "temporaryLocationId"]:
+            if folio_prop_name == "permanentLocationId":
                 return self.get_location_id(legacy_item, index_or_id)
+            elif folio_prop_name == "temporaryLocationId": 
+                return self.get_location_id(legacy_item, index_or_id, True)
             elif folio_prop_name == "callNumber":
                 if legacy_value.startswith("["):
                     self.add_stats("Bound-with items callnumber identified")
@@ -109,7 +55,7 @@ class HoldingsMapper(MapperBase):
             elif folio_prop_name == "callNumberTypeId":
                 return self.get_call_number_type_id(legacy_item)
             elif folio_prop_name == "statisticalCodeIds":
-                return self.get_statistical_codes(vals)
+                return self.get_statistical_codes(legacy_values)
             elif folio_prop_name == "instanceId":
                 return self.get_instance_ids(legacy_value, index_or_id)
             elif len(legacy_item_keys) == 1:
@@ -124,7 +70,7 @@ class HoldingsMapper(MapperBase):
                 logging.debug(
                     f"Multiple values from multiple mappings to return{folio_prop_name} "
                 )
-                return vals
+                return legacy_values
             else:
                 self.report_folio_mapping(f"Edge case: {folio_prop_name}", False, False)
                 return ""
@@ -132,19 +78,20 @@ class HoldingsMapper(MapperBase):
             self.report_folio_mapping(f"{folio_prop_name}", True, False)
             return legacy_item[folio_prop_name]
 
-    def get_location_id(self, legacy_item: dict, id_or_index):
+    def get_location_id(self, legacy_item: dict, id_or_index, prevent_default=False):
         return self.get_mapped_value(
-            "Location",
-            legacy_item,
-            self.location_keys,
-            self.location_map,
-            self.default_location_id,
-            self.default_location_name,
-            "folio_code",
+            self.location_mapping,
+            legacy_item, prevent_default
         )
 
     def get_call_number_type_id(self, legacy_item):
-        return self.default_call_number_type_id
+        if self.call_number_mapping:
+            return self.get_mapped_value(
+                    self.call_number_mapping,
+                    legacy_item
+                )
+        self.add_to_migration_report("Call number type mapping", "No mapping")
+        return ""
 
     def get_instance_ids(self, legacy_value: str, index_or_id: str):
         # Returns a list of Id:s

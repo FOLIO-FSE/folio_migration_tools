@@ -1,6 +1,7 @@
 import csv
 import json
 import logging
+from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from marc_to_folio.custom_exceptions import (
     TransformationCriticalDataError,
     TransformationDataError,
@@ -16,7 +17,7 @@ import os
 
 
 class MapperBase:
-    def __init__(self, folio_client: FolioClient, schema, record_map, error_file):
+    def __init__(self, folio_client: FolioClient, schema, record_map):
         self.schema = schema
         self.stats = {}
         self.migration_report = {}
@@ -25,7 +26,8 @@ class MapperBase:
         self.mapped_legacy_fields = {}
         self.use_map = True  # Legacy
         self.record_map = record_map
-        self.error_file = error_file
+        self.num_exeptions = 0
+        self.num_criticalerrors = 0
         self.ref_data_dicts = {}
         self.empty_vals = ["Not mapped", None, ""]
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
@@ -40,19 +42,28 @@ class MapperBase:
         for k in self.record_map["data"]:
             if k["value"] not in [None, ""]:
                 self.mapped_from_values[k["folio_field"]] = k["value"]
-        logging.info(f"Mapped values:\n{json.dumps(self.mapped_from_values, indent=4, sort_keys=True)}")
+        logging.info(
+            f"Mapped values:\n{json.dumps(self.mapped_from_values, indent=4, sort_keys=True)}"
+        )
 
         self.mapped_from_legacy_data = {}
         for k in self.record_map["data"]:
-            if k["legacy_field"] not in self.empty_vals or k["value"] not in self.empty_vals:
+            if (
+                k["legacy_field"] not in self.empty_vals
+                or k["value"] not in self.empty_vals
+            ):
                 if not self.mapped_from_legacy_data.get(k["folio_field"]):
                     self.mapped_from_legacy_data[k["folio_field"]] = {k["legacy_field"]}
                 else:
                     self.mapped_from_legacy_data[k["folio_field"]].add(
                         k["legacy_field"]
                     )
-        logging.info(f"Mapped legacy fields:\n{json.dumps(list(self.mapped_from_legacy_data), indent=4, sort_keys=True)}")
-        logging.info(f"Mapped FOLIO fields:\n{json.dumps(self.folio_keys, indent=4, sort_keys=True)}")
+        logging.info(
+            f"Mapped legacy fields:\n{json.dumps(list(self.mapped_from_legacy_data), indent=4, sort_keys=True)}"
+        )
+        logging.info(
+            f"Mapped FOLIO fields:\n{json.dumps(self.folio_keys, indent=4, sort_keys=True)}"
+        )
         csv.register_dialect("tsv", delimiter="\t")
 
     def write_migration_report(self, report_file):
@@ -79,6 +90,35 @@ class MapperBase:
             for b in sortedlist:
                 report_file.write(f"{b[0]} | {b[1]}   \n")
             report_file.write("</details>   \n")
+
+    def handle_transformation_process_error(
+        self, idx, process_error: TransformationProcessError
+    ):
+        self.add_to_migration_report(
+            "General statistics", "Records failed due to a process error"
+        )
+
+        logging.error(f"{idx}\t{process_error}")
+
+    def handle_transformation_critical_error(
+        self, idx, data_error: TransformationCriticalDataError
+    ):
+        self.add_to_migration_report(
+            "General statistics", "Records failed due to a data error"
+        )
+        logging.error(f"{idx}\t{data_error}")
+        self.num_criticalerrors += 1
+        if self.num_criticalerrors > 10000:
+            logging.fatal("Stopping. More than 10,000 critical data errors")
+            exit()
+
+    def handle_generic_exception(self, idx, excepion: Exception):
+        self.num_exeptions += 1
+        print("\n=======ERROR===========")
+        print(
+            f"Row {idx:,} failed with the following unhandled Exception: {excepion}  "
+            f"of type {type(excepion).__name__}"
+        )
 
     @staticmethod
     def get_mapped_folio_properties_from_map(map):
@@ -168,63 +208,13 @@ class MapperBase:
         for k, v in d_sorted.items():
             print(f"{k} | {v}")
 
-    def setup_location_mappings(self, location_map):
-        # Locations
-        logging.info("Fetching locations...")
-        for idx, loc_map in enumerate(location_map):
-            if idx == 1:
-                self.location_keys = [
-                    k
-                    for k in loc_map.keys()
-                    if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
-                ]
-
-            if any(m for m in loc_map.values() if m == "*"):
-                t = self.get_ref_data_tuple_by_code(
-                    self.folio_client.locations, "locations", loc_map["folio_code"]
-                )
-                if not t:
-                    raise TransformationProcessError(
-                        f"Default location {loc_map['folio_code']} not found in folio. "
-                        "Change default code"
-                    )
-                self.default_location_id = t[0]
-                self.default_location_name = t[1]
-                logging.info(f'Set {loc_map["folio_code"]} as default location')
-            else:
-                t = self.get_ref_data_tuple_by_code(
-                    self.folio_client.locations, "locations", loc_map["folio_code"]
-                )
-                if t:
-                    loc_map["folio_id"] = t[0]
-                else:
-                    raise TransformationProcessError(
-                        f"Location code {loc_map['folio_code']} from map not found in FOLIO"
-                    )
-
-        if not self.default_location_id:
-            raise TransformationProcessError(
-                "No Default Location set up in map. "
-                "Add a row to mapping file with *:s and a valid Location code"
-            )
-        logging.info(
-            f"loaded {idx} mappings for {len(self.folio_client.locations)} locations in FOLIO"
-        )
-
     def get_mapped_value(
-        self,
-        name_of_mapping,
-        legacy_object,
-        legacy_keys,
-        map,
-        default_value,
-        default_name,
-        map_key,
+        self, ref_dat_mapping: RefDataMapping, legacy_object, prevent_default=False
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
             # Get the values in the fields that will be used for mapping
-            fieldvalues = [legacy_object.get(k) for k in legacy_keys]
+            fieldvalues = [legacy_object.get(k) for k in ref_dat_mapping.keys]
             # logging.debug(f"fieldvalues are {fieldvalues}")
 
             # Gets the first line in the map satisfying all legacy mapping values.
@@ -232,30 +222,36 @@ class MapperBase:
             # TODO: add option for Wild card matching in individual columns
             right_mapping = next(
                 mapping
-                for mapping in map
+                for mapping in ref_dat_mapping.map
                 if all(
                     legacy_object[k].strip().casefold() in mapping[k].casefold()
-                    for k in legacy_keys
+                    for k in ref_dat_mapping.keys
                 )
             )
             # logging.debug(f"Found mapping is {right_mapping}")
             self.add_to_migration_report(
-                f"{name_of_mapping} mapping",
-                f'{" - ".join(fieldvalues)} -> {right_mapping[map_key]}',
+                f"{ref_dat_mapping.name} mapping",
+                f'{" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',
             )
             return right_mapping["folio_id"]
         except StopIteration:
+            if prevent_default:
+                self.add_to_migration_report(
+                    f"{ref_dat_mapping.name} mapping",
+                    f'Unmapped -- {" - ".join(fieldvalues)} -> "" (No default)',
+                )
+                return ""
             self.add_to_migration_report(
-                f"{name_of_mapping} mapping",
-                f'Unmapped -- {" - ".join(fieldvalues)} -> {default_value}',
+                f"{ref_dat_mapping.name} mapping",
+                f'Unmapped -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
             )
-            return default_value
+            return ref_dat_mapping.default_id
         except Exception as ee:
             raise TransformationCriticalDataError(
-                f"{name_of_mapping} - {map_key} ({legacy_keys}) {ee}"
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.keys}) {ee}"
             )
 
-    def add_to_migration_report(self, header:str, measure_to_add: str):
+    def add_to_migration_report(self, header: str, measure_to_add: str):
         if header not in self.migration_report:
             self.migration_report[header] = {}
         if measure_to_add not in self.migration_report[header]:
@@ -263,7 +259,7 @@ class MapperBase:
         else:
             self.migration_report[header][measure_to_add] += 1
 
-    def set_to_migration_report(self, header:str, measure_to_add:str, number: int):
+    def set_to_migration_report(self, header: str, measure_to_add: str, number: int):
         if header not in self.migration_report:
             self.migration_report[header] = {}
         self.migration_report[header][measure_to_add] = number
@@ -287,7 +283,7 @@ class MapperBase:
                 )
             except TransformationDataError as data_error:
                 self.add_stats("Data issues found")
-                self.error_file.write(data_error)
+                logging.error(data_error)
         self.validate_object(folio_object, index_or_id)
         return folio_object
 
@@ -461,8 +457,9 @@ class MapperBase:
                     mapped_prop = self.get_prop(legacy_object, prop_name, index_or_id)
                     if mapped_prop:
                         # logging.debug(f"Mapped string array prop {mapped_prop}")
-                        if prop in folio_object and mapped_prop not in folio_object.get(
-                            prop, []
+                        if (
+                            prop in folio_object
+                            and mapped_prop not in folio_object.get(prop, [])
                         ):
                             folio_object.get(prop, []).append(mapped_prop)
                         else:

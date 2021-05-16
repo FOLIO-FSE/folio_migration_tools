@@ -59,7 +59,6 @@ class Worker(MainBase):
         self.failed_files: List[str] = list()
         self.num_exeptions = 0
         self.error_file = error_file
-        logging.info("Init done")
         self.holdings_types = list(
             self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
         )
@@ -72,6 +71,8 @@ class Worker(MainBase):
             raise TransformationProcessError(
                 f"Holdings type named Unmapped not found in FOLIO."
             )
+        logging.info("Init done")
+        
 
     def work(self):
         total_records = 0
@@ -83,7 +84,9 @@ class Worker(MainBase):
                     file_name,
                     encoding="utf-8-sig",
                 ) as records_file:
-                    self.mapper.add_to_migration_report("General numbers", "Number of files processed")
+                    self.mapper.add_to_migration_report(
+                        "General statistics", "Number of files processed"
+                    )
                     start = time.time()
                     for idx, record in enumerate(
                         self.mapper.get_objects(records_file, file_name)
@@ -115,7 +118,9 @@ class Worker(MainBase):
                             )
                             exit()
 
-                        self.mapper.add_to_migration_report("General numbers", "Number of Legacy items in file")
+                        self.mapper.add_to_migration_report(
+                            "General statistics", "Number of Legacy items in file"
+                        )
                         if idx > 1 and idx % 10000 == 0:
                             elapsed = idx / (time.time() - start)
                             elapsed_formatted = "{0:.4g}".format(elapsed)
@@ -158,7 +163,7 @@ class Worker(MainBase):
 
     def create_bound_with_holdings(self, folio_rec):
         note = {
-            "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e", # Default binding note type
+            "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e",  # Default binding note type
             "note": (
                 f'This Record is a Bound-with. It is bound-with {len(folio_rec["instanceId"])}\n'
                 f'instances. Search within this volume :<a href="{"&".join(folio_rec["instanceId"])}'
@@ -181,7 +186,9 @@ class Worker(MainBase):
             c["callNumber"] = call_numbers[bwidx]
             c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
             c["id"] = str(uuid.uuid4())
-            self.mapper.add_to_migration_report("General numbers", "Bound-with holdings created")
+            self.mapper.add_to_migration_report(
+                "General statistics", "Bound-with holdings created"
+            )
             yield c
 
     def merge_holding_in(self, folio_holding):
@@ -192,10 +199,14 @@ class Worker(MainBase):
             and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
         )
         if exclude or not existing_holding:
-            self.mapper.add_to_migration_report("General numbers", "Unique Holdings created from Items")
+            self.mapper.add_to_migration_report(
+                "General statistics", "Unique Holdings created from Items"
+            )
             self.holdings[new_holding_key] = folio_holding
         else:
-            self.mapper.add_to_migration_report("General numbers", "Holdings already created from Item")
+            self.mapper.add_to_migration_report(
+                "General statistics", "Holdings already created from Item"
+            )
             self.merge_holding(new_holding_key, existing_holding, folio_holding)
 
     def wrap_up(self):
@@ -213,7 +224,9 @@ class Worker(MainBase):
                             self.legacy_map[legacy_id] = {"id": holding["id"]}
 
                     Helper.write_to_file(holdings_file, holding)
-                    self.mapper.add_to_migration_report("General numbers", "Holdings Records Written to disk")
+                    self.mapper.add_to_migration_report(
+                        "General statistics", "Holdings Records Written to disk"
+                    )
             legacy_path = os.path.join(self.results_path, "holdings_id_map.json")
             with open(legacy_path, "w") as legacy_map_path_file:
                 json.dump(self.legacy_map, legacy_map_path_file)
@@ -293,7 +306,9 @@ def parse_args():
         "the same Holdings record in FOLIO. \n"
         "\tclb\t-\tCallNumber, Location, Bib ID\n"
         "\tlb\t-\tLocation and Bib ID only\n"
-        "\t{clb}_HOLDINGS_TYPEID\t-\tExclude holdings type with this UUID from merging"
+        "\tclb_7b94034e-ac0d-49c9-9417-0631a35d506b\t-\t "
+        "Exclude bound-with holdings from merging. Requires a "
+        "Holdings type in the tenant with this Id"
     )
     parser.add_argument(
         "--holdings_merge_criteria", "-hmc", default="clb", help=flavourhelp
@@ -386,7 +401,9 @@ def main():
             logging.info(
                 f'{len(holdings_map["data"])} fields in holdings mapping file map'
             )
-            mapped_fields = MapperBase.get_mapped_folio_properties_from_map(holdings_map)
+            mapped_fields = MapperBase.get_mapped_folio_properties_from_map(
+                holdings_map
+            )
             logging.info(
                 f"{len(list(mapped_fields))} Mapped fields in holdings mapping file map"
             )
@@ -402,7 +419,6 @@ def main():
                 location_map,
                 call_number_type_map,
                 instance_id_map,
-                error_file,
             )
             worker = Worker(
                 folio_client,
