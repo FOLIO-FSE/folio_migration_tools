@@ -68,7 +68,7 @@ class RefDataMapping(object):
                 raise TransformationProcessError(
                     f'{mapping[f"folio_{self.key_type}"]} could not be found in FOLIO'
                 )
-        if not self.default_call_number_type_id:
+        if not self.default_id:
             raise TransformationProcessError(
                 f"No {self.name} set up in map."
                 f"Add a row to mapping file with *:s and a valid {self.name}"
