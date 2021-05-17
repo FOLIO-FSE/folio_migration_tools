@@ -33,6 +33,7 @@ class BibsRulesMapper(RulesMapperBase):
         super().__init__(folio_client, Conditions(folio_client, self, "bibs"))
         self.folio = folio_client
         self.record_status = {}
+        self.unique_001s = set()
         self.migration_report = {}
         self.suppress = args.suppress
         self.ils_flavour = args.ils_flavour
@@ -44,6 +45,8 @@ class BibsRulesMapper(RulesMapperBase):
         self.mapped_folio_fields = {}
         self.unmapped_folio_fields = {}
         self.alt_title_map = {}
+        logging.info(f"HRID handling is set to: '{args.hrid_handling}'")
+        self.hrid_handling = args.hrid_handling
         logging.info("Fetching mapping rules from the tenant")
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
         logging.info("Fetching valid language codes...")
@@ -52,11 +55,11 @@ class BibsRulesMapper(RulesMapperBase):
         self.unmapped_conditions = {}
         self.instance_relationships = {}
         self.instance_relationship_types = {}
-        self.hrid_handling = self.folio.folio_get_single_object(
+        self.hrid_settings = self.folio.folio_get_single_object(
             "/hrid-settings-storage/hrid-settings"
         )
-        self.hrid_prefix = self.hrid_handling["instances"]["prefix"]
-        self.hrid_counter = self.hrid_handling["instances"]["startNumber"]
+        self.hrid_prefix = self.hrid_settings["instances"]["prefix"]
+        self.hrid_counter = self.hrid_settings["instances"]["startNumber"]
         logging.info(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
         self.other_mode_of_issuance_id = next(
             (
@@ -207,8 +210,8 @@ class BibsRulesMapper(RulesMapperBase):
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:
             holdingsfields = marc_record.get_fields("852", "866")
-            f852s = list(f for f in holdingsfields if f.tag == "852")
-            f866s = list(f for f in holdingsfields if f.tag == "866")
+            f852s = [f for f in holdingsfields if f.tag == "852"]
+            f866s = [f for f in holdingsfields if f.tag == "866"]
             self.add_to_migration_report(
                 "Holdings generation from bibs",
                 f"{len(f852s)} 852:s and {len(f866s)} 866:s in record",
@@ -389,14 +392,10 @@ class BibsRulesMapper(RulesMapperBase):
 
     def handle_hrid(self, folio_instance, marc_record: Record) -> None:
         """Create HRID if not mapped. Add hrid as MARC record 001"""
-        if "hrid" not in folio_instance:  #  HRID MAPPING FOLIO DEFAULT
-            self.add_to_migration_report(
-                "HRID Handling", "Records without HRID from rules. Created HRID"
-            )
+        if self.hrid_handling == "default" or "001" not in marc_record:
             num_part = str(self.hrid_counter).zfill(11)
             folio_instance["hrid"] = f"mig{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
-            marc_record.add_ordered_field(new_001)
             try:
                 new_035 = Field(
                     tag="035",
@@ -410,13 +409,23 @@ class BibsRulesMapper(RulesMapperBase):
                 self.add_to_migration_report(
                     "HRID Handling", "Failed to create 035 from 001"
                 )
+            marc_record.add_ordered_field(new_001)
+            self.add_to_migration_report("General statistics", "Created HRID")
             self.hrid_counter += 1
+        elif self.hrid_handling == "001":
+            value = marc_record["001"].value()
+            if value in self.unique_001s:
+                raise TransformationCriticalDataError(
+                    f"Duplicate 001 ({value}) for record."
+                )
+            self.unique_001s.add(value)
+            folio_instance["hrid"] = value
+            self.add_to_migration_report("General statistics", "Took HRID from 001")
         else:
-            self.add_to_migration_report(
-                "HRID Handling", "HRID created from mapping rules"
-            )
+            logging.critical(f"Unknown HRID handling: {self.hrid_handling}. Exiting")
+            exit()
 
-    def get_mode_of_issuance_id(self, marc_record :Record, legacy_id :str) -> str:
+    def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: str) -> str:
         level = marc_record.leader[7]
         try:
             name = "unspecified"
@@ -539,14 +548,7 @@ class BibsRulesMapper(RulesMapperBase):
 
     def get_legacy_ids(self, marc_record: Record, ils_flavour: str) -> List[str]:
         if ils_flavour in ["iii", "sierra", "millennium"]:
-            try:
-                return [marc_record["907"]["a"]]
-            except:
-                raise TransformationCriticalDataError(
-                    "unknown identifier",
-                    "907 $a is missing, although it is required for Sierra/iii migrations",
-                    marc_record.as_json(),
-                )
+            return get_iii_bib_id(marc_record)
         elif ils_flavour in ["907y"]:
             try:
                 return [marc_record["907"]["y"]]
@@ -566,34 +568,14 @@ class BibsRulesMapper(RulesMapperBase):
                     marc_record.as_json(),
                 )
         elif ils_flavour == "990a":
-            res = set()
-            for f in marc_record.get_fields("990"):
-                if "a" in f:
-                    res.add(f["a"].strip())
+            res = {f["a"].strip() for f in marc_record.get_fields("990") if "a" in f}
             if marc_record["001"].format_field().strip():
                 res.add(marc_record["001"].format_field().strip())
             if any(res):
                 self.add_stats(self.stats, "legacy id from 990$a")
                 return list(res)
         elif ils_flavour == "aleph":
-            res = set()
-            for f in marc_record.get_fields("998"):
-                if "b" in f:
-                    res.add(f["b"].strip())
-            if any(res):
-                self.add_stats(self.stats, "legacy id from 998$b")
-                return list(res)
-            else:
-                try:
-                    ret = [marc_record["001"].format_field().strip()]
-                    self.add_stats(self.stats, "legacy id from 001")
-                    return ret
-                except:
-                    raise TransformationCriticalDataError(
-                        "unknown identifier",
-                        "001 is missing.although that or 998$b is required for Aleph migrations",
-                        marc_record.as_json(),
-                    )
+            return self.get_aleph_bib_id(marc_record)
         elif ils_flavour in ["voyager", "001"]:
             try:
                 return [marc_record["001"].format_field().strip()]
@@ -614,3 +596,31 @@ class BibsRulesMapper(RulesMapperBase):
                 )
         else:
             raise Exception(f"ILS {ils_flavour} not configured")
+    
+    def get_aleph_bib_id(self, marc_record: Record):
+        res = {f["b"].strip() for f in marc_record.get_fields("998") if "b" in f}
+        if any(res):
+            self.add_stats(self.stats, "legacy id from 998$b")
+            return list(res)
+        else:
+            try:
+                ret = [marc_record["001"].format_field().strip()]
+                self.add_stats(self.stats, "legacy id from 001")
+                return ret
+            except:
+                raise TransformationCriticalDataError(
+                    "unknown identifier",
+                    "001 is missing.although that or 998$b is required for Aleph migrations",
+                    marc_record.as_json(),
+                )
+
+def get_iii_bib_id(marc_record: Record):
+    try:
+        return [marc_record["907"]["a"]]
+    except:
+        raise TransformationCriticalDataError(
+            "unknown identifier",
+            "907 $a is missing, although it is required for Sierra/iii migrations",
+            marc_record.as_json(),
+        )
+

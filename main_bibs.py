@@ -150,7 +150,6 @@ def parse_args():
         "\t907y    \t- bib id in 907 $y\n"
         "\t001      \t- bib id in 001\n"
         "\t990a \t- bib id in 990 $a and 001\n "
-
     )
     parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
     parser.add_argument(
@@ -160,11 +159,25 @@ def parse_args():
         default=False,
         type=bool,
     )
+    hrid_handling = (
+        "HRID Handling\n"
+        "This overrides any HRID/001 setting from the mapping rules"
+        "\tdefault\tFOLIO Default. Current 001 will be placed in a 035, and The "
+        "FOLIO-generated HRID will be put in 001"
+        "\t001\tHonor current 001:s. 001 will be used in the HRID field on the "
+        "Instance, and the current 001 will be maintained"
+    )
     parser.add_argument(
         "--force_utf_8",
         "-utf8",
         help="forcing UTF8 when parsing marc records",
-         default="True"
+        default="True",
+    )
+    parser.add_argument(
+        "--hrid_handling",
+        "-hh",
+        help=hrid_handling,
+        default="default"
     )
     parser.add_argument(
         "--suppress",
@@ -173,8 +186,7 @@ def parse_args():
         default=False,
         type=bool,
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
