@@ -6,8 +6,11 @@ import ctypes
 import json
 import logging
 import copy
+
+from requests.api import request
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 import uuid
+import requests.exceptions
 
 from argparse_prompt import PromptParser
 from marc_to_folio.helper import Helper
@@ -72,7 +75,6 @@ class Worker(MainBase):
                 f"Holdings type named Unmapped not found in FOLIO."
             )
         logging.info("Init done")
-        
 
     def work(self):
         total_records = 0
@@ -162,18 +164,41 @@ class Worker(MainBase):
             self.merge_holding_in(folio_holding)
 
     def create_bound_with_holdings(self, folio_rec):
+        # Add former ids
+        temp_ids = []
+        for former_id in folio_rec.get("formerIds", []):
+            if former_id.startswith("[") and former_id.endswith("]") and ',' in former_id:
+                ids = former_id[1:-1].replace('"', "").replace(" ", "").replace("'", "").split(",")
+                temp_ids.extend(ids)
+            else:
+                temp_ids.append(former_id)
+        folio_rec["formerIds"] = temp_ids
+
+        # Add note
         note = {
             "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e",  # Default binding note type
             "note": (
-                f'This Record is a Bound-with. It is bound-with {len(folio_rec["instanceId"])}\n'
-                f'instances. Search within this volume :<a href="{"&".join(folio_rec["instanceId"])}'
+                f'This Record is a Bound-with. It is bound with {len(folio_rec["instanceId"])} '
+                "instances. Below is a json structure allowing you to move this into the future "
+                "Bound-with functionality in FOLIO\n"
+                f'{{"instances": {json.dumps(folio_rec["instanceId"], indent=4)}}}'
+            ),
+            "staffOnly": True,
+        }
+        note2 = {
+            "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e",  # Default binding note type
+            "note": (
+                f'This Record is a Bound-with. It is bound with {len(folio_rec["instanceId"])} other records. '
+                'In order to locate the other records, make a search for the Class mark, but without brackets.'
             ),
             "staffOnly": False,
         }
         if "notes" in folio_rec:
             folio_rec["notes"].append(note)
+            folio_rec["notes"].append(note2)
         else:
-            folio_rec["notes"] = [note]
+            folio_rec["notes"] = [note, note2]
+
         for bwidx, id in enumerate(folio_rec["instanceId"]):
             if not id:
                 raise Exception(f"No ID for record {folio_rec}")
@@ -182,7 +207,6 @@ class Worker(MainBase):
                 call_numbers = [call_numbers]
             c = copy.deepcopy(folio_rec)
             c["instanceId"] = id
-
             c["callNumber"] = call_numbers[bwidx]
             c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
             c["id"] = str(uuid.uuid4())
@@ -355,9 +379,15 @@ def main():
         os.path.join(args.result_path, "holdings_transformation.log"),
         args.log_level_debug,
     )
-    folio_client = FolioClient(
-        args.okapi_url, args.tenant_id, args.username, args.password
-    )
+    try:
+        folio_client = FolioClient(
+            args.okapi_url, args.tenant_id, args.username, args.password
+        )
+    except requests.exceptions.SSLError as sslerror:
+        logging.error(f"{sslerror}")
+        logging.error("Network Error. Are you connected to the Internet? Do you need VPN? {}")
+        exit()
+
 
     # Source data files
     files = [

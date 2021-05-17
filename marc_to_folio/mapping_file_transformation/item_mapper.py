@@ -33,14 +33,14 @@ class ItemMapper(MapperBase):
         item_schema = folio_client.get_item_schema()
         super().__init__(folio_client, item_schema, items_map)
         self.item_schema = self.folio_client.get_item_schema()
-        self.items_map = items_map
-        self.status_mapping = {}
+        self.items_map = items_map        
         self.holdings_id_map = holdings_id_map
         self.set_to_migration_report(
             "Holdings IDs mapped", f"Unique holdings", len(self.holdings_id_map)
         )
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
+        self.status_mapping = {}
         if item_statuses_map:
             self.setup_status_mapping(item_statuses_map)
         if call_number_type_map:
