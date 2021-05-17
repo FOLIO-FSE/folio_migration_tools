@@ -45,7 +45,6 @@ class Worker(MainBase):
         mapper: HoldingsMapper,
         files,
         results_path,
-        error_file,
         holdings_merge_criteria,
     ):
         self.holdings = {}
@@ -61,7 +60,6 @@ class Worker(MainBase):
         self.mapper = mapper
         self.failed_files: List[str] = list()
         self.num_exeptions = 0
-        self.error_file = error_file
         self.holdings_types = list(
             self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
         )
@@ -403,9 +401,6 @@ def main():
     try:
         instance_id_dict_path = setup_path(args.result_path, "instance_id_map.json")
         holdings_map_path = setup_path(args.map_path, "holdingsrecord_mapping.json")
-        error_file_path = os.path.join(
-            args.result_path, "holdings_transform_errors.tsv"
-        )
         location_map_path = setup_path(args.map_path, "locations.tsv")
         call_number_type_map_path = setup_path(
             args.map_path, "call_number_type_mapping.tsv"
@@ -416,9 +411,7 @@ def main():
             instance_id_dict_path, "r"
         ) as instance_id_map_file, open(holdings_map_path) as holdings_mapper_f, open(
             location_map_path
-        ) as location_map_f, open(
-            error_file_path, "w"
-        ) as error_file:
+        ) as location_map_f:
             instance_id_map = {}
             for index, json_string in enumerate(instance_id_map_file):
                 # {"legacy_id", "folio_id","instanceLevelCallNumber"}
