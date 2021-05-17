@@ -161,24 +161,22 @@ def parse_args():
     )
     hrid_handling = (
         "HRID Handling\n"
-        "This overrides any HRID/001 setting from the mapping rules"
+        "This overrides any HRID/001 setting from the mapping rules\n"
         "\tdefault\tFOLIO Default. Current 001 will be placed in a 035, and The "
-        "FOLIO-generated HRID will be put in 001"
+        "FOLIO-generated HRID will be put in 001\n"
         "\t001\tHonor current 001:s. 001 will be used in the HRID field on the "
         "Instance, and the current 001 will be maintained"
     )
     parser.add_argument(
         "--force_utf_8",
         "-utf8",
-        help="forcing UTF8 when parsing marc records",
+        help=(
+            "forcing UTF8 when parsing marc records. If you get a lot of encoding issues, test "
+            "changing this setting to False"
+        ),
         default="True",
     )
-    parser.add_argument(
-        "--hrid_handling",
-        "-hh",
-        help=hrid_handling,
-        default="default"
-    )
+    parser.add_argument("--hrid_handling", "-hh", help=hrid_handling, default="default")
     parser.add_argument(
         "--suppress",
         "-ds",

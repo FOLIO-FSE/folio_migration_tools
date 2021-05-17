@@ -46,8 +46,8 @@ class RefDataMapping(object):
                     # Set up default mapping if available
                     t = self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"])
                     if t:
-                        self.default_call_number_type_id = t[0]
-                        self.default_call_number_type_name = t[1]
+                        self.default_id = t[0]
+                        self.default_name = t[1]
                         logging.info(
                             f'Set {mapping[f"folio_{self.key_type}"]} as default {self.name} mapping'
                         )
