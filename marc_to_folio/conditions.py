@@ -6,7 +6,14 @@ from pymarc import field
 
 
 class Conditions:
-    def __init__(self, folio, mapper, object_type, default_location_code="", default_call_number_type_id=""):
+    def __init__(
+        self,
+        folio,
+        mapper,
+        object_type,
+        default_location_code="",
+        default_call_number_type_id="",
+    ):
         logging.debug(f"default location code is still {default_location_code}")
         self.default_location_code = default_location_code
         logging.debug("Init conditions!")
@@ -22,7 +29,9 @@ class Conditions:
         if object_type == "bibs":
             self.setup_reference_data_for_bibs()
         else:
-            self.setup_reference_data_for_items_and_holdings(default_call_number_type_id)
+            self.setup_reference_data_for_items_and_holdings(
+                default_call_number_type_id
+            )
         self.condition_cache = {}
 
     def setup_reference_data_for_bibs(self):
@@ -74,7 +83,6 @@ class Conditions:
         # Set defaults
         logging.info("Defaults")
         self.default_call_number_type_id = default_call_number_type_id
-        # "95467209-6d7b-468b-94df-0f5d7ad2747d"
         logging.info(f"Callnumber type:\t{self.default_call_number_type_id}")
         self.default_call_number_type = next(
             ct for ct in self.folio.call_number_types if ct["name"] == "Other scheme"
@@ -88,20 +96,20 @@ class Conditions:
         else:
             raise Exception("Holdings type Unmapped not set in client")
 
-        if self.default_location_code:
-            logging.info(f"Default location code is {self.default_location_code}")
-            t = self.get_ref_data_tuple_by_code(
-                self.folio.locations, "locations", self.default_location_code
-            )
-            if t:
-                self.default_location_id = t[0]
-                logging.info(f"Default location id is {self.default_location_id}")
-            else:
-                raise Exception(
-                    f"Default location for {self.default_location_code} is not set up"
-                )
-        else:
+        if not self.default_location_code:
             raise Exception("Default location code is not set up")
+
+        logging.info(f"Default location code is {self.default_location_code}")
+        t = self.get_ref_data_tuple_by_code(
+            self.folio.locations, "locations", self.default_location_code
+        )
+        if t:
+            self.default_location_id = t[0]
+            logging.info(f"Default location id is {self.default_location_id}")
+        else:
+            raise Exception(
+                f"Default location for {self.default_location_code} is not set up"
+            )
 
     def setup_reference_data_for_all(self):
         logging.info(
@@ -147,13 +155,13 @@ class Conditions:
             )
             self.mapper.add_to_migration_report(
                 "Instance format ids handling (337 + 338)",
-                f"Successful match  - {value}->{t[1]}",
+                f'Successful match  - "{value}"->{t[1]}',
             )
             return t[0]
         except:
             self.mapper.add_to_migration_report(
                 "Instance format ids handling (337 + 338)",
-                f"{value} not found in FOLIO",
+                f'Value NOT found in FOLIO: "{value}"',
             )
             return ""
 
@@ -161,11 +169,11 @@ class Conditions:
         """Returns the index title according to the rules"""
         ind2 = marc_field.indicator2
         reg_str = r"[\s:\/]{0,3}$"
-        if ind2 in map(str, range(1, 9)):
-            num_take = int(ind2)
-            return re.sub(reg_str, "", value[num_take:])
-        else:
+        if ind2 not in map(str, range(1, 9)):
             return re.sub(reg_str, "", value)
+
+        num_take = int(ind2)
+        return re.sub(reg_str, "", value[num_take:])
 
     def condition_capitalize(self, value, parameter, marc_field):
         return value.capitalize()
@@ -184,8 +192,12 @@ class Conditions:
             "2": "Distribution",
             "3": "Manufacture",
         }
-
-        return roles.get(marc_field.indicator2, "")
+        role = roles.get(marc_field.indicator2, "")
+        self.mapper.add_to_migration_report(
+            "Mapped publisher role from Indicator2",
+            f"{marc_field.tag} ind2 {marc_field.indicator2}->{role}",
+        )
+        return role
 
     def condition_set_identifier_type_id_by_value(self, value, parameter, marc_field):
         if "oclc_regex" in parameter:
@@ -195,16 +207,16 @@ class Conditions:
                     "identifier_types",
                     parameter["names"][1],
                 )
-                self.mapper.add_to_migration_report("Mapped identifier types", t[1])
-                return t[0]
             else:
                 t = self.get_ref_data_tuple_by_name(
                     self.folio.identifier_types,
                     "identifier_types",
                     parameter["names"][0],
                 )
-                self.mapper.add_to_migration_report("Mapped identifier types", t[1])
-                return t[0]
+            self.mapper.add_to_migration_report(
+                "Mapped identifier types", f"{marc_field.tag} -> {t[1]}"
+            )
+            return t[0]
         identifier_type = next(
             (f for f in self.folio.identifier_types if f["name"] in parameter["names"]),
             None,
@@ -216,10 +228,6 @@ class Conditions:
         if not my_id:
             raise Exception(
                 f"no matching identifier_types in {parameter['names']} {marc_field}"
-            )
-        if not validate_uuid(my_id):
-            raise Exception(
-                f"UUID validation failed for {my_id} identifier_types in {parameter['names']} {marc_field}"
             )
         return my_id
 
@@ -261,7 +269,9 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.identifier_types, "identifier_types", parameter["name"]
             )
-            self.mapper.add_to_migration_report("Mapped identifier types", t[1])
+            self.mapper.add_to_migration_report(
+                "Mapped identifier types", f"{marc_field.tag} -> {t[1]}"
+            )
             return t[0]
         except:
             raise TransformationCriticalDataError(
@@ -276,7 +286,9 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.contrib_name_types, "contrib_name_types", parameter["name"]
             )
-            self.mapper.add_to_migration_report("Mapped contributor name types", t[1])
+            self.mapper.add_to_migration_report(
+                "Mapped contributor name types", f"{marc_field.tag} -> {t[1]}"
+            )
             return t[0]
         except:
             self.mapper.add_to_migration_report(
@@ -289,7 +301,9 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
             )
-            self.mapper.add_to_migration_report("Mapped note types", t[1])
+            self.mapper.add_to_migration_report(
+                "Mapped note types", f"{marc_field.tag} -> {t[1]}"
+            )
             return t[0]
         except:
             raise ValueError(
@@ -310,7 +324,7 @@ class Conditions:
             else:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Contributor type code {t} found for $4 {subfield} ({normalized_subfield}))",
+                    f'Contributor type code {t} found for $4 "{subfield}" ({normalized_subfield}))',
                 )
                 return t[0]
         subfield_code = "j" if marc_field.tag in ["111", "711"] else "e"
@@ -338,7 +352,9 @@ class Conditions:
             return self.mapper.instance_id_map[value]["folio_id"]
         except:
             self.mapper.add_stats(self.mapper.stats, "bib id not in map")
-            raise TransformationCriticalDataError(f"Old instance id not in map: {value} Field: {marc_field}")
+            raise TransformationCriticalDataError(
+                f"Old instance id not in map: {value} Field: {marc_field}"
+            )
 
     def condition_set_url_relationship(self, value, parameter, marc_field):
         enum = {
@@ -379,7 +395,7 @@ class Conditions:
         # CallNumber type specified in $2. This needs further mapping
         if marc_field.indicator1 == "7" and "2" in marc_field:
             self.mapper.add_to_migration_report(
-                "Callnumber types",
+                "Callnumber type mapping",
                 f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}",
             )
             return self.default_call_number_type["id"]
@@ -388,7 +404,7 @@ class Conditions:
         call_number_type_name_temp = first_level_map.get(marc_field.indicator1, "")
         if not call_number_type_name_temp:
             self.mapper.add_to_migration_report(
-                "Callnumber types",
+                "Callnumber type mapping",
                 f'Unhandled call number type in ind1: "{marc_field.indicator1}"',
             )
             return self.default_call_number_type["id"]
@@ -397,8 +413,8 @@ class Conditions:
         )
         if t:
             self.mapper.add_to_migration_report(
-                "Callnumber types",
-                f"Mapped from Indicator 1 {marc_field.indicator1} - {t[1]}",
+                "Callnumber type mapping",
+                f"Mapped from Indicator 1 {marc_field.indicator1} -> {t[1]}",
             )
             return t[0]
 
@@ -423,9 +439,7 @@ class Conditions:
         for subfield in marc_field.get_subfields("4", "e"):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
             for cont_type in self.folio.contributor_types:
-                if normalized_subfield == cont_type["code"]:
-                    return cont_type["name"]
-                elif normalized_subfield == cont_type["name"]:
+                if normalized_subfield in [cont_type["code"], cont_type["name"]]:
                     return cont_type["name"]
         return self.default_contributor_type["name"]
 
@@ -446,9 +460,7 @@ class Conditions:
 
         # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
-            d = {}
-            for lm in self.mapper.location_map:
-                d[lm["legacy_code"]] = lm["folio_code"]
+            d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}
             self.ref_data_dicts["legacy_locations"] = d
 
         # Get the right code from the location map
@@ -508,7 +520,10 @@ class Conditions:
         if marc_field.tag not in ["008", "336"]:
             self.mapper.add_to_migration_report(
                 "Instance Type Mapping (336, 008)",
-                f"Unhandled MARC tag {marc_field.tag} ",
+                (
+                    f"Unhandled MARC tag {marc_field.tag}. Instance Type ID is only mapped "
+                    "from 008 and 336 "
+                ),
             )
         return ""  # functionality moved
 
@@ -536,13 +551,3 @@ class Conditions:
         )
         return t[0]
 
-
-def validate_uuid(my_uuid):
-    # removed for performance reasons
-    """reg = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-    pattern = re.compile(reg)
-    if pattern.match(my_uuid):
-        return True
-    else:
-        return False"""
-    return True

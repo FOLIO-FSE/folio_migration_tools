@@ -443,7 +443,6 @@ def main():
                 mapper,
                 files,
                 args.result_path,
-                error_file,
                 args.holdings_merge_criteria,
             )
             worker.work()
