@@ -449,12 +449,12 @@ class BibsRulesMapper(RulesMapperBase):
             )
 
             self.add_to_migration_report(
-                "Matched Modes of issuance code", f"{ret} - {name}"
+                "Matched Modes of issuance code", f"{name} -- {ret}"
             )
             if not ret:
                 self.add_to_migration_report(
-                    "Unmatched Modes of issuance code",
-                    level,
+                    "Matched Modes of issuance code",
+                    f"Unmatched level: {level}",
                 )
                 return self.other_mode_of_issuance_id
             return ret

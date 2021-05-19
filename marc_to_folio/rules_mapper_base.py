@@ -453,12 +453,12 @@ class RulesMapperBase:
             ):
                 self.add_entity_to_record(entity, e_parent, rec)
             else:
-                sfs = " - ".join(list([f[0] for f in marc_field]))
+                sfs = " - ".join(f[0] for f in marc_field)
 
                 pattern = " - ".join(f"{k}:{bool(v)}" for k, v in entity.items())
                 self.add_to_migration_report(
-                    "Incomplete entity mapping (a code issue) adding entity",
-                    f"{marc_field.tag} {e_parent} {pattern} {sfs} ",
+                    "Incomplete entity mapping adding entity",
+                    f"{marc_field.tag} {sfs} --- {e_parent} {pattern}  ",
                 )
                 # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec)
