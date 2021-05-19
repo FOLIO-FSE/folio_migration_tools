@@ -155,6 +155,17 @@ class Worker(MainBase):
             ):
                 try:
                     folio_rec = self.mapper.do_map(record, f"row {idx}")
+                    # Hard code circ note sources
+                    # TODO: Add more levels (recursive) to mapping
+                    for circ_note in folio_rec.get("circulationNotes",[]):
+                        circ_note["source"] = {
+                            "id": self.folio_client.current_user,
+                            "personal":{
+                                "lastName":"Data",
+                                "firstName": "Migration"
+                            }
+                        }
+
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.add_to_migration_report(
                         "General statistics",
