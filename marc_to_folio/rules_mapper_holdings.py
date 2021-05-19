@@ -119,9 +119,7 @@ class RulesMapperHoldings(RulesMapperBase):
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"
         if dict_key not in self.ref_data_dicts:
-            d = {}
-            for r in ref_data:
-                d[r[key_type].lower()] = (r["id"], r["name"])
+            d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
             self.ref_data_dicts[dict_key] = d
         ref_object = (
             self.ref_data_dicts[dict_key][key_value.lower()]

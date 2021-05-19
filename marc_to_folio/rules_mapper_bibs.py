@@ -336,14 +336,16 @@ class BibsRulesMapper(RulesMapperBase):
         for fidx, f in enumerate(all_338s):
             source = f["2"] if "2" in f else "Not set"
             self.add_to_migration_report(
-                "Instance format ids handling (337 + 338)",
-                f"Source ($2) is set to {source}",
+                "Instance format ids handling (337 + 338) ",
+                f"Source ($2) is set to {source}. "
+                "Everything starting with rdacarrier will get mapped.",
             )
             if source.strip().startswith("rdacarrier"):
                 logging.debug(f"Carrier is {source}")
                 if "b" not in f and "a" in f:
                     self.add_to_migration_report(
-                        "Instance format ids handling (337 + 338)", f"338$b is missing"
+                        "Instance format ids handling (337 + 338)",
+                        f"338$b is missing. Will try parse from 337$a and 338$b",
                     )
                     for sfidx, a in enumerate(f.get_subfields("a")):
                         corresponding_337 = (
@@ -596,7 +598,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
         else:
             raise Exception(f"ILS {ils_flavour} not configured")
-    
+
     def get_aleph_bib_id(self, marc_record: Record):
         res = {f["b"].strip() for f in marc_record.get_fields("998") if "b" in f}
         if any(res):
@@ -614,6 +616,7 @@ class BibsRulesMapper(RulesMapperBase):
                     marc_record.as_json(),
                 )
 
+
 def get_iii_bib_id(marc_record: Record):
     try:
         return [marc_record["907"]["a"]]
@@ -623,4 +626,3 @@ def get_iii_bib_id(marc_record: Record):
             "907 $a is missing, although it is required for Sierra/iii migrations",
             marc_record.as_json(),
         )
-

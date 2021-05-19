@@ -506,11 +506,8 @@ class Conditions:
         ref_object = self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())
         if ref_object:
             return ref_object
-        else:
-            d = {}
-            for r in ref_data:
-                d[r[key_type].lower()] = (r["id"], r["name"])
-            self.ref_data_dicts[dict_key] = d
+        d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
+        self.ref_data_dicts[dict_key] = d
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())
 
     def condition_remove_substring(self, value, parameter, marc_field):
