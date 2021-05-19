@@ -1,38 +1,33 @@
 '''Main "script."'''
 import argparse
 import ast
+import copy
 import csv
 import ctypes
 import json
 import logging
-import copy
-
-from requests.api import request
-from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
-import uuid
-import requests.exceptions
-
-from argparse_prompt import PromptParser
-from marc_to_folio.helper import Helper
 import os
 import time
+import traceback
+import uuid
 from os import listdir
 from os.path import isfile, join
-import traceback
 from typing import List
 
 import pymarc
+import requests.exceptions
+from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
+from requests.api import request
 
-from marc_to_folio.custom_exceptions import (
-    TransformationCriticalDataError,
-    TransformationProcessError,
-)
+from marc_to_folio.custom_exceptions import (TransformationCriticalDataError,
+                                             TransformationProcessError)
+from marc_to_folio.helper import Helper
 from marc_to_folio.holdings_processor import HoldingsProcessor
 from marc_to_folio.main_base import MainBase
-from marc_to_folio.mapping_file_transformation.holdings_mapper import HoldingsMapper
-from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
-
+from marc_to_folio.mapping_file_transformation.holdings_mapper import \
+    HoldingsMapper
+from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 

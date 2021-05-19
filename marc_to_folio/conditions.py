@@ -6,7 +6,7 @@ from pymarc import field
 
 
 class Conditions:
-    def __init__(self, folio, mapper, object_type, default_location_code=""):
+    def __init__(self, folio, mapper, object_type, default_location_code="", default_call_number_type_id=""):
         logging.debug(f"default location code is still {default_location_code}")
         self.default_location_code = default_location_code
         logging.debug("Init conditions!")
@@ -22,7 +22,7 @@ class Conditions:
         if object_type == "bibs":
             self.setup_reference_data_for_bibs()
         else:
-            self.setup_reference_data_for_items_and_holdings()
+            self.setup_reference_data_for_items_and_holdings(default_call_number_type_id)
         self.condition_cache = {}
 
     def setup_reference_data_for_bibs(self):
@@ -46,13 +46,13 @@ class Conditions:
         # Set defaults
         logging.info("Setting defaults")
         self.default_contributor_name_type = self.folio.contrib_name_types[0]["id"]
-        logging.info(f"contributor name type\t{self.default_contributor_name_type}")
+        logging.info(f"Contributor name type:\t{self.default_contributor_name_type}")
         self.default_contributor_type = next(
             ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
         )
-        logging.info(f"contributor type\t{self.default_contributor_type['id']}")
+        logging.info(f"Contributor type:\t{self.default_contributor_type['id']}")
 
-    def setup_reference_data_for_items_and_holdings(self):
+    def setup_reference_data_for_items_and_holdings(self, default_call_number_type_id):
         logging.info(f"{len(self.folio.locations)}\tlocations")
         self.default_call_number_type = {}
         logging.info(f"{len(self.folio.holding_note_types)}\tholding_note_types")
@@ -73,8 +73,9 @@ class Conditions:
 
         # Set defaults
         logging.info("Defaults")
-        self.default_call_number_type_id = "95467209-6d7b-468b-94df-0f5d7ad2747d"
-        logging.info(f"callnumber type\t{self.default_call_number_type_id}")
+        self.default_call_number_type_id = default_call_number_type_id
+        # "95467209-6d7b-468b-94df-0f5d7ad2747d"
+        logging.info(f"Callnumber type:\t{self.default_call_number_type_id}")
         self.default_call_number_type = next(
             ct for ct in self.folio.call_number_types if ct["name"] == "Other scheme"
         )
@@ -247,7 +248,7 @@ class Conditions:
         except:
             raise TransformationCriticalDataError(
                 "unknown",
-                f'Classification mapping error.\tParameter: {parameter.get("name", "")}\t'
+                f'Classification mapping error.\tParameter: "{parameter.get("name", "")}"\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
             )
@@ -265,7 +266,7 @@ class Conditions:
         except:
             raise TransformationCriticalDataError(
                 "",
-                f'Unmapped identifier name type: {parameter["name"]}\tMARC Field: {marc_field}'
+                f'Unmapped identifier name type: "{parameter["name"]}"\tMARC Field: {marc_field}'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 {parameter["name"]},
             )
@@ -304,7 +305,7 @@ class Conditions:
             if not t:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Mapping failed for $4 {subfield} ({normalized_subfield}) ",
+                    f'Mapping failed for $4 "{subfield}" ({normalized_subfield}) ',
                 )
             else:
                 self.mapper.add_to_migration_report(
@@ -337,7 +338,7 @@ class Conditions:
             return self.mapper.instance_id_map[value]["folio_id"]
         except:
             self.mapper.add_stats(self.mapper.stats, "bib id not in map")
-            raise ValueError(f"Old instance id not in map: {value} Field: {marc_field}")
+            raise TransformationCriticalDataError(f"Old instance id not in map: {value} Field: {marc_field}")
 
     def condition_set_url_relationship(self, value, parameter, marc_field):
         enum = {

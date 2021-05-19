@@ -30,10 +30,16 @@ def parse_args():
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("--password", help="the api users password", secure=True)
     parser.add_argument(
+        "--default_call_number_type_id",
+        help="UUID of the default callnumber type",
+        default="95467209-6d7b-468b-94df-0f5d7ad2747d",
+    )
+    parser.add_argument(
         "--suppress",
         "-ds",
         help="This batch of records are to be suppressed in FOLIO.",
-        default=False, type=bool
+        default=False,
+        type=bool,
     )
     args = parser.parse_args()
     logging.info(f"\tresults are stored at:\t{args.result_folder}")

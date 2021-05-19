@@ -14,7 +14,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self, folio, instance_id_map, location_map, default_location_code, args
     ):
         logging.debug(f"Default location code is {default_location_code}")
-        self.conditions = Conditions(folio, self, "holdings", default_location_code)
+        self.conditions = Conditions(folio, self, "holdings", default_location_code, args.default_call_number_type_id)
         self.folio = folio
         super().__init__(folio, self.conditions)
         self.instance_id_map = instance_id_map
