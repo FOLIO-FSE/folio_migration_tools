@@ -224,7 +224,7 @@ class MapperBase:
                 mapping
                 for mapping in ref_dat_mapping.map
                 if all(
-                    legacy_object[k].strip().casefold() in mapping[k].casefold()
+                    legacy_object[k].strip().casefold() == mapping[k].casefold()
                     for k in ref_dat_mapping.keys
                 )
             )
@@ -246,6 +246,11 @@ class MapperBase:
                 f'Unmapped -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
             )
             return ref_dat_mapping.default_id
+        except IndexError as ee:
+            raise TransformationCriticalDataError(
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
+                f"({ref_dat_mapping.keys}) {ee} is not a recognized fields in the legacy data."
+            )
         except Exception as ee:
             raise TransformationCriticalDataError(
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.keys}) {ee}"

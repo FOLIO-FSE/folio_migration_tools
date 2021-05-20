@@ -94,7 +94,9 @@ class Worker(MainBase):
                     return map
             except Exception as ee:
                 raise TransformationProcessError(
-                    f"{folio_property_name} not mapped in legacy->folio mapping file ({map_file_name}) ({ee})"
+                    f"{folio_property_name} not mapped in legacy->folio mapping file "
+                    f"({map_file_name}) ({ee}). Did you map this field, "
+                    "but forgot to add a mapping file?"
                 )
         else:
             logging.info(
