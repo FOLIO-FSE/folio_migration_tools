@@ -39,7 +39,7 @@ class RefDataMapping(object):
                     self.keys = [
                         k
                         for k in mapping.keys()
-                        if k not in ["folio_code", "folio_id", "folio_name"]
+                        if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
                     ]
                     logging.info(json.dumps(self.keys, indent=4))
                 if any(m for m in mapping.values() if m == "*"):
