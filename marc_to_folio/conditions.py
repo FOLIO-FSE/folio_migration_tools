@@ -125,7 +125,9 @@ class Conditions:
         if not self.folio.class_types:
             raise Exception("No class_types setup in tenant")
 
-    def get_condition(self, name, value, parameter=None, marc_field=None):
+    def get_condition(
+        self, name, value, parameter=None, marc_field: field.Field = None
+    ):
         try:
             return self.condition_cache.get(name)(value, parameter, marc_field)
         except Exception:
@@ -133,20 +135,22 @@ class Conditions:
             self.condition_cache[name] = attr
             return attr(value, parameter, marc_field)
 
-    def condition_trim_period(self, value, parameter, marc_field):
+    def condition_trim_period(self, value, parameter, marc_field: field.Field):
         return value.strip().rstrip(".").rstrip(",")
 
-    def condition_trim(self, value, parameter, marc_field):
+    def condition_trim(self, value, parameter, marc_field: field.Field):
         return value.strip()
 
-    def condition_remove_ending_punc(self, value, parameter, marc_field):
+    def condition_remove_ending_punc(self, value, parameter, marc_field: field.Field):
         v = value
         chars = ".;:,/+=- "
         while any(v) > 0 and v[-1] in chars:
             v = v.rstrip(v[-1])
         return v
 
-    def condition_set_instance_format_id(self, value, parameter, marc_field):
+    def condition_set_instance_format_id(
+        self, value, parameter, marc_field: field.Field
+    ):
         # This method only handles the simple case of 2-character codes of RDA in the first 338$b
         # Other cases are handled in performAddidtionalParsing in the mapper class
         try:
@@ -165,7 +169,9 @@ class Conditions:
             )
             return ""
 
-    def condition_remove_prefix_by_indicator(self, value, parameter, marc_field):
+    def condition_remove_prefix_by_indicator(
+        self, value, parameter, marc_field: field.Field
+    ):
         """Returns the index title according to the rules"""
         ind2 = marc_field.indicator2
         reg_str = r"[\s:\/]{0,3}$"
@@ -175,17 +181,17 @@ class Conditions:
         num_take = int(ind2)
         return re.sub(reg_str, "", value[num_take:])
 
-    def condition_capitalize(self, value, parameter, marc_field):
+    def condition_capitalize(self, value, parameter, marc_field: field.Field):
         return value.capitalize()
 
-    def condition_clean_isbn(self, value, parameter, marc_field):
+    def condition_clean_isbn(self, value, parameter, marc_field: field.Field):
         return value
 
-    def condition_set_issuance_mode_id(self, value, parameter, marc_field):
+    def condition_set_issuance_mode_id(self, value, parameter, marc_field: field.Field):
         # mode of issuance is handled elsewhere in the mapping.
         return ""
 
-    def condition_set_publisher_role(self, value, parameter, marc_field):
+    def condition_set_publisher_role(self, value, parameter, marc_field: field.Field):
         roles = {
             "0": "Production",
             "1": "Publication",
@@ -199,7 +205,9 @@ class Conditions:
         )
         return role
 
-    def condition_set_identifier_type_id_by_value(self, value, parameter, marc_field):
+    def condition_set_identifier_type_id_by_value(
+        self, value, parameter, marc_field: field.Field
+    ):
         if "oclc_regex" in parameter:
             if re.match(parameter["oclc_regex"], value):
                 t = self.get_ref_data_tuple_by_name(
@@ -231,7 +239,9 @@ class Conditions:
             )
         return my_id
 
-    def condition_set_holding_note_type_id_by_name(self, value, parameter, marc_field):
+    def condition_set_holding_note_type_id_by_name(
+        self, value, parameter, marc_field: field.Field
+    ):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.holding_note_types, "holding_note_types", parameter["name"]
@@ -246,7 +256,9 @@ class Conditions:
                 parameter.get("name", ""),
             )
 
-    def condition_set_classification_type_id(self, value, parameter, marc_field):
+    def condition_set_classification_type_id(
+        self, value, parameter, marc_field: field.Field
+    ):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.class_types, "class_types", parameter["name"]
@@ -261,10 +273,12 @@ class Conditions:
                 parameter.get("name", ""),
             )
 
-    def condition_char_select(self, value, parameter, marc_field):
+    def condition_char_select(self, value, parameter, marc_field: field.Field):
         return value[parameter["from"] : parameter["to"]]
 
-    def condition_set_identifier_type_id_by_name(self, value, parameter, marc_field):
+    def condition_set_identifier_type_id_by_name(
+        self, value, parameter, marc_field: field.Field
+    ):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.identifier_types, "identifier_types", parameter["name"]
@@ -281,7 +295,9 @@ class Conditions:
                 {parameter["name"]},
             )
 
-    def condition_set_contributor_name_type_id(self, value, parameter, marc_field):
+    def condition_set_contributor_name_type_id(
+        self, value, parameter, marc_field: field.Field
+    ):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.contrib_name_types, "contrib_name_types", parameter["name"]
@@ -296,7 +312,7 @@ class Conditions:
             )
             return self.default_contributor_name_type
 
-    def condition_set_note_type_id(self, value, parameter, marc_field):
+    def condition_set_note_type_id(self, value, parameter, marc_field: field.Field):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
@@ -310,7 +326,9 @@ class Conditions:
                 f"Instance note type not found for {marc_field} {parameter}"
             )
 
-    def condition_set_contributor_type_id(self, value, parameter, marc_field: field):
+    def condition_set_contributor_type_id(
+        self, value, parameter, marc_field: field.Field
+    ):
         for subfield in marc_field.get_subfields("4"):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
             t = self.get_ref_data_tuple_by_code(
@@ -347,7 +365,9 @@ class Conditions:
                 return t[0]
         return self.default_contributor_type["id"]
 
-    def condition_set_instance_id_by_map(self, value, parameter, marc_field):
+    def condition_set_instance_id_by_map(
+        self, value, parameter, marc_field: field.Field
+    ):
         try:
             return self.mapper.instance_id_map[value]["folio_id"]
         except:
@@ -356,7 +376,7 @@ class Conditions:
                 f"Old instance id not in map: {value} Field: {marc_field}"
             )
 
-    def condition_set_url_relationship(self, value, parameter, marc_field):
+    def condition_set_url_relationship(self, value, parameter, marc_field: field.Field):
         enum = {
             "0": "resource",
             "1": "version of resource",
@@ -423,7 +443,9 @@ class Conditions:
         )
         return self.default_call_number_type["id"]
 
-    def condition_set_electronic_if_serv_remo(self, value, parameter, marc_field):
+    def condition_set_electronic_if_serv_remo(
+        self, value, parameter, marc_field: field.Field
+    ):
         if value == "serv,remo":
             t = self.get_ref_data_tuple_by_name(
                 self.holdings_types, "hold_types", "Electronic"
@@ -435,7 +457,9 @@ class Conditions:
                 return t[0]
         return ""
 
-    def condition_set_contributor_type_text(self, value, parameter, marc_field):
+    def condition_set_contributor_type_text(
+        self, value, parameter, marc_field: field.Field
+    ):
         for subfield in marc_field.get_subfields("4", "e"):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
             for cont_type in self.folio.contributor_types:
@@ -455,7 +479,9 @@ class Conditions:
                 f"Alternative title type not found for {parameter['name']} {marc_field}"
             )
 
-    def condition_set_location_id_by_code(self, value, parameter, marc_field):
+    def condition_set_location_id_by_code(
+        self, value, parameter, marc_field: field.Field
+    ):
         self.mapper.add_to_migration_report("Legacy location codes", value)
 
         # Setup mapping if not already set up
@@ -510,10 +536,10 @@ class Conditions:
         self.ref_data_dicts[dict_key] = d
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())
 
-    def condition_remove_substring(self, value, parameter, marc_field):
+    def condition_remove_substring(self, value, parameter, marc_field: field.Field):
         return value.replace(parameter["substring"], "")
 
-    def condition_set_instance_type_id(self, value, parameter, marc_field):
+    def condition_set_instance_type_id(self, value, parameter, marc_field: field.Field):
         if marc_field.tag not in ["008", "336"]:
             self.mapper.add_to_migration_report(
                 "Instance Type Mapping (336, 008)",
@@ -525,7 +551,7 @@ class Conditions:
         return ""  # functionality moved
 
     def condition_set_electronic_access_relations_id(
-        self, value, parameter, marc_field
+        self, value, parameter, marc_field: field.Field
     ):
         enum = {
             "0": "resource",
@@ -548,3 +574,14 @@ class Conditions:
         )
         return t[0]
 
+    def condition_set_note_staff_only_via_indicator(
+        self, value, parameter, marc_field: field.Field
+    ):
+        """Returns true of false depending on the first indicator"""
+        # https://www.loc.gov/marc/bibliographic/bd541.html
+        ind1 = marc_field.indicator1
+        self.mapper.add_to_migration_report(
+            "Set note staff only via indicator",
+            f"{marc_field.tag} indicator1: {ind1} (0 is staff only, all other values are public)",
+        )
+        return ind1 == "0"
