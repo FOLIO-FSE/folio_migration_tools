@@ -130,6 +130,8 @@ class Conditions:
     ):
         try:
             return self.condition_cache.get(name)(value, parameter, marc_field)
+        # Exception should only handle the missing condition from the cache. 
+        # All other exceptions should propagate up
         except Exception:
             attr = getattr(self, "condition_" + str(name))
             self.condition_cache[name] = attr
@@ -342,7 +344,7 @@ class Conditions:
             else:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f'Contributor type code {t} found for $4 "{subfield}" ({normalized_subfield}))',
+                    f'Contributor type code {t[1]} found for $4 "{subfield}" ({normalized_subfield}))',
                 )
                 return t[0]
         subfield_code = "j" if marc_field.tag in ["111", "711"] else "e"
@@ -355,12 +357,12 @@ class Conditions:
             if not t:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Mapping failed for $e {normalized_subfield} ({subfield}) ",
+                    f'Mapping failed for $e "{normalized_subfield}" ({subfield}) ',
                 )
             else:
                 self.mapper.add_to_migration_report(
                     "Contributor type mapping",
-                    f"Contributor type name {t[1]} found for $e {normalized_subfield} ({subfield}) ",
+                    f'Contributor type name {t[1]} found for $e "{normalized_subfield}" ({subfield}) ',
                 )
                 return t[0]
         return self.default_contributor_type["id"]

@@ -1,4 +1,5 @@
 """ Class that processes each MARC record """
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 from marc_to_folio.helper import Helper
 from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 import time
@@ -45,6 +46,13 @@ class HoldingsProcessor:
                 elapsed = self.records_count / (time.time() - self.start)
                 elapsed_formatted = "{0:.4g}".format(elapsed)
                 logging.info(f"{elapsed_formatted}\t\t{self.records_count}")
+        except TransformationCriticalDataError as data_error:
+            add_stats(self.mapper.stats, "Critical data errors")
+            add_stats(self.mapper.stats, "Failed records")
+            logging.error(data_error)
+            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
+            if callable(remove_from_id_map):
+                self.mapper.remove_from_id_map(marc_record)
         except ValueError as value_error:
             add_stats(self.mapper.stats, "Value errors")
             add_stats(self.mapper.stats, "Failed records")
