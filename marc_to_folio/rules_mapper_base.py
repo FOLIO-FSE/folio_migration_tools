@@ -23,7 +23,7 @@ class RulesMapperBase:
         self.start = time.time()
         self.stats = {}
         self.folio_client = folio_client
-        self.holdings_json_schema = folio_client.fetch_holdings_schema()
+        self.holdings_json_schema = fetch_holdings_schema()
         self.instance_json_schema = get_instance_schema()
         self.schema = {}
         self.conditions = conditions
