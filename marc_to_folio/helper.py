@@ -33,7 +33,7 @@ class Helper():
             latest_path = (
                 f"https://raw.githubusercontent.com/{owner}/{repo}/{latest_tag}/{filepath}"
             )
-            # print(latest_path)
+            logging.info(latest_path)
             req = requests.get(latest_path)
             req.raise_for_status()
             return json.loads(req.text)

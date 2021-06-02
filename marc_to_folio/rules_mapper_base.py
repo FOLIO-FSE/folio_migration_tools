@@ -503,10 +503,10 @@ def fetch_holdings_schema():
 def get_instance_schema():
     logging.info("Fetching Instance schema...")
     instance_schema = Helper.get_latest_from_github(
-        "folio-org", "mod-inventory-storage", "/ramls/holdingsrecord.json"
+        "folio-org", "mod-inventory-storage", "/ramls/instance.json"
     )
     logging.info("done")
-    return json.loads(instance_schema)
+    return instance_schema
 
 
 def has_conditions(mapping):
