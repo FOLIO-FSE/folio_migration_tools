@@ -1,5 +1,6 @@
 import json
 import logging
+from marc_to_folio.helper import Helper
 from marc_to_folio.conditions import Conditions
 from marc_to_folio.report_blurbs import blurbs
 import time
@@ -22,7 +23,7 @@ class RulesMapperBase:
         self.start = time.time()
         self.stats = {}
         self.folio_client = folio_client
-        self.holdings_json_schema = fetch_holdings_schema()
+        self.holdings_json_schema = folio_client.fetch_holdings_schema()
         self.instance_json_schema = get_instance_schema()
         self.schema = {}
         self.conditions = conditions
@@ -50,7 +51,7 @@ class RulesMapperBase:
             self.mapped_folio_fields[field_name][1] += int(was_empty)
 
     def print_mapping_report(self, report_file):
-        
+
         total_records = self.stats["Number of records in file(s)"]
         header = "Mapped FOLIO fields"
 
@@ -90,7 +91,9 @@ class RulesMapperBase:
         report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             present = v[0]
-            present_per = "{:.1%}".format(present / total_records if total_records else 0)
+            present_per = "{:.1%}".format(
+                present / total_records if total_records else 0
+            )
             unmapped = present - v[1]
             mapped = v[1]
             mp = mapped / total_records if total_records else 0
@@ -102,7 +105,7 @@ class RulesMapperBase:
 
     def add_to_migration_report(self, header, measure_to_add):
         """Add section header and values to migration report."""
-    
+
         if header not in self.migration_report:
             self.migration_report[header] = {}
         if measure_to_add not in self.migration_report[header]:
@@ -120,7 +123,9 @@ class RulesMapperBase:
             try:
                 report_file.write(f"{blurbs[a]}    \n")
             except KeyError as key_error:
-                logging.error(f"Uhoh. Please add this one to report_blurbs.py: {key_error}")
+                logging.error(
+                    f"Uhoh. Please add this one to report_blurbs.py: {key_error}"
+                )
 
             report_file.write(
                 f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
@@ -140,8 +145,7 @@ class RulesMapperBase:
         if i % 1000 == 0:
             elapsed = i / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            logging.info(
-                f"{elapsed_formatted} records/sec.\t\t{i:,} records processed")
+            logging.info(f"{elapsed_formatted} records/sec.\t\t{i:,} records processed")
 
     def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
         # TODO: Move to interface or parent class
@@ -488,23 +492,21 @@ def as_str(s):
 
 
 def fetch_holdings_schema():
-    logging.info("Fetching holdings schema...")
-    holdings_url = (
-        "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/"
-        "master/ramls/holdingsrecord.json"
+    logging.info("Fetching HoldingsRecord schema...")
+    holdings_record_schema = Helper.get_latest_from_github(
+        "folio-org", "mod-inventory-storage", "/ramls/holdingsrecord.json"
     )
-    schema_request = requests.get(holdings_url)
-    schema_text = schema_request.text
     logging.info("done")
-    return json.loads(schema_text)
+    return holdings_record_schema
 
 
 def get_instance_schema():
-    # instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory-storage/master/ramls/instance.json"
-    instance_url = "https://raw.githubusercontent.com/folio-org/mod-inventory/master/ramls/instance.json"
-    schema_request = requests.get(instance_url)
-    schema_text = schema_request.text
-    return json.loads(schema_text)
+    logging.info("Fetching Instance schema...")
+    instance_schema = Helper.get_latest_from_github(
+        "folio-org", "mod-inventory-storage", "/ramls/holdingsrecord.json"
+    )
+    logging.info("done")
+    return json.loads(instance_schema)
 
 
 def has_conditions(mapping):

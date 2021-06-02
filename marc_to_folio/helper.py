@@ -1,5 +1,7 @@
 import json
 
+import requests
+
 class Helper():
 
     @staticmethod
@@ -10,3 +12,25 @@ class Helper():
             file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
         else:
             file.write("{}\n".format(json.dumps(folio_record)))
+
+    @staticmethod
+    def get_latest_from_github(owner, repo, filepath):
+        """[gets the a json file from Github tied to the latest release]
+        Args:
+            owner (): [the owner (user or organization) of the repo]
+            repo (): [the name of the repository]
+            filepath (): [the local path to the file you want to download]
+        """
+        latest_path = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
+        req = requests.get(latest_path)
+        req.raise_for_status()
+        latest = json.loads(req.text)
+        # print(json.dumps(latest, indent=4))
+        latest_tag = latest["tag_name"]
+        latest_path = (
+            f"https://raw.githubusercontent.com/{owner}/{repo}/{latest_tag}/{filepath}"
+        )
+        # print(latest_path)
+        req = requests.get(latest_path)
+        req.raise_for_status()
+        return json.loads(req.text)
