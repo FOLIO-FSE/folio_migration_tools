@@ -150,6 +150,7 @@ def parse_args():
         "\t907y    \t- bib id in 907 $y\n"
         "\t001      \t- bib id in 001\n"
         "\t990a \t- bib id in 990 $a and 001\n "
+        "\tnone      \t- Use for ebooks and related records that will not need any legacy id:s\n"
     )
     parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
     parser.add_argument(

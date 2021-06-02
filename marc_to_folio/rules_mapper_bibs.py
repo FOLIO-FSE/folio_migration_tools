@@ -596,6 +596,8 @@ class BibsRulesMapper(RulesMapperBase):
                     "999 $c is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
                 )
+        elif ils_flavour in ["none"]:
+            return [str(uuid.uuid4())]
         else:
             raise Exception(f"ILS {ils_flavour} not configured")
 
