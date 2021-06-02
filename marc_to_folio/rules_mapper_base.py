@@ -437,7 +437,9 @@ class RulesMapperBase:
                     self.add_entity_to_record(entity, e_parent, rec)
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
-            if (
+            if e_parent in ["precedingTitles", "succeedingTitles"]:
+                logging.log(25,json.dumps({e_parent:entity}))
+            elif (
                 all(
                     v
                     for k, v in entity.items()
@@ -494,7 +496,7 @@ def as_str(s):
 def fetch_holdings_schema():
     logging.info("Fetching HoldingsRecord schema...")
     holdings_record_schema = Helper.get_latest_from_github(
-        "folio-org", "mod-inventory-storage", "/ramls/holdingsrecord.json"
+        "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
     )
     logging.info("done")
     return holdings_record_schema
@@ -503,7 +505,7 @@ def fetch_holdings_schema():
 def get_instance_schema():
     logging.info("Fetching Instance schema...")
     instance_schema = Helper.get_latest_from_github(
-        "folio-org", "mod-inventory-storage", "/ramls/instance.json"
+        "folio-org", "mod-inventory-storage", "ramls/instance.json"
     )
     logging.info("done")
     return instance_schema
