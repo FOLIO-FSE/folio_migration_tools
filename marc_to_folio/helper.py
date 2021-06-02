@@ -1,4 +1,5 @@
 import json
+import logging
 
 import requests
 
@@ -21,16 +22,20 @@ class Helper():
             repo (): [the name of the repository]
             filepath (): [the local path to the file you want to download]
         """
-        latest_path = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
-        req = requests.get(latest_path)
-        req.raise_for_status()
-        latest = json.loads(req.text)
-        # print(json.dumps(latest, indent=4))
-        latest_tag = latest["tag_name"]
-        latest_path = (
-            f"https://raw.githubusercontent.com/{owner}/{repo}/{latest_tag}/{filepath}"
-        )
-        # print(latest_path)
-        req = requests.get(latest_path)
-        req.raise_for_status()
-        return json.loads(req.text)
+        try:
+            latest_path = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
+            req = requests.get(latest_path)
+            req.raise_for_status()
+            latest = json.loads(req.text)
+            # print(json.dumps(latest, indent=4))
+            latest_tag = latest["tag_name"]
+            logging.info(f"Latest tag of {repo} is {latest_tag}")
+            latest_path = (
+                f"https://raw.githubusercontent.com/{owner}/{repo}/{latest_tag}/{filepath}"
+            )
+            # print(latest_path)
+            req = requests.get(latest_path)
+            req.raise_for_status()
+            return json.loads(req.text)
+        except Exception as ee:
+            logging.exception(latest_path)
