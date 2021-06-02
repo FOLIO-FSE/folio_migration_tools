@@ -70,8 +70,8 @@ class RefDataMapping(object):
                 )
         if not self.default_id:
             raise TransformationProcessError(
-                f"No {self.name} set up in map."
-                f"Add a row to mapping file with *:s and a valid {self.name}"
+                f"No default {self.name} set up in map."
+                f"Add a row to mapping file with *:s and a valid {self.name} value"
             )
         logging.info(
             f"loaded {idx} mappings for {len(self.ref_data)} {self.name} in FOLIO"
