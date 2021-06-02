@@ -438,7 +438,10 @@ class RulesMapperBase:
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
             if e_parent in ["precedingTitles", "succeedingTitles"]:
-                logging.log(25,json.dumps({e_parent:entity}))
+                self.add_to_migration_report(
+                    "Preceding and Succeding titles", f"{e_parent} created"
+                )
+                logging.log(25, json.dumps({e_parent: entity}))
             elif (
                 all(
                     v
