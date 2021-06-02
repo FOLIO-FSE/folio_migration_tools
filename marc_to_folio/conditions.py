@@ -320,7 +320,7 @@ class Conditions:
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
             )
             self.mapper.add_to_migration_report(
-                "Mapped note types", f"{marc_field.tag} -> {t[1]}"
+                "Mapped note types", f"{marc_field.tag} ({parameter.get('name', '')}) -> {t[1]}"
             )
             return t[0]
         except:
