@@ -200,7 +200,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.handle_hrid(folio_instance, marc_record)
         folio_instance["discoverySuppress"] = bool(self.suppress)
-        folio_instance["staffSuppress"] = bool(self.suppress)
+        folio_instance["staffSuppress"] = False
 
         self.handle_holdings(marc_record)
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
