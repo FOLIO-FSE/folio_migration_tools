@@ -1,9 +1,24 @@
+from genericpath import isfile
 import json
 import logging
+import os
 
 import requests
 
 class Helper():
+
+    @staticmethod
+    def setup_path(path, filename):
+        new_path = ""
+        try:
+            new_path = os.path.join(path, filename)
+        except:
+            raise Exception(
+                f"Something went wrong when joining {path} and {filename} into a path"
+            )
+        if not isfile(new_path):
+            raise Exception(f"No file called {filename} present in {path}")
+        return new_path
 
     @staticmethod
     def write_to_file(file, folio_record, pg_dump = False):
@@ -13,9 +28,10 @@ class Helper():
             file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
         else:
             file.write("{}\n".format(json.dumps(folio_record)))
-
+               
     @staticmethod
     def get_latest_from_github(owner, repo, filepath):
+
         """[gets the a json file from Github tied to the latest release]
         Args:
             owner (): [the owner (user or organization) of the repo]
