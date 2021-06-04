@@ -41,7 +41,6 @@ class Worker(main_base.MainBase):
         logging.info(json.dumps(self.files, sort_keys=True, indent=4))
         self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
-        self.failed_files = list()
         self.bib_ids = set()
         logging.info("Init done")
 
