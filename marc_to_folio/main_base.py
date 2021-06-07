@@ -44,7 +44,7 @@ class MainBase:
             # Data file formatter
             data_file_formatter = logging.Formatter("%(message)s")
             data_file_handler = logging.FileHandler(
-                filename=log_file_path.replace(".log",".data"), 
+                filename=str(log_file_path).replace(".log",".data"), 
             )
             data_file_handler.addFilter(LevelFilter(25))
             data_file_handler.setFormatter(data_file_formatter)

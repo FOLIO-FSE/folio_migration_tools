@@ -1,6 +1,7 @@
 """ Class that processes each MARC record """
 from io import StringIO
 import logging
+from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.helper import Helper
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
@@ -18,20 +19,20 @@ from jsonschema import ValidationError, validate
 class BibsProcessor:
     """the processor"""
 
-    def __init__(self, mapper, folio_client, results_file, args):
+    def __init__(self, mapper, folio_client, results_file, folder_structure: FolderStructure, args):
         self.ils_flavour = args.ils_flavour
         self.suppress = args.suppress
-        self.results_folder = args.results_folder
         self.results_file = results_file
         self.folio_client = folio_client
         self.instance_schema = folio_client.get_instance_json_schema()
         self.mapper: BibsRulesMapper = mapper
         self.args = args
+        self.folders = folder_structure
         self.srs_records_file = open(
-            os.path.join(self.results_folder, "srs.json"), "w+"
+            self.folders.srs_records_path, "w+"
         )
         self.instance_id_map_file = open(
-            os.path.join(self.results_folder, "instance_id_map.json"), "w+"
+            self.folders.instance_id_map_path, "w+"
         )
 
     def process_record(self, idx, marc_record, inventory_only):

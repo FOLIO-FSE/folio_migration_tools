@@ -1,6 +1,7 @@
 from genericpath import isfile
 import json
 import logging
+from pathlib import Path
 import os
 
 import requests

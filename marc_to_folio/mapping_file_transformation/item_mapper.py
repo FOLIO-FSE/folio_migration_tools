@@ -126,10 +126,11 @@ class ItemMapper(MapperBase):
             elif folio_prop_name == "temporaryLocationId":
                 if len(legacy_values) == 1:
                     t = self.location_mapping.get_ref_data_tuple(legacy_value)
+                    raise NotImplementedError("Temporary locations does not get mapped")
                     if t:
                         self.add_to_migration_report("Temporary locations mapping",f"{legacy_value} -> {t[1]}")
                         return t[0]
-                self.add_to_migration_report("Temporary locations mapping",f"Unmapped ({legacy_values})")
+                self.add_to_migration_report("Temporary locations mapping",f"Unmapped ({legacy_value})")
                 return ""
             elif folio_prop_name == "materialTypeId":
                 return self.get_material_type_id(legacy_item)
