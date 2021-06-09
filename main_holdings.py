@@ -60,8 +60,8 @@ def main():
     """Main method. Magic starts here."""
     args = parse_args()
     folder_structure = FolderStructure(args.base_folder, args.time_stamp)
-    MainBase.setup_logging(folder_structure.transformation_log_path)
     folder_structure.setup_migration_file_structure("holdingsrecord")
+    MainBase.setup_logging(folder_structure.transformation_log_path)   
     folder_structure.log_folder_structure()
 
     folio_client = FolioClient(
