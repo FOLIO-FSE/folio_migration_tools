@@ -78,6 +78,8 @@ def verify_git_ignore(gitignore: Path):
             f.write("results/\n")
         if "data/" not in contents:
             f.write("data/\n")
+        if "*.data" not in contents:
+            f.write("*.data/\n")
     logging.info(f"Made sure there was a valid .gitignore file at {gitignore}")
 
 
