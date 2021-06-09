@@ -269,16 +269,16 @@ def parse_args():
 def main():
     """Main Method. Used for bootstrapping. """
     args = parse_args()
-    folder_structure = FolderStructure(args.base_folder, args.time_stamp)
+    folder_structure : FolderStructure = FolderStructure(args.base_folder, args.time_stamp)
     folder_structure.setup_migration_file_structure("item")
     MainBase.setup_logging(folder_structure.transformation_log_path)
     folder_structure.log_folder_structure()
 
     # Source data files
     files = [
-        join(folder_structure.data_folder, f)
-        for f in listdir(folder_structure.data_folder)
-        if isfile(join(folder_structure.data_folder, f))
+        join(folder_structure.legacy_records_folder, f)
+        for f in listdir(folder_structure.legacy_records_folder)
+        if isfile(join(folder_structure.legacy_records_folder, f))
     ]
     logging.info(f"Files to process:")
     for f in files:
