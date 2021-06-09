@@ -63,6 +63,8 @@ class FolderStructure:
         self.holdings_from_bibs_path = self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
 
         self.holdings_from_csv_path = self.results_folder / f"holdings_from_csv_{self.time_stamp}.json"
+        self.holdings_id_map_path = self.results_folder / f"holdings_id_map_{self.time_stamp}.json"
+        
         self.holdings_from_mfhd_path = self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
         self.holdings_from_c_records_path = self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
 

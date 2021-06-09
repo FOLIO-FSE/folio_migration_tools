@@ -78,9 +78,7 @@ def main():
         folder_structure.locations_map_path
     ) as location_map_f, open(
         folder_structure.mfhd_rules_path
-    ) as mapping_rules_file, open(
-        folder_structure.created_objects_path, "w+"
-    ) as results_file:
+    ) as mapping_rules_file:
         instance_id_map = {}
         for index, json_string in enumerate(json_file):
             # {"legacy_id", "folio_id","instanceLevelCallNumber"}

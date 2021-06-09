@@ -263,14 +263,9 @@ class RulesMapperBase:
                         for sf in mapping["subfield"]:
                             next_subfield = next(iter(marc_field.get_subfields(sf)), "")
                             sfs.append(next_subfield)
-                        value = " ".join(
-                            [
-                                self.apply_rule(
+                        value = " ".join(self.apply_rule(
                                     x, condition_types, marc_field, parameter
-                                )
-                                for x in sfs
-                            ]
-                        )
+                                ) for x in sfs)
                     else:
                         subfields = marc_field.get_subfields(*mapping["subfield"])
                         x = [
@@ -295,10 +290,7 @@ class RulesMapperBase:
             "conditions", []
         ):
             value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-        if mapping.get("subFieldSplit", ""):
-            values = wrap(value, 3)
-        else:
-            values = [value]
+        values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
         return values
 
     def add_value_to_target(self, rec, target_string, value):
