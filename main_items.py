@@ -64,7 +64,7 @@ class Worker(MainBase):
 
         self.failed_files: List[str] = list()
         csv.register_dialect("tsv", delimiter="\t")
-
+        self.total_records = 0
         self.mapper = ItemMapper(
             self.folio_client,
             self.items_map,
