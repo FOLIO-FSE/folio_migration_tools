@@ -227,7 +227,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.hrid_settings["instances"]["startNumber"] = self.hrid_counter + 1
         try:
             url = self.folio_client.okapi_url + "/hrid-settings-storage/hrid-settings"
-            resp = requests.post(
+            resp = requests.put(
                 url,
                 data=json.dumps(self.hrid_settings),
                 headers=self.folio_client.okapi_headers,

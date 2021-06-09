@@ -423,7 +423,7 @@ class RulesMapperBase:
         return entity
 
     def handle_entity_mapping(
-        self, marc_field : Field, entity_mapping, rec, e_per_subfield
+        self, marc_field, entity_mapping, rec, e_per_subfield
     ):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
