@@ -584,6 +584,6 @@ class Conditions:
         ind1 = marc_field.indicator1
         self.mapper.add_to_migration_report(
             "Set note staff only via indicator",
-            f"{marc_field.tag} indicator1: {ind1} (0 is staff only, all other values are public)",
+            f"{marc_field.tag} indicator1: {ind1} (1 is public, all other values are Staff only)",
         )
-        return ind1 == "0"
+        return ind1 != "1"
