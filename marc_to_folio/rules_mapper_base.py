@@ -1,5 +1,7 @@
 import json
 import logging
+
+from pymarc.field import Field
 from marc_to_folio.helper import Helper
 from marc_to_folio.conditions import Conditions
 from marc_to_folio.report_blurbs import blurbs
@@ -421,12 +423,12 @@ class RulesMapperBase:
         return entity
 
     def handle_entity_mapping(
-        self, marc_field: pymarc.Field, entity_mapping, rec, e_per_subfield
+        self, marc_field : Field, entity_mapping, rec, e_per_subfield
     ):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
             for sf_tuple in grouped(marc_field.subfields, 2):
-                temp_field = pymarc.Field(
+                temp_field = Field(
                     tag=marc_field.tag,
                     indicators=marc_field.indicators,
                     subfields=[sf_tuple[0], sf_tuple[1]],
