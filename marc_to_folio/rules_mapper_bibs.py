@@ -221,8 +221,28 @@ class BibsRulesMapper(RulesMapperBase):
                 "Holdings generation from bibs", f"0 852:s and 0 866:s in record"
             )
 
-    def wrap_up(self):
+    def wrap_up(self):        
         logging.info("Mapper wrapping up")
+        logging.info("Setting HRID counter to current +1")
+        self.hrid_settings["instances"]["startNumber"] = self.hrid_counter + 1
+        try:
+            url = self.folio_client.okapi_url + "/hrid-settings-storage/hrid-settings"
+            resp = requests.post(
+                url,
+                data=json.dumps(self.hrid_settings),
+                headers=self.folio_client.okapi_headers,
+            )
+            resp.raise_for_status()
+            logging.info(f"{resp.status_code} Successfully set HRID settings.")
+            a = self.folio_client.folio_get_single_object(
+                "/hrid-settings-storage/hrid-settings"
+            )
+            logging.info(f"Current hrid settings: {json.dumps(a, indent=4)}")
+        except Exception as ee:
+            logging.exception(
+                f"Something went wrong when setting the HRID settings. "
+                f"Update them manually. {json.dumps(self.hrid_settings)}"
+            )
 
     def report_bad_tags(self, marc_field, bad_tags):
         if (
@@ -336,7 +356,7 @@ class BibsRulesMapper(RulesMapperBase):
         for fidx, f in enumerate(all_338s):
             source = f["2"] if "2" in f else "Not set"
             self.add_to_migration_report(
-                "Instance format ids handling (337 + 338) ",
+                "Instance format ids handling (337 + 338)",
                 f"Source ($2) is set to {source}. "
                 "Everything starting with rdacarrier will get mapped.",
             )

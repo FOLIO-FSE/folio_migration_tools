@@ -4,6 +4,7 @@ from marc_to_folio.helper import Helper
 from marc_to_folio.conditions import Conditions
 from marc_to_folio.report_blurbs import blurbs
 import time
+from folioclient import FolioClient
 from typing import Dict, List
 import pymarc
 import copy
@@ -16,13 +17,13 @@ import requests
 
 
 class RulesMapperBase:
-    def __init__(self, folio_client, conditions=None):
+    def __init__(self, folio_client : FolioClient, conditions=None):
         self.migration_report = {}
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
         self.start = time.time()
         self.stats = {}
-        self.folio_client = folio_client
+        self.folio_client : FolioClient = folio_client
         self.holdings_json_schema = fetch_holdings_schema()
         self.instance_json_schema = get_instance_schema()
         self.schema = {}

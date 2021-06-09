@@ -104,6 +104,7 @@ class Worker(main_base.MainBase):
                     self.processor.process_record(idx, record, False)
             except TransformationCriticalDataError as error:
                 logging.error(error)
+        logging.info(f"Done reading {idx} records from file")
 
     @staticmethod
     def set_leader(marc_record: Record):
@@ -194,7 +195,8 @@ def main():
     try:
         # Parse CLI Arguments
         args = parse_args()
-        folder_structure = FolderStructure(args.base_folder)
+        time_stamp = time.strftime("%Y%m%d-%H%M%S")
+        folder_structure = FolderStructure(args.base_folder, time_stamp)
         folder_structure.setup_migration_file_structure("instance")
         Worker.setup_logging(folder_structure.transformation_log_path)
         folder_structure.log_folder_structure()
