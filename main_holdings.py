@@ -24,7 +24,6 @@ def parse_args():
     # parser = argparse.ArgumentParser()
     parser = PromptParser()
     parser.add_argument("base_folder", help="Base folder of the client.")
-    parser.add_argument("map_path", help=("path to mapping files"))
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
