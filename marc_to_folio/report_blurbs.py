@@ -53,5 +53,8 @@ blurbs = {
     "Mapped classification types": "Section description to be added.",
     "Location mapping": "These are the results for the mapping between legacy locations and your new FOLIO location structure",
     "Value set in mapping file": "The value for these fields are set in the mapping file instead of coming from the legacy system data.",
-    "Values mapped from legacy fields": "A list fo the values and what they were mapped to"
+    "Values mapped from legacy fields": "A list fo the values and what they were mapped to",
+    "General statistics": "A list of general counterts to outline the transformation as a whole.",
+    "Mapped publisher role from Indicator2": "Publication Role, taken from the code in Ind2",
+    "Preceding and Succeding titles": "Preceding and Succeding titles is still Work In progress and still not fully implemented"
 }

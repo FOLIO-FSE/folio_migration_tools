@@ -1,4 +1,5 @@
 """ Class that processes each MARC record """
+from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 from marc_to_folio.helper import Helper
 from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
@@ -14,16 +15,15 @@ from jsonschema import ValidationError, validate
 class HoldingsProcessor:
     """the processor"""
 
-    def __init__(self, mapper, folio_client, results_file, args):
-        self.results_file = results_file
+    def __init__(self, mapper, folio_client, folder_structure:FolderStructure, suppress: bool):
+        self.folder_structure : FolderStructure = folder_structure
         self.records_count = 0
         self.missing_instance_id_count = 0
         self.mapper : RulesMapperHoldings = mapper
-        self.args = args
         self.start = time.time()
-        self.suppress = args.suppress
+        self.suppress = suppress
         logging.info(
-            f'map will be saved to {os.path.join(self.args.result_folder, "holdings_id_map.json")}'
+            f'map will be saved to {}'
         )
 
     def process_record(self, marc_record):

@@ -1,5 +1,6 @@
 import json
 import logging
+from marc_to_folio.folder_structure import FolderStructure
 from typing import Dict, List
 
 from pymarc.record import Record
@@ -11,10 +12,10 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(
-        self, folio, instance_id_map, location_map, default_location_code, args
+        self, folio, instance_id_map, location_map, default_location_code, default_call_number_type_id
     ):
         logging.debug(f"Default location code is {default_location_code}")
-        self.conditions = Conditions(folio, self, "holdings", default_location_code, args.default_call_number_type_id)
+        self.conditions = Conditions(folio, self, "holdings", default_location_code, default_call_number_type_id)
         self.folio = folio
         super().__init__(folio, self.conditions)
         self.instance_id_map = instance_id_map

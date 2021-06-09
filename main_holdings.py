@@ -3,6 +3,7 @@ import argparse
 import csv
 import json
 import logging
+from marc_to_folio.folder_structure import FolderStructure
 import os
 from os import listdir
 from os.path import isfile, join
@@ -22,8 +23,7 @@ def parse_args():
     """Parse CLI Arguments"""
     # parser = argparse.ArgumentParser()
     parser = PromptParser()
-    parser.add_argument("source_folder", help="path to marc records folder")
-    parser.add_argument("result_folder", help="path to results folder")
+    parser.add_argument("base_folder", help="Base folder of the client.")
     parser.add_argument("map_path", help=("path to mapping files"))
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
@@ -41,8 +41,15 @@ def parse_args():
         default=False,
         type=bool,
     )
+    parser.add_argument(
+        "--time_stamp",
+        "-ts",
+        help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
+    )
     args = parser.parse_args()
-    logging.info(f"\tresults are stored at:\t{args.result_folder}")
+    if len(args.time_stamp) != 15:
+        logging.critical(f"Time stamp ({args.time_stamp}) is not set properly")
+        exit()
     logging.info(f"\tOkapi URL:\t{args.okapi_url}")
     logging.info(f"\tTenanti Id:\t{args.tenant_id}")
     logging.info(f"\tUsername:\t{args.username}")
@@ -53,26 +60,26 @@ def parse_args():
 def main():
     """Main method. Magic starts here."""
     args = parse_args()
-    MainBase.setup_logging(
-        os.path.join(args.result_folder, "holdings_transformation.log")
-    )
+    folder_structure = FolderStructure(args.base_folder, args.time_stamp)
+    MainBase.setup_logging(folder_structure.transformation_log_path)
+    folder_structure.setup_migration_file_structure("holdingsrecord")
+    folder_structure.log_folder_structure()
+
     folio_client = FolioClient(
         args.okapi_url, args.tenant_id, args.username, args.password
     )
     csv.register_dialect("tsv", delimiter="\t")
     files = [
-        os.path.join(args.source_folder, f)
-        for f in listdir(args.source_folder)
-        if isfile(os.path.join(args.source_folder, f))
+        os.path.join(folder_structure.legacy_records_folder, f)
+        for f in listdir(folder_structure.legacy_records_folder)
+        if isfile(os.path.join(folder_structure.legacy_records_folder, f))
     ]
-    with open(
-        os.path.join(args.result_folder, "instance_id_map.json"), "r"
-    ) as json_file, open(
-        os.path.join(args.map_path, "locations.tsv")
+    with open(folder_structure.instance_id_map_path) as json_file, open(
+        folder_structure.locations_map_path
     ) as location_map_f, open(
-        os.path.join(args.map_path, "mfhd_rules.json")
+        folder_structure.mfhd_rules_path
     ) as mapping_rules_file, open(
-        os.path.join(args.result_folder, "folio_holdings.json"), "w+"
+        folder_structure.created_objects_path, "w+"
     ) as results_file:
         instance_id_map = {}
         for index, json_string in enumerate(json_file):
@@ -98,11 +105,11 @@ def main():
             instance_id_map,
             location_map,
             rules_file["defaultLocationCode"],
-            args,
+            args.default_call_number_type_id,
         )
         mapper.mappings = rules_file["rules"]
 
-        processor = HoldingsProcessor(mapper, folio_client, results_file, args)
+        processor = HoldingsProcessor(mapper, folio_client, folder_structure, args.suppress)
         for records_file in files:
             try:
                 with open(records_file, "rb") as marc_file:

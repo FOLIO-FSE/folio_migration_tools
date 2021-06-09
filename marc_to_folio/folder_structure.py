@@ -4,7 +4,8 @@ import time
 
 
 class FolderStructure:
-    def __init__(self, base_path: Path):
+    def __init__(self, base_path: Path, time_stamp:str):
+        self.time_stamp = time_stamp
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
             logging.info(f"Base Folder Path is not a folder. Exiting.")
@@ -38,30 +39,38 @@ class FolderStructure:
         verify_folder(self.legacy_records_folder)
         logging.info(f"{object_type} source records files folder is {self.legacy_records_folder}")
 
-        time_str = time.strftime("%Y%m%d-%H%M%S")
         self.transformation_log_path = (
-            self.reports_folder / f"{object_type}_transformation_{time_str}.log"
+            self.reports_folder / f"{object_type}_transformation_{self.time_stamp}.log"
         )
         logging.info(
             f"Log file will be located at {self.transformation_log_path}"
         )
 
         self.created_objects_path = (
-            self.results_folder / f"folio_{object_type}_{time_str}.json"
+            self.results_folder / f"folio_{object_type}_{self.time_stamp}.json"
         )
         logging.info(
             f"Created {object_type}s will be stored at  {self.created_objects_path}"
         )
 
         self.migration_reports_file = (
-            self.reports_folder / f"{object_type}_transformation_report_{time_str}.md"
+            self.reports_folder / f"{object_type}_transformation_report_{self.time_stamp}.md"
         )
         logging.info(f"{object_type} migration report file will be saved at {self.migration_reports_file}")
 
-        self.srs_records_path = self.results_folder / f"srs_{time_str}.json"
-        self.instance_id_map_path = self.results_folder / f"instance_id_map_{time_str}.json"
+        self.srs_records_path = self.results_folder / f"srs_{self.time_stamp}.json"
+        self.instance_id_map_path = self.results_folder / f"instance_id_map_{self.time_stamp}.json"
+        self.holdings_from_bibs_path = self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
 
+        self.holdings_from_csv_path = self.results_folder / f"holdings_from_csv_{self.time_stamp}.json"
+        self.holdings_from_mfhd_path = self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
+        self.holdings_from_c_records_path = self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
 
+        # Mapping files
+        self.locations_map_path = self.mapping_files_folder / 'locations.tsv'
+        self.mfhd_rules_path = self.mapping_files_folder / "mfhd_rules.json"
+
+        
 def verify_git_ignore(gitignore: Path):
     with open(gitignore, "a+") as f:
         contents = f.read()
