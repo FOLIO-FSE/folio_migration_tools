@@ -192,6 +192,7 @@ class ItemMapper(MapperBase):
         return self.get_mapped_value(self.loan_type_mapping, legacy_item)
 
     def get_material_type_id(self, legacy_item: dict):
+        logging.debug(f"Material type mapping")
         return self.get_mapped_value(self.material_type_mapping, legacy_item)
 
     def get_location_id(self, legacy_item: dict, id_or_index, prevent_default=False):

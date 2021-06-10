@@ -108,7 +108,7 @@ class MapperBase:
         )
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
-        if self.num_criticalerrors > 10000:
+        if self.num_criticalerrors > 1000:
             logging.fatal("Stopping. More than 10,000 critical data errors")
             exit()
 
@@ -437,7 +437,6 @@ class MapperBase:
             for prop in (
                 k for k, p in properties.items() if not p.get("folio:isVirtual", False)
             ):
-
                 prop_path = f"{prop_name}[{i}].{prop}"
                 # logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
@@ -454,7 +453,7 @@ class MapperBase:
                 # logging.debug(f"temporary object {temp_object}")
                 resulting_array.append(temp_object)
             else:
-                logging.debug(json.dumps(temp_object, indent=4))
+                logging.debug(f"empty temp object {json.dumps(temp_object, indent=4)}")
         if any(resulting_array):
             folio_object[prop_name] = resulting_array
 
