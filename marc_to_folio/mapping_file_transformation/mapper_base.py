@@ -108,7 +108,7 @@ class MapperBase:
         )
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
-        if self.num_criticalerrors > 1000:
+        if self.num_criticalerrors > 500:
             logging.fatal("Stopping. More than 10,000 critical data errors")
             exit()
 
