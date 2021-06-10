@@ -213,9 +213,10 @@ class MapperBase:
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
+            
             # Get the values in the fields that will be used for mapping
             fieldvalues = [legacy_object.get(k) for k in ref_dat_mapping.keys]
-            # logging.debug(f"fieldvalues are {fieldvalues}")
+            logging.debug(f"fieldvalues are {fieldvalues}")
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
@@ -228,13 +229,14 @@ class MapperBase:
                     for k in ref_dat_mapping.keys
                 )
             )
-            # logging.debug(f"Found mapping is {right_mapping}")
+            logging.debug(f"Found mapping is {right_mapping}")
             self.add_to_migration_report(
                 f"{ref_dat_mapping.name} mapping",
                 f'{" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',
             )
             return right_mapping["folio_id"]
         except StopIteration:
+            logging.debug(f"{ref_dat_mapping.name} mapping stopiteration")
             if prevent_default:
                 self.add_to_migration_report(
                     f"{ref_dat_mapping.name} mapping",
@@ -247,11 +249,14 @@ class MapperBase:
             )
             return ref_dat_mapping.default_id
         except IndexError as ee:
+            logging.debug(f"{ref_dat_mapping.name} mapping indexerror")
+            
             raise TransformationCriticalDataError(
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
                 f"({ref_dat_mapping.keys}) {ee} is not a recognized fields in the legacy data."
             )
         except Exception as ee:
+            logging.debug(f"{ref_dat_mapping.name} mapping general error")
             raise TransformationCriticalDataError(
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.keys}) {ee}"
             )
