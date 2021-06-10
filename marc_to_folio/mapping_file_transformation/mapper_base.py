@@ -452,8 +452,8 @@ class MapperBase:
             ):
                 # logging.debug(f"temporary object {temp_object}")
                 resulting_array.append(temp_object)
-            else:
-                logging.debug(f"empty temp object {json.dumps(temp_object, indent=4)}")
+            # else:
+            #    logging..trace(f"empty temp object {json.dumps(temp_object, indent=4)}")
         if any(resulting_array):
             folio_object[prop_name] = resulting_array
 
