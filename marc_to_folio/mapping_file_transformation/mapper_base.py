@@ -109,7 +109,7 @@ class MapperBase:
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
         if self.num_criticalerrors > 500:
-            logging.fatal("Stopping. More than 10,000 critical data errors")
+            logging.fatal(f"Stopping. More than {self.num_criticalerrors} critical data errors")
             exit()
 
     def handle_generic_exception(self, idx, excepion: Exception):
@@ -119,6 +119,9 @@ class MapperBase:
             f"Row {idx:,} failed with the following unhandled Exception: {excepion}  "
             f"of type {type(excepion).__name__}"
         )
+        if self.num_exeptions > 500:
+            logging.fatal(f"Stopping. More than {self.num_exeptions} unhandled exceptions")
+            exit()
 
     @staticmethod
     def get_mapped_folio_properties_from_map(map):
