@@ -255,6 +255,13 @@ def parse_args():
         "-ts",
         help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
     )
+    parser.add_argument(
+        "--log_level_debug",
+        "-debug",
+        help="Set log level to debug",
+        default=False,
+        type=bool,
+    )
     args = parser.parse_args()
     if len(args.time_stamp) != 15:
         logging.critical(f"Time stamp ({args.time_stamp}) is not set properly")
@@ -269,9 +276,11 @@ def parse_args():
 def main():
     """Main Method. Used for bootstrapping. """
     args = parse_args()
-    folder_structure : FolderStructure = FolderStructure(args.base_folder, args.time_stamp)
+    folder_structure: FolderStructure = FolderStructure(
+        args.base_folder, args.time_stamp
+    )
     folder_structure.setup_migration_file_structure("item")
-    MainBase.setup_logging(folder_structure.transformation_log_path)
+    MainBase.setup_logging(folder_structure.transformation_log_path, args.log_level_debug)
     folder_structure.log_folder_structure()
 
     # Source data files
