@@ -45,21 +45,24 @@ class MapperBase:
         logging.info(
             f"Mapped values:\n{json.dumps(self.mapped_from_values, indent=4, sort_keys=True)}"
         )
-
+        legacy_fields = set()
         self.mapped_from_legacy_data = {}
         for k in self.record_map["data"]:
             if (
                 k["legacy_field"] not in self.empty_vals
                 or k["value"] not in self.empty_vals
             ):
+                legacy_fields.add(k["legacy_field"])
                 if not self.mapped_from_legacy_data.get(k["folio_field"]):
                     self.mapped_from_legacy_data[k["folio_field"]] = {k["legacy_field"]}
                 else:
                     self.mapped_from_legacy_data[k["folio_field"]].add(
                         k["legacy_field"]
                     )
+
+        
         logging.info(
-            f"Mapped legacy fields:\n{json.dumps(list(self.mapped_from_legacy_data.values()), indent=4, sort_keys=True)}"
+            f"Mapped legacy fields:\n{json.dumps(list(legacy_fields), indent=4, sort_keys=True)}"
         )
         logging.info(
             f"Mapped FOLIO fields:\n{json.dumps(self.folio_keys, indent=4, sort_keys=True)}"
