@@ -249,7 +249,7 @@ class Worker(MainBase):
                 json.dump(self.legacy_map, legacy_map_path_file)
                 logging.info(f"Wrote {len(self.legacy_map)} id:s to legacy map")
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logging.info(f"Writing migration- and mapping report to {p}")
+            logging.info(f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}")
             self.mapper.write_migration_report(migration_report_file)
             self.mapper.print_mapping_report(migration_report_file, self.total_records)
         logging.info("All done!")
