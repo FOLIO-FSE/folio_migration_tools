@@ -86,7 +86,7 @@ class RulesMapperHoldings(RulesMapperBase):
             htype_map = {
                 "u": "Unknown",
                 "v": "Multi-part monograph",
-                "x": "Monographic",
+                "x": "Monograph",
                 "y": "Serial",
             }
             htype = htype_map.get(ldr06, "")

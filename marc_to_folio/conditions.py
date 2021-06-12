@@ -289,6 +289,34 @@ class Conditions:
     def condition_char_select(self, value, parameter, marc_field: field.Field):
         return value[parameter["from"] : parameter["to"]]
 
+    def condition_set_receipt_status(self, value, parameter, marc_field: field.Field):
+        if len(value) < 7:
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"008 is too short: {value}"
+            )
+            return ""
+        try:
+            status_map = {
+                "0": "Unknown",
+                "1": "Other receipt or acquisition status",
+                "2": "Received and complete or ceased",
+                "3": "On order",
+                "4": "Currently received",
+                "5": "Not currently received",
+                "6": "External access",
+            }
+            mapped_value = status_map[value[6]]
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"{value[6]} mapped to {mapped_value}"
+            )
+
+            return
+        except:
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"{value[6]} not found in map."
+            )
+            return "Unknown"
+
     def condition_set_identifier_type_id_by_name(
         self, value, parameter, marc_field: field.Field
     ):
