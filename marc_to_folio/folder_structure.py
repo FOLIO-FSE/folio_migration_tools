@@ -82,6 +82,7 @@ class FolderStructure:
         self.locations_map_path = self.mapping_files_folder / 'locations.tsv'
         self.mfhd_rules_path = self.mapping_files_folder / "mfhd_rules.json"
         self.items_map_path = self.mapping_files_folder / "item_mapping.json"
+        self.holdings_map_path = self.mapping_files_folder / "holdingsrecord_mapping.json"
         self.material_type_map_path = self.mapping_files_folder /"material_types.tsv"
         self.loan_type_map_path = self.mapping_files_folder /"loan_types.tsv"
         self.call_number_type_map_path = self.mapping_files_folder /"call_number_type_mapping.tsv"

@@ -381,7 +381,7 @@ def main():
     try:
         with open(folder_structure.call_number_type_map_path, "r") as callnumber_type_map_f, open(
             folder_structure.instance_id_map_path, "r"
-        ) as instance_id_map_file, open(folder_structure.holdings_id_map_path) as holdings_mapper_f, open(
+        ) as instance_id_map_file, open(folder_structure.holdings_map_path) as holdings_mapper_f, open(
             folder_structure.locations_map_path
         ) as location_map_f:
             instance_id_map = {}
