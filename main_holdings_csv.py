@@ -331,6 +331,11 @@ def parse_args():
         default=False,
         type=bool,
     )
+    parser.add_argument(
+        "--time_stamp",
+        "-ts",
+        help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
+    )
     args = parser.parse_args()
     logging.info(f"\tOkapi URL:\t{args.okapi_url}")
     logging.info(f"\tTenanti Id:\t{args.tenant_id}")
