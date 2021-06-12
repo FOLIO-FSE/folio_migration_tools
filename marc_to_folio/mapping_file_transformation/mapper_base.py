@@ -354,10 +354,14 @@ class MapperBase:
         required = self.schema["required"]
         for required_prop in required:
             if required_prop not in folio_object:
+                if index_or_id == "row 1":
+                    logging.info(json.dumps(folio_object, indent=4))
                 raise TransformationCriticalDataError(
                     f"Required property {required_prop} missing for {index_or_id}"
                 )
             elif not folio_object[required_prop]:
+                if index_or_id == "row 1":
+                    logging.info(json.dumps(folio_object, indent=4))
                 raise TransformationCriticalDataError(
                     f"Required property {required_prop} empty for {index_or_id}"
                 )
