@@ -59,7 +59,7 @@ class MapperBase:
                         k["legacy_field"]
                     )
         logging.info(
-            f"Mapped legacy fields:\n{json.dumps(list(self.mapped_from_legacy_data), indent=4, sort_keys=True)}"
+            f"Mapped legacy fields:\n{json.dumps(list(self.mapped_from_legacy_data.values()), indent=4, sort_keys=True)}"
         )
         logging.info(
             f"Mapped FOLIO fields:\n{json.dumps(self.folio_keys, indent=4, sort_keys=True)}"
