@@ -130,7 +130,7 @@ class Conditions:
     ):
         try:
             return self.condition_cache.get(name)(value, parameter, marc_field)
-        # Exception should only handle the missing condition from the cache. 
+        # Exception should only handle the missing condition from the cache.
         # All other exceptions should propagate up
         except Exception:
             attr = getattr(self, "condition_" + str(name))
@@ -142,6 +142,17 @@ class Conditions:
 
     def condition_trim(self, value, parameter, marc_field: field.Field):
         return value.strip()
+
+    def condition_get_value_if_subfield_is_empty(
+        self, value, parameter, marc_field: field.Field
+    ):
+        if value.strip():
+            return value.strip()
+        self.mapper.add_to_migration_report(
+            "Added Value since value is empty",
+            f"Tag: {marc_field.tag}. Added value: {parameter['value']}",
+        )
+        return parameter["value"]
 
     def condition_remove_ending_punc(self, value, parameter, marc_field: field.Field):
         v = value
@@ -320,7 +331,8 @@ class Conditions:
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
             )
             self.mapper.add_to_migration_report(
-                "Mapped note types", f"{marc_field.tag} ({parameter.get('name', '')}) -> {t[1]}"
+                "Mapped note types",
+                f"{marc_field.tag} ({parameter.get('name', '')}) -> {t[1]}",
             )
             return t[0]
         except:
