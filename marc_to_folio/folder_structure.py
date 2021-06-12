@@ -35,10 +35,12 @@ class FolderStructure:
         logging.info(f"Data folder is {self.data_folder}")
         logging.info(f"Source records files folder is {self.legacy_records_folder}")
 
-    def setup_migration_file_structure(self, object_type:str):
-        self.legacy_records_folder = self.data_folder / object_type
+    def setup_migration_file_structure(self, object_type:str, source_file_type:str = ""):
+        if source_file_type:
+            self.legacy_records_folder = self.data_folder / source_file_type
+        else:
+            self.legacy_records_folder = self.data_folder / object_type
         verify_folder(self.legacy_records_folder)
-       
 
         self.transformation_log_path = (
             self.reports_folder / f"{object_type}_transformation_{self.time_stamp}.log"
