@@ -280,7 +280,7 @@ def main():
         args.base_folder, args.time_stamp
     )
     folder_structure.setup_migration_file_structure("item")
-    MainBase.setup_logging(folder_structure.transformation_log_path, args.log_level_debug)
+    MainBase.setup_logging(folder_structure, args.log_level_debug)
     folder_structure.log_folder_structure()
 
     # Source data files

@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 
 from pymarc.field import Field
 from marc_to_folio.helper import Helper
@@ -19,13 +20,13 @@ import requests
 
 
 class RulesMapperBase:
-    def __init__(self, folio_client : FolioClient, conditions=None):
+    def __init__(self, folio_client: FolioClient, conditions=None):
         self.migration_report = {}
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
         self.start = time.time()
         self.stats = {}
-        self.folio_client : FolioClient = folio_client
+        self.folio_client: FolioClient = folio_client
         self.holdings_json_schema = fetch_holdings_schema()
         self.instance_json_schema = get_instance_schema()
         self.schema = {}
@@ -256,28 +257,28 @@ class RulesMapperBase:
             if mapping.get("applyRulesOnConcatenatedData", ""):
                 value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
                 value = self.apply_rule(value, condition_types, marc_field, parameter)
-            else:
-                if mapping.get("subfield", []):
-                    if mapping.get("ignoreSubsequentFields", False):
-                        sfs = []
-                        for sf in mapping["subfield"]:
-                            next_subfield = next(iter(marc_field.get_subfields(sf)), "")
-                            sfs.append(next_subfield)
-                        value = " ".join(self.apply_rule(
-                                    x, condition_types, marc_field, parameter
-                                ) for x in sfs)
-                    else:
-                        subfields = marc_field.get_subfields(*mapping["subfield"])
-                        x = [
-                            self.apply_rule(x, condition_types, marc_field, parameter)
-                            for x in subfields
-                        ]
-                        value = " ".join(set(x))
-                else:
-                    value1 = marc_field.format_field() if marc_field else ""
-                    value = self.apply_rule(
-                        value1, condition_types, marc_field, parameter
+            elif mapping.get("subfield", []):
+                if mapping.get("ignoreSubsequentFields", False):
+                    sfs = []
+                    for sf in mapping["subfield"]:
+                        next_subfield = next(iter(marc_field.get_subfields(sf)), "")
+                        sfs.append(next_subfield)
+                    value = " ".join(
+                        self.apply_rule(x, condition_types, marc_field, parameter)
+                        for x in sfs
                     )
+                else:
+                    subfields = marc_field.get_subfields(*mapping["subfield"])
+                    x = [
+                        self.apply_rule(x, condition_types, marc_field, parameter)
+                        for x in subfields
+                    ]
+                    value = " ".join(set(x))
+            else:
+                value1 = marc_field.format_field() if marc_field else ""
+                value = self.apply_rule(
+                    value1, condition_types, marc_field, parameter
+                )
         elif has_value_to_add(mapping):
             value = mapping["rules"][0]["value"]
             if value == "false":
@@ -294,86 +295,78 @@ class RulesMapperBase:
         return values
 
     def add_value_to_target(self, rec, target_string, value):
-        if value:
-            targets = target_string.split(".")
-            if len(targets) == 1:
-                self.add_value_to_first_level_target(rec, target_string, value)
+        if not value:
+            return
+        targets = target_string.split(".")
+        if len(targets) == 1:
+            self.add_value_to_first_level_target(rec, target_string, value)
 
-            else:
-                schema_parent = None
-                parent = None
-                schema_properties = self.schema["properties"]
-                sc_prop = schema_properties
+        else:
+            schema_parent = None
+            parent = None
+            schema_properties = self.schema["properties"]
+            sc_prop = schema_properties
                 # prop = copy.deepcopy(rec)
-                for target in targets:  # Iterate over names in hierarcy
-                    if target in sc_prop:  # property is on this level
-                        sc_prop = sc_prop[target]  # set current property
-                    else:  # next level. take the properties from the items
-                        sc_prop = schema_parent["items"]["properties"][target]
-                    if (
+            for target in targets:  # Iterate over names in hierarcy
+                if target in sc_prop:  # property is on this level
+                    sc_prop = sc_prop[target]  # set current property
+                else:  # next level. take the properties from the items
+                    sc_prop = schema_parent["items"]["properties"][target]
+                if (
                         target not in rec and not schema_parent
                     ):  # have we added this already?
-                        if is_array_of_strings(sc_prop):
-                            rec[target] = []
-                            # break
-                            # prop[target].append({})
-                        elif is_array_of_objects(sc_prop):
-                            rec[target] = [{}]
-                            # break
-                        elif (
+                    if is_array_of_strings(sc_prop):
+                        rec[target] = []
+                        # break
+                        # prop[target].append({})
+                    elif is_array_of_objects(sc_prop):
+                        rec[target] = [{}]
+                        # break
+                    elif (
                             schema_parent
                             and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
-                            logging.error("This should be unreachable code")
-                            raise Exception("This should be unreachable code")
-                            # logging.error(f"break! {target} {prop} {value}")
-                            if len(rec[parent][-1]) > 0:
-                                rec[parent][-1][target] = value[0]
-                            else:
-                                rec[parent][-1] = {target: value[0]}
-                            # logging.info(parent)
-                            # break
+                        logging.error("This should be unreachable code")
+                        raise Exception("This should be unreachable code")
+                                            # logging.info(parent)
+                                            # break
+                    else:
+                        if schema_parent["type"] == "array":
+                            # prop[target] = {}
+                            # parent.append(prop[target])
+                            parent.append({})
                         else:
-                            if schema_parent["type"] == "array":
-                                # prop[target] = {}
-                                # parent.append(prop[target])
-                                parent.append({})
-                            else:
-                                raise Exception(
-                                    f"Edge! {target_string} {schema_properties[target_string]}"
-                                )
-                    else:  # We already have stuff in here
-                        if is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
+                            raise Exception(
+                                f"Edge! {target_string} {schema_properties[target_string]}"
+                            )
+                elif is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
                             sc_prop["items"]["properties"]
                         ):
-                            rec[target].append({})
-                        elif schema_parent and target in rec[parent][-1]:
-                            rec[parent].append({})
-                            if len(rec[parent][-1]) > 0:
-                                rec[parent][-1][target] = value[0]
-                            else:
-                                rec[parent][-1] = {target: value[0]}
-                        elif (
+                    rec[target].append({})
+                elif schema_parent and target in rec[parent][-1]:
+                    rec[parent].append({})
+                    if len(rec[parent][-1]) > 0:
+                        rec[parent][-1][target] = value[0]
+                    else:
+                        rec[parent][-1] = {target: value[0]}
+                elif (
                             schema_parent
                             and is_array_of_objects(schema_parent)
                             and sc_prop.get("type", "string") == "string"
                         ):
                             # logging.debug(f"break! {target} {prop} {value}")
-                            if len(rec[parent][-1]) > 0:
-                                rec[parent][-1][target] = value[0]
-                                logging.debug(rec[parent])
-                            else:
-                                rec[parent][-1] = {target: value[0]}
-                                logging.debug(rec[parent])
-                        # break
-
-                    # if target == targets[-1]:
-                    # logging.debug(f"HIT {target} {value[0]}")
-                    # prop[target] = value[0]
-                    # prop = rec[target]
-                    schema_parent = sc_prop
-                    parent = target
+                    if len(rec[parent][-1]) > 0:
+                        rec[parent][-1][target] = value[0]
+                    else:
+                        rec[parent][-1] = {target: value[0]}
+                    logging.debug(rec[parent])
+                # if target == targets[-1]:
+                # logging.debug(f"HIT {target} {value[0]}")
+                # prop[target] = value[0]
+                # prop = rec[target]
+                schema_parent = sc_prop
+                parent = target
 
     def add_value_to_first_level_target(self, rec, target_string, value):
         logging.debug(f"{target_string} {value} {rec}")
@@ -414,9 +407,7 @@ class RulesMapperBase:
                     entity[k] = values[0]
         return entity
 
-    def handle_entity_mapping(
-        self, marc_field, entity_mapping, rec, e_per_subfield
-    ):
+    def handle_entity_mapping(self, marc_field, entity_mapping, rec, e_per_subfield):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
             for sf_tuple in grouped(marc_field.subfields, 2):
@@ -433,10 +424,7 @@ class RulesMapperBase:
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
             if e_parent in ["precedingTitles", "succeedingTitles"]:
-                self.add_to_migration_report(
-                    "Preceding and Succeding titles", f"{e_parent} created"
-                )
-                logging.log(25, json.dumps({e_parent: entity}))
+               self.create_preceding_succeeding_titles(entity, e_parent)
             elif (
                 all(
                     v
@@ -466,6 +454,31 @@ class RulesMapperBase:
                 )
                 # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec)
+
+    def create_preceding_succeeding_titles(self, entity, e_parent):
+        self.add_to_migration_report(
+            "Preceding and Succeding titles", f"{e_parent} created"
+        )
+        new_entity = {
+            "id": str(uuid.uuid4()),
+            "title": entity.get("title"),
+            "identifiers": [],
+        }
+        if new_entity.get("isbnValue", ""):
+            new_entity["identifiers"].append(
+                {
+                    "identifierTypeId": new_entity.get("isbnId"),
+                    "value": new_entity.get("isbnValue"),
+                }
+            )
+        if new_entity.get("issnValue", ""):
+            new_entity["identifiers"].append(
+                {
+                    "identifierTypeId": new_entity.get("issnId"),
+                    "value": new_entity.get("issnValue"),
+                }
+            )
+        logging.log(25, f"{e_parent}\t{json.dumps(new_entity)}")
 
     def apply_rule(self, value, condition_types, marc_field, parameter):
         v = value

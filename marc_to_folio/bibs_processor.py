@@ -51,14 +51,14 @@ class BibsProcessor:
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
                 self.mapper.add_to_migration_report(
-                    "Preceeding and Succeeding titles", f"{len(prec_titles)}"
+                    "Preceding and Succeeding titles", f"{len(prec_titles)}"
                 )
                 del folio_rec["precedingTitles"]
             succ_titles = folio_rec.get("succeedingTitles", [])
             if succ_titles:
                 del folio_rec["succeedingTitles"]
                 self.mapper.add_to_migration_report(
-                    "Preceeding and Succeeding titles", f"{len(succ_titles)}"
+                    "Preceding and Succeeding titles", f"{len(succ_titles)}"
                 )
             if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
                 Helper.write_to_file(self.results_file, folio_rec)

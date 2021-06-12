@@ -198,7 +198,7 @@ def main():
         time_stamp = time.strftime("%Y%m%d-%H%M%S")
         folder_structure = FolderStructure(args.base_folder, time_stamp)
         folder_structure.setup_migration_file_structure("instance")
-        Worker.setup_logging(folder_structure.transformation_log_path)
+        Worker.setup_logging(folder_structure)
         folder_structure.log_folder_structure()
         
         logging.info(f"Okapi URL:\t{args.okapi_url}")

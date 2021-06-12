@@ -43,6 +43,11 @@ class FolderStructure:
         self.transformation_log_path = (
             self.reports_folder / f"{object_type}_transformation_{self.time_stamp}.log"
         )
+
+        self.transformation_extra_data_path = (
+            self.results_folder / f"{object_type}_transformation_{self.time_stamp}.extradata"
+        )
+
         logging.info(
             f"Log file will be located at {self.transformation_log_path}"
         )
@@ -50,6 +55,7 @@ class FolderStructure:
         self.created_objects_path = (
             self.results_folder / f"folio_{object_type}_{self.time_stamp}.json"
         )
+
         logging.info(
             f"Created {object_type}s will be stored at  {self.created_objects_path}"
         )
@@ -66,7 +72,6 @@ class FolderStructure:
         self.holdings_from_csv_path = self.results_folder / f"holdings_from_csv_{self.time_stamp}.json"
         self.holdings_id_map_path = self.results_folder / f"holdings_id_map_{self.time_stamp}.json"
 
-        
         
         self.holdings_from_mfhd_path = self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
         self.holdings_from_c_records_path = self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
