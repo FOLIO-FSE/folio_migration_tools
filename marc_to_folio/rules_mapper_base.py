@@ -213,7 +213,7 @@ class RulesMapperBase:
                         res.append(v)
                 rec[key] = res
 
-    def map_field_according_to_mapping(self, marc_field: pymarc.Field, mappings, rec):
+    def map_field_according_to_mapping(self, marc_field: pymarc.Field, mappings, folio_record):
         for mapping in mappings:
             if "entity" not in mapping:
                 target = mapping["target"]
@@ -222,16 +222,16 @@ class RulesMapperBase:
                     # TODO: add condition to customize this...
                     if marc_field.tag == "655":
                         values[0] = f"Genre: {values[0]}"
-                    self.add_value_to_target(rec, target, values)
+                    self.add_value_to_target(folio_record, target, values)
                 elif has_value_to_add(mapping):
                     value = mapping["rules"][0]["value"]
                     # Stupid construct to avoid bool("false") == True
                     if value == "true":
-                        self.add_value_to_target(rec, target, [True])
+                        self.add_value_to_target(folio_record, target, [True])
                     elif value == "false":
-                        self.add_value_to_target(rec, target, [False])
+                        self.add_value_to_target(folio_record, target, [False])
                     else:
-                        self.add_value_to_target(rec, target, [value])
+                        self.add_value_to_target(folio_record, target, [value])
                 else:
                     # Adding stuff without rules/Conditions.
                     # Might need more complex mapping for arrays etc
@@ -239,11 +239,11 @@ class RulesMapperBase:
                         value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
                     else:
                         value = marc_field.format_field() if marc_field else ""
-                    self.add_value_to_target(rec, target, [value])
+                    self.add_value_to_target(folio_record, target, [value])
             else:
                 e_per_subfield = mapping.get("entityPerRepeatedSubfield", False)
                 self.handle_entity_mapping(
-                    marc_field, mapping["entity"], rec, e_per_subfield
+                    marc_field, mapping["entity"], folio_record, e_per_subfield
                 )
 
     def apply_rules(self, marc_field: pymarc.Field, mapping):
@@ -407,7 +407,7 @@ class RulesMapperBase:
                     entity[k] = values[0]
         return entity
 
-    def handle_entity_mapping(self, marc_field, entity_mapping, rec, e_per_subfield):
+    def handle_entity_mapping(self, marc_field, entity_mapping, folio_record, e_per_subfield):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
             for sf_tuple in grouped(marc_field.subfields, 2):
@@ -418,13 +418,13 @@ class RulesMapperBase:
                 )
                 entity = self.create_entity(entity_mapping, temp_field, e_parent)
                 if type(entity) is dict and any(entity.values()):
-                    self.add_entity_to_record(entity, e_parent, rec)
+                    self.add_entity_to_record(entity, e_parent, folio_record)
                 elif type(entity) is list and any(entity):
-                    self.add_entity_to_record(entity, e_parent, rec)
+                    self.add_entity_to_record(entity, e_parent, folio_record)
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
             if e_parent in ["precedingTitles", "succeedingTitles"]:
-               self.create_preceding_succeeding_titles(entity, e_parent)
+               self.create_preceding_succeeding_titles(entity, e_parent, folio_record["id"])
             elif (
                 all(
                     v
@@ -443,7 +443,7 @@ class RulesMapperBase:
                     and any(v for k, v in entity.items())
                 )
             ):
-                self.add_entity_to_record(entity, e_parent, rec)
+                self.add_entity_to_record(entity, e_parent, folio_record)
             else:
                 sfs = " - ".join(f[0] for f in marc_field)
 
@@ -455,7 +455,7 @@ class RulesMapperBase:
                 # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec)
 
-    def create_preceding_succeeding_titles(self, entity, e_parent):
+    def create_preceding_succeeding_titles(self, entity, e_parent, id):
         self.add_to_migration_report(
             "Preceding and Succeding titles", f"{e_parent} created"
         )
@@ -464,6 +464,10 @@ class RulesMapperBase:
             "title": entity.get("title"),
             "identifiers": [],
         }
+        if e_parent == "precedingTitles":
+            new_entity["succeedingInstanceId"] = id
+        else:
+            new_entity["precedingInstanceId"] = id
         if new_entity.get("isbnValue", ""):
             new_entity["identifiers"].append(
                 {
