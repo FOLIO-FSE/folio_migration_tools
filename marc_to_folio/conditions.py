@@ -1,4 +1,6 @@
 import logging
+from marc_to_folio.rules_mapper_base import RulesMapperBase
+from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import re
 import pymarc
@@ -9,7 +11,7 @@ class Conditions:
     def __init__(
         self,
         folio,
-        mapper,
+        mapper: RulesMapperBase,
         object_type,
         default_location_code="",
         default_call_number_type_id="",
@@ -525,6 +527,17 @@ class Conditions:
         self, value, parameter, marc_field: field.Field
     ):
         self.mapper.add_to_migration_report("Legacy location codes", value)
+        if parameter.get("value", "") == "filter_out_set_undicators" and not (
+            marc_field.indicator1.strip() and marc_field.indicator2.strip()
+        ):
+            self.mapper.add_to_migration_report(
+                "Indicators set in 852",
+                (
+                    f"Ind1: '{marc_field.indicator1.strip()}'"
+                    f"Ind2: '{marc_field.indicator2.strip()}'"
+                ),
+            )
+            return ""
 
         # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
@@ -534,20 +547,15 @@ class Conditions:
         # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
             mapped_code = self.ref_data_dicts["legacy_locations"].get(value, "")
-            if not mapped_code:
-                self.mapper.add_to_migration_report(
-                    "Locations - Unmapped legacy codes", value
-                )
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value
-
         # Get the FOLIO UUID for the code and return it
         try:
             t = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", mapped_code
             )
             self.mapper.add_to_migration_report(
-                "Mapped Locations", f"{mapped_code}->{t[1]}"
+                "Location mapping", f"{mapped_code} -> {t[1]}"
             )
             return t[0]
         except Exception:
@@ -559,7 +567,8 @@ class Conditions:
                     f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
                 )
             self.mapper.add_to_migration_report(
-                "Mapped Locations", f"Default loc returned {mapped_code}->{t[1]}"
+                "Location mapping",
+                f"A Unmapped. Set default location. {value} ({mapped_code}) -> {t[1]}",
             )
             return t[0]
 

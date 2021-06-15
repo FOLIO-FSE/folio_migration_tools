@@ -213,7 +213,9 @@ class RulesMapperBase:
                         res.append(v)
                 rec[key] = res
 
-    def map_field_according_to_mapping(self, marc_field: pymarc.Field, mappings, folio_record):
+    def map_field_according_to_mapping(
+        self, marc_field: pymarc.Field, mappings, folio_record
+    ):
         for mapping in mappings:
             if "entity" not in mapping:
                 target = mapping["target"]
@@ -257,7 +259,9 @@ class RulesMapperBase:
                 # logging.info(f'conditions {condition_types}')
                 if mapping.get("applyRulesOnConcatenatedData", ""):
                     value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-                    value = self.apply_rule(value, condition_types, marc_field, parameter)
+                    value = self.apply_rule(
+                        value, condition_types, marc_field, parameter
+                    )
                 elif mapping.get("subfield", []):
                     if mapping.get("ignoreSubsequentFields", False):
                         sfs = []
@@ -295,7 +299,9 @@ class RulesMapperBase:
             values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
             return values
         except Exception as ee:
-            logging.error(f"Mapping error in apply_rules {marc_field} {json.dumps(mapping)}")
+            logging.error(
+                f"Mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
+            )
             raise ee
 
     def add_value_to_target(self, rec, target_string, value):
@@ -310,15 +316,15 @@ class RulesMapperBase:
             parent = None
             schema_properties = self.schema["properties"]
             sc_prop = schema_properties
-                # prop = copy.deepcopy(rec)
+            # prop = copy.deepcopy(rec)
             for target in targets:  # Iterate over names in hierarcy
                 if target in sc_prop:  # property is on this level
                     sc_prop = sc_prop[target]  # set current property
                 else:  # next level. take the properties from the items
                     sc_prop = schema_parent["items"]["properties"][target]
                 if (
-                        target not in rec and not schema_parent
-                    ):  # have we added this already?
+                    target not in rec and not schema_parent
+                ):  # have we added this already?
                     if is_array_of_strings(sc_prop):
                         rec[target] = []
                         # break
@@ -327,14 +333,14 @@ class RulesMapperBase:
                         rec[target] = [{}]
                         # break
                     elif (
-                            schema_parent
-                            and is_array_of_objects(schema_parent)
-                            and sc_prop.get("type", "string") == "string"
-                        ):
+                        schema_parent
+                        and is_array_of_objects(schema_parent)
+                        and sc_prop.get("type", "string") == "string"
+                    ):
                         logging.error("This should be unreachable code")
                         raise Exception("This should be unreachable code")
-                                            # logging.info(parent)
-                                            # break
+                        # logging.info(parent)
+                        # break
                     else:
                         if schema_parent["type"] == "array":
                             # prop[target] = {}
@@ -345,8 +351,8 @@ class RulesMapperBase:
                                 f"Edge! {target_string} {schema_properties[target_string]}"
                             )
                 elif is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
-                            sc_prop["items"]["properties"]
-                        ):
+                    sc_prop["items"]["properties"]
+                ):
                     rec[target].append({})
                 elif schema_parent and target in rec[parent][-1]:
                     rec[parent].append({})
@@ -355,11 +361,11 @@ class RulesMapperBase:
                     else:
                         rec[parent][-1] = {target: value[0]}
                 elif (
-                            schema_parent
-                            and is_array_of_objects(schema_parent)
-                            and sc_prop.get("type", "string") == "string"
-                        ):
-                            # logging.debug(f"break! {target} {prop} {value}")
+                    schema_parent
+                    and is_array_of_objects(schema_parent)
+                    and sc_prop.get("type", "string") == "string"
+                ):
+                    # logging.debug(f"break! {target} {prop} {value}")
                     if len(rec[parent][-1]) > 0:
                         rec[parent][-1][target] = value[0]
                     else:
@@ -411,7 +417,9 @@ class RulesMapperBase:
                     entity[k] = values[0]
         return entity
 
-    def handle_entity_mapping(self, marc_field, entity_mapping, folio_record, e_per_subfield):
+    def handle_entity_mapping(
+        self, marc_field, entity_mapping, folio_record, e_per_subfield
+    ):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
             for sf_tuple in grouped(marc_field.subfields, 2):
@@ -428,7 +436,9 @@ class RulesMapperBase:
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
             if e_parent in ["precedingTitles", "succeedingTitles"]:
-               self.create_preceding_succeeding_titles(entity, e_parent, folio_record["id"])
+                self.create_preceding_succeeding_titles(
+                    entity, e_parent, folio_record["id"]
+                )
             elif (
                 all(
                     v

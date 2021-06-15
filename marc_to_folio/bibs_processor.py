@@ -138,7 +138,7 @@ class BibsProcessor:
             logging.exception(f"error during wrap up")
         logging.info("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
-            holdings_path = os.path.join(self.results_folder, "folio_holdings.json")
+            holdings_path = self.folders.data_folder / "folio_holdings_from_bibs.json"
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     Helper.write_to_file(holdings_file, holding)
