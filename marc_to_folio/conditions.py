@@ -626,4 +626,6 @@ class Conditions:
             "Set note staff only via indicator",
             f"{marc_field.tag} indicator1: {ind1} (1 is public, all other values are Staff only)",
         )
-        return ind1 != "1"
+        if ind1 != "1":
+            return "true"
+        return "false"
