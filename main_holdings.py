@@ -47,7 +47,7 @@ def parse_args():
     )
     args = parser.parse_args()
     if len(args.time_stamp) != 15:
-        logging.critical(f"Time stamp ({args.time_stamp}) is not set properly")
+        print(f"Time stamp ({args.time_stamp}) is not set properly")
         exit()
     logging.info(f"\tOkapi URL:\t{args.okapi_url}")
     logging.info(f"\tTenanti Id:\t{args.tenant_id}")
