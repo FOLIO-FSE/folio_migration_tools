@@ -295,7 +295,7 @@ class RulesMapperBase:
             values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
             return values
         except Exception as ee:
-            logging.error(f"apply_rules {marc_field.format_field()} {json.dumps(mapping)}")
+            logging.error(f"Mapping error in apply_rules {marc_field} {json.dumps(mapping)}")
             raise ee
 
     def add_value_to_target(self, rec, target_string, value):
