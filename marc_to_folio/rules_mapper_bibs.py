@@ -120,13 +120,16 @@ class BibsRulesMapper(RulesMapperBase):
                         else []
                     )
                 if mappings:
-                    self.map_field_according_to_mapping(
-                        marc_field, mappings, folio_instance
-                    )
-                    if any(
-                        m.get("ignoreSubsequentFields", False) for m in mappings
-                    ):
-                        ignored_subsequent_fields.add(marc_field.tag)
+                    try:
+                        self.map_field_according_to_mapping(
+                            marc_field, mappings, folio_instance
+                        )
+                        if any(
+                            m.get("ignoreSubsequentFields", False) for m in mappings
+                        ):
+                            ignored_subsequent_fields.add(marc_field.tag)
+                    except Exception as ee:
+                        logging.error(f"map_field_according_to_mapping {marc_field.tag} {marc_field.format_field()} {json.dumps(mappings)}")
                 else:
                     self.add_to_migration_report(
                         "Mappings not found for field", marc_field.tag

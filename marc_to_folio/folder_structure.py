@@ -12,7 +12,10 @@ class FolderStructure:
             exit()
 
         self.data_folder = self.base_folder / "data"
-        verify_folder(self.data_folder)        
+        verify_folder(self.data_folder)
+
+        self.archive_folder = self.base_folder / "archive"
+        verify_folder(self.data_folder)
 
         self.results_folder = self.base_folder / "results"
         verify_folder(self.results_folder)
@@ -95,14 +98,16 @@ def verify_git_ignore(gitignore: Path):
         contents = f.read()
         if "results/" not in contents:
             f.write("results/\n")
+        if "archive/" not in contents:
+            f.write("archive/\n")
         if "data/" not in contents:
             f.write("data/\n")
         if "*.data" not in contents:
-            f.write("*.data/\n")
+            f.write("*.data\n")
     logging.info(f"Made sure there was a valid .gitignore file at {gitignore}")
 
 
 def verify_folder(folder_path: Path):
     if not folder_path.is_dir():
-        logging.critical(f"There is no folder located at {folder_path}. Exiting.")
+        logging.critical(f"There is no folder located at {folder_path}.Exiting.")
         exit()
