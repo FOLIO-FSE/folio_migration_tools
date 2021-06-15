@@ -46,13 +46,14 @@ def parse_args():
         help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
     )
     args = parser.parse_args()
+    print(args.time_stamp)
     if len(args.time_stamp) != 15:
         print(f"Time stamp ({args.time_stamp}) is not set properly")
         exit()
-    logging.info(f"\tOkapi URL:\t{args.okapi_url}")
-    logging.info(f"\tTenanti Id:\t{args.tenant_id}")
-    logging.info(f"\tUsername:\t{args.username}")
-    logging.info(f"\tPassword:\tSecret")
+    print(f"\tOkapi URL:\t{args.okapi_url}")
+    print(f"\tTenanti Id:\t{args.tenant_id}")
+    print(f"\tUsername:\t{args.username}")
+    print(f"\tPassword:\tSecret")
     return args
 
 
