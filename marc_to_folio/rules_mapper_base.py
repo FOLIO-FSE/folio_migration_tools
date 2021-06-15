@@ -4,7 +4,6 @@ import uuid
 
 from pymarc.field import Field
 from marc_to_folio.helper import Helper
-from marc_to_folio.conditions import Conditions
 from marc_to_folio.report_blurbs import blurbs
 import time
 from folioclient import FolioClient
