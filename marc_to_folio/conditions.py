@@ -526,19 +526,6 @@ class Conditions:
     def condition_set_location_id_by_code(
         self, value, parameter, marc_field: field.Field
     ):
-        self.mapper.add_to_migration_report("Legacy location codes", value)
-        if parameter.get("value", "") == "filter_out_set_undicators" and not (
-            marc_field.indicator1.strip() and marc_field.indicator2.strip()
-        ):
-            self.mapper.add_to_migration_report(
-                "Indicators set in 852",
-                (
-                    f"Ind1: '{marc_field.indicator1.strip()}'"
-                    f"Ind2: '{marc_field.indicator2.strip()}'"
-                ),
-            )
-            return ""
-
         # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
             d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}
