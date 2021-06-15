@@ -247,52 +247,56 @@ class RulesMapperBase:
                 )
 
     def apply_rules(self, marc_field: pymarc.Field, mapping):
-        values = []
-        value = ""
-        if has_conditions(mapping):
-            c_type_def = mapping["rules"][0]["conditions"][0]["type"].split(",")
-            condition_types = [x.strip() for x in c_type_def]
-            parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
-            # logging.info(f'conditions {condition_types}')
-            if mapping.get("applyRulesOnConcatenatedData", ""):
-                value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-                value = self.apply_rule(value, condition_types, marc_field, parameter)
-            elif mapping.get("subfield", []):
-                if mapping.get("ignoreSubsequentFields", False):
-                    sfs = []
-                    for sf in mapping["subfield"]:
-                        next_subfield = next(iter(marc_field.get_subfields(sf)), "")
-                        sfs.append(next_subfield)
-                    value = " ".join(
-                        self.apply_rule(x, condition_types, marc_field, parameter)
-                        for x in sfs
-                    )
+        try:
+            values = []
+            value = ""
+            if has_conditions(mapping):
+                c_type_def = mapping["rules"][0]["conditions"][0]["type"].split(",")
+                condition_types = [x.strip() for x in c_type_def]
+                parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
+                # logging.info(f'conditions {condition_types}')
+                if mapping.get("applyRulesOnConcatenatedData", ""):
+                    value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+                    value = self.apply_rule(value, condition_types, marc_field, parameter)
+                elif mapping.get("subfield", []):
+                    if mapping.get("ignoreSubsequentFields", False):
+                        sfs = []
+                        for sf in mapping["subfield"]:
+                            next_subfield = next(iter(marc_field.get_subfields(sf)), "")
+                            sfs.append(next_subfield)
+                        value = " ".join(
+                            self.apply_rule(x, condition_types, marc_field, parameter)
+                            for x in sfs
+                        )
+                    else:
+                        subfields = marc_field.get_subfields(*mapping["subfield"])
+                        x = [
+                            self.apply_rule(x, condition_types, marc_field, parameter)
+                            for x in subfields
+                        ]
+                        value = " ".join(set(x))
                 else:
-                    subfields = marc_field.get_subfields(*mapping["subfield"])
-                    x = [
-                        self.apply_rule(x, condition_types, marc_field, parameter)
-                        for x in subfields
-                    ]
-                    value = " ".join(set(x))
-            else:
-                value1 = marc_field.format_field() if marc_field else ""
-                value = self.apply_rule(
-                    value1, condition_types, marc_field, parameter
-                )
-        elif has_value_to_add(mapping):
-            value = mapping["rules"][0]["value"]
-            if value == "false":
-                return [False]
-            elif value == "true":
-                return [True]
-            else:
-                return [value]
-        elif not mapping.get("rules", []) or not mapping["rules"][0].get(
-            "conditions", []
-        ):
-            value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-        values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
-        return values
+                    value1 = marc_field.format_field() if marc_field else ""
+                    value = self.apply_rule(
+                        value1, condition_types, marc_field, parameter
+                    )
+            elif has_value_to_add(mapping):
+                value = mapping["rules"][0]["value"]
+                if value == "false":
+                    return [False]
+                elif value == "true":
+                    return [True]
+                else:
+                    return [value]
+            elif not mapping.get("rules", []) or not mapping["rules"][0].get(
+                "conditions", []
+            ):
+                value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+            values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
+            return values
+        except Exception as ee:
+            logging.error(f"apply_rules {marc_field.format_field()} {json.dumps(mapping)}")
+            raise ee
 
     def add_value_to_target(self, rec, target_string, value):
         if not value:
