@@ -130,6 +130,7 @@ class BibsRulesMapper(RulesMapperBase):
                             ignored_subsequent_fields.add(marc_field.tag)
                     except Exception as ee:
                         logging.error(f"map_field_according_to_mapping {marc_field.tag} {marc_field.format_field()} {json.dumps(mappings)}")
+                        raise ee
                 else:
                     self.add_to_migration_report(
                         "Mappings not found for field", marc_field.tag
