@@ -5,10 +5,11 @@ import time
 
 class FolderStructure:
     def __init__(self, base_path: Path, time_stamp:str):
+        print("Setting up folder structure", flush=True)
         self.time_stamp = time_stamp
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
-            logging.info(f"Base Folder Path is not a folder. Exiting.")
+            print(f"Base Folder Path is not a folder. Exiting.", flush=True)
             exit()
 
         self.data_folder = self.base_folder / "data"
@@ -111,3 +112,5 @@ def verify_folder(folder_path: Path):
     if not folder_path.is_dir():
         logging.critical(f"There is no folder located at {folder_path}.Exiting.")
         exit()
+    else:
+        print(f"Locaded {folder_path}", flush=True)
