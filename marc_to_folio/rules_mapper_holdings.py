@@ -12,10 +12,17 @@ from marc_to_folio.rules_mapper_base import RulesMapperBase
 
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(
-        self, folio, instance_id_map, location_map, default_location_code, default_call_number_type_id
+        self,
+        folio,
+        instance_id_map,
+        location_map,
+        default_location_code,
+        default_call_number_type_id,
     ):
         logging.debug(f"Default location code is {default_location_code}")
-        self.conditions = Conditions(folio, self, "holdings", default_location_code, default_call_number_type_id)
+        self.conditions = Conditions(
+            folio, self, "holdings", default_location_code, default_call_number_type_id
+        )
         self.folio = folio
         super().__init__(folio, self.conditions)
         self.instance_id_map = instance_id_map
@@ -79,10 +86,14 @@ class RulesMapperHoldings(RulesMapperBase):
 
         # Holdings type mapping
         ldr06 = marc_record.leader[6]
-        self.add_to_migration_report("Leader 06 (Holdings type)", ldr06)
         # TODO: map this better
         # type = type_map.get(ldr06, "Unknown")
-        if not folio_holding.get("holdingsTypeId", ""):
+        if folio_holding.get("holdingsTypeId", ""):
+            self.add_to_migration_report(
+                "Holdings type mapping",
+                f"Already set to {folio_holding.get('holdingsTypeId')}. LDR[06] was {ldr06}",
+            )
+        else:
             htype_map = {
                 "u": "Unknown",
                 "v": "Multi-part monograph",
@@ -95,12 +106,17 @@ class RulesMapperHoldings(RulesMapperBase):
             )
             if t:
                 folio_holding["holdingsTypeId"] = t[0]
-                self.add_to_migration_report("Holdings type mapping", t[1])
+                self.add_to_migration_report(
+                    "Holdings type mapping", f"{ldr06} -> {htype} -> {t[1]}"
+                )
             else:
                 folio_holding[
                     "holdingsTypeId"
                 ] = self.conditions.default_holdings_type_id
-                self.add_to_migration_report("Holdings type mapping", "Unmapped")
+                self.add_to_migration_report(
+                    "Holdings type mapping",
+                    f"A Unmapped {ldr06} -> {htype} -> Unmapped",
+                )
 
         if not folio_holding.get("callNumberTypeId", ""):
             folio_holding[
