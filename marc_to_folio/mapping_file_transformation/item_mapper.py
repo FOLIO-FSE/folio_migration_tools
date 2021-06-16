@@ -129,8 +129,10 @@ class ItemMapper(MapperBase):
                     # raise NotImplementedError("Temporary locations does not get mapped")
                     if t and t[0] != self.location_mapping.default_id:
                         self.add_to_migration_report("Temporary locations mapping",f"{legacy_value} -> {t[1]}")
+                        self.report_folio_mapping(f"{folio_prop_name}", True)
                         return t[0]
                 self.add_to_migration_report("Temporary locations mapping",f"Unmapped ({legacy_value})")
+                self.report_folio_mapping(f"{folio_prop_name}", False)
                 return ""
             elif folio_prop_name == "materialTypeId":
                 return self.get_material_type_id(legacy_item)
@@ -145,7 +147,13 @@ class ItemMapper(MapperBase):
             elif folio_prop_name == "status.date":
                 return datetime.utcnow().isoformat()
             elif folio_prop_name in ["permanentLoanTypeId", "temporaryLoanTypeId"]:
-                return self.get_loan_type_id(legacy_item)
+                ltid = self.get_loan_type_id(legacy_item)
+                self.add_to_migration_report("Loan type mapping",f"{folio_prop_name} -> {ltid}")
+                if ltid:
+                    self.report_folio_mapping(f"{folio_prop_name}", True)
+                    return ltid
+                self.report_folio_mapping(f"{folio_prop_name}", False)
+                return ltid
             elif folio_prop_name == "statisticalCodeIds":
                 return self.get_statistical_codes(legacy_item)
             elif folio_prop_name == "holdingsRecordId":
