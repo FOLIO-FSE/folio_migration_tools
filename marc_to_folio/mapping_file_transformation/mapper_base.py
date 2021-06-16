@@ -246,7 +246,7 @@ class MapperBase:
             if prevent_default:
                 self.add_to_migration_report(
                     f"{ref_dat_mapping.name} mapping",
-                    f'Unmapped -- {" - ".join(fieldvalues)} -> "" (No default)',
+                    f'Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""',
                 )
                 return ""
             self.add_to_migration_report(
