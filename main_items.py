@@ -65,6 +65,19 @@ class Worker(MainBase):
         self.failed_files: List[str] = list()
         csv.register_dialect("tsv", delimiter="\t")
         self.total_records = 0
+        if "temporaryLoanTypeId" in self.folio_keys:
+            temporary_loan_type_mapping = self.load_ref_data_mapping_file(
+                "temporaryLoanTypeId", self.folder_structure.temp_loan_type_map_path
+            )
+        else:
+            temporary_loan_type_mapping = None
+
+        if "temporaryLocationId" in self.folio_keys:
+            temporary_location_mapping = self.load_ref_data_mapping_file(
+                "temporaryLocationId", self.folder_structure.temp_locations_map_path
+            )
+        else:
+            temporary_location_mapping = None
         self.mapper = ItemMapper(
             self.folio_client,
             self.items_map,
@@ -91,6 +104,8 @@ class Worker(MainBase):
             self.load_ref_data_mapping_file(
                 "status.name", self.folder_structure.item_statuses_map_path, False
             ),
+            temporary_loan_type_mapping,
+            temporary_location_mapping,
         )
         logging.info("Init done")
 

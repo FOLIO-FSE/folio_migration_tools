@@ -84,14 +84,17 @@ class FolderStructure:
 
         # Mapping files
         self.locations_map_path = self.mapping_files_folder / 'locations.tsv'
+        self.temp_locations_map_path = self.mapping_files_folder / 'temp_locations.tsv'
         self.mfhd_rules_path = self.mapping_files_folder / "mfhd_rules.json"
         self.items_map_path = self.mapping_files_folder / "item_mapping.json"
         self.holdings_map_path = self.mapping_files_folder / "holdingsrecord_mapping.json"
         self.material_type_map_path = self.mapping_files_folder /"material_types.tsv"
         self.loan_type_map_path = self.mapping_files_folder /"loan_types.tsv"
+        self.temp_loan_type_map_path = self.mapping_files_folder /"temp_loan_types.tsv"
         self.call_number_type_map_path = self.mapping_files_folder /"call_number_type_mapping.tsv"
         self.statistical_codes_map_path = self.mapping_files_folder /"statcodes.tsv"
         self.item_statuses_map_path = self.mapping_files_folder /"item_statuses.tsv"
+        
 
         
 def verify_git_ignore(gitignore: Path):

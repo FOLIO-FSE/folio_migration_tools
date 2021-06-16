@@ -29,11 +29,13 @@ class ItemMapper(MapperBase):
         holdings_id_map,
         statistical_codes_map,
         item_statuses_map,
+        temporary_loan_type_mapping,
+        temporary_location_mapping,
     ):
         item_schema = folio_client.get_item_schema()
         super().__init__(folio_client, item_schema, items_map)
         self.item_schema = self.folio_client.get_item_schema()
-        self.items_map = items_map        
+        self.items_map = items_map
         self.holdings_id_map = holdings_id_map
         self.set_to_migration_report(
             "Holdings IDs mapped", f"Unique holdings", len(self.holdings_id_map)
@@ -41,6 +43,23 @@ class ItemMapper(MapperBase):
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         self.status_mapping = {}
+        if temporary_loan_type_mapping:
+            self.temp_loan_type_mapping = RefDataMapping(
+                self.folio_client,
+                "/loan-types",
+                "loantypes",
+                temporary_loan_type_mapping,
+                "name",
+            )
+        if temporary_location_mapping:
+            self.temp_location_mapping = RefDataMapping(
+                self.folio_client,
+                "/locations",
+                "locations",
+                temporary_location_mapping,
+                "code",
+            )
+
         if item_statuses_map:
             self.setup_status_mapping(item_statuses_map)
         if call_number_type_map:
@@ -121,19 +140,16 @@ class ItemMapper(MapperBase):
             # legacy_value = ""
             legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
             legacy_value = " ".join(legacy_values).strip()
-            if folio_prop_name == "permanentLocationId":                
-                return self.get_location_id(legacy_item, index_or_id)
+            if folio_prop_name == "permanentLocationId":
+                return self.get_mapped_value(self.location_mapping, legacy_item, False)
             elif folio_prop_name == "temporaryLocationId":
-                if len(legacy_values) == 1:
-                    t = self.location_mapping.get_ref_data_tuple(legacy_value)
-                    # raise NotImplementedError("Temporary locations does not get mapped")
-                    if t and t[0] != self.location_mapping.default_id:
-                        self.add_to_migration_report("Temporary locations mapping",f"{legacy_value} -> {t[1]}")
-                        self.report_folio_mapping(f"{folio_prop_name}", True)
-                        return t[0]
-                self.add_to_migration_report("Temporary locations mapping",f"Unmapped ({legacy_value})")
-                self.report_folio_mapping(f"{folio_prop_name}", False)
-                return ""
+                temp_loc = self.get_mapped_value(
+                    self.temp_location_mapping, legacy_item, True
+                )
+                self.add_to_migration_report(
+                    "Temporary location mapping", f"{temp_loc}"
+                )
+                return temp_loc
             elif folio_prop_name == "materialTypeId":
                 return self.get_material_type_id(legacy_item)
             elif folio_prop_name == "itemLevelCallNumberTypeId":
@@ -146,13 +162,17 @@ class ItemMapper(MapperBase):
                 return next((v for v in legacy_values if v), "")
             elif folio_prop_name == "status.date":
                 return datetime.utcnow().isoformat()
-            elif folio_prop_name in ["permanentLoanTypeId", "temporaryLoanTypeId"]:
-                ltid = self.get_loan_type_id(legacy_item)
-                self.add_to_migration_report("Loan type mapping",f"{folio_prop_name} -> {ltid}")
-                if ltid:
-                    self.report_folio_mapping(f"{folio_prop_name}", True)
-                    return ltid
-                self.report_folio_mapping(f"{folio_prop_name}", False)
+            elif folio_prop_name == "temporaryLoanTypeId":
+                ltid = self.get_mapped_value(
+                    self.temp_loan_type_mapping, legacy_item, True
+                )
+                self.add_to_migration_report("Temporary Loan type mapping", f"{ltid}")
+                return ltid
+            elif folio_prop_name == "permanentLoanTypeId":
+                ltid = self.get_mapped_value(self.loan_type_mapping, legacy_item)
+                self.add_to_migration_report(
+                    "Loan type mapping", f"{folio_prop_name} -> {ltid}"
+                )
                 return ltid
             elif folio_prop_name == "statisticalCodeIds":
                 return self.get_statistical_codes(legacy_item)
@@ -196,17 +216,9 @@ class ItemMapper(MapperBase):
         )
         return ""
 
-    def get_loan_type_id(self, legacy_item: dict):
-        return self.get_mapped_value(self.loan_type_mapping, legacy_item)
-
     def get_material_type_id(self, legacy_item: dict):
         logging.debug(f"Material type mapping")
         return self.get_mapped_value(self.material_type_mapping, legacy_item)
-
-    def get_location_id(self, legacy_item: dict, id_or_index, prevent_default=False):
-        return self.get_mapped_value(
-            self.location_mapping, legacy_item, prevent_default
-        )
 
     def get_item_level_call_number_type_id(self, legacy_item):
         if self.call_number_type_map:
