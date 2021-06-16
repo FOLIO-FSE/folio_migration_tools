@@ -50,14 +50,6 @@ class HoldingsProcessor:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
-        except ValueError as value_error:
-            add_stats(self.mapper.stats, "Value errors")
-            add_stats(self.mapper.stats, "Failed records")
-            logging.debug(marc_record)
-            logging.error(value_error)
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if callable(remove_from_id_map):
-                self.mapper.remove_from_id_map(marc_record)
         except ValidationError as validation_error:
             add_stats(self.mapper.stats, "Validation errors")
             add_stats(self.mapper.stats, "Failed records")
@@ -65,6 +57,14 @@ class HoldingsProcessor:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
+        except ValueError as value_error:
+            add_stats(self.mapper.stats, "Value errors")
+            add_stats(self.mapper.stats, "Failed records")
+            logging.debug(marc_record)
+            logging.error(value_error)
+            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
+            if callable(remove_from_id_map):
+                self.mapper.remove_from_id_map(marc_record)        
         except Exception as inst:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):

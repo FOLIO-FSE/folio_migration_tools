@@ -118,6 +118,7 @@ def main():
                     read_records(reader, processor)
             except Exception:
                 logging.exception(f"Failure in Main: {records_file}", stack_info=True)
+        processor.wrap_up()
 
 
 def read_records(reader, processor: HoldingsProcessor):
@@ -135,7 +136,7 @@ def read_records(reader, processor: HoldingsProcessor):
             logging.error(error)
         except ValueError as error:
             logging.error(error)
-    processor.wrap_up()
+    
 
 
 if __name__ == "__main__":
