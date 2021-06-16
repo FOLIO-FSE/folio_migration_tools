@@ -458,12 +458,11 @@ class RulesMapperBase:
             ):
                 self.add_entity_to_record(entity, e_parent, folio_record)
             else:
-                sfs = " - ".join(f[0] for f in marc_field)
-
-                pattern = " - ".join(f"{k}:{bool(v)}" for k, v in entity.items())
+                sfs = " - ".join(f"{f[0]}:{len(str(f[1]).strip())}" for f in marc_field)
+                pattern = " - ".join(f"{k}:'{str(v)}'" for k, v in entity.items())
                 self.add_to_migration_report(
                     "Incomplete entity mapping adding entity",
-                    f"{marc_field.tag} {sfs} --- {e_parent} {pattern}  ",
+                    f"{marc_field.tag} {sfs} ->>-->> {e_parent} {pattern}  ",
                 )
                 # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec)
