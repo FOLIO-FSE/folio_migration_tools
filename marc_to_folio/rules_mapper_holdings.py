@@ -107,7 +107,7 @@ class RulesMapperHoldings(RulesMapperBase):
             if t:
                 folio_holding["holdingsTypeId"] = t[0]
                 self.add_to_migration_report(
-                    "Holdings type mapping", f"{ldr06} -> {htype} -> {t[1]}"
+                    "Holdings type mapping", f"{ldr06} -> {htype} -> {t[1]} ({t[0]}"
                 )
             else:
                 folio_holding[
