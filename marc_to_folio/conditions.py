@@ -533,7 +533,7 @@ class Conditions:
 
         # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
-            mapped_code = self.ref_data_dicts["legacy_locations"].get(value, "").strip()
+            mapped_code = self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value.strip()
         # Get the FOLIO UUID for the code and return it
@@ -555,7 +555,7 @@ class Conditions:
                 )
             self.mapper.add_to_migration_report(
                 "Location mapping",
-                f"_Unmapped. Set default location. {value} ({mapped_code}) -> {t[1]}",
+                f"Unmapped. Set default location. '{value}' ({mapped_code}) -> {t[1]}",
             )
             return t[0]
 
