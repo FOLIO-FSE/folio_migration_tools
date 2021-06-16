@@ -20,7 +20,7 @@ class MainBase:
 
         logger = logging.getLogger()
         logger.handlers = []
-        formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s\t%(filename)s\t%(lineno)d")
+        formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s\t%(filename)s:%(lineno)d")
         stream_handler = logging.StreamHandler()
         stream_handler.addFilter(ExcludeLevelFilter(25))
         
