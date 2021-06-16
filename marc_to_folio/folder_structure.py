@@ -113,4 +113,4 @@ def verify_folder(folder_path: Path):
         logging.critical(f"There is no folder located at {folder_path}.Exiting.")
         exit()
     else:
-        print(f"Locaded {folder_path}", flush=True)
+        print(f"Located {folder_path}", flush=True)

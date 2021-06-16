@@ -140,6 +140,7 @@ class Worker(MainBase):
                 self.mapper.add_to_migration_report(
                     "Failed files", f"{file_name} - {ee}"
                 )
+                exit()
         logging.info(f"processed {total_records:,} records in {len(self.files)} files")
         self.total_records = total_records
 
