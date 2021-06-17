@@ -56,7 +56,7 @@ class RulesMapperBase:
                     mapped = 1
                     empty = 0
                 elif isinstance(v,list) and any(v):
-                    l = len(a for a in v if a)
+                    l = len([a for a in v if a])
                     mapped = l
                     empty = 0
                 if field_name not in self.mapped_folio_fields:
@@ -64,7 +64,7 @@ class RulesMapperBase:
                 else:
                     self.mapped_folio_fields[field_name][0] += mapped
                     self.mapped_folio_fields[field_name][1] += empty
-            
+
             schema_properties = schema["properties"].keys()
             unmatched_properties = (
                 p for p in schema_properties if p not in folio_record.keys()
