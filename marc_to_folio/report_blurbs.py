@@ -1,3 +1,12 @@
+from enum import Enum
+
+
+class KindOfBlurb(Enum):
+    GENERAL = "General statistics"
+    LIBRARY_ACTION = "Library action needed"
+    ADDITIONAL_INFORMATION = "Additional indformation"
+
+
 blurbs = {
     "Introduction": "<br/>Data errors preventing records from being migrated are marked **FIX BEFORE MIGRATION**. The library is advised to clean up these errors in the source data.<br/><br/> The sections related to field counts and mapping results are marked **REVIEW**. These do not indicate errors preventing records from being migrated, but may point to data anomalies or in the mappings. The library should review these to make sure that the numbers are what one would expect, knowing the source data. Is this the expected number of serials? Is this the expected number of cartographic materials?",
     "Mapped Legacy fields": "Library action: **REVIEW** <br/>This table lists all the MARC fields in the source data, and whether it has been mapped to a FOLIO instance record field. The library should examine the MARC tags with a high 'Unmapped' figure and determine if these MARC tags contain data that you would like mapped to the FOLIO instance record.",
@@ -56,5 +65,6 @@ blurbs = {
     "Values mapped from legacy fields": "A list fo the values and what they were mapped to",
     "General statistics": "A list of general counterts to outline the transformation as a whole.",
     "Mapped publisher role from Indicator2": "Publication Role, taken from the code in Ind2",
-    "Preceding and Succeding titles": "Preceding and Succeding titles is still Work In progress and still not fully implemented"
+    "Preceding and Succeding titles": "Preceding and Succeding titles is still Work In progress and still not fully implemented",
+    "Added value since value was empty": "Some FOLIO objects need to have values in them despite the source data was empty. This involves 86X fields for example. ",
 }
