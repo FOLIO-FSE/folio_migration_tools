@@ -38,14 +38,18 @@ class BibsProcessor:
 
         """processes a marc record and saves it"""
         try:
-            index_or_legacy_id = self.mapper.get_legacy_ids(marc_record, self.ils_flavour)
+            index_or_legacy_id = self.mapper.get_legacy_ids(
+                marc_record, self.ils_flavour
+            )
         except:
-            index_or_legacy_id = [f"Index in file: {idx}"] # Only used for reporting purposes
+            index_or_legacy_id = [
+                f"Index in file: {idx}"
+            ]  # Only used for reporting purposes
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
-            (folio_rec, id_map_strings) = self.mapper.parse_bib(index_or_legacy_id,
-                marc_record, inventory_only
+            (folio_rec, id_map_strings) = self.mapper.parse_bib(
+                index_or_legacy_id, marc_record, inventory_only
             )
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
@@ -161,11 +165,13 @@ class BibsProcessor:
             temp_leader[9] = "a"
             marc_record.leader = temp_leader
         except:
-            logging.exception(f"Something is wrong with the marc records leader: {marc_record.leader}")
+            logging.exception(
+                f"Something is wrong with the marc records leader: {marc_record.leader}"
+            )
         srs_record_string = get_srs_string(
             (
                 marc_record,
-                instance["id"],
+                instance,
                 srs_id,
                 self.folio_client.get_metadata_construct(),
                 self.suppress,
@@ -188,7 +194,10 @@ def get_srs_string(my_tuple):
         "rawRecord": raw_record,
         "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": my_tuple[4]},
-        "externalIdsHolder": {"instanceId": my_tuple[1]},
+        "externalIdsHolder": {
+            "instanceId": my_tuple[1]["id"],
+            "instanceHrid": my_tuple[1]["hrid"],
+        },
         "metadata": my_tuple[3],
         "state": "ACTUAL",
         "leaderRecordStatus": parsed_record["content"]["leader"][5],
