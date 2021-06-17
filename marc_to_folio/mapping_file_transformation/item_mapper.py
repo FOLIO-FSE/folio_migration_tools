@@ -153,10 +153,8 @@ class ItemMapper(MapperBase):
             elif folio_prop_name == "materialTypeId":
                 return self.get_material_type_id(legacy_item)
             elif folio_prop_name == "itemLevelCallNumberTypeId":
-                self.report_folio_mapping(f"{folio_prop_name}", True)
                 return self.get_item_level_call_number_type_id(legacy_item)
             elif folio_prop_name == "status.name":
-                self.report_folio_mapping(f"{folio_prop_name}", True)
                 return self.transform_status(legacy_value)
             elif folio_prop_name == "barcode":
                 return next((v for v in legacy_values if v), "")
@@ -204,7 +202,6 @@ class ItemMapper(MapperBase):
                 )
                 return ""
         else:
-            self.report_folio_mapping(f"{folio_prop_name}", True, False)
             return legacy_item[folio_prop_name]
 
     def get_statistical_codes(self, legacy_item: dict):

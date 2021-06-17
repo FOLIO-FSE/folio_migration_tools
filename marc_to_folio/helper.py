@@ -5,8 +5,15 @@ from pathlib import Path
 import os
 
 import requests
+import pandas as pd
 
 class Helper():
+
+    @staticmethod
+    def flatten_dict(dictionary_to_flatten):
+        df = pd.json_normalize(dictionary_to_flatten, sep='.')
+        return df.to_dict(orient='records')[0]
+
 
     @staticmethod
     def setup_path(path, filename):

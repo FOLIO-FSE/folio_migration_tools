@@ -145,11 +145,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.validate(folio_instance, legacy_ids)
         self.dedupe_rec(folio_instance)
         # marc_record.remove_fields(*list(bad_tags))
-        self.count_unmapped_fields(self.schema, folio_instance)
-        try:
-            self.count_mapped_fields(folio_instance)
-        except Exception:
-            logging.exception(folio_instance)
+        self.report_folio_mapping(folio_instance, self.instance_json_schema)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         id_map_strings = []

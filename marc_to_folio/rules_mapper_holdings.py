@@ -69,11 +69,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     )
 
         self.dedupe_rec(folio_holding)
-        self.count_unmapped_fields(self.schema, folio_holding)
-        try:
-            self.count_mapped_fields(folio_holding)
-        except:
-            logging.error(f"Error counting mapped folio fields for {folio_holding}")
+        self.report_folio_mapping(folio_holding, self.holdings_json_schema)
         for id in legacy_ids:
             self.holdings_id_map[id] = {"id": folio_holding["id"]}
 

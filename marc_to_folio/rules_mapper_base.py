@@ -46,12 +46,33 @@ class RulesMapperBase:
             self.mapped_legacy_fields[field_name][1] += int(mapped)
             self.mapped_legacy_fields[field_name][2] += int(empty)
 
-    def report_folio_mapping(self, field_name, was_mapped, was_empty=False):
-        if field_name not in self.mapped_folio_fields:
-            self.mapped_folio_fields[field_name] = [int(was_mapped), int(was_empty)]
-        else:
-            self.mapped_folio_fields[field_name][0] += int(was_mapped)
-            self.mapped_folio_fields[field_name][1] += int(was_empty)
+    def report_folio_mapping(self, folio_record, schema):
+        try:
+            flattened = Helper.flatten_dict(folio_record)
+            for field_name, v in flattened.items():
+                mapped = 0
+                empty = 1
+                if isinstance(v, str) and v.strip():
+                    mapped = 1
+                    empty = 0
+                elif isinstance(v,list) and any(v):
+                    l = len(a for a in v if a)
+                    mapped = l
+                    empty = 0
+                if field_name not in self.mapped_folio_fields:
+                    self.mapped_folio_fields[field_name] = [mapped, empty]
+                else:
+                    self.mapped_folio_fields[field_name][0] += mapped
+                    self.mapped_folio_fields[field_name][1] += empty
+            
+            schema_properties = schema["properties"].keys()
+            unmatched_properties = (
+                p for p in schema_properties if p not in folio_record.keys()
+            )
+            for p in unmatched_properties:
+                self.mapped_folio_fields[p] = [0, 0]
+        except Exception as ee:
+            logging.error(ee)
 
     def print_mapping_report(self, report_file):
 
@@ -163,44 +184,6 @@ class RulesMapperBase:
             stats[a] = 1
         else:
             stats[a] += 1
-
-    def count_unmapped_fields(self, schema, folio_object):
-        schema_properties = schema["properties"].keys()
-        unmatched_properties = (
-            p for p in schema_properties if p not in folio_object.keys()
-        )
-        for p in unmatched_properties:
-            self.report_folio_mapping(p, False, False)
-
-    def count_mapped_fields(self, folio_object):
-        schema_properties = self.schema["properties"].keys()
-        matched_properties = (p for p in schema_properties if p in folio_object.keys())
-        for p in matched_properties:
-            self.report_folio_mapping(p, True, False)
-        """keys_to_delete = []
-        for key, value in folio_object.items():
-            if isinstance(value, str):
-                self.report_folio_mapping(key, True, not value)
-                if not value:
-                    keys_to_delete.append(key)
-            elif isinstance(value, bool):
-                self.report_folio_mapping(key, True, not value)
-                if not value:
-                    keys_to_delete.append(key)
-            elif isinstance(value, list):
-                self.report_folio_mapping(key, True, not any(value))
-                if not any(value):
-                    keys_to_delete.append(key)
-            elif isinstance(value, dict):
-                self.report_folio_mapping(key, True, not any(value))
-                if not any(value):
-                    keys_to_delete.append(key)
-            else:
-                self.report_folio_mapping(key, True, not any(value))
-                logging.info(type(value))
-                # logging.info(type(value))
-        for mykey in keys_to_delete:
-            del folio_object[mykey]"""
 
     def dedupe_rec(self, rec):
         # remove duplicates
