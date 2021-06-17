@@ -32,6 +32,7 @@ class RulesMapperBase:
         self.conditions = conditions
         self.item_json_schema = ""
         self.mappings = {}
+        # self.schema_properties = schema["properties"].keys()
         logging.info(f"Current user id is {self.folio_client.current_user}")
 
     def report_legacy_mapping(self, field_name, present, mapped, empty=False):
@@ -65,12 +66,12 @@ class RulesMapperBase:
                     self.mapped_folio_fields[field_name][0] += mapped
                     self.mapped_folio_fields[field_name][1] += empty
 
-            schema_properties = schema["properties"].keys()
+            """schema_properties = 
             unmatched_properties = (
                 p for p in schema_properties if p not in folio_record.keys()
             )
             for p in unmatched_properties:
-                self.mapped_folio_fields[p] = [0, 0]
+                self.mapped_folio_fields[p] = [0, 0]"""
         except Exception as ee:
             logging.error(ee)
 
