@@ -34,7 +34,7 @@ class HoldingsProcessor:
                 self.missing_instance_id_count += 1
                 if self.missing_instance_id_count > 1000:
                     raise Exception(f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}")
-
+            folio_rec["discoverySuppress"] = self.suppress
             Helper.write_to_file(self.created_objects_file, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
