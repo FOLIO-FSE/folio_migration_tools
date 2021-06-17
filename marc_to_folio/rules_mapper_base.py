@@ -1,3 +1,4 @@
+import collections
 import json
 import logging
 import uuid
@@ -32,7 +33,7 @@ class RulesMapperBase:
         self.conditions = conditions
         self.item_json_schema = ""
         self.mappings = {}
-        # self.schema_properties = schema["properties"].keys()
+        self.schema_properties = None
         logging.info(f"Current user id is {self.folio_client.current_user}")
 
     def report_legacy_mapping(self, field_name, present, mapped, empty=False):
@@ -49,7 +50,7 @@ class RulesMapperBase:
 
     def report_folio_mapping(self, folio_record, schema):
         try:
-            flattened = Helper.flatten_dict(folio_record)
+            flattened = flatten(folio_record)
             for field_name, v in flattened.items():
                 mapped = 0
                 empty = 1
@@ -65,13 +66,13 @@ class RulesMapperBase:
                 else:
                     self.mapped_folio_fields[field_name][0] += mapped
                     self.mapped_folio_fields[field_name][1] += empty
-
-            """schema_properties = 
+            if not self.schema_properties:
+                self.schema_properties = schema["properties"].keys()        
             unmatched_properties = (
-                p for p in schema_properties if p not in folio_record.keys()
+                p for p in self.schema_properties if p not in folio_record.keys()
             )
             for p in unmatched_properties:
-                self.mapped_folio_fields[p] = [0, 0]"""
+                self.mapped_folio_fields[p] = [0, 0]
         except Exception as ee:
             logging.error(ee)
 
@@ -546,3 +547,14 @@ def is_array_of_objects(schema_property):
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
     return zip(*[iter(iterable)] * n)
+
+
+def flatten(d, parent_key='', sep='.'):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
