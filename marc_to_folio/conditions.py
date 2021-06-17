@@ -151,7 +151,7 @@ class Conditions:
         if value.strip():
             return value.strip()
         self.mapper.add_to_migration_report(
-            "Added Value since value is empty",
+            "Added value since value is empty",
             f"Tag: {marc_field.tag}. Added value: {parameter['value']}",
         )
         return parameter["value"]
@@ -483,7 +483,7 @@ class Conditions:
             return t[0]
 
         self.mapper.add_to_migration_report(
-            "Callnumber types", f"Mapping failed. Setting default CallNumber type."
+            "Callnumber type mapping", f"Mapping failed. Setting default CallNumber type."
         )
         return self.default_call_number_type["id"]
 

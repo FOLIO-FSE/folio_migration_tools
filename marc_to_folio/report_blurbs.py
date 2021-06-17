@@ -36,7 +36,6 @@ blurbs = {
     "Matched Modes of issuance code": "Library action: **REVIEW** <br/>The created FOLIO instances contain the following Mode of issuace values. The library should review the total number for each value against what they would expect to see mapped.",
     "Unrecognized language codes in records": "Library action: **REVIEW** <br/>Language code values in the source data that do not match standard language codes. If not fixed before migration, these will display as Undetermined in the instance record and Filtering by language in Inventory will not be conclusive.",
     "__Section 2: holdings": "The entries below seem to be related to holdings",
-    "Callnumber types": "Section description to be added.",
     "Holdings type mapping": "Section description to be added.",
     "Legacy location codes": "Section description to be added.",
     "Locations - Unmapped legacy codes": "Section description to be added.",
@@ -67,4 +66,6 @@ blurbs = {
     "Mapped publisher role from Indicator2": "Publication Role, taken from the code in Ind2",
     "Preceding and Succeding titles": "Preceding and Succeding titles is still Work In progress and still not fully implemented",
     "Added value since value was empty": "Some FOLIO objects need to have values in them despite the source data was empty. This involves 86X fields for example. ",
+    "Callnumber type mapping": "Call number types in MFHDs are mapped from 852, Indicator 1 according to a certain scheme. (LOC documentation)[https://www.loc.gov/marc/holdings/hd852.html]",
+    "Reciept status mapping": "Mapped reciept status from 008[06]. (LoC documentation)[https://www.loc.gov/marc/holdings/hd008.html]"
 }

@@ -19,7 +19,14 @@ from jsonschema import ValidationError, validate
 class BibsProcessor:
     """the processor"""
 
-    def __init__(self, mapper, folio_client, results_file, folder_structure: FolderStructure, args):
+    def __init__(
+        self,
+        mapper,
+        folio_client,
+        results_file,
+        folder_structure: FolderStructure,
+        args,
+    ):
         self.ils_flavour = args.ils_flavour
         self.suppress = args.suppress
         self.results_file = results_file
@@ -28,25 +35,25 @@ class BibsProcessor:
         self.mapper: BibsRulesMapper = mapper
         self.args = args
         self.folders = folder_structure
-        self.srs_records_file = open(
-            self.folders.srs_records_path, "w+"
-        )
-        self.instance_id_map_file = open(
-            self.folders.instance_id_map_path, "w+"
-        )
+        self.srs_records_file = open(self.folders.srs_records_path, "w+")
+        self.instance_id_map_file = open(self.folders.instance_id_map_path, "w+")
 
     def process_record(self, idx, marc_record, inventory_only):
 
         """processes a marc record and saves it"""
         try:
-            index_or_legacy_id = self.mapper.get_legacy_ids(marc_record, self.ils_flavour)
+            index_or_legacy_id = self.mapper.get_legacy_ids(
+                marc_record, self.ils_flavour
+            )
         except:
-            index_or_legacy_id = [f"Index in file: {idx}"] # Only used for reporting purposes
+            index_or_legacy_id = [
+                f"Index in file: {idx}"
+            ]  # Only used for reporting purposes
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
-            (folio_rec, id_map_strings) = self.mapper.parse_bib(index_or_legacy_id,
-                marc_record, inventory_only
+            (folio_rec, id_map_strings) = self.mapper.parse_bib(
+                index_or_legacy_id, marc_record, inventory_only
             )
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
@@ -162,11 +169,13 @@ class BibsProcessor:
             temp_leader[9] = "a"
             marc_record.leader = temp_leader
         except:
-            logging.exception(f"Something is wrong with the marc records leader: {marc_record.leader}")
+            logging.exception(
+                f"Something is wrong with the marc records leader: {marc_record.leader}"
+            )
         srs_record_string = get_srs_string(
             (
                 marc_record,
-                instance["id"],
+                instance,
                 srs_id,
                 self.folio_client.get_metadata_construct(),
                 self.suppress,
@@ -189,7 +198,10 @@ def get_srs_string(my_tuple):
         "rawRecord": raw_record,
         "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": my_tuple[4]},
-        "externalIdsHolder": {"instanceId": my_tuple[1]},
+        "externalIdsHolder": {
+            "instanceId": my_tuple[1]["id"],
+            "instanceHrid": my_tuple[1]["hrid"],
+        },
         "metadata": my_tuple[3],
         "state": "ACTUAL",
         "leaderRecordStatus": parsed_record["content"]["leader"][5],
