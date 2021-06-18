@@ -36,46 +36,45 @@ class HoldingsMapper(MapperBase):
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        if self.use_map:
-            legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-            legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
-            legacy_value = " ".join(legacy_values).strip()
-            if folio_prop_name == "permanentLocationId":
-                return self.get_location_id(legacy_item, index_or_id)
-            elif folio_prop_name == "temporaryLocationId": 
-                return self.get_location_id(legacy_item, index_or_id, True)
-            elif folio_prop_name == "callNumber":
-                if legacy_value.startswith("["):
-                    self.add_stats("Bound-with items callnumber identified")
-                    self.add_to_migration_report(
-                        "Bound-with mapping",
-                        f"Number of bib-level callnumbers in record: {len(legacy_value.split(','))}",
-                    )
-                return legacy_value
-            elif folio_prop_name == "callNumberTypeId":
-                return self.get_call_number_type_id(legacy_item)
-            elif folio_prop_name == "statisticalCodeIds":
-                return self.get_statistical_codes(legacy_values)
-            elif folio_prop_name == "instanceId":
-                return self.get_instance_ids(legacy_value, index_or_id)
-            elif len(legacy_item_keys) == 1:
-                logging.debug(
-                    f"One value from one property to return{folio_prop_name} "
-                )
-                value = self.mapped_from_values.get(folio_prop_name, "")
-                if value in [None, ""]:
-                    return legacy_value
-                return value
-            elif any(legacy_item_keys):
-                logging.debug(
-                    f"Multiple values from multiple mappings to return{folio_prop_name} "
-                )
-                return legacy_values
-            else:
-                self.report_folio_mapping(f"Edge case: {folio_prop_name}", False, False)
-                return ""
-        else:
+        if not self.use_map:
             return legacy_item[folio_prop_name]
+        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+        legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
+        legacy_value = " ".join(legacy_values).strip()
+        if folio_prop_name == "permanentLocationId":
+            return self.get_location_id(legacy_item, index_or_id)
+        elif folio_prop_name == "temporaryLocationId": 
+            return self.get_location_id(legacy_item, index_or_id, True)
+        elif folio_prop_name == "callNumber":
+            if legacy_value.startswith("["):
+                self.add_stats("Bound-with items callnumber identified")
+                self.add_to_migration_report(
+                    "Bound-with mapping",
+                    f"Number of bib-level callnumbers in record: {len(legacy_value.split(','))}",
+                )
+            return legacy_value
+        elif folio_prop_name == "callNumberTypeId":
+            return self.get_call_number_type_id(legacy_item)
+        elif folio_prop_name == "statisticalCodeIds":
+            return self.get_statistical_codes(legacy_values)
+        elif folio_prop_name == "instanceId":
+            return self.get_instance_ids(legacy_value, index_or_id)
+        elif len(legacy_item_keys) == 1:
+            logging.debug(
+                f"One value from one property to return{folio_prop_name} "
+            )
+            value = self.mapped_from_values.get(folio_prop_name, "")
+            if value in [None, ""]:
+                return legacy_value
+            return value
+        elif any(legacy_item_keys):
+            logging.debug(
+                f"Multiple values from multiple mappings to return{folio_prop_name} "
+            )
+            return legacy_values
+        else:
+            self.report_folio_mapping(f"Edge case: {folio_prop_name}", False, False)
+            return ""
 
     def get_location_id(self, legacy_item: dict, id_or_index, prevent_default=False):
         return self.get_mapped_value(

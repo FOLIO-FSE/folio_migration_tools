@@ -69,7 +69,6 @@ class RulesMapperHoldings(RulesMapperBase):
                     )
 
         self.dedupe_rec(folio_holding)
-        self.report_folio_mapping(folio_holding, self.holdings_json_schema)
         for id in legacy_ids:
             self.holdings_id_map[id] = {"id": folio_holding["id"]}
 

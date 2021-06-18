@@ -4,6 +4,7 @@ import json
 import logging
 import csv
 import copy
+from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 from marc_to_folio.folder_structure import FolderStructure
 import os
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
@@ -18,7 +19,7 @@ import time
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
 from pymarc.record import Record
-from marc_to_folio import BibsRulesMapper, main_base
+from marc_to_folio import main_base
 
 from marc_to_folio.bibs_processor import BibsProcessor
 
