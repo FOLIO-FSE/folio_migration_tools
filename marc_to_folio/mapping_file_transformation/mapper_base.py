@@ -60,7 +60,6 @@ class MapperBase:
                         k["legacy_field"]
                     )
 
-        
         logging.info(
             f"Mapped legacy fields:\n{json.dumps(list(legacy_fields), indent=4, sort_keys=True)}"
         )
@@ -112,7 +111,9 @@ class MapperBase:
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
         if self.num_criticalerrors > 500:
-            logging.fatal(f"Stopping. More than {self.num_criticalerrors} critical data errors")
+            logging.fatal(
+                f"Stopping. More than {self.num_criticalerrors} critical data errors"
+            )
             exit()
 
     def handle_generic_exception(self, idx, excepion: Exception):
@@ -123,7 +124,9 @@ class MapperBase:
             f"of type {type(excepion).__name__}"
         )
         if self.num_exeptions > 500:
-            logging.fatal(f"Stopping. More than {self.num_exeptions} unhandled exceptions")
+            logging.fatal(
+                f"Stopping. More than {self.num_exeptions} unhandled exceptions"
+            )
             exit()
 
     @staticmethod
@@ -210,7 +213,7 @@ class MapperBase:
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
-            
+
             # Get the values in the fields that will be used for mapping
             fieldvalues = [legacy_object.get(k) for k in ref_dat_mapping.keys]
             logging.debug(f"fieldvalues are {fieldvalues}")
@@ -247,7 +250,7 @@ class MapperBase:
             return ref_dat_mapping.default_id
         except IndexError as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping indexerror")
-            
+
             raise TransformationCriticalDataError(
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
                 f"({ref_dat_mapping.keys}) {ee} is not a recognized fields in the legacy data."
@@ -302,7 +305,9 @@ class MapperBase:
         index_or_id,
         legacy_object,
     ):
-        if property_level1.get("description", "") == "Deprecated" or skip_property(property_name_level1, property_level1):
+        if property_level1.get("description", "") == "Deprecated" or skip_property(
+            property_name_level1, property_level1
+        ):
             pass
         elif property_level1["type"] == "object":
             if "properties" in property_level1:
@@ -336,19 +341,21 @@ class MapperBase:
 
     def validate_object(self, folio_object, index_or_id):
         required = self.schema["required"]
+        missing = []
         for required_prop in required:
             if required_prop not in folio_object:
                 if index_or_id == "row 1":
                     logging.info(json.dumps(folio_object, indent=4))
-                raise TransformationCriticalDataError(
-                    f"Required property {required_prop} missing for {index_or_id}"
-                )
+                missing.append(f"Missing: {required_prop}")
             elif not folio_object[required_prop]:
                 if index_or_id == "row 1":
                     logging.info(json.dumps(folio_object, indent=4))
-                raise TransformationCriticalDataError(
-                    f"Required property {required_prop} empty for {index_or_id}"
-                )
+                missing.append(f"Empty: {required_prop}")
+        if any(missing):
+            raise TransformationCriticalDataError(
+                f"Required properties empty for {index_or_id}\t{json.dumps(missing)}"
+            )
+
         del folio_object["type"]
 
     @staticmethod
@@ -453,9 +460,8 @@ class MapperBase:
                 mapped_prop = self.get_prop(legacy_object, prop_name, index_or_id)
                 if mapped_prop:
                     # logging.debug(f"Mapped string array prop {mapped_prop}")
-                    if (
-                        prop in folio_object
-                        and mapped_prop not in folio_object.get(prop, [])
+                    if prop in folio_object and mapped_prop not in folio_object.get(
+                        prop, []
                     ):
                         folio_object.get(prop, []).append(mapped_prop)
                     else:
