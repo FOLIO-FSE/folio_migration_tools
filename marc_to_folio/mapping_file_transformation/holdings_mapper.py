@@ -73,7 +73,7 @@ class HoldingsMapper(MapperBase):
             )
             return legacy_values
         else:
-            self.report_folio_mapping(f"Edge case: {folio_prop_name}", False, False)
+            logging.error(f"Edge case: {folio_prop_name}")
             return ""
 
     def get_location_id(self, legacy_item: dict, id_or_index, prevent_default=False):
