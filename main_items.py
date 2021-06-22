@@ -206,6 +206,10 @@ class Worker(MainBase):
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationCriticalDataError as data_error:
                     self.mapper.handle_transformation_critical_error(idx, data_error)
+                except AttributeError as attribute_error:
+                    traceback.print_exc()
+                    logging.fatal(attribute_error)
+                    exit()
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
 

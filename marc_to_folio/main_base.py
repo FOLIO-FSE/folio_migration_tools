@@ -41,7 +41,7 @@ class MainBase:
             stream_handler.addFilter(ExcludeLevelFilter(25))
             # file_handler.addFilter(LevelFilter(0, 20))
             file_handler.setFormatter(file_formatter)
-            file_handler.setLevel(logging.ERROR)
+            file_handler.setLevel(logging.INFO)
             logging.getLogger().addHandler(file_handler)
 
             # Data file formatter
