@@ -206,7 +206,7 @@ class ItemMapper(MapperBase):
 
     def get_statistical_codes(self, legacy_item: dict):
         if self.statistical_codes_mapping:
-            return self.get_mapped_value(self.statistical_code_mapping, legacy_item)
+            return self.get_mapped_value(self.statistical_codes_mapping, legacy_item)
         self.add_to_migration_report(
             "Statistical code mapping",
             "Mapping not setup",
@@ -218,7 +218,7 @@ class ItemMapper(MapperBase):
         return self.get_mapped_value(self.material_type_mapping, legacy_item)
 
     def get_item_level_call_number_type_id(self, legacy_item):
-        if self.call_number_type_map:
+        if self.call_number_mapping:
             return self.get_mapped_value(self.call_number_mapping, legacy_item)
         self.add_to_migration_report(
             "Callnumber type mapping",

@@ -14,7 +14,7 @@ class RefDataMapping(object):
         logging.info(f"{self.name} reference data mapping. Initializing")
         logging.info(f"Fetching {self.name} reference data from FOLIO")
         self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name))
-        logging.info(json.dumps(self.ref_data))
+        logging.info(json.dumps(self.ref_data, indent=4))
         self.map = map
         self.key_type = key_type
         self.keys = ""
