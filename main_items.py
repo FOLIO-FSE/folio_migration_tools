@@ -209,6 +209,7 @@ class Worker(MainBase):
                 except AttributeError as attribute_error:
                     traceback.print_exc()
                     logging.fatal(attribute_error)
+                    logging.info("Quitting...")
                     exit()
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
