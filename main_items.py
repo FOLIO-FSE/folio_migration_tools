@@ -5,6 +5,7 @@ import ctypes
 import json
 import logging
 from pathlib import Path
+import uuid
 from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio import custom_exceptions
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
@@ -191,11 +192,11 @@ class Worker(MainBase):
                     # Hard code circ note sources
                     # TODO: Add more levels (recursive) to mapping
                     for circ_note in folio_rec.get("circulationNotes", []):
+                        circ_note["id"] = str(uuid.uuid4())
                         circ_note["source"] = {
                             "id": self.folio_client.current_user,
                             "personal": {"lastName": "Data", "firstName": "Migration"},
                         }
-
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.add_to_migration_report(
                         "General statistics",
