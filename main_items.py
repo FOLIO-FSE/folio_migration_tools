@@ -4,6 +4,7 @@ import csv
 import ctypes
 import json
 import logging
+import uuid
 from marc_to_folio import custom_exceptions
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 from marc_to_folio.helper import Helper
@@ -160,6 +161,7 @@ class Worker(MainBase):
                     # Hard code circ note sources
                     # TODO: Add more levels (recursive) to mapping
                     for circ_note in folio_rec.get("circulationNotes",[]):
+                        circ_note["id"] = str(uuid.uuid4())
                         circ_note["source"] = {
                             "id": self.folio_client.current_user,
                             "personal":{
