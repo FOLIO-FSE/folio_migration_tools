@@ -70,8 +70,6 @@ class Worker(MainBase):
             False,
         )
 
-        
-        
         self.total_records = 0
         if "temporaryLoanTypeId" in self.folio_keys:
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
@@ -119,7 +117,7 @@ class Worker(MainBase):
         if (
             folio_property_name in self.folio_keys
             or required
-            or any(a.startswith("statisticalCodeIds") for a in self.folio_keys)
+            or folio_property_name.startswith("statisticalCodeIds")
         ):
             try:
                 with open(map_file_path) as map_file:
