@@ -184,10 +184,10 @@ class Worker(MainBase):
                 self.mapper.get_objects(records_file, file_name)
             ):
                 try:
-                    if idx == 1:
+                    if idx == 0:
                         logging.info(json.dumps(record, indent=4))
                     folio_rec = self.mapper.do_map(record, f"row {idx}")
-                    if idx == 1:
+                    if idx == 0:
                         logging.info(json.dumps(folio_rec, indent=4))
                     # Hard code circ note sources
                     # TODO: Add more levels (recursive) to mapping
