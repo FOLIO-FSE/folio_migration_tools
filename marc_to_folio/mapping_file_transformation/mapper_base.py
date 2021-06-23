@@ -216,7 +216,7 @@ class MapperBase:
 
             # Get the values in the fields that will be used for mapping
             fieldvalues = [legacy_object.get(k) for k in ref_dat_mapping.keys]
-            logging.debug(f"fieldvalues are {fieldvalues}")
+            logging.debug(f"(statcode)fieldvalues are {fieldvalues}")
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
@@ -229,7 +229,7 @@ class MapperBase:
                     for k in ref_dat_mapping.keys
                 )
             )
-            logging.debug(f"Found mapping is {right_mapping}")
+            logging.debug(f"Found statcode mapping is {right_mapping}")
             self.add_to_migration_report(
                 f"{ref_dat_mapping.name} mapping",
                 f'{" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',

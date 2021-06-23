@@ -173,7 +173,11 @@ class ItemMapper(MapperBase):
                 )
                 return ltid
             elif folio_prop_name == "statisticalCodeIds":
-                return self.get_statistical_codes(legacy_item)
+                statistical_code_id = self.get_statistical_codes(legacy_item)
+                self.add_to_migration_report(
+                    "Statistical code mapping", f"{folio_prop_name} -> {statistical_code_id}"
+                )
+                return statistical_code_id
             elif folio_prop_name == "holdingsRecordId":
                 if legacy_value not in self.holdings_id_map:
                     self.add_to_migration_report(
