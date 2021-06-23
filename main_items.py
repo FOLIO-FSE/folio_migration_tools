@@ -63,6 +63,12 @@ class Worker(MainBase):
         )
         self.source_files = source_files
 
+        statcode_mapping = self.load_ref_data_mapping_file(
+                "statisticalCodeIds",
+                self.folder_structure.statistical_codes_map_path,
+                False,
+            )
+    
         self.failed_files: List[str] = list()
         csv.register_dialect("tsv", delimiter="\t")
         self.total_records = 0
@@ -97,11 +103,7 @@ class Worker(MainBase):
                 False,
             ),
             self.holdings_id_map,
-            self.load_ref_data_mapping_file(
-                "statisticalCodeIds",
-                self.folder_structure.statistical_codes_map_path,
-                False,
-            ),
+            statcode_mapping,
             self.load_ref_data_mapping_file(
                 "status.name", self.folder_structure.item_statuses_map_path, False
             ),
