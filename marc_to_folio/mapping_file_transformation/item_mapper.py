@@ -173,7 +173,7 @@ class ItemMapper(MapperBase):
                 "Loan type mapping", f"{folio_prop_name} -> {ltid}"
             )
             return ltid
-        elif folio_prop_name == "statisticalCodeIds":
+        elif folio_prop_name.startswith("statisticalCodeIds"):
             logging.debug(f"{folio_prop_name} propery in get_prop")
             statistical_code_id = self.get_statistical_codes(legacy_item)
             logging.debug(f"{folio_prop_name} -> {statistical_code_id}")
