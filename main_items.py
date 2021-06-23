@@ -64,11 +64,11 @@ class Worker(MainBase):
         self.source_files = source_files
 
         statcode_mapping = self.load_ref_data_mapping_file(
-                "statisticalCodeIds",
-                self.folder_structure.statistical_codes_map_path,
-                False,
-            )
-    
+            "statisticalCodeIds",
+            self.folder_structure.statistical_codes_map_path,
+            False,
+        )
+
         self.failed_files: List[str] = list()
         csv.register_dialect("tsv", delimiter="\t")
         self.total_records = 0
@@ -115,7 +115,11 @@ class Worker(MainBase):
     def load_ref_data_mapping_file(
         self, folio_property_name: str, map_file_path: Path, required: bool = True
     ):
-        if folio_property_name in self.folio_keys or required:
+        if (
+            folio_property_name in self.folio_keys
+            or required
+            or any(a.startswith("statisticalCodeIds") for a in self.folio_keys)
+        ):
             try:
                 with open(map_file_path) as map_file:
                     map = list(csv.DictReader(map_file, dialect="tsv"))
