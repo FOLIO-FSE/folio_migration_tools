@@ -173,7 +173,9 @@ class ItemMapper(MapperBase):
                 )
                 return ltid
             elif folio_prop_name == "statisticalCodeIds":
+                logging.debug(f"{folio_prop_name} propery in get_prop")
                 statistical_code_id = self.get_statistical_codes(legacy_item)
+                logging.debug(f"{folio_prop_name} -> {statistical_code_id}")
                 self.add_to_migration_report(
                     "Statistical code mapping", f"{folio_prop_name} -> {statistical_code_id}"
                 )
