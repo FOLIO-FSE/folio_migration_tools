@@ -186,12 +186,11 @@ class MapperBase:
             self.mapped_legacy_fields[field_name][1] += int(was_empty)
 
     def instantiate_record(self):
-        record = {
+        return {
             "metadata": self.folio_client.get_metadata_construct(),
             "id": str(uuid.uuid4()),
             "type": "object",
         }
-        return record
 
     def add_stats(self, a):
         # TODO: Move to interface or parent class
@@ -334,6 +333,8 @@ class MapperBase:
                     folio_object,
                     index_or_id,
                 )
+            else:
+                logging.debug(f"")
         else:  # Basic property
             self.map_basic_props(
                 legacy_object, property_name_level1, folio_object, index_or_id
@@ -451,7 +452,7 @@ class MapperBase:
             folio_object[prop_name] = resulting_array
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
-        # logging.debug(f"String array {prop}")
+        logging.debug(f"String array {prop}")
         for i in range(9):
             prop_name = f"{prop}[{i}]"
             if prop_name in self.folio_keys and self.has_property(
