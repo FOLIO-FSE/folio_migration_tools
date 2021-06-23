@@ -131,84 +131,83 @@ class ItemMapper(MapperBase):
         logging.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        # logging.debug(f"get item prop {folio_prop_name}")
-        if self.use_map:
-            # legacy_item_keys = [k["legacy_field"] for k in self.items_map["data"]
-            #            if k["folio_field"] == folio_prop_name]
-            # vals = [v for k, v in legacy_item.items() if k in legacy_item_keys]
-            legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-            # legacy_value = ""
-            legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
-            legacy_value = " ".join(legacy_values).strip()
-            if folio_prop_name == "permanentLocationId":
-                return self.get_mapped_value(self.location_mapping, legacy_item, False)
-            elif folio_prop_name == "temporaryLocationId":
-                temp_loc = self.get_mapped_value(
-                    self.temp_location_mapping, legacy_item, True
-                )
-                self.add_to_migration_report(
-                    "Temporary location mapping", f"{temp_loc}"
-                )
-                return temp_loc
-            elif folio_prop_name == "materialTypeId":
-                return self.get_material_type_id(legacy_item)
-            elif folio_prop_name == "itemLevelCallNumberTypeId":
-                return self.get_item_level_call_number_type_id(legacy_item)
-            elif folio_prop_name == "status.name":
-                return self.transform_status(legacy_value)
-            elif folio_prop_name == "barcode":
-                return next((v for v in legacy_values if v), "")
-            elif folio_prop_name == "status.date":
-                return datetime.utcnow().isoformat()
-            elif folio_prop_name == "temporaryLoanTypeId":
-                ltid = self.get_mapped_value(
-                    self.temp_loan_type_mapping, legacy_item, True
-                )
-                self.add_to_migration_report("Temporary Loan type mapping", f"{ltid}")
-                return ltid
-            elif folio_prop_name == "permanentLoanTypeId":
-                ltid = self.get_mapped_value(self.loan_type_mapping, legacy_item)
-                self.add_to_migration_report(
-                    "Loan type mapping", f"{folio_prop_name} -> {ltid}"
-                )
-                return ltid
-            elif folio_prop_name == "statisticalCodeIds":
-                logging.debug(f"{folio_prop_name} propery in get_prop")
-                statistical_code_id = self.get_statistical_codes(legacy_item)
-                logging.debug(f"{folio_prop_name} -> {statistical_code_id}")
-                self.add_to_migration_report(
-                    "Statistical code mapping", f"{folio_prop_name} -> {statistical_code_id}"
-                )
-                return statistical_code_id
-            elif folio_prop_name == "holdingsRecordId":
-                if legacy_value not in self.holdings_id_map:
-                    self.add_to_migration_report(
-                        "General statistics",
-                        "Records failed because of failed holdings",
-                    )
-                    self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
-                    s = f"Holdings id '{legacy_value}' not in hold id map."
-                    raise TransformationProcessError(s, index_or_id)
-                else:
-                    self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
-                    return self.holdings_id_map[legacy_value]["id"]
-            elif (
-                len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values
-            ):
-                value = self.mapped_from_values.get(folio_prop_name, "")
-                if value not in [None, ""]:
-                    return value
-                else:
-                    return legacy_value
-            elif any(legacy_item_keys):
-                return legacy_value
-            else:
-                self.add_to_migration_report(
-                    "Unmapped properties", f"{folio_prop_name} {legacy_item_keys}"
-                )
-                return ""
-        else:
+        logging.debug(f"get item prop {folio_prop_name}")
+        if not self.use_map:
             return legacy_item[folio_prop_name]
+        # legacy_item_keys = [k["legacy_field"] for k in self.items_map["data"]
+        #            if k["folio_field"] == folio_prop_name]
+        # vals = [v for k, v in legacy_item.items() if k in legacy_item_keys]
+        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+        # legacy_value = ""
+        legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
+        legacy_value = " ".join(legacy_values).strip()
+        if folio_prop_name == "permanentLocationId":
+            return self.get_mapped_value(self.location_mapping, legacy_item, False)
+        elif folio_prop_name == "temporaryLocationId":
+            temp_loc = self.get_mapped_value(
+                self.temp_location_mapping, legacy_item, True
+            )
+            self.add_to_migration_report(
+                "Temporary location mapping", f"{temp_loc}"
+            )
+            return temp_loc
+        elif folio_prop_name == "materialTypeId":
+            return self.get_material_type_id(legacy_item)
+        elif folio_prop_name == "itemLevelCallNumberTypeId":
+            return self.get_item_level_call_number_type_id(legacy_item)
+        elif folio_prop_name == "status.name":
+            return self.transform_status(legacy_value)
+        elif folio_prop_name == "barcode":
+            return next((v for v in legacy_values if v), "")
+        elif folio_prop_name == "status.date":
+            return datetime.utcnow().isoformat()
+        elif folio_prop_name == "temporaryLoanTypeId":
+            ltid = self.get_mapped_value(
+                self.temp_loan_type_mapping, legacy_item, True
+            )
+            self.add_to_migration_report("Temporary Loan type mapping", f"{ltid}")
+            return ltid
+        elif folio_prop_name == "permanentLoanTypeId":
+            ltid = self.get_mapped_value(self.loan_type_mapping, legacy_item)
+            self.add_to_migration_report(
+                "Loan type mapping", f"{folio_prop_name} -> {ltid}"
+            )
+            return ltid
+        elif folio_prop_name == "statisticalCodeIds":
+            logging.debug(f"{folio_prop_name} propery in get_prop")
+            statistical_code_id = self.get_statistical_codes(legacy_item)
+            logging.debug(f"{folio_prop_name} -> {statistical_code_id}")
+            self.add_to_migration_report(
+                "Statistical code mapping", f"{folio_prop_name} -> {statistical_code_id}"
+            )
+            return statistical_code_id
+        elif folio_prop_name == "holdingsRecordId":
+            if legacy_value not in self.holdings_id_map:
+                self.add_to_migration_report(
+                    "General statistics",
+                    "Records failed because of failed holdings",
+                )
+                self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
+                s = f"Holdings id '{legacy_value}' not in hold id map."
+                raise TransformationProcessError(s, index_or_id)
+            else:
+                self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
+                return self.holdings_id_map[legacy_value]["id"]
+        elif (
+            len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values
+        ):
+            value = self.mapped_from_values.get(folio_prop_name, "")
+            if value not in [None, ""]:
+                return value
+            else:
+                return legacy_value
+        elif any(legacy_item_keys):
+            return legacy_value
+        else:
+            self.add_to_migration_report(
+                "Unmapped properties", f"{folio_prop_name} {legacy_item_keys}"
+            )
+            return ""
 
     def get_statistical_codes(self, legacy_item: dict):
         if self.statistical_codes_mapping:
