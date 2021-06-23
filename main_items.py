@@ -62,15 +62,16 @@ class Worker(MainBase):
             self.items_map
         )
         self.source_files = source_files
-
+        csv.register_dialect("tsv", delimiter="\t")
+        self.failed_files: List[str] = list()
         statcode_mapping = self.load_ref_data_mapping_file(
             "statisticalCodeIds",
             self.folder_structure.statistical_codes_map_path,
             False,
         )
 
-        self.failed_files: List[str] = list()
-        csv.register_dialect("tsv", delimiter="\t")
+        
+        
         self.total_records = 0
         if "temporaryLoanTypeId" in self.folio_keys:
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
