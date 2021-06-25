@@ -147,7 +147,7 @@ class Worker(MainBase):
         )
 
     def process_single_file(self, file_name, results_file):
-        with open(file_name, encoding="utf-8-sig") as records_file:
+        with open(file_name, encoding="utf-8") as records_file:
             self.mapper.add_to_migration_report(
                 "General statistics", "Number of files processed"
             )
