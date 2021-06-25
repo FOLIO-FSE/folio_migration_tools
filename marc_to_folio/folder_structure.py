@@ -15,6 +15,14 @@ class FolderStructure:
         self.data_folder = self.base_folder / "data"
         verify_folder(self.data_folder)
 
+        verify_folder(self.data_folder / "instance")
+        verify_folder(self.data_folder / "holdingsrecord")
+        verify_folder(self.data_folder / "item")
+        verify_folder(self.data_folder / "users")
+        
+
+
+
         self.archive_folder = self.base_folder / "archive"
         verify_folder(self.data_folder)
 
