@@ -64,11 +64,12 @@ class Worker(MainBase):
         self.source_files = source_files
         csv.register_dialect("tsv", delimiter="\t")
         self.failed_files: List[str] = list()
-        statcode_mapping = self.load_ref_data_mapping_file(
-            "statisticalCodeIds",
-            self.folder_structure.statistical_codes_map_path,
-            False,
-        )
+        if "statisticalCodes" in self.folio_keys:
+            statcode_mapping = self.load_ref_data_mapping_file(
+                "statisticalCodeIds",
+                self.folder_structure.statistical_codes_map_path,
+                False,
+            )
 
         self.total_records = 0
         if "temporaryLoanTypeId" in self.folio_keys:
