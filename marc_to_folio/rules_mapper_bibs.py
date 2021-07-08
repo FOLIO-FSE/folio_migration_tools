@@ -396,7 +396,7 @@ class BibsRulesMapper(RulesMapperBase):
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if self.hrid_handling == "default" or "001" not in marc_record:
             num_part = str(self.hrid_counter).zfill(11)
-            folio_instance["hrid"] = f"mig{num_part}"
+            folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             try:
                 new_035 = Field(
