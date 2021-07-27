@@ -94,7 +94,7 @@ class Worker(main_base.MainBase):
                     )
                     raise TransformationCriticalDataError(
                         f"Index in file:{idx}",
-                        f"MARC parsing error: " f"{reader.current_exception}",
+                        f"MARC parsing error: {reader.current_exception}",
                         reader.current_chunk,
                     )
                 else:
@@ -135,7 +135,6 @@ class Worker(main_base.MainBase):
 
 def parse_args():
     """Parse CLI Arguments"""
-    # parser = argparse.ArgumentParser()
     parser = PromptParser()
     parser.add_argument("base_folder", help="path base folder", type=str)
     parser.add_argument("okapi_url", help="OKAPI base url")
