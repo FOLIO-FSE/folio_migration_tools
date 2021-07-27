@@ -31,8 +31,8 @@ class TestRulesMapperVanilla(unittest.TestCase):
 
     def default_map(self, file_name, xpath):
         ns = {
-            "marc": "http://www.loc.gov/MARC21/slim",
-            "oai": "http://www.openarchives.org/OAI/2.0/",
+            "marc": "https://www.loc.gov/MARC21/slim",
+            "oai": "https://www.openarchives.org/OAI/2.0/",
         }
         file_path = f"./tests/test_data/default/{file_name}"
         record = pymarc.parse_xml_to_array(file_path)[0]
@@ -315,7 +315,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
             self.assertIn("Lous, Christian Carl, 1724-1804", contributors, m)
         with self.subTest("700$e (contributor)"):
             self.assertIn("Weaver, James L", contributors, m)
-        print(json.dumps(record[0]["contributors"],indent=4))
+        print(json.dumps(record[0]["contributors"], indent=4))
         with self.subTest("111$acde, no contrib type id"):
             self.assertIn("Wolfcon Durham 2018", contributors, m)
         with self.subTest("111$abbde4"):
@@ -438,7 +438,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
         print(so)
         with self.subTest("staffOnly"):
             for s in so:
-                self.assertEqual(type(s),bool)
+                self.assertEqual(type(s), bool)
         with self.subTest("500$a"):
             self.assertIn(
                 '"Embedded application development for home and industry."--Cover',

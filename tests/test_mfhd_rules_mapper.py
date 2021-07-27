@@ -41,8 +41,8 @@ class TestMFHDRulesMapper(unittest.TestCase):
 
     def default_map(self, file_name, xpath):
         ns = {
-            "marc": "http://www.loc.gov/MARC21/slim",
-            "oai": "http://www.openarchives.org/OAI/2.0/",
+            "marc": "https://www.loc.gov/MARC21/slim",
+            "oai": "https://www.openarchives.org/OAI/2.0/",
         }
         file_path = f"./tests/test_data/mfhd/{file_name}"
         record = pymarc.parse_xml_to_array(file_path)[0]
