@@ -147,9 +147,7 @@ class ItemMapper(MapperBase):
             temp_loc = self.get_mapped_value(
                 self.temp_location_mapping, legacy_item, True
             )
-            self.add_to_migration_report(
-                "Temporary location mapping", f"{temp_loc}"
-            )
+            self.add_to_migration_report("Temporary location mapping", f"{temp_loc}")
             return temp_loc
         elif folio_prop_name == "materialTypeId":
             return self.get_material_type_id(legacy_item)
@@ -162,9 +160,7 @@ class ItemMapper(MapperBase):
         elif folio_prop_name == "status.date":
             return datetime.utcnow().isoformat()
         elif folio_prop_name == "temporaryLoanTypeId":
-            ltid = self.get_mapped_value(
-                self.temp_loan_type_mapping, legacy_item, True
-            )
+            ltid = self.get_mapped_value(self.temp_loan_type_mapping, legacy_item, True)
             self.add_to_migration_report("Temporary Loan type mapping", f"{ltid}")
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
@@ -178,13 +174,13 @@ class ItemMapper(MapperBase):
             statistical_code_id = self.get_statistical_codes(legacy_item)
             logging.debug(f"{folio_prop_name} -> {statistical_code_id}")
             self.add_to_migration_report(
-                "Statistical code mapping", f"{folio_prop_name} -> {statistical_code_id}"
+                "Statistical code mapping",
+                f"{folio_prop_name} -> {statistical_code_id}",
             )
             return statistical_code_id
         elif folio_prop_name == "holdingsRecordId":
             if legacy_value not in self.holdings_id_map:
-                self.add_to_migration_report(
-                    "General statistics",
+                self.add_general_statistics(
                     "Records failed because of failed holdings",
                 )
                 self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
@@ -193,9 +189,7 @@ class ItemMapper(MapperBase):
             else:
                 self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
                 return self.holdings_id_map[legacy_value]["id"]
-        elif (
-            len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values
-        ):
+        elif len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
             if value not in [None, ""]:
                 return value

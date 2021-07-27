@@ -129,7 +129,9 @@ class BibsRulesMapper(RulesMapperBase):
                         ):
                             ignored_subsequent_fields.add(marc_field.tag)
                     except Exception as ee:
-                        logging.error(f"map_field_according_to_mapping {marc_field.tag} {marc_field.format_field()} {json.dumps(mappings)}")
+                        logging.error(
+                            f"map_field_according_to_mapping {marc_field.tag} {marc_field.format_field()} {json.dumps(mappings)}"
+                        )
                         raise ee
                 else:
                     self.add_to_migration_report(
@@ -219,7 +221,7 @@ class BibsRulesMapper(RulesMapperBase):
                 "Holdings generation from bibs", f"0 852:s and 0 866:s in record"
             )
 
-    def wrap_up(self):        
+    def wrap_up(self):
         logging.info("Mapper wrapping up")
         logging.info("Setting HRID counter to current +1")
         self.hrid_settings["instances"]["startNumber"] = self.hrid_counter + 1
