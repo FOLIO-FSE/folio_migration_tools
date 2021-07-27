@@ -3,11 +3,7 @@
 
 name: Python application
 
-on:
-  push:
-    branches: [ sonarcloud ]
-  pull_request:
-    branches: [ sonarcloud ]
+on: push
 
 jobs:
   build:
