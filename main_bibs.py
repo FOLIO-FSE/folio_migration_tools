@@ -1,27 +1,22 @@
 '''Main "script."'''
-import argparse
 import json
 import logging
-import csv
-import copy
-from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
-from marc_to_folio.folder_structure import FolderStructure
 import os
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
-import sys
-from argparse_prompt import PromptParser
-import traceback
-from os import listdir
-from os.path import isfile, dirname
-from datetime import datetime as dt
 import time
+from datetime import datetime as dt
+from os import listdir
+from os.path import dirname, isfile
 
+from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
 from pymarc.record import Record
-from marc_to_folio import main_base
 
+from marc_to_folio import main_base
 from marc_to_folio.bibs_processor import BibsProcessor
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.folder_structure import FolderStructure
+from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 
 
 class Worker(main_base.MainBase):

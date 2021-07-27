@@ -35,7 +35,6 @@ class TestMFHDRulesMapper(unittest.TestCase):
                 cls.folio, instance_id_map, location_map, d["defaultLocationCode"], args
             )
             cls.holdings_schema = cls.mapper.holdings_json_schema
-            isFile = os.path.isfile("./maps/mfhd_to_holdings_five_colleges.json")
 
             cls.mapper.mappings = d["rules"]
 

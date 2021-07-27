@@ -39,7 +39,7 @@ class HoldingsProcessor:
             if not folio_rec.get("instanceId", ""):
                 self.missing_instance_id_count += 1
                 if self.missing_instance_id_count > 1000:
-                    raise Exception(
+                    raise TransformationCriticalDataError(
                         f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}"
                     )
             folio_rec["discoverySuppress"] = self.suppress

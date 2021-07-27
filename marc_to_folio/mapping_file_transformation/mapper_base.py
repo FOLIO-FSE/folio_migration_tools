@@ -14,6 +14,8 @@ from marc_to_folio.custom_exceptions import (
 from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from marc_to_folio.report_blurbs import blurbs
 
+empty_vals = ["Not mapped", None, ""]
+
 
 class MapperBase:
     def __init__(self, folio_client: FolioClient, schema, record_map):
@@ -28,7 +30,7 @@ class MapperBase:
         self.num_exeptions = 0
         self.num_criticalerrors = 0
         self.ref_data_dicts = {}
-        self.empty_vals = ["Not mapped", None, ""]
+        self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
         self.e = {}
         for k in self.record_map["data"]:
@@ -134,8 +136,8 @@ class MapperBase:
             k["folio_field"]
             for k in map["data"]
             if (
-                k["legacy_field"] not in ["", "Not mapped"]
-                or k.get("value", "") not in ["", "Not mapped", None]
+                k["legacy_field"] not in empty_vals
+                or k.get("value", "") not in empty_vals
             )
         ]
 
@@ -306,7 +308,10 @@ class MapperBase:
         if property_level1.get("description", "") == "Deprecated" or skip_property(
             property_name_level1, property_level1
         ):
-            pass
+            self.add_to_migration_report(
+                "Properties in Schema excluded from transformation",
+                property_name_level1,
+            )
         elif property_level1["type"] == "object":
             if "properties" in property_level1:
                 self.map_object_props(
@@ -507,7 +512,7 @@ class MapperBase:
         # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
             any(legacy_keys)
-            and any(k not in ["", "Not mapped"] for k in legacy_keys)
+            and any(k not in empty_vals for k in legacy_keys)
             and any(legacy_object.get(legacy_key, "") for legacy_key in legacy_keys)
         )
 
@@ -522,7 +527,7 @@ class MapperBase:
         # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
             any(legacy_keys)
-            and any(k not in ["", "Not mapped"] for k in legacy_keys)
+            and any(k not in empty_vals for k in legacy_keys)
             and any(legacy_object.get(legacy_key, "") for legacy_key in legacy_keys)
         )
 

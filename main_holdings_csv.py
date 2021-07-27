@@ -1,12 +1,10 @@
 '''Main "script."'''
-import argparse
 import ast
 import copy
 import csv
 import ctypes
 import json
 import logging
-from marc_to_folio.folder_structure import FolderStructure
 import os
 import time
 import traceback
@@ -15,20 +13,21 @@ from os import listdir
 from os.path import isfile, join
 from typing import List
 
-import pymarc
 import requests.exceptions
 from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from requests.api import request
 
-from marc_to_folio.custom_exceptions import (TransformationCriticalDataError,
-                                             TransformationProcessError)
+from marc_to_folio.custom_exceptions import (
+    TransformationCriticalDataError,
+    TransformationProcessError,
+)
+from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.helper import Helper
-from marc_to_folio.holdings_processor import HoldingsProcessor
 from marc_to_folio.main_base import MainBase
-from marc_to_folio.mapping_file_transformation.holdings_mapper import \
-    HoldingsMapper
+from marc_to_folio.mapping_file_transformation.holdings_mapper import HoldingsMapper
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
+
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
@@ -163,8 +162,18 @@ class Worker(MainBase):
         # Add former ids
         temp_ids = []
         for former_id in folio_rec.get("formerIds", []):
-            if former_id.startswith("[") and former_id.endswith("]") and ',' in former_id:
-                ids = former_id[1:-1].replace('"', "").replace(" ", "").replace("'", "").split(",")
+            if (
+                former_id.startswith("[")
+                and former_id.endswith("]")
+                and "," in former_id
+            ):
+                ids = (
+                    former_id[1:-1]
+                    .replace('"', "")
+                    .replace(" ", "")
+                    .replace("'", "")
+                    .split(",")
+                )
                 temp_ids.extend(ids)
             else:
                 temp_ids.append(former_id)
@@ -185,7 +194,7 @@ class Worker(MainBase):
             "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e",  # Default binding note type
             "note": (
                 f'This Record is a Bound-with. It is bound with {len(folio_rec["instanceId"])} other records. '
-                'In order to locate the other records, make a search for the Class mark, but without brackets.'
+                "In order to locate the other records, make a search for the Class mark, but without brackets."
             ),
             "staffOnly": False,
         }
@@ -232,8 +241,12 @@ class Worker(MainBase):
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
         if any(self.holdings):
-            print(f"Saving holdings created to {self.folder_structure.created_objects_path}")
-            with open(self.folder_structure.created_objects_path, "w+") as holdings_file:
+            print(
+                f"Saving holdings created to {self.folder_structure.created_objects_path}"
+            )
+            with open(
+                self.folder_structure.created_objects_path, "w+"
+            ) as holdings_file:
                 for key, holding in self.holdings.items():
                     for legacy_id in holding["formerIds"]:
                         logging.debug(f"Legacy id:{legacy_id}")
@@ -246,11 +259,17 @@ class Worker(MainBase):
                     self.mapper.add_to_migration_report(
                         "General statistics", "Holdings Records Written to disk"
                     )
-            with open(self.folder_structure.holdings_id_map_path, "w") as legacy_map_path_file:
+            with open(
+                self.folder_structure.holdings_id_map_path, "w"
+            ) as legacy_map_path_file:
                 json.dump(self.legacy_map, legacy_map_path_file)
                 logging.info(f"Wrote {len(self.legacy_map)} id:s to legacy map")
-        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logging.info(f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}")
+        with open(
+            self.folder_structure.migration_reports_file, "w"
+        ) as migration_report_file:
+            logging.info(
+                f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}"
+            )
             self.mapper.write_migration_report(migration_report_file)
             self.mapper.print_mapping_report(migration_report_file, self.total_records)
         logging.info("All done!")
@@ -297,7 +316,6 @@ class Worker(MainBase):
 
 def parse_args():
     """Parse CLI Arguments"""
-    # parser = argparse.ArgumentParser()
     parser = PromptParser()
     parser.add_argument("base_folder", help="Base folder of the client.")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
@@ -364,9 +382,10 @@ def main():
         )
     except requests.exceptions.SSLError as sslerror:
         logging.error(f"{sslerror}")
-        logging.error("Network Error. Are you connected to the Internet? Do you need VPN? {}")
+        logging.error(
+            "Network Error. Are you connected to the Internet? Do you need VPN? {}"
+        )
         exit()
-
 
     # Source data files
     files = [
@@ -380,9 +399,13 @@ def main():
 
     # All the paths...
     try:
-        with open(folder_structure.call_number_type_map_path, "r") as callnumber_type_map_f, open(
+        with open(
+            folder_structure.call_number_type_map_path, "r"
+        ) as callnumber_type_map_f, open(
             folder_structure.instance_id_map_path, "r"
-        ) as instance_id_map_file, open(folder_structure.holdings_map_path) as holdings_mapper_f, open(
+        ) as instance_id_map_file, open(
+            folder_structure.holdings_map_path
+        ) as holdings_mapper_f, open(
             folder_structure.locations_map_path
         ) as location_map_f:
             instance_id_map = {}
