@@ -1,3 +1,5 @@
+This repo has been forked to https://github.com/FOLIO-FSE/MARC21-To-FOLIO and lives there from now on
+
 # MARC21-To-FOLIO
 A  set of Python3 script transforming MARC21 and Items in delimited files to FOLIO inventory objects.
 
