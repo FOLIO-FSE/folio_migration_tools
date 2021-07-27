@@ -42,7 +42,9 @@ class Worker(MainBase):
         folder_structure: FolderStructure,
         holdings_merge_criteria,
     ):
+        super.__init__()
         self.holdings = {}
+        self.total_records = 0
         self.folder_structure = folder_structure
         self.folio_client = folio_client
         self.files = files
@@ -55,7 +57,6 @@ class Worker(MainBase):
         self.results_path = self.folder_structure.created_objects_path
         self.mapper = mapper
         self.failed_files: List[str] = list()
-        self.num_exeptions = 0
         self.holdings_types = list(
             self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
         )
@@ -71,64 +72,11 @@ class Worker(MainBase):
         logging.info("Init done")
 
     def work(self):
-        total_records = 0
         logging.info("Starting....")
         for file_name in self.files:
             logging.info(f"Processing {file_name}")
             try:
-                with open(
-                    file_name,
-                    encoding="utf-8-sig",
-                ) as records_file:
-                    self.mapper.add_to_migration_report(
-                        "General statistics", "Number of files processed"
-                    )
-                    start = time.time()
-                    for idx, record in enumerate(
-                        self.mapper.get_objects(records_file, file_name)
-                    ):
-                        try:
-                            self.process_holding(idx, record)
-                        except TransformationProcessError as process_error:
-                            logging.error(f"{idx}\t{process_error}")
-                        except TransformationCriticalDataError as error:
-                            self.num_exeptions += 1
-                            logging.error(error)
-                            if self.num_exeptions > 500:
-                                logging.fatal(
-                                    f"Number of exceptions exceeded limit of "
-                                    f"{self.num_exeptions}. Stopping."
-                                )
-                                exit()
-                        except Exception as excepion:
-                            self.num_exeptions += 1
-                            print("\n=======ERROR===========\n")
-                            print("\n=======Stack Trace===========")
-                            traceback.print_exc()
-                            print("\n============Data========")
-                            print(json.dumps(record, indent=4))
-                            print("\n=======Message===========")
-                            print(
-                                f"Row {idx:,} failed with the following Exception: {excepion} "
-                                f" of type {type(excepion).__name__}"
-                            )
-                            exit()
-
-                        self.mapper.add_to_migration_report(
-                            "General statistics", "Number of Legacy items in file"
-                        )
-                        if idx > 1 and idx % 10000 == 0:
-                            elapsed = idx / (time.time() - start)
-                            elapsed_formatted = "{0:.4g}".format(elapsed)
-                            logging.info(
-                                f"{idx:,} records processed. "
-                                f"Recs/sec: {elapsed_formatted} "
-                            )
-                    total_records += idx
-                    logging.info(
-                        f"Done processing {file_name} containing {idx:,} records. "
-                        f"Total records processed: {total_records:,}"
-                    )
+                self.process_single_file(file_name)
 
             except Exception as ee:
                 error_str = (
@@ -140,8 +88,49 @@ class Worker(MainBase):
                     "Failed files", f"{file_name} - {ee}"
                 )
                 exit()
-        logging.info(f"processed {total_records:,} records in {len(self.files)} files")
-        self.total_records = total_records
+        logging.info(
+            f"processed {self.total_records:,} records in {len(self.files)} files"
+        )
+
+    def process_single_file(self, file_name):
+        with open(file_name, encoding="utf-8-sig") as records_file:
+            self.mapper.add_general_statistics("Number of files processed")
+            start = time.time()
+            for idx, record in enumerate(
+                self.mapper.get_objects(records_file, file_name)
+            ):
+                try:
+                    self.process_holding(idx, record)
+                except TransformationProcessError as process_error:
+                    logging.error(f"{idx}\t{process_error}")
+                except TransformationCriticalDataError as error:
+                    self.log_and_exit_if_too_many_errors(error)
+                except Exception as excepion:
+                    self.num_exeptions += 1
+                    print("\n=======ERROR===========\n")
+                    print("\n=======Stack Trace===========")
+                    traceback.print_exc()
+                    print("\n============Data========")
+                    print(json.dumps(record, indent=4))
+                    print("\n=======Message===========")
+                    print(
+                        f"Row {idx:,} failed with the following Exception: {excepion} "
+                        f" of type {type(excepion).__name__}"
+                    )
+                    exit()
+
+                self.mapper.add_general_statistics("Number of Legacy items in file")
+                if idx > 1 and idx % 10000 == 0:
+                    elapsed = idx / (time.time() - start)
+                    elapsed_formatted = "{0:.4g}".format(elapsed)
+                    logging.info(
+                        f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
+                    )
+            self.total_records += idx
+            logging.info(
+                f"Done processing {file_name} containing {idx:,} records. "
+                f"Total records processed: {self.total_records:,}"
+            )
 
     def process_holding(self, idx, row):
         folio_rec = self.mapper.do_map(row, f"row # {idx}")
@@ -206,7 +195,7 @@ class Worker(MainBase):
 
         for bwidx, id in enumerate(folio_rec["instanceId"]):
             if not id:
-                raise Exception(f"No ID for record {folio_rec}")
+                raise ValueError(f"No ID for record {folio_rec}")
             call_numbers = ast.literal_eval(folio_rec["callNumber"])
             if isinstance(call_numbers, str):
                 call_numbers = [call_numbers]
@@ -215,9 +204,7 @@ class Worker(MainBase):
             c["callNumber"] = call_numbers[bwidx]
             c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
             c["id"] = str(uuid.uuid4())
-            self.mapper.add_to_migration_report(
-                "General statistics", "Bound-with holdings created"
-            )
+            self.mapper.add_general_statistics("Bound-with holdings created")
             yield c
 
     def merge_holding_in(self, folio_holding):
@@ -228,14 +215,10 @@ class Worker(MainBase):
             and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
         )
         if exclude or not existing_holding:
-            self.mapper.add_to_migration_report(
-                "General statistics", "Unique Holdings created from Items"
-            )
+            self.mapper.add_general_statistics("Unique Holdings created from Items")
             self.holdings[new_holding_key] = folio_holding
         else:
-            self.mapper.add_to_migration_report(
-                "General statistics", "Holdings already created from Item"
-            )
+            self.mapper.add_general_statistics("Holdings already created from Item")
             self.merge_holding(new_holding_key, existing_holding, folio_holding)
 
     def wrap_up(self):
@@ -247,7 +230,7 @@ class Worker(MainBase):
             with open(
                 self.folder_structure.created_objects_path, "w+"
             ) as holdings_file:
-                for key, holding in self.holdings.items():
+                for holding in self.holdings.values():
                     for legacy_id in holding["formerIds"]:
                         logging.debug(f"Legacy id:{legacy_id}")
 
@@ -256,8 +239,8 @@ class Worker(MainBase):
                             self.legacy_map[legacy_id] = {"id": holding["id"]}
 
                     Helper.write_to_file(holdings_file, holding)
-                    self.mapper.add_to_migration_report(
-                        "General statistics", "Holdings Records Written to disk"
+                    self.mapper.add_general_statistics(
+                        "Holdings Records Written to disk"
                     )
             with open(
                 self.folder_structure.holdings_id_map_path, "w"

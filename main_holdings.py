@@ -21,7 +21,6 @@ from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 
 def parse_args():
     """Parse CLI Arguments"""
-    # parser = argparse.ArgumentParser()
     parser = PromptParser()
     parser.add_argument("base_folder", help="Base folder of the client.")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
@@ -62,7 +61,7 @@ def main():
     args = parse_args()
     folder_structure = FolderStructure(args.base_folder, args.time_stamp)
     folder_structure.setup_migration_file_structure("holdingsrecord")
-    MainBase.setup_logging(folder_structure)   
+    MainBase.setup_logging(folder_structure)
     folder_structure.log_folder_structure()
 
     folio_client = FolioClient(
@@ -76,9 +75,7 @@ def main():
     ]
     with open(folder_structure.instance_id_map_path) as json_file, open(
         folder_structure.locations_map_path
-    ) as location_map_f, open(
-        folder_structure.mfhd_rules_path
-    ) as mapping_rules_file:
+    ) as location_map_f, open(folder_structure.mfhd_rules_path) as mapping_rules_file:
         instance_id_map = {}
         for index, json_string in enumerate(json_file):
             # {"legacy_id", "folio_id","instanceLevelCallNumber"}
@@ -107,7 +104,9 @@ def main():
         )
         mapper.mappings = rules_file["rules"]
 
-        processor = HoldingsProcessor(mapper, folio_client, folder_structure, args.suppress)
+        processor = HoldingsProcessor(
+            mapper, folio_client, folder_structure, args.suppress
+        )
         for records_file in files:
             try:
                 with open(records_file, "rb") as marc_file:
@@ -126,9 +125,12 @@ def read_records(reader, processor: HoldingsProcessor):
         try:
             if record is None:
                 raise TransformationCriticalDataError(
-                    f"Index in file:{idx}",
-                    f"MARC parsing error: " f"{reader.current_exception}",
-                    reader.current_chunk,
+                    (
+                        f"Index in file:{idx}"
+                        f"MARC parsing error: "
+                        f"{reader.current_exception}"
+                        f"{reader.current_chunk}"
+                    )
                 )
             else:
                 processor.process_record(record)
@@ -136,7 +138,6 @@ def read_records(reader, processor: HoldingsProcessor):
             logging.error(error)
         except ValueError as error:
             logging.error(error)
-    
 
 
 if __name__ == "__main__":

@@ -97,9 +97,7 @@ class MapperBase:
     def handle_transformation_process_error(
         self, idx, process_error: TransformationProcessError
     ):
-        self.add_to_migration_report(
-            "General statistics", "Records failed due to a process error"
-        )
+        self.add_general_statistics("Records failed due to a process error")
 
         logging.error(f"{idx}\t{process_error}")
 
@@ -268,6 +266,10 @@ class MapperBase:
             self.migration_report[header][measure_to_add] = 1
         else:
             self.migration_report[header][measure_to_add] += 1
+
+    def add_general_statistics(self, measure_to_add: str):
+        header = "General statistics"
+        self.add_to_migration_report(header, measure_to_add)
 
     def set_to_migration_report(self, header: str, measure_to_add: str, number: int):
         if header not in self.migration_report:

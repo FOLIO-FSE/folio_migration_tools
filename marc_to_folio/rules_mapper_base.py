@@ -57,7 +57,7 @@ class RulesMapperBase:
                 if isinstance(v, str) and v.strip():
                     mapped = 1
                     empty = 0
-                elif isinstance(v,list) and any(v):
+                elif isinstance(v, list) and any(v):
                     l = len([a for a in v if a])
                     mapped = l
                     empty = 0
@@ -67,7 +67,7 @@ class RulesMapperBase:
                     self.mapped_folio_fields[field_name][0] += mapped
                     self.mapped_folio_fields[field_name][1] += empty
             if not self.schema_properties:
-                self.schema_properties = schema["properties"].keys()        
+                self.schema_properties = schema["properties"].keys()
             unmatched_properties = (
                 p for p in self.schema_properties if p not in folio_record.keys()
             )
@@ -96,7 +96,7 @@ class RulesMapperBase:
             unmapped = total_records - v[0]
             mapped = v[0] - v[1]
             mp = mapped / total_records if total_records else 0
-            mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
+            mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
                 f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
@@ -123,7 +123,7 @@ class RulesMapperBase:
             unmapped = present - v[1]
             mapped = v[1]
             mp = mapped / total_records if total_records else 0
-            mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
+            mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
                 f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
@@ -300,7 +300,6 @@ class RulesMapperBase:
             parent = None
             schema_properties = self.schema["properties"]
             sc_prop = schema_properties
-            # prop = copy.deepcopy(rec)
             for target in targets:  # Iterate over names in hierarcy
                 if target in sc_prop:  # property is on this level
                     sc_prop = sc_prop[target]  # set current property
@@ -413,9 +412,9 @@ class RulesMapperBase:
                     subfields=[sf_tuple[0], sf_tuple[1]],
                 )
                 entity = self.create_entity(entity_mapping, temp_field, e_parent)
-                if type(entity) is dict and any(entity.values()):
-                    self.add_entity_to_record(entity, e_parent, folio_record)
-                elif type(entity) is list and any(entity):
+                if (type(entity) is dict and any(entity.values())) or (
+                    type(entity) is list and any(entity)
+                ):
                     self.add_entity_to_record(entity, e_parent, folio_record)
         else:
             entity = self.create_entity(entity_mapping, marc_field, e_parent)
@@ -549,7 +548,7 @@ def grouped(iterable, n):
     return zip(*[iter(iterable)] * n)
 
 
-def flatten(d, parent_key='', sep='.'):
+def flatten(d, parent_key="", sep="."):
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k

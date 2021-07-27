@@ -33,13 +33,6 @@ from marc_to_folio.mapping_file_transformation.item_mapper import ItemMapper
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
-def setup_path(path, filename):
-    path = os.path.join(path, filename)
-    if not isfile(path):
-        raise Exception(f"No file called {filename} present in {path}")
-    return path
-
-
 def setup_holdings_id_map(folder_structure: FolderStructure):
     with open(folder_structure.holdings_id_map_path, "r") as holdings_id_map_file:
         holdings_id_map = json.load(holdings_id_map_file)
@@ -122,13 +115,15 @@ class Worker(MainBase):
         ):
             try:
                 with open(map_file_path) as map_file:
-                    map = list(csv.DictReader(map_file, dialect="tsv"))
-                    logging.info(f"Found {len(map)} rows in {folio_property_name} map")
+                    ref_data_map = list(csv.DictReader(map_file, dialect="tsv"))
                     logging.info(
-                        f'{",".join(map[0].keys())} '
+                        f"Found {len(ref_data_map)} rows in {folio_property_name} map"
+                    )
+                    logging.info(
+                        f'{",".join(ref_data_map[0].keys())} '
                         f"will be used for determinig {folio_property_name}"
                     )
-                    return map
+                    return ref_data_map
             except Exception as ee:
                 raise TransformationProcessError(
                     f"{folio_property_name} not mapped in legacy->folio mapping file "
@@ -182,9 +177,7 @@ class Worker(MainBase):
 
     def process_single_file(self, file_name, results_file):
         with open(file_name, encoding="utf-8-sig") as records_file:
-            self.mapper.add_to_migration_report(
-                "General statistics", "Number of files processed"
-            )
+            self.mapper.add_general_statistics("Number of files processed")
             start = time.time()
             for idx, record in enumerate(
                 self.mapper.get_objects(records_file, file_name)
@@ -193,9 +186,6 @@ class Worker(MainBase):
                     if idx == 0:
                         logging.info(json.dumps(record, indent=4))
                     folio_rec = self.mapper.do_map(record, f"row {idx}")
-                    if idx == 0:
-                        logging.info(json.dumps(folio_rec, indent=4))
-                    # Hard code circ note sources
                     # TODO: Add more levels (recursive) to mapping
                     for circ_note in folio_rec.get("circulationNotes", []):
                         circ_note["id"] = str(uuid.uuid4())
@@ -204,9 +194,8 @@ class Worker(MainBase):
                             "personal": {"lastName": "Data", "firstName": "Migration"},
                         }
                     Helper.write_to_file(results_file, folio_rec)
-                    self.mapper.add_to_migration_report(
-                        "General statistics",
-                        "Number of records written to disk",
+                    self.mapper.add_general_statistics(
+                        "Number of records written to disk"
                     )
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -224,15 +213,8 @@ class Worker(MainBase):
                     "General statistics",
                     f"Number of Legacy items in {file_name}",
                 )
-                self.mapper.add_to_migration_report(
-                    "General statistics", f"Number of Legacy items in total"
-                )
-                if idx > 1 and idx % 10000 == 0:
-                    elapsed = idx / (time.time() - start)
-                    elapsed_formatted = "{0:.4g}".format(elapsed)
-                    logging.info(
-                        f"{idx:,} records processed. " f"Recs/sec: {elapsed_formatted} "
-                    )
+                self.mapper.add_general_statistics(f"Number of Legacy items in total")
+                self.print_progress(idx, start)
 
             total_records = 0
             total_records += idx
@@ -241,11 +223,6 @@ class Worker(MainBase):
                 f"Total records processed: {total_records:,}"
             )
         self.total_records = total_records
-
-        if self.mapper.num_exeptions > 10:
-            raise Exception(
-                f"Number of exceptions exceeded limit of {self.mapper.num_exeptions}. Stopping."
-            )
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
@@ -262,7 +239,6 @@ class Worker(MainBase):
 
 def parse_args():
     """Parse CLI Arguments"""
-    # parser = argparse.ArgumentParser()
     parser = PromptParser()
     parser.add_argument("base_folder", help="Base folder of the client.")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
