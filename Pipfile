@@ -21,6 +21,7 @@ black = "*"
 Deprecated = "*"
 folioclient = "*"
 argparse-prompt = "*"
+pandas = "*"
 
 [requires]
 python_version = "3.9"
