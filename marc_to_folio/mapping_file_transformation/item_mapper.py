@@ -134,11 +134,7 @@ class ItemMapper(MapperBase):
         logging.debug(f"get item prop {folio_prop_name}")
         if not self.use_map:
             return legacy_item[folio_prop_name]
-        # legacy_item_keys = [k["legacy_field"] for k in self.items_map["data"]
-        #            if k["folio_field"] == folio_prop_name]
-        # vals = [v for k, v in legacy_item.items() if k in legacy_item_keys]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        # legacy_value = ""
         legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
         legacy_value = " ".join(legacy_values).strip()
         if folio_prop_name == "permanentLocationId":
