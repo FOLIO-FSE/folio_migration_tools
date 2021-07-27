@@ -149,7 +149,7 @@ class BibsRulesMapper(RulesMapperBase):
         elif marc_field.tag not in ignored_subsequent_fields:
             self.report_legacy_mapping(marc_field.tag, True, True, False)
             if marc_field.tag == "880" and "6" in marc_field:
-                self.perform_proxy_mapping(marc_field)
+                mappings = self.perform_proxy_mapping(marc_field)
             else:
                 mappings = (
                     self.mappings.get(marc_field.tag, {})
@@ -193,6 +193,7 @@ class BibsRulesMapper(RulesMapperBase):
             )
         else:
             mappings = []
+        return mappings
 
     def perform_additional_parsing(self, folio_instance, marc_record, legacy_id):
         """Do stuff not easily captured by the mapping rules"""
