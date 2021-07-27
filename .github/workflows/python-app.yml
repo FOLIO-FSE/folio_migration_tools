@@ -30,3 +30,6 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+    - name: Make sure the code can run
+      run: |
+        main_bibs.py -h
