@@ -1,6 +1,7 @@
 """ Class that processes each MARC record """
 from io import StringIO
 import logging
+from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.helper import Helper
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
@@ -18,21 +19,24 @@ from jsonschema import ValidationError, validate
 class BibsProcessor:
     """the processor"""
 
-    def __init__(self, mapper, folio_client, results_file, args):
+    def __init__(
+        self,
+        mapper,
+        folio_client,
+        results_file,
+        folder_structure: FolderStructure,
+        args,
+    ):
         self.ils_flavour = args.ils_flavour
         self.suppress = args.suppress
-        self.results_folder = args.results_folder
         self.results_file = results_file
         self.folio_client = folio_client
         self.instance_schema = folio_client.get_instance_json_schema()
         self.mapper: BibsRulesMapper = mapper
         self.args = args
-        self.srs_records_file = open(
-            os.path.join(self.results_folder, "srs.json"), "w+"
-        )
-        self.instance_id_map_file = open(
-            os.path.join(self.results_folder, "instance_id_map.json"), "w+"
-        )
+        self.folders = folder_structure
+        self.srs_records_file = open(self.folders.srs_records_path, "w+")
+        self.instance_id_map_file = open(self.folders.instance_id_map_path, "w+")
 
     def process_record(self, idx, marc_record, inventory_only):
 
@@ -54,14 +58,14 @@ class BibsProcessor:
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
                 self.mapper.add_to_migration_report(
-                    "Preceeding and Succeeding titles", f"{len(prec_titles)}"
+                    "Preceding and Succeeding titles", f"{len(prec_titles)}"
                 )
                 del folio_rec["precedingTitles"]
             succ_titles = folio_rec.get("succeedingTitles", [])
             if succ_titles:
                 del folio_rec["succeedingTitles"]
                 self.mapper.add_to_migration_report(
-                    "Preceeding and Succeeding titles", f"{len(succ_titles)}"
+                    "Preceding and Succeeding titles", f"{len(succ_titles)}"
                 )
             if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
                 Helper.write_to_file(self.results_file, folio_rec)
@@ -141,7 +145,7 @@ class BibsProcessor:
             logging.exception(f"error during wrap up")
         logging.info("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
-            holdings_path = os.path.join(self.results_folder, "folio_holdings.json")
+            holdings_path = self.folders.data_folder / "folio_holdings_from_bibs.json"
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     Helper.write_to_file(holdings_file, holding)

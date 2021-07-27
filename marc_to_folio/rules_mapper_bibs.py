@@ -62,12 +62,11 @@ class BibsRulesMapper(RulesMapperBase):
         self.hrid_counter = self.hrid_settings["instances"]["startNumber"]
         logging.info(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
         self.other_mode_of_issuance_id = next(
-            (
-                i["id"]
-                for i in self.folio.modes_of_issuance
-                if "unspecified" == i["name"].lower()
-            )
+            i["id"]
+            for i in self.folio.modes_of_issuance
+            if i["name"].lower() == "unspecified"
         )
+
         self.start = time.time()
 
     def parse_bib(
@@ -94,34 +93,34 @@ class BibsRulesMapper(RulesMapperBase):
             self.report_bad_tags(marc_field, bad_tags)
             if marc_field.tag not in self.mappings and marc_field.tag not in ["008"]:
                 self.report_legacy_mapping(marc_field.tag, True, False, True)
-            else:
-                if marc_field.tag not in ignored_subsequent_fields:
-                    self.report_legacy_mapping(marc_field.tag, True, True, False)
-                    if marc_field.tag == "880" and "6" in marc_field:
-                        proxy_mapping = next(iter(self.mappings.get("880", [])))
-                        if proxy_mapping and "fieldReplacementRule" in proxy_mapping:
-                            target_field = next(
-                                (
-                                    r["targetField"]
-                                    for r in proxy_mapping["fieldReplacementRule"]
-                                    if r["sourceDigits"] == marc_field["6"][:3]
-                                ),
-                                "",
-                            )
-                            mappings = self.mappings.get(target_field, {})
-                            self.add_to_migration_report(
-                                "880 mappings",
-                                f"Source digits: {marc_field['6'][:3]} Target field: {target_field}",
-                            )
-                        else:
-                            mappings = []
-                    else:
-                        mappings = (
-                            self.mappings.get(marc_field.tag, {})
-                            if marc_field.tag != "880"
-                            else []
+            elif marc_field.tag not in ignored_subsequent_fields:
+                self.report_legacy_mapping(marc_field.tag, True, True, False)
+                if marc_field.tag == "880" and "6" in marc_field:
+                    proxy_mapping = next(iter(self.mappings.get("880", [])))
+                    if proxy_mapping and "fieldReplacementRule" in proxy_mapping:
+                        target_field = next(
+                            (
+                                r["targetField"]
+                                for r in proxy_mapping["fieldReplacementRule"]
+                                if r["sourceDigits"] == marc_field["6"][:3]
+                            ),
+                            "",
                         )
-                    if mappings:
+                        mappings = self.mappings.get(target_field, {})
+                        self.add_to_migration_report(
+                            "880 mappings",
+                            f"Source digits: {marc_field['6'][:3]} Target field: {target_field}",
+                        )
+                    else:
+                        mappings = []
+                else:
+                    mappings = (
+                        self.mappings.get(marc_field.tag, {})
+                        if marc_field.tag != "880"
+                        else []
+                    )
+                if mappings:
+                    try:
                         self.map_field_according_to_mapping(
                             marc_field, mappings, folio_instance
                         )
@@ -129,12 +128,15 @@ class BibsRulesMapper(RulesMapperBase):
                             m.get("ignoreSubsequentFields", False) for m in mappings
                         ):
                             ignored_subsequent_fields.add(marc_field.tag)
-                    else:
-                        self.add_to_migration_report(
-                            "Mappings not found for field", marc_field.tag
-                        )
+                    except Exception as ee:
+                        logging.error(f"map_field_according_to_mapping {marc_field.tag} {marc_field.format_field()} {json.dumps(mappings)}")
+                        raise ee
                 else:
-                    self.report_legacy_mapping(marc_field.tag, True, False, True)
+                    self.add_to_migration_report(
+                        "Mappings not found for field", marc_field.tag
+                    )
+            else:
+                self.report_legacy_mapping(marc_field.tag, True, False, True)
 
         self.perform_additional_parsing(folio_instance, marc_record, legacy_ids)
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
@@ -143,11 +145,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.validate(folio_instance, legacy_ids)
         self.dedupe_rec(folio_instance)
         # marc_record.remove_fields(*list(bad_tags))
-        self.count_unmapped_fields(self.schema, folio_instance)
-        try:
-            self.count_mapped_fields(folio_instance)
-        except Exception:
-            logging.exception(folio_instance)
+        self.report_folio_mapping(folio_instance, self.instance_json_schema)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         id_map_strings = []
@@ -200,7 +198,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.handle_hrid(folio_instance, marc_record)
         folio_instance["discoverySuppress"] = bool(self.suppress)
-        folio_instance["staffSuppress"] = bool(self.suppress)
+        folio_instance["staffSuppress"] = False
 
         self.handle_holdings(marc_record)
         # folio_instance['natureOfContentTermIds'] = self.get_nature_of_content(
@@ -221,8 +219,28 @@ class BibsRulesMapper(RulesMapperBase):
                 "Holdings generation from bibs", f"0 852:s and 0 866:s in record"
             )
 
-    def wrap_up(self):
+    def wrap_up(self):        
         logging.info("Mapper wrapping up")
+        logging.info("Setting HRID counter to current +1")
+        self.hrid_settings["instances"]["startNumber"] = self.hrid_counter + 1
+        try:
+            url = self.folio_client.okapi_url + "/hrid-settings-storage/hrid-settings"
+            resp = requests.put(
+                url,
+                data=json.dumps(self.hrid_settings),
+                headers=self.folio_client.okapi_headers,
+            )
+            resp.raise_for_status()
+            logging.info(f"{resp.status_code} Successfully set HRID settings.")
+            a = self.folio_client.folio_get_single_object(
+                "/hrid-settings-storage/hrid-settings"
+            )
+            logging.info(f"Current hrid settings: {json.dumps(a, indent=4)}")
+        except Exception as ee:
+            logging.exception(
+                f"Something went wrong when setting the HRID settings. "
+                f"Update them manually. {json.dumps(self.hrid_settings)}"
+            )
 
     def report_bad_tags(self, marc_field, bad_tags):
         if (
@@ -336,7 +354,7 @@ class BibsRulesMapper(RulesMapperBase):
         for fidx, f in enumerate(all_338s):
             source = f["2"] if "2" in f else "Not set"
             self.add_to_migration_report(
-                "Instance format ids handling (337 + 338) ",
+                "Instance format ids handling (337 + 338)",
                 f"Source ($2) is set to {source}. "
                 "Everything starting with rdacarrier will get mapped.",
             )
@@ -529,29 +547,28 @@ class BibsRulesMapper(RulesMapperBase):
                 and language_value not in forbidden_values
             ):
                 yield language_value
-            else:
-                if language_value == "jap":
-                    yield "jpn"
-                elif language_value == "fra":
-                    yield "fre"
-                elif language_value == "sve":
-                    yield "swe"
-                elif language_value == "tys":
-                    yield "ger"
-                elif not language_value:
-                    continue
-                elif not language_value.strip():
-                    continue
-                elif language_value not in forbidden_values:
-                    self.add_to_migration_report(
-                        "Unrecognized language codes in records",
-                        f"{language_value} not recognized for {self.get_legacy_ids(marc_record, self.ils_flavour)}",
-                    )
+            elif language_value == "jap":
+                yield "jpn"
+            elif language_value == "fra":
+                yield "fre"
+            elif language_value == "sve":
+                yield "swe"
+            elif language_value == "tys":
+                yield "ger"
+            elif not language_value:
+                continue
+            elif not language_value.strip():
+                continue
+            elif language_value not in forbidden_values:
+                self.add_to_migration_report(
+                    "Unrecognized language codes in records",
+                    f"{language_value} not recognized for {self.get_legacy_ids(marc_record, self.ils_flavour)}",
+                )
 
     def get_legacy_ids(self, marc_record: Record, ils_flavour: str) -> List[str]:
-        if ils_flavour in ["iii", "sierra", "millennium"]:
+        if ils_flavour in {"iii", "sierra", "millennium"}:
             return get_iii_bib_id(marc_record)
-        elif ils_flavour in ["907y"]:
+        elif ils_flavour in {"907y"}:
             try:
                 return [marc_record["907"]["y"]]
             except:
@@ -578,7 +595,7 @@ class BibsRulesMapper(RulesMapperBase):
                 return list(res)
         elif ils_flavour == "aleph":
             return self.get_aleph_bib_id(marc_record)
-        elif ils_flavour in ["voyager", "001"]:
+        elif ils_flavour in {"voyager", "001"}:
             try:
                 return [marc_record["001"].format_field().strip()]
             except:
@@ -587,7 +604,7 @@ class BibsRulesMapper(RulesMapperBase):
                     "001 is missing, although it is required for Voyager migrations",
                     marc_record.as_json(),
                 )
-        elif ils_flavour in ["koha"]:
+        elif ils_flavour in {"koha"}:
             try:
                 return [marc_record["999"]["c"]]
             except:
@@ -596,6 +613,8 @@ class BibsRulesMapper(RulesMapperBase):
                     "999 $c is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
                 )
+        elif ils_flavour in {"none"}:
+            return [str(uuid.uuid4())]
         else:
             raise Exception(f"ILS {ils_flavour} not configured")
 

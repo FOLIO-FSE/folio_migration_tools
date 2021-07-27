@@ -1,29 +1,33 @@
 """ Class that processes each MARC record """
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
-from marc_to_folio.helper import Helper
-from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
-import time
 import json
-import traceback
 import logging
 import os
+import time
+import traceback
 from datetime import datetime as dt
+
 from jsonschema import ValidationError, validate
+
+from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.folder_structure import FolderStructure
+from marc_to_folio.helper import Helper
+from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 
 
 class HoldingsProcessor:
     """the processor"""
 
-    def __init__(self, mapper, folio_client, results_file, args):
-        self.results_file = results_file
+    def __init__(
+        self, mapper, folio_client, folder_structure: FolderStructure, suppress: bool
+    ):
+        self.folder_structure: FolderStructure = folder_structure
         self.records_count = 0
         self.missing_instance_id_count = 0
-        self.mapper : RulesMapperHoldings = mapper
-        self.args = args
+        self.mapper: RulesMapperHoldings = mapper
         self.start = time.time()
-        self.suppress = args.suppress
-        logging.info(
-            f'map will be saved to {os.path.join(self.args.result_folder, "holdings_id_map.json")}'
+        self.suppress = suppress
+        self.created_objects_file = open(
+            self.folder_structure.created_objects_path, "w+"
         )
 
     def process_record(self, marc_record):
@@ -35,10 +39,11 @@ class HoldingsProcessor:
             if not folio_rec.get("instanceId", ""):
                 self.missing_instance_id_count += 1
                 if self.missing_instance_id_count > 1000:
-                    raise Exception(f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}")
-
+                    raise Exception(
+                        f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}"
+                    )
             folio_rec["discoverySuppress"] = self.suppress
-            Helper.write_to_file(self.results_file, folio_rec)
+            Helper.write_to_file(self.created_objects_file, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
             # Print progress
             if self.records_count % 10000 == 0:
@@ -53,18 +58,18 @@ class HoldingsProcessor:
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
+        except ValidationError as validation_error:
+            add_stats(self.mapper.stats, "Validation errors")
+            add_stats(self.mapper.stats, "Failed records")
+            logging.error(validation_error)
+            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
+            if callable(remove_from_id_map):
+                self.mapper.remove_from_id_map(marc_record)
         except ValueError as value_error:
             add_stats(self.mapper.stats, "Value errors")
             add_stats(self.mapper.stats, "Failed records")
             logging.debug(marc_record)
             logging.error(value_error)
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if callable(remove_from_id_map):
-                self.mapper.remove_from_id_map(marc_record)
-        except ValidationError as validation_error:
-            add_stats(self.mapper.stats, "Validation errors")
-            add_stats(self.mapper.stats, "Failed records")
-            logging.error(validation_error)
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
@@ -81,24 +86,27 @@ class HoldingsProcessor:
 
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
+        self.created_objects_file.close()
         id_map = self.mapper.holdings_id_map
-        path = os.path.join(self.args.result_folder, "holdings_id_map.json")
         logging.warning(
-            "Saving map of {} old and new IDs to {}".format(len(id_map), path)
+            f"Saving map of {len(id_map)} old and new IDs to {self.folder_structure.holdings_id_map_path}"
         )
-        with open(path, "w+") as id_map_file:
+        with open(self.folder_structure.holdings_id_map_path, "w+") as id_map_file:
             json.dump(id_map, id_map_file)
         logging.warning(f"{self.records_count} records processed")
-        mrf = os.path.join(self.args.result_folder, "holdings_transformation_report.md")
-        with open(mrf, "w+") as report_file:
+        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write(f"# MFHD records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
             report_file.write(f"## MFHD records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
-                self.mapper.stats, report_file, "Measure","Count",
+                self.mapper.stats,
+                report_file,
+                "Measure",
+                "Count",
             )
             self.mapper.write_migration_report(report_file)
             self.mapper.print_mapping_report(report_file)
+
         logging.info(f"Done. Transformation report written to {report_file}")
 
 

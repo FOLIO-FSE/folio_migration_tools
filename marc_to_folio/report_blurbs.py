@@ -1,3 +1,12 @@
+from enum import Enum
+
+
+class KindOfBlurb(Enum):
+    GENERAL = "General statistics"
+    LIBRARY_ACTION = "Library action needed"
+    ADDITIONAL_INFORMATION = "Additional indformation"
+
+
 blurbs = {
     "Introduction": "<br/>Data errors preventing records from being migrated are marked **FIX BEFORE MIGRATION**. The library is advised to clean up these errors in the source data.<br/><br/> The sections related to field counts and mapping results are marked **REVIEW**. These do not indicate errors preventing records from being migrated, but may point to data anomalies or in the mappings. The library should review these to make sure that the numbers are what one would expect, knowing the source data. Is this the expected number of serials? Is this the expected number of cartographic materials?",
     "Mapped Legacy fields": "Library action: **REVIEW** <br/>This table lists all the MARC fields in the source data, and whether it has been mapped to a FOLIO instance record field. The library should examine the MARC tags with a high 'Unmapped' figure and determine if these MARC tags contain data that you would like mapped to the FOLIO instance record.",
@@ -27,7 +36,6 @@ blurbs = {
     "Matched Modes of issuance code": "Library action: **REVIEW** <br/>The created FOLIO instances contain the following Mode of issuace values. The library should review the total number for each value against what they would expect to see mapped.",
     "Unrecognized language codes in records": "Library action: **REVIEW** <br/>Language code values in the source data that do not match standard language codes. If not fixed before migration, these will display as Undetermined in the instance record and Filtering by language in Inventory will not be conclusive.",
     "__Section 2: holdings": "The entries below seem to be related to holdings",
-    "Callnumber types": "Section description to be added.",
     "Holdings type mapping": "Section description to be added.",
     "Legacy location codes": "Section description to be added.",
     "Locations - Unmapped legacy codes": "Section description to be added.",
@@ -47,11 +55,17 @@ blurbs = {
     "Mapped loan types": "Section description to be added.",
     "Unmapped loan types": "Section description to be added.",
     "HRID Handling": "Section description to be added.",
-    "Preceeding and Succeeding titles": "Section description to be added.",
+    "Preceding and Succeeding titles": "Section description to be added.",
     "Holdings generation from bibs": "Section description to be added.",
     "Instance format ids handling (337 + 338))": "Section description to be added.",
     "Mapped classification types": "Section description to be added.",
     "Location mapping": "These are the results for the mapping between legacy locations and your new FOLIO location structure",
     "Value set in mapping file": "The value for these fields are set in the mapping file instead of coming from the legacy system data.",
-    "Values mapped from legacy fields": "A list fo the values and what they were mapped to"
+    "Values mapped from legacy fields": "A list fo the values and what they were mapped to",
+    "General statistics": "A list of general counterts to outline the transformation as a whole.",
+    "Mapped publisher role from Indicator2": "Publication Role, taken from the code in Ind2",
+    "Preceding and Succeding titles": "Preceding and Succeding titles is still Work In progress and still not fully implemented",
+    "Added value since value was empty": "Some FOLIO objects need to have values in them despite the source data was empty. This involves 86X fields for example. ",
+    "Callnumber type mapping": "Call number types in MFHDs are mapped from 852, Indicator 1 according to a certain scheme. (LOC documentation)[https://www.loc.gov/marc/holdings/hd852.html]",
+    "Reciept status mapping": "Mapped reciept status from 008[06]. (LoC documentation)[https://www.loc.gov/marc/holdings/hd008.html]"
 }

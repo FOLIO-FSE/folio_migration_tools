@@ -14,6 +14,7 @@ class RefDataMapping(object):
         logging.info(f"{self.name} reference data mapping. Initializing")
         logging.info(f"Fetching {self.name} reference data from FOLIO")
         self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name))
+        # logging.debug(json.dumps(self.ref_data, indent=4))
         self.map = map
         self.key_type = key_type
         self.keys = ""
@@ -58,9 +59,12 @@ class RefDataMapping(object):
                             f"Add a row to mapping file with *:s and a valid {self.name}"
                         )
                 else:
-                    mapping["folio_id"] = self.get_ref_data_tuple(
+                    t= self.get_ref_data_tuple(
                         mapping[f"folio_{self.key_type}"]
-                    )[0]
+                    )
+                    if not t:
+                        raise TransformationProcessError(f'Mapping not found for {mapping}')
+                    mapping["folio_id"] = t[0]
             except TransformationProcessError as te:
                 raise te
             except Exception:

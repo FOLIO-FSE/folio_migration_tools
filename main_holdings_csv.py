@@ -6,6 +6,7 @@ import csv
 import ctypes
 import json
 import logging
+from marc_to_folio.folder_structure import FolderStructure
 import os
 import time
 import traceback
@@ -39,10 +40,11 @@ class Worker(MainBase):
         folio_client: FolioClient,
         mapper: HoldingsMapper,
         files,
-        results_path,
+        folder_structure: FolderStructure,
         holdings_merge_criteria,
     ):
         self.holdings = {}
+        self.folder_structure = folder_structure
         self.folio_client = folio_client
         self.files = files
         self.legacy_map = {}
@@ -51,7 +53,7 @@ class Worker(MainBase):
             self.excluded_hold_type_id = self.holdings_merge_criteria.split("_")[-1]
             logging.info(self.excluded_hold_type_id)
 
-        self.results_path = results_path
+        self.results_path = self.folder_structure.created_objects_path
         self.mapper = mapper
         self.failed_files: List[str] = list()
         self.num_exeptions = 0
@@ -138,6 +140,7 @@ class Worker(MainBase):
                 self.mapper.add_to_migration_report(
                     "Failed files", f"{file_name} - {ee}"
                 )
+                exit()
         logging.info(f"processed {total_records:,} records in {len(self.files)} files")
         self.total_records = total_records
 
@@ -229,9 +232,8 @@ class Worker(MainBase):
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
         if any(self.holdings):
-            results_path = os.path.join(self.results_path, "folio_holdings.json")
-            print(f"Saving holdings created to {results_path}")
-            with open(results_path, "w+") as holdings_file:
+            print(f"Saving holdings created to {self.folder_structure.created_objects_path}")
+            with open(self.folder_structure.created_objects_path, "w+") as holdings_file:
                 for key, holding in self.holdings.items():
                     for legacy_id in holding["formerIds"]:
                         logging.debug(f"Legacy id:{legacy_id}")
@@ -244,16 +246,11 @@ class Worker(MainBase):
                     self.mapper.add_to_migration_report(
                         "General statistics", "Holdings Records Written to disk"
                     )
-            legacy_path = os.path.join(self.results_path, "holdings_id_map.json")
-            with open(legacy_path, "w") as legacy_map_path_file:
+            with open(self.folder_structure.holdings_id_map_path, "w") as legacy_map_path_file:
                 json.dump(self.legacy_map, legacy_map_path_file)
                 logging.info(f"Wrote {len(self.legacy_map)} id:s to legacy map")
-        p = os.path.join(
-            self.results_path,
-            "holdings_transformation_report.md",
-        )
-        with open(p, "w") as migration_report_file:
-            logging.info(f"Writing migration- and mapping report to {p}")
+        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
+            logging.info(f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}")
             self.mapper.write_migration_report(migration_report_file)
             self.mapper.print_mapping_report(migration_report_file, self.total_records)
         logging.info("All done!")
@@ -302,9 +299,7 @@ def parse_args():
     """Parse CLI Arguments"""
     # parser = argparse.ArgumentParser()
     parser = PromptParser()
-    parser.add_argument("records_path", help="path to legacy item records folder")
-    parser.add_argument("result_path", help="path to results folder")
-    parser.add_argument("map_path", help=("path to mapping files"))
+    parser.add_argument("base_folder", help="Base folder of the client.")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
@@ -337,26 +332,17 @@ def parse_args():
         default=False,
         type=bool,
     )
+    parser.add_argument(
+        "--time_stamp",
+        "-ts",
+        help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
+    )
     args = parser.parse_args()
-    logging.info(f"\tresults are stored at:\t{args.result_path}")
     logging.info(f"\tOkapi URL:\t{args.okapi_url}")
     logging.info(f"\tTenanti Id:\t{args.tenant_id}")
     logging.info(f"\tUsername:\t{args.username}")
     logging.info(f"\tPassword:\tSecret")
     return args
-
-
-def setup_path(path, filename):
-    new_path = ""
-    try:
-        new_path = os.path.join(path, filename)
-    except:
-        raise Exception(
-            f"Something went wrong when joining {path} and {filename} into a path"
-        )
-    if not isfile(new_path):
-        raise Exception(f"No file called {filename} present in {path}")
-    return new_path
 
 
 def dedupe(list_of_dicts):
@@ -368,10 +354,10 @@ def main():
     """Main Method. Used for bootstrapping. """
     csv.register_dialect("tsv", delimiter="\t")
     args = parse_args()
-    Worker.setup_logging(
-        os.path.join(args.result_path, "holdings_transformation.log"),
-        args.log_level_debug,
-    )
+    folder_structure = FolderStructure(args.base_folder, args.time_stamp)
+    folder_structure.setup_migration_file_structure("holdingsrecord", "item")
+    Worker.setup_logging(folder_structure, args.log_level_debug)
+    folder_structure.log_folder_structure()
     try:
         folio_client = FolioClient(
             args.okapi_url, args.tenant_id, args.username, args.password
@@ -384,9 +370,9 @@ def main():
 
     # Source data files
     files = [
-        join(args.records_path, f)
-        for f in listdir(args.records_path)
-        if isfile(join(args.records_path, f))
+        os.path.join(folder_structure.legacy_records_folder, f)
+        for f in listdir(folder_structure.legacy_records_folder)
+        if isfile(os.path.join(folder_structure.legacy_records_folder, f))
     ]
     logging.info(f"Files to process:")
     for f in files:
@@ -394,18 +380,10 @@ def main():
 
     # All the paths...
     try:
-        instance_id_dict_path = setup_path(args.result_path, "instance_id_map.json")
-        holdings_map_path = setup_path(args.map_path, "holdingsrecord_mapping.json")
-        location_map_path = setup_path(args.map_path, "locations.tsv")
-        call_number_type_map_path = setup_path(
-            args.map_path, "call_number_type_mapping.tsv"
-        )
-        # Files found, let's go!
-
-        with open(call_number_type_map_path, "r") as callnumber_type_map_f, open(
-            instance_id_dict_path, "r"
-        ) as instance_id_map_file, open(holdings_map_path) as holdings_mapper_f, open(
-            location_map_path
+        with open(folder_structure.call_number_type_map_path, "r") as callnumber_type_map_f, open(
+            folder_structure.instance_id_map_path, "r"
+        ) as instance_id_map_file, open(folder_structure.holdings_map_path) as holdings_mapper_f, open(
+            folder_structure.locations_map_path
         ) as location_map_f:
             instance_id_map = {}
             for index, json_string in enumerate(instance_id_map_file):
@@ -442,7 +420,7 @@ def main():
                 folio_client,
                 mapper,
                 files,
-                args.result_path,
+                folder_structure,
                 args.holdings_merge_criteria,
             )
             worker.work()

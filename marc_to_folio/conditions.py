@@ -1,4 +1,6 @@
 import logging
+from marc_to_folio.rules_mapper_base import RulesMapperBase
+from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import re
 import pymarc
@@ -9,7 +11,7 @@ class Conditions:
     def __init__(
         self,
         folio,
-        mapper,
+        mapper: RulesMapperBase,
         object_type,
         default_location_code="",
         default_call_number_type_id="",
@@ -130,7 +132,7 @@ class Conditions:
     ):
         try:
             return self.condition_cache.get(name)(value, parameter, marc_field)
-        # Exception should only handle the missing condition from the cache. 
+        # Exception should only handle the missing condition from the cache.
         # All other exceptions should propagate up
         except Exception:
             attr = getattr(self, "condition_" + str(name))
@@ -142,6 +144,17 @@ class Conditions:
 
     def condition_trim(self, value, parameter, marc_field: field.Field):
         return value.strip()
+
+    def condition_get_value_if_subfield_is_empty(
+        self, value, parameter, marc_field: field.Field
+    ):
+        if value.strip():
+            return value.strip()
+        self.mapper.add_to_migration_report(
+            "Added value since value is empty",
+            f"Tag: {marc_field.tag}. Added value: {parameter['value']}",
+        )
+        return parameter["value"]
 
     def condition_remove_ending_punc(self, value, parameter, marc_field: field.Field):
         v = value
@@ -278,6 +291,34 @@ class Conditions:
     def condition_char_select(self, value, parameter, marc_field: field.Field):
         return value[parameter["from"] : parameter["to"]]
 
+    def condition_set_receipt_status(self, value, parameter, marc_field: field.Field):
+        if len(value) < 7:
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"008 is too short: {value}"
+            )
+            return ""
+        try:
+            status_map = {
+                "0": "Unknown",
+                "1": "Other receipt or acquisition status",
+                "2": "Received and complete or ceased",
+                "3": "On order",
+                "4": "Currently received",
+                "5": "Not currently received",
+                "6": "External access",
+            }
+            mapped_value = status_map[value[6]]
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"{value[6]} mapped to {mapped_value}"
+            )
+
+            return
+        except:
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"{value[6]} not found in map."
+            )
+            return "Unknown"
+
     def condition_set_identifier_type_id_by_name(
         self, value, parameter, marc_field: field.Field
     ):
@@ -320,7 +361,8 @@ class Conditions:
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
             )
             self.mapper.add_to_migration_report(
-                "Mapped note types", f"{marc_field.tag} -> {t[1]}"
+                "Mapped note types",
+                f"{marc_field.tag} ({parameter.get('name', '')}) -> {t[1]}",
             )
             return t[0]
         except:
@@ -441,7 +483,7 @@ class Conditions:
             return t[0]
 
         self.mapper.add_to_migration_report(
-            "Callnumber types", f"Mapping failed. Setting default CallNumber type."
+            "Callnumber type mapping", f"Mapping failed. Setting default CallNumber type."
         )
         return self.default_call_number_type["id"]
 
@@ -484,8 +526,6 @@ class Conditions:
     def condition_set_location_id_by_code(
         self, value, parameter, marc_field: field.Field
     ):
-        self.mapper.add_to_migration_report("Legacy location codes", value)
-
         # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
             d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}
@@ -493,21 +533,16 @@ class Conditions:
 
         # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
-            mapped_code = self.ref_data_dicts["legacy_locations"].get(value, "")
-            if not mapped_code:
-                self.mapper.add_to_migration_report(
-                    "Locations - Unmapped legacy codes", value
-                )
+            mapped_code = self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
-            mapped_code = value
-
+            mapped_code = value.strip()
         # Get the FOLIO UUID for the code and return it
         try:
             t = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", mapped_code
             )
             self.mapper.add_to_migration_report(
-                "Mapped Locations", f"{mapped_code}->{t[1]}"
+                "Location mapping", f"'{value}' ({mapped_code}) -> {t[1]}"
             )
             return t[0]
         except Exception:
@@ -519,7 +554,8 @@ class Conditions:
                     f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
                 )
             self.mapper.add_to_migration_report(
-                "Mapped Locations", f"Default loc returned {mapped_code}->{t[1]}"
+                "Location mapping",
+                f"Unmapped. Set default location. '{value}' ({mapped_code}) -> {t[1]}",
             )
             return t[0]
 
@@ -584,6 +620,8 @@ class Conditions:
         ind1 = marc_field.indicator1
         self.mapper.add_to_migration_report(
             "Set note staff only via indicator",
-            f"{marc_field.tag} indicator1: {ind1} (0 is staff only, all other values are public)",
+            f"{marc_field.tag} indicator1: {ind1} (1 is public, all other values are Staff only)",
         )
-        return ind1 == "0"
+        if ind1 != "1":
+            return "true"
+        return "false"
