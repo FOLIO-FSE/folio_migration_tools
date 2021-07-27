@@ -25,7 +25,7 @@ from marc_to_folio.bibs_processor import BibsProcessor
 
 
 class Worker(main_base.MainBase):
-    """Class that is responsible for the acutal work"""
+    """Class that is responsible for the actual work"""
 
     def __init__(self, folio_client, folder_structure: FolderStructure, args):
         # msu special case
@@ -54,7 +54,7 @@ class Worker(main_base.MainBase):
                 self.folio_client,
                 created_records_file,
                 self.folder_structure,
-                self.args
+                self.args,
             )
             for file_name in self.files:
                 try:
@@ -201,7 +201,7 @@ def main():
         folder_structure.setup_migration_file_structure("instance")
         Worker.setup_logging(folder_structure)
         folder_structure.log_folder_structure()
-        
+
         logging.info(f"Okapi URL:\t{args.okapi_url}")
         logging.info(f"Tenant Id:\t{args.tenant_id}")
         logging.info(f"Username:   \t{args.username}")
