@@ -32,4 +32,4 @@ jobs:
         pytest
     - name: Make sure the code can run
       run: |
-        main_bibs.py -h
+        python main_bibs.py -h
