@@ -3,6 +3,8 @@ import argparse
 import csv
 import json
 import logging
+
+import requests
 from marc_to_folio.folder_structure import FolderStructure
 import os
 from os import listdir
@@ -64,9 +66,14 @@ def main():
     MainBase.setup_logging(folder_structure)
     folder_structure.log_folder_structure()
 
-    folio_client = FolioClient(
-        args.okapi_url, args.tenant_id, args.username, args.password
-    )
+    try:
+        folio_client = FolioClient(
+            args.okapi_url, args.tenant_id, args.username, args.password
+        )
+    except requests.exceptions.SSLError:
+        logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
+        exit()
+
     csv.register_dialect("tsv", delimiter="\t")
     files = [
         os.path.join(folder_structure.legacy_records_folder, f)

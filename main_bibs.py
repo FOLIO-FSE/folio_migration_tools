@@ -11,6 +11,7 @@ from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
 from pymarc.record import Record
+import requests
 
 from marc_to_folio import main_base
 from marc_to_folio.bibs_processor import BibsProcessor
@@ -186,7 +187,7 @@ def parse_args():
 
 
 def main():
-    """Main Method. Used for bootstrapping. """
+    """Main Method. Used for bootstrapping."""
     try:
         # Parse CLI Arguments
         args = parse_args()
@@ -200,9 +201,15 @@ def main():
         logging.info(f"Tenant Id:\t{args.tenant_id}")
         logging.info(f"Username:   \t{args.username}")
         logging.info(f"Password:   \tSecret")
-        folio_client = FolioClient(
-            args.okapi_url, args.tenant_id, args.username, args.password
-        )
+        try:
+            folio_client = FolioClient(
+                args.okapi_url, args.tenant_id, args.username, args.password
+            )
+        except requests.exceptions.SSLError:
+            logging.critical(
+                "SSL error. Check your VPN or Internet connection. Exiting"
+            )
+            exit()
         # Initiate Worker
         worker = Worker(folio_client, folder_structure, args)
         worker.work()

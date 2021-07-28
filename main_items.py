@@ -6,6 +6,8 @@ import json
 import logging
 from pathlib import Path
 import uuid
+
+import requests
 from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio import custom_exceptions
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
@@ -281,7 +283,7 @@ def parse_args():
 
 
 def main():
-    """Main Method. Used for bootstrapping. """
+    """Main Method. Used for bootstrapping."""
     args = parse_args()
     folder_structure: FolderStructure = FolderStructure(
         args.base_folder, args.time_stamp
@@ -300,9 +302,13 @@ def main():
     for f in files:
         logging.info(f"\t{f}")
 
-    folio_client = FolioClient(
-        args.okapi_url, args.tenant_id, args.username, args.password
-    )
+    try:
+        folio_client = FolioClient(
+            args.okapi_url, args.tenant_id, args.username, args.password
+        )
+    except requests.exceptions.SSLError:
+        logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
+        exit()
     try:
         worker = Worker(files, folio_client, folder_structure)
         worker.work()
