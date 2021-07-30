@@ -65,6 +65,8 @@ class Worker(MainBase):
                 self.folder_structure.statistical_codes_map_path,
                 False,
             )
+        else:
+            statcode_mapping = None
 
         self.total_records = 0
         if "temporaryLoanTypeId" in self.folio_keys:
@@ -133,9 +135,9 @@ class Worker(MainBase):
                     "but forgot to add a mapping file?"
                 )
         else:
+            logging.info(f"No mapping setup for {folio_property_name}. ")
+            logging.info(f"{folio_property_name} will have default mapping if any ")
             logging.info(
-                f"No mapping setup for {folio_property_name}. "
-                f"{folio_property_name} will have default mapping if any"
                 f"Add a file named {map_file_path} and add the field to "
                 "the item.mapping.json file."
             )

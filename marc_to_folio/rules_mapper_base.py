@@ -1,6 +1,7 @@
 import collections
 import json
 import logging
+from marc_to_folio.custom_exceptions import TransformationProcessError
 import uuid
 
 from pymarc.field import Field
@@ -282,6 +283,9 @@ class RulesMapperBase:
                 value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
             values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
             return values
+        except TransformationProcessError as te:
+            logging.fatal(f"{te}. Quitting...")
+            exit()
         except Exception as ee:
             logging.error(
                 f"Mapping error in apply_rules {marc_field} {json.dumps(mapping)}"

@@ -1,7 +1,10 @@
 import logging
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.custom_exceptions import (
+    TransformationCriticalDataError,
+    TransformationProcessError,
+)
 import re
 import pymarc
 from pymarc import field
@@ -85,11 +88,20 @@ class Conditions:
         # Set defaults
         logging.info("Defaults")
         self.default_call_number_type_id = default_call_number_type_id
-        logging.info(f"Callnumber type:\t{self.default_call_number_type_id}")
+        logging.info(f"Default Callnumber type ID:\t{self.default_call_number_type_id}")
         self.default_call_number_type = next(
-            ct for ct in self.folio.call_number_types if ct["name"] == "Other scheme"
+            ct
+            for ct in self.folio.call_number_types
+            if ct["id"] == self.default_call_number_type_id
         )
-        logging.info(f"call_number_type\t{self.default_call_number_type}")
+        if not self.default_call_number_type:
+            raise TransformationProcessError(
+                f"No callnumber type with ID "
+                f"{self.default_call_number_type_id} set up in tenant"
+            )
+        logging.info(
+            f"Default Callnumber type Name:\t{self.default_call_number_type['name']}"
+        )
         t = self.get_ref_data_tuple_by_name(
             self.holdings_types, "holdings_types", "Unmapped"
         )
@@ -483,7 +495,8 @@ class Conditions:
             return t[0]
 
         self.mapper.add_to_migration_report(
-            "Callnumber type mapping", f"Mapping failed. Setting default CallNumber type."
+            "Callnumber type mapping",
+            f"Mapping failed. Setting default CallNumber type.",
         )
         return self.default_call_number_type["id"]
 
@@ -527,13 +540,27 @@ class Conditions:
         self, value, parameter, marc_field: field.Field
     ):
         # Setup mapping if not already set up
-        if "legacy_locations" not in self.ref_data_dicts:
-            d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}
-            self.ref_data_dicts["legacy_locations"] = d
-
+        try:
+            if "legacy_locations" not in self.ref_data_dicts:
+                d = {
+                    lm["legacy_code"]: lm["folio_code"]
+                    for lm in self.mapper.location_map
+                }
+                self.ref_data_dicts["legacy_locations"] = d
+        except KeyError as ke:
+            if "folio_code" in str(ke):
+                raise TransformationProcessError(
+                    "Your location map lacks the column folio_code"
+                )
+            if "legacy_code" in str(ke):
+                raise TransformationProcessError(
+                    "Your location map lacks the column legacy_code"
+                )
         # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
-            mapped_code = self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
+            mapped_code = (
+                self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
+            )
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value.strip()
         # Get the FOLIO UUID for the code and return it

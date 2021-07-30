@@ -144,7 +144,7 @@ class RulesMapperHoldings(RulesMapperBase):
         return ref_object
 
     def remove_from_id_map(self, marc_record):
-        """ removes the ID from the map in case parsing failed"""
+        """removes the ID from the map in case parsing failed"""
         id_key = marc_record["001"].format_field()
         if id_key in self.holdings_id_map:
             del self.holdings_id_map[id_key]
