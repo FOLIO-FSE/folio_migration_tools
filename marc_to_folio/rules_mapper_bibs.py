@@ -521,7 +521,7 @@ class BibsRulesMapper(RulesMapperBase):
             for lang_tag in lang_fields:
                 if "2" in lang_tag:
                     self.add_to_migration_report(
-                        "Language coude sources in 041", lang_tag["2"]
+                        "Language code sources in 041", lang_tag["2"]
                     )
                 lang_codes = lang_tag.get_subfields(*list(subfields))
                 for lang_code in lang_codes:

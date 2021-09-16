@@ -22,6 +22,7 @@ import requests
 class RulesMapperBase:
     def __init__(self, folio_client: FolioClient, conditions=None):
         self.migration_report = {}
+        self.parsed_records = 0
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
         self.start = time.time()
@@ -78,7 +79,7 @@ class RulesMapperBase:
 
     def print_mapping_report(self, report_file):
 
-        total_records = self.stats["Number of records in file(s)"]
+        total_records = self.parsed_records
         header = "Mapped FOLIO fields"
 
         report_file.write(f"\n## {header}\n")
@@ -166,12 +167,13 @@ class RulesMapperBase:
             report_file.write("</details>   \n")
 
     def print_progress(self):
-        self.add_stats(self.stats, "Number of records in file(s)")
-        i = self.stats["Number of records in file(s)"]
-        if i % 1000 == 0:
-            elapsed = i / (time.time() - self.start)
+        self.parsed_records += 1
+        if self.parsed_records % 1000 == 0:
+            elapsed = self.parsed_records / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            logging.info(f"{elapsed_formatted} records/sec.\t\t{i:,} records processed")
+            logging.info(
+                f"{elapsed_formatted} records/sec.\t\t{self.parsed_records:,} records processed"
+            )
 
     def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
         # TODO: Move to interface or parent class
