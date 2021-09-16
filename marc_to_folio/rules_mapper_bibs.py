@@ -4,6 +4,8 @@ import json
 import logging
 from typing import Generator, List
 import typing
+
+from folioclient import FolioClient
 from marc_to_folio.custom_exceptions import TransformationCriticalDataError
 import time
 from marc_to_folio.conditions import Conditions
@@ -62,12 +64,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.hrid_prefix = self.hrid_settings["instances"]["prefix"]
         self.hrid_counter = self.hrid_settings["instances"]["startNumber"]
         logging.info(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
-        self.other_mode_of_issuance_id = next(
-            i["id"]
-            for i in self.folio.modes_of_issuance
-            if i["name"].lower() == "unspecified"
-        )
-
+        self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio)
         self.start = time.time()
 
     def perform_initial_preparation(self, marc_record: pymarc.Record):
@@ -653,6 +650,20 @@ class BibsRulesMapper(RulesMapperBase):
                     "001 is missing.although that or 998$b is required for Aleph migrations",
                     marc_record.as_json(),
                 )
+
+
+def get_unspecified_mode_of_issuance(folio_client: FolioClient):
+    m_o_is = list(folio_client.modes_of_issuance)
+    if not any(m_o_is):
+        logging.critical("No Modes of issuance set up in tenant. Quitting...")
+        exit()
+    if not any(i for i in m_o_is if i["name"].lower() == "unspecified"):
+        logging.critical(
+            "Mode of issuance 'unspecified' missing in tenant "
+            "configuration. Please add this to continue. Quitting..."
+        )
+        exit()
+    return next(i["id"] for i in m_o_is if i["name"].lower() == "unspecified")
 
 
 def get_iii_bib_id(marc_record: Record):
