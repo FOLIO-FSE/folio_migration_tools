@@ -54,7 +54,7 @@ blurbs = {
     "Unapped Material Types": "Section description to be added.",
     "Mapped loan types": "Section description to be added.",
     "Unmapped loan types": "Section description to be added.",
-    "HRID Handling": "Section description to be added.",
+    "HRID Handling": "There are two ways of handling HRIDs. The default behaviour is to take the current 001 and move that to a new 035. This will also emerge as an Identifier on the Inventory Instances. The 001 and Instance HRID will be generated from the HRID settings in FOLIO. The second option is to maintain the 001s in the records, and also add this as the Instance HRID",
     "Preceding and Succeeding titles": "Section description to be added.",
     "Holdings generation from bibs": "Section description to be added.",
     "Instance format ids handling (337 + 338))": "Section description to be added.",
