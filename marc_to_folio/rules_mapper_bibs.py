@@ -221,17 +221,30 @@ class BibsRulesMapper(RulesMapperBase):
 
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:
-            holdingsfields = marc_record.get_fields("852", "866")
+            holdingsfields = marc_record.get_fields(
+                "852", "866", "867", "868", "865", "864", "863"
+            )
             f852s = [f for f in holdingsfields if f.tag == "852"]
-            f866s = [f for f in holdingsfields if f.tag == "866"]
-            self.add_to_migration_report(
-                "Holdings generation from bibs",
-                f"{len(f852s)} 852:s and {len(f866s)} 866:s in record",
-            )
-        else:
-            self.add_to_migration_report(
-                "Holdings generation from bibs", f"0 852:s and 0 866:s in record"
-            )
+            f86Xs = [
+                f
+                for f in holdingsfields
+                if f.tag in ["866", "867", "868", "865", "864", "863"]
+            ]
+            if f852s and not f86Xs:
+                self.add_to_migration_report(
+                    "Holdings generation from bibs",
+                    f"Records with 852s but no 86X",
+                )
+            elif f852s and f86Xs:
+                self.add_to_migration_report(
+                    "Holdings generation from bibs",
+                    f"Records with both 852s and at least one 86X",
+                )
+            elif not f852s and f86Xs:
+                self.add_to_migration_report(
+                    "Holdings generation from bibs",
+                    f"Records without 852s but with 86X",
+                )
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
@@ -444,7 +457,7 @@ class BibsRulesMapper(RulesMapperBase):
                     "HRID Handling", "Failed to create 035 from 001"
                 )
             marc_record.add_ordered_field(new_001)
-            self.add_to_migration_report("General statistics", "Created HRID")
+            self.add_to_migration_report("HRID Handling", "Created HRID")
             self.hrid_counter += 1
         elif self.hrid_handling == "001":
             value = marc_record["001"].value()
