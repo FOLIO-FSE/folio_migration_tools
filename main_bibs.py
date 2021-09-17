@@ -163,7 +163,9 @@ def parse_args():
         "\tdefault\tFOLIO Default. Current 001 will be placed in a 035, and The "
         "FOLIO-generated HRID will be put in 001. FOLIO HRID prefix will be honored\n"
         "\t001\tHonor current 001:s. 001 will be used in the HRID field on the "
-        "Instance, and the current 001 will be maintained"
+        "Instance, and the current 001 will be maintained\n"
+        "\t\t In the absence of a 001 to derive the HRID from, the script will fall "
+        "back on the default HRID handling."
     )
     parser.add_argument(
         "--force_utf_8",
