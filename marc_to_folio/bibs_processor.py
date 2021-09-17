@@ -71,12 +71,12 @@ class BibsProcessor:
                 Helper.write_to_file(self.results_file, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
                 self.mapper.add_stats(
-                    self.mapper.stats, "Successfully transformed bibs"
+                    self.mapper.stats, "Records successfully transformed"
                 )
                 for id_map_string in id_map_strings:
                     self.instance_id_map_file.write(f"{id_map_string}\n")
                     self.mapper.add_stats(
-                        self.mapper.stats, "Ids written to bib->instance id map"
+                        self.mapper.stats, "Lines written to identifier map"
                     )
 
         except ValueError as value_error:
@@ -88,25 +88,21 @@ class BibsProcessor:
                 self.mapper.stats, "Value Errors (records that failed transformation)"
             )
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details",
             )
-            # raise value_error
-        except ValidationError:
-            self.mapper.add_stats(self.mapper.stats, "Validation Errors")
-            self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
-            )
-            # raise validation_error
         except TransformationCriticalDataError as error:
             self.mapper.add_stats(self.mapper.stats, "TransformationCriticalDataErrors")
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details. Check log for details",
             )
             logging.critical(error)
 
         except Exception as inst:
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details. Check log for details",
             )
             self.mapper.add_stats(self.mapper.stats, "Transformation exceptions")
             logging.error(type(inst))
@@ -125,14 +121,16 @@ class BibsProcessor:
             self.mapper.add_to_migration_report("Records without titles", s)
             logging.error(s)
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details. Check log for details",
             )
             return False
         if not folio_rec.get("instanceTypeId", ""):
             s = f"No Instance Type Id in {index_or_legacy_id}"
             self.mapper.add_to_migration_report("Records without Instance Type Ids", s)
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details. Check log for details",
             )
             return False
         return True

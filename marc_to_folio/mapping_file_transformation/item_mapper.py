@@ -180,7 +180,10 @@ class ItemMapper(MapperBase):
                     "Records failed because of failed holdings",
                 )
                 self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
-                s = f"Holdings id '{legacy_value}' not in hold id map."
+                s = (
+                    f"Holdings id referenced in legacy item with id '{legacy_value}' "
+                    "was not found amongst transformed Holdings records."
+                )
                 raise TransformationProcessError(s, index_or_id)
             else:
                 self.add_to_migration_report("Holdings IDs mapped", f"Mapped")

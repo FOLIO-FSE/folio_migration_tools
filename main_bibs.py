@@ -75,9 +75,7 @@ class Worker(main_base.MainBase):
 
     def read_records(self, reader):
         for idx, record in enumerate(reader):
-            self.mapper.add_stats(
-                self.mapper.stats, "MARC21 records in file before parsing"
-            )
+            self.mapper.add_stats(self.mapper.stats, "Records in file before parsing")
             try:
                 if record is None:
                     self.mapper.add_to_migration_report(
@@ -86,7 +84,7 @@ class Worker(main_base.MainBase):
                     )
                     self.mapper.add_stats(
                         self.mapper.stats,
-                        "MARC21 Records with encoding errors - parsing failed",
+                        "Records with encoding errors - parsing failed",
                     )
                     raise TransformationCriticalDataError(
                         f"Index in file:{idx}",
@@ -96,7 +94,8 @@ class Worker(main_base.MainBase):
                 else:
                     self.set_leader(record)
                     self.mapper.add_stats(
-                        self.mapper.stats, "MARC21 Records successfully parsed"
+                        self.mapper.stats,
+                        "Records successfully parsed from MARC21",
                     )
                     self.processor.process_record(idx, record, False)
             except TransformationCriticalDataError as error:
@@ -164,7 +163,9 @@ def parse_args():
         "\tdefault\tFOLIO Default. Current 001 will be placed in a 035, and The "
         "FOLIO-generated HRID will be put in 001. FOLIO HRID prefix will be honored\n"
         "\t001\tHonor current 001:s. 001 will be used in the HRID field on the "
-        "Instance, and the current 001 will be maintained"
+        "Instance, and the current 001 will be maintained\n"
+        "\t\t In the absence of a 001 to derive the HRID from, the script will fall "
+        "back on the default HRID handling."
     )
     parser.add_argument(
         "--force_utf_8",
