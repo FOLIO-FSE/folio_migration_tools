@@ -453,11 +453,14 @@ class BibsRulesMapper(RulesMapperBase):
                 marc_record.add_ordered_field(new_035)
                 self.add_to_migration_report("HRID Handling", "Added 035 from 001")
             except Exception:
-                self.add_to_migration_report(
-                    "HRID Handling", "Failed to create 035 from 001"
-                )
+                if "001" in marc_record:
+                    self.add_to_migration_report(
+                        "HRID Handling", "Failed to create 035 from 001"
+                    )
             marc_record.add_ordered_field(new_001)
-            self.add_to_migration_report("HRID Handling", "Created HRID")
+            self.add_to_migration_report(
+                "HRID Handling", "Created HRID using default settings"
+            )
             self.hrid_counter += 1
         elif self.hrid_handling == "001":
             value = marc_record["001"].value()
@@ -467,7 +470,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
             self.unique_001s.add(value)
             folio_instance["hrid"] = value
-            self.add_to_migration_report("General statistics", "Took HRID from 001")
+            self.add_to_migration_report("HRID Handling", "Took HRID from 001")
         else:
             logging.critical(f"Unknown HRID handling: {self.hrid_handling}. Exiting")
             exit()
