@@ -525,7 +525,7 @@ class BibsRulesMapper(RulesMapperBase):
     def get_nature_of_content(self, marc_record: Record) -> List[str]:
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
 
-    def get_languages(self, marc_record) -> List[str]:
+    def get_languages(self, marc_record: Record) -> List[str]:
         """Get languages and tranforms them to correct codes"""
         languages = set()
         lang_fields = marc_record.get_fields("041")
@@ -535,6 +535,9 @@ class BibsRulesMapper(RulesMapperBase):
                 if "2" in lang_tag:
                     self.add_to_migration_report(
                         "Language code sources in 041", lang_tag["2"]
+                    )
+                    logging.info(
+                        f"Field with other Language code\t{marc_record['001']}\t{lang_tag.value()}"
                     )
                 lang_codes = lang_tag.get_subfields(*list(subfields))
                 for lang_code in lang_codes:
