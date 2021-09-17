@@ -68,5 +68,5 @@ blurbs = {
     "Added value since value was empty": "Some FOLIO objects need to have values in them despite the source data was empty. This involves 86X fields for example. ",
     "Callnumber type mapping": "Call number types in MFHDs are mapped from 852, Indicator 1 according to a certain scheme. (LOC documentation)[https://www.loc.gov/marc/holdings/hd852.html]",
     "Reciept status mapping": "Mapped reciept status from 008[06]. (LoC documentation)[https://www.loc.gov/marc/holdings/hd008.html]",
-    "Language code sources in 041": "Most language codes in MARC records come from this list: https://www.loc.gov/marc/languages/, But other codes are allowed. The controlled vocabulary needs to be stated in $2 and this is where the information in this list comes from. The mapping tools can not currently handle other language codes, and so cannot FOLIO.",
+    "Language code sources in 041": "Most language codes in MARC records come from this list: https://www.loc.gov/marc/languages/, But other codes are allowed. The controlled vocabulary needs to be stated in $2 and this is where the information in this list comes from. The mapping tools can not currently handle other language codes, and so cannot FOLIO. One solution is for the library to add extra data for these records in order to improve discoverability",
 }
