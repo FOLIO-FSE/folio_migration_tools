@@ -212,6 +212,7 @@ class Conditions:
             "1": "Publication",
             "2": "Distribution",
             "3": "Manufacture",
+            "4": "Copyright notice date",
         }
         role = roles.get(marc_field.indicator2, "")
         self.mapper.add_to_migration_report(
@@ -483,7 +484,8 @@ class Conditions:
             return t[0]
 
         self.mapper.add_to_migration_report(
-            "Callnumber type mapping", f"Mapping failed. Setting default CallNumber type."
+            "Callnumber type mapping",
+            f"Mapping failed. Setting default CallNumber type.",
         )
         return self.default_call_number_type["id"]
 
@@ -533,7 +535,9 @@ class Conditions:
 
         # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
-            mapped_code = self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
+            mapped_code = (
+                self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
+            )
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value.strip()
         # Get the FOLIO UUID for the code and return it
