@@ -165,11 +165,11 @@ class Worker(MainBase):
                 try:
                     self.process_single_file(file_name, results_file)
                 except Exception as ee:
-                    error_str = (
-                        f"\n\nProcessing of {file_name} failed:\n{ee}."
+                    error_str = f"\n\nProcessing of {file_name} failed:\n{ee}."
+                    logging.exception(error_str, stack_info=True)
+                    logging.fatal(
                         "Check source files for empty lines or missing reference data. Halting"
                     )
-                    logging.exception(error_str, stack_info=True)
                     self.mapper.add_to_migration_report(
                         "Failed files", f"{file_name} - {ee}"
                     )

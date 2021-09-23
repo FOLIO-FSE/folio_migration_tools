@@ -221,17 +221,30 @@ class BibsRulesMapper(RulesMapperBase):
 
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:
-            holdingsfields = marc_record.get_fields("852", "866")
+            holdingsfields = marc_record.get_fields(
+                "852", "866", "867", "868", "865", "864", "863"
+            )
             f852s = [f for f in holdingsfields if f.tag == "852"]
-            f866s = [f for f in holdingsfields if f.tag == "866"]
-            self.add_to_migration_report(
-                "Holdings generation from bibs",
-                f"{len(f852s)} 852:s and {len(f866s)} 866:s in record",
-            )
-        else:
-            self.add_to_migration_report(
-                "Holdings generation from bibs", f"0 852:s and 0 866:s in record"
-            )
+            f86Xs = [
+                f
+                for f in holdingsfields
+                if f.tag in ["866", "867", "868", "865", "864", "863"]
+            ]
+            if f852s and not f86Xs:
+                self.add_to_migration_report(
+                    "Holdings generation from bibs",
+                    f"Records with 852s but no 86X",
+                )
+            elif f852s and f86Xs:
+                self.add_to_migration_report(
+                    "Holdings generation from bibs",
+                    f"Records with both 852s and at least one 86X",
+                )
+            elif not f852s and f86Xs:
+                self.add_to_migration_report(
+                    "Holdings generation from bibs",
+                    f"Records without 852s but with 86X",
+                )
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
@@ -440,11 +453,14 @@ class BibsRulesMapper(RulesMapperBase):
                 marc_record.add_ordered_field(new_035)
                 self.add_to_migration_report("HRID Handling", "Added 035 from 001")
             except Exception:
-                self.add_to_migration_report(
-                    "HRID Handling", "Failed to create 035 from 001"
-                )
+                if "001" in marc_record:
+                    self.add_to_migration_report(
+                        "HRID Handling", "Failed to create 035 from 001"
+                    )
             marc_record.add_ordered_field(new_001)
-            self.add_to_migration_report("General statistics", "Created HRID")
+            self.add_to_migration_report(
+                "HRID Handling", "Created HRID using default settings"
+            )
             self.hrid_counter += 1
         elif self.hrid_handling == "001":
             value = marc_record["001"].value()
@@ -454,7 +470,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
             self.unique_001s.add(value)
             folio_instance["hrid"] = value
-            self.add_to_migration_report("General statistics", "Took HRID from 001")
+            self.add_to_migration_report("HRID Handling", "Took HRID from 001")
         else:
             logging.critical(f"Unknown HRID handling: {self.hrid_handling}. Exiting")
             exit()
@@ -512,7 +528,7 @@ class BibsRulesMapper(RulesMapperBase):
     def get_nature_of_content(self, marc_record: Record) -> List[str]:
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
 
-    def get_languages(self, marc_record) -> List[str]:
+    def get_languages(self, marc_record: Record) -> List[str]:
         """Get languages and tranforms them to correct codes"""
         languages = set()
         lang_fields = marc_record.get_fields("041")
@@ -521,7 +537,10 @@ class BibsRulesMapper(RulesMapperBase):
             for lang_tag in lang_fields:
                 if "2" in lang_tag:
                     self.add_to_migration_report(
-                        "Language coude sources in 041", lang_tag["2"]
+                        "Language code sources in 041", lang_tag["2"]
+                    )
+                    logging.info(
+                        f"Field with other Language code\t{marc_record['001']}\t{lang_tag.value()}"
                     )
                 lang_codes = lang_tag.get_subfields(*list(subfields))
                 for lang_code in lang_codes:

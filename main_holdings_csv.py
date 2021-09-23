@@ -78,11 +78,11 @@ class Worker(MainBase):
                 self.process_single_file(file_name)
 
             except Exception as ee:
-                error_str = (
-                    f"Processing of {file_name} failed:\n{ee}."
-                    "Check source files for empty lines or missing reference data"
-                )
+                error_str = f"Processing of {file_name} failed:\n{ee}."
                 logging.exception(error_str)
+                logging.fatal(
+                    "Check source files for empty lines or missing reference data. Halting"
+                )
                 self.mapper.add_to_migration_report(
                     "Failed files", f"{file_name} - {ee}"
                 )
@@ -351,7 +351,7 @@ def dedupe(list_of_dicts):
 
 
 def main():
-    """Main Method. Used for bootstrapping. """
+    """Main Method. Used for bootstrapping."""
     csv.register_dialect("tsv", delimiter="\t")
     args = parse_args()
     folder_structure = FolderStructure(args.base_folder, args.time_stamp)

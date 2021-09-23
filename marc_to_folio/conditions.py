@@ -224,6 +224,7 @@ class Conditions:
             "1": "Publication",
             "2": "Distribution",
             "3": "Manufacture",
+            "4": "Copyright notice date",
         }
         role = roles.get(marc_field.indicator2, "")
         self.mapper.add_to_migration_report(
