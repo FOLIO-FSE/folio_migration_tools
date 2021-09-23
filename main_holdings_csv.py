@@ -42,6 +42,7 @@ class Worker(MainBase):
         folder_structure: FolderStructure,
         holdings_merge_criteria,
     ):
+        super.__init__()
         self.holdings = {}
         self.total_records = 0
         self.folder_structure = folder_structure
@@ -78,11 +79,11 @@ class Worker(MainBase):
                 self.process_single_file(file_name)
 
             except Exception as ee:
-                error_str = f"Processing of {file_name} failed:\n{ee}."
-                logging.exception(error_str)
-                logging.fatal(
-                    "Check source files for empty lines or missing reference data. Halting"
+                error_str = (
+                    f"Processing of {file_name} failed:\n{ee}."
+                    "Check source files for empty lines or missing reference data"
                 )
+                logging.exception(error_str)
                 self.mapper.add_to_migration_report(
                     "Failed files", f"{file_name} - {ee}"
                 )
