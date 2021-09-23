@@ -48,7 +48,7 @@ class Worker(MainBase):
     def __init__(
         self, source_files, folio_client: FolioClient, folder_structure: FolderStructure
     ):
-        super.__init__()
+        super().__init__()
         self.folio_keys = []
         self.folder_structure = folder_structure
         self.holdings_id_map = setup_holdings_id_map(self.folder_structure)
