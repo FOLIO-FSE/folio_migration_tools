@@ -42,7 +42,6 @@ class Worker(MainBase):
         folder_structure: FolderStructure,
         holdings_merge_criteria,
     ):
-        super.__init__()
         self.holdings = {}
         self.total_records = 0
         self.folder_structure = folder_structure

@@ -131,7 +131,7 @@ class ItemMapper(MapperBase):
         logging.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        logging.debug(f"get item prop {folio_prop_name}")
+        logging.debug(f"get item property for {folio_prop_name}")
         if not self.use_map:
             return legacy_item[folio_prop_name]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
