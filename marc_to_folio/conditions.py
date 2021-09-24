@@ -2,7 +2,7 @@ import logging
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 from marc_to_folio.custom_exceptions import (
-    TransformationCriticalDataError,
+    TransformationRecordFailedError,
     TransformationProcessError,
 )
 import re
@@ -277,7 +277,7 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped note types", t[1])
             return t[0]
         except:
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 "unknown",
                 f'Holdings note type mapping error.\tParameter: {parameter.get("name", "")}\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
@@ -294,7 +294,7 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped classification types", t[1])
             return t[0]
         except:
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 "unknown",
                 f'Classification mapping error.\tParameter: "{parameter.get("name", "")}"\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
@@ -344,7 +344,7 @@ class Conditions:
             )
             return t[0]
         except:
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 "",
                 f'Unmapped identifier name type: "{parameter["name"]}"\tMARC Field: {marc_field}'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
@@ -429,7 +429,7 @@ class Conditions:
             return self.mapper.instance_id_map[value]["folio_id"]
         except:
             self.mapper.add_stats(self.mapper.stats, "bib id not in map")
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 f"Old instance id not in map: {value} Field: {marc_field}"
             )
 

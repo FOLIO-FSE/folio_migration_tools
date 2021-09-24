@@ -59,7 +59,7 @@ class HoldingsHelper:
                         f"list of previously stored Holdings. You have likely not used the same "
                         f"matching criterias ({fields_criteria}) as you did in the previous process"
                     )
-                    raise custom_exceptions.TransformationCriticalDataError(message)
+                    raise custom_exceptions.TransformationRecordFailedError(message)
                 prev_holdings[stored_key] = stored_holding
             return prev_holdings
 
@@ -70,6 +70,7 @@ class HoldingsHelper:
             holdings_id_map = json.load(holdings_id_map_file)
             logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
             return holdings_id_map
+
 
 def dedupe(list_of_dicts):
     # TODO: Move to interface or parent class

@@ -15,7 +15,7 @@ from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from pymarc.reader import MARCReader
 
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.custom_exceptions import TransformationRecordFailedError
 from marc_to_folio.holdings_processor import HoldingsProcessor
 from marc_to_folio.main_base import MainBase
 from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
@@ -131,7 +131,7 @@ def read_records(reader, processor: HoldingsProcessor):
     for idx, record in enumerate(reader):
         try:
             if record is None:
-                raise TransformationCriticalDataError(
+                raise TransformationRecordFailedError(
                     (
                         f"Index in file:{idx}"
                         f"MARC parsing error: "
@@ -141,7 +141,7 @@ def read_records(reader, processor: HoldingsProcessor):
                 )
             else:
                 processor.process_record(record)
-        except TransformationCriticalDataError as error:
+        except TransformationRecordFailedError as error:
             logging.error(error)
         except ValueError as error:
             logging.error(error)

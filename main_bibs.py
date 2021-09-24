@@ -15,7 +15,7 @@ import requests
 
 from marc_to_folio import main_base
 from marc_to_folio.bibs_processor import BibsProcessor
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.custom_exceptions import TransformationRecordFailedError
 from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 
@@ -86,7 +86,7 @@ class Worker(main_base.MainBase):
                         self.mapper.stats,
                         "Records with encoding errors - parsing failed",
                     )
-                    raise TransformationCriticalDataError(
+                    raise TransformationRecordFailedError(
                         f"Index in file:{idx}",
                         f"MARC parsing error: {reader.current_exception}",
                         reader.current_chunk,
@@ -98,7 +98,7 @@ class Worker(main_base.MainBase):
                         "Records successfully parsed from MARC21",
                     )
                     self.processor.process_record(idx, record, False)
-            except TransformationCriticalDataError as error:
+            except TransformationRecordFailedError as error:
                 logging.error(error)
         logging.info(f"Done reading {idx} records from file")
 

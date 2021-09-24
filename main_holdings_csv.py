@@ -19,7 +19,7 @@ from folioclient.FolioClient import FolioClient
 from requests.api import request
 
 from marc_to_folio.custom_exceptions import (
-    TransformationCriticalDataError,
+    TransformationRecordFailedError,
     TransformationProcessError,
 )
 from marc_to_folio.folder_structure import FolderStructure
@@ -103,7 +103,7 @@ class Worker(MainBase):
                     self.process_holding(idx, record)
                 except TransformationProcessError as process_error:
                     logging.error(f"{idx}\t{process_error}")
-                except TransformationCriticalDataError as error:
+                except TransformationRecordFailedError as error:
                     self.log_and_exit_if_too_many_errors(error)
                 except Exception as excepion:
                     self.num_exeptions += 1

@@ -3,7 +3,7 @@ from io import StringIO
 import logging
 from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.helper import Helper
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.custom_exceptions import TransformationRecordFailedError
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
@@ -91,7 +91,7 @@ class BibsProcessor:
                 self.mapper.stats,
                 "Records that failed transformation. Check log for details",
             )
-        except TransformationCriticalDataError as error:
+        except TransformationRecordFailedError as error:
             self.mapper.add_stats(self.mapper.stats, "TransformationCriticalDataErrors")
             self.mapper.add_stats(
                 self.mapper.stats,

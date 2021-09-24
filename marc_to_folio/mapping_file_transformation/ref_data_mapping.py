@@ -2,8 +2,10 @@ import json
 import logging
 
 from folioclient import FolioClient
-from marc_to_folio.custom_exceptions import (TransformationCriticalDataError,
-                                             TransformationProcessError)
+from marc_to_folio.custom_exceptions import (
+    TransformationRecordFailedError,
+    TransformationProcessError,
+)
 
 
 class RefDataMapping(object):
@@ -19,7 +21,7 @@ class RefDataMapping(object):
         self.key_type = key_type
         self.keys = ""
         self.default_id = ""
-        self.default_name = ""        
+        self.default_name = ""
         self.cached_dict = {}
         self.setup_mappings()
         logging.info(f"{self.name} reference data mapping. Done init")
@@ -40,7 +42,8 @@ class RefDataMapping(object):
                     self.keys = [
                         k
                         for k in mapping.keys()
-                        if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
+                        if k
+                        not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
                     ]
                     logging.info(json.dumps(self.keys, indent=4))
                 if any(m for m in mapping.values() if m == "*"):
@@ -59,11 +62,11 @@ class RefDataMapping(object):
                             f"Add a row to mapping file with *:s and a valid {self.name}"
                         )
                 else:
-                    t= self.get_ref_data_tuple(
-                        mapping[f"folio_{self.key_type}"]
-                    )
+                    t = self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"])
                     if not t:
-                        raise TransformationProcessError(f'Mapping not found for {mapping}')
+                        raise TransformationProcessError(
+                            f"Mapping not found for {mapping}"
+                        )
                     mapping["folio_id"] = t[0]
             except TransformationProcessError as te:
                 raise te
@@ -89,7 +92,10 @@ class RefDataMapping(object):
                     f"folio_{self.key_type} is not a column in the {self.name} mapping file. Fix."
                 )
                 exit()
-            elif all(k not in mapping for k in self.keys) and "legacy_code" not in mapping:
+            elif (
+                all(k not in mapping for k in self.keys)
+                and "legacy_code" not in mapping
+            ):
                 logging.critical(
                     f"field names from {self.keys} missing in map legacy_code is not a column in the {self.name} mapping file"
                 )
@@ -99,4 +105,3 @@ class RefDataMapping(object):
                     f"empty value in mapping {mapping.values()}. Check {self.name} mapping file"
                 )
                 exit()
-            

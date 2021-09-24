@@ -3,7 +3,7 @@ import json
 import logging
 from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from marc_to_folio.custom_exceptions import (
-    TransformationCriticalDataError,
+    TransformationRecordFailedError,
     TransformationProcessError,
 )
 from typing import List

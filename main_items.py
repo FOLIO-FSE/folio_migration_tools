@@ -27,7 +27,7 @@ import pymarc
 from folioclient.FolioClient import FolioClient
 
 from marc_to_folio.custom_exceptions import (
-    TransformationCriticalDataError,
+    TransformationRecordFailedError,
     TransformationProcessError,
 )
 from marc_to_folio.mapping_file_transformation.item_mapper import ItemMapper
@@ -204,7 +204,7 @@ class Worker(MainBase):
                     )
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
-                except TransformationCriticalDataError as data_error:
+                except TransformationRecordFailedError as data_error:
                     self.mapper.handle_transformation_critical_error(idx, data_error)
                 except AttributeError as attribute_error:
                     traceback.print_exc()
@@ -316,6 +316,9 @@ def main():
         worker = Worker(files, folio_client, folder_structure)
         worker.work()
         worker.wrap_up()
+    except TransformationProcessError as pocess_error:
+        logging.critical(f"{pocess_error}")
+        logging.critical("Halting")
     except Exception as process_error:
         logging.info(f"=======ERROR in MAIN: {process_error}===========")
         logging.exception("=======Stack Trace===========")

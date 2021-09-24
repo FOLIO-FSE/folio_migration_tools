@@ -7,8 +7,8 @@ from abc import abstractmethod
 import requests
 from folioclient import FolioClient
 from marc_to_folio.custom_exceptions import (
-    TransformationCriticalDataError,
-    TransformationDataError,
+    TransformationRecordFailedError,
+    TransformationFieldMappingError,
     TransformationProcessError,
 )
 from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
@@ -32,13 +32,13 @@ class MapperBase:
         self.ref_data_dicts = {}
         self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
-        self.e = {}
+        self.field_map = {}  # Map of folio_fields and source fields as an array
         for k in self.record_map["data"]:
-            if not self.e.get(k["folio_field"]):
-                self.e[k["folio_field"]] = [k["legacy_field"]]
+            if not self.field_map.get(k["folio_field"]):
+                self.field_map[k["folio_field"]] = [k["legacy_field"]]
             else:
-                self.e[k["folio_field"]].append(k["legacy_field"])
-
+                self.field_map[k["folio_field"]].append(k["legacy_field"])
+        self.validate_map()
         self.mapped_from_values = {}
         for k in self.record_map["data"]:
             if k["value"] not in [None, ""]:
@@ -102,7 +102,7 @@ class MapperBase:
         logging.error(f"{idx}\t{process_error}")
 
     def handle_transformation_critical_error(
-        self, idx, data_error: TransformationCriticalDataError
+        self, idx, data_error: TransformationRecordFailedError
     ):
         self.add_to_migration_report(
             "General statistics", "Records failed due to a data error"
@@ -249,13 +249,13 @@ class MapperBase:
         except IndexError as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping indexerror")
 
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
                 f"({ref_dat_mapping.keys}) {ee} is not a recognized fields in the legacy data."
             )
         except Exception as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping general error")
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.keys}) {ee}"
             )
 
@@ -293,7 +293,7 @@ class MapperBase:
                     index_or_id,
                     legacy_object,
                 )
-            except TransformationDataError as data_error:
+            except TransformationFieldMappingError as data_error:
                 self.add_stats("Data issues found")
                 logging.error(data_error)
         self.validate_object(folio_object, index_or_id)
@@ -359,7 +359,26 @@ class MapperBase:
                     logging.info(json.dumps(folio_object, indent=4))
                 missing.append(f"Empty: {required_prop}")
         if any(missing):
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
+                f"Required properties empty for {index_or_id}\t{json.dumps(missing)}"
+            )
+
+        del folio_object["type"]
+
+    def validate_map(self):
+        required = self.schema["required"]
+        missing = []
+        for required_prop in required:
+            if required_prop not in self.field_map:
+                if index_or_id == "row 1":
+                    logging.info(json.dumps(folio_object, indent=4))
+                missing.append(f"Missing: {required_prop}")
+            elif not folio_object[required_prop]:
+                if index_or_id == "row 1":
+                    logging.info(json.dumps(folio_object, indent=4))
+                missing.append(f"Empty: {required_prop}")
+        if any(missing):
+            raise TransformationRecordFailedError(
                 f"Required properties empty for {index_or_id}\t{json.dumps(missing)}"
             )
 
@@ -510,7 +529,7 @@ class MapperBase:
         if not self.use_map:
             return folio_prop_name in legacy_object
 
-        legacy_keys = self.e.get(folio_prop_name, [])
+        legacy_keys = self.field_map.get(folio_prop_name, [])
         # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
             any(legacy_keys)
@@ -525,7 +544,7 @@ class MapperBase:
         if folio_prop_name not in self.folio_keys:
             # logging.debug(f"map_basic_props -> {folio_prop_name}")
             return False
-        legacy_keys = self.e.get(folio_prop_name, [])
+        legacy_keys = self.field_map.get(folio_prop_name, [])
         # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
             any(legacy_keys)

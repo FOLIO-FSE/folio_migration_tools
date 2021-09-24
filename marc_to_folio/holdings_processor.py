@@ -8,7 +8,7 @@ from datetime import datetime as dt
 
 from jsonschema import ValidationError, validate
 
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.custom_exceptions import TransformationRecordFailedError
 from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.helper import Helper
 from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
@@ -39,7 +39,7 @@ class HoldingsProcessor:
             if not folio_rec.get("instanceId", ""):
                 self.missing_instance_id_count += 1
                 if self.missing_instance_id_count > 1000:
-                    raise TransformationCriticalDataError(
+                    raise TransformationRecordFailedError(
                         f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}"
                     )
             folio_rec["discoverySuppress"] = self.suppress
@@ -51,7 +51,7 @@ class HoldingsProcessor:
                 elapsed = self.records_count / (time.time() - self.start)
                 elapsed_formatted = "{0:.4g}".format(elapsed)
                 logging.info(f"{elapsed_formatted}\t\t{self.records_count}")
-        except TransformationCriticalDataError as data_error:
+        except TransformationRecordFailedError as data_error:
             add_stats(self.mapper.stats, "Critical data errors")
             add_stats(self.mapper.stats, "Failed records")
             logging.error(data_error)

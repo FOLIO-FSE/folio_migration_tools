@@ -6,7 +6,7 @@ from typing import Generator, List
 import typing
 
 from folioclient import FolioClient
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.custom_exceptions import TransformationRecordFailedError
 import time
 from marc_to_folio.conditions import Conditions
 import traceback
@@ -465,7 +465,7 @@ class BibsRulesMapper(RulesMapperBase):
         elif self.hrid_handling == "001":
             value = marc_record["001"].value()
             if value in self.unique_001s:
-                raise TransformationCriticalDataError(
+                raise TransformationRecordFailedError(
                     f"Duplicate 001 ({value}) for record."
                 )
             self.unique_001s.add(value)
@@ -607,7 +607,7 @@ class BibsRulesMapper(RulesMapperBase):
             try:
                 return [marc_record["907"]["y"]]
             except:
-                raise TransformationCriticalDataError(
+                raise TransformationRecordFailedError(
                     "unknown identifier",
                     "907 $y is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
@@ -616,7 +616,7 @@ class BibsRulesMapper(RulesMapperBase):
             try:
                 return [marc_record["035"]["a"]]
             except:
-                raise TransformationCriticalDataError(
+                raise TransformationRecordFailedError(
                     "unknown identifier",
                     "035 $a is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
@@ -634,7 +634,7 @@ class BibsRulesMapper(RulesMapperBase):
             try:
                 return [marc_record["001"].format_field().strip()]
             except:
-                raise TransformationCriticalDataError(
+                raise TransformationRecordFailedError(
                     "unknown identifier",
                     "001 is missing, although it is required for Voyager migrations",
                     marc_record.as_json(),
@@ -643,7 +643,7 @@ class BibsRulesMapper(RulesMapperBase):
             try:
                 return [marc_record["999"]["c"]]
             except:
-                raise TransformationCriticalDataError(
+                raise TransformationRecordFailedError(
                     "unknown identifier",
                     "999 $c is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
@@ -664,7 +664,7 @@ class BibsRulesMapper(RulesMapperBase):
                 self.add_stats(self.stats, "legacy id from 001")
                 return ret
             except:
-                raise TransformationCriticalDataError(
+                raise TransformationRecordFailedError(
                     "unknown identifier",
                     "001 is missing.although that or 998$b is required for Aleph migrations",
                     marc_record.as_json(),
@@ -689,7 +689,7 @@ def get_iii_bib_id(marc_record: Record):
     try:
         return [marc_record["907"]["a"]]
     except:
-        raise TransformationCriticalDataError(
+        raise TransformationRecordFailedError(
             "unknown identifier",
             "907 $a is missing, although it is required for Sierra/iii migrations",
             marc_record.as_json(),
