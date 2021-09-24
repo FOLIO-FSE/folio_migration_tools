@@ -39,10 +39,10 @@ class RefDataMapping(object):
         folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
         folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
         folio_values_not_in_map = [
-            f for f in folio_values_from_folio not in folio_values_from_map
+            f for f in folio_values_from_folio if f not in folio_values_from_map
         ]
         map_values_not_in_folio = [
-            f for f in folio_values_from_map not in folio_values_from_folio
+            f for f in folio_values_from_map if f not in folio_values_from_folio
         ]
         if any(map_values_not_in_folio):
             raise TransformationProcessError(
