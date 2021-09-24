@@ -51,7 +51,6 @@ class Worker(MainBase):
         super().__init__()
         self.folio_keys = []
         self.folder_structure = folder_structure
-        self.holdings_id_map = setup_holdings_id_map(self.folder_structure)
         self.folio_client = folio_client
         self.items_map = self.setup_records_map()
         self.folio_keys = MapperBase.get_mapped_folio_properties_from_map(
@@ -100,7 +99,7 @@ class Worker(MainBase):
                 self.folder_structure.call_number_type_map_path,
                 False,
             ),
-            self.holdings_id_map,
+            setup_holdings_id_map(self.folder_structure),
             statcode_mapping,
             self.load_ref_data_mapping_file(
                 "status.name", self.folder_structure.item_statuses_map_path, False
