@@ -184,7 +184,7 @@ class ItemMapper(MapperBase):
                     f"Holdings id referenced in legacy item with id '{legacy_value}' "
                     "was not found amongst transformed Holdings records."
                 )
-                raise TransformationProcessError(s, index_or_id)
+                raise TransformationRecordFailedError(s, index_or_id)
             else:
                 self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
                 return self.holdings_id_map[legacy_value]["id"]
