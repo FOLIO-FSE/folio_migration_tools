@@ -36,6 +36,22 @@ class RefDataMapping(object):
         return self.cached_dict.get(key_value.lower().strip(), ())
 
     def setup_mappings(self):
+        folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
+        folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
+        folio_values_not_in_map = [
+            f for f in folio_values_from_folio not in folio_values_from_map
+        ]
+        map_values_not_in_folio = [
+            f for f in folio_values_from_map not in folio_values_from_folio
+        ]
+        if any(map_values_not_in_folio):
+            raise TransformationProcessError(
+                f"Values from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
+            )
+        if any(folio_values_not_in_map):
+            logging.info(
+                f"Values from {self.name} Ref data are not in map: {map_values_not_in_folio}"
+            )
         for idx, mapping in enumerate(self.map):
             try:
                 if idx == 0:
