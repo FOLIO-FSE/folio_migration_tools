@@ -135,7 +135,7 @@ class BibsProcessor:
             return False
         return True
 
-    def wrap_up(self):
+    def wrap_up(self):  # sourcery skip: remove-redundant-fstring
         """Finalizes the mapping by writing things out."""
         try:
             self.mapper.wrap_up()
