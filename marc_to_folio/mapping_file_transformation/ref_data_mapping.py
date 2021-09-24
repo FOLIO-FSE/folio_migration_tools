@@ -50,14 +50,16 @@ class RefDataMapping(object):
             {f for f in folio_values_from_map if f not in folio_values_from_folio}
         )
 
-        if any(map_values_not_in_folio):
-            raise TransformationProcessError(
-                f"Values from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
-            )
         if any(folio_values_not_in_map):
             logging.info(
                 f"Values from {self.name} Ref data are not in map: {map_values_not_in_folio}"
             )
+
+        if any(map_values_not_in_folio):
+            raise TransformationProcessError(
+                f"Values from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
+            )
+
         for idx, mapping in enumerate(self.map):
             try:
                 if idx == 0:
