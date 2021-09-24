@@ -117,9 +117,9 @@ class MapperBase:
     def handle_transformation_process_error(
         self, idx, process_error: TransformationProcessError
     ):
-        self.add_general_statistics("Records failed due to a process error")
-
-        logging.error(f"{idx}\t{process_error}")
+        self.add_general_statistics("Critical process error")
+        logging.critical(f"{idx}\t{process_error}")
+        exit()
 
     def handle_transformation_critical_error(
         self, idx, data_error: TransformationRecordFailedError
