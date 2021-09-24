@@ -93,7 +93,7 @@ class MapperBase:
         logging.info("Writing migration report")
         report_file.write(f"{blurbs['Introduction']}\n")
         for header in self.migration_report:
-            report_file.write(f"   \n")
+            report_file.write("   \n")
             report_file.write(f"## {header}    \n")
             try:
                 report_file.write(f"{blurbs[header]}    \n")
@@ -106,8 +106,8 @@ class MapperBase:
                 f"<details><summary>Click to expand all {len(self.migration_report[header])} things</summary>     \n"
             )
             report_file.write(f"   \n")
-            report_file.write(f"Measure | Count   \n")
-            report_file.write(f"--- | ---:   \n")
+            report_file.write("Measure | Count   \n")
+            report_file.write("--- | ---:   \n")
             b = self.migration_report[header]
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
             for b in sortedlist:
@@ -129,7 +129,7 @@ class MapperBase:
         )
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
-        if self.num_criticalerrors > 500:
+        if self.num_criticalerrors > 5000:
             logging.fatal(
                 f"Stopping. More than {self.num_criticalerrors} critical data errors"
             )
@@ -166,7 +166,7 @@ class MapperBase:
         d_sorted = {
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
         }
-        report_file.write(f"FOLIO Field | Mapped | Empty | Unmapped  \n")
+        report_file.write("FOLIO Field | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             unmapped = total_records - v[0]
@@ -182,7 +182,7 @@ class MapperBase:
         d_sorted = {
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
         }
-        report_file.write(f"Legacy Field | Present | Mapped | Empty | Unmapped  \n")
+        report_file.write("Legacy Field | Present | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             present = v[0]
