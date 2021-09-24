@@ -52,7 +52,7 @@ class RefDataMapping(object):
 
         if any(folio_values_not_in_map):
             logging.info(
-                f"Values from {self.name} Ref data are not in map: {map_values_not_in_folio}"
+                f"Values from {self.name} ref data in FOLIO that are not in the map: {folio_values_not_in_map}"
             )
 
         if any(map_values_not_in_folio):
