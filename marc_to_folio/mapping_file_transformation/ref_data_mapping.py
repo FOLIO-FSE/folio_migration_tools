@@ -36,6 +36,10 @@ class RefDataMapping(object):
         return self.cached_dict.get(key_value.lower().strip(), ())
 
     def setup_mappings(self):
+        if not self.map.get(f"folio_{self.key_type}", ""):
+            raise TransformationProcessError(
+                f"Column folio_{self.key_type} missing from {self.name} map file"
+            )
         folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
         folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
         folio_values_not_in_map = [
