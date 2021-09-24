@@ -36,6 +36,7 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
 def setup_holdings_id_map(folder_structure: FolderStructure):
+    logging.info("Loading holdings id map. This can take a while...")
     with open(folder_structure.holdings_id_map_path, "r") as holdings_id_map_file:
         holdings_id_map = json.load(holdings_id_map_file)
         logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
