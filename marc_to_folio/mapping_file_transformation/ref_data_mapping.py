@@ -58,7 +58,7 @@ class RefDataMapping(object):
                     else:
                         x = mapping.get(f"folio_{self.key_type}", "")
                         raise TransformationProcessError(
-                            f"No Default {self.name} -{x}- set up in map. "
+                            f"No {self.name} - {x} - set up in map or tenant. Check for inconstencies in {self.name} naming."
                             f"Add a row to mapping file with *:s and a valid {self.name}"
                         )
                 else:
