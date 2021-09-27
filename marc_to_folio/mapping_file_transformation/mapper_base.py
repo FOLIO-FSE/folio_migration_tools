@@ -130,10 +130,12 @@ class MapperBase:
         )
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
-        if (
-            self.num_criticalerrors / (self.total_records + 1) > 0.2
-            and self.num_criticalerrors > 5000
-        ):
+        logging.error(
+            f"Errors: {self.num_criticalerrors}\terrors/records:"
+            f"{self.num_criticalerrors / (idx + 1)}"
+        )
+
+        if self.num_criticalerrors / (idx + 1) > 0.2 and self.num_criticalerrors > 5000:
             logging.fatal(
                 f"Stopping. More than {self.num_criticalerrors} critical data errors"
             )
@@ -236,33 +238,19 @@ class MapperBase:
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
             # Get the values in the fields that will be used for mapping
+
             fieldvalues = [
                 legacy_object.get(k) for k in ref_dat_mapping.mapped_legacy_keys
             ]
-            logging.debug(f"fieldvalues are {fieldvalues}")
+            # logging.debug(f"fieldvalues are {fieldvalues}")
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
             # TODO: add option for Wild card matching in individual columns
-            right_mapping = None
-            for mapping in ref_dat_mapping.map:
-                if all(
-                    False
-                    for k in ref_dat_mapping.mapped_legacy_keys
-                    if legacy_object[k] != mapping[k]
-                ):
-                    right_mapping = mapping
-                    break
-
+            right_mapping = self.get_ref_data_mapping(legacy_object, ref_dat_mapping)
             if not right_mapping:
                 # Not all fields matched. Could it be a hybrid wildcard map?
-                for mapping in ref_dat_mapping.hybrid_mappings:
-                    if all(
-                        mapping[k] in [legacy_object[k], "*"]
-                        for k in ref_dat_mapping.mapped_legacy_keys
-                    ):
-                        right_mapping = mapping
-                        break
+                right_mapping = self.get_hybrid_mapping(legacy_object, ref_dat_mapping)
 
             if not right_mapping:
                 raise StopIteration()
@@ -296,6 +284,25 @@ class MapperBase:
             raise TransformationRecordFailedError(
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}"
             )
+
+    def get_hybrid_mapping(self, legacy_object, ref_dat_mapping: RefDataMapping):
+        for mapping in ref_dat_mapping.hybrid_mappings:
+            if all(
+                mapping[k] in [legacy_object[k], "*"]
+                for k in ref_dat_mapping.mapped_legacy_keys
+            ):
+                return mapping
+        return None
+
+    def get_ref_data_mapping(self, legacy_object, ref_dat_mapping: RefDataMapping):
+        for mapping in ref_dat_mapping.regular_mappings:
+            if all(
+                False
+                for k in ref_dat_mapping.mapped_legacy_keys
+                if legacy_object[k] != mapping[k]
+            ):
+                return mapping
+        return None
 
     def add_to_migration_report(self, header: str, measure_to_add: str):
         if header not in self.migration_report:

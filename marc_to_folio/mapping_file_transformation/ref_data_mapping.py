@@ -18,6 +18,7 @@ class RefDataMapping(object):
         self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name))
         # logging.debug(json.dumps(self.ref_data, indent=4))
         self.map = map
+        self.regular_mappings = []
         self.key_type = key_type
         self.hybrid_mappings = []
         self.mapped_legacy_keys = ""
@@ -61,6 +62,8 @@ class RefDataMapping(object):
                 else:
                     if self.is_hybrid_default_mapping(mapping):
                         self.hybrid_mappings.append(mapping)
+                    else:
+                        self.regular_mappings.append(mapping)
                     t = self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"])
                     if not t:
                         raise TransformationProcessError(
@@ -77,7 +80,7 @@ class RefDataMapping(object):
                 )
         self.post_validate_map()
         logging.info(
-            f"Loaded {idx} mappings for {len(self.ref_data)} {self.name} in FOLIO"
+            f"Loaded {len(self.regular_mappings)} mappings for {len(self.ref_data)} {self.name} in FOLIO"
         )
         logging.info(
             f"loaded {len(self.hybrid_mappings)} hybrid mappings for {len(self.ref_data)} {self.name} in FOLIO"
@@ -87,7 +90,7 @@ class RefDataMapping(object):
         legacy_values = [
             value for key, value in mapping.items() if key in self.mapped_legacy_keys
         ]
-        return "*" in legacy_values and any(f != "*" for f in legacy_values)
+        return "*" in legacy_values and not self.is_default_mapping(mapping)
 
     def is_default_mapping(self, mapping):
         legacy_values = [
