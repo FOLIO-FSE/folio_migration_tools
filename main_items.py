@@ -69,7 +69,6 @@ class Worker(MainBase):
         else:
             statcode_mapping = None
 
-        self.total_records = 0
         if "temporaryLoanTypeId" in self.folio_keys:
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
                 "temporaryLoanTypeId", self.folder_structure.temp_loan_type_map_path

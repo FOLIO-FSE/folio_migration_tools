@@ -114,8 +114,6 @@ class BibsProcessor:
             raise inst
 
     def validate_instance(self, folio_rec, marc_record, index_or_legacy_id: str):
-        # if self.args.validate:
-        #    validate(folio_rec, self.instance_schema)
         if not folio_rec.get("title", ""):
             s = f"No title in {index_or_legacy_id}"
             self.mapper.add_to_migration_report("Records without titles", s)

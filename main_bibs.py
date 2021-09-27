@@ -15,7 +15,10 @@ import requests
 
 from marc_to_folio import main_base
 from marc_to_folio.bibs_processor import BibsProcessor
-from marc_to_folio.custom_exceptions import TransformationRecordFailedError
+from marc_to_folio.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 
@@ -216,6 +219,10 @@ def main():
         worker.work()
     except FileNotFoundError as fne:
         print(f"{fne}")
+    except TransformationProcessError as process_error:
+        logging.critical(process_error)
+        logging.critical("Halting...")
+        exit()
 
 
 if __name__ == "__main__":

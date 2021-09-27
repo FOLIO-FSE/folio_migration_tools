@@ -9,7 +9,7 @@ class FolderStructure:
         self.time_stamp = time_stamp
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
-            print(f"Base Folder Path is not a folder. Exiting.", flush=True)
+            print("Base Folder Path is not a folder. Exiting.", flush=True)
             exit()
 
         self.data_folder = self.base_folder / "data"

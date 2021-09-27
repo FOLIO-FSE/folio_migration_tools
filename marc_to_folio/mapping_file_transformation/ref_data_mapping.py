@@ -19,7 +19,8 @@ class RefDataMapping(object):
         # logging.debug(json.dumps(self.ref_data, indent=4))
         self.map = map
         self.key_type = key_type
-        self.keys = ""
+        self.hybrid_mappings = []
+        self.mapped_legacy_keys = ""
         self.default_id = ""
         self.default_name = ""
         self.cached_dict = {}
@@ -36,41 +37,13 @@ class RefDataMapping(object):
         return self.cached_dict.get(key_value.lower().strip(), ())
 
     def setup_mappings(self):
-        if not any(f for f in self.map if f.get(f"folio_{self.key_type}", "")):
-            raise TransformationProcessError(
-                f"Column folio_{self.key_type} missing from {self.name} map file"
-            )
-        folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
-        folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
-        folio_values_not_in_map = list(
-            {f for f in folio_values_from_folio if f not in folio_values_from_map}
-        )
-
-        map_values_not_in_folio = list(
-            {f for f in folio_values_from_map if f not in folio_values_from_folio}
-        )
-
-        if any(folio_values_not_in_map):
-            logging.info(
-                f"Values from {self.name} ref data in FOLIO that are not in the map: {folio_values_not_in_map}"
-            )
-
-        if any(map_values_not_in_folio):
-            raise TransformationProcessError(
-                f"Values from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
-            )
-
+        self.pre_validate_map()
         for idx, mapping in enumerate(self.map):
             try:
+                # Get the legacy keys
                 if idx == 0:
-                    self.keys = [
-                        k
-                        for k in mapping.keys()
-                        if k
-                        not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
-                    ]
-                    logging.info(json.dumps(self.keys, indent=4))
-                if any(m for m in mapping.values() if m == "*"):
+                    self.mapped_legacy_keys = get_mapped_legacy_keys(mapping)
+                if self.is_default_mapping(mapping):
                     # Set up default mapping if available
                     t = self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"])
                     if t:
@@ -86,6 +59,8 @@ class RefDataMapping(object):
                             f"Add a row to mapping file with *:s and a valid {self.name}"
                         )
                 else:
+                    if self.is_hybrid_default_mapping(mapping):
+                        self.hybrid_mappings.append(mapping)
                     t = self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"])
                     if not t:
                         raise TransformationProcessError(
@@ -99,17 +74,52 @@ class RefDataMapping(object):
                 raise TransformationProcessError(
                     f'{mapping[f"folio_{self.key_type}"]} could not be found in FOLIO'
                 )
+        self.post_validate_map()
+        logging.info(
+            f"Loaded {idx} mappings for {len(self.ref_data)} {self.name} in FOLIO"
+        )
+        logging.info(
+            f"loaded {len(self.hybrid_mappings)} hybrid mappings for {len(self.ref_data)} {self.name} in FOLIO"
+        )
+
+    def is_hybrid_default_mapping(self, mapping):
+        legacy_values = [f.value() for f in mapping if f in self.mapped_legacy_keys]
+        return any(f for f in legacy_values if f == "*") and not all(
+            f for f in legacy_values if f == "*"
+        )
+
+    def is_default_mapping(self, mapping):
+        legacy_values = [f.value() for f in mapping if f in self.mapped_legacy_keys]
+        return all(f for f in legacy_values if f == "*")
+
+    def pre_validate_map(self):
+        if not any(f for f in self.map if f.get(f"folio_{self.key_type}", "")):
+            raise TransformationProcessError(
+                f"Column folio_{self.key_type} missing from {self.name} map file"
+            )
+        folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
+        folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
+        folio_values_not_in_map = list(
+            {f for f in folio_values_from_folio if f not in folio_values_from_map}
+        )
+        map_values_not_in_folio = list(
+            {f for f in folio_values_from_map if f not in folio_values_from_folio}
+        )
+        if any(folio_values_not_in_map):
+            logging.info(
+                f"Values from {self.name} ref data in FOLIO that are not in the map: {folio_values_not_in_map}"
+            )
+        if any(map_values_not_in_folio):
+            raise TransformationProcessError(
+                f"Values from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
+            )
+
+    def post_validate_map(self):
         if not self.default_id:
             raise TransformationProcessError(
                 f"No default {self.name} set up in map."
-                f"Add a row to mapping file with *:s and a valid {self.name} value"
+                f"Add a row to mapping file with *:s in all legacy columns and a valid {self.name} value"
             )
-        logging.info(
-            f"loaded {idx} mappings for {len(self.ref_data)} {self.name} in FOLIO"
-        )
-        self.check_up_on_mapping()
-
-    def check_up_on_mapping(self):
         for mapping in self.map:
             if f"folio_{self.key_type}" not in mapping:
                 logging.critical(
@@ -117,11 +127,11 @@ class RefDataMapping(object):
                 )
                 exit()
             elif (
-                all(k not in mapping for k in self.keys)
+                all(k not in mapping for k in self.mapped_legacy_keys)
                 and "legacy_code" not in mapping
             ):
                 logging.critical(
-                    f"field names from {self.keys} missing in map legacy_code is not a column in the {self.name} mapping file"
+                    f"field names from {self.mapped_legacy_keys} missing in map legacy_code is not a column in the {self.name} mapping file"
                 )
                 exit()
             elif not all(mapping.values()):
@@ -129,3 +139,13 @@ class RefDataMapping(object):
                     f"empty value in mapping {mapping.values()}. Check {self.name} mapping file"
                 )
                 exit()
+
+
+def get_mapped_legacy_keys(mapping):
+    legacy_keys = [
+        k
+        for k in mapping.keys()
+        if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
+    ]
+    logging.info(json.dumps(legacy_keys, indent=4))
+    return legacy_keys

@@ -47,15 +47,17 @@ class Conditions:
         logging.info(f"{len(self.folio.identifier_types)}\tidentifier_types")
         # Raise for empty settings
         if not self.folio.contributor_types:
-            raise Exception("No contributor_types setup in tenant")
+            raise TransformationProcessError("No contributor_types setup in tenant")
         if not self.folio.contrib_name_types:
-            raise Exception("No contributor name types setup in tenant")
+            raise TransformationProcessError(
+                "No contributor name types setup in tenant"
+            )
         if not self.folio.identifier_types:
-            raise Exception("No identifier_types setup in tenant")
+            raise TransformationProcessError("No identifier_types setup in tenant")
         if not self.folio.identifier_types:
-            raise Exception("No identifier_types setup in tenant")
+            raise TransformationProcessError("No identifier_types setup in tenant")
         if not self.folio.alt_title_types:
-            raise Exception("No alt_title_types setup in tenant")
+            raise TransformationProcessError("No alt_title_types setup in tenant")
 
         # Set defaults
         logging.info("Setting defaults")
@@ -108,10 +110,14 @@ class Conditions:
         if t:
             self.default_holdings_type_id = t[0]
         else:
-            raise Exception("Holdings type Unmapped not set in client")
+            raise TransformationProcessError(
+                "Holdings type Unmapped not set in client: Please add one to the tenant."
+            )
 
         if not self.default_location_code:
-            raise Exception("Default location code is not set up")
+            raise TransformationProcessError(
+                "Default location code is not set up. Make sure it is set up"
+            )
 
         logging.info(f"Default location code is {self.default_location_code}")
         t = self.get_ref_data_tuple_by_code(
@@ -121,7 +127,7 @@ class Conditions:
             self.default_location_id = t[0]
             logging.info(f"Default location id is {self.default_location_id}")
         else:
-            raise Exception(
+            raise TransformationProcessError(
                 f"Default location for {self.default_location_code} is not set up"
             )
 
@@ -276,7 +282,8 @@ class Conditions:
             )
             self.mapper.add_to_migration_report("Mapped note types", t[1])
             return t[0]
-        except:
+        except Exception as ee:
+            logging.error(ee)
             raise TransformationRecordFailedError(
                 "unknown",
                 f'Holdings note type mapping error.\tParameter: {parameter.get("name", "")}\t'
