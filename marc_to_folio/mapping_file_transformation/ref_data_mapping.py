@@ -87,15 +87,13 @@ class RefDataMapping(object):
         legacy_values = [
             value for key, value in mapping.items() if key in self.mapped_legacy_keys
         ]
-        return any(f for f in legacy_values if f == "*") and not all(
-            f for f in legacy_values if f == "*"
-        )
+        return "*" in legacy_values and any(f != "*" for f in legacy_values)
 
     def is_default_mapping(self, mapping):
         legacy_values = [
             value for key, value in mapping.items() if key in self.mapped_legacy_keys
         ]
-        return all(f for f in legacy_values if f == "*")
+        return all(f == "*" for f in legacy_values)
 
     def pre_validate_map(self):
         if not any(f for f in self.map if f.get(f"folio_{self.key_type}", "")):
