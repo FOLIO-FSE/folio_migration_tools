@@ -1,7 +1,11 @@
 import collections
 import json
 import logging
-from marc_to_folio.custom_exceptions import TransformationProcessError
+from marc_to_folio.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 import uuid
 
 from pymarc.field import Field
@@ -90,9 +94,10 @@ class RulesMapperBase:
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
         }
         report_file.write(
-            f"<details><summary>Click to expand field report</summary>     \n\n"
+            "<details><summary>Click to expand field report</summary>     \n\n"
         )
-        report_file.write(f"FOLIO Field | Mapped | Empty | Unmapped  \n")
+
+        report_file.write("FOLIO Field | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             unmapped = total_records - v[0]
@@ -113,9 +118,10 @@ class RulesMapperBase:
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
         }
         report_file.write(
-            f"<details><summary>Click to expand field report</summary>     \n\n"
+            "<details><summary>Click to expand field report</summary>     \n\n"
         )
-        report_file.write(f"Legacy Field | Present | Mapped | Empty | Unmapped  \n")
+
+        report_file.write("Legacy Field | Present | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             present = v[0]
@@ -146,7 +152,7 @@ class RulesMapperBase:
         report_file.write(f"{blurbs['Introduction']}\n")
 
         for a in self.migration_report:
-            report_file.write(f"   \n")
+            report_file.write("   \n")
             report_file.write(f"## {a}    \n")
             try:
                 report_file.write(f"{blurbs[a]}    \n")
@@ -159,8 +165,8 @@ class RulesMapperBase:
                 f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
             )
             report_file.write(f"   \n")
-            report_file.write(f"Measure | Count   \n")
-            report_file.write(f"--- | ---:   \n")
+            report_file.write("Measure | Count   \n")
+            report_file.write("--- | ---:   \n")
             b = self.migration_report[a]
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
             for b in sortedlist:
@@ -180,7 +186,7 @@ class RulesMapperBase:
         # TODO: Move to interface or parent class
         d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
         report_file.write(f"{h1} | {h2}   \n")
-        report_file.write(f"--- | ---:   \n")
+        report_file.write("--- | ---:   \n")
         for k, v in d_sorted.items():
             report_file.write(f"{k} | {v:,}   \n")
 
@@ -288,6 +294,17 @@ class RulesMapperBase:
         except TransformationProcessError as te:
             logging.fatal(f"{te}. Quitting...")
             exit()
+        except TransformationFieldMappingError as fme:
+            logging.error(
+                f"Non-critical mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
+            )
+            logging.error(fme)
+            return []
+        except TransformationRecordFailedError as ee:
+            logging.error(
+                f"Mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
+            )
+            raise ee
         except Exception as ee:
             logging.error(
                 f"Mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
@@ -326,18 +343,19 @@ class RulesMapperBase:
                         and is_array_of_objects(schema_parent)
                         and sc_prop.get("type", "string") == "string"
                     ):
-                        logging.error("This should be unreachable code")
-                        raise Exception("This should be unreachable code")
-                        # logging.info(parent)
+                        s = "This should be unreachable code. Check schema for changes"
+                        logging.error(s)
+                        logging.error(parent)
+                        raise TransformationProcessError(s)
                         # break
                     else:
                         if schema_parent["type"] == "array":
-                            # prop[target] = {}
-                            # parent.append(prop[target])
                             parent.append({})
                         else:
-                            raise Exception(
-                                f"Edge! {target_string} {schema_properties[target_string]}"
+                            raise TransformationProcessError(
+                                f"Edge! Something in the schemas has changed. "
+                                "The mapping of this needs to be investigated "
+                                f"{target_string} {schema_properties[target_string]}"
                             )
                 elif is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
                     sc_prop["items"]["properties"]
@@ -372,7 +390,7 @@ class RulesMapperBase:
         sch = self.schema["properties"]
 
         if not target_string or target_string not in sch:
-            raise Exception(
+            raise TransformationProcessError(
                 f"Target string {target_string} not in Schema! Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
             )
 
@@ -390,7 +408,7 @@ class RulesMapperBase:
         elif target_field.get("type", "") == "string":
             rec[target_string] = value[0]
         else:
-            raise Exception(
+            raise TransformationProcessError(
                 f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
             )
 

@@ -21,6 +21,7 @@ class MapperBase:
     def __init__(self, folio_client: FolioClient, schema, record_map):
         self.schema = schema
         self.stats = {}
+        self.total_records = 0
         self.migration_report = {}
         self.folio_client = folio_client
         self.mapped_folio_fields = {}
@@ -129,7 +130,7 @@ class MapperBase:
         )
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
-        if self.num_criticalerrors > 5000:
+        if self.num_criticalerrors / self.total_records > 5000:
             logging.fatal(
                 f"Stopping. More than {self.num_criticalerrors} critical data errors"
             )
@@ -231,22 +232,38 @@ class MapperBase:
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
-
             # Get the values in the fields that will be used for mapping
-            fieldvalues = [legacy_object.get(k) for k in ref_dat_mapping.keys]
+            fieldvalues = [
+                legacy_object.get(k) for k in ref_dat_mapping.mapped_legacy_keys
+            ]
             logging.debug(f"fieldvalues are {fieldvalues}")
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
             # TODO: add option for Wild card matching in individual columns
             right_mapping = next(
-                mapping
-                for mapping in ref_dat_mapping.map
-                if all(
-                    legacy_object[k].strip().casefold() == mapping[k].casefold()
-                    for k in ref_dat_mapping.keys
-                )
+                (
+                    mapping
+                    for mapping in ref_dat_mapping.map
+                    if all(
+                        legacy_object[k].strip().casefold() == mapping[k].casefold()
+                        for k in ref_dat_mapping.mapped_legacy_keys
+                    )
+                ),
+                None,
             )
+            if not right_mapping:
+                # Not all fields matched. Could it be a hybrid wildcard map?
+                right_mapping = next(
+                    mapping
+                    for mapping in ref_dat_mapping.hybrid_mappings
+                    if all(
+                        legacy_object[k].strip().casefold() == mapping[k].casefold()
+                        or mapping[k] == "*"
+                        for k in ref_dat_mapping.mapped_legacy_keys
+                    )
+                )
+
             logging.debug(f"Found mapping is {right_mapping}")
             self.add_to_migration_report(
                 f"{ref_dat_mapping.name} mapping",
@@ -271,12 +288,12 @@ class MapperBase:
 
             raise TransformationRecordFailedError(
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                f"({ref_dat_mapping.keys}) {ee} is not a recognized fields in the legacy data."
+                f"({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized fields in the legacy data."
             )
         except Exception as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping general error")
             raise TransformationRecordFailedError(
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.keys}) {ee}"
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}"
             )
 
     def add_to_migration_report(self, header: str, measure_to_add: str):

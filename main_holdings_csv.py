@@ -104,7 +104,7 @@ class Worker(MainBase):
                 except TransformationProcessError as process_error:
                     logging.error(f"{idx}\t{process_error}")
                 except TransformationRecordFailedError as error:
-                    self.log_and_exit_if_too_many_errors(error)
+                    self.log_and_exit_if_too_many_errors(error, idx)
                 except Exception as excepion:
                     self.num_exeptions += 1
                     print("\n=======ERROR===========\n")

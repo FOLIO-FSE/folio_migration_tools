@@ -2,6 +2,7 @@ import logging
 from marc_to_folio.rules_mapper_base import RulesMapperBase
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 from marc_to_folio.custom_exceptions import (
+    TransformationFieldMappingError,
     TransformationRecordFailedError,
     TransformationProcessError,
 )
@@ -47,15 +48,17 @@ class Conditions:
         logging.info(f"{len(self.folio.identifier_types)}\tidentifier_types")
         # Raise for empty settings
         if not self.folio.contributor_types:
-            raise Exception("No contributor_types setup in tenant")
+            raise TransformationProcessError("No contributor_types setup in tenant")
         if not self.folio.contrib_name_types:
-            raise Exception("No contributor name types setup in tenant")
+            raise TransformationProcessError(
+                "No contributor name types setup in tenant"
+            )
         if not self.folio.identifier_types:
-            raise Exception("No identifier_types setup in tenant")
+            raise TransformationProcessError("No identifier_types setup in tenant")
         if not self.folio.identifier_types:
-            raise Exception("No identifier_types setup in tenant")
+            raise TransformationProcessError("No identifier_types setup in tenant")
         if not self.folio.alt_title_types:
-            raise Exception("No alt_title_types setup in tenant")
+            raise TransformationProcessError("No alt_title_types setup in tenant")
 
         # Set defaults
         logging.info("Setting defaults")
@@ -77,13 +80,13 @@ class Conditions:
         logging.info(f"{len(self.holdings_types)}\tholdings types")
         # Raise for empty settings
         if not self.folio.holding_note_types:
-            raise Exception("No holding_note_types setup in tenant")
+            raise TransformationProcessError("No holding_note_types setup in tenant")
         if not self.folio.call_number_types:
-            raise Exception("No call_number_types setup in tenant")
+            raise TransformationProcessError("No call_number_types setup in tenant")
         if not self.holdings_types:
-            raise Exception("No holdings_types setup in tenant")
+            raise TransformationProcessError("No holdings_types setup in tenant")
         if not self.folio.locations:
-            raise Exception("No locations set up in tenant")
+            raise TransformationProcessError("No locations set up in tenant")
 
         # Set defaults
         logging.info("Defaults")
@@ -108,10 +111,14 @@ class Conditions:
         if t:
             self.default_holdings_type_id = t[0]
         else:
-            raise Exception("Holdings type Unmapped not set in client")
+            raise TransformationProcessError(
+                "Holdings type Unmapped not set in client: Please add one to the tenant."
+            )
 
         if not self.default_location_code:
-            raise Exception("Default location code is not set up")
+            raise TransformationProcessError(
+                "Default location code is not set up. Make sure it is set up"
+            )
 
         logging.info(f"Default location code is {self.default_location_code}")
         t = self.get_ref_data_tuple_by_code(
@@ -121,7 +128,7 @@ class Conditions:
             self.default_location_id = t[0]
             logging.info(f"Default location id is {self.default_location_id}")
         else:
-            raise Exception(
+            raise TransformationProcessError(
                 f"Default location for {self.default_location_code} is not set up"
             )
 
@@ -137,7 +144,7 @@ class Conditions:
 
         # Raise for empty settings
         if not self.folio.class_types:
-            raise Exception("No class_types setup in tenant")
+            raise TransformationProcessError("No class_types setup in tenant")
 
     def get_condition(
         self, name, value, parameter=None, marc_field: field.Field = None
@@ -262,7 +269,7 @@ class Conditions:
         )
         my_id = identifier_type["id"]
         if not my_id:
-            raise Exception(
+            raise TransformationFieldMappingError(
                 f"no matching identifier_types in {parameter['names']} {marc_field}"
             )
         return my_id
@@ -276,7 +283,8 @@ class Conditions:
             )
             self.mapper.add_to_migration_report("Mapped note types", t[1])
             return t[0]
-        except:
+        except Exception as ee:
+            logging.error(ee)
             raise TransformationRecordFailedError(
                 "unknown",
                 f'Holdings note type mapping error.\tParameter: {parameter.get("name", "")}\t'
@@ -497,8 +505,9 @@ class Conditions:
 
         self.mapper.add_to_migration_report(
             "Callnumber type mapping",
-            f"Mapping failed. Setting default CallNumber type.",
+            "Mapping failed. Setting default CallNumber type.",
         )
+
         return self.default_call_number_type["id"]
 
     def condition_set_electronic_if_serv_remo(
@@ -533,7 +542,7 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped Alternative title types", t[1])
             return t[0]
         except:
-            raise Exception(
+            raise TransformationFieldMappingError(
                 f"Alternative title type not found for {parameter['name']} {marc_field}"
             )
 
@@ -578,7 +587,7 @@ class Conditions:
                 self.folio.locations, "locations", parameter["unspecifiedLocationCode"]
             )
             if not t:
-                raise Exception(
+                raise TransformationProcessError(
                     f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
                 )
             self.mapper.add_to_migration_report(
