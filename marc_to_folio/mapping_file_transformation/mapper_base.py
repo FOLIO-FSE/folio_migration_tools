@@ -244,29 +244,28 @@ class MapperBase:
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
             # TODO: add option for Wild card matching in individual columns
-            right_mapping = next(
-                (
-                    mapping
-                    for mapping in ref_dat_mapping.map
-                    if all(
-                        legacy_object[k].strip().casefold() == mapping[k].casefold()
-                        for k in ref_dat_mapping.mapped_legacy_keys
-                    )
-                ),
-                None,
-            )
+            right_mapping = None
+            for mapping in ref_dat_mapping.map:
+                if all(
+                    False
+                    for k in ref_dat_mapping.mapped_legacy_keys
+                    if legacy_object[k] != mapping[k]
+                ):
+                    right_mapping = mapping
+                    break
+
             if not right_mapping:
                 # Not all fields matched. Could it be a hybrid wildcard map?
-                right_mapping = next(
-                    mapping
-                    for mapping in ref_dat_mapping.hybrid_mappings
+                for mapping in ref_dat_mapping.hybrid_mappings:
                     if all(
-                        legacy_object[k].strip().casefold() == mapping[k].casefold()
-                        or mapping[k] == "*"
+                        mapping[k] in [legacy_object[k], "*"]
                         for k in ref_dat_mapping.mapped_legacy_keys
-                    )
-                )
+                    ):
+                        right_mapping = mapping
+                        break
 
+            if not right_mapping:
+                raise StopIteration()
             logging.debug(f"Found mapping is {right_mapping}")
             self.add_to_migration_report(
                 f"{ref_dat_mapping.name} mapping",
@@ -288,11 +287,10 @@ class MapperBase:
             return ref_dat_mapping.default_id
         except IndexError as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping indexerror")
-
             raise TransformationRecordFailedError(
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                f"({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized fields in the legacy data."
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized fields in the legacy data."
             )
+
         except Exception as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping general error")
             raise TransformationRecordFailedError(
