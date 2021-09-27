@@ -71,7 +71,7 @@ class RefDataMapping(object):
                 raise te
             except Exception as ee:
                 logging.info(json.dumps(self.map, indent=4))
-                logging.error(ee)
+                logging.exception())
                 raise TransformationProcessError(
                     f'{mapping[f"folio_{self.key_type}"]} could not be found in FOLIO'
                 )
@@ -84,13 +84,13 @@ class RefDataMapping(object):
         )
 
     def is_hybrid_default_mapping(self, mapping):
-        legacy_values = [f.value() for f in mapping if f in self.mapped_legacy_keys]
+        legacy_values = [value for key,value in mapping.items() if key in self.mapped_legacy_keys]
         return any(f for f in legacy_values if f == "*") and not all(
             f for f in legacy_values if f == "*"
         )
 
     def is_default_mapping(self, mapping):
-        legacy_values = [f.value() for f in mapping if f in self.mapped_legacy_keys]
+        legacy_values = [value for key, value in mapping.items() if key in self.mapped_legacy_keys]
         return all(f for f in legacy_values if f == "*")
 
     def pre_validate_map(self):
