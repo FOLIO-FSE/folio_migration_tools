@@ -130,7 +130,10 @@ class MapperBase:
         )
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
-        if self.num_criticalerrors / (self.total_records + 1) > 5000:
+        if (
+            self.num_criticalerrors / (self.total_records + 1) > 0.2
+            and self.num_criticalerrors > 5000
+        ):
             logging.fatal(
                 f"Stopping. More than {self.num_criticalerrors} critical data errors"
             )
