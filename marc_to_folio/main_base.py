@@ -14,7 +14,7 @@ class MainBase:
     def log_and_exit_if_too_many_errors(self, error: Exception, idx):
         self.num_exeptions += 1
         logging.error(error)
-        if self.num_exeptions / idx > 30 and self.num_exeptions:
+        if self.num_exeptions / (1 + idx) > 29 and self.num_exeptions:
             logging.fatal(
                 f"Number of exceptions exceeded limit of "
                 f"{self.num_exeptions}. Stopping."
