@@ -288,8 +288,9 @@ class MapperBase:
     def get_hybrid_mapping(self, legacy_object, ref_dat_mapping: RefDataMapping):
         for mapping in ref_dat_mapping.hybrid_mappings:
             if all(
-                mapping[k] in [legacy_object[k], "*"]
+                True
                 for k in ref_dat_mapping.mapped_legacy_keys
+                if mapping[k] in [legacy_object[k], "*"]
             ):
                 return mapping
         return None
