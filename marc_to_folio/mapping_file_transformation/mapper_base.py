@@ -72,24 +72,9 @@ class MapperBase:
         csv.register_dialect("tsv", delimiter="\t")
 
     def validate_map(self):
+        # TODO: Add functionality here to validate that the map is complete.
+        # That it maps the required fields etc
         return True
-        """required = self.schema["required"]
-        missing = []
-        for required_prop in required:
-            if required_prop not in self.field_map:
-                if index_or_id == "row 1":
-                    logging.info(json.dumps(folio_object, indent=4))
-                missing.append(f"Missing: {required_prop}")
-            elif not folio_object[required_prop]:
-                if index_or_id == "row 1":
-                    logging.info(json.dumps(folio_object, indent=4))
-                missing.append(f"Empty: {required_prop}")
-        if any(missing):
-            raise TransformationRecordFailedError(
-                f"Required properties empty for {index_or_id}\t{json.dumps(missing)}"
-            )
-
-        del folio_object["type"]"""
 
     def write_migration_report(self, report_file):
         logging.info("Writing migration report")
