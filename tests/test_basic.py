@@ -12,11 +12,12 @@ def test_answer2():
     assert func(4) == 5
 
 
-"""def test_is_hybrid_default_mapping():
-    mappings = [{"a": "*", "b": "*", "c": "*"}]
+def test_is_hybrid_default_mapping():
+    mappings = [{"location": "*", "loan_type": "*", "material_type": "*"}]
     mock = Mock(spec=RefDataMapping)
-    res = mock.is_hybrid_default_mapping(mappings[0])
-    assert res == False"""
+    mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
+    res = RefDataMapping.is_hybrid_default_mapping(mock, mappings[0])
+    assert res == False
 
 
 def test_get_hybrid_mapping():
