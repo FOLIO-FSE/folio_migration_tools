@@ -21,8 +21,7 @@ class RefDataMapping(object):
         self.regular_mappings = []
         self.key_type = key_type
         self.hybrid_mappings = []
-        self.mapped_legacy_keys = ""
-        self.default_id = ""
+        self.mapped_legacy_keys = []
         self.default_name = ""
         self.cached_dict = {}
         self.setup_mappings()
@@ -153,5 +152,5 @@ def get_mapped_legacy_keys(mapping):
         for k in mapping.keys()
         if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
     ]
-    logging.info(json.dumps(legacy_keys, indent=4))
+    # logging.info(json.dumps(legacy_keys, indent=4))
     return legacy_keys

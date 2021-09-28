@@ -11,6 +11,7 @@ from marc_to_folio.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
 )
+from marc_to_folio.mapping_file_transformation import ref_data_mapping
 from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from marc_to_folio.report_blurbs import blurbs
 
@@ -285,22 +286,31 @@ class MapperBase:
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}"
             )
 
-    def get_hybrid_mapping(self, legacy_object, ref_dat_mapping: RefDataMapping):
-        for mapping in ref_dat_mapping.hybrid_mappings:
-            if all(
-                True
-                for k in ref_dat_mapping.mapped_legacy_keys
-                if mapping[k] in [legacy_object[k], "*"]
+    @staticmethod
+    def get_hybrid_mapping(legacy_object, rdm: RefDataMapping):
+        highest_match = None
+        highest_match_number = 0
+        for mapping in rdm.hybrid_mappings:
+            match_number = 0
+            match_number_wildcard = 0
+            for k in rdm.mapped_legacy_keys:
+                if mapping[k] == legacy_object[k]:
+                    match_number += 1
+                elif mapping[k] == "*":
+                    match_number_wildcard += 1
+            if (
+                match_number + match_number_wildcard == len(rdm.mapped_legacy_keys)
+                and match_number > highest_match_number
             ):
-                return mapping
-        return None
+                highest_match_number = match_number
+                highest_match = mapping
+        return highest_match
 
-    def get_ref_data_mapping(self, legacy_object, ref_dat_mapping: RefDataMapping):
-        for mapping in ref_dat_mapping.regular_mappings:
+    @staticmethod
+    def get_ref_data_mapping(legacy_object, rdm: RefDataMapping):
+        for mapping in rdm.regular_mappings:
             if all(
-                False
-                for k in ref_dat_mapping.mapped_legacy_keys
-                if legacy_object[k] != mapping[k]
+                False for k in rdm.mapped_legacy_keys if legacy_object[k] != mapping[k]
             ):
                 return mapping
         return None
