@@ -190,7 +190,7 @@ def get_srs_string(my_tuple):
         "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
         "matchedId": my_tuple[2],
         "generation": 0,
-        "recordType": "MARC_BIB",
+        "recordType": "MARC",
         "rawRecord": raw_record,
         "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": my_tuple[4]},
