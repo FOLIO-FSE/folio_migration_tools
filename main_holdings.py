@@ -3,6 +3,9 @@ import argparse
 import csv
 import json
 import logging
+
+import requests
+from marc_to_folio.folder_structure import FolderStructure
 import os
 from os import listdir
 from os.path import isfile, join
@@ -12,7 +15,7 @@ from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from pymarc.reader import MARCReader
 
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.custom_exceptions import TransformationRecordFailedError
 from marc_to_folio.holdings_processor import HoldingsProcessor
 from marc_to_folio.main_base import MainBase
 from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
@@ -20,11 +23,8 @@ from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
 
 def parse_args():
     """Parse CLI Arguments"""
-    # parser = argparse.ArgumentParser()
     parser = PromptParser()
-    parser.add_argument("source_folder", help="path to marc records folder")
-    parser.add_argument("result_folder", help="path to results folder")
-    parser.add_argument("map_path", help=("path to mapping files"))
+    parser.add_argument("base_folder", help="Base folder of the client.")
     parser.add_argument("okapi_url", help=("OKAPI base url"))
     parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
     parser.add_argument("username", help=("the api user"))
@@ -41,42 +41,51 @@ def parse_args():
         default=False,
         type=bool,
     )
+    parser.add_argument(
+        "--time_stamp",
+        "-ts",
+        help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
+    )
     args = parser.parse_args()
-    logging.info(f"\tresults are stored at:\t{args.result_folder}")
-    logging.info(f"\tOkapi URL:\t{args.okapi_url}")
-    logging.info(f"\tTenanti Id:\t{args.tenant_id}")
-    logging.info(f"\tUsername:\t{args.username}")
-    logging.info(f"\tPassword:\tSecret")
+    print(args.time_stamp)
+    if len(args.time_stamp) != 15:
+        print(f"Time stamp ({args.time_stamp}) is not set properly")
+        exit()
+    print(f"\tOkapi URL:\t{args.okapi_url}")
+    print(f"\tTenanti Id:\t{args.tenant_id}")
+    print(f"\tUsername:\t{args.username}")
+    print(f"\tPassword:\tSecret")
     return args
 
 
 def main():
     """Main method. Magic starts here."""
     args = parse_args()
-    MainBase.setup_logging(
-        os.path.join(args.result_folder, "holdings_transformation.log")
-    )
-    folio_client = FolioClient(
-        args.okapi_url, args.tenant_id, args.username, args.password
-    )
+    folder_structure = FolderStructure(args.base_folder, args.time_stamp)
+    folder_structure.setup_migration_file_structure("holdingsrecord")
+    MainBase.setup_logging(folder_structure)
+    folder_structure.log_folder_structure()
+
+    try:
+        folio_client = FolioClient(
+            args.okapi_url, args.tenant_id, args.username, args.password
+        )
+    except requests.exceptions.SSLError:
+        logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
+        exit()
+
     csv.register_dialect("tsv", delimiter="\t")
     files = [
-        os.path.join(args.source_folder, f)
-        for f in listdir(args.source_folder)
-        if isfile(os.path.join(args.source_folder, f))
+        os.path.join(folder_structure.legacy_records_folder, f)
+        for f in listdir(folder_structure.legacy_records_folder)
+        if isfile(os.path.join(folder_structure.legacy_records_folder, f))
     ]
-    with open(
-        os.path.join(args.result_folder, "instance_id_map.json"), "r"
-    ) as json_file, open(
-        os.path.join(args.map_path, "locations.tsv")
-    ) as location_map_f, open(
-        os.path.join(args.map_path, "mfhd_rules.json")
-    ) as mapping_rules_file, open(
-        os.path.join(args.result_folder, "folio_holdings.json"), "w+"
-    ) as results_file:
+    with open(folder_structure.instance_id_map_path) as instance_id_map_file, open(
+        folder_structure.locations_map_path
+    ) as location_map_f, open(folder_structure.mfhd_rules_path) as mapping_rules_file:
         instance_id_map = {}
-        for index, json_string in enumerate(json_file):
-            # {"legacy_id", "folio_id","instanceLevelCallNumber"}
+        for index, json_string in enumerate(instance_id_map_file):
+            # {"legacy_id", "folio_id","instanceLevelCallNumber", "suppressed"}
             map_object = json.loads(json_string)
             if index % 50000 == 0:
                 print(
@@ -98,11 +107,13 @@ def main():
             instance_id_map,
             location_map,
             rules_file["defaultLocationCode"],
-            args,
+            args.default_call_number_type_id,
         )
         mapper.mappings = rules_file["rules"]
 
-        processor = HoldingsProcessor(mapper, folio_client, results_file, args)
+        processor = HoldingsProcessor(
+            mapper, folio_client, folder_structure, args.suppress
+        )
         for records_file in files:
             try:
                 with open(records_file, "rb") as marc_file:
@@ -113,24 +124,27 @@ def main():
                     read_records(reader, processor)
             except Exception:
                 logging.exception(f"Failure in Main: {records_file}", stack_info=True)
+        processor.wrap_up()
 
 
 def read_records(reader, processor: HoldingsProcessor):
     for idx, record in enumerate(reader):
         try:
             if record is None:
-                raise TransformationCriticalDataError(
-                    f"Index in file:{idx}",
-                    f"MARC parsing error: " f"{reader.current_exception}",
-                    reader.current_chunk,
+                raise TransformationRecordFailedError(
+                    (
+                        f"Index in file:{idx}"
+                        f"MARC parsing error: "
+                        f"{reader.current_exception}"
+                        f"{reader.current_chunk}"
+                    )
                 )
             else:
                 processor.process_record(record)
-        except TransformationCriticalDataError as error:
+        except TransformationRecordFailedError as error:
             logging.error(error)
         except ValueError as error:
             logging.error(error)
-    processor.wrap_up()
 
 
 if __name__ == "__main__":

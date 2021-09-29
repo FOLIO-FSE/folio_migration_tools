@@ -1,5 +1,11 @@
 import logging
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.rules_mapper_base import RulesMapperBase
+from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
+from marc_to_folio.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationRecordFailedError,
+    TransformationProcessError,
+)
 import re
 import pymarc
 from pymarc import field
@@ -9,7 +15,7 @@ class Conditions:
     def __init__(
         self,
         folio,
-        mapper,
+        mapper: RulesMapperBase,
         object_type,
         default_location_code="",
         default_call_number_type_id="",
@@ -42,15 +48,17 @@ class Conditions:
         logging.info(f"{len(self.folio.identifier_types)}\tidentifier_types")
         # Raise for empty settings
         if not self.folio.contributor_types:
-            raise Exception("No contributor_types setup in tenant")
+            raise TransformationProcessError("No contributor_types setup in tenant")
         if not self.folio.contrib_name_types:
-            raise Exception("No contributor name types setup in tenant")
+            raise TransformationProcessError(
+                "No contributor name types setup in tenant"
+            )
         if not self.folio.identifier_types:
-            raise Exception("No identifier_types setup in tenant")
+            raise TransformationProcessError("No identifier_types setup in tenant")
         if not self.folio.identifier_types:
-            raise Exception("No identifier_types setup in tenant")
+            raise TransformationProcessError("No identifier_types setup in tenant")
         if not self.folio.alt_title_types:
-            raise Exception("No alt_title_types setup in tenant")
+            raise TransformationProcessError("No alt_title_types setup in tenant")
 
         # Set defaults
         logging.info("Setting defaults")
@@ -72,32 +80,45 @@ class Conditions:
         logging.info(f"{len(self.holdings_types)}\tholdings types")
         # Raise for empty settings
         if not self.folio.holding_note_types:
-            raise Exception("No holding_note_types setup in tenant")
+            raise TransformationProcessError("No holding_note_types setup in tenant")
         if not self.folio.call_number_types:
-            raise Exception("No call_number_types setup in tenant")
+            raise TransformationProcessError("No call_number_types setup in tenant")
         if not self.holdings_types:
-            raise Exception("No holdings_types setup in tenant")
+            raise TransformationProcessError("No holdings_types setup in tenant")
         if not self.folio.locations:
-            raise Exception("No locations set up in tenant")
+            raise TransformationProcessError("No locations set up in tenant")
 
         # Set defaults
         logging.info("Defaults")
         self.default_call_number_type_id = default_call_number_type_id
-        logging.info(f"Callnumber type:\t{self.default_call_number_type_id}")
+        logging.info(f"Default Callnumber type ID:\t{self.default_call_number_type_id}")
         self.default_call_number_type = next(
-            ct for ct in self.folio.call_number_types if ct["name"] == "Other scheme"
+            ct
+            for ct in self.folio.call_number_types
+            if ct["id"] == self.default_call_number_type_id
         )
-        logging.info(f"call_number_type\t{self.default_call_number_type}")
+        if not self.default_call_number_type:
+            raise TransformationProcessError(
+                f"No callnumber type with ID "
+                f"{self.default_call_number_type_id} set up in tenant"
+            )
+        logging.info(
+            f"Default Callnumber type Name:\t{self.default_call_number_type['name']}"
+        )
         t = self.get_ref_data_tuple_by_name(
             self.holdings_types, "holdings_types", "Unmapped"
         )
         if t:
             self.default_holdings_type_id = t[0]
         else:
-            raise Exception("Holdings type Unmapped not set in client")
+            raise TransformationProcessError(
+                "Holdings type Unmapped not set in client: Please add one to the tenant."
+            )
 
         if not self.default_location_code:
-            raise Exception("Default location code is not set up")
+            raise TransformationProcessError(
+                "Default location code is not set up. Make sure it is set up"
+            )
 
         logging.info(f"Default location code is {self.default_location_code}")
         t = self.get_ref_data_tuple_by_code(
@@ -107,7 +128,7 @@ class Conditions:
             self.default_location_id = t[0]
             logging.info(f"Default location id is {self.default_location_id}")
         else:
-            raise Exception(
+            raise TransformationProcessError(
                 f"Default location for {self.default_location_code} is not set up"
             )
 
@@ -123,14 +144,14 @@ class Conditions:
 
         # Raise for empty settings
         if not self.folio.class_types:
-            raise Exception("No class_types setup in tenant")
+            raise TransformationProcessError("No class_types setup in tenant")
 
     def get_condition(
         self, name, value, parameter=None, marc_field: field.Field = None
     ):
         try:
             return self.condition_cache.get(name)(value, parameter, marc_field)
-        # Exception should only handle the missing condition from the cache. 
+        # Exception should only handle the missing condition from the cache.
         # All other exceptions should propagate up
         except Exception:
             attr = getattr(self, "condition_" + str(name))
@@ -142,6 +163,17 @@ class Conditions:
 
     def condition_trim(self, value, parameter, marc_field: field.Field):
         return value.strip()
+
+    def condition_get_value_if_subfield_is_empty(
+        self, value, parameter, marc_field: field.Field
+    ):
+        if value.strip():
+            return value.strip()
+        self.mapper.add_to_migration_report(
+            "Added value since value is empty",
+            f"Tag: {marc_field.tag}. Added value: {parameter['value']}",
+        )
+        return parameter["value"]
 
     def condition_remove_ending_punc(self, value, parameter, marc_field: field.Field):
         v = value
@@ -199,6 +231,7 @@ class Conditions:
             "1": "Publication",
             "2": "Distribution",
             "3": "Manufacture",
+            "4": "Copyright notice date",
         }
         role = roles.get(marc_field.indicator2, "")
         self.mapper.add_to_migration_report(
@@ -236,7 +269,7 @@ class Conditions:
         )
         my_id = identifier_type["id"]
         if not my_id:
-            raise Exception(
+            raise TransformationFieldMappingError(
                 f"no matching identifier_types in {parameter['names']} {marc_field}"
             )
         return my_id
@@ -250,8 +283,9 @@ class Conditions:
             )
             self.mapper.add_to_migration_report("Mapped note types", t[1])
             return t[0]
-        except:
-            raise TransformationCriticalDataError(
+        except Exception as ee:
+            logging.error(ee)
+            raise TransformationRecordFailedError(
                 "unknown",
                 f'Holdings note type mapping error.\tParameter: {parameter.get("name", "")}\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
@@ -268,7 +302,7 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped classification types", t[1])
             return t[0]
         except:
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 "unknown",
                 f'Classification mapping error.\tParameter: "{parameter.get("name", "")}"\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
@@ -277,6 +311,34 @@ class Conditions:
 
     def condition_char_select(self, value, parameter, marc_field: field.Field):
         return value[parameter["from"] : parameter["to"]]
+
+    def condition_set_receipt_status(self, value, parameter, marc_field: field.Field):
+        if len(value) < 7:
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"008 is too short: {value}"
+            )
+            return ""
+        try:
+            status_map = {
+                "0": "Unknown",
+                "1": "Other receipt or acquisition status",
+                "2": "Received and complete or ceased",
+                "3": "On order",
+                "4": "Currently received",
+                "5": "Not currently received",
+                "6": "External access",
+            }
+            mapped_value = status_map[value[6]]
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"{value[6]} mapped to {mapped_value}"
+            )
+
+            return
+        except:
+            self.mapper.add_to_migration_report(
+                "Reciept status mapping", f"{value[6]} not found in map."
+            )
+            return "Unknown"
 
     def condition_set_identifier_type_id_by_name(
         self, value, parameter, marc_field: field.Field
@@ -290,7 +352,7 @@ class Conditions:
             )
             return t[0]
         except:
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 "",
                 f'Unmapped identifier name type: "{parameter["name"]}"\tMARC Field: {marc_field}'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
@@ -320,7 +382,8 @@ class Conditions:
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
             )
             self.mapper.add_to_migration_report(
-                "Mapped note types", f"{marc_field.tag} -> {t[1]}"
+                "Mapped note types",
+                f"{marc_field.tag} ({parameter.get('name', '')}) -> {t[1]}",
             )
             return t[0]
         except:
@@ -374,7 +437,7 @@ class Conditions:
             return self.mapper.instance_id_map[value]["folio_id"]
         except:
             self.mapper.add_stats(self.mapper.stats, "bib id not in map")
-            raise TransformationCriticalDataError(
+            raise TransformationRecordFailedError(
                 f"Old instance id not in map: {value} Field: {marc_field}"
             )
 
@@ -441,8 +504,10 @@ class Conditions:
             return t[0]
 
         self.mapper.add_to_migration_report(
-            "Callnumber types", f"Mapping failed. Setting default CallNumber type."
+            "Callnumber type mapping",
+            "Mapping failed. Setting default CallNumber type.",
         )
+
         return self.default_call_number_type["id"]
 
     def condition_set_electronic_if_serv_remo(
@@ -477,37 +542,44 @@ class Conditions:
             self.mapper.add_to_migration_report("Mapped Alternative title types", t[1])
             return t[0]
         except:
-            raise Exception(
+            raise TransformationFieldMappingError(
                 f"Alternative title type not found for {parameter['name']} {marc_field}"
             )
 
     def condition_set_location_id_by_code(
         self, value, parameter, marc_field: field.Field
     ):
-        self.mapper.add_to_migration_report("Legacy location codes", value)
-
         # Setup mapping if not already set up
-        if "legacy_locations" not in self.ref_data_dicts:
-            d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}
-            self.ref_data_dicts["legacy_locations"] = d
-
+        try:
+            if "legacy_locations" not in self.ref_data_dicts:
+                d = {
+                    lm["legacy_code"]: lm["folio_code"]
+                    for lm in self.mapper.location_map
+                }
+                self.ref_data_dicts["legacy_locations"] = d
+        except KeyError as ke:
+            if "folio_code" in str(ke):
+                raise TransformationProcessError(
+                    "Your location map lacks the column folio_code"
+                )
+            if "legacy_code" in str(ke):
+                raise TransformationProcessError(
+                    "Your location map lacks the column legacy_code"
+                )
         # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
-            mapped_code = self.ref_data_dicts["legacy_locations"].get(value, "")
-            if not mapped_code:
-                self.mapper.add_to_migration_report(
-                    "Locations - Unmapped legacy codes", value
-                )
+            mapped_code = (
+                self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
+            )
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
-            mapped_code = value
-
+            mapped_code = value.strip()
         # Get the FOLIO UUID for the code and return it
         try:
             t = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", mapped_code
             )
             self.mapper.add_to_migration_report(
-                "Mapped Locations", f"{mapped_code}->{t[1]}"
+                "Location mapping", f"'{value}' ({mapped_code}) -> {t[1]}"
             )
             return t[0]
         except Exception:
@@ -515,11 +587,12 @@ class Conditions:
                 self.folio.locations, "locations", parameter["unspecifiedLocationCode"]
             )
             if not t:
-                raise Exception(
+                raise TransformationProcessError(
                     f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
                 )
             self.mapper.add_to_migration_report(
-                "Mapped Locations", f"Default loc returned {mapped_code}->{t[1]}"
+                "Location mapping",
+                f"Unmapped. Set default location. '{value}' ({mapped_code}) -> {t[1]}",
             )
             return t[0]
 
@@ -584,6 +657,8 @@ class Conditions:
         ind1 = marc_field.indicator1
         self.mapper.add_to_migration_report(
             "Set note staff only via indicator",
-            f"{marc_field.tag} indicator1: {ind1} (0 is staff only, all other values are public)",
+            f"{marc_field.tag} indicator1: {ind1} (1 is public, all other values are Staff only)",
         )
-        return ind1 == "0"
+        if ind1 != "1":
+            return "true"
+        return "false"

@@ -1,8 +1,9 @@
 """ Class that processes each MARC record """
 from io import StringIO
 import logging
+from marc_to_folio.folder_structure import FolderStructure
 from marc_to_folio.helper import Helper
-from marc_to_folio.custom_exceptions import TransformationCriticalDataError
+from marc_to_folio.custom_exceptions import TransformationRecordFailedError
 from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
@@ -18,21 +19,24 @@ from jsonschema import ValidationError, validate
 class BibsProcessor:
     """the processor"""
 
-    def __init__(self, mapper, folio_client, results_file, args):
+    def __init__(
+        self,
+        mapper,
+        folio_client,
+        results_file,
+        folder_structure: FolderStructure,
+        args,
+    ):
         self.ils_flavour = args.ils_flavour
         self.suppress = args.suppress
-        self.results_folder = args.results_folder
         self.results_file = results_file
         self.folio_client = folio_client
         self.instance_schema = folio_client.get_instance_json_schema()
         self.mapper: BibsRulesMapper = mapper
         self.args = args
-        self.srs_records_file = open(
-            os.path.join(self.results_folder, "srs.json"), "w+"
-        )
-        self.instance_id_map_file = open(
-            os.path.join(self.results_folder, "instance_id_map.json"), "w+"
-        )
+        self.folders = folder_structure
+        self.srs_records_file = open(self.folders.srs_records_path, "w+")
+        self.instance_id_map_file = open(self.folders.instance_id_map_path, "w+")
 
     def process_record(self, idx, marc_record, inventory_only):
 
@@ -54,25 +58,25 @@ class BibsProcessor:
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
                 self.mapper.add_to_migration_report(
-                    "Preceeding and Succeeding titles", f"{len(prec_titles)}"
+                    "Preceding and Succeeding titles", f"{len(prec_titles)}"
                 )
                 del folio_rec["precedingTitles"]
             succ_titles = folio_rec.get("succeedingTitles", [])
             if succ_titles:
                 del folio_rec["succeedingTitles"]
                 self.mapper.add_to_migration_report(
-                    "Preceeding and Succeeding titles", f"{len(succ_titles)}"
+                    "Preceding and Succeeding titles", f"{len(succ_titles)}"
                 )
             if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
                 Helper.write_to_file(self.results_file, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
                 self.mapper.add_stats(
-                    self.mapper.stats, "Successfully transformed bibs"
+                    self.mapper.stats, "Records successfully transformed"
                 )
                 for id_map_string in id_map_strings:
                     self.instance_id_map_file.write(f"{id_map_string}\n")
                     self.mapper.add_stats(
-                        self.mapper.stats, "Ids written to bib->instance id map"
+                        self.mapper.stats, "Lines written to identifier map"
                     )
 
         except ValueError as value_error:
@@ -84,25 +88,21 @@ class BibsProcessor:
                 self.mapper.stats, "Value Errors (records that failed transformation)"
             )
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details",
             )
-            # raise value_error
-        except ValidationError:
-            self.mapper.add_stats(self.mapper.stats, "Validation Errors")
-            self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
-            )
-            # raise validation_error
-        except TransformationCriticalDataError as error:
+        except TransformationRecordFailedError as error:
             self.mapper.add_stats(self.mapper.stats, "TransformationCriticalDataErrors")
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details. Check log for details",
             )
             logging.critical(error)
 
         except Exception as inst:
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details. Check log for details",
             )
             self.mapper.add_stats(self.mapper.stats, "Transformation exceptions")
             logging.error(type(inst))
@@ -114,26 +114,26 @@ class BibsProcessor:
             raise inst
 
     def validate_instance(self, folio_rec, marc_record, index_or_legacy_id: str):
-        # if self.args.validate:
-        #    validate(folio_rec, self.instance_schema)
         if not folio_rec.get("title", ""):
             s = f"No title in {index_or_legacy_id}"
             self.mapper.add_to_migration_report("Records without titles", s)
             logging.error(s)
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details. Check log for details",
             )
             return False
         if not folio_rec.get("instanceTypeId", ""):
             s = f"No Instance Type Id in {index_or_legacy_id}"
             self.mapper.add_to_migration_report("Records without Instance Type Ids", s)
             self.mapper.add_stats(
-                self.mapper.stats, "Bib records that failed transformation"
+                self.mapper.stats,
+                "Records that failed transformation. Check log for details. Check log for details",
             )
             return False
         return True
 
-    def wrap_up(self):
+    def wrap_up(self):  # sourcery skip: remove-redundant-fstring
         """Finalizes the mapping by writing things out."""
         try:
             self.mapper.wrap_up()
@@ -141,7 +141,7 @@ class BibsProcessor:
             logging.exception(f"error during wrap up")
         logging.info("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
-            holdings_path = os.path.join(self.results_folder, "folio_holdings.json")
+            holdings_path = self.folders.data_folder / "folio_holdings_from_bibs.json"
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
                     Helper.write_to_file(holdings_file, holding)

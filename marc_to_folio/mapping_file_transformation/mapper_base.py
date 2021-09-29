@@ -1,25 +1,28 @@
 import csv
 import json
 import logging
-from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
+import uuid
+from abc import abstractmethod
+
+import requests
+from folioclient import FolioClient
 from marc_to_folio.custom_exceptions import (
-    TransformationCriticalDataError,
-    TransformationDataError,
+    TransformationRecordFailedError,
+    TransformationFieldMappingError,
     TransformationProcessError,
 )
-import uuid
+from marc_to_folio.mapping_file_transformation import ref_data_mapping
+from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from marc_to_folio.report_blurbs import blurbs
-from abc import abstractmethod
-import requests
-import re
-from folioclient import FolioClient
-import os
+
+empty_vals = ["Not mapped", None, ""]
 
 
 class MapperBase:
     def __init__(self, folio_client: FolioClient, schema, record_map):
         self.schema = schema
         self.stats = {}
+        self.total_records = 0
         self.migration_report = {}
         self.folio_client = folio_client
         self.mapped_folio_fields = {}
@@ -29,15 +32,15 @@ class MapperBase:
         self.num_exeptions = 0
         self.num_criticalerrors = 0
         self.ref_data_dicts = {}
-        self.empty_vals = ["Not mapped", None, ""]
+        self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
-        self.e = {}
+        self.field_map = {}  # Map of folio_fields and source fields as an array
         for k in self.record_map["data"]:
-            if not self.e.get(k["folio_field"]):
-                self.e[k["folio_field"]] = [k["legacy_field"]]
+            if not self.field_map.get(k["folio_field"]):
+                self.field_map[k["folio_field"]] = [k["legacy_field"]]
             else:
-                self.e[k["folio_field"]].append(k["legacy_field"])
-
+                self.field_map[k["folio_field"]].append(k["legacy_field"])
+        self.validate_map()
         self.mapped_from_values = {}
         for k in self.record_map["data"]:
             if k["value"] not in [None, ""]:
@@ -45,32 +48,39 @@ class MapperBase:
         logging.info(
             f"Mapped values:\n{json.dumps(self.mapped_from_values, indent=4, sort_keys=True)}"
         )
-
+        legacy_fields = set()
         self.mapped_from_legacy_data = {}
         for k in self.record_map["data"]:
             if (
                 k["legacy_field"] not in self.empty_vals
                 or k["value"] not in self.empty_vals
             ):
+                legacy_fields.add(k["legacy_field"])
                 if not self.mapped_from_legacy_data.get(k["folio_field"]):
                     self.mapped_from_legacy_data[k["folio_field"]] = {k["legacy_field"]}
                 else:
                     self.mapped_from_legacy_data[k["folio_field"]].add(
                         k["legacy_field"]
                     )
+
         logging.info(
-            f"Mapped legacy fields:\n{json.dumps(list(self.mapped_from_legacy_data), indent=4, sort_keys=True)}"
+            f"Mapped legacy fields:\n{json.dumps(list(legacy_fields), indent=4, sort_keys=True)}"
         )
         logging.info(
             f"Mapped FOLIO fields:\n{json.dumps(self.folio_keys, indent=4, sort_keys=True)}"
         )
         csv.register_dialect("tsv", delimiter="\t")
 
+    def validate_map(self):
+        # TODO: Add functionality here to validate that the map is complete.
+        # That it maps the required fields etc
+        return True
+
     def write_migration_report(self, report_file):
         logging.info("Writing migration report")
         report_file.write(f"{blurbs['Introduction']}\n")
         for header in self.migration_report:
-            report_file.write(f"   \n")
+            report_file.write("   \n")
             report_file.write(f"## {header}    \n")
             try:
                 report_file.write(f"{blurbs[header]}    \n")
@@ -83,8 +93,8 @@ class MapperBase:
                 f"<details><summary>Click to expand all {len(self.migration_report[header])} things</summary>     \n"
             )
             report_file.write(f"   \n")
-            report_file.write(f"Measure | Count   \n")
-            report_file.write(f"--- | ---:   \n")
+            report_file.write("Measure | Count   \n")
+            report_file.write("--- | ---:   \n")
             b = self.migration_report[header]
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
             for b in sortedlist:
@@ -94,22 +104,26 @@ class MapperBase:
     def handle_transformation_process_error(
         self, idx, process_error: TransformationProcessError
     ):
-        self.add_to_migration_report(
-            "General statistics", "Records failed due to a process error"
-        )
-
-        logging.error(f"{idx}\t{process_error}")
+        self.add_general_statistics("Critical process error")
+        logging.critical(f"{idx}\t{process_error}")
+        exit()
 
     def handle_transformation_critical_error(
-        self, idx, data_error: TransformationCriticalDataError
+        self, idx, data_error: TransformationRecordFailedError
     ):
         self.add_to_migration_report(
             "General statistics", "Records failed due to a data error"
         )
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
-        if self.num_criticalerrors > 10000:
-            logging.fatal("Stopping. More than 10,000 critical data errors")
+        if self.num_criticalerrors / (idx + 1) > 0.2 and self.num_criticalerrors > 5000:
+            logging.fatal(
+                f"Stopping. More than {self.num_criticalerrors} critical data errors"
+            )
+            logging.error(
+                f"Errors: {self.num_criticalerrors}\terrors/records:"
+                f"{self.num_criticalerrors / (idx + 1)}"
+            )
             exit()
 
     def handle_generic_exception(self, idx, excepion: Exception):
@@ -119,6 +133,11 @@ class MapperBase:
             f"Row {idx:,} failed with the following unhandled Exception: {excepion}  "
             f"of type {type(excepion).__name__}"
         )
+        if self.num_exeptions > 500:
+            logging.fatal(
+                f"Stopping. More than {self.num_exeptions} unhandled exceptions"
+            )
+            exit()
 
     @staticmethod
     def get_mapped_folio_properties_from_map(map):
@@ -126,8 +145,8 @@ class MapperBase:
             k["folio_field"]
             for k in map["data"]
             if (
-                k["legacy_field"] not in ["", "Not mapped"]
-                or k.get("value", "") not in ["", "Not mapped", None]
+                k["legacy_field"] not in empty_vals
+                or k.get("value", "") not in empty_vals
             )
         ]
 
@@ -138,13 +157,13 @@ class MapperBase:
         d_sorted = {
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
         }
-        report_file.write(f"FOLIO Field | Mapped | Empty | Unmapped  \n")
+        report_file.write("FOLIO Field | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             unmapped = total_records - v[0]
             mapped = v[0] - v[1]
             mp = mapped / total_records if total_records else 0
-            mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
+            mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
                 f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
@@ -154,7 +173,7 @@ class MapperBase:
         d_sorted = {
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
         }
-        report_file.write(f"Legacy Field | Present | Mapped | Empty | Unmapped  \n")
+        report_file.write("Legacy Field | Present | Mapped | Empty | Unmapped  \n")
         report_file.write("--- | --- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             present = v[0]
@@ -164,7 +183,7 @@ class MapperBase:
             unmapped = present - v[1]
             mapped = v[1]
             mp = mapped / total_records if total_records else 0
-            mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
+            mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
                 f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
             )
@@ -176,22 +195,12 @@ class MapperBase:
             self.mapped_legacy_fields[field_name][0] += int(was_mapped)
             self.mapped_legacy_fields[field_name][1] += int(was_empty)
 
-    def report_folio_mapping(self, field_name, transformed, was_empty=False):
-        if field_name not in self.mapped_folio_fields:
-            self.mapped_folio_fields[field_name] = [int(transformed), int(was_empty)]
-        else:
-            self.mapped_folio_fields[field_name][0] += int(transformed)
-            self.mapped_folio_fields[field_name][1] += int(was_empty)
-
     def instantiate_record(self):
-        record = {
+        return {
             "metadata": self.folio_client.get_metadata_construct(),
             "id": str(uuid.uuid4()),
             "type": "object",
         }
-        self.report_folio_mapping("id", True)
-        self.report_folio_mapping("metadata", True)
-        return record
 
     def add_stats(self, a):
         # TODO: Move to interface or parent class
@@ -214,31 +223,34 @@ class MapperBase:
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
             # Get the values in the fields that will be used for mapping
-            fieldvalues = [legacy_object.get(k) for k in ref_dat_mapping.keys]
+
+            fieldvalues = [
+                legacy_object.get(k) for k in ref_dat_mapping.mapped_legacy_keys
+            ]
             # logging.debug(f"fieldvalues are {fieldvalues}")
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
             # TODO: add option for Wild card matching in individual columns
-            right_mapping = next(
-                mapping
-                for mapping in ref_dat_mapping.map
-                if all(
-                    legacy_object[k].strip().casefold() == mapping[k].casefold()
-                    for k in ref_dat_mapping.keys
-                )
-            )
-            # logging.debug(f"Found mapping is {right_mapping}")
+            right_mapping = self.get_ref_data_mapping(legacy_object, ref_dat_mapping)
+            if not right_mapping:
+                # Not all fields matched. Could it be a hybrid wildcard map?
+                right_mapping = self.get_hybrid_mapping(legacy_object, ref_dat_mapping)
+
+            if not right_mapping:
+                raise StopIteration()
+            logging.debug(f"Found mapping is {right_mapping}")
             self.add_to_migration_report(
                 f"{ref_dat_mapping.name} mapping",
                 f'{" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',
             )
             return right_mapping["folio_id"]
         except StopIteration:
+            logging.debug(f"{ref_dat_mapping.name} mapping stopiteration")
             if prevent_default:
                 self.add_to_migration_report(
                     f"{ref_dat_mapping.name} mapping",
-                    f'Unmapped -- {" - ".join(fieldvalues)} -> "" (No default)',
+                    f'Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""',
                 )
                 return ""
             self.add_to_migration_report(
@@ -247,14 +259,45 @@ class MapperBase:
             )
             return ref_dat_mapping.default_id
         except IndexError as ee:
-            raise TransformationCriticalDataError(
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                f"({ref_dat_mapping.keys}) {ee} is not a recognized fields in the legacy data."
+            logging.debug(f"{ref_dat_mapping.name} mapping indexerror")
+            raise TransformationRecordFailedError(
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized fields in the legacy data."
             )
+
         except Exception as ee:
-            raise TransformationCriticalDataError(
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.keys}) {ee}"
+            logging.debug(f"{ref_dat_mapping.name} mapping general error")
+            raise TransformationRecordFailedError(
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}"
             )
+
+    @staticmethod
+    def get_hybrid_mapping(legacy_object, rdm: RefDataMapping):
+        highest_match = None
+        highest_match_number = 0
+        for mapping in rdm.hybrid_mappings:
+            match_number = 0
+            match_number_wildcard = 0
+            for k in rdm.mapped_legacy_keys:
+                if mapping[k] == legacy_object[k]:
+                    match_number += 1
+                elif mapping[k] == "*":
+                    match_number_wildcard += 1
+            if (
+                match_number + match_number_wildcard == len(rdm.mapped_legacy_keys)
+                and match_number > highest_match_number
+            ):
+                highest_match_number = match_number
+                highest_match = mapping
+        return highest_match
+
+    @staticmethod
+    def get_ref_data_mapping(legacy_object, rdm: RefDataMapping):
+        for mapping in rdm.regular_mappings:
+            if all(
+                False for k in rdm.mapped_legacy_keys if legacy_object[k] != mapping[k]
+            ):
+                return mapping
+        return None
 
     def add_to_migration_report(self, header: str, measure_to_add: str):
         if header not in self.migration_report:
@@ -263,6 +306,10 @@ class MapperBase:
             self.migration_report[header][measure_to_add] = 1
         else:
             self.migration_report[header][measure_to_add] += 1
+
+    def add_general_statistics(self, measure_to_add: str):
+        header = "General statistics"
+        self.add_to_migration_report(header, measure_to_add)
 
     def set_to_migration_report(self, header: str, measure_to_add: str, number: int):
         if header not in self.migration_report:
@@ -286,7 +333,7 @@ class MapperBase:
                     index_or_id,
                     legacy_object,
                 )
-            except TransformationDataError as data_error:
+            except TransformationFieldMappingError as data_error:
                 self.add_stats("Data issues found")
                 logging.error(data_error)
         self.validate_object(folio_object, index_or_id)
@@ -300,10 +347,13 @@ class MapperBase:
         index_or_id,
         legacy_object,
     ):
-        if property_level1.get("description", "") == "Deprecated":
-            self.report_folio_mapping(f"{property_name_level1} (deprecated)", False)
-        elif skip_property(property_name_level1, property_level1):
-            self.report_folio_mapping(f"{property_name_level1} (skipped)", False)
+        if property_level1.get("description", "") == "Deprecated" or skip_property(
+            property_name_level1, property_level1
+        ):
+            self.add_to_migration_report(
+                "Properties in Schema excluded from transformation",
+                property_name_level1,
+            )
         elif property_level1["type"] == "object":
             if "properties" in property_level1:
                 self.map_object_props(
@@ -330,10 +380,7 @@ class MapperBase:
                     index_or_id,
                 )
             else:
-                self.report_folio_mapping(
-                    f'Unhandled array of {property_level1["items"]["type"]}: {property_name_level1}',
-                    False,
-                )
+                logging.debug(f"")
         else:  # Basic property
             self.map_basic_props(
                 legacy_object, property_name_level1, folio_object, index_or_id
@@ -341,15 +388,21 @@ class MapperBase:
 
     def validate_object(self, folio_object, index_or_id):
         required = self.schema["required"]
+        missing = []
         for required_prop in required:
             if required_prop not in folio_object:
-                raise TransformationCriticalDataError(
-                    f"Required property {required_prop} missing for {index_or_id}"
-                )
+                if index_or_id == "row 1":
+                    logging.info(json.dumps(folio_object, indent=4))
+                missing.append(f"Missing: {required_prop}")
             elif not folio_object[required_prop]:
-                raise TransformationCriticalDataError(
-                    f"Required property {required_prop} empty for {index_or_id}"
-                )
+                if index_or_id == "row 1":
+                    logging.info(json.dumps(folio_object, indent=4))
+                missing.append(f"Empty: {required_prop}")
+        if any(missing):
+            raise TransformationRecordFailedError(
+                f"Required properties empty for {index_or_id}\t{json.dumps(missing)}"
+            )
+
         del folio_object["type"]
 
     @staticmethod
@@ -378,18 +431,11 @@ class MapperBase:
                 for property_name_level3, property_level3 in property_level2[
                     "properties"
                 ].items():
-                    self.report_folio_mapping(
-                        f"{sub_prop_key}.{property_name_level3} (Unmapped {property_level3.get('type','')})",
-                        False,
-                    )
+                    # not parsing stuff on level three.
+                    pass
             elif property_level2["type"] == "array":
-                self.report_folio_mapping(
-                    (
-                        f"{property_name_level2}"
-                        f" (Unmapped {property_level2['items']['type']})"
-                    ),
-                    False,
-                )
+                # not parsing arrays on level 2
+                pass
                 """
                 # Object with subprop array
                 temp_object[property_name_level2] = []
@@ -432,15 +478,13 @@ class MapperBase:
             for prop in (
                 k for k, p in properties.items() if not p.get("folio:isVirtual", False)
             ):
-
                 prop_path = f"{prop_name}[{i}].{prop}"
                 # logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
                     res = self.get_prop(legacy_object, prop_path, index_or_id)
                     self.report_legacy_mapping(
-                        self.legacy_property(prop), True, res in ["", None, []]
+                        self.legacy_basic_property(prop), True, res in ["", None, []]
                     )
-                    self.report_folio_mapping(prop_path, True, res in ["", None, []])
                     temp_object[prop] = res
 
             if temp_object != {} and all(
@@ -448,40 +492,35 @@ class MapperBase:
             ):
                 # logging.debug(f"temporary object {temp_object}")
                 resulting_array.append(temp_object)
-            else:
-                #logging.debug(json.dumps(temp_object, indent=4))
-                logging.debug(f"Temporary Object is not complete: {prop_name} ")
+            # else:
+            #    logging..trace(f"empty temp object {json.dumps(temp_object, indent=4)}")
         if any(resulting_array):
             folio_object[prop_name] = resulting_array
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
-        # logging.debug(f"String array {prop}")
+        logging.debug(f"String array {prop}")
         for i in range(9):
             prop_name = f"{prop}[{i}]"
-            if prop_name in self.folio_keys:
-                if self.has_property(legacy_object, prop_name):
-                    mapped_prop = self.get_prop(legacy_object, prop_name, index_or_id)
-                    if mapped_prop:
-                        # logging.debug(f"Mapped string array prop {mapped_prop}")
-                        if (
-                            prop in folio_object
-                            and mapped_prop not in folio_object.get(prop, [])
-                        ):
-                            folio_object.get(prop, []).append(mapped_prop)
-                        else:
-                            folio_object[prop] = [mapped_prop]
-                        # logging.debug(f"Mapped string array prop {folio_object[prop]}")
-                        self.report_legacy_mapping(
-                            self.legacy_property(prop_name), True, False
-                        )
-                        self.report_folio_mapping(prop_name, True, False)
-                    else:  # Match but empty field. Lets report this
-                        self.report_legacy_mapping(
-                            self.legacy_property(prop_name), True, True
-                        )
-                        self.report_folio_mapping(prop_name, True, True)
-                else:
-                    self.report_folio_mapping(prop_name, False)
+            if prop_name in self.folio_keys and self.has_property(
+                legacy_object, prop_name
+            ):
+                mapped_prop = self.get_prop(legacy_object, prop_name, index_or_id)
+                if mapped_prop:
+                    # logging.debug(f"Mapped string array prop {mapped_prop}")
+                    if prop in folio_object and mapped_prop not in folio_object.get(
+                        prop, []
+                    ):
+                        folio_object.get(prop, []).append(mapped_prop)
+                    else:
+                        folio_object[prop] = [mapped_prop]
+                    # logging.debug(f"Mapped string array prop {folio_object[prop]}")
+                    self.report_legacy_mapping(
+                        self.legacy_basic_property(prop_name), True, False
+                    )
+                else:  # Match but empty field. Lets report this
+                    self.report_legacy_mapping(
+                        self.legacy_basic_property(prop_name), True, True
+                    )
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
@@ -491,12 +530,8 @@ class MapperBase:
                 self.report_legacy_mapping(
                     self.legacy_basic_property(prop), True, False
                 )
-                self.report_folio_mapping(prop, True, False)
             else:  # Match but empty field. Lets report this
-                self.report_legacy_mapping(self.legacy_property(prop), True, True)
-                self.report_folio_mapping(prop, True, True)
-        else:
-            self.report_folio_mapping(prop, False)
+                self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
 
     def get_objects(self, source_file, file_name: str):
         if file_name.endswith("tsv"):
@@ -515,23 +550,11 @@ class MapperBase:
         if not self.use_map:
             return folio_prop_name in legacy_object
 
-        # if folio_prop_name not in self.folio_keys:
-        #     return False
-        """legacy_key = next(
-                (
-                    k["legacy_field"]
-                    for k in self.record_map["data"]
-                    if k["folio_field"] == folio_prop_name
-                    or re.sub(self.arr_re, ".", k["folio_field"]).strip(".")
-                    == folio_prop_name
-                ),
-                "",
-            )"""
-        legacy_keys = self.e.get(folio_prop_name, [])
+        legacy_keys = self.field_map.get(folio_prop_name, [])
         # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
             any(legacy_keys)
-            and any(k not in ["", "Not mapped"] for k in legacy_keys)
+            and any(k not in empty_vals for k in legacy_keys)
             and any(legacy_object.get(legacy_key, "") for legacy_key in legacy_keys)
         )
 
@@ -542,41 +565,17 @@ class MapperBase:
         if folio_prop_name not in self.folio_keys:
             # logging.debug(f"map_basic_props -> {folio_prop_name}")
             return False
-        """legacy_key = next(
-                (
-                    k["legacy_field"]
-                    for k in self.record_map["data"]
-                    if k["folio_field"] == folio_prop_name
-                ),
-                "",
-            )"""
-        legacy_keys = self.e.get(folio_prop_name, [])
+        legacy_keys = self.field_map.get(folio_prop_name, [])
         # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
             any(legacy_keys)
-            and any(k not in ["", "Not mapped"] for k in legacy_keys)
+            and any(k not in empty_vals for k in legacy_keys)
             and any(legacy_object.get(legacy_key, "") for legacy_key in legacy_keys)
-        )
-
-    def legacy_property(self, folio_prop):
-        if not self.use_map:
-            return folio_prop
-
-        if folio_prop not in self.folio_keys:
-            return ""
-        return next(
-            (
-                k["legacy_field"]
-                for k in self.record_map["data"]
-                if k["folio_field"] == folio_prop
-            ),
-            "",
         )
 
     def legacy_basic_property(self, folio_prop):
         if not self.use_map:
             return folio_prop
-
         if folio_prop not in self.folio_keys:
             return ""
         return next(
