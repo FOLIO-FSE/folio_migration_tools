@@ -22,7 +22,7 @@ class HoldingsProcessor:
     ):
         self.folder_structure: FolderStructure = folder_structure
         self.records_count = 0
-        self.missing_instance_id_count = 0
+        self.failed_records_count = 0
         self.mapper: RulesMapperHoldings = mapper
         self.start = time.time()
         self.suppress = suppress
@@ -34,14 +34,13 @@ class HoldingsProcessor:
         """processes a marc holdings record and saves it"""
         try:
             self.records_count += 1
+
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record)
             if not folio_rec.get("instanceId", ""):
-                self.missing_instance_id_count += 1
-                if self.missing_instance_id_count > 1000:
-                    raise TransformationRecordFailedError(
-                        f"More than 1000 missing instance ids. Something is wrong. Last 004: {marc_record['004']}"
-                    )
+                raise TransformationRecordFailedError(
+                    f"Missing instance ids. Something is wrong. 004: {marc_record['004']}"
+                )
             folio_rec["discoverySuppress"] = self.suppress
             Helper.write_to_file(self.created_objects_file, folio_rec)
             add_stats(self.mapper.stats, "Holdings records written to disk")
@@ -51,13 +50,20 @@ class HoldingsProcessor:
                 elapsed = self.records_count / (time.time() - self.start)
                 elapsed_formatted = "{0:.4g}".format(elapsed)
                 logging.info(f"{elapsed_formatted}\t\t{self.records_count}")
+                if self.failed_records_count / (self.records_count + 1) > 0.2:
+                    logging.critical(
+                        "More than 20 percent of the records have failed. Halting"
+                    )
+                    exit()
         except TransformationRecordFailedError as data_error:
+            self.failed_records_count += 1
             add_stats(self.mapper.stats, "Critical data errors")
             add_stats(self.mapper.stats, "Failed records")
             logging.error(data_error)
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
             if callable(remove_from_id_map):
                 self.mapper.remove_from_id_map(marc_record)
+
         except ValidationError as validation_error:
             add_stats(self.mapper.stats, "Validation errors")
             add_stats(self.mapper.stats, "Failed records")

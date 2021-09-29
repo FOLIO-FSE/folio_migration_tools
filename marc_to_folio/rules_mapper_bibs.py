@@ -124,6 +124,7 @@ class BibsRulesMapper(RulesMapperBase):
                             "legacy_id": legacy_id,
                             "folio_id": folio_instance["id"],
                             "instanceLevelCallNumber": instance_level_call_number,
+                            "suppressed": self.suppress,
                         }
                     )
                 )

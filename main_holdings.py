@@ -80,12 +80,12 @@ def main():
         for f in listdir(folder_structure.legacy_records_folder)
         if isfile(os.path.join(folder_structure.legacy_records_folder, f))
     ]
-    with open(folder_structure.instance_id_map_path) as json_file, open(
+    with open(folder_structure.instance_id_map_path) as instance_id_map_file, open(
         folder_structure.locations_map_path
     ) as location_map_f, open(folder_structure.mfhd_rules_path) as mapping_rules_file:
         instance_id_map = {}
-        for index, json_string in enumerate(json_file):
-            # {"legacy_id", "folio_id","instanceLevelCallNumber"}
+        for index, json_string in enumerate(instance_id_map_file):
+            # {"legacy_id", "folio_id","instanceLevelCallNumber", "suppressed"}
             map_object = json.loads(json_string)
             if index % 50000 == 0:
                 print(
