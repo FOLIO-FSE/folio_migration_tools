@@ -42,9 +42,9 @@ class HoldingsMapper(MapperBase):
         legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
         legacy_value = " ".join(legacy_values).strip()
         if folio_prop_name == "permanentLocationId":
-            return self.get_location_id(legacy_item, index_or_id)
-        elif folio_prop_name == "temporaryLocationId": 
-            return self.get_location_id(legacy_item, index_or_id, True)
+            return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
+        elif folio_prop_name == "temporaryLocationId":
+            return self.get_location_id(legacy_item, index_or_id, folio_prop_name, True)
         elif folio_prop_name == "callNumber":
             if legacy_value.startswith("["):
                 self.add_stats("Bound-with items callnumber identified")
@@ -54,15 +54,13 @@ class HoldingsMapper(MapperBase):
                 )
             return legacy_value
         elif folio_prop_name == "callNumberTypeId":
-            return self.get_call_number_type_id(legacy_item)
+            return self.get_call_number_type_id(legacy_item, folio_prop_name)
         elif folio_prop_name == "statisticalCodeIds":
             return self.get_statistical_codes(legacy_values)
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(legacy_value, index_or_id)
         elif len(legacy_item_keys) == 1:
-            logging.debug(
-                f"One value from one property to return{folio_prop_name} "
-            )
+            logging.debug(f"One value from one property to return{folio_prop_name} ")
             value = self.mapped_from_values.get(folio_prop_name, "")
             if value in [None, ""]:
                 return legacy_value
@@ -76,18 +74,18 @@ class HoldingsMapper(MapperBase):
             # edge case
             return ""
 
-    def get_location_id(self, legacy_item: dict, id_or_index, prevent_default=False):
+    def get_location_id(
+        self, legacy_item: dict, id_or_index, folio_prop_name, prevent_default=False
+    ):
         return self.get_mapped_value(
-            self.location_mapping,
-            legacy_item, prevent_default
+            self.location_mapping, legacy_item, folio_prop_name, prevent_default
         )
 
-    def get_call_number_type_id(self, legacy_item):
+    def get_call_number_type_id(self, legacy_item, folio_prop_name: str):
         if self.call_number_mapping:
             return self.get_mapped_value(
-                    self.call_number_mapping,
-                    legacy_item
-                )
+                self.call_number_mapping, legacy_item, folio_prop_name
+            )
         self.add_to_migration_report("Call number type mapping", "No mapping")
         return ""
 
