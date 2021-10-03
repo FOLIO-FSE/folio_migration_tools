@@ -290,13 +290,11 @@ class MapperBase:
 
     @staticmethod
     def get_ref_data_mapping(legacy_object, rdm: RefDataMapping):
-        print("apa")
         for mapping in rdm.regular_mappings:
             match_number = sum(
                 legacy_object[k].strip() == mapping[k].strip()
                 for k in rdm.mapped_legacy_keys
             )
-            print(f"{match_number}-{mapping}")
             if match_number == len(rdm.mapped_legacy_keys):
                 return mapping
         return None
