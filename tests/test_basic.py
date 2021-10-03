@@ -37,19 +37,18 @@ def test_get_hybrid_mapping():
         assert res == mappings[1]
 
 
-def test_get_hybrid_mapping2():
+def test_normal_refdata_mapping_strip():
     mappings = [
-        {"location": "l_2", "loan_type": "*", "material_type": "*"},
-        {"location": "*", "loan_type": "*", "material_type": "mt_1"},
-        {"location": "l_1", "loan_type": "*", "material_type": "*"},
+        {"location": "l_2", "loan_type": "lt2", "material_type": "mt_1"},
+        {"location": "L_1", "loan_type": "Lt1", "material_type": "Mt_1"},
+        {"location": "l_1", "loan_type": "lt1 ", "material_type": "mt2"},
     ]
-    legacy_object = {"location": "l_1", "loan_type": "lt_1", "material_type": "mt_1"}
+    legacy_object = {"location": "l_1 ", "loan_type": "lt1", "material_type": "mt2"}
     with patch(
         "marc_to_folio.mapping_file_transformation.ref_data_mapping.RefDataMapping"
     ) as mock_rdm:
         instance = mock_rdm.return_value
-
         instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        instance.hybrid_mappings = mappings
-        res = mapper_base.MapperBase.get_hybrid_mapping(legacy_object, instance)
-        assert res == mappings[1]
+        instance.regular_mappings = mappings
+        res = mapper_base.MapperBase.get_ref_data_mapping(legacy_object, instance)
+        assert res == mappings[2]

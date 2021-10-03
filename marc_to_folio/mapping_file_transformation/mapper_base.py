@@ -223,11 +223,9 @@ class MapperBase:
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
             # Get the values in the fields that will be used for mapping
-
             fieldvalues = [
                 legacy_object.get(k) for k in ref_dat_mapping.mapped_legacy_keys
             ]
-            # logging.debug(f"fieldvalues are {fieldvalues}")
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
@@ -292,10 +290,14 @@ class MapperBase:
 
     @staticmethod
     def get_ref_data_mapping(legacy_object, rdm: RefDataMapping):
+        print("apa")
         for mapping in rdm.regular_mappings:
-            if all(
-                False for k in rdm.mapped_legacy_keys if legacy_object[k] != mapping[k]
-            ):
+            match_number = sum(
+                legacy_object[k].strip() == mapping[k].strip()
+                for k in rdm.mapped_legacy_keys
+            )
+            print(f"{match_number}-{mapping}")
+            if match_number == len(rdm.mapped_legacy_keys):
                 return mapping
         return None
 
