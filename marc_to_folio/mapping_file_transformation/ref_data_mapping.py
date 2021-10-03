@@ -71,9 +71,9 @@ class RefDataMapping(object):
                     mapping["folio_id"] = t[0]
             except TransformationProcessError as te:
                 raise te
-            except Exception as ee:
+            except:
                 logging.info(json.dumps(self.map, indent=4))
-                logging.exception()
+                logging.exception("")
                 raise TransformationProcessError(
                     f'{mapping[f"folio_{self.key_type}"]} could not be found in FOLIO'
                 )
@@ -147,10 +147,9 @@ class RefDataMapping(object):
 
 
 def get_mapped_legacy_keys(mapping):
-    legacy_keys = [
+    # logging.info(json.dumps(legacy_keys, indent=4))
+    return [
         k
         for k in mapping.keys()
         if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
     ]
-    # logging.info(json.dumps(legacy_keys, indent=4))
-    return legacy_keys

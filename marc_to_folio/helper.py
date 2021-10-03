@@ -40,6 +40,10 @@ class Helper:
             file.write("{}\n".format(json.dumps(folio_record)))
 
     @staticmethod
+    def log_data_issue(index_or_id, message, legacy_value):
+        logging.log(26, f"DATA ISSUE\t{index_or_id}\t{message}\t{legacy_value}")
+
+    @staticmethod
     def get_latest_from_github(owner, repo, filepath):
 
         """[gets the a json file from Github tied to the latest release]

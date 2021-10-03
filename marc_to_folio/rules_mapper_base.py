@@ -207,13 +207,13 @@ class RulesMapperBase:
                 rec[key] = res
 
     def map_field_according_to_mapping(
-        self, marc_field: pymarc.Field, mappings, folio_record
+        self, marc_field: pymarc.Field, mappings, folio_record, index_or_legacy_id
     ):
         for mapping in mappings:
             if "entity" not in mapping:
                 target = mapping["target"]
                 if has_conditions(mapping):
-                    values = self.apply_rules(marc_field, mapping)
+                    values = self.apply_rules(marc_field, mapping, index_or_legacy_id)
                     # TODO: add condition to customize this...
                     if marc_field.tag == "655":
                         values[0] = f"Genre: {values[0]}"
@@ -238,45 +238,52 @@ class RulesMapperBase:
             else:
                 e_per_subfield = mapping.get("entityPerRepeatedSubfield", False)
                 self.handle_entity_mapping(
-                    marc_field, mapping["entity"], folio_record, e_per_subfield
+                    marc_field,
+                    mapping["entity"],
+                    folio_record,
+                    e_per_subfield,
+                    index_or_legacy_id,
                 )
 
-    def apply_rules(self, marc_field: pymarc.Field, mapping):
+    def get_value_from_condition(
+        self,
+        mapping,
+        marc_field,
+    ):
+        condition_types = [
+            x.strip() for x in mapping["rules"][0]["conditions"][0]["type"].split(",")
+        ]
+        parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
+        if mapping.get("applyRulesOnConcatenatedData", ""):
+            value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+            return self.apply_rule(value, condition_types, marc_field, parameter)
+        elif mapping.get("subfield", []):
+            if mapping.get("ignoreSubsequentFields", False):
+                subfields = []
+                for sf in mapping["subfield"]:
+                    next_subfield = next(iter(marc_field.get_subfields(sf)), "")
+                    subfields.append(next_subfield)
+                return " ".join(
+                    self.apply_rule(x, condition_types, marc_field, parameter)
+                    for x in subfields
+                )
+            else:
+                subfields = marc_field.get_subfields(*mapping["subfield"])
+                x = [
+                    self.apply_rule(x, condition_types, marc_field, parameter)
+                    for x in subfields
+                ]
+                return " ".join(set(x))
+        else:
+            value1 = marc_field.format_field() if marc_field else ""
+            return self.apply_rule(value1, condition_types, marc_field, parameter)
+
+    def apply_rules(self, marc_field: pymarc.Field, mapping, index_or_legacy_id):
         try:
             values = []
             value = ""
             if has_conditions(mapping):
-                c_type_def = mapping["rules"][0]["conditions"][0]["type"].split(",")
-                condition_types = [x.strip() for x in c_type_def]
-                parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
-                # logging.info(f'conditions {condition_types}')
-                if mapping.get("applyRulesOnConcatenatedData", ""):
-                    value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-                    value = self.apply_rule(
-                        value, condition_types, marc_field, parameter
-                    )
-                elif mapping.get("subfield", []):
-                    if mapping.get("ignoreSubsequentFields", False):
-                        sfs = []
-                        for sf in mapping["subfield"]:
-                            next_subfield = next(iter(marc_field.get_subfields(sf)), "")
-                            sfs.append(next_subfield)
-                        value = " ".join(
-                            self.apply_rule(x, condition_types, marc_field, parameter)
-                            for x in sfs
-                        )
-                    else:
-                        subfields = marc_field.get_subfields(*mapping["subfield"])
-                        x = [
-                            self.apply_rule(x, condition_types, marc_field, parameter)
-                            for x in subfields
-                        ]
-                        value = " ".join(set(x))
-                else:
-                    value1 = marc_field.format_field() if marc_field else ""
-                    value = self.apply_rule(
-                        value1, condition_types, marc_field, parameter
-                    )
+                value = self.get_value_from_condition(mapping, marc_field)
             elif has_value_to_add(mapping):
                 value = mapping["rules"][0]["value"]
                 if value == "false":
@@ -295,10 +302,10 @@ class RulesMapperBase:
             logging.fatal(f"{te}. Quitting...")
             exit()
         except TransformationFieldMappingError as fme:
+            fme.log_it()
             logging.error(
                 f"Non-critical mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
             )
-            logging.error(fme)
             return []
         except TransformationRecordFailedError as ee:
             logging.error(
@@ -412,11 +419,13 @@ class RulesMapperBase:
                 f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
             )
 
-    def create_entity(self, entity_mappings, marc_field, entity_parent_key):
+    def create_entity(
+        self, entity_mappings, marc_field, entity_parent_key, index_or_legacy_id
+    ):
         entity = {}
         for entity_mapping in entity_mappings:
             k = entity_mapping["target"].split(".")[-1]
-            values = self.apply_rules(marc_field, entity_mapping)
+            values = self.apply_rules(marc_field, entity_mapping, index_or_legacy_id)
             if values:
                 if entity_parent_key == k:
                     entity = values[0]
@@ -425,7 +434,12 @@ class RulesMapperBase:
         return entity
 
     def handle_entity_mapping(
-        self, marc_field, entity_mapping, folio_record, e_per_subfield
+        self,
+        marc_field,
+        entity_mapping,
+        folio_record,
+        e_per_subfield,
+        index_or_legacy_id,
     ):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
@@ -435,13 +449,17 @@ class RulesMapperBase:
                     indicators=marc_field.indicators,
                     subfields=[sf_tuple[0], sf_tuple[1]],
                 )
-                entity = self.create_entity(entity_mapping, temp_field, e_parent)
+                entity = self.create_entity(
+                    entity_mapping, temp_field, e_parent, index_or_legacy_id
+                )
                 if (type(entity) is dict and any(entity.values())) or (
                     type(entity) is list and any(entity)
                 ):
                     self.add_entity_to_record(entity, e_parent, folio_record)
         else:
-            entity = self.create_entity(entity_mapping, marc_field, e_parent)
+            entity = self.create_entity(
+                entity_mapping, marc_field, e_parent, index_or_legacy_id
+            )
             if e_parent in ["precedingTitles", "succeedingTitles"]:
                 self.create_preceding_succeeding_titles(
                     entity, e_parent, folio_record["id"]

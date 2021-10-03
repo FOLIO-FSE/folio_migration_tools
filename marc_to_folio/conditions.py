@@ -270,7 +270,7 @@ class Conditions:
         my_id = identifier_type["id"]
         if not my_id:
             raise TransformationFieldMappingError(
-                f"no matching identifier_types in {parameter['names']} {marc_field}"
+                "", f"no matching identifier_types in {parameter['names']}", marc_field
             )
         return my_id
 

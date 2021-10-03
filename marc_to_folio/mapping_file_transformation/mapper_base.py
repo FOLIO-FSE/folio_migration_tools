@@ -114,7 +114,8 @@ class MapperBase:
         self.add_to_migration_report(
             "General statistics", "Records failed due to a data error"
         )
-        logging.error(f"{idx}\t{data_error}")
+        data_error.id = idx
+        data_error.log_it()
         self.num_criticalerrors += 1
         if self.num_criticalerrors / (idx + 1) > 0.2 and self.num_criticalerrors > 5000:
             logging.fatal(
@@ -221,6 +222,7 @@ class MapperBase:
         self,
         ref_dat_mapping: RefDataMapping,
         legacy_object,
+        index_or_id,
         folio_property_name="",
         prevent_default=False,
     ):
@@ -269,13 +271,15 @@ class MapperBase:
         except IndexError as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping indexerror")
             raise TransformationRecordFailedError(
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized field in the legacy data."
+                index_or_id,
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized field in the legacy data.",
             )
 
         except Exception as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping general error")
             raise TransformationRecordFailedError(
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}"
+                index_or_id,
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}",
             )
 
     @staticmethod
@@ -342,8 +346,8 @@ class MapperBase:
                     legacy_object,
                 )
             except TransformationFieldMappingError as data_error:
+                data_error.log_it()
                 self.add_stats("Data issues found")
-                logging.error(data_error)
         self.validate_object(folio_object, index_or_id)
         return folio_object
 

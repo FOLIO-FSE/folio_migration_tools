@@ -43,12 +43,18 @@ class BibsProcessor:
         """processes a marc record and saves it"""
         try:
             index_or_legacy_id = self.mapper.get_legacy_ids(
-                marc_record, self.ils_flavour
+                marc_record, self.ils_flavour, idx
             )
-        except:
+        except TransformationRecordFailedError as trf:
+            trf.log_it()
+        except Exception as ee:
             index_or_legacy_id = [
                 f"Index in file: {idx}"
             ]  # Only used for reporting purposes
+            logging.log(
+                26,
+                f"Smaller issue\t{index_or_legacy_id}\t001 nor legacy id found\t{ee}",
+            )
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
@@ -95,9 +101,10 @@ class BibsProcessor:
             self.mapper.add_stats(self.mapper.stats, "TransformationCriticalDataErrors")
             self.mapper.add_stats(
                 self.mapper.stats,
-                "Records that failed transformation. Check log for details. Check log for details",
+                "Records that failed transformation. Check log for details",
             )
-            logging.critical(error)
+            error.id = index_or_legacy_id
+            error.log_it()
 
         except Exception as inst:
             self.mapper.add_stats(

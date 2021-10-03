@@ -70,13 +70,16 @@ class Worker(main_base.MainBase):
                             logging.info("FORCE UTF-8 is set to FALSE")
                             reader.force_utf8 = False
                         logging.info(f"running {file_name}")
-                        self.read_records(reader)
+                        self.read_records(reader, file_name)
+                except TransformationProcessError as tpe:
+                    logging.critical(tpe)
+                    exit()
                 except Exception:
                     logging.exception(file_name, stack_info=True)
             # wrap up
             self.wrap_up()
 
-    def read_records(self, reader):
+    def read_records(self, reader, file_name):
         for idx, record in enumerate(reader):
             self.mapper.add_stats(self.mapper.stats, "Records in file before parsing")
             try:
@@ -90,7 +93,7 @@ class Worker(main_base.MainBase):
                         "Records with encoding errors - parsing failed",
                     )
                     raise TransformationRecordFailedError(
-                        f"Index in file:{idx}",
+                        f"Index in {file_name}:{idx}",
                         f"MARC parsing error: {reader.current_exception}",
                         reader.current_chunk,
                     )
@@ -102,8 +105,8 @@ class Worker(main_base.MainBase):
                     )
                     self.processor.process_record(idx, record, False)
             except TransformationRecordFailedError as error:
-                logging.error(error)
-        logging.info(f"Done reading {idx} records from file")
+                error.log_it()
+        logging.info(f"Done reading {idx+1} records from file")
 
     @staticmethod
     def set_leader(marc_record: Record):
@@ -114,9 +117,9 @@ class Worker(main_base.MainBase):
         logging.info("Done. Wrapping up...")
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write(f"# Bibliographic records transformation results   \n")
+            report_file.write("# Bibliographic records transformation results   \n")
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
-            report_file.write(f"## Bibliographic records transformation counters   \n")
+            report_file.write("## Bibliographic records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
                 self.mapper.stats,
                 report_file,
@@ -204,7 +207,7 @@ def main():
         logging.info(f"Okapi URL:\t{args.okapi_url}")
         logging.info(f"Tenant Id:\t{args.tenant_id}")
         logging.info(f"Username:   \t{args.username}")
-        logging.info(f"Password:   \tSecret")
+        logging.info("Password:   \tSecret")
         try:
             folio_client = FolioClient(
                 args.okapi_url, args.tenant_id, args.username, args.password

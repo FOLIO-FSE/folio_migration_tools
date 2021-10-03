@@ -54,19 +54,16 @@ class RulesMapperHoldings(RulesMapperBase):
 
             if marc_field.tag not in self.mappings:
                 self.report_legacy_mapping(marc_field.tag, True, False, False)
-            else:
-                if marc_field.tag not in ignored_subsequent_fields:
-                    mappings = self.mappings[marc_field.tag]
-                    # logging.debug(mappings)
-                    self.map_field_according_to_mapping(
-                        marc_field, mappings, folio_holding
-                    )
-                    self.report_legacy_mapping(marc_field.tag, True, True, False)
-                    if any(m.get("ignoreSubsequentFields", False) for m in mappings):
-                        ignored_subsequent_fields.add(marc_field.tag)
-                    self.perform_additional_mapping(
-                        marc_record, folio_holding, legacy_ids
-                    )
+            elif marc_field.tag not in ignored_subsequent_fields:
+                mappings = self.mappings[marc_field.tag]
+                # logging.debug(mappings)
+                self.map_field_according_to_mapping(
+                    marc_field, mappings, folio_holding, "-".join(legacy_ids)
+                )
+                self.report_legacy_mapping(marc_field.tag, True, True, False)
+                if any(m.get("ignoreSubsequentFields", False) for m in mappings):
+                    ignored_subsequent_fields.add(marc_field.tag)
+                self.perform_additional_mapping(marc_record, folio_holding, legacy_ids)
 
         self.dedupe_rec(folio_holding)
         for id in legacy_ids:

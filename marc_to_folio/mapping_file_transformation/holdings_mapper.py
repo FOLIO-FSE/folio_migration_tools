@@ -2,7 +2,10 @@ import json
 import logging
 from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
 import re
-from marc_to_folio.custom_exceptions import TransformationProcessError
+from marc_to_folio.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folioclient import FolioClient
 from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
 from datetime import datetime
@@ -54,9 +57,11 @@ class HoldingsMapper(MapperBase):
                 )
             return legacy_value
         elif folio_prop_name == "callNumberTypeId":
-            return self.get_call_number_type_id(legacy_item, folio_prop_name)
+            return self.get_call_number_type_id(
+                legacy_item, folio_prop_name, index_or_id
+            )
         elif folio_prop_name == "statisticalCodeIds":
-            return self.get_statistical_codes(legacy_values)
+            return self.get_statistical_codes(legacy_values, index_or_id)
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(legacy_value, index_or_id)
         elif len(legacy_item_keys) == 1:
@@ -78,13 +83,17 @@ class HoldingsMapper(MapperBase):
         self, legacy_item: dict, id_or_index, folio_prop_name, prevent_default=False
     ):
         return self.get_mapped_value(
-            self.location_mapping, legacy_item, folio_prop_name, prevent_default
+            self.location_mapping,
+            legacy_item,
+            id_or_index,
+            folio_prop_name,
+            prevent_default,
         )
 
-    def get_call_number_type_id(self, legacy_item, folio_prop_name: str):
+    def get_call_number_type_id(self, legacy_item, folio_prop_name: str, id_or_index):
         if self.call_number_mapping:
             return self.get_mapped_value(
-                self.call_number_mapping, legacy_item, folio_prop_name
+                self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
             )
         self.add_to_migration_report("Call number type mapping", "No mapping")
         return ""
@@ -99,10 +108,9 @@ class HoldingsMapper(MapperBase):
                     self.add_stats("Bound-with items identified by bib id")
                     for l in new_legacy_values:
                         self.add_stats("Bib ids referenced in bound-with items")
-            except:
-                logging.error(
-                    f"{legacy_value} could not get parsed to array of strings"
-                )
+            except Exception as ee:
+                s = f"legacy string could not get parsed to array of strings {ee}"
+                TransformationRecordFailedError(index_or_id, s, legacy_value)
         else:
             new_legacy_values = [legacy_value]
         self.add_to_migration_report(
@@ -116,19 +124,17 @@ class HoldingsMapper(MapperBase):
                 and v not in self.instance_id_map
             ):
                 self.add_stats("Holdings IDs not mapped")
-                s = f"Bib id '{new_legacy_value}' not in instance id map."
-                logging.error(f"{s}\t{index_or_id}")
-                # raise TransformationProcessError(s, index_or_id)
+                s = "Bib id not in instance id map."
+                raise TransformationRecordFailedError(index_or_id, s, new_legacy_value)
             else:
                 self.add_stats("Holdings IDs mapped")
                 entry = self.instance_id_map.get(
                     new_legacy_value, ""
                 ) or self.instance_id_map.get(v)
-
                 return_ids.append(entry["folio_id"])
         if any(return_ids):
             return return_ids
         else:
-            raise TransformationProcessError(
-                f"No instance id mapped from {legacy_value}"
+            raise TransformationRecordFailedError(
+                index_or_id, "No instance id mapped from", legacy_value
             )

@@ -54,7 +54,7 @@ def parse_args():
     print(f"\tOkapi URL:\t{args.okapi_url}")
     print(f"\tTenanti Id:\t{args.tenant_id}")
     print(f"\tUsername:\t{args.username}")
-    print(f"\tPassword:\tSecret")
+    print("\tPassword:\tSecret")
     return args
 
 
@@ -142,7 +142,7 @@ def read_records(reader, processor: HoldingsProcessor):
             else:
                 processor.process_record(record)
         except TransformationRecordFailedError as error:
-            logging.error(error)
+            error.log_it()
         except ValueError as error:
             logging.error(error)
 
