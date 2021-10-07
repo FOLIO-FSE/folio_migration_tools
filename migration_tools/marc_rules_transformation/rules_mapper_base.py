@@ -14,7 +14,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
-from migration_tools.report_blurbs import Blurbs, blurbs
+from migration_tools.report_blurbs import Blurbs
 from pymarc.field import Field
 
 
