@@ -2,6 +2,7 @@
 FOLIO community specifications"""
 import json
 import logging
+import sys
 import time
 import typing
 import uuid
@@ -470,7 +471,7 @@ class BibsRulesMapper(RulesMapperBase):
             self.add_to_migration_report(Blurbs.HridHandling, "Took HRID from 001")
         else:
             logging.critical(f"Unknown HRID handling: {self.hrid_handling}. Exiting")
-            exit()
+            sys.exit()
 
     def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: str) -> str:
         level = marc_record.leader[7]
@@ -672,13 +673,13 @@ def get_unspecified_mode_of_issuance(folio_client: FolioClient):
     m_o_is = list(folio_client.modes_of_issuance)
     if not any(m_o_is):
         logging.critical("No Modes of issuance set up in tenant. Quitting...")
-        exit()
+        sys.exit()
     if not any(i for i in m_o_is if i["name"].lower() == "unspecified"):
         logging.critical(
             "Mode of issuance 'unspecified' missing in tenant "
             "configuration. Please add this to continue. Quitting..."
         )
-        exit()
+        sys.exit()
     return next(i["id"] for i in m_o_is if i["name"].lower() == "unspecified")
 
 

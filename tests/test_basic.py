@@ -1,11 +1,16 @@
 # content of test_sample.py
+from migration_tools.mapping_file_transformation import mapping_file_mapper_base
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
-from migration_tools.mapping_file_transformation import mapper_base
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from unittest.mock import Mock, patch
 import pymarc
+
+from migration_tools.report_blurbs import Blurbs
 
 
 def func(x):
@@ -37,7 +42,9 @@ def test_get_hybrid_mapping():
         instance = mock_rdm.return_value
         instance.hybrid_mappings = mappings
         instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        res = mapper_base.MapperBase.get_hybrid_mapping(legacy_object, instance)
+        res = mapping_file_mapper_base.MappingFileMapperBase.get_hybrid_mapping(
+            legacy_object, instance
+        )
         assert res == mappings[1]
 
 
@@ -54,7 +61,9 @@ def test_get_hybrid_mapping2():
         instance = mock_rdm.return_value
         instance.hybrid_mappings = mappings
         instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        res = mapper_base.MapperBase.get_hybrid_mapping(legacy_object, instance)
+        res = mapping_file_mapper_base.MappingFileMapperBase.get_hybrid_mapping(
+            legacy_object, instance
+        )
         assert res == mappings[0]
 
 
@@ -71,7 +80,9 @@ def test_get_hybrid_mapping3():
         instance = mock_rdm.return_value
         instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
         instance.hybrid_mappings = mappings
-        res = mapper_base.MapperBase.get_hybrid_mapping(legacy_object, instance)
+        res = mapping_file_mapper_base.MappingFileMapperBase.get_hybrid_mapping(
+            legacy_object, instance
+        )
         assert res == mappings[0]
 
 
@@ -88,8 +99,16 @@ def test_normal_refdata_mapping_strip():
         instance = mock_rdm.return_value
         instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
         instance.regular_mappings = mappings
-        res = mapper_base.MapperBase.get_ref_data_mapping(legacy_object, instance)
+        res = mapping_file_mapper_base.MappingFileMapperBase.get_ref_data_mapping(
+            legacy_object, instance
+        )
         assert res == mappings[2]
+
+
+def test_blurbs():
+    b = Blurbs.Introduction
+    print(b)
+    assert b[0] == "Introduction"
 
 
 def test_get_marc_record():

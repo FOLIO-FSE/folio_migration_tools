@@ -1,5 +1,6 @@
 '''Main "script."'''
 import json
+import sys
 import logging
 import os
 import time
@@ -19,6 +20,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.folder_structure import FolderStructure
+from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from migration_tools.report_blurbs import Blurbs
@@ -118,17 +120,22 @@ class Worker(main_base.MainBase):
             report_file.write("# Bibliographic records transformation results   \n")
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
             report_file.write("## Bibliographic records transformation counters   \n")
-            self.mapper.print_dict_to_md_table(
+            Helper.print_dict_to_md_table(
                 self.mapper.stats,
                 report_file,
                 "Measure",
                 "Count",
             )
-            self.mapper.write_migration_report(report_file)
-            self.mapper.print_mapping_report(report_file)
+            Helper.write_migration_report(report_file, self.mapper.migration_report)
+            Helper.print_mapping_report(
+                report_file,
+                self.mapper.parsed_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
 
         logging.info(
-            f"Done. Transformation report written to {self.folder_structure.migration_reports_file}"
+            f"Done. Transformation report written to {self.folder_structure.migration_reports_file.name}"
         )
 
 
@@ -214,7 +221,7 @@ def main():
             logging.critical(
                 "SSL error. Check your VPN or Internet connection. Exiting"
             )
-            exit()
+            sys.exit()
         # Initiate Worker
         worker = Worker(folio_client, folder_structure, args)
         worker.work()
@@ -223,7 +230,7 @@ def main():
     except TransformationProcessError as process_error:
         logging.critical(process_error)
         logging.critical("Halting...")
-        exit()
+        sys.exit()
 
 
 if __name__ == "__main__":

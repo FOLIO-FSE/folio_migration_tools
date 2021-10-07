@@ -1,6 +1,7 @@
 """ Class that processes each MARC record """
 import json
 import logging
+import sys
 import time
 import traceback
 from datetime import datetime as dt
@@ -40,7 +41,7 @@ class HoldingsProcessor:
                 logging.critical(
                     "More than 20 percent of the records have failed. Halting"
                 )
-                exit()
+                sys.exit()
 
     def process_record(self, marc_record):
         """processes a marc holdings record and saves it"""
@@ -112,16 +113,21 @@ class HoldingsProcessor:
             report_file.write("# MFHD records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
             report_file.write("## MFHD records transformation counters   \n")
-            self.mapper.print_dict_to_md_table(
+            Helper.print_dict_to_md_table(
                 self.mapper.stats,
                 report_file,
                 "Measure",
                 "Count",
             )
-            self.mapper.write_migration_report(report_file)
-            self.mapper.print_mapping_report(report_file)
+            Helper.write_migration_report(report_file, self.mapper.migration_report)
+            Helper.print_mapping_report(
+                report_file,
+                self.mapper.parsed_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
 
-        logging.info(f"Done. Transformation report written to {report_file}")
+        logging.info(f"Done. Transformation report written to {report_file.name}")
 
 
 def add_stats(stats, a):

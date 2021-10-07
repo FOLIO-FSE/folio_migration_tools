@@ -194,13 +194,13 @@ class Conditions:
                 self.folio.instance_formats, "instance_formats_code", value
             )
             self.mapper.add_to_migration_report(
-                Blurbs.InstanceFormatIdHandling,
+                Blurbs.InstanceFormat,
                 f'Successful match  - "{value}"->{t[1]}',
             )
             return t[0]
         except Exception:
             self.mapper.add_to_migration_report(
-                Blurbs.InstanceFormatIdHandling,
+                Blurbs.InstanceFormat,
                 f'Code from 338$b NOT found in FOLIO: "{value}"',
             )
             return ""

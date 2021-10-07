@@ -6,12 +6,14 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.mapping_file_transformation.mapper_base import MapperBase
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.report_blurbs import Blurbs
 
 
-class HoldingsMapper(MapperBase):
+class HoldingsMapper(MappingFileMapperBase):
     def __init__(
         self,
         folio_client: FolioClient,
@@ -41,7 +43,9 @@ class HoldingsMapper(MapperBase):
         if not self.use_map:
             return legacy_item[folio_prop_name]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
+        legacy_values = MappingFileMapperBase.get_legacy_vals(
+            legacy_item, legacy_item_keys
+        )
         legacy_value = " ".join(legacy_values).strip()
         if folio_prop_name == "permanentLocationId":
             return self.get_location_id(legacy_item, index_or_id)

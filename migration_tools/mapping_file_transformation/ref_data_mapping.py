@@ -129,7 +129,7 @@ class RefDataMapping(object):
                 logging.critical(
                     f"folio_{self.key_type} is not a column in the {self.name} mapping file. Fix."
                 )
-                exit()
+                sys.exit()
             elif (
                 all(k not in mapping for k in self.mapped_legacy_keys)
                 and "legacy_code" not in mapping
@@ -137,12 +137,12 @@ class RefDataMapping(object):
                 logging.critical(
                     f"field names from {self.mapped_legacy_keys} missing in map legacy_code is not a column in the {self.name} mapping file"
                 )
-                exit()
+                sys.exit()
             elif not all(mapping.values()):
                 logging.critical(
                     f"empty value in mapping {mapping.values()}. Check {self.name} mapping file"
                 )
-                exit()
+                sys.exit()
 
 
 def get_mapped_legacy_keys(mapping):

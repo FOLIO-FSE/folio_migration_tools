@@ -1,4 +1,3 @@
-import json
 import logging
 import logging.handlers
 import time
@@ -18,7 +17,7 @@ class MainBase:
                 f"Number of exceptions exceeded limit of "
                 f"{self.num_exeptions}. Stopping."
             )
-            exit()
+            sys.exit()
 
     @staticmethod
     def print_progress(num_processed, start_time):
@@ -83,6 +82,7 @@ class MainBase:
 
 class ExcludeLevelFilter(logging.Filter):
     def __init__(self, level):
+        super().__init__()
         self.level = level
 
     def filter(self, record):
@@ -91,6 +91,7 @@ class ExcludeLevelFilter(logging.Filter):
 
 class LevelFilter(logging.Filter):
     def __init__(self, level):
+        super().__init__()
         self.level = level
 
     def filter(self, record):

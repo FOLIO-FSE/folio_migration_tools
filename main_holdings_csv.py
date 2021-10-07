@@ -1,5 +1,6 @@
 '''Main "script."'''
 import ast
+import sys
 import copy
 import csv
 import ctypes
@@ -26,7 +27,9 @@ from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.main_base import MainBase
 from migration_tools.mapping_file_transformation.holdings_mapper import HoldingsMapper
-from migration_tools.mapping_file_transformation.mapper_base import MapperBase
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
 from migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -89,7 +92,7 @@ class Worker(MainBase):
                 self.mapper.add_to_migration_report(
                     Blurbs.FailedFiles, f"{file_name} - {ee}"
                 )
-                exit()
+                sys.exit()
         logging.info(
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
@@ -119,7 +122,7 @@ class Worker(MainBase):
                         f"Row {idx:,} failed with the following Exception: {excepion} "
                         f" of type {type(excepion).__name__}"
                     )
-                    exit()
+                    sys.exit()
 
                 self.mapper.add_general_statistics("Number of Legacy items in file")
                 if idx > 1 and idx % 10000 == 0:
@@ -255,8 +258,15 @@ class Worker(MainBase):
             logging.info(
                 f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}"
             )
-            self.mapper.write_migration_report(migration_report_file)
-            self.mapper.print_mapping_report(migration_report_file, self.total_records)
+            Helper.write_migration_report(
+                migration_report_file, self.mapper.migration_report
+            )
+            Helper.print_mapping_report(
+                migration_report_file,
+                self.total_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
         logging.info("All done!")
 
     @staticmethod
@@ -370,7 +380,7 @@ def main():
         logging.error(
             "Network Error. Are you connected to the Internet? Do you need VPN? {}"
         )
-        exit()
+        sys.exit()
 
     # Source data files
     files = [
@@ -405,7 +415,7 @@ def main():
             logging.info(
                 f'{len(holdings_map["data"])} fields in holdings mapping file map'
             )
-            mapped_fields = MapperBase.get_mapped_folio_properties_from_map(
+            mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
                 holdings_map
             )
             logging.info(

@@ -1,7 +1,7 @@
-import collections
 import csv
 import json
 import logging
+import sys
 import uuid
 from abc import abstractmethod
 
@@ -11,14 +11,16 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from migration_tools.mapper_base import MapperBase
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.report_blurbs import Blurbs
 
 empty_vals = ["Not mapped", None, ""]
 
 
-class MapperBase:
+class MappingFileMapperBase(MapperBase):
     def __init__(self, folio_client: FolioClient, schema, record_map):
+        super().__init__()
         self.schema = schema
         self.stats = {}
         self.total_records = 0
@@ -70,49 +72,17 @@ class MapperBase:
         )
         csv.register_dialect("tsv", delimiter="\t")
 
-    def report_folio_mapping(self, folio_object):
-        flat_object = flatten(folio_object)
-        for field_name, value in flat_object.items():
-            v = 1 if value else 0
-            if field_name not in self.mapped_folio_fields:
-                self.mapped_folio_fields[field_name] = v
-            else:
-                self.mapped_folio_fields[field_name] += v
-
     def validate_map(self):
         # TODO: Add functionality here to validate that the map is complete.
         # That it maps the required fields etc
         return True
-
-    def write_migration_report(self, report_file):
-        """Writes the migrstion report, including section headers, section blurbs, and values."""
-        report_file.write(f"{Blurbs.Introduction[1]}\n")
-
-        for a in self.migration_report:
-            blurb = a.get("blurb_tuple")
-            report_file.write("   \n")
-            report_file.write(f"## {blurb[0]}    \n")
-            report_file.write(f"{blurb[1]}    \n")
-            report_file.write(
-                f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
-            )
-            report_file.write(f"   \n")
-            report_file.write("Measure | Count   \n")
-            report_file.write("--- | ---:   \n")
-            b = self.migration_report[a]
-            sortedlist = [
-                (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
-            ]
-            for b in sortedlist:
-                report_file.write(f"{b[0]} | {b[1]}   \n")
-            report_file.write("</details>   \n")
 
     def handle_transformation_process_error(
         self, idx, process_error: TransformationProcessError
     ):
         self.add_general_statistics("Critical process error")
         logging.critical(f"{idx}\t{process_error}")
-        exit()
+        sys.exit()
 
     def handle_transformation_critical_error(
         self, idx, data_error: TransformationRecordFailedError
@@ -130,7 +100,7 @@ class MapperBase:
                 f"Errors: {self.num_criticalerrors}\terrors/records:"
                 f"{self.num_criticalerrors / (idx + 1)}"
             )
-            exit()
+            sys.exit()
 
     def handle_generic_exception(self, idx, excepion: Exception):
         self.num_exeptions += 1
@@ -143,7 +113,7 @@ class MapperBase:
             logging.fatal(
                 f"Stopping. More than {self.num_exeptions} unhandled exceptions"
             )
-            exit()
+            sys.exit()
 
     @staticmethod
     def get_mapped_folio_properties_from_map(map):
@@ -214,14 +184,6 @@ class MapperBase:
             self.stats[a] = number
         else:
             self.stats[a] += number
-
-    @staticmethod
-    def print_dict_to_md_table(my_dict, h1="", h2=""):
-        d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
-        print(f"{h1} | {h2}")
-        print("--- | ---:")
-        for k, v in d_sorted.items():
-            print(f"{k} | {v}")
 
     def get_mapped_value(
         self, ref_dat_mapping: RefDataMapping, legacy_object, prevent_default=False
@@ -619,23 +581,5 @@ def skip_property(property_name_level1, property_level1):
     )
 
 
-def as_str(s):
-    try:
-        return str(s), ""
-    except ValueError:
-        return "", s
-
-
 def weird_division(n, d):
     return n / d if d else 0
-
-
-def flatten(d, parent_key="", sep="."):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flatten(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)

@@ -22,7 +22,9 @@ from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.main_base import MainBase
 from migration_tools.mapping_file_transformation.item_mapper import ItemMapper
-from migration_tools.mapping_file_transformation.mapper_base import MapperBase
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
 from migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -47,7 +49,7 @@ class Worker(MainBase):
         self.folder_structure = folder_structure
         self.folio_client = folio_client
         self.items_map = self.setup_records_map()
-        self.folio_keys = MapperBase.get_mapped_folio_properties_from_map(
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
         self.source_files = source_files
@@ -167,7 +169,7 @@ class Worker(MainBase):
                         Blurbs.FailedFiles, f"{file_name} - {ee}"
                     )
                     logging.fatal(error_str)
-                    exit()
+                    sys.exit()
         logging.info(
             f"processed {self.total_records:,} records in {len(self.source_files)} files"
         )
@@ -202,7 +204,7 @@ class Worker(MainBase):
                     traceback.print_exc()
                     logging.fatal(attribute_error)
                     logging.info("Quitting...")
-                    exit()
+                    sys.exit()
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
 
@@ -229,8 +231,15 @@ class Worker(MainBase):
             logging.info(
                 f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}"
             )
-            self.mapper.write_migration_report(migration_report_file)
-            self.mapper.print_mapping_report(migration_report_file, self.total_records)
+            Helper.write_migration_report(
+                migration_report_file, self.mapper.migration_report
+            )
+            Helper.print_mapping_report(
+                migration_report_file,
+                self.total_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
         logging.info("All done!")
 
 
@@ -269,7 +278,7 @@ def parse_args():
     args = parser.parse_args()
     if len(args.time_stamp) != 15:
         logging.critical(f"Time stamp ({args.time_stamp}) is not set properly")
-        exit()
+        sys.exit()
     logging.info(f"\tOkapi URL:\t{args.okapi_url}")
     logging.info(f"\tTenanti Id:\t{args.tenant_id}")
     logging.info(f"\tUsername:\t{args.username}")
@@ -303,7 +312,7 @@ def main():
         )
     except requests.exceptions.SSLError:
         logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
-        exit()
+        sys.exit()
     try:
         worker = Worker(files, folio_client, folder_structure)
         worker.work()

@@ -54,7 +54,7 @@ def parse_args():
     print(args.time_stamp)
     if len(args.time_stamp) != 15:
         print(f"Time stamp ({args.time_stamp}) is not set properly")
-        exit()
+        sys.exit()
     print(f"\tOkapi URL:\t{args.okapi_url}")
     print(f"\tTenanti Id:\t{args.tenant_id}")
     print(f"\tUsername:\t{args.username}")
@@ -76,7 +76,7 @@ def main():
         )
     except requests.exceptions.SSLError:
         logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
-        exit()
+        sys.exit()
 
     csv.register_dialect("tsv", delimiter="\t")
     files = [
@@ -128,7 +128,7 @@ def main():
                     read_records(reader, processor)
             except TransformationProcessError as tpe:
                 logging.critical(tpe)
-                exit()
+                sys.exit()
             except Exception:
                 logging.exception(f"Failure in Main: {records_file}", stack_info=True)
         processor.wrap_up()

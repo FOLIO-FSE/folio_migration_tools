@@ -5,12 +5,14 @@ from typing import Dict, List
 
 from folioclient import FolioClient
 from migration_tools.custom_exceptions import TransformationRecordFailedError
-from migration_tools.mapping_file_transformation.mapper_base import MapperBase
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.report_blurbs import Blurbs
 
 
-class ItemMapper(MapperBase):
+class ItemMapper(MappingFileMapperBase):
     def __init__(
         self,
         folio_client: FolioClient,
@@ -95,28 +97,28 @@ class ItemMapper(MapperBase):
                 logging.critical(
                     "folio_name is not a column in the status mapping file"
                 )
-                exit()
+                sys.exit()
             elif "legacy_code" not in mapping:
                 logging.critical(
                     "legacy_code is not a column in the status mapping file"
                 )
-                exit()
+                sys.exit()
             elif mapping["folio_name"] not in statuses:
                 logging.critical(
                     f'{mapping["folio_name"]} in the mapping file is not a FOLIO item status'
                 )
-                exit()
+                sys.exit()
             elif mapping["legacy_code"] == "*":
                 logging.critical(
                     "* in status mapping not allowed. Available will be the default mapping. "
                     "Please remove the row with the *"
                 )
-                exit()
+                sys.exit()
             elif not all(mapping.values()):
                 logging.critical(
                     f"empty value in mapping {mapping.values()}. Check mapping file"
                 )
-                exit()
+                sys.exit()
             else:
                 self.status_mapping = {
                     v["legacy_code"]: v["folio_name"] for v in item_statuses_map
@@ -127,7 +129,9 @@ class ItemMapper(MapperBase):
         if not self.use_map:
             return legacy_item[folio_prop_name]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
+        legacy_values = MappingFileMapperBase.get_legacy_vals(
+            legacy_item, legacy_item_keys
+        )
         legacy_value = " ".join(legacy_values).strip()
         if folio_prop_name == "permanentLocationId":
             return self.get_mapped_value(self.location_mapping, legacy_item, False)

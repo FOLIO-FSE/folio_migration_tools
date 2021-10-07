@@ -1,10 +1,9 @@
-import collections
 import json
 import logging
+import sys
 import time
 import uuid
 from textwrap import wrap
-from typing import Dict, List
 
 import pymarc
 from folioclient import FolioClient
@@ -14,16 +13,16 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
+from migration_tools.mapper_base import MapperBase
 from migration_tools.report_blurbs import Blurbs
 from pymarc.field import Field
 
 
-class RulesMapperBase:
+class RulesMapperBase(MapperBase):
     def __init__(self, folio_client: FolioClient, conditions=None):
+        super().__init__()
         self.migration_report = {}
         self.parsed_records = 0
-        self.mapped_folio_fields = {}
-        self.mapped_legacy_fields = {}
         self.start = time.time()
         self.stats = {}
         self.folio_client: FolioClient = folio_client
@@ -48,89 +47,6 @@ class RulesMapperBase:
             self.mapped_legacy_fields[field_name][1] += int(mapped)
             self.mapped_legacy_fields[field_name][2] += int(empty)
 
-    def report_folio_mapping(self, folio_record, schema):
-        try:
-            flattened = flatten(folio_record)
-            for field_name, v in flattened.items():
-                mapped = 0
-                empty = 1
-                if isinstance(v, str) and v.strip():
-                    mapped = 1
-                    empty = 0
-                elif isinstance(v, list) and any(v):
-                    l = len([a for a in v if a])
-                    mapped = l
-                    empty = 0
-                if field_name not in self.mapped_folio_fields:
-                    self.mapped_folio_fields[field_name] = [mapped, empty]
-                else:
-                    self.mapped_folio_fields[field_name][0] += mapped
-                    self.mapped_folio_fields[field_name][1] += empty
-            if not self.schema_properties:
-                self.schema_properties = schema["properties"].keys()
-            unmatched_properties = (
-                p for p in self.schema_properties if p not in folio_record.keys()
-            )
-            for p in unmatched_properties:
-                self.mapped_folio_fields[p] = [0, 0]
-        except Exception as ee:
-            logging.error(ee)
-
-    def print_mapping_report(self, report_file):
-
-        total_records = self.parsed_records
-        header = "Mapped FOLIO fields"
-
-        report_file.write(f"\n## {header}\n")
-        # report_file.write(f"{blurbs[header]}\n")
-
-        d_sorted = {
-            k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
-        }
-        report_file.write(
-            "<details><summary>Click to expand field report</summary>     \n\n"
-        )
-
-        report_file.write("FOLIO Field | Mapped | Empty | Unmapped  \n")
-        report_file.write("--- | --- | --- | ---:  \n")
-        for k, v in d_sorted.items():
-            unmapped = total_records - v[0]
-            mapped = v[0] - v[1]
-            mp = mapped / total_records if total_records else 0
-            mapped_per = "{:.0%}".format(max(mp, 0))
-            report_file.write(
-                f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
-            )
-        report_file.write("</details>   \n")
-
-        # Legacy fields (like marc)
-        header = "Mapped Legacy fields"
-        report_file.write(f"\n## {header}\n")
-        # report_file.write(f"{blurbs[header]}\n")
-
-        d_sorted = {
-            k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
-        }
-        report_file.write(
-            "<details><summary>Click to expand field report</summary>     \n\n"
-        )
-
-        report_file.write("Legacy Field | Present | Mapped | Empty | Unmapped  \n")
-        report_file.write("--- | --- | --- | --- | ---:  \n")
-        for k, v in d_sorted.items():
-            present = v[0]
-            present_per = "{:.1%}".format(
-                present / total_records if total_records else 0
-            )
-            unmapped = present - v[1]
-            mapped = v[1]
-            mp = mapped / total_records if total_records else 0
-            mapped_per = "{:.0%}".format(max(mp, 0))
-            report_file.write(
-                f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
-            )
-        report_file.write("</details>   \n")
-
     def add_to_migration_report(self, blurb_tuple: tuple, measure_to_add):
         """Add section header and values to migration report."""
 
@@ -140,29 +56,6 @@ class RulesMapperBase:
             self.migration_report[blurb_tuple[0]][measure_to_add] = 1
         else:
             self.migration_report[blurb_tuple[0]][measure_to_add] += 1
-
-    def write_migration_report(self, report_file):
-        """Writes the migrstion report, including section headers, section blurbs, and values."""
-        report_file.write(f"{Blurbs.Introduction[1]}\n")
-
-        for a in self.migration_report:
-            blurb = a.get("blurb_tuple")
-            report_file.write("   \n")
-            report_file.write(f"## {blurb[0]}    \n")
-            report_file.write(f"{blurb[1]}    \n")
-            report_file.write(
-                f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
-            )
-            report_file.write(f"   \n")
-            report_file.write("Measure | Count   \n")
-            report_file.write("--- | ---:   \n")
-            b = self.migration_report[a]
-            sortedlist = [
-                (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
-            ]
-            for b in sortedlist:
-                report_file.write(f"{b[0]} | {b[1]}   \n")
-            report_file.write("</details>   \n")
 
     def print_progress(self):
         self.parsed_records += 1
@@ -284,7 +177,7 @@ class RulesMapperBase:
             return values
         except TransformationProcessError as te:
             logging.fatal(f"{te}. Quitting...")
-            exit()
+            sys.exit()
         except TransformationFieldMappingError as fme:
             self.add_to_migration_report(Blurbs.FieldMappingErrors, fme)
             logging.error(
@@ -517,13 +410,6 @@ class RulesMapperBase:
             rec[entity_parent_key] = entity
 
 
-def as_str(s):
-    try:
-        return str(s), ""
-    except ValueError:
-        return "", s
-
-
 def fetch_holdings_schema():
     logging.info("Fetching HoldingsRecord schema...")
     holdings_record_schema = Helper.get_latest_from_github(
@@ -563,14 +449,3 @@ def is_array_of_objects(schema_property):
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
     return zip(*[iter(iterable)] * n)
-
-
-def flatten(d, parent_key="", sep="."):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flatten(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
