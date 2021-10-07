@@ -82,7 +82,7 @@ class RulesMapperBase:
         header = "Mapped FOLIO fields"
 
         report_file.write(f"\n## {header}\n")
-        report_file.write(f"{blurbs[header]}\n")
+        # report_file.write(f"{blurbs[header]}\n")
 
         d_sorted = {
             k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
@@ -106,7 +106,7 @@ class RulesMapperBase:
         # Legacy fields (like marc)
         header = "Mapped Legacy fields"
         report_file.write(f"\n## {header}\n")
-        report_file.write(f"{blurbs[header]}\n")
+        # report_file.write(f"{blurbs[header]}\n")
 
         d_sorted = {
             k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
