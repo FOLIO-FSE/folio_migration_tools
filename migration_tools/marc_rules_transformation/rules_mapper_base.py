@@ -1,27 +1,21 @@
 import collections
 import json
 import logging
-from marc_to_folio.custom_exceptions import (
+import time
+import uuid
+from textwrap import wrap
+from typing import Dict, List
+
+import pymarc
+from folioclient import FolioClient
+from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-import uuid
-
+from migration_tools.helper import Helper
+from migration_tools.report_blurbs import Blurbs, blurbs
 from pymarc.field import Field
-from marc_to_folio.helper import Helper
-from marc_to_folio.report_blurbs import blurbs
-import time
-from folioclient import FolioClient
-from typing import Dict, List
-import pymarc
-import copy
-import os
-import sys
-
-from textwrap import wrap
-
-import requests
 
 
 class RulesMapperBase:
@@ -137,30 +131,25 @@ class RulesMapperBase:
             )
         report_file.write("</details>   \n")
 
-    def add_to_migration_report(self, header, measure_to_add):
+    def add_to_migration_report(self, blurb_tuple: tuple, measure_to_add):
         """Add section header and values to migration report."""
 
-        if header not in self.migration_report:
-            self.migration_report[header] = {}
-        if measure_to_add not in self.migration_report[header]:
-            self.migration_report[header][measure_to_add] = 1
+        if blurb_tuple[0] not in self.migration_report:
+            self.migration_report[blurb_tuple[0]] = {"blurb_tuple": blurb_tuple}
+        if measure_to_add not in self.migration_report[blurb_tuple[0]]:
+            self.migration_report[blurb_tuple[0]][measure_to_add] = 1
         else:
-            self.migration_report[header][measure_to_add] += 1
+            self.migration_report[blurb_tuple[0]][measure_to_add] += 1
 
     def write_migration_report(self, report_file):
         """Writes the migrstion report, including section headers, section blurbs, and values."""
-        report_file.write(f"{blurbs['Introduction']}\n")
+        report_file.write(f"{Blurbs.Introduction[1]}\n")
 
         for a in self.migration_report:
+            blurb = a.get("blurb_tuple")
             report_file.write("   \n")
-            report_file.write(f"## {a}    \n")
-            try:
-                report_file.write(f"{blurbs[a]}    \n")
-            except KeyError as key_error:
-                logging.error(
-                    f"Uhoh. Please add this one to report_blurbs.py: {key_error}"
-                )
-
+            report_file.write(f"## {blurb[0]}    \n")
+            report_file.write(f"{blurb[1]}    \n")
             report_file.write(
                 f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
             )
@@ -168,7 +157,9 @@ class RulesMapperBase:
             report_file.write("Measure | Count   \n")
             report_file.write("--- | ---:   \n")
             b = self.migration_report[a]
-            sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
+            sortedlist = [
+                (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
+            ]
             for b in sortedlist:
                 report_file.write(f"{b[0]} | {b[1]}   \n")
             report_file.write("</details>   \n")
@@ -267,11 +258,11 @@ class RulesMapperBase:
                         )
                     else:
                         subfields = marc_field.get_subfields(*mapping["subfield"])
-                        x = [
+                        y = [
                             self.apply_rule(x, condition_types, marc_field, parameter)
                             for x in subfields
                         ]
-                        value = " ".join(set(x))
+                        value = " ".join(set(y))
                 else:
                     value1 = marc_field.format_field() if marc_field else ""
                     value = self.apply_rule(
@@ -295,6 +286,7 @@ class RulesMapperBase:
             logging.fatal(f"{te}. Quitting...")
             exit()
         except TransformationFieldMappingError as fme:
+            self.add_to_migration_report(Blurbs.FieldMappingErrors, fme)
             logging.error(
                 f"Non-critical mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
             )
@@ -386,12 +378,12 @@ class RulesMapperBase:
                 parent = target
 
     def add_value_to_first_level_target(self, rec, target_string, value):
-        logging.debug(f"{target_string} {value} {rec}")
         sch = self.schema["properties"]
 
         if not target_string or target_string not in sch:
             raise TransformationProcessError(
-                f"Target string {target_string} not in Schema! Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+                f"Target string {target_string} not in Schema! Check mapping file against the schema."
+                f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
             )
 
         target_field = sch.get(target_string, {})
@@ -406,7 +398,8 @@ class RulesMapperBase:
                 rec[target_string].extend(value)
 
         elif target_field.get("type", "") == "string":
-            rec[target_string] = value[0]
+            if value[0]:
+                rec[target_string] = value[0]
         else:
             raise TransformationProcessError(
                 f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
@@ -472,7 +465,7 @@ class RulesMapperBase:
                 )
                 pattern = " - ".join(f"{k}:'{str(v)}'" for k, v in entity.items())
                 self.add_to_migration_report(
-                    "Incomplete entity mapping adding entity",
+                    Blurbs.IncompleteEntityMapping,
                     f"{marc_field.tag} {sfs} ->>-->> {e_parent} {pattern}  ",
                 )
                 # Experimental
@@ -480,7 +473,7 @@ class RulesMapperBase:
 
     def create_preceding_succeeding_titles(self, entity, e_parent, id):
         self.add_to_migration_report(
-            "Preceding and Succeding titles", f"{e_parent} created"
+            Blurbs.PrecedingSuccedingTitles, f"{e_parent} created"
         )
         new_entity = {
             "id": str(uuid.uuid4()),

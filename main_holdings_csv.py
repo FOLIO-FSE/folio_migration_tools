@@ -18,15 +18,16 @@ from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from requests.api import request
 
-from marc_to_folio.custom_exceptions import (
-    TransformationRecordFailedError,
+from migration_tools.custom_exceptions import (
     TransformationProcessError,
+    TransformationRecordFailedError,
 )
-from marc_to_folio.folder_structure import FolderStructure
-from marc_to_folio.helper import Helper
-from marc_to_folio.main_base import MainBase
-from marc_to_folio.mapping_file_transformation.holdings_mapper import HoldingsMapper
-from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
+from migration_tools.folder_structure import FolderStructure
+from migration_tools.helper import Helper
+from migration_tools.main_base import MainBase
+from migration_tools.mapping_file_transformation.holdings_mapper import HoldingsMapper
+from migration_tools.mapping_file_transformation.mapper_base import MapperBase
+from migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -67,8 +68,9 @@ class Worker(MainBase):
         )
         if not self.default_holdings_type:
             raise TransformationProcessError(
-                f"Holdings type named Unmapped not found in FOLIO."
+                "Holdings type named Unmapped not found in FOLIO."
             )
+
         logging.info("Init done")
 
     def work(self):
@@ -85,7 +87,7 @@ class Worker(MainBase):
                 )
                 logging.exception(error_str)
                 self.mapper.add_to_migration_report(
-                    "Failed files", f"{file_name} - {ee}"
+                    Blurbs.FailedFiles, f"{file_name} - {ee}"
                 )
                 exit()
         logging.info(
@@ -342,7 +344,7 @@ def parse_args():
     logging.info(f"\tOkapi URL:\t{args.okapi_url}")
     logging.info(f"\tTenanti Id:\t{args.tenant_id}")
     logging.info(f"\tUsername:\t{args.username}")
-    logging.info(f"\tPassword:\tSecret")
+    logging.info("\tPassword:\tSecret")
     return args
 
 
@@ -376,7 +378,7 @@ def main():
         for f in listdir(folder_structure.legacy_records_folder)
         if isfile(os.path.join(folder_structure.legacy_records_folder, f))
     ]
-    logging.info(f"Files to process:")
+    logging.info("Files to process:")
     for f in files:
         logging.info(f"\t{f}")
 

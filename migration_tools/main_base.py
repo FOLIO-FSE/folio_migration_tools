@@ -2,9 +2,8 @@ import json
 import logging
 import logging.handlers
 import time
-from marc_to_folio.folder_structure import FolderStructure
-import os
-from abc import abstractmethod
+
+from migration_tools.folder_structure import FolderStructure
 
 
 class MainBase:

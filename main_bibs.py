@@ -7,20 +7,21 @@ from datetime import datetime as dt
 from os import listdir
 from os.path import dirname, isfile
 
+import requests
 from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
 from pymarc.record import Record
-import requests
 
-from marc_to_folio import main_base
-from marc_to_folio.bibs_processor import BibsProcessor
-from marc_to_folio.custom_exceptions import (
+from migration_tools import main_base
+from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from marc_to_folio.folder_structure import FolderStructure
-from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
+from migration_tools.folder_structure import FolderStructure
+from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
+from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
+from migration_tools.report_blurbs import Blurbs
 
 
 class Worker(main_base.MainBase):
@@ -82,7 +83,7 @@ class Worker(main_base.MainBase):
             try:
                 if record is None:
                     self.mapper.add_to_migration_report(
-                        "Bib records that failed to parse",
+                        Blurbs.BibRecordsFailedParsing,
                         f"{reader.current_exception} {reader.current_chunk}",
                     )
                     self.mapper.add_stats(
@@ -114,9 +115,9 @@ class Worker(main_base.MainBase):
         logging.info("Done. Wrapping up...")
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write(f"# Bibliographic records transformation results   \n")
+            report_file.write("# Bibliographic records transformation results   \n")
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
-            report_file.write(f"## Bibliographic records transformation counters   \n")
+            report_file.write("## Bibliographic records transformation counters   \n")
             self.mapper.print_dict_to_md_table(
                 self.mapper.stats,
                 report_file,
@@ -204,7 +205,7 @@ def main():
         logging.info(f"Okapi URL:\t{args.okapi_url}")
         logging.info(f"Tenant Id:\t{args.tenant_id}")
         logging.info(f"Username:   \t{args.username}")
-        logging.info(f"Password:   \tSecret")
+        logging.info("Password:   \tSecret")
         try:
             folio_client = FolioClient(
                 args.okapi_url, args.tenant_id, args.username, args.password

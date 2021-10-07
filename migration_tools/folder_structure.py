@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-import time
 
 
 class FolderStructure:

@@ -1,24 +1,28 @@
 '''Main "script."'''
-import argparse
 import csv
 import json
 import logging
-
-import requests
-from marc_to_folio.folder_structure import FolderStructure
 import os
 from os import listdir
 from os.path import isfile, join
 
-import pymarc
+import requests
 from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from pymarc.reader import MARCReader
 
-from marc_to_folio.custom_exceptions import TransformationRecordFailedError
-from marc_to_folio.holdings_processor import HoldingsProcessor
-from marc_to_folio.main_base import MainBase
-from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
+from migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
+from migration_tools.folder_structure import FolderStructure
+from migration_tools.marc_rules_transformation.holdings_processor import (
+    HoldingsProcessor,
+)
+from migration_tools.main_base import MainBase
+from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
+    RulesMapperHoldings,
+)
 
 
 def parse_args():
@@ -54,7 +58,7 @@ def parse_args():
     print(f"\tOkapi URL:\t{args.okapi_url}")
     print(f"\tTenanti Id:\t{args.tenant_id}")
     print(f"\tUsername:\t{args.username}")
-    print(f"\tPassword:\tSecret")
+    print("\tPassword:\tSecret")
     return args
 
 
@@ -122,6 +126,9 @@ def main():
                     reader.force_utf8 = True
                     logging.info(f"Running {records_file}")
                     read_records(reader, processor)
+            except TransformationProcessError as tpe:
+                logging.critical(tpe)
+                exit()
             except Exception:
                 logging.exception(f"Failure in Main: {records_file}", stack_info=True)
         processor.wrap_up()

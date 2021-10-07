@@ -1,19 +1,18 @@
+import collections
 import csv
 import json
 import logging
 import uuid
 from abc import abstractmethod
 
-import requests
 from folioclient import FolioClient
-from marc_to_folio.custom_exceptions import (
-    TransformationRecordFailedError,
+from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
+    TransformationRecordFailedError,
 )
-from marc_to_folio.mapping_file_transformation import ref_data_mapping
-from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
-from marc_to_folio.report_blurbs import blurbs
+from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
+from migration_tools.report_blurbs import Blurbs
 
 empty_vals = ["Not mapped", None, ""]
 
@@ -71,32 +70,39 @@ class MapperBase:
         )
         csv.register_dialect("tsv", delimiter="\t")
 
+    def report_folio_mapping(self, folio_object):
+        flat_object = flatten(folio_object)
+        for field_name, value in flat_object.items():
+            v = 1 if value else 0
+            if field_name not in self.mapped_folio_fields:
+                self.mapped_folio_fields[field_name] = v
+            else:
+                self.mapped_folio_fields[field_name] += v
+
     def validate_map(self):
         # TODO: Add functionality here to validate that the map is complete.
         # That it maps the required fields etc
         return True
 
     def write_migration_report(self, report_file):
-        logging.info("Writing migration report")
-        report_file.write(f"{blurbs['Introduction']}\n")
-        for header in self.migration_report:
-            report_file.write("   \n")
-            report_file.write(f"## {header}    \n")
-            try:
-                report_file.write(f"{blurbs[header]}    \n")
-            except KeyError as key_error:
-                logging.error(
-                    f"Uhoh. Please add this one to report_blurbs.py: {key_error}"
-                )
+        """Writes the migrstion report, including section headers, section blurbs, and values."""
+        report_file.write(f"{Blurbs.Introduction[1]}\n")
 
+        for a in self.migration_report:
+            blurb = a.get("blurb_tuple")
+            report_file.write("   \n")
+            report_file.write(f"## {blurb[0]}    \n")
+            report_file.write(f"{blurb[1]}    \n")
             report_file.write(
-                f"<details><summary>Click to expand all {len(self.migration_report[header])} things</summary>     \n"
+                f"<details><summary>Click to expand all {len(self.migration_report[a])} things</summary>     \n"
             )
             report_file.write(f"   \n")
             report_file.write("Measure | Count   \n")
             report_file.write("--- | ---:   \n")
-            b = self.migration_report[header]
-            sortedlist = [(k, b[k]) for k in sorted(b, key=as_str)]
+            b = self.migration_report[a]
+            sortedlist = [
+                (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
+            ]
             for b in sortedlist:
                 report_file.write(f"{b[0]} | {b[1]}   \n")
             report_file.write("</details>   \n")
@@ -112,7 +118,7 @@ class MapperBase:
         self, idx, data_error: TransformationRecordFailedError
     ):
         self.add_to_migration_report(
-            "General statistics", "Records failed due to a data error"
+            Blurbs.GeneralStatistics, "Records failed due to a data error"
         )
         logging.error(f"{idx}\t{data_error}")
         self.num_criticalerrors += 1
@@ -202,12 +208,12 @@ class MapperBase:
             "type": "object",
         }
 
-    def add_stats(self, a):
+    def add_stats(self, a, number=1):
         # TODO: Move to interface or parent class
         if a not in self.stats:
-            self.stats[a] = 1
+            self.stats[a] = number
         else:
-            self.stats[a] += 1
+            self.stats[a] += number
 
     @staticmethod
     def print_dict_to_md_table(my_dict, h1="", h2=""):
@@ -239,33 +245,35 @@ class MapperBase:
                 raise StopIteration()
             logging.debug(f"Found mapping is {right_mapping}")
             self.add_to_migration_report(
-                f"{ref_dat_mapping.name} mapping",
-                f'{" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',
+                Blurbs.ReferenceDataMapping,
+                f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',
             )
             return right_mapping["folio_id"]
         except StopIteration:
             logging.debug(f"{ref_dat_mapping.name} mapping stopiteration")
             if prevent_default:
                 self.add_to_migration_report(
-                    f"{ref_dat_mapping.name} mapping",
-                    f'Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""',
+                    Blurbs.ReferenceDataMapping,
+                    f'{ref_dat_mapping.name} mapping - Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""',
                 )
                 return ""
             self.add_to_migration_report(
-                f"{ref_dat_mapping.name} mapping",
-                f'Unmapped -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
+                Blurbs.ReferenceDataMapping,
+                f'{ref_dat_mapping.name} mapping - Unmapped -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
             )
             return ref_dat_mapping.default_id
         except IndexError as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping indexerror")
             raise TransformationRecordFailedError(
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized fields in the legacy data."
+                "",
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized field in the legacy data.",
             )
 
         except Exception as ee:
             logging.debug(f"{ref_dat_mapping.name} mapping general error")
             raise TransformationRecordFailedError(
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}"
+                "",
+                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}",
             )
 
     @staticmethod
@@ -273,18 +281,15 @@ class MapperBase:
         highest_match = None
         highest_match_number = 0
         for mapping in rdm.hybrid_mappings:
-            match_number = 0
-            match_number_wildcard = 0
+            match_numbers = []
             for k in rdm.mapped_legacy_keys:
-                if mapping[k] == legacy_object[k]:
-                    match_number += 1
-                elif mapping[k] == "*":
-                    match_number_wildcard += 1
-            if (
-                match_number + match_number_wildcard == len(rdm.mapped_legacy_keys)
-                and match_number > highest_match_number
-            ):
-                highest_match_number = match_number
+                if mapping[k].strip() == legacy_object[k].strip():
+                    match_numbers.append(10)
+                elif mapping[k].strip() == "*":
+                    match_numbers.append(1)
+            summa = sum(match_numbers)
+            if summa > highest_match_number and min(match_numbers) > 0:
+                highest_match_number = summa
                 highest_match = mapping
         return highest_match
 
@@ -299,17 +304,17 @@ class MapperBase:
                 return mapping
         return None
 
-    def add_to_migration_report(self, header: str, measure_to_add: str):
-        if header not in self.migration_report:
-            self.migration_report[header] = {}
-        if measure_to_add not in self.migration_report[header]:
-            self.migration_report[header][measure_to_add] = 1
+    def add_to_migration_report(self, blurb_tuple: tuple, measure_to_add):
+        """Add section header and values to migration report."""
+        if blurb_tuple[0] not in self.migration_report:
+            self.migration_report[blurb_tuple[0]] = {"blurb_tuple": blurb_tuple}
+        if measure_to_add not in self.migration_report[blurb_tuple[0]]:
+            self.migration_report[blurb_tuple[0]][measure_to_add] = 1
         else:
-            self.migration_report[header][measure_to_add] += 1
+            self.migration_report[blurb_tuple[0]][measure_to_add] += 1
 
     def add_general_statistics(self, measure_to_add: str):
-        header = "General statistics"
-        self.add_to_migration_report(header, measure_to_add)
+        self.add_to_migration_report(Blurbs.GeneralStatistics, measure_to_add)
 
     def set_to_migration_report(self, header: str, measure_to_add: str, number: int):
         if header not in self.migration_report:
@@ -334,6 +339,7 @@ class MapperBase:
                     legacy_object,
                 )
             except TransformationFieldMappingError as data_error:
+                self.add_to_migration_report(Blurbs.FieldMappingErrors, data_error)
                 self.add_stats("Data issues found")
                 logging.error(data_error)
         self.validate_object(folio_object, index_or_id)
@@ -351,7 +357,7 @@ class MapperBase:
             property_name_level1, property_level1
         ):
             self.add_to_migration_report(
-                "Properties in Schema excluded from transformation",
+                Blurbs.PropertiesExcludedFromSchema,
                 property_name_level1,
             )
         elif property_level1["type"] == "object":
@@ -622,3 +628,14 @@ def as_str(s):
 
 def weird_division(n, d):
     return n / d if d else 0
+
+
+def flatten(d, parent_key="", sep="."):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)

@@ -1,14 +1,16 @@
 import logging
-from marc_to_folio.rules_mapper_base import RulesMapperBase
-from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
-from marc_to_folio.custom_exceptions import (
-    TransformationFieldMappingError,
-    TransformationRecordFailedError,
-    TransformationProcessError,
-)
 import re
+
 import pymarc
+from migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
+from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 from pymarc import field
+
+from migration_tools.report_blurbs import Blurbs
 
 
 class Conditions:
@@ -170,7 +172,7 @@ class Conditions:
         if value.strip():
             return value.strip()
         self.mapper.add_to_migration_report(
-            "Added value since value is empty",
+            Blurbs.AddedValueFromParameter,
             f"Tag: {marc_field.tag}. Added value: {parameter['value']}",
         )
         return parameter["value"]
@@ -192,14 +194,14 @@ class Conditions:
                 self.folio.instance_formats, "instance_formats_code", value
             )
             self.mapper.add_to_migration_report(
-                "Instance format ids handling (337 + 338)",
+                Blurbs.InstanceFormatIdHandling,
                 f'Successful match  - "{value}"->{t[1]}',
             )
             return t[0]
-        except:
+        except Exception:
             self.mapper.add_to_migration_report(
-                "Instance format ids handling (337 + 338)",
-                f'Value NOT found in FOLIO: "{value}"',
+                Blurbs.InstanceFormatIdHandling,
+                f'Code from 338$b NOT found in FOLIO: "{value}"',
             )
             return ""
 
@@ -235,7 +237,7 @@ class Conditions:
         }
         role = roles.get(marc_field.indicator2, "")
         self.mapper.add_to_migration_report(
-            "Mapped publisher role from Indicator2",
+            Blurbs.MappedPublisherRoleFromIndicator2,
             f"{marc_field.tag} ind2 {marc_field.indicator2}->{role}",
         )
         return role
@@ -257,7 +259,7 @@ class Conditions:
                     parameter["names"][0],
                 )
             self.mapper.add_to_migration_report(
-                "Mapped identifier types", f"{marc_field.tag} -> {t[1]}"
+                Blurbs.MappedIdentifierTypes, f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
         identifier_type = next(
@@ -265,7 +267,7 @@ class Conditions:
             None,
         )
         self.mapper.add_to_migration_report(
-            "Mapped identifier types", identifier_type["name"]
+            Blurbs.MappedIdentifierTypes, identifier_type["name"]
         )
         my_id = identifier_type["id"]
         if not my_id:
@@ -281,7 +283,7 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.holding_note_types, "holding_note_types", parameter["name"]
             )
-            self.mapper.add_to_migration_report("Mapped note types", t[1])
+            self.mapper.add_to_migration_report(Blurbs.MappedNoteTypes, t[1])
             return t[0]
         except Exception as ee:
             logging.error(ee)
@@ -299,9 +301,9 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.class_types, "class_types", parameter["name"]
             )
-            self.mapper.add_to_migration_report("Mapped classification types", t[1])
+            self.mapper.add_to_migration_report(Blurbs.MappedClassificationTypes, t[1])
             return t[0]
-        except:
+        except Exception:
             raise TransformationRecordFailedError(
                 "unknown",
                 f'Classification mapping error.\tParameter: "{parameter.get("name", "")}"\t'
@@ -315,7 +317,7 @@ class Conditions:
     def condition_set_receipt_status(self, value, parameter, marc_field: field.Field):
         if len(value) < 7:
             self.mapper.add_to_migration_report(
-                "Reciept status mapping", f"008 is too short: {value}"
+                Blurbs.ReceiptStatusMapping, f"008 is too short: {value}"
             )
             return ""
         try:
@@ -330,13 +332,13 @@ class Conditions:
             }
             mapped_value = status_map[value[6]]
             self.mapper.add_to_migration_report(
-                "Reciept status mapping", f"{value[6]} mapped to {mapped_value}"
+                Blurbs.ReceiptStatusMapping, f"{value[6]} mapped to {mapped_value}"
             )
 
             return
-        except:
+        except Exception:
             self.mapper.add_to_migration_report(
-                "Reciept status mapping", f"{value[6]} not found in map."
+                Blurbs.ReceiptStatusMapping, f"{value[6]} not found in map."
             )
             return "Unknown"
 
@@ -348,10 +350,10 @@ class Conditions:
                 self.folio.identifier_types, "identifier_types", parameter["name"]
             )
             self.mapper.add_to_migration_report(
-                "Mapped identifier types", f"{marc_field.tag} -> {t[1]}"
+                Blurbs.MappedIdentifierTypes, f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
-        except:
+        except Exception:
             raise TransformationRecordFailedError(
                 "",
                 f'Unmapped identifier name type: "{parameter["name"]}"\tMARC Field: {marc_field}'
@@ -367,12 +369,12 @@ class Conditions:
                 self.folio.contrib_name_types, "contrib_name_types", parameter["name"]
             )
             self.mapper.add_to_migration_report(
-                "Mapped contributor name types", f"{marc_field.tag} -> {t[1]}"
+                Blurbs.MappedContributorNameTypes, f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
-        except:
+        except Exception:
             self.mapper.add_to_migration_report(
-                "Unmapped contributor name types", parameter["name"]
+                Blurbs.UnmappedContributorNameTypes, parameter["name"]
             )
             return self.default_contributor_name_type
 
@@ -382,11 +384,11 @@ class Conditions:
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
             )
             self.mapper.add_to_migration_report(
-                "Mapped note types",
+                Blurbs.MappedNoteTypes,
                 f"{marc_field.tag} ({parameter.get('name', '')}) -> {t[1]}",
             )
             return t[0]
-        except:
+        except Exception:
             raise ValueError(
                 f"Instance note type not found for {marc_field} {parameter}"
             )
@@ -401,12 +403,12 @@ class Conditions:
             )
             if not t:
                 self.mapper.add_to_migration_report(
-                    "Contributor type mapping",
+                    Blurbs.ContributorTypeMapping,
                     f'Mapping failed for $4 "{subfield}" ({normalized_subfield}) ',
                 )
             else:
                 self.mapper.add_to_migration_report(
-                    "Contributor type mapping",
+                    Blurbs.ContributorTypeMapping,
                     f'Contributor type code {t[1]} found for $4 "{subfield}" ({normalized_subfield}))',
                 )
                 return t[0]
@@ -419,12 +421,12 @@ class Conditions:
 
             if not t:
                 self.mapper.add_to_migration_report(
-                    "Contributor type mapping",
+                    Blurbs.ContributorTypeMapping,
                     f'Mapping failed for $e "{normalized_subfield}" ({subfield}) ',
                 )
             else:
                 self.mapper.add_to_migration_report(
-                    "Contributor type mapping",
+                    Blurbs.ContributorTypeMapping,
                     f'Contributor type name {t[1]} found for $e "{normalized_subfield}" ({subfield}) ',
                 )
                 return t[0]
@@ -434,33 +436,24 @@ class Conditions:
         self, value, parameter, marc_field: field.Field
     ):
         try:
-            return self.mapper.instance_id_map[value]["folio_id"]
-        except:
+            if value:
+                if value.strip() not in self.mapper.instance_id_map:
+                    logging.info(f"{value} not in instance id map")
+                return self.mapper.instance_id_map[value.strip()]["folio_id"]
+            logging.info(f"no instance id {marc_field.format_field()}")
+            return ""
+        except Exception:
             self.mapper.add_stats(self.mapper.stats, "bib id not in map")
             raise TransformationRecordFailedError(
-                f"Old instance id not in map: {value} Field: {marc_field}"
+                "",
+                "Old instance id not in map",
+                f"{value} {marc_field.format_field()}",
             )
 
     def condition_set_url_relationship(self, value, parameter, marc_field: field.Field):
-        enum = {
-            "0": "resource",
-            "1": "version of resource",
-            "2": "related resource",
-            "8": "no information provided",
-        }
-        ind2 = marc_field.indicator2
-        name = enum.get(ind2, enum["8"])
-        if not self.folio.electronic_access_relationships:
-            raise ValueError("No electronic_access_relationships setup in tenant")
-        t = self.get_ref_data_tuple_by_name(
-            self.folio.electronic_access_relationships,
-            "electronic_access_relationships",
-            name,
+        return self._extracted_from_condition_set_electronic_access_relations_id_2(
+            "8", marc_field
         )
-        self.mapper.add_to_migration_report(
-            "Mapped electronic access relationships types", t[1]
-        )
-        return t[0]
 
     def condition_set_call_number_type_by_indicator(
         self, value, parameter, marc_field: pymarc.Field
@@ -480,7 +473,7 @@ class Conditions:
         # CallNumber type specified in $2. This needs further mapping
         if marc_field.indicator1 == "7" and "2" in marc_field:
             self.mapper.add_to_migration_report(
-                "Callnumber type mapping",
+                Blurbs.CallNumberTypeMapping,
                 f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}",
             )
             return self.default_call_number_type["id"]
@@ -489,7 +482,7 @@ class Conditions:
         call_number_type_name_temp = first_level_map.get(marc_field.indicator1, "")
         if not call_number_type_name_temp:
             self.mapper.add_to_migration_report(
-                "Callnumber type mapping",
+                Blurbs.CallNumberTypeMapping,
                 f'Unhandled call number type in ind1: "{marc_field.indicator1}"',
             )
             return self.default_call_number_type["id"]
@@ -498,31 +491,17 @@ class Conditions:
         )
         if t:
             self.mapper.add_to_migration_report(
-                "Callnumber type mapping",
+                Blurbs.CallNumberTypeMapping,
                 f"Mapped from Indicator 1 {marc_field.indicator1} -> {t[1]}",
             )
             return t[0]
 
         self.mapper.add_to_migration_report(
-            "Callnumber type mapping",
+            Blurbs.CallNumberTypeMapping,
             "Mapping failed. Setting default CallNumber type.",
         )
 
         return self.default_call_number_type["id"]
-
-    def condition_set_electronic_if_serv_remo(
-        self, value, parameter, marc_field: field.Field
-    ):
-        if value == "serv,remo":
-            t = self.get_ref_data_tuple_by_name(
-                self.holdings_types, "hold_types", "Electronic"
-            )
-            if t:
-                self.mapper.add_to_migration_report(
-                    "Holdings type mapping", f"special cornell case {t[1]}"
-                )
-                return t[0]
-        return ""
 
     def condition_set_contributor_type_text(
         self, value, parameter, marc_field: field.Field
@@ -539,33 +518,61 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.alt_title_types, "alt_title_types", parameter["name"]
             )
-            self.mapper.add_to_migration_report("Mapped Alternative title types", t[1])
+            self.mapper.add_to_migration_report(
+                Blurbs.MappedAlternativeTitleTypes, t[1]
+            )
             return t[0]
-        except:
+        except Exception:
             raise TransformationFieldMappingError(
                 f"Alternative title type not found for {parameter['name']} {marc_field}"
+            )
+
+    def setup_location_code_from_second_column(self):
+        try:
+            other_columns = [
+                f for f in self.mapper.location_map[0].keys() if f not in ["folio_code"]
+            ]
+            if len(other_columns) > 1:
+                raise TransformationProcessError(
+                    "",
+                    "Other location map columns could not be used since more than one",
+                    other_columns,
+                )
+            elif len(other_columns) == 1:
+                logging.info(f"{other_columns[0]} will be used for location mapping")
+                return {
+                    lm[other_columns[0]]: lm["folio_code"]
+                    for lm in self.mapper.location_map
+                }
+        except Exception as ee:
+            raise TransformationProcessError(
+                "", f"{ee}", self.mapper.location_map.keys()
             )
 
     def condition_set_location_id_by_code(
         self, value, parameter, marc_field: field.Field
     ):
         # Setup mapping if not already set up
-        try:
-            if "legacy_locations" not in self.ref_data_dicts:
+        if "legacy_locations" not in self.ref_data_dicts:
+            try:
                 d = {
                     lm["legacy_code"]: lm["folio_code"]
                     for lm in self.mapper.location_map
                 }
                 self.ref_data_dicts["legacy_locations"] = d
-        except KeyError as ke:
-            if "folio_code" in str(ke):
-                raise TransformationProcessError(
-                    "Your location map lacks the column folio_code"
-                )
-            if "legacy_code" in str(ke):
-                raise TransformationProcessError(
-                    "Your location map lacks the column legacy_code"
-                )
+            except KeyError as ke:
+                if "folio_code" in str(ke):
+                    raise TransformationProcessError(
+                        "Your location map lacks the column folio_code"
+                    )
+                if "legacy_code" in str(ke):
+                    logging.info(
+                        "legacy_code column not found. "
+                        "Trying to use other columns from location map."
+                    )
+                    self.ref_data_dicts[
+                        "legacy_locations"
+                    ] = self.setup_location_code_from_second_column()
         # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
             mapped_code = (
@@ -579,7 +586,7 @@ class Conditions:
                 self.folio.locations, "locations", mapped_code
             )
             self.mapper.add_to_migration_report(
-                "Location mapping", f"'{value}' ({mapped_code}) -> {t[1]}"
+                Blurbs.LocationMapping, f"'{value}' ({mapped_code}) -> {t[1]}"
             )
             return t[0]
         except Exception:
@@ -591,7 +598,7 @@ class Conditions:
                     f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
                 )
             self.mapper.add_to_migration_report(
-                "Location mapping",
+                Blurbs.LocationMapping,
                 f"Unmapped. Set default location. '{value}' ({mapped_code}) -> {t[1]}",
             )
             return t[0]
@@ -617,7 +624,7 @@ class Conditions:
     def condition_set_instance_type_id(self, value, parameter, marc_field: field.Field):
         if marc_field.tag not in ["008", "336"]:
             self.mapper.add_to_migration_report(
-                "Instance Type Mapping (336, 008)",
+                Blurbs.InstanceTypeMapping,
                 (
                     f"Unhandled MARC tag {marc_field.tag}. Instance Type ID is only mapped "
                     "from 008 and 336 "
@@ -628,15 +635,23 @@ class Conditions:
     def condition_set_electronic_access_relations_id(
         self, value, parameter, marc_field: field.Field
     ):
+        return self._extracted_from_condition_set_electronic_access_relations_id_2(
+            "3", marc_field
+        )
+
+    # TODO Rename this here and in `condition_set_url_relationship` and `condition_set_electronic_access_relations_id`
+    def _extracted_from_condition_set_electronic_access_relations_id_2(
+        self, arg0, marc_field
+    ):
         enum = {
             "0": "resource",
             "1": "version of resource",
             "2": "related resource",
-            "3": "no information provided",
+            arg0: "no information provided",
         }
-        ind2 = marc_field.indicator2
-        name = enum.get(ind2, enum["3"])
 
+        ind2 = marc_field.indicator2
+        name = enum.get(ind2, enum[arg0])
         if not self.folio.electronic_access_relationships:
             raise ValueError("No electronic_access_relationships setup in tenant")
         t = self.get_ref_data_tuple_by_name(
@@ -644,9 +659,11 @@ class Conditions:
             "electronic_access_relationships",
             name,
         )
+
         self.mapper.add_to_migration_report(
-            "Mapped electronic access relationships types", t[1]
+            Blurbs.MappedElectronicRelationshipTypes, t[1]
         )
+
         return t[0]
 
     def condition_set_note_staff_only_via_indicator(
@@ -656,7 +673,7 @@ class Conditions:
         # https://www.loc.gov/marc/bibliographic/bd541.html
         ind1 = marc_field.indicator1
         self.mapper.add_to_migration_report(
-            "Set note staff only via indicator",
+            Blurbs.StaffOnlyViaIndicator,
             f"{marc_field.tag} indicator1: {ind1} (1 is public, all other values are Staff only)",
         )
         if ind1 != "1":

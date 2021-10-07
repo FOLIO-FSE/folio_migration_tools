@@ -1,36 +1,29 @@
 '''Main "script."'''
-import argparse
 import csv
 import ctypes
 import json
 import logging
-from pathlib import Path
-import uuid
-
-import requests
-from marc_to_folio.folder_structure import FolderStructure
-from marc_to_folio import custom_exceptions
-from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
-from marc_to_folio.helper import Helper
-
-from argparse_prompt import PromptParser
-from marc_to_folio.main_base import MainBase
-import os
 import time
 import traceback
+import uuid
 from os import listdir
 from os.path import isfile, join
-from typing import Dict, List
-from datetime import datetime
-
-import pymarc
+from pathlib import Path
+from typing import List
+import requests
+from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 
-from marc_to_folio.custom_exceptions import (
-    TransformationRecordFailedError,
+from migration_tools.custom_exceptions import (
     TransformationProcessError,
+    TransformationRecordFailedError,
 )
-from marc_to_folio.mapping_file_transformation.item_mapper import ItemMapper
+from migration_tools.folder_structure import FolderStructure
+from migration_tools.helper import Helper
+from migration_tools.main_base import MainBase
+from migration_tools.mapping_file_transformation.item_mapper import ItemMapper
+from migration_tools.mapping_file_transformation.mapper_base import MapperBase
+from migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -171,7 +164,7 @@ class Worker(MainBase):
                         "Check source files for empty lines or missing reference data. Halting"
                     )
                     self.mapper.add_to_migration_report(
-                        "Failed files", f"{file_name} - {ee}"
+                        Blurbs.FailedFiles, f"{file_name} - {ee}"
                     )
                     logging.fatal(error_str)
                     exit()
@@ -214,7 +207,7 @@ class Worker(MainBase):
                     self.mapper.handle_generic_exception(idx, excepion)
 
                 self.mapper.add_to_migration_report(
-                    "General statistics",
+                    Blurbs.GeneralStatistics,
                     f"Number of Legacy items in {file_name}",
                 )
                 self.mapper.add_general_statistics("Number of Legacy items in total")

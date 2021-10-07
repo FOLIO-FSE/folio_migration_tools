@@ -2,8 +2,7 @@ import json
 import logging
 
 from folioclient import FolioClient
-from marc_to_folio.custom_exceptions import (
-    TransformationRecordFailedError,
+from migration_tools.custom_exceptions import (
     TransformationProcessError,
 )
 
@@ -71,9 +70,9 @@ class RefDataMapping(object):
                     mapping["folio_id"] = t[0]
             except TransformationProcessError as te:
                 raise te
-            except Exception as ee:
+            except Exception:
                 logging.info(json.dumps(self.map, indent=4))
-                logging.exception()
+                logging.exception("")
                 raise TransformationProcessError(
                     f'{mapping[f"folio_{self.key_type}"]} could not be found in FOLIO'
                 )
@@ -147,10 +146,8 @@ class RefDataMapping(object):
 
 
 def get_mapped_legacy_keys(mapping):
-    legacy_keys = [
+    return [
         k
         for k in mapping.keys()
         if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
     ]
-    # logging.info(json.dumps(legacy_keys, indent=4))
-    return legacy_keys

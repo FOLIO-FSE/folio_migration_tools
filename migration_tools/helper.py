@@ -1,12 +1,12 @@
-from genericpath import isfile
 import json
 import logging
-from marc_to_folio.custom_exceptions import TransformationProcessError
-from pathlib import Path
 import os
 
-import requests
 import pandas as pd
+import requests
+from genericpath import isfile
+
+from migration_tools.custom_exceptions import TransformationProcessError
 
 
 class Helper:
@@ -20,7 +20,7 @@ class Helper:
         new_path = ""
         try:
             new_path = os.path.join(path, filename)
-        except:
+        except Exception:
             raise TransformationProcessError(
                 f"Something went wrong when joining {path} and {filename} into a path"
             )
@@ -61,5 +61,5 @@ class Helper:
             req = requests.get(latest_path)
             req.raise_for_status()
             return json.loads(req.text)
-        except:
+        except Exception:
             logging.exception(latest_path)

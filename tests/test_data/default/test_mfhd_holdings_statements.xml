@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2019-05-22T09:33:32.293Z</responseDate>
+    <request verb="GetRecord" identifier="https://libris.kb.se/6qjz91jj2gpb788" metadataPrefix="marcxml">http://libris.kb.se/oaipmh/</request>
+    <GetRecord>
+        <record>
+            <header>
+                <identifier>https://libris.kb.se/6qjz91jj2gpb788</identifier>
+                <datestamp>2017-11-22T14:54:30Z</datestamp>
+                <setSpec>bib</setSpec>
+            </header>
+            <metadata>
+                <record xmlns="http://www.loc.gov/MARC21/slim" type="Holdings">
+                    <leader>00571ny   22001453n 4500</leader>
+                    <datafield ind1=" " ind2=" " tag="852">
+                        <subfield code="z">Current issues in MSU SPEC COLL RARE BOOKS</subfield>
+                    </datafield>                    
+                    <datafield ind1=" " ind2=" " tag="866">
+                        <subfield code="8">0</subfield>
+                        <subfield code="a">v.1:no. 1(1943:July 3)-v.1:no.52(1944:June 24)</subfield>
+                        <subfield code="z">Some note</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="866">
+                        <subfield code="8">0</subfield>
+                        <subfield code="a">Some statement without note</subfield>
+                    </datafield>
+                     <datafield ind1="2" ind2="0" tag="853">
+                        <subfield code="8">1</subfield>
+                        <subfield code="a">v.</subfield>
+                        <subfield code="i">(year))</subfield>
+                    </datafield>
+                    <datafield ind1="4" ind2="0" tag="863">
+                        <subfield code="8">1.1</subfield>
+                        <subfield code="a">1-27</subfield>
+                        <subfield code="i">1948-2007</subfield>
+                         <subfield code="w">g</subfield>
+                    </datafield>
+                    <datafield ind1="4" ind2="0" tag="863">
+                        <subfield code="8">1.1</subfield>
+                        <subfield code="a">1-27</subfield>
+                        <subfield code="i">1948-2007</subfield>
+                         <subfield code="w">g</subfield>
+                    </datafield>
+                     <datafield ind1="4" ind2="0" tag="863">
+                        <subfield code="8">1.2</subfield>
+                        <subfield code="a">29-</subfield>
+                        <subfield code="i">2011-</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="853">
+                        <subfield code="8">5</subfield>
+                        <subfield code="a">Some pattern</subfield>
+                    </datafield>
+
+
+
+                </record>
+            </metadata>
+            <about>
+                <agent name="unknown"/>
+            </about>
+        </record>
+    </GetRecord>
+</OAI-PMH>
