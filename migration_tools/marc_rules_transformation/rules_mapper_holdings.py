@@ -55,7 +55,7 @@ class RulesMapperHoldings(RulesMapperBase):
             self.process_marc_field(
                 marc_field, ignored_subsequent_fields, folio_holding, index_or_legacy_id
             )
-        if not folio_holding["formerIds"]:
+        if not folio_holding.get("formerIds", []):
             raise TransformationProcessError(
                 self.parsed_records,
                 (
