@@ -87,10 +87,6 @@ class Worker(main_base.MainBase):
             self.mapper.add_stats(self.mapper.stats, "Records in file before parsing")
             try:
                 if record is None:
-                    self.mapper.add_to_migration_report(
-                        Blurbs.BibRecordsFailedParsing,
-                        f"{reader.current_exception} {reader.current_chunk}",
-                    )
                     self.mapper.add_stats(
                         self.mapper.stats,
                         "Records with encoding errors - parsing failed",

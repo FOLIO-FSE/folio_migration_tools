@@ -35,18 +35,6 @@ class RulesMapperBase(MapperBase):
         self.schema_properties = None
         logging.info(f"Current user id is {self.folio_client.current_user}")
 
-    def report_legacy_mapping(self, field_name, present, mapped, empty=False):
-        if field_name not in self.mapped_legacy_fields:
-            self.mapped_legacy_fields[field_name] = [
-                int(present),
-                int(mapped),
-                int(empty),
-            ]
-        else:
-            self.mapped_legacy_fields[field_name][0] += int(present)
-            self.mapped_legacy_fields[field_name][1] += int(mapped)
-            self.mapped_legacy_fields[field_name][2] += int(empty)
-
     def add_to_migration_report(self, blurb_tuple: tuple, measure_to_add):
         """Add section header and values to migration report."""
 
@@ -374,7 +362,7 @@ class RulesMapperBase(MapperBase):
                     f"{f[0]}:{('has_value' if f[1].strip() else 'empty')}"
                     for f in marc_field
                 )
-                pattern = " - ".join(f"{k}:'{str(v)}'" for k, v in entity.items())
+                pattern = " - ".join(f"{k}:'{bool(v)}'" for k, v in entity.items())
                 self.add_to_migration_report(
                     Blurbs.IncompleteEntityMapping,
                     f"{marc_field.tag} {sfs} ->>-->> {e_parent} {pattern}  ",

@@ -3,6 +3,8 @@ import json
 import logging
 import uuid
 
+from pymarc.record import Record
+
 from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
@@ -35,7 +37,7 @@ class BibsProcessor:
         self.srs_records_file = open(self.folders.srs_records_path, "w+")
         self.instance_id_map_file = open(self.folders.instance_id_map_path, "w+")
 
-    def process_record(self, idx, marc_record, inventory_only):
+    def process_record(self, idx, marc_record: Record, inventory_only):
 
         """processes a marc record and saves it"""
         try:
