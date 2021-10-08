@@ -39,7 +39,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
 
-    def parse_hold(self, marc_record, inventory_only=False):
+    def parse_hold(self, marc_record, index_or_legacy_id, inventory_only=False):
         """Parses a mfhd recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://docs.google.com/spreadsheets/d/1ac95azO1R41_PGkeLhc6uybAKcfpe6XLyd9-F4jqoTo/edit#gid=301923972
          This is the main function"""
@@ -53,7 +53,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
         for marc_field in marc_record:
             self.process_marc_field(
-                marc_field, ignored_subsequent_fields, folio_holding
+                marc_field, ignored_subsequent_fields, folio_holding, index_or_legacy_id
             )
         if not folio_holding["formerIds"]:
             raise TransformationProcessError(
@@ -76,19 +76,25 @@ class RulesMapperHoldings(RulesMapperBase):
         self.dedupe_rec(folio_holding)
         for id in folio_holding["formerIds"]:
             self.holdings_id_map[id] = {"id": folio_holding["id"]}
-
+        self.report_folio_mapping(folio_holding, self.schema)
         return folio_holding
 
     def process_marc_field(
-        self, marc_field: Field, ignored_subsequent_fields, folio_holding
+        self,
+        marc_field: Field,
+        ignored_subsequent_fields,
+        folio_holding,
+        index_or_legacy_id,
     ):
         self.add_stats(self.stats, "Total number of Tags processed")
         if marc_field.tag not in self.mappings:
-            self.report_legacy_mapping(marc_field.tag, True, False, False)
+            self.report_legacy_mapping(marc_field.tag, True, False)
         elif marc_field.tag not in ignored_subsequent_fields:
             mappings = self.mappings[marc_field.tag]
-            self.map_field_according_to_mapping(marc_field, mappings, folio_holding)
-            self.report_legacy_mapping(marc_field.tag, True, True, False)
+            self.map_field_according_to_mapping(
+                marc_field, mappings, folio_holding, index_or_legacy_id
+            )
+            self.report_legacy_mapping(marc_field.tag, True, True)
             if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                 ignored_subsequent_fields.add(marc_field.tag)
 

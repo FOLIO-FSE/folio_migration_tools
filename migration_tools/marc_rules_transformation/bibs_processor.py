@@ -40,12 +40,18 @@ class BibsProcessor:
         """processes a marc record and saves it"""
         try:
             index_or_legacy_id = self.mapper.get_legacy_ids(
-                marc_record, self.ils_flavour
+                marc_record, self.ils_flavour, idx
             )
-        except Exception:
+        except TransformationRecordFailedError as trf:
+            trf.log_it()
+        except Exception as ee:
             index_or_legacy_id = [
                 f"Index in file: {idx}"
             ]  # Only used for reporting purposes
+            logging.log(
+                26,
+                f"Smaller issue\t{index_or_legacy_id}\t001 nor legacy id found\t{ee}",
+            )
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
@@ -93,7 +99,8 @@ class BibsProcessor:
                 self.mapper.stats,
                 "Records that failed transformation. Check log for details.",
             )
-            logging.critical(error)
+            error.id = index_or_legacy_id
+            error.log_it()
 
         except Exception as inst:
             self.mapper.add_stats(
@@ -186,7 +193,7 @@ def get_srs_string(my_tuple):
         "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
         "matchedId": my_tuple[2],
         "generation": 0,
-        "recordType": "MARC",
+        "recordType": "MARC_BIB",
         "rawRecord": raw_record,
         "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": my_tuple[4]},

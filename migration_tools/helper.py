@@ -33,15 +33,15 @@ class Helper:
             "<details><summary>Click to expand field report</summary>     \n\n"
         )
 
-        report_file.write("FOLIO Field | Mapped | Empty | Unmapped  \n")
-        report_file.write("--- | --- | --- | ---:  \n")
+        report_file.write("FOLIO Field | Mapped | Unmapped  \n")
+        report_file.write("--- | --- | ---:  \n")
         for k, v in d_sorted.items():
             unmapped = total_records - v[0]
-            mapped = v[0] - v[1]
+            mapped = v[0]
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
-                f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
+                f"{k} | {(mapped if mapped > 0 else 0):,} ({mapped_per}) | {unmapped:,}  \n"
             )
         report_file.write("</details>   \n")
 
@@ -53,8 +53,8 @@ class Helper:
             "<details><summary>Click to expand field report</summary>     \n\n"
         )
 
-        report_file.write("Legacy Field | Present | Mapped | Empty | Unmapped  \n")
-        report_file.write("--- | --- | --- | --- | ---:  \n")
+        report_file.write("Legacy Field | Present | Mapped | Unmapped  \n")
+        report_file.write("--- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             present = v[0]
             present_per = "{:.1%}".format(
@@ -65,7 +65,7 @@ class Helper:
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
-                f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
+                f"{k} | {(present if present > 0 else 0):,} ({present_per}) | {(mapped if mapped > 0 else 0):,} ({mapped_per}) | {unmapped:,}  \n"
             )
         report_file.write("</details>   \n")
 
@@ -112,6 +112,10 @@ class Helper:
                 f"No file called {filename} present in {path}"
             )
         return new_path
+
+    @staticmethod
+    def log_data_issue(index_or_id, message, legacy_value):
+        logging.log(26, f"DATA ISSUE\t{index_or_id}\t{message}\t{legacy_value}")
 
     @staticmethod
     def write_to_file(file, folio_record, pg_dump=False):

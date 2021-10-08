@@ -73,13 +73,16 @@ class Worker(main_base.MainBase):
                             logging.info("FORCE UTF-8 is set to FALSE")
                             reader.force_utf8 = False
                         logging.info(f"running {file_name}")
-                        self.read_records(reader)
+                        self.read_records(reader, file_name)
+                except TransformationProcessError as tpe:
+                    logging.critical(tpe)
+                    exit()
                 except Exception:
                     logging.exception(file_name, stack_info=True)
             # wrap up
             self.wrap_up()
 
-    def read_records(self, reader):
+    def read_records(self, reader, file_name):
         for idx, record in enumerate(reader):
             self.mapper.add_stats(self.mapper.stats, "Records in file before parsing")
             try:
@@ -93,7 +96,7 @@ class Worker(main_base.MainBase):
                         "Records with encoding errors - parsing failed",
                     )
                     raise TransformationRecordFailedError(
-                        f"Index in file:{idx}",
+                        f"Index in {file_name}:{idx}",
                         f"MARC parsing error: {reader.current_exception}",
                         reader.current_chunk,
                     )
@@ -105,8 +108,8 @@ class Worker(main_base.MainBase):
                     )
                     self.processor.process_record(idx, record, False)
             except TransformationRecordFailedError as error:
-                logging.error(error)
-        logging.info(f"Done reading {idx} records from file")
+                error.log_it()
+        logging.info(f"Done reading {idx+1} records from file")
 
     @staticmethod
     def set_leader(marc_record: Record):

@@ -1,10 +1,9 @@
 import json
 import logging
+import sys
 
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (
-    TransformationProcessError,
-)
+from migration_tools.custom_exceptions import TransformationProcessError
 
 
 class RefDataMapping(object):

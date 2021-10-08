@@ -3,8 +3,9 @@ import csv
 import json
 import logging
 import os
+import sys
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile
 
 import requests
 from argparse_prompt import PromptParser
@@ -16,10 +17,10 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.folder_structure import FolderStructure
+from migration_tools.main_base import MainBase
 from migration_tools.marc_rules_transformation.holdings_processor import (
     HoldingsProcessor,
 )
-from migration_tools.main_base import MainBase
 from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
@@ -149,7 +150,7 @@ def read_records(reader, processor: HoldingsProcessor):
             else:
                 processor.process_record(record)
         except TransformationRecordFailedError as error:
-            logging.error(error)
+            error.log_it()
         except ValueError as error:
             logging.error(error)
 

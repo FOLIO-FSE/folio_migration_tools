@@ -1,17 +1,17 @@
 '''Main "script."'''
 import ast
-import sys
 import copy
 import csv
 import ctypes
 import json
 import logging
 import os
+import sys
 import time
 import traceback
 import uuid
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile
 from typing import List
 
 import requests.exceptions

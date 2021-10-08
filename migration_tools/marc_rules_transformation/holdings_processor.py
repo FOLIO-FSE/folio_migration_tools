@@ -49,7 +49,7 @@ class HoldingsProcessor:
             self.records_count += 1
 
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.mapper.parse_hold(marc_record)
+            folio_rec = self.mapper.parse_hold(marc_record, self.records_count)
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
                     f"Missing instance ids. Something is wrong. Legacy ID: {folio_rec['formerIds']}"
