@@ -21,7 +21,7 @@ class Blurbs(NamedTuple):
         "Mapped FOLIO fields",
         "Library action: **REVIEW** <br/>This table shows how many of the FOLIO instance records created contain data in the different FOLIO fields. The library should review the mapped totals against what they would expect to see mapped.",
     )
-    _Section1 = (
+    Section1 = (
         "__Section 1: instances",
         "This entries below seem to be related to instances",
     )
@@ -81,11 +81,11 @@ class Blurbs(NamedTuple):
         "Mapped Alternative title types",
         "Library action: **REVIEW** <br/>The created FOLIO instances contain the following Alternative title type values. The library should review the total number for each value against what they would expect to see mapped. The FOLIO community recommends a coarse-grained mapping.",
     )
-    _880Mappings = (
+    Field880Mappings = (
         "880 mappings",
         "This table shows how the 880 (Alternate Graphic Representation) has been mapped.",
     )
-    _880MappingsMissingFromRules = (
+    Field880MappingsMissingFromRules = (
         "880 mappings: mapped field not in mapping-rules",
         "Library action: **REVIEW** <br/>Fields that are referenced in the 880 mapping, but not configured in the mapping-rules.",
     )
@@ -97,10 +97,6 @@ class Blurbs(NamedTuple):
         "Non-numeric tags in records",
         "Library action: **REVIEW** <br/>Non-numeric tags may indicate locally defined fields.",
     )
-    UnspecifiedModesOfIssuanceCode = (
-        "Unspecified Modes of issuance code",
-        "Library action: **REVIEW** <br/>Number of created FOLIO instances with Mode of issueance set to *Unspecified*.",
-    )
     MatchedModesOfIssuanceCode = (
         "Matched Modes of issuance code",
         "Library action: **REVIEW** <br/>The created FOLIO instances contain the following Mode of issuace values. The library should review the total number for each value against what they would expect to see mapped.",
@@ -109,7 +105,7 @@ class Blurbs(NamedTuple):
         "Unrecognized language codes in records",
         "Library action: **REVIEW** <br/>Language code values in the source data that do not match standard language codes. If not fixed before migration, these will display as Undetermined in the instance record and Filtering by language in Inventory will not be conclusive.",
     )
-    _Section2 = (
+    Section2 = (
         "__Section 2: holdings",
         "The entries below seem to be related to holdings",
     )
@@ -121,7 +117,7 @@ class Blurbs(NamedTuple):
     )
     MappedLocations = ("Mapped Locations", "")
     Leader06 = ("Leader 06 (Holdings type)", "")
-    _Section3 = ("__Section 3: items", "The entries below seem to be related to items")
+    Section3 = ("__Section 3: items", "The entries below seem to be related to items")
     Exceptions = ("Exceptions", "")
     HridHandling = (
         "HRID Handling",
@@ -166,6 +162,10 @@ class Blurbs(NamedTuple):
     CallNumberTypeMapping = (
         "Callnumber type mapping",
         "Call number types in MFHDs are mapped from 852, Indicator 1 according to a certain scheme. (LOC documentation)[https://www.loc.gov/marc/holdings/hd852.html]",
+    )
+    LanguagesInRecords = (
+        "Language codes in records",
+        "A breakdown of language codes occuring in the records. Purely informational.",
     )
     ReceiptStatusMapping = (
         "Reciept status mapping",

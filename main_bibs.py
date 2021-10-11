@@ -84,11 +84,10 @@ class Worker(main_base.MainBase):
 
     def read_records(self, reader, file_name):
         for idx, record in enumerate(reader):
-            self.mapper.add_stats(self.mapper.stats, "Records in file before parsing")
+            self.mapper.add_stats("Records in file before parsing")
             try:
                 if record is None:
                     self.mapper.add_stats(
-                        self.mapper.stats,
                         "Records with encoding errors - parsing failed",
                     )
                     raise TransformationRecordFailedError(
@@ -99,7 +98,6 @@ class Worker(main_base.MainBase):
                 else:
                     self.set_leader(record)
                     self.mapper.add_stats(
-                        self.mapper.stats,
                         "Records successfully parsed from MARC21",
                     )
                     self.processor.process_record(idx, record, False)

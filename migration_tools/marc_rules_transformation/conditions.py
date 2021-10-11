@@ -443,7 +443,7 @@ class Conditions:
             logging.info(f"no instance id {marc_field.format_field()}")
             return ""
         except Exception:
-            self.mapper.add_stats(self.mapper.stats, "bib id not in map")
+            self.mapper.add_stats("bib id not in map")
             raise TransformationRecordFailedError(
                 "",
                 "Old instance id not in map",

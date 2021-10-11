@@ -5,7 +5,10 @@ import uuid
 
 from pymarc.record import Record
 
-from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationRecordFailedError,
+)
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
@@ -50,10 +53,7 @@ class BibsProcessor:
             index_or_legacy_id = [
                 f"Index in file: {idx}"
             ]  # Only used for reporting purposes
-            logging.log(
-                26,
-                f"Smaller issue\t{index_or_legacy_id}\t001 nor legacy id found\t{ee}",
-            )
+            Helper.log_data_issue(index_or_legacy_id, "001 nor legacy id found", ee)
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
@@ -75,30 +75,22 @@ class BibsProcessor:
             if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
                 Helper.write_to_file(self.results_file, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
-                self.mapper.add_stats(
-                    self.mapper.stats, "Records successfully transformed"
-                )
+                self.mapper.add_stats("Records successfully transformed")
                 for id_map_string in id_map_strings:
                     self.instance_id_map_file.write(f"{id_map_string}\n")
-                    self.mapper.add_stats(
-                        self.mapper.stats, "Lines written to identifier map"
-                    )
+                    self.mapper.add_stats("Lines written to identifier map")
 
         except ValueError as value_error:
             self.mapper.add_to_migration_report(
                 Blurbs.FieldMappingErrors,
                 f"{value_error} for {index_or_legacy_id} ",
             )
+            self.mapper.add_stats("Value Errors (records that failed transformation)")
             self.mapper.add_stats(
-                self.mapper.stats, "Value Errors (records that failed transformation)"
-            )
-            self.mapper.add_stats(
-                self.mapper.stats,
                 "Records that failed transformation. Check log for details",
             )
         except TransformationRecordFailedError as error:
             self.mapper.add_stats(
-                self.mapper.stats,
                 "Records that failed transformation. Check log for details.",
             )
             error.id = index_or_legacy_id
@@ -106,10 +98,11 @@ class BibsProcessor:
 
         except Exception as inst:
             self.mapper.add_stats(
-                self.mapper.stats,
                 "Records that failed transformation. Check log for details",
             )
-            self.mapper.add_stats(self.mapper.stats, "Transformation exceptions")
+            self.mapper.add_stats(
+                f"Transformation exceptions: {inst.__class__.__name__}",
+            )
             logging.error(type(inst))
             logging.error(inst.args)
             logging.error(inst)
@@ -124,7 +117,6 @@ class BibsProcessor:
             self.mapper.add_to_migration_report(Blurbs.MissingTitles, s)
             logging.error(s)
             self.mapper.add_stats(
-                self.mapper.stats,
                 "Records that failed transformation. Check log for details.",
             )
             return False
@@ -132,7 +124,6 @@ class BibsProcessor:
             s = f"No Instance Type Id in {index_or_legacy_id}"
             self.mapper.add_to_migration_report(Blurbs.MissingInstanceTypeIds, s)
             self.mapper.add_stats(
-                self.mapper.stats,
                 "Records that failed transformation. Check log for details.",
             )
             return False
@@ -143,7 +134,7 @@ class BibsProcessor:
         try:
             self.mapper.wrap_up()
         except Exception:
-            logging.exception(f"error during wrap up")
+            logging.exception("error during wrap up")
         logging.info("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
             holdings_path = self.folders.data_folder / "folio_holdings_from_bibs.json"

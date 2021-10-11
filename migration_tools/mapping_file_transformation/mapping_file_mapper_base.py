@@ -11,6 +11,7 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from migration_tools.helper import Helper
 from migration_tools.mapper_base import MapperBase
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.report_blurbs import Blurbs
@@ -186,13 +187,6 @@ class MappingFileMapperBase(MapperBase):
             "type": "object",
         }
 
-    def add_stats(self, a, number=1):
-        # TODO: Move to interface or parent class
-        if a not in self.stats:
-            self.stats[a] = number
-        else:
-            self.stats[a] += number
-
     def get_statistical_codes(
         self, legacy_item: dict, folio_prop_name: str, index_or_id
     ):
@@ -241,27 +235,28 @@ class MappingFileMapperBase(MapperBase):
             )
             return right_mapping["folio_id"]
         except StopIteration:
-            logging.debug(f"{ref_dat_mapping.name} mapping stopiteration")
             if prevent_default:
                 self.add_to_migration_report(
                     Blurbs.ReferenceDataMapping,
                     f'{ref_dat_mapping.name} mapping - Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""',
                 )
                 return ""
+            Helper.log_data_issue(
+                index_or_id,
+                f"{folio_property_name} mapping failed. Check mapping files",
+                " - ".join(fieldvalues),
+            )
             self.add_to_migration_report(
                 Blurbs.ReferenceDataMapping,
                 f'{ref_dat_mapping.name} mapping - Unmapped -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
             )
             return ref_dat_mapping.default_id
         except IndexError as ee:
-            logging.debug(f"{ref_dat_mapping.name} mapping indexerror")
             raise TransformationRecordFailedError(
                 index_or_id,
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized field in the legacy data.",
             )
-
         except Exception as ee:
-            logging.debug(f"{ref_dat_mapping.name} mapping general error")
             raise TransformationRecordFailedError(
                 index_or_id,
                 f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}",

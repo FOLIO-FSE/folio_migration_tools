@@ -7,6 +7,8 @@ class MapperBase:
         logging.info("MapperBase initiating")
         self.mapped_folio_fields = {}
         self.mapped_legacy_fields = {}
+        self.stats = {}
+        self.schema_properties = None
 
     def report_legacy_mapping(self, field_name, present, mapped):
         if field_name not in self.mapped_legacy_fields:
@@ -14,6 +16,13 @@ class MapperBase:
         else:
             self.mapped_legacy_fields[field_name][0] += int(present)
             self.mapped_legacy_fields[field_name][1] += int(mapped)
+
+    def add_stats(self, measure_to_add, number=1):
+        # TODO: Move to interface or parent class
+        if measure_to_add not in self.stats:
+            self.stats[measure_to_add] = number
+        else:
+            self.stats[measure_to_add] += number
 
     def report_folio_mapping(self, folio_record, schema):
         try:

@@ -24,7 +24,6 @@ class RulesMapperBase(MapperBase):
         self.migration_report = {}
         self.parsed_records = 0
         self.start = time.time()
-        self.stats = {}
         self.folio_client: FolioClient = folio_client
         self.holdings_json_schema = fetch_holdings_schema()
         self.instance_json_schema = get_instance_schema()
@@ -53,20 +52,6 @@ class RulesMapperBase(MapperBase):
             logging.info(
                 f"{elapsed_formatted} records/sec.\t\t{self.parsed_records:,} records processed"
             )
-
-    def print_dict_to_md_table(self, my_dict, report_file, h1="Measure", h2="Number"):
-        # TODO: Move to interface or parent class
-        d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
-        report_file.write(f"{h1} | {h2}   \n")
-        report_file.write("--- | ---:   \n")
-        for k, v in d_sorted.items():
-            report_file.write(f"{k} | {v:,}   \n")
-
-    def add_stats(self, stats, a):
-        if a not in stats:
-            stats[a] = 1
-        else:
-            stats[a] += 1
 
     def dedupe_rec(self, rec):
         # remove duplicates

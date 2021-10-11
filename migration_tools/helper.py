@@ -90,7 +90,7 @@ class Helper:
                 (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
             ]
             for b in sortedlist:
-                report_file.write(f"{b[0]} | {b[1]}   \n")
+                report_file.write(f"{b[0]} | {b[1]:,}   \n")
             report_file.write("</details>   \n")
 
     @staticmethod

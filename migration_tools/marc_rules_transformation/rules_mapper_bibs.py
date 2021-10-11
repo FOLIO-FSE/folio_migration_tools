@@ -76,12 +76,8 @@ class BibsRulesMapper(RulesMapperBase):
         self.add_to_migration_report(Blurbs.RecordStatus, marc_record.leader[5])
         self.handle_hrid(folio_instance, marc_record, index_or_legacy_id)
         if marc_record.leader[5] == "d":
-            logging.log(
-                26,
-                (
-                    f"OTHER DATA ISSUE\t{index_or_legacy_id}"
-                    f"\td in leader\t{marc_record.leader}"
-                ),
+            Helper.log_data_issue(
+                index_or_legacy_id, "d in leader. Is this correct?", marc_record.leader
             )
         return folio_instance
 
@@ -211,7 +207,7 @@ class BibsRulesMapper(RulesMapperBase):
             mappings = self.mappings.get(target_field, {})
 
             self.add_to_migration_report(
-                Blurbs._880Mappings,
+                Blurbs.Field880Mappings,
                 f"Source digits: {marc_field['6'][:3]} Target field: {target_field}",
             )
         else:
@@ -305,13 +301,7 @@ class BibsRulesMapper(RulesMapperBase):
         ):
             self.add_to_migration_report(Blurbs.NonNumericTagsInRecord, marc_field.tag)
             message = "Non-numeric tags in records"
-            logging.log(
-                26,
-                (
-                    f"OTHER DATA ISSUE\t{index_or_legacy_id}\t{message}\t "
-                    f"{marc_field.tag}"
-                ),
-            )
+            Helper.log_data_issue(index_or_legacy_id, message, marc_field.tag)
             bad_tags.add(marc_field.tag)
 
     def get_instance_type_id(self, marc_record, legacy_id):
@@ -400,13 +390,16 @@ class BibsRulesMapper(RulesMapperBase):
                 return match["id"]
             except Exception:
                 # TODO: Distinguish between generated codes and proper 338bs
+                Helper.log_data_issue(
+                    legacy_id, "Instance format Code not found in FOLIO", code
+                )
                 self.add_to_migration_report(
                     Blurbs.InstanceFormat,
                     f"Code {code} not found in FOLIO",
                 )
                 return ""
 
-        def get_folio_id_by_name(f337a: str, f338a: str):
+        def get_folio_id_by_name(f337a: str, f338a: str, legacy_id: str):
             f337a = f337a.lower().replace(" ", "")
             f338a = f338a.lower().replace(" ", "")
             match_template = f"{f337a} -- {f338a}"
@@ -422,6 +415,11 @@ class BibsRulesMapper(RulesMapperBase):
                 )
                 return match["id"]
             except Exception:
+                Helper.log_data_issue(
+                    legacy_id,
+                    "Unsuccessful matching on 337$a and 338$a",
+                    match_template,
+                )
                 self.add_to_migration_report(
                     Blurbs.InstanceFormat,
                     f"Unsuccessful matching on 337$a and 338$a - {match_template}",
@@ -438,52 +436,53 @@ class BibsRulesMapper(RulesMapperBase):
                 "Everything starting with rdacarrier will get mapped.",
             )
             if source.strip().startswith("rdacarrier"):
-                logging.debug(f"Carrier is {source}")
                 if "b" not in f and "a" in f:
                     self.add_to_migration_report(
                         Blurbs.InstanceFormat,
-                        f"338$b is missing. Will try parse from 337$a and 338$b",
+                        "338$b is missing. Will try parse from 337$a and 338$b",
                     )
                     for sfidx, a in enumerate(f.get_subfields("a")):
                         corresponding_337 = (
                             all_337s[fidx] if fidx < len(all_337s) else None
                         )
                         if corresponding_337 and "a" in corresponding_337:
-                            fmt_id = get_folio_id_by_name(corresponding_337["a"], a)
+                            fmt_id = get_folio_id_by_name(
+                                corresponding_337["a"], a, legacy_id
+                            )
                             if fmt_id:
                                 yield fmt_id
 
                 for sfidx, b in enumerate(f.get_subfields("b")):
                     b = b.replace(" ", "")
                     if len(b) == 2:  # Normal 338b. should be able to map this
-                        logging.debug(f"Length of 338 $b is 2")
+                        logging.debug("Length of 338 $b is 2")
                         yield get_folio_id(b)
                     elif len(b) == 1:
-                        logging.debug(f"Length of 338 $b is 1 ")
+                        logging.debug("Length of 338 $b is 1 ")
                         corresponding_337 = (
                             all_337s[fidx] if fidx < len(all_337s) else None
                         )
                         if (
                             not corresponding_337
                         ):  # No matching 337. No use mapping the 338
-                            logging.debug(f"No corresponding 337")
+                            s = "No corresponding 337 to 338 even though 338$b was one charachter code"
+                            Helper.log_data_issue(legacy_id, s, b)
                             self.add_to_migration_report(
                                 Blurbs.InstanceFormat,
-                                "No corresponding 337 to 338 even though 338$b was one charachter code",
+                                s,
                             )
                         else:  # Corresponding 337. Try to combine the codes.
-                            logging.debug(f"Corresponding 337 found")
+                            logging.debug("Corresponding 337 found")
                             corresponding_b = (
                                 corresponding_337.get_subfields("b")[sfidx]
                                 if sfidx < len(corresponding_337.get_subfields("b"))
                                 else None
                             )
                             if not corresponding_b:
-                                logging.debug(f"No corresponding $b found")
-                                self.add_to_migration_report(
-                                    Blurbs.InstanceFormat,
-                                    "No corresponding $b in corresponding 338",
-                                )
+                                logging.debug("No corresponding $b found")
+                                s = "No corresponding $b in corresponding 338"
+                                Helper.log_data_issue(legacy_id, s, "")
+                                self.add_to_migration_report(Blurbs.InstanceFormat, s)
                             else:
                                 combined_code = (corresponding_b + b).strip()
                                 if len(combined_code) == 2:
@@ -508,15 +507,9 @@ class BibsRulesMapper(RulesMapperBase):
                 self.add_to_migration_report(Blurbs.HridHandling, "Added 035 from 001")
             except Exception:
                 if "001" in marc_record:
-                    self.add_to_migration_report(
-                        Blurbs.HridHandling, "Failed to create 035 from 001"
-                    )
-                    logging.log(
-                        26,
-                        (
-                            f"\t{index_or_legacy_id}\tFailed to create 035 from 001\t{marc_record['001']}"
-                        ),
-                    )
+                    s = "Failed to create 035 from 001"
+                    self.add_to_migration_report(Blurbs.HridHandling, s)
+                    Helper.log_data_issue(index_or_legacy_id, s, marc_record["001"])
             marc_record.add_ordered_field(new_001)
             self.add_to_migration_report(
                 Blurbs.HridHandling, "Created HRID using default settings"
@@ -525,7 +518,7 @@ class BibsRulesMapper(RulesMapperBase):
         elif self.hrid_handling == "001":
             value = marc_record["001"].value()
             if value in self.unique_001s:
-                self.add_to_migration_report("HRID Handling", "Duplicate 001")
+                self.add_to_migration_report(Blurbs.HridHandling, "Duplicate 001")
                 raise TransformationRecordFailedError(
                     index_or_legacy_id, "Duplicate 001 for record", value
                 )
@@ -548,10 +541,6 @@ class BibsRulesMapper(RulesMapperBase):
                 name = "serial"
             if level == "i":
                 name = "integrating resource"
-            if name == "unspecified":
-                self.add_to_migration_report(
-                    Blurbs.UnspecifiedModesOfIssuanceCode, level
-                )
             ret = next(
                 (
                     i["id"]
@@ -560,7 +549,6 @@ class BibsRulesMapper(RulesMapperBase):
                 ),
                 "",
             )
-
             self.add_to_migration_report(
                 Blurbs.MatchedModesOfIssuanceCode, f"{name} -- {ret}"
             )
@@ -633,7 +621,7 @@ class BibsRulesMapper(RulesMapperBase):
         languages = self.get_languages_041(marc_record, legacy_id)
         languages.add(self.get_languages_008(marc_record))
         for lang in languages:
-            self.add_to_migration_report("Languages in records", lang)
+            self.add_to_migration_report(Blurbs.LanguagesInRecords, lang)
         return list(languages)
 
     def fetch_language_codes(self) -> Generator[str, None, None]:
@@ -672,7 +660,7 @@ class BibsRulesMapper(RulesMapperBase):
                     marc_record, self.ils_flavour, index_or_legacy_id
                 )
                 m = "Unrecognized language codes in record"
-                logging.log(26, f"Other data issue\t{legacy_id}\t{m}\t{language_value}")
+                Helper.log_data_issue(legacy_id, m, language_value)
                 self.add_to_migration_report(
                     Blurbs.UnrecognizedLanguageCodes,
                     f"{language_value} not recognized for {self.get_legacy_ids(marc_record, self.ils_flavour, index_or_legacy_id)}",

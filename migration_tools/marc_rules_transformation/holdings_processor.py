@@ -61,7 +61,6 @@ class HoldingsProcessor:
         except TransformationRecordFailedError as data_error:
             self.failed_records_count += 1
             self.mapper.add_stats(
-                self.mapper.stats,
                 "Records that failed transformation. Check log for details",
             )
             logging.error(data_error)
