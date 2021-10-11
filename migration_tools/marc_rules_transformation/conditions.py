@@ -26,7 +26,6 @@ class Conditions:
         self.default_location_code = default_location_code
         logging.debug("Init conditions!")
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
-        self.stats = {}
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
         self.filter_last_chars = r",$"
         self.folio = folio

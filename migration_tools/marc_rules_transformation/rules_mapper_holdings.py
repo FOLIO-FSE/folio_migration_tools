@@ -86,7 +86,7 @@ class RulesMapperHoldings(RulesMapperBase):
         folio_holding,
         index_or_legacy_id,
     ):
-        self.add_stats(self.stats, "Total number of Tags processed")
+        self.add_stats("Total number of Tags processed")
         if marc_field.tag not in self.mappings:
             self.report_legacy_mapping(marc_field.tag, True, False)
         elif marc_field.tag not in ignored_subsequent_fields:

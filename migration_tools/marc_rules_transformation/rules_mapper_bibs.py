@@ -12,13 +12,12 @@ from typing import Generator, List
 import pymarc
 import requests
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from migration_tools.custom_exceptions import (TransformationProcessError,
+                                               TransformationRecordFailedError)
 from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.conditions import Conditions
-from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
+from migration_tools.marc_rules_transformation.rules_mapper_base import \
+    RulesMapperBase
 from migration_tools.report_blurbs import Blurbs
 from pymarc import Field
 from pymarc.record import Record
@@ -186,7 +185,7 @@ class BibsRulesMapper(RulesMapperBase):
     def report_marc_stats(
         self, marc_field, bad_tags, index_or_legacy_id, ignored_subsequent_fields
     ):
-        self.add_stats(self.stats, "Total number of Tags processed")
+        self.add_stats("Total number of Tags processed")
         self.report_bad_tags(marc_field, bad_tags, index_or_legacy_id)
         mapped = marc_field.tag in self.mappings
         if marc_field.tag in ignored_subsequent_fields:
@@ -694,7 +693,7 @@ class BibsRulesMapper(RulesMapperBase):
             if marc_record["001"].format_field().strip():
                 res.add(marc_record["001"].format_field().strip())
             if any(res):
-                self.add_stats(self.stats, "legacy id from 990$a")
+                self.add_stats("legacy id from 990$a")
                 return list(res)
         elif ils_flavour == "aleph":
             return self.get_aleph_bib_id(marc_record)
@@ -724,12 +723,12 @@ class BibsRulesMapper(RulesMapperBase):
     def get_aleph_bib_id(self, marc_record: Record):
         res = {f["b"].strip() for f in marc_record.get_fields("998") if "b" in f}
         if any(res):
-            self.add_stats(self.stats, "legacy id from 998$b")
+            self.add_stats("legacy id from 998$b")
             return list(res)
         else:
             try:
                 ret = [marc_record["001"].format_field().strip()]
-                self.add_stats(self.stats, "legacy id from 001")
+                self.add_stats("legacy id from 001")
                 return ret
             except Exception:
                 raise TransformationRecordFailedError(
