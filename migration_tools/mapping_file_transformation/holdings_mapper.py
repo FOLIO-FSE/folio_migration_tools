@@ -73,15 +73,11 @@ class HoldingsMapper(MappingFileMapperBase):
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(legacy_value, index_or_id)
         elif len(legacy_item_keys) == 1:
-            logging.debug(f"One value from one property to return{folio_prop_name} ")
             value = self.mapped_from_values.get(folio_prop_name, "")
             if value in [None, ""]:
                 return legacy_value
             return value
         elif any(legacy_item_keys):
-            logging.debug(
-                f"Multiple values from multiple mappings to return{folio_prop_name} "
-            )
             return legacy_values
         else:
             # edge case

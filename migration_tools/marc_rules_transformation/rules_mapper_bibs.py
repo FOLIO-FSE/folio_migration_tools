@@ -12,12 +12,13 @@ from typing import Generator, List
 import pymarc
 import requests
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (TransformationProcessError,
-                                               TransformationRecordFailedError)
+from migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.conditions import Conditions
-from migration_tools.marc_rules_transformation.rules_mapper_base import \
-    RulesMapperBase
+from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 from migration_tools.report_blurbs import Blurbs
 from pymarc import Field
 from pymarc.record import Record
@@ -454,10 +455,8 @@ class BibsRulesMapper(RulesMapperBase):
                 for sfidx, b in enumerate(f.get_subfields("b")):
                     b = b.replace(" ", "")
                     if len(b) == 2:  # Normal 338b. should be able to map this
-                        logging.debug("Length of 338 $b is 2")
                         yield get_folio_id(b)
                     elif len(b) == 1:
-                        logging.debug("Length of 338 $b is 1 ")
                         corresponding_337 = (
                             all_337s[fidx] if fidx < len(all_337s) else None
                         )
@@ -471,14 +470,12 @@ class BibsRulesMapper(RulesMapperBase):
                                 s,
                             )
                         else:  # Corresponding 337. Try to combine the codes.
-                            logging.debug("Corresponding 337 found")
                             corresponding_b = (
                                 corresponding_337.get_subfields("b")[sfidx]
                                 if sfidx < len(corresponding_337.get_subfields("b"))
                                 else None
                             )
                             if not corresponding_b:
-                                logging.debug("No corresponding $b found")
                                 s = "No corresponding $b in corresponding 338"
                                 Helper.log_data_issue(legacy_id, s, "")
                                 self.add_to_migration_report(Blurbs.InstanceFormat, s)

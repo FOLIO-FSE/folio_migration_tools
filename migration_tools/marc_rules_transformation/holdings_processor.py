@@ -7,7 +7,10 @@ import traceback
 from datetime import datetime as dt
 
 from jsonschema import ValidationError, validate
-from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
@@ -45,65 +48,61 @@ class HoldingsProcessor:
 
     def process_record(self, marc_record):
         """processes a marc holdings record and saves it"""
+        success = True
         try:
             self.records_count += 1
-
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record, self.records_count)
+            if not any(folio_rec.get("formerIds", [])):
+                raise TransformationRecordFailedError(
+                    self.records_count, "Missing formerIds", self.records_count
+                )
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
-                    f"Missing instance ids. Something is wrong. Legacy ID: {folio_rec['formerIds']}"
+                    "".join(folio_rec.get("formerIds", [])),
+                    "Missing instance ids. Something is wrong.",
+                    "",
                 )
             folio_rec["discoverySuppress"] = self.suppress
             Helper.write_to_file(self.created_objects_file, folio_rec)
-            add_stats(self.mapper.stats, "Holdings records written to disk")
+            self.mapper.add_stats("Holdings records written to disk")
             self.print_progress()
-        except TransformationRecordFailedError as data_error:
-            self.failed_records_count += 1
+        except TransformationRecordFailedError as error:
+            success = False
+            Helper.log_data_issue(error.id, error.message, error.data_value)
             self.mapper.add_stats(
                 "Records that failed transformation. Check log for details",
             )
-            logging.error(data_error)
+            logging.error(error)
             remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if (
-                callable(remove_from_id_map)
-                and "folio_rec" in locals()
-                and folio_rec.get("formerIds", "")
-            ):
-                self.mapper.remove_from_id_map(folio_rec["formerIds"])
-
-        except ValidationError as validation_error:
-            add_stats(self.mapper.stats, "Validation errors")
-            add_stats(self.mapper.stats, "Failed records")
-            logging.error(validation_error)
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if callable(remove_from_id_map):
-                self.mapper.remove_from_id_map(folio_rec["formerIds"])
-        except ValueError as value_error:
-            add_stats(self.mapper.stats, "Value errors")
-            add_stats(self.mapper.stats, "Failed records")
-            logging.debug(folio_rec["formerIds"])
-            logging.error(value_error)
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if callable(remove_from_id_map):
-                self.mapper.remove_from_id_map(folio_rec["formerIds"])
+        except TransformationProcessError as tpe:
+            raise tpe  #  Raise, since it should be handled higher up
         except Exception as inst:
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-            if callable(remove_from_id_map):
-                self.mapper.remove_from_id_map(folio_rec["formerIds"])
+            success = False
             traceback.print_exc()
             logging.error(type(inst))
             logging.error(inst.args)
             logging.error(inst)
             logging.error(marc_record)
             raise inst
+        finally:
+            if not success:
+                self.failed_records_count += 1
+                remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
+                if (
+                    callable(remove_from_id_map)
+                    and "folio_rec" in locals()
+                    and folio_rec.get("formerIds", "")
+                ):
+                    self.mapper.remove_from_id_map(folio_rec["formerIds"])
 
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
         self.created_objects_file.close()
         id_map = self.mapper.holdings_id_map
         logging.warning(
-            f"Saving map of {len(id_map)} old and new IDs to {self.folder_structure.holdings_id_map_path}"
+            f"Saving map of {len(id_map)} old and new IDs "
+            f"to {self.folder_structure.holdings_id_map_path}"
         )
         with open(self.folder_structure.holdings_id_map_path, "w+") as id_map_file:
             json.dump(id_map, id_map_file)
@@ -127,11 +126,3 @@ class HoldingsProcessor:
             )
 
         logging.info(f"Done. Transformation report written to {report_file.name}")
-
-
-def add_stats(stats, a):
-    # TODO: Move to interface or parent class
-    if a not in stats:
-        stats[a] = 1
-    else:
-        stats[a] += 1

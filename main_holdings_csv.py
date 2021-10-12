@@ -237,8 +237,6 @@ class Worker(MainBase):
             ) as holdings_file:
                 for holding in self.holdings.values():
                     for legacy_id in holding["formerIds"]:
-                        logging.debug(f"Legacy id:{legacy_id}")
-
                         # Prevent the first item in a boundwith to be overwritten
                         if legacy_id not in self.legacy_map:
                             self.legacy_map[legacy_id] = {"id": holding["id"]}

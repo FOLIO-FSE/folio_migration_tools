@@ -22,9 +22,7 @@ class Conditions:
         default_location_code="",
         default_call_number_type_id="",
     ):
-        logging.debug(f"default location code is still {default_location_code}")
         self.default_location_code = default_location_code
-        logging.debug("Init conditions!")
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
         self.filter_last_chars = r",$"

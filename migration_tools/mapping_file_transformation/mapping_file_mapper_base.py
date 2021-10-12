@@ -25,7 +25,6 @@ class MappingFileMapperBase(MapperBase):
     ):
         super().__init__()
         self.schema = schema
-        self.stats = {}
         self.total_records = 0
         self.migration_report = {}
         self.folio_client = folio_client
@@ -228,7 +227,6 @@ class MappingFileMapperBase(MapperBase):
 
             if not right_mapping:
                 raise StopIteration()
-            logging.debug(f"Found mapping is {right_mapping}")
             self.add_to_migration_report(
                 Blurbs.ReferenceDataMapping,
                 f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',
@@ -471,7 +469,6 @@ class MappingFileMapperBase(MapperBase):
                 k for k, p in properties.items() if not p.get("folio:isVirtual", False)
             ):
                 prop_path = f"{prop_name}[{i}].{prop}"
-                # logging.debug(f"object array prop_path {prop_path}")
                 if prop_path in self.folio_keys:
                     res = self.get_prop(legacy_object, prop_path, index_or_id)
                     self.report_legacy_mapping(
@@ -482,7 +479,6 @@ class MappingFileMapperBase(MapperBase):
             if temp_object != {} and all(
                 (v or (isinstance(v, bool)) for k, v in temp_object.items())
             ):
-                # logging.debug(f"temporary object {temp_object}")
                 resulting_array.append(temp_object)
             # else:
             #    logging..trace(f"empty temp object {json.dumps(temp_object, indent=4)}")
@@ -490,7 +486,6 @@ class MappingFileMapperBase(MapperBase):
             folio_object[prop_name] = resulting_array
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
-        logging.debug(f"String array {prop}")
         for i in range(9):
             prop_name = f"{prop}[{i}]"
             if prop_name in self.folio_keys and self.has_property(
@@ -498,14 +493,12 @@ class MappingFileMapperBase(MapperBase):
             ):
                 mapped_prop = self.get_prop(legacy_object, prop_name, index_or_id)
                 if mapped_prop:
-                    # logging.debug(f"Mapped string array prop {mapped_prop}")
                     if prop in folio_object and mapped_prop not in folio_object.get(
                         prop, []
                     ):
                         folio_object.get(prop, []).append(mapped_prop)
                     else:
                         folio_object[prop] = [mapped_prop]
-                    # logging.debug(f"Mapped string array prop {folio_object[prop]}")
                 self.report_legacy_mapping(
                     self.legacy_basic_property(prop_name), True, True
                 )
@@ -535,7 +528,6 @@ class MappingFileMapperBase(MapperBase):
             return folio_prop_name in legacy_object
 
         legacy_keys = self.field_map.get(folio_prop_name, [])
-        # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
             any(legacy_keys)
             and any(k not in empty_vals for k in legacy_keys)
@@ -547,10 +539,8 @@ class MappingFileMapperBase(MapperBase):
             return folio_prop_name in legacy_object
 
         if folio_prop_name not in self.folio_keys:
-            # logging.debug(f"map_basic_props -> {folio_prop_name}")
             return False
         legacy_keys = self.field_map.get(folio_prop_name, [])
-        # logging.debug(f"{folio_prop_name} - {legacy_key}")
         return (
             any(legacy_keys)
             and any(k not in empty_vals for k in legacy_keys)

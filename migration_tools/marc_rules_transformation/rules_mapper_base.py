@@ -237,14 +237,11 @@ class RulesMapperBase(MapperBase):
                     and is_array_of_objects(schema_parent)
                     and sc_prop.get("type", "string") == "string"
                 ):
-                    # logging.debug(f"break! {target} {prop} {value}")
                     if len(rec[parent][-1]) > 0:
                         rec[parent][-1][target] = value[0]
                     else:
                         rec[parent][-1] = {target: value[0]}
-                    logging.debug(rec[parent])
                 # if target == targets[-1]:
-                # logging.debug(f"HIT {target} {value[0]}")
                 # prop[target] = value[0]
                 # prop = rec[target]
                 schema_parent = sc_prop
