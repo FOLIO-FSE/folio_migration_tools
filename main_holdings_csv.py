@@ -17,7 +17,6 @@ from typing import List
 import requests.exceptions
 from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
-from requests.api import request
 
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -89,7 +88,7 @@ class Worker(MainBase):
                     "Check source files for empty lines or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.add_to_migration_report(
+                self.mapper.migration_report.add(
                     Blurbs.FailedFiles, f"{file_name} - {ee}"
                 )
                 sys.exit()
@@ -107,23 +106,11 @@ class Worker(MainBase):
                 try:
                     self.process_holding(idx, record)
                 except TransformationProcessError as process_error:
-                    logging.error(f"{idx}\t{process_error}")
+                    self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as error:
-                    self.log_and_exit_if_too_many_errors(error, idx)
+                    self.mapper.handle_transformation_record_failed_error(idx, error)
                 except Exception as excepion:
-                    self.num_exeptions += 1
-                    print("\n=======ERROR===========\n")
-                    print("\n=======Stack Trace===========")
-                    traceback.print_exc()
-                    print("\n============Data========")
-                    print(json.dumps(record, indent=4))
-                    print("\n=======Message===========")
-                    print(
-                        f"Row {idx:,} failed with the following Exception: {excepion} "
-                        f" of type {type(excepion).__name__}"
-                    )
-                    sys.exit()
-
+                    self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.add_general_statistics("Number of Legacy items in file")
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
@@ -141,13 +128,15 @@ class Worker(MainBase):
         folio_rec = self.mapper.do_map(row, f"row # {idx}")
         folio_rec["holdingsTypeId"] = self.default_holdings_type
         holdings_from_row = []
-        if len(folio_rec["instanceId"]) == 1:  # Normal case.
+        if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
             holdings_from_row.append(folio_rec)
-        elif len(folio_rec["instanceId"]) > 1:  # Bound-with.
+        elif len(folio_rec.get("instanceId", [])) > 1:  # Bound-with.
             holdings_from_row.extend(self.create_bound_with_holdings(folio_rec))
         else:
-            logging.critical(f"No instance id at row {idx}")
+            raise TransformationRecordFailedError(
+                idx, "No instance id in parsed record", ""
+            )
 
         for folio_holding in holdings_from_row:
             self.merge_holding_in(folio_holding)
@@ -198,14 +187,14 @@ class Worker(MainBase):
         else:
             folio_rec["notes"] = [note, note2]
 
-        for bwidx, id in enumerate(folio_rec["instanceId"]):
-            if not id:
+        for bwidx, index in enumerate(folio_rec["instanceId"]):
+            if not index:
                 raise ValueError(f"No ID for record {folio_rec}")
             call_numbers = ast.literal_eval(folio_rec["callNumber"])
             if isinstance(call_numbers, str):
                 call_numbers = [call_numbers]
             c = copy.deepcopy(folio_rec)
-            c["instanceId"] = id
+            c["instanceId"] = index
             c["callNumber"] = call_numbers[bwidx]
             c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
             c["id"] = str(uuid.uuid4())
@@ -374,7 +363,7 @@ def main():
             args.okapi_url, args.tenant_id, args.username, args.password
         )
     except requests.exceptions.SSLError as sslerror:
-        logging.error(f"{sslerror}")
+        logging.error(sslerror)
         logging.error(
             "Network Error. Are you connected to the Internet? Do you need VPN? {}"
         )

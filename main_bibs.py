@@ -6,7 +6,7 @@ import os
 import time
 from datetime import datetime as dt
 from os import listdir
-from os.path import dirname, isfile
+from os.path import isfile
 
 import requests
 from argparse_prompt import PromptParser
@@ -23,7 +23,6 @@ from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
-from migration_tools.report_blurbs import Blurbs
 
 
 class Worker(main_base.MainBase):
@@ -31,6 +30,7 @@ class Worker(main_base.MainBase):
 
     def __init__(self, folio_client, folder_structure: FolderStructure, args):
         # msu special case
+        super().__init__()
         self.args = args
         self.folder_structure = folder_structure
         self.files = [
@@ -84,10 +84,10 @@ class Worker(main_base.MainBase):
 
     def read_records(self, reader, file_name):
         for idx, record in enumerate(reader):
-            self.mapper.add_stats("Records in file before parsing")
+            self.mapper.migration_report.add_stats("Records in file before parsing")
             try:
                 if record is None:
-                    self.mapper.add_stats(
+                    self.mapper.migration_report.add_general_statistics(
                         "Records with encoding errors - parsing failed",
                     )
                     raise TransformationRecordFailedError(
@@ -97,7 +97,7 @@ class Worker(main_base.MainBase):
                     )
                 else:
                     self.set_leader(record)
-                    self.mapper.add_stats(
+                    self.mapper.migration_report.add_general_statistics(
                         "Records successfully parsed from MARC21",
                     )
                     self.processor.process_record(idx, record, False)
@@ -132,7 +132,8 @@ class Worker(main_base.MainBase):
             )
 
         logging.info(
-            f"Done. Transformation report written to {self.folder_structure.migration_reports_file.name}"
+            f"Done. Transformation report written to "
+            f"{self.folder_structure.migration_reports_file.name}"
         )
 
 

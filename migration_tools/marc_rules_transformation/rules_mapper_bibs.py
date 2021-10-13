@@ -38,7 +38,6 @@ class BibsRulesMapper(RulesMapperBase):
         self.folio = folio_client
         self.record_status = {}
         self.unique_001s = set()
-        self.migration_report = {}
         self.suppress = args.suppress
         self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
@@ -73,7 +72,7 @@ class BibsRulesMapper(RulesMapperBase):
             "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
         }
-        self.add_to_migration_report(Blurbs.RecordStatus, marc_record.leader[5])
+        self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
         self.handle_hrid(folio_instance, marc_record, index_or_legacy_id)
         if marc_record.leader[5] == "d":
             Helper.log_data_issue(
@@ -129,7 +128,7 @@ class BibsRulesMapper(RulesMapperBase):
                     marc_record["099"].format_field() if "099" in marc_record else ""
                 )
                 if instance_level_call_number:
-                    self.add_to_migration_report(
+                    self.migration_report.add(
                         Blurbs.InstanceLevelCallnumber, bool(instance_level_call_number)
                     )
                 id_map_strings.append(
@@ -179,14 +178,12 @@ class BibsRulesMapper(RulesMapperBase):
                 )
                 raise ee
         else:
-            self.add_to_migration_report(
-                Blurbs.MappingsNotFoundForField, marc_field.tag
-            )
+            self.migration_report.add(Blurbs.MappingsNotFoundForField, marc_field.tag)
 
     def report_marc_stats(
         self, marc_field, bad_tags, index_or_legacy_id, ignored_subsequent_fields
     ):
-        self.add_stats("Total number of Tags processed")
+        self.migration_report.add_general_statistics("Total number of Tags processed")
         self.report_bad_tags(marc_field, bad_tags, index_or_legacy_id)
         mapped = marc_field.tag in self.mappings
         if marc_field.tag in ignored_subsequent_fields:
@@ -206,7 +203,7 @@ class BibsRulesMapper(RulesMapperBase):
             )
             mappings = self.mappings.get(target_field, {})
 
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.Field880Mappings,
                 f"Source digits: {marc_field['6'][:3]} Target field: {target_field}",
             )
@@ -256,18 +253,18 @@ class BibsRulesMapper(RulesMapperBase):
                 if f.tag in ["866", "867", "868", "865", "864", "863"]
             ]
             if f852s and not f86xs:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.HoldingsGenerationFromBibs,
                     "Records with 852s but no 86X",
                 )
             elif f852s:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.HoldingsGenerationFromBibs,
                     "Records with both 852s and at least one 86X",
                 )
 
             elif f86xs:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.HoldingsGenerationFromBibs,
                     "Records without 852s but with 86X",
                 )
@@ -299,7 +296,7 @@ class BibsRulesMapper(RulesMapperBase):
             and marc_field.tag != "LDR"
             and marc_field.tag not in bad_tags
         ):
-            self.add_to_migration_report(Blurbs.NonNumericTagsInRecord, marc_field.tag)
+            self.migration_report.add(Blurbs.NonNumericTagsInRecord, marc_field.tag)
             message = "Non-numeric tags in records"
             Helper.log_data_issue(index_or_legacy_id, message, marc_field.tag)
             bad_tags.add(marc_field.tag)
@@ -318,12 +315,12 @@ class BibsRulesMapper(RulesMapperBase):
                 "",
             )
             if match:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
                     f"336$a -Successful matching on  {match_template} ({f336a})",
                 )
             else:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
                     f"336$a -Unsuccessful matching on  {match_template} ({f336a})",
                 )
@@ -338,7 +335,7 @@ class BibsRulesMapper(RulesMapperBase):
             raise TransformationProcessError("No instance_types setup in tenant")
 
         if "336" in marc_record and "b" not in marc_record["336"]:
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.RecourceTypeMapping, f"Subfield b not in 336"
             )
             Helper.log_data_issue(
@@ -354,7 +351,7 @@ class BibsRulesMapper(RulesMapperBase):
                 self.folio.instance_types, "instance_types", marc_record["336"]["b"]
             )
             if not t:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
                     f'Code {marc_record["336"]["b"]} not found in FOLIO (from 336$b)',
                 )
@@ -364,7 +361,7 @@ class BibsRulesMapper(RulesMapperBase):
                     marc_record["336"]["b"],
                 )
             else:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.RecourceTypeMapping, f"{t[1]} (from 336$b)"
                 )
                 return_id = t[0]
@@ -383,7 +380,7 @@ class BibsRulesMapper(RulesMapperBase):
                 match = next(
                     f for f in self.folio.instance_formats if f["code"] == code
                 )
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.InstanceFormat,
                     f"Successful match  - {code}->{match['name']}",
                 )
@@ -393,7 +390,7 @@ class BibsRulesMapper(RulesMapperBase):
                 Helper.log_data_issue(
                     legacy_id, "Instance format Code not found in FOLIO", code
                 )
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.InstanceFormat,
                     f"Code {code} not found in FOLIO",
                 )
@@ -409,7 +406,7 @@ class BibsRulesMapper(RulesMapperBase):
                     for f in self.folio.instance_formats
                     if f["name"] == match_template
                 )
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.InstanceFormat,
                     f"Successful matching on 337$a & 338$a - {match_template}->{match['name']}",
                 )
@@ -420,7 +417,7 @@ class BibsRulesMapper(RulesMapperBase):
                     "Unsuccessful matching on 337$a and 338$a",
                     match_template,
                 )
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.InstanceFormat,
                     f"Unsuccessful matching on 337$a and 338$a - {match_template}",
                 )
@@ -430,14 +427,14 @@ class BibsRulesMapper(RulesMapperBase):
         all_338s = marc_record.get_fields("338")
         for fidx, f in enumerate(all_338s):
             source = f["2"] if "2" in f else "Not set"
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.InstanceFormat,
                 f"338$2 (Source) is set to {source}. "
                 "Everything starting with rdacarrier will get mapped.",
             )
             if source.strip().startswith("rdacarrier"):
                 if "b" not in f and "a" in f:
-                    self.add_to_migration_report(
+                    self.migration_report.add(
                         Blurbs.InstanceFormat,
                         "338$b is missing. Will try parse from 337$a and 338$b",
                     )
@@ -465,7 +462,7 @@ class BibsRulesMapper(RulesMapperBase):
                         ):  # No matching 337. No use mapping the 338
                             s = "No corresponding 337 to 338 even though 338$b was one charachter code"
                             Helper.log_data_issue(legacy_id, s, b)
-                            self.add_to_migration_report(
+                            self.migration_report.add(
                                 Blurbs.InstanceFormat,
                                 s,
                             )
@@ -478,7 +475,7 @@ class BibsRulesMapper(RulesMapperBase):
                             if not corresponding_b:
                                 s = "No corresponding $b in corresponding 338"
                                 Helper.log_data_issue(legacy_id, s, "")
-                                self.add_to_migration_report(Blurbs.InstanceFormat, s)
+                                self.migration_report.add(Blurbs.InstanceFormat, s)
                             else:
                                 combined_code = (corresponding_b + b).strip()
                                 if len(combined_code) == 2:
@@ -500,28 +497,28 @@ class BibsRulesMapper(RulesMapperBase):
                 )
                 marc_record.remove_fields("001")
                 marc_record.add_ordered_field(new_035)
-                self.add_to_migration_report(Blurbs.HridHandling, "Added 035 from 001")
+                self.migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
             except Exception:
                 if "001" in marc_record:
                     s = "Failed to create 035 from 001"
-                    self.add_to_migration_report(Blurbs.HridHandling, s)
+                    self.migration_report.add(Blurbs.HridHandling, s)
                     Helper.log_data_issue(index_or_legacy_id, s, marc_record["001"])
             marc_record.add_ordered_field(new_001)
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.HridHandling, "Created HRID using default settings"
             )
             self.hrid_counter += 1
         elif self.hrid_handling == "001":
             value = marc_record["001"].value()
             if value in self.unique_001s:
-                self.add_to_migration_report(Blurbs.HridHandling, "Duplicate 001")
+                self.migration_report.add(Blurbs.HridHandling, "Duplicate 001")
                 raise TransformationRecordFailedError(
                     index_or_legacy_id, "Duplicate 001 for record", value
                 )
 
             self.unique_001s.add(value)
             folio_instance["hrid"] = value
-            self.add_to_migration_report(Blurbs.HridHandling, "Took HRID from 001")
+            self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
         else:
             raise TransformationProcessError(
                 f"Unknown HRID handling: {self.hrid_handling}"
@@ -545,18 +542,18 @@ class BibsRulesMapper(RulesMapperBase):
                 ),
                 "",
             )
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.MatchedModesOfIssuanceCode, f"{name} -- {ret}"
             )
             if not ret:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.MatchedModesOfIssuanceCode,
                     f"Unmatched level: {level}",
                 )
                 return self.other_mode_of_issuance_id
             return ret
         except IndexError:
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.PossibleCleaningTasks, f"No Leader[7] in {legacy_id}"
             )
             return self.other_mode_of_issuance_id
@@ -588,9 +585,7 @@ class BibsRulesMapper(RulesMapperBase):
         subfields = "abdefghjkmn"
         for lang_tag in lang_fields:
             if "2" in lang_tag:
-                self.add_to_migration_report(
-                    "Language code sources in 041", lang_tag["2"]
-                )
+                self.migration_report.add("Language code sources in 041", lang_tag["2"])
                 logging.info(
                     f"Field with other Language code\t{marc_record['001']}"
                     f"\t{lang_tag.value()}"
@@ -617,7 +612,7 @@ class BibsRulesMapper(RulesMapperBase):
         languages = self.get_languages_041(marc_record, legacy_id)
         languages.add(self.get_languages_008(marc_record))
         for lang in languages:
-            self.add_to_migration_report(Blurbs.LanguagesInRecords, lang)
+            self.migration_report.add(Blurbs.LanguagesInRecords, lang)
         return list(languages)
 
     def fetch_language_codes(self) -> Generator[str, None, None]:
@@ -657,7 +652,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
                 m = "Unrecognized language codes in record"
                 Helper.log_data_issue(legacy_id, m, language_value)
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.UnrecognizedLanguageCodes,
                     f"{language_value} not recognized for {self.get_legacy_ids(marc_record, self.ils_flavour, index_or_legacy_id)}",
                 )
@@ -690,7 +685,7 @@ class BibsRulesMapper(RulesMapperBase):
             if marc_record["001"].format_field().strip():
                 res.add(marc_record["001"].format_field().strip())
             if any(res):
-                self.add_stats("legacy id from 990$a")
+                self.migration_report.add_general_statistics("legacy id from 990$a")
                 return list(res)
         elif ils_flavour == "aleph":
             return self.get_aleph_bib_id(marc_record)
@@ -720,12 +715,12 @@ class BibsRulesMapper(RulesMapperBase):
     def get_aleph_bib_id(self, marc_record: Record):
         res = {f["b"].strip() for f in marc_record.get_fields("998") if "b" in f}
         if any(res):
-            self.add_stats("legacy id from 998$b")
+            self.migration_report.add_general_statistics("legacy id from 998$b")
             return list(res)
         else:
             try:
                 ret = [marc_record["001"].format_field().strip()]
-                self.add_stats("legacy id from 001")
+                self.migration_report.add_general_statistics("legacy id from 001")
                 return ret
             except Exception:
                 raise TransformationRecordFailedError(

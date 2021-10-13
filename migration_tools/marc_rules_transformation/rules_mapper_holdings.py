@@ -1,6 +1,8 @@
 import uuid
 from typing import List
 
+from pymarc.field import Field
+from pymarc.record import Record
 from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -13,8 +15,6 @@ from migration_tools.marc_rules_transformation.holdings_statementsparser import 
 )
 from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 from migration_tools.report_blurbs import Blurbs
-from pymarc.field import Field
-from pymarc.record import Record
 
 
 class RulesMapperHoldings(RulesMapperBase):
@@ -46,7 +46,7 @@ class RulesMapperHoldings(RulesMapperBase):
             "id": str(uuid.uuid4()),
             "metadata": self.folio_client.get_metadata_construct(),
         }
-        self.add_to_migration_report(Blurbs.RecordStatus, marc_record.leader[5])
+        self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
         ignored_subsequent_fields = set()
 
         for marc_field in marc_record:
@@ -78,8 +78,8 @@ class RulesMapperHoldings(RulesMapperBase):
             marc_record, folio_holding, folio_holding["formerIds"]
         )
         self.dedupe_rec(folio_holding)
-        for id in folio_holding["formerIds"]:
-            self.holdings_id_map[id] = {"id": folio_holding["id"]}
+        for identifier in folio_holding["formerIds"]:
+            self.holdings_id_map[identifier] = {"id": folio_holding["id"]}
         self.report_folio_mapping(folio_holding, self.schema)
         return folio_holding
 
@@ -90,7 +90,7 @@ class RulesMapperHoldings(RulesMapperBase):
         folio_holding,
         index_or_legacy_id,
     ):
-        self.add_stats("Total number of Tags processed")
+        self.migration_report.add_general_statistics("Total number of Tags processed")
         if marc_field.tag not in self.mappings:
             self.report_legacy_mapping(marc_field.tag, True, False)
         elif marc_field.tag not in ignored_subsequent_fields:
@@ -135,12 +135,12 @@ class RulesMapperHoldings(RulesMapperBase):
                 )
                 folio_holding[key] = res["statements"]
                 for mr in res["migration_report"]:
-                    self.add_to_migration_report(
+                    self.migration_report.add(
                         Blurbs.HoldingsStatementsParsing, f"{mr[0]} -- {mr[1]}"
                     )
             except TransformationFieldMappingError as tfme:
-                Helper.log_data_issue(tfme.id, tfme.message, tfme.data_value)
-                self.add_to_migration_report(Blurbs.FieldMappingErrors, tfme.message)
+                Helper.log_data_issue(tfme.index_or_id, tfme.message, tfme.data_value)
+                self.migration_report.add(Blurbs.FieldMappingErrors, tfme.message)
 
     def set_holdings_type(self, marc_record: Record, folio_holding):
         # Holdings type mapping
@@ -148,7 +148,7 @@ class RulesMapperHoldings(RulesMapperBase):
         # TODO: map this better
         # type = type_map.get(ldr06, "Unknown")
         if folio_holding.get("holdingsTypeId", ""):
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.HoldingsTypeMapping,
                 f"Already set to {folio_holding.get('holdingsTypeId')}. LDR[06] was {ldr06}",
             )
@@ -165,7 +165,7 @@ class RulesMapperHoldings(RulesMapperBase):
             )
             if t:
                 folio_holding["holdingsTypeId"] = t[0]
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,
                     f"{ldr06} -> {holdings_type} -> {t[1]} ({t[0]}",
                 )
@@ -174,7 +174,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     "holdingsTypeId"
                 ] = self.conditions.default_holdings_type_id
                 Helper.log_data_issue("", Blurbs.HoldingsTypeMapping, ldr06)
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
                 )

@@ -42,7 +42,10 @@ class TransformationRecordFailedError(TransfomationError):
         super().__init__(self.message)
 
     def __str__(self):
-        return f"Critical data issue. Record needs fixing\t{self.index_or_id}\t{self.message}\t{self.data_value}"
+        return (
+            f"Critical data issue. Record needs fixing"
+            f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
+        )
 
     def log_it(self):
         logging.error(
@@ -58,7 +61,8 @@ class TransformationRecordFailedError(TransfomationError):
 
 
 class TransformationProcessError(TransfomationError):
-    """Raised when the mapping fails due to disconnects in ref data. This error should take the process to a halt"""
+    """Raised when the mapping fails due to disconnects in ref data.
+    This error should take the process to a halt"""
 
     def __init__(
         self,

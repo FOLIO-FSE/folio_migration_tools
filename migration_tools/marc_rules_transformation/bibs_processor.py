@@ -2,18 +2,17 @@
 import json
 import logging
 import uuid
+from pymarc.field import Field
+from pymarc.leader import Leader
 
 from pymarc.record import Record
 
 from migration_tools.custom_exceptions import (
-    TransformationFieldMappingError,
     TransformationRecordFailedError,
 )
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
-from pymarc.field import Field
-from pymarc.leader import Leader
 
 from migration_tools.report_blurbs import Blurbs
 
@@ -62,45 +61,51 @@ class BibsProcessor:
             )
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
-                self.mapper.add_to_migration_report(
+                self.mapper.migration_report.add(
                     Blurbs.PrecedingSuccedingTitles, f"{len(prec_titles)}"
                 )
                 del folio_rec["precedingTitles"]
             succ_titles = folio_rec.get("succeedingTitles", [])
             if succ_titles:
                 del folio_rec["succeedingTitles"]
-                self.mapper.add_to_migration_report(
+                self.mapper.migration_report.add(
                     Blurbs.PrecedingSuccedingTitles, f"{len(succ_titles)}"
                 )
             if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
                 Helper.write_to_file(self.results_file, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
-                self.mapper.add_stats("Records successfully transformed")
+                self.mapper.migration_report.add_general_statistics(
+                    "Records successfully transformed"
+                )
                 for id_map_string in id_map_strings:
                     self.instance_id_map_file.write(f"{id_map_string}\n")
-                    self.mapper.add_stats("Lines written to identifier map")
+                    self.mapper.migration_report.add_general_statistics(
+                        "Lines written to identifier map"
+                    )
 
         except ValueError as value_error:
-            self.mapper.add_to_migration_report(
+            self.mapper.self.mapper.migration_report.add(
                 Blurbs.FieldMappingErrors,
                 f"{value_error} for {index_or_legacy_id} ",
             )
-            self.mapper.add_stats("Value Errors (records that failed transformation)")
-            self.mapper.add_stats(
+            self.mapper.migration_report.add_general_statistics(
+                "Value Errors (records that failed transformation)"
+            )
+            self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
             )
         except TransformationRecordFailedError as error:
-            self.mapper.add_stats(
+            self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details.",
             )
             error.id = index_or_legacy_id
             error.log_it()
 
         except Exception as inst:
-            self.mapper.add_stats(
+            self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
             )
-            self.mapper.add_stats(
+            self.mapper.migration_report.add_general_statistics(
                 f"Transformation exceptions: {inst.__class__.__name__}",
             )
             logging.error(type(inst))
@@ -114,16 +119,18 @@ class BibsProcessor:
     def validate_instance(self, folio_rec, marc_record, index_or_legacy_id: str):
         if not folio_rec.get("title", ""):
             s = f"No title in {index_or_legacy_id}"
-            self.mapper.add_to_migration_report(Blurbs.MissingTitles, s)
+            self.mapper.self.mapper.migration_report.add(Blurbs.MissingTitles, s)
             logging.error(s)
-            self.mapper.add_stats(
+            self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details.",
             )
             return False
         if not folio_rec.get("instanceTypeId", ""):
             s = f"No Instance Type Id in {index_or_legacy_id}"
-            self.mapper.add_to_migration_report(Blurbs.MissingInstanceTypeIds, s)
-            self.mapper.add_stats(
+            self.mapper.self.mapper.migration_report.add(
+                Blurbs.MissingInstanceTypeIds, s
+            )
+            self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details.",
             )
             return False
@@ -200,5 +207,4 @@ def get_srs_string(my_tuple):
         if parsed_record["content"]["leader"][5] in [*"acdnposx"]
         else "d",
     }
-
     return f"{record['id']}\t{json.dumps(record)}"

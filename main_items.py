@@ -179,7 +179,7 @@ class Worker(MainBase):
                     logging.fatal(
                         "Check source files for empty lines or missing reference data. Halting"
                     )
-                    self.mapper.add_to_migration_report(
+                    self.mapper.migration_report.add(
                         Blurbs.FailedFiles, f"{file_name} - {ee}"
                     )
                     logging.fatal(error_str)
@@ -191,16 +191,23 @@ class Worker(MainBase):
 
     def process_single_file(self, file_name, results_file):
         logging.info("Processing %s", file_name)
+        records_in_file = 0
         with open(file_name, encoding="utf-8-sig") as records_file:
-            self.mapper.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                "Number of files processed"
+            )
             start = time.time()
             for idx, record in enumerate(
                 self.mapper.get_objects(records_file, file_name)
             ):
                 try:
                     if idx == 0:
+                        logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
                     folio_rec = self.mapper.do_map(record, f"row {idx}")
+                    if idx == 0:
+                        logging.info("First FOLIO record:")
+                        logging.info(json.dumps(folio_rec, indent=4))
                     # TODO: Add more levels (recursive) to mapping
                     for circ_note in folio_rec.get("circulationNotes", []):
                         circ_note["id"] = str(uuid.uuid4())
@@ -215,7 +222,9 @@ class Worker(MainBase):
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as data_error:
-                    self.mapper.handle_transformation_critical_error(idx, data_error)
+                    self.mapper.handle_transformation_record_failed_error(
+                        idx, data_error
+                    )
                 except AttributeError as attribute_error:
                     traceback.print_exc()
                     logging.fatal(attribute_error)
@@ -224,17 +233,20 @@ class Worker(MainBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
 
-                self.mapper.add_to_migration_report(
+                self.mapper.migration_report.add(
                     Blurbs.GeneralStatistics,
                     f"Number of Legacy items in {file_name}",
                 )
-                self.mapper.add_general_statistics("Number of Legacy items in total")
+                self.mapper.migration_report.add_general_statistics(
+                    "Number of Legacy items in total"
+                )
                 self.print_progress(idx, start)
+                records_in_file = idx + 1
 
             total_records = 0
-            total_records += idx
+            total_records += records_in_file
             logging.info(
-                f"Done processing {file_name} containing {idx:,} records. "
+                f"Done processing {file_name} containing {records_in_file:,} records. "
                 f"Total records processed: {total_records:,}"
             )
         self.total_records = total_records
@@ -245,7 +257,8 @@ class Worker(MainBase):
             self.folder_structure.migration_reports_file, "w"
         ) as migration_report_file:
             logging.info(
-                f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}"
+                "Writing migration- and mapping report to %s",
+                self.folder_structure.migration_reports_file,
             )
             Helper.write_migration_report(
                 migration_report_file, self.mapper.migration_report
@@ -320,7 +333,7 @@ def main():
     ]
     logging.info("Files to process:")
     for f in files:
-        logging.info(f"\t{f}")
+        logging.info("\t%s", f)
 
     try:
         folio_client = FolioClient(

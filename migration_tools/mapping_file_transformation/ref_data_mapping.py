@@ -8,13 +8,13 @@ from migration_tools.custom_exceptions import TransformationProcessError
 
 class RefDataMapping(object):
     def __init__(
-        self, folio_client: FolioClient, ref_data_path, array_name, map, key_type
+        self, folio_client: FolioClient, ref_data_path, array_name, the_map, key_type
     ):
         self.name = array_name
         logging.info(f"{self.name} reference data mapping. Initializing")
         logging.info(f"Fetching {self.name} reference data from FOLIO")
         self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name))
-        self.map = map
+        self.map = the_map
         self.regular_mappings = []
         self.key_type = key_type
         self.hybrid_mappings = []

@@ -1,5 +1,4 @@
 import ast
-import logging
 
 from folioclient import FolioClient
 from migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -53,8 +52,10 @@ class HoldingsMapper(MappingFileMapperBase):
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name, True)
         elif folio_prop_name == "callNumber":
             if legacy_value.startswith("["):
-                self.add_stats("Bound-with items callnumber identified")
-                self.add_to_migration_report(
+                self.migration_report.add_stats(
+                    "Bound-with items callnumber identified"
+                )
+                self.migration_report.add(
                     Blurbs.BoundWithMappings,
                     (
                         f"Number of bib-level callnumbers in record: "
@@ -99,14 +100,14 @@ class HoldingsMapper(MappingFileMapperBase):
             return self.get_mapped_value(
                 self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
             )
-        self.add_to_migration_report(Blurbs.CallNumberTypeMapping, "No mapping")
+        self.migration_report.add(Blurbs.CallNumberTypeMapping, "No mapping")
         return ""
 
     def get_instance_ids(self, legacy_value: str, index_or_id: str):
         # Returns a list of Id:s
         return_ids = []
         legacy_bib_ids = self.get_legacy_bib_ids(legacy_value, index_or_id)
-        self.add_to_migration_report(
+        self.migration_report.add(
             Blurbs.BoundWithMappings,
             f"Number of bib records referenced in item: {len(legacy_bib_ids)}",
         )
@@ -120,11 +121,11 @@ class HoldingsMapper(MappingFileMapperBase):
                 new_legacy_value not in self.instance_id_map
                 and legacy_instance_id not in self.instance_id_map
             ):
-                self.add_stats("Holdings IDs not mapped")
+                self.migration_report.add_general_statistics("Holdings IDs not mapped")
                 s = "Bib id not in instance id map."
                 raise TransformationRecordFailedError(index_or_id, s, new_legacy_value)
             else:
-                self.add_stats("Holdings IDs mapped")
+                self.migration_report.add_general_statistics("Holdings IDs mapped")
                 entry = self.instance_id_map.get(
                     new_legacy_value, ""
                 ) or self.instance_id_map.get(legacy_instance_id)
@@ -143,8 +144,14 @@ class HoldingsMapper(MappingFileMapperBase):
             new_legacy_values = ast.literal_eval(legacy_value)
             l = len(new_legacy_values)
             if l > 1:
-                self.add_stats("Bound-with items identified by bib id")
-                self.add_stats("Bib ids referenced in bound-with items", l)
+                self.migration_report.add_general_statistics(
+                    "Bound-with items identified by bib id"
+                )
+                self.migration_report.add(
+                    Blurbs.GeneralStatistics,
+                    "Bib ids referenced in bound-with items",
+                    l,
+                )
             return new_legacy_values
         except Exception as error:
             raise TransformationRecordFailedError(

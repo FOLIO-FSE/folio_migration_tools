@@ -65,12 +65,14 @@ class HoldingsProcessor:
                 )
             folio_rec["discoverySuppress"] = self.suppress
             Helper.write_to_file(self.created_objects_file, folio_rec)
-            self.mapper.add_stats("Holdings records written to disk")
+            self.mapper.migration_report.add_general_statistics(
+                "Holdings records written to disk"
+            )
             self.print_progress()
         except TransformationRecordFailedError as error:
             success = False
-            Helper.log_data_issue(error.id, error.message, error.data_value)
-            self.mapper.add_stats(
+            Helper.log_data_issue(error.index_or_id, error.message, error.data_value)
+            self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
             )
             logging.error(error)

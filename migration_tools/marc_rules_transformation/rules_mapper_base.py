@@ -1,6 +1,5 @@
 import json
 import logging
-import sys
 import time
 import uuid
 from textwrap import wrap
@@ -21,7 +20,6 @@ from pymarc.field import Field
 class RulesMapperBase(MapperBase):
     def __init__(self, folio_client: FolioClient, conditions=None):
         super().__init__()
-        self.migration_report = {}
         self.parsed_records = 0
         self.start = time.time()
         self.folio_client: FolioClient = folio_client
@@ -32,17 +30,7 @@ class RulesMapperBase(MapperBase):
         self.item_json_schema = ""
         self.mappings = {}
         self.schema_properties = None
-        logging.info(f"Current user id is {self.folio_client.current_user}")
-
-    def add_to_migration_report(self, blurb_tuple: tuple, measure_to_add):
-        """Add section header and values to migration report."""
-
-        if blurb_tuple[0] not in self.migration_report:
-            self.migration_report[blurb_tuple[0]] = {"blurb_tuple": blurb_tuple}
-        if measure_to_add not in self.migration_report[blurb_tuple[0]]:
-            self.migration_report[blurb_tuple[0]][measure_to_add] = 1
-        else:
-            self.migration_report[blurb_tuple[0]][measure_to_add] += 1
+        logging.info("Current user id is %s", self.folio_client.current_user)
 
     def print_progress(self):
         self.parsed_records += 1
@@ -155,26 +143,21 @@ class RulesMapperBase(MapperBase):
                 value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
             values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
             return values
-        except TransformationProcessError as te:
-            logging.fatal(f"{te}. Quitting...")
-            sys.exit()
+        except TransformationProcessError as trpe:
+            self.handle_transformation_process_error(self.parsed_records, trpe)
         except TransformationFieldMappingError as fme:
-            self.add_to_migration_report(Blurbs.FieldMappingErrors, fme)
+            self.migration_report.add(Blurbs.FieldMappingErrors, fme.message)
+            fme.data_value = f"{fme.data_value} MARCField: {marc_field} Mapping: {json.dumps(mapping)}"
             fme.log_it()
-            logging.error(
-                f"Non-critical mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
-            )
             return []
-        except TransformationRecordFailedError as ee:
-            logging.error(
-                f"Mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
+        except TransformationRecordFailedError as trfe:
+            trfe.data_value = (
+                f"{trfe.data_value} MARCField: {marc_field} "
+                f"Mapping: {json.dumps(mapping)}"
             )
-            raise ee
-        except Exception as ee:
-            logging.error(
-                f"Mapping error in apply_rules {marc_field} {json.dumps(mapping)}"
-            )
-            raise ee
+            raise trfe
+        except Exception as exception:
+            self.handle_generic_exception(self.parsed_records, exception)
 
     def add_value_to_target(self, rec, target_string, value):
         if not value:
@@ -345,15 +328,15 @@ class RulesMapperBase(MapperBase):
                     for f in marc_field
                 )
                 pattern = " - ".join(f"{k}:'{bool(v)}'" for k, v in entity.items())
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.IncompleteEntityMapping,
                     f"{marc_field.tag} {sfs} ->>-->> {e_parent} {pattern}  ",
                 )
                 # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec)
 
-    def create_preceding_succeeding_titles(self, entity, e_parent, id):
-        self.add_to_migration_report(
+    def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
+        self.migration_report.add(
             Blurbs.PrecedingSuccedingTitles, f"{e_parent} created"
         )
         new_entity = {
@@ -362,9 +345,9 @@ class RulesMapperBase(MapperBase):
             "identifiers": [],
         }
         if e_parent == "precedingTitles":
-            new_entity["succeedingInstanceId"] = id
+            new_entity["succeedingInstanceId"] = identifier
         else:
-            new_entity["precedingInstanceId"] = id
+            new_entity["precedingInstanceId"] = identifier
         if new_entity.get("isbnValue", ""):
             new_entity["identifiers"].append(
                 {

@@ -1,14 +1,12 @@
 import csv
 import json
 import logging
-import sys
 import uuid
 from abc import abstractmethod
 
 from folioclient import FolioClient
 from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
-    TransformationProcessError,
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
@@ -26,14 +24,9 @@ class MappingFileMapperBase(MapperBase):
         super().__init__()
         self.schema = schema
         self.total_records = 0
-        self.migration_report = {}
         self.folio_client = folio_client
-        self.mapped_folio_fields = {}
-        self.mapped_legacy_fields = {}
         self.use_map = True  # Legacy
         self.record_map = record_map
-        self.num_exeptions = 0
-        self.num_criticalerrors = 0
         self.ref_data_dicts = {}
         self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
@@ -44,7 +37,8 @@ class MappingFileMapperBase(MapperBase):
             if k["value"] not in [None, ""]:
                 self.mapped_from_values[k["folio_field"]] = k["value"]
         logging.info(
-            f"Mapped values:\n{json.dumps(self.mapped_from_values, indent=4, sort_keys=True)}"
+            "Mapped values:\n%s",
+            json.dumps(self.mapped_from_values, indent=4, sort_keys=True),
         )
         legacy_fields = set()
         if statistical_codes_map:
@@ -91,95 +85,16 @@ class MappingFileMapperBase(MapperBase):
         # That it maps the required fields etc
         return True
 
-    def handle_transformation_process_error(
-        self, idx, process_error: TransformationProcessError
-    ):
-        self.add_general_statistics("Critical process error")
-        logging.critical(f"{idx}\t{process_error}")
-        sys.exit()
-
-    def handle_transformation_critical_error(
-        self, idx, data_error: TransformationRecordFailedError
-    ):
-        self.add_to_migration_report(
-            Blurbs.GeneralStatistics, "Records failed due to a data error"
-        )
-        logging.error(data_error.message)
-        data_error.id = idx
-        data_error.log_it()
-        self.num_criticalerrors += 1
-        if self.num_criticalerrors / (idx + 1) > 0.2 and self.num_criticalerrors > 5000:
-            logging.fatal(
-                "Stopping. More than %s critical data errors", self.num_criticalerrors
-            )
-            logging.error(
-                "Errors: %s\terrors/records: %s",
-                self.num_criticalerrors,
-                (self.num_criticalerrors / (idx + 1)),
-            )
-            sys.exit()
-
-    def handle_generic_exception(self, idx, excepion: Exception):
-        self.num_exeptions += 1
-        print("\n=======ERROR===========")
-        print(
-            f"Row {idx:,} failed with the following unhandled Exception: {excepion}  "
-            f"of type {type(excepion).__name__}"
-        )
-        if self.num_exeptions > 500:
-            logging.fatal(
-                f"Stopping. More than {self.num_exeptions} unhandled exceptions"
-            )
-            sys.exit()
-
     @staticmethod
-    def get_mapped_folio_properties_from_map(map):
+    def get_mapped_folio_properties_from_map(the_map):
         return [
             k["folio_field"]
-            for k in map["data"]
+            for k in the_map["data"]
             if (
                 k["legacy_field"] not in empty_vals
                 or k.get("value", "") not in empty_vals
             )
         ]
-
-    def print_mapping_report(self, report_file, total_records):
-
-        logging.info("Writing mapping report")
-        report_file.write("\n## Mapped FOLIO fields   \n")
-        d_sorted = {
-            k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
-        }
-        report_file.write("FOLIO Field | Mapped | Empty | Unmapped  \n")
-        report_file.write("--- | --- | --- | ---:  \n")
-        for k, v in d_sorted.items():
-            unmapped = total_records - v[0]
-            mapped = v[0] - v[1]
-            mp = mapped / total_records if total_records else 0
-            mapped_per = "{:.0%}".format(max(mp, 0))
-            report_file.write(
-                f"{k} | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
-            )
-
-        # Legacy fields (like marc)
-        report_file.write("\n## Mapped Legacy fields  \n")
-        d_sorted = {
-            k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
-        }
-        report_file.write("Legacy Field | Present | Mapped | Empty | Unmapped  \n")
-        report_file.write("--- | --- | --- | --- | ---:  \n")
-        for k, v in d_sorted.items():
-            present = v[0]
-            present_per = "{:.1%}".format(
-                present / total_records if total_records else 0
-            )
-            unmapped = present - v[1]
-            mapped = v[1]
-            mp = mapped / total_records if total_records else 0
-            mapped_per = "{:.0%}".format(max(mp, 0))
-            report_file.write(
-                f"{k} | {present if present > 0 else 0} ({present_per}) | {mapped if mapped > 0 else 0} ({mapped_per}) | {v[1]} | {unmapped}  \n"
-            )
 
     def instantiate_record(self):
         return {
@@ -198,7 +113,7 @@ class MappingFileMapperBase(MapperBase):
                 index_or_id,
                 folio_prop_name,
             )
-        self.add_to_migration_report(
+        self.migration_report.add(
             Blurbs.StatisticalCodeMapping,
             "Mapping not setup",
         )
@@ -229,14 +144,14 @@ class MappingFileMapperBase(MapperBase):
 
             if not right_mapping:
                 raise StopIteration()
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.ReferenceDataMapping,
                 f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',
             )
             return right_mapping["folio_id"]
         except StopIteration:
             if prevent_default:
-                self.add_to_migration_report(
+                self.migration_report.add(
                     Blurbs.ReferenceDataMapping,
                     f'{ref_dat_mapping.name} mapping - Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""',
                 )
@@ -246,7 +161,7 @@ class MappingFileMapperBase(MapperBase):
                 f"{folio_property_name} mapping failed. Check mapping files",
                 " - ".join(fieldvalues),
             )
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.ReferenceDataMapping,
                 f'{ref_dat_mapping.name} mapping - Unmapped -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
             )
@@ -290,23 +205,6 @@ class MappingFileMapperBase(MapperBase):
                 return mapping
         return None
 
-    def add_to_migration_report(self, blurb_tuple: tuple, measure_to_add):
-        """Add section header and values to migration report."""
-        if blurb_tuple[0] not in self.migration_report:
-            self.migration_report[blurb_tuple[0]] = {"blurb_tuple": blurb_tuple}
-        if measure_to_add not in self.migration_report[blurb_tuple[0]]:
-            self.migration_report[blurb_tuple[0]][measure_to_add] = 1
-        else:
-            self.migration_report[blurb_tuple[0]][measure_to_add] += 1
-
-    def add_general_statistics(self, measure_to_add: str):
-        self.add_to_migration_report(Blurbs.GeneralStatistics, measure_to_add)
-
-    def set_to_migration_report(self, blurb, measure_to_add: str, number: int):
-        if blurb[0] not in self.migration_report:
-            self.migration_report[blurb[0]] = {}
-        self.migration_report[blurb[0]][measure_to_add] = number
-
     @abstractmethod
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         raise NotImplementedError(
@@ -325,9 +223,8 @@ class MappingFileMapperBase(MapperBase):
                     legacy_object,
                 )
             except TransformationFieldMappingError as data_error:
-                self.add_to_migration_report(Blurbs.FieldMappingErrors, data_error)
-                data_error.log_it()
-                self.add_stats("Data issues found")
+                self.handle_transformation_field_mapping_error(index_or_id, data_error)
+
         self.validate_object(folio_object, index_or_id)
         return folio_object
 
@@ -342,7 +239,7 @@ class MappingFileMapperBase(MapperBase):
         if property_level1.get("description", "") == "Deprecated" or skip_property(
             property_name_level1, property_level1
         ):
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.PropertiesExcludedFromSchema,
                 property_name_level1,
             )
@@ -372,7 +269,7 @@ class MappingFileMapperBase(MapperBase):
                     index_or_id,
                 )
             else:
-                logging.debug(f"")
+                logging.info("Edge case %s", property_name_level1)
         else:  # Basic property
             self.map_basic_props(
                 legacy_object, property_name_level1, folio_object, index_or_id
@@ -591,5 +488,5 @@ def skip_property(property_name_level1, property_level1):
     )
 
 
-def weird_division(n, d):
-    return n / d if d else 0
+def weird_division(number, divisor):
+    return number / divisor if divisor else 0

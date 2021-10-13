@@ -33,7 +33,7 @@ class ItemMapper(MappingFileMapperBase):
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
-        self.set_to_migration_report(
+        self.migration_report.set(
             Blurbs.HoldingsRecordIdMapping, "Unique holdings", len(self.holdings_id_map)
         )
 
@@ -140,7 +140,7 @@ class ItemMapper(MappingFileMapperBase):
                 *value_tuple,
                 True,
             )
-            self.add_to_migration_report(Blurbs.TemporaryLocationMapping, f"{temp_loc}")
+            self.migration_report.add(Blurbs.TemporaryLocationMapping, f"{temp_loc}")
             return temp_loc
         elif folio_prop_name == "materialTypeId":
             return self.get_mapped_value(
@@ -163,13 +163,13 @@ class ItemMapper(MappingFileMapperBase):
                 *value_tuple,
                 True,
             )
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.TemporaryLoanTypeMapping, f"{folio_prop_name} -> {ltid}"
             )
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
             ltid = self.get_mapped_value(self.loan_type_mapping, *value_tuple)
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.PermanentLoanTypeMapping, f"{folio_prop_name} -> {ltid}"
             )
             return ltid
@@ -177,24 +177,24 @@ class ItemMapper(MappingFileMapperBase):
             statistical_code_id = self.get_statistical_codes(
                 legacy_item, folio_prop_name, index_or_id
             )
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.StatisticalCodeMapping,
                 f"{folio_prop_name} -> {statistical_code_id}",
             )
             return statistical_code_id
         elif folio_prop_name == "holdingsRecordId":
             if legacy_value not in self.holdings_id_map:
-                self.add_general_statistics(
+                self.migration_report.add_general_statistics(
                     "Records failed because of failed holdings",
                 )
-                self.add_to_migration_report(Blurbs.HoldingsRecordIdMapping, "Unmapped")
+                self.migration_report.add(Blurbs.HoldingsRecordIdMapping, "Unmapped")
                 s = (
                     "Holdings id referenced in legacy item "
                     "was not found amongst transformed Holdings records."
                 )
                 raise TransformationRecordFailedError(index_or_id, s, legacy_value)
             else:
-                self.add_to_migration_report(Blurbs.HoldingsRecordIdMapping, "Mapped")
+                self.migration_report.add(Blurbs.HoldingsRecordIdMapping, "Mapped")
                 return self.holdings_id_map[legacy_value]["id"]
         elif len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
@@ -205,7 +205,7 @@ class ItemMapper(MappingFileMapperBase):
         elif any(legacy_item_keys):
             return legacy_value
         else:
-            self.add_to_migration_report(
+            self.migration_report.add(
                 Blurbs.UnmappedProperties, f"{folio_prop_name} {legacy_item_keys}"
             )
             return ""
@@ -217,7 +217,7 @@ class ItemMapper(MappingFileMapperBase):
             return self.get_mapped_value(
                 self.call_number_mapping, legacy_item, index_or_id, folio_prop_name
             )
-        self.add_to_migration_report(
+        self.migration_report.add(
             Blurbs.CallNumberTypeMapping,
             "Mapping not setup",
         )
@@ -225,7 +225,5 @@ class ItemMapper(MappingFileMapperBase):
 
     def transform_status(self, legacy_value):
         status = self.status_mapping.get(legacy_value, "Available")
-        self.add_to_migration_report(
-            Blurbs.StatusMapping, f"'{legacy_value}' -> {status}"
-        )
+        self.migration_report.add(Blurbs.StatusMapping, f"'{legacy_value}' -> {status}")
         return status

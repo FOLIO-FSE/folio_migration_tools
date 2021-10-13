@@ -82,7 +82,7 @@ class Helper:
             report_file.write(
                 f"<details><summary>Click to expand all {len(migration_report[a])} things</summary>     \n"
             )
-            report_file.write(f"   \n")
+            report_file.write("   \n")
             report_file.write("Measure | Count   \n")
             report_file.write("--- | ---:   \n")
             b = migration_report[a]
