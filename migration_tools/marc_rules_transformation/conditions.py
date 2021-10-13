@@ -47,17 +47,15 @@ class Conditions:
         logging.info(f"{len(self.folio.identifier_types)}\tidentifier_types")
         # Raise for empty settings
         if not self.folio.contributor_types:
-            raise TransformationProcessError("No contributor_types setup in tenant")
+            raise TransformationProcessError("", "No contributor_types in FOLIO")
         if not self.folio.contrib_name_types:
-            raise TransformationProcessError(
-                "No contributor name types setup in tenant"
-            )
+            raise TransformationProcessError("", "No contributor name types in FOLIO")
         if not self.folio.identifier_types:
-            raise TransformationProcessError("No identifier_types setup in tenant")
+            raise TransformationProcessError("", "No identifier_types in FOLIO")
         if not self.folio.identifier_types:
-            raise TransformationProcessError("No identifier_types setup in tenant")
+            raise TransformationProcessError("", "No identifier_types in FOLIO")
         if not self.folio.alt_title_types:
-            raise TransformationProcessError("No alt_title_types setup in tenant")
+            raise TransformationProcessError("", "No alt_title_types in FOLIO")
 
         # Set defaults
         logging.info("Setting defaults")
@@ -79,13 +77,13 @@ class Conditions:
         logging.info(f"{len(self.holdings_types)}\tholdings types")
         # Raise for empty settings
         if not self.folio.holding_note_types:
-            raise TransformationProcessError("No holding_note_types setup in tenant")
+            raise TransformationProcessError("", "No holding_note_types in FOLIO")
         if not self.folio.call_number_types:
-            raise TransformationProcessError("No call_number_types setup in tenant")
+            raise TransformationProcessError("", "No call_number_types in FOLIO")
         if not self.holdings_types:
-            raise TransformationProcessError("No holdings_types setup in tenant")
+            raise TransformationProcessError("", "No holdings_types in FOLIO")
         if not self.folio.locations:
-            raise TransformationProcessError("No locations set up in tenant")
+            raise TransformationProcessError("", "No locations in FOLIO")
 
         # Set defaults
         logging.info("Defaults")
@@ -98,8 +96,11 @@ class Conditions:
         )
         if not self.default_call_number_type:
             raise TransformationProcessError(
-                f"No callnumber type with ID "
-                f"{self.default_call_number_type_id} set up in tenant"
+                "",
+                (
+                    f"No callnumber type with ID "
+                    f"{self.default_call_number_type_id} in FOLIO"
+                ),
             )
         logging.info(
             f"Default Callnumber type Name:\t{self.default_call_number_type['name']}"
@@ -128,7 +129,7 @@ class Conditions:
             logging.info(f"Default location id is {self.default_location_id}")
         else:
             raise TransformationProcessError(
-                f"Default location for {self.default_location_code} is not set up"
+                "", f"Default location for {self.default_location_code} is not set up"
             )
 
     def setup_reference_data_for_all(self):
@@ -143,7 +144,7 @@ class Conditions:
 
         # Raise for empty settings
         if not self.folio.class_types:
-            raise TransformationProcessError("No class_types setup in tenant")
+            raise TransformationProcessError("", "No class_types in FOLIO")
 
     def get_condition(
         self, name, value, parameter=None, marc_field: field.Field = None
@@ -200,6 +201,7 @@ class Conditions:
                 Blurbs.InstanceFormat,
                 f'Code from 338$b NOT found in FOLIO: "{value}"',
             )
+
             return ""
 
     def condition_remove_prefix_by_indicator(
@@ -608,9 +610,12 @@ class Conditions:
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"
+        # Try get the object from the cache
         ref_object = self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())
         if ref_object:
             return ref_object
+
+        # No cache, we need to add it to the cache.
         d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
         self.ref_data_dicts[dict_key] = d
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())

@@ -140,12 +140,9 @@ def read_records(reader, processor: HoldingsProcessor):
         try:
             if record is None:
                 raise TransformationRecordFailedError(
-                    (
-                        f"Index in file:{idx}"
-                        f"MARC parsing error: "
-                        f"{reader.current_exception}"
-                        f"{reader.current_chunk}"
-                    )
+                    f"Index in file:{idx}",
+                    f"MARC parsing error: {reader.current_exception}",
+                    f"{reader.current_chunk}",
                 )
             else:
                 processor.process_record(record)

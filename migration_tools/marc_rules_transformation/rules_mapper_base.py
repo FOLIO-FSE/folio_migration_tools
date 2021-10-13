@@ -71,7 +71,7 @@ class RulesMapperBase(MapperBase):
                 target = mapping["target"]
                 if has_conditions(mapping):
                     values = self.apply_rules(marc_field, mapping, index_or_legacy_id)
-                    # TODO: add condition to customize this...
+                    # TODO: add condition to customize this hardcoded thing
                     if marc_field.tag == "655":
                         values[0] = f"Genre: {values[0]}"
                     self.add_value_to_target(folio_record, target, values)

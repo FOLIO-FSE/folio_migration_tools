@@ -104,16 +104,18 @@ class MappingFileMapperBase(MapperBase):
         self.add_to_migration_report(
             Blurbs.GeneralStatistics, "Records failed due to a data error"
         )
+        logging.error(data_error.message)
         data_error.id = idx
         data_error.log_it()
         self.num_criticalerrors += 1
         if self.num_criticalerrors / (idx + 1) > 0.2 and self.num_criticalerrors > 5000:
             logging.fatal(
-                f"Stopping. More than {self.num_criticalerrors} critical data errors"
+                "Stopping. More than %s critical data errors", self.num_criticalerrors
             )
             logging.error(
-                f"Errors: {self.num_criticalerrors}\terrors/records:"
-                f"{self.num_criticalerrors / (idx + 1)}"
+                "Errors: %s\terrors/records: %s",
+                self.num_criticalerrors,
+                (self.num_criticalerrors / (idx + 1)),
             )
             sys.exit()
 
@@ -390,7 +392,9 @@ class MappingFileMapperBase(MapperBase):
                 missing.append(f"Empty: {required_prop}")
         if any(missing):
             raise TransformationRecordFailedError(
-                f"Required properties empty for {index_or_id}\t{json.dumps(missing)}"
+                index_or_id,
+                "One or many required properties empty",
+                json.dumps(missing),
             )
 
         del folio_object["type"]

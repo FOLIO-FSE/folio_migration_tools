@@ -36,7 +36,7 @@ def setup_holdings_id_map(folder_structure: FolderStructure):
     logging.info("Loading holdings id map. This can take a while...")
     with open(folder_structure.holdings_id_map_path, "r") as holdings_id_map_file:
         holdings_id_map = json.load(holdings_id_map_file)
-        logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
+        logging.info("Loaded %s holdings ids", len(holdings_id_map))
         return holdings_id_map
 
 
@@ -47,6 +47,7 @@ class Worker(MainBase):
         self, source_files, folio_client: FolioClient, folder_structure: FolderStructure
     ):
         super().__init__()
+        self.total_records = 0
         self.folio_keys = []
         self.folder_structure = folder_structure
         self.folio_client = folio_client
@@ -66,18 +67,26 @@ class Worker(MainBase):
         else:
             statcode_mapping = None
 
-        if "temporaryLoanTypeId" in self.folio_keys:
+        if self.folder_structure.temp_loan_type_map_path.is_file():
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
                 "temporaryLoanTypeId", self.folder_structure.temp_loan_type_map_path
             )
         else:
+            logging.info(
+                "%s not found. No temporary loan type mapping will be performed",
+                self.folder_structure.temp_loan_type_map_path,
+            )
             temporary_loan_type_mapping = None
 
-        if "temporaryLocationId" in self.folio_keys:
+        if self.folder_structure.temp_locations_map_path.is_file():
             temporary_location_mapping = self.load_ref_data_mapping_file(
                 "temporaryLocationId", self.folder_structure.temp_locations_map_path
             )
         else:
+            logging.info(
+                "%s not found. No temporary location mapping will be performed",
+                self.folder_structure.temp_locations_map_path,
+            )
             temporary_location_mapping = None
         self.mapper = ItemMapper(
             self.folio_client,
@@ -118,11 +127,14 @@ class Worker(MainBase):
                 with open(map_file_path) as map_file:
                     ref_data_map = list(csv.DictReader(map_file, dialect="tsv"))
                     logging.info(
-                        f"Found {len(ref_data_map)} rows in {folio_property_name} map"
+                        "Found %s rows in %s map",
+                        len(ref_data_map),
+                        folio_property_name,
                     )
                     logging.info(
-                        f'{",".join(ref_data_map[0].keys())} '
-                        f"will be used for determinig {folio_property_name}"
+                        "%s will be used for determinig %s",
+                        ",".join(ref_data_map[0].keys()),
+                        folio_property_name,
                     )
                     return ref_data_map
             except Exception as ee:
@@ -132,25 +144,26 @@ class Worker(MainBase):
                     "but forgot to add a mapping file?"
                 )
         else:
-            logging.info(f"No mapping setup for {folio_property_name}. ")
-            logging.info(f"{folio_property_name} will have default mapping if any ")
+            logging.info("No mapping setup for %s", folio_property_name)
+            logging.info("%s will have default mapping if any ", folio_property_name)
             logging.info(
-                f"Add a file named {map_file_path} and add the field to "
-                "the item.mapping.json file."
+                "Add a file named %s and add the field to "
+                "the item.mapping.json file.",
+                map_file_path,
             )
             return None
 
     def setup_records_map(self):
         with open(self.folder_structure.items_map_path) as items_mapper_f:
             items_map = json.load(items_mapper_f)
-            logging.info(f'{len(items_map["data"])} fields in item mapping file map')
+            logging.info("%s fields in item mapping file map", len(items_map["data"]))
             mapped_fields = (
                 f
                 for f in items_map["data"]
                 if f["legacy_field"] and f["legacy_field"] != "Not mapped"
             )
             logging.info(
-                f"{len(list(mapped_fields))} Mapped fields in item mapping file map"
+                "%s Mapped fields in item mapping file map", len(list(mapped_fields))
             )
             return items_map
 
@@ -158,7 +171,6 @@ class Worker(MainBase):
         logging.info("Starting....")
         with open(self.folder_structure.created_objects_path, "w+") as results_file:
             for file_name in self.source_files:
-                logging.info(f"Processing {file_name}")
                 try:
                     self.process_single_file(file_name, results_file)
                 except Exception as ee:
@@ -173,10 +185,12 @@ class Worker(MainBase):
                     logging.fatal(error_str)
                     sys.exit()
         logging.info(
-            f"processed {self.total_records:,} records in {len(self.source_files)} files"
+            f"processed {self.total_records:,} records "
+            f"in {len(self.source_files)} files"
         )
 
     def process_single_file(self, file_name, results_file):
+        logging.info("Processing %s", file_name)
         with open(file_name, encoding="utf-8-sig") as records_file:
             self.mapper.add_general_statistics("Number of files processed")
             start = time.time()
@@ -320,10 +334,11 @@ def main():
         worker.work()
         worker.wrap_up()
     except TransformationProcessError as pocess_error:
-        logging.critical(f"{pocess_error}")
+        logging.critical(pocess_error)
         logging.critical("Halting")
+        sys.exit()
     except Exception as process_error:
-        logging.info(f"=======ERROR in MAIN: {process_error}===========")
+        logging.info("======= UNKNOWN ERROR in MAIN: %s ===========", process_error)
         logging.exception("=======Stack Trace===========")
 
 

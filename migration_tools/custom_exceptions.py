@@ -9,43 +9,52 @@ class TransformationFieldMappingError(TransfomationError):
     """Raised when the a field mapping fails, but the error is not critical.
     The issue should be logged for the library to act upon it"""
 
-    def __init__(self, id, message="", data_value=""):
-        self.id = id
+    def __init__(self, index_or_id, message="", data_value=""):
+        self.index_or_id = index_or_id
         self.message = message
         self.data_value = data_value
-        # logging.log(
-        #     26, f"FIELD MAPPING FAILED\t{self.id}\t{self.message}\t{self.data_value}"
-        # )
         super().__init__(self.message)
 
     def __str__(self):
-        return f"Data issue. Consider fixing the record.\t{self.id}\t{self.message}\t{self.data_value}"
+        return (
+            f"Data issue. Consider fixing the record. "
+            f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
+        )
 
     def log_it(self):
         logging.log(
             26,
-            (
-                f"FIELD MAPPING FAILED\t{self.id}\t{self.message}\t "
-                f"{self.data_value}"
-            ),
+            "FIELD MAPPING FAILED\t%s\t%s\t%s",
+            self.index_or_id,
+            self.message,
+            self.data_value,
         )
 
 
 class TransformationRecordFailedError(TransfomationError):
     """Raised when the a field mapping fails, Error is critical and means tranformation fails"""
 
-    def __init__(self, id, message="", data_value=""):
-        self.id = id
+    def __init__(self, index_or_id, message="", data_value=""):
+        self.index_or_id = index_or_id
         self.message = message
         self.data_value = data_value
         # logging.log(26, f"RECORD FAILED\t{self.id}\t{self.message}\t{self.data_value}")
         super().__init__(self.message)
 
     def __str__(self):
-        return f"Critical data issue. Record needs fixing\t{self.id}\t{self.message}\t{self.data_value}"
+        return f"Critical data issue. Record needs fixing\t{self.index_or_id}\t{self.message}\t{self.data_value}"
 
     def log_it(self):
-        logging.log(26, f"RECORD FAILED\t{self.id}\t{self.message}\t{self.data_value}")
+        logging.error(
+            "Record failed: %s. See the data issues log for details", self.message
+        )
+        logging.log(
+            26,
+            "RECORD FAILED\t%s\t%s\t%s",
+            self.index_or_id,
+            self.message,
+            self.data_value,
+        )
 
 
 class TransformationProcessError(TransfomationError):
@@ -53,14 +62,17 @@ class TransformationProcessError(TransfomationError):
 
     def __init__(
         self,
-        id,
+        index_or_id,
         message="Critical Process issue. Transformation failed.",
         data_value="",
     ):
-        self.id = id
+        self.index_or_id = index_or_id
         self.message = message
         self.data_value = data_value
         super().__init__(self.message)
 
     def __str__(self):
-        return f"Critical Process issue. Check mapping files and reference data \t{self.id}\t{self.message}\t{self.data_value}"
+        return (
+            f"Critical Process issue. Check mapping files and reference data "
+            f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
+        )

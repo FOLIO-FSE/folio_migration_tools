@@ -1,21 +1,20 @@
-import logging
 import uuid
 from typing import List
 
-from migration_tools.marc_rules_transformation.conditions import Conditions
 from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from migration_tools.helper import Helper
+from migration_tools.marc_rules_transformation.conditions import Conditions
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
 from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
+from migration_tools.report_blurbs import Blurbs
 from pymarc.field import Field
 from pymarc.record import Record
-
-from migration_tools.report_blurbs import Blurbs
 
 
 class RulesMapperHoldings(RulesMapperBase):
@@ -51,9 +50,15 @@ class RulesMapperHoldings(RulesMapperBase):
         ignored_subsequent_fields = set()
 
         for marc_field in marc_record:
-            self.process_marc_field(
-                marc_field, ignored_subsequent_fields, folio_holding, index_or_legacy_id
-            )
+            try:
+                self.process_marc_field(
+                    marc_field,
+                    ignored_subsequent_fields,
+                    folio_holding,
+                    index_or_legacy_id,
+                )
+            except TransformationFieldMappingError as tfme:
+                tfme.log_it()
         if not folio_holding.get("formerIds", []):
             raise TransformationProcessError(
                 self.parsed_records,
@@ -97,16 +102,6 @@ class RulesMapperHoldings(RulesMapperBase):
             if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                 ignored_subsequent_fields.add(marc_field.tag)
 
-    def pick_first_location_if_many(self, folio_holding, legacy_ids):
-        if " " in folio_holding["permanentLocationId"]:
-            logging.info(
-                f"Space in permanentLocationId for {legacy_ids} "
-                f'({folio_holding["permanentLocationId"]}). Taking the first one'
-            )
-            folio_holding["permanentLocationId"] = folio_holding[
-                "permanentLocationId"
-            ].split(" ")[0]
-
     def perform_additional_mapping(
         self, marc_record: Record, folio_holding, legacy_ids: List[str]
     ):
@@ -116,6 +111,15 @@ class RulesMapperHoldings(RulesMapperBase):
         self.set_default_location_if_empty(folio_holding)
         self.pick_first_location_if_many(folio_holding, legacy_ids)
         self.parse_coded_holdings_statements(marc_record, folio_holding)
+
+    def pick_first_location_if_many(self, folio_holding, legacy_ids):
+        if " " in folio_holding["permanentLocationId"]:
+            Helper.log_data_issue(
+                "".join(legacy_ids), "Space in permanentLocationId.", legacy_ids
+            )
+            folio_holding["permanentLocationId"] = folio_holding[
+                "permanentLocationId"
+            ].split(" ")[0]
 
     def parse_coded_holdings_statements(self, marc_record: Record, folio_holding):
         # TODO: Should one be able to switch these things off?
@@ -135,8 +139,8 @@ class RulesMapperHoldings(RulesMapperBase):
                         Blurbs.HoldingsStatementsParsing, f"{mr[0]} -- {mr[1]}"
                     )
             except TransformationFieldMappingError as tfme:
+                Helper.log_data_issue(tfme.id, tfme.message, tfme.data_value)
                 self.add_to_migration_report(Blurbs.FieldMappingErrors, tfme.message)
-                logging.error(tfme)
 
     def set_holdings_type(self, marc_record: Record, folio_holding):
         # Holdings type mapping
@@ -169,6 +173,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 folio_holding[
                     "holdingsTypeId"
                 ] = self.conditions.default_holdings_type_id
+                Helper.log_data_issue("", Blurbs.HoldingsTypeMapping, ldr06)
                 self.add_to_migration_report(
                     Blurbs.HoldingsTypeMapping,
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
@@ -182,23 +187,9 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def set_default_location_if_empty(self, folio_holding):
         if not folio_holding.get("permanentLocationId", ""):
+            Helper.log_data_issue("", Blurbs.LocationMapping, "")
             folio_holding["permanentLocationId"] = self.conditions.default_location_id
         # special weird case. Likely needs fixing in the mapping rules.
-
-    def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
-        dict_key = f"{ref_name}{key_type}"
-        if dict_key not in self.ref_data_dicts:
-            d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
-            self.ref_data_dicts[dict_key] = d
-        ref_object = (
-            self.ref_data_dicts[dict_key][key_value.lower()]
-            if key_value.lower() in self.ref_data_dicts[dict_key]
-            else None
-        )
-        if not ref_object:
-            logging.error(f"No matching element for {key_value} in {list(ref_data)}")
-            return None
-        return ref_object
 
     def remove_from_id_map(self, former_ids):
         """removes the ID from the map in case parsing failed"""
