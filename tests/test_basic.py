@@ -1,5 +1,7 @@
 # content of test_sample.py
 import json
+
+from pymarc.reader import MARCReader
 from migration_tools import mapper_base
 from migration_tools.helper import Helper
 from migration_tools.mapper_base import MapperBase
@@ -144,6 +146,35 @@ def test_flatten():
 
     flat = list(mapper_base.flatten(instance, ""))
     assert "id" in flat
-    assert "metadata" in flat
-    assert "contributors" in flat
+    assert "metadata.createdDate" in flat
     assert "contributors.name" in flat
+
+
+def test_udec():
+    path = "./tests/test_data/msplit00000005.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record1 = None
+        for record in reader:
+            if record["001"].value() == "udec000207828":
+                record1 = record
+        assert record1["911"]["a"] == "Biblioteca de Chillán. Hemeroteca"
+        my_tuple_json = record1.as_json()
+        assert '"Biblioteca de Chilla\\u0301n. Hemeroteca"' in my_tuple_json
+
+
+def test_udec2():
+    path = "./tests/test_data/msplit00000005.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = False
+        record1 = None
+        for record in reader:
+            if record["001"].value() == "udec000207828":
+                record1 = record
+        assert record1["911"]["a"] == "Biblioteca de Chilla n. Hemeroteca"
+        my_tuple_json = record1.as_json()
+        assert '"Biblioteca de Chilla n. Hemeroteca"' in my_tuple_json

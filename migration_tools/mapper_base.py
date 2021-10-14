@@ -33,18 +33,21 @@ class MapperBase:
         try:
             for field_name in flatten(folio_record):
                 if field_name not in self.mapped_folio_fields:
-                    self.mapped_folio_fields[field_name] = 1
+                    self.mapped_folio_fields[field_name] = [1]
                 else:
                     self.mapped_folio_fields[field_name][0] += 1
             if not self.schema_properties:
                 self.schema_properties = schema["properties"].keys()
+
             unmatched_properties = (
                 p for p in self.schema_properties if p not in folio_record.keys()
             )
-            for p in unmatched_properties:
-                self.mapped_folio_fields[p] = [0]
+            for prop in unmatched_properties:
+                if prop not in self.mapped_folio_fields:
+                    self.mapped_folio_fields[prop] = [0]
         except Exception as ee:
-            logging.error(ee)
+            logging.error(ee, stack_info=True)
+            raise ee
 
     def handle_transformation_field_mapping_error(self, index_or_id, error):
         self.migration_report.add(Blurbs.FieldMappingErrors, error)
@@ -105,11 +108,9 @@ def flatten(my_dict: dict, path=""):
         if v:
             if isinstance(v, list):
                 for e in v:
-                    yield (path + "." + k).strip(".")
                     if isinstance(e, dict):
                         yield from (flatten(dict(e), path + "." + k))
             elif isinstance(v, dict):
-                yield (path + "." + k).strip(".")
                 yield from flatten(dict(v), path + "." + k)
             else:
                 yield (path + "." + k).strip(".")

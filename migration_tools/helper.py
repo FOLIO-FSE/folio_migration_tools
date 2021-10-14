@@ -37,7 +37,7 @@ class Helper:
         report_file.write("FOLIO Field | Mapped | Unmapped  \n")
         report_file.write("--- | --- | ---:  \n")
         for k, v in d_sorted.items():
-            unmapped = total_records - v[0]
+            unmapped = max(total_records - v[0], 0)
             mapped = v[0]
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
@@ -91,7 +91,7 @@ class Helper:
                 (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
             ]
             for b in sortedlist:
-                report_file.write(f"{b[0]} | {b[1]:,}   \n")
+                report_file.write(f"{b[0] or 'EMPTY'} | {b[1]:,}   \n")
             report_file.write("</details>   \n")
 
     @staticmethod

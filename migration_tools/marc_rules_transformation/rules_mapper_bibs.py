@@ -148,7 +148,7 @@ class BibsRulesMapper(RulesMapperBase):
                     )
                 )
             else:
-                logging.info("Legacy id is None %s",legacy_ids)
+                logging.info("Legacy id is None %s", legacy_ids)
 
     def process_marc_field(
         self,
@@ -655,7 +655,7 @@ class BibsRulesMapper(RulesMapperBase):
                 Helper.log_data_issue(legacy_id, m, language_value)
                 self.migration_report.add(
                     Blurbs.UnrecognizedLanguageCodes,
-                    f"{language_value} not recognized for {self.get_legacy_ids(marc_record, self.ils_flavour, index_or_legacy_id)}",
+                    f"{m}: {language_value}",
                 )
 
     def get_legacy_ids(

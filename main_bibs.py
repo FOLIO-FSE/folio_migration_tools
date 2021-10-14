@@ -118,13 +118,6 @@ class Worker(main_base.MainBase):
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# Bibliographic records transformation results   \n")
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
-            report_file.write("## Bibliographic records transformation counters   \n")
-            Helper.print_dict_to_md_table(
-                self.mapper.stats,
-                report_file,
-                "Measure",
-                "Count",
-            )
             Helper.write_migration_report(report_file, self.mapper.migration_report)
             Helper.print_mapping_report(
                 report_file,
