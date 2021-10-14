@@ -1,4 +1,8 @@
 # content of test_sample.py
+import json
+from migration_tools import mapper_base
+from migration_tools.helper import Helper
+from migration_tools.mapper_base import MapperBase
 from migration_tools.mapping_file_transformation import mapping_file_mapper_base
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -107,7 +111,6 @@ def test_normal_refdata_mapping_strip():
 
 def test_blurbs():
     b = Blurbs.Introduction
-    print(b)
     assert b[0] == "Introduction"
 
 
@@ -133,3 +136,14 @@ def test_get_marc_textual_stmt():
     assert any("Some note" in f["note"] for f in res["statements"])
     assert any(stmt2 in f["statement"] for f in res["statements"])
     assert any("Missing linked fields for 853" in f[1] for f in res["migration_report"])
+
+
+def test_flatten():
+    instance_str = '{"id": "11af72aa-5921-46c4-8fa3-55b481849948", "metadata": {"createdDate": "2021-10-14T13:40:48.848", "createdByUserId": "f446ed29-2dac-436a-b1bc-8ebe5ac7ea76", "updatedDate": "2021-10-14T13:40:48.848", "updatedByUserId": "f446ed29-2dac-436a-b1bc-8ebe5ac7ea76"}, "hrid": "2471459", "identifiers": [{"identifierTypeId": "c858e4f2-2b6b-4385-842b-60732ee14abb", "value": "2018027930"}, {"identifierTypeId": "439bfbae-75bc-4f74-9fc7-b2a2d47ce3ef", "value": "(OCoLC)on1040079128"}, {"identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422", "value": "1541541839"}, {"identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422", "value": "9781541546745 (electronic bk.)"}, {"identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422", "value": "1541546741 (electronic bk.)"}, {"identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422", "value": "9781541541832 (electronic bk.)"}, {"identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422", "value": "9781541546752 (e-book)"}, {"identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422", "value": "154154675X"}], "classifications": [{"classificationTypeId": "ce176ace-a53e-4b4d-aa89-725ed7b2edac", "classificationNumber": "PZ7.1.H433"}], "contributors": [{"contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a", "contributorTypeId": "6e09d47d-95e2-4d8a-831b-f777b8ef6d81", "contributorTypeText": "Contributor", "primary": true, "name": "Heathfield, Lisa"}, {"contributorNameTypeId": "2e48e713-17f3-4c13-a9f8-23845bb210aa", "contributorTypeId": "9f0a2cf0-7a9b-45a2-a403-f68d2850d07c", "contributorTypeText": "Contributor", "primary": false, "name": "PALCI EBSCO books"}], "title": "Flight of a starling / Lisa Heathfield.", "indexTitle": "Flight of a starling", "publication": [{"place": "Minneapolis", "publisher": "Carolrhoda Lab", "dateOfPublication": "[2019]", "role": "Publication"}], "physicalDescriptions": ["1 online resource"], "instanceFormatIds": ["8d511d33-5e85-4c5d-9bce-6e3c9cd0c324"], "notes": [{"instanceNoteTypeId": "6a2533a7-4de2-4e64-8466-074c2fa9308c", "note": "Originally published: London : Electric Monkey, 2017", "staffOnly": false}, {"instanceNoteTypeId": "e814a32e-02da-4773-8f3a-6629cdb7ecdf", "note": "Electronic access restricted to Villanova University patrons", "staffOnly": false}, {"instanceNoteTypeId": "10e2e11b-450f-45c8-b09b-0f819999966e", "note": "Told from two viewpoints, sisters Lo and Rita spend their lives flying high on the trapeze, but real danger comes as secrets begin to unravel the tightknit circus community and Lo finds love with a ", "staffOnly": false}, {"instanceNoteTypeId": "66ea8f28-d5da-426a-a7c9-739a5d676347", "note": "Description based on print version record and CIP data provided by publisher", "staffOnly": false}], "subjects": ["Sisters Fiction", "Circus Fiction", "Family life Fiction", "Dating (Social customs) Fiction", "Aerialists Fiction", "Families Fiction", "Aerialists", "Circus", "Dating (Social customs)", "Families", "Sisters", "Genre: Electronic books", "Genre: Fiction"], "electronicAccess": [{"relationshipId": "f5d0068e-6272-458e-8a81-b85e7b9a14aa", "uri": "http://ezproxy.villanova.edu/login?URL=http://search.ebscohost.com/login.aspx?direct=true&scope=site&db=nlebk&AN=1947377", "linkText": "", "materialsSpecification": "", "publicNote": "Online version"}], "source": "MARC", "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f", "modeOfIssuanceId": "9d18a02f-5897-4c31-9106-c9abb5c7ae8b", "languages": ["eng"], "discoverySuppress": false, "staffSuppress": false}'
+    instance = json.loads(instance_str)
+
+    flat = list(mapper_base.flatten(instance, ""))
+    assert "id" in flat
+    assert "metadata" in flat
+    assert "contributors" in flat
+    assert "contributors.name" in flat

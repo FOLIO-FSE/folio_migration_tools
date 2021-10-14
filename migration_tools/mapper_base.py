@@ -31,18 +31,11 @@ class MapperBase:
 
     def report_folio_mapping(self, folio_record, schema):
         try:
-            flattened = flatten(folio_record)
-            for field_name, v in flattened.items():
-                mapped = 0
-                if isinstance(v, str) and v.strip():
-                    mapped = 1
-                elif isinstance(v, list) and any(v):
-                    l = len([a for a in v if a])
-                    mapped = l
+            for field_name in flatten(folio_record):
                 if field_name not in self.mapped_folio_fields:
-                    self.mapped_folio_fields[field_name] = [mapped]
+                    self.mapped_folio_fields[field_name] = 1
                 else:
-                    self.mapped_folio_fields[field_name][0] += mapped
+                    self.mapped_folio_fields[field_name][0] += 1
             if not self.schema_properties:
                 self.schema_properties = schema["properties"].keys()
             unmatched_properties = (
@@ -106,12 +99,17 @@ class MapperBase:
             sys.exit()
 
 
-def flatten(d, parent_key="", sep="."):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flatten(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+def flatten(my_dict: dict, path=""):
+    for k, v in iter(my_dict.items()):
+        # print(f"{type(v).__name__} {k} {path}")
+        if v:
+            if isinstance(v, list):
+                for e in v:
+                    yield (path + "." + k).strip(".")
+                    if isinstance(e, dict):
+                        yield from (flatten(dict(e), path + "." + k))
+            elif isinstance(v, dict):
+                yield (path + "." + k).strip(".")
+                yield from flatten(dict(v), path + "." + k)
+            else:
+                yield (path + "." + k).strip(".")
