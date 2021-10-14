@@ -63,7 +63,7 @@ class Worker(MainBase):
         self.holdings_types = list(
             self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
         )
-        logging.info(f"{len(self.holdings_types)}\tholdings types in tenant")
+        logging.info("%s\tholdings types in tenant", len(self.holdings_types))
 
         self.default_holdings_type = next(
             (h["id"] for h in self.holdings_types if h["name"] == "Unmapped"), ""
@@ -78,7 +78,7 @@ class Worker(MainBase):
     def work(self):
         logging.info("Starting....")
         for file_name in self.files:
-            logging.info(f"Processing {file_name}")
+            logging.info("Processing %s",file_name)
             try:
                 self.process_single_file(file_name)
             except Exception as ee:

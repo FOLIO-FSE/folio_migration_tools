@@ -106,7 +106,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self, marc_record: Record, folio_holding, legacy_ids: List[str]
     ):
         """Perform additional tasks not easily handled in the mapping rules"""
-        self.set_holdings_type(marc_record, folio_holding)
+        self.set_holdings_type(marc_record, folio_holding, legacy_ids)
         self.set_default_call_number_type_if_empty(folio_holding)
         self.set_default_location_if_empty(folio_holding)
         self.pick_first_location_if_many(folio_holding, legacy_ids)
@@ -142,7 +142,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 Helper.log_data_issue(tfme.index_or_id, tfme.message, tfme.data_value)
                 self.migration_report.add(Blurbs.FieldMappingErrors, tfme.message)
 
-    def set_holdings_type(self, marc_record: Record, folio_holding):
+    def set_holdings_type(self, marc_record: Record, folio_holding, legacy_ids):
         # Holdings type mapping
         ldr06 = marc_record.leader[6]
         # TODO: map this better
@@ -169,11 +169,19 @@ class RulesMapperHoldings(RulesMapperBase):
                     Blurbs.HoldingsTypeMapping,
                     f"{ldr06} -> {holdings_type} -> {t[1]} ({t[0]}",
                 )
+                Helper.log_data_issue(
+                    legacy_ids,
+                    (
+                        "{Blurbs.HoldingsTypeMapping[0]} is 'unknown'. "
+                        "Check if this is correct"
+                    ),
+                    ldr06,
+                )
             else:
                 folio_holding[
                     "holdingsTypeId"
                 ] = self.conditions.default_holdings_type_id
-                Helper.log_data_issue("", Blurbs.HoldingsTypeMapping, ldr06)
+                Helper.log_data_issue(legacy_ids, Blurbs.HoldingsTypeMapping[0], ldr06)
                 self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",

@@ -148,7 +148,7 @@ class BibsRulesMapper(RulesMapperBase):
                     )
                 )
             else:
-                logging.info(f"Legacy id is None {legacy_ids}")
+                logging.info("Legacy id is None %s",legacy_ids)
 
     def process_marc_field(
         self,
@@ -585,10 +585,11 @@ class BibsRulesMapper(RulesMapperBase):
         subfields = "abdefghjkmn"
         for lang_tag in lang_fields:
             if "2" in lang_tag:
-                self.migration_report.add("Language code sources in 041", lang_tag["2"])
+                self.migration_report.add(Blurbs.LanguageCodeSources, lang_tag["2"])
                 logging.info(
-                    f"Field with other Language code\t{marc_record['001']}"
-                    f"\t{lang_tag.value()}"
+                    "Field with other Language code\t%s\t%s",
+                    marc_record["001"],
+                    lang_tag.value(),
                 )
             lang_codes = lang_tag.get_subfields(*list(subfields))
             for lang_code in lang_codes:

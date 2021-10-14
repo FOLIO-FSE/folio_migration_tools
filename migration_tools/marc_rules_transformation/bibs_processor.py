@@ -96,7 +96,7 @@ class BibsProcessor:
             )
         except TransformationRecordFailedError as error:
             self.mapper.migration_report.add_general_statistics(
-                "Records that failed transformation. Check log for details.",
+                "Records that failed transformation. Check log for details",
             )
             error.id = index_or_legacy_id
             error.log_it()
@@ -122,14 +122,14 @@ class BibsProcessor:
             self.mapper.migration_report.add(Blurbs.MissingTitles, s)
             logging.error(s)
             self.mapper.migration_report.add_general_statistics(
-                "Records that failed transformation. Check log for details.",
+                "Records that failed transformation. Check log for details",
             )
             return False
         if not folio_rec.get("instanceTypeId", ""):
             s = f"No Instance Type Id in {index_or_legacy_id}"
             self.mapper.migration_report.add(Blurbs.MissingInstanceTypeIds, s)
             self.mapper.migration_report.add_general_statistics(
-                "Records that failed transformation. Check log for details.",
+                "Records that failed transformation. Check log for details",
             )
             return False
         return True
