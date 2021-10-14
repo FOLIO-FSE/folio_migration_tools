@@ -208,13 +208,8 @@ class Worker(MainBase):
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
-                    # TODO: Add more levels (recursive) to mapping
-                    for circ_note in folio_rec.get("circulationNotes", []):
-                        circ_note["id"] = str(uuid.uuid4())
-                        circ_note["source"] = {
-                            "id": self.folio_client.current_user,
-                            "personal": {"lastName": "Data", "firstName": "Migration"},
-                        }
+                    self.handle_circiulation_notes(folio_rec)
+                    # TODO: turn this into a asynchrounous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.add_general_statistics(
                         "Number of records written to disk"
@@ -232,7 +227,6 @@ class Worker(MainBase):
                     sys.exit()
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
-
                 self.mapper.migration_report.add(
                     Blurbs.GeneralStatistics,
                     f"Number of Legacy items in {file_name}",
@@ -250,6 +244,14 @@ class Worker(MainBase):
                 f"Total records processed: {total_records:,}"
             )
         self.total_records = total_records
+
+    def handle_circiulation_notes(self, folio_rec):
+        for circ_note in folio_rec.get("circulationNotes", []):
+            circ_note["id"] = str(uuid.uuid4())
+            circ_note["source"] = {
+                "id": self.folio_client.current_user,
+                "personal": {"lastName": "Data", "firstName": "Migration"},
+            }
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
@@ -308,10 +310,10 @@ def parse_args():
     if len(args.time_stamp) != 15:
         logging.critical(f"Time stamp ({args.time_stamp}) is not set properly")
         sys.exit()
-    logging.info(f"\tOkapi URL:\t{args.okapi_url}")
-    logging.info(f"\tTenanti Id:\t{args.tenant_id}")
-    logging.info(f"\tUsername:\t{args.username}")
-    logging.info("\tPassword:\tSecret")
+    logging.info("Okapi URL:\t%s", args.okapi_url)
+    logging.info("Tenant Id:\t%s", args.tenant_id)
+    logging.info("Username:   \t%s", args.username)
+    logging.info("Password:   \tSecret")
     return args
 
 

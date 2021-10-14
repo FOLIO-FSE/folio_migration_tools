@@ -52,7 +52,7 @@ class HoldingsMapper(MappingFileMapperBase):
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name, True)
         elif folio_prop_name == "callNumber":
             if legacy_value.startswith("["):
-                self.migration_report.add_stats(
+                self.migration_report.add_general_statistics(
                     "Bound-with items callnumber identified"
                 )
                 self.migration_report.add(

@@ -81,7 +81,6 @@ class Worker(MainBase):
             logging.info(f"Processing {file_name}")
             try:
                 self.process_single_file(file_name)
-
             except Exception as ee:
                 error_str = (
                     f"Processing of {file_name} failed:\n{ee}."

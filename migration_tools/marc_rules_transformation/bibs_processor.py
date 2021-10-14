@@ -84,7 +84,7 @@ class BibsProcessor:
                     )
 
         except ValueError as value_error:
-            self.mapper.self.mapper.migration_report.add(
+            self.mapper.migration_report.add(
                 Blurbs.FieldMappingErrors,
                 f"{value_error} for {index_or_legacy_id} ",
             )
@@ -119,7 +119,7 @@ class BibsProcessor:
     def validate_instance(self, folio_rec, marc_record, index_or_legacy_id: str):
         if not folio_rec.get("title", ""):
             s = f"No title in {index_or_legacy_id}"
-            self.mapper.self.mapper.migration_report.add(Blurbs.MissingTitles, s)
+            self.mapper.migration_report.add(Blurbs.MissingTitles, s)
             logging.error(s)
             self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details.",
@@ -127,9 +127,7 @@ class BibsProcessor:
             return False
         if not folio_rec.get("instanceTypeId", ""):
             s = f"No Instance Type Id in {index_or_legacy_id}"
-            self.mapper.self.mapper.migration_report.add(
-                Blurbs.MissingInstanceTypeIds, s
-            )
+            self.mapper.migration_report.add(Blurbs.MissingInstanceTypeIds, s)
             self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details.",
             )

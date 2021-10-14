@@ -56,10 +56,10 @@ def parse_args():
     if len(args.time_stamp) != 15:
         print(f"Time stamp ({args.time_stamp}) is not set properly")
         sys.exit()
-    print(f"\tOkapi URL:\t{args.okapi_url}")
-    print(f"\tTenanti Id:\t{args.tenant_id}")
-    print(f"\tUsername:\t{args.username}")
-    print("\tPassword:\tSecret")
+    logging.info("Okapi URL:\t%s", args.okapi_url)
+    logging.info("Tenant Id:\t%s", args.tenant_id)
+    logging.info("Username:   \t%s", args.username)
+    logging.info("Password:   \tSecret")
     return args
 
 

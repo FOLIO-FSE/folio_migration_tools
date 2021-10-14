@@ -1,6 +1,7 @@
 import logging
 import collections
 import sys
+import traceback
 
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -96,6 +97,7 @@ class MapperBase:
             f"Row {idx:,} failed with the following unhandled Exception: {excepion}  "
             f"of type {type(excepion).__name__}"
         )
+        logging.error(excepion, exc_info=True)
         if self.num_exeptions > 500:
             logging.fatal(
                 "Stopping. More than %s unhandled exceptions. Code needs fixing",

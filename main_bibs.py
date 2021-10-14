@@ -39,7 +39,7 @@ class Worker(main_base.MainBase):
             if isfile(os.path.join(folder_structure.legacy_records_folder, f))
         ]
         self.folio_client = folio_client
-        logging.info(f"# of files to process: {len(self.files)}")
+        logging.info("# of files to process: %s", len(self.files))
         logging.info(json.dumps(self.files, sort_keys=True, indent=4))
         self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
@@ -72,7 +72,7 @@ class Worker(main_base.MainBase):
                         else:
                             logging.info("FORCE UTF-8 is set to FALSE")
                             reader.force_utf8 = False
-                        logging.info(f"running {file_name}")
+                        logging.info("running %s", file_name)
                         self.read_records(reader, file_name)
                 except TransformationProcessError as tpe:
                     logging.critical(tpe)
@@ -84,7 +84,9 @@ class Worker(main_base.MainBase):
 
     def read_records(self, reader, file_name):
         for idx, record in enumerate(reader):
-            self.mapper.migration_report.add_stats("Records in file before parsing")
+            self.mapper.migration_report.add_general_statistics(
+                "Records in file before parsing"
+            )
             try:
                 if record is None:
                     self.mapper.migration_report.add_general_statistics(
@@ -103,7 +105,7 @@ class Worker(main_base.MainBase):
                     self.processor.process_record(idx, record, False)
             except TransformationRecordFailedError as error:
                 error.log_it()
-        logging.info(f"Done reading {idx+1} records from file")
+        logging.info("Done reading %s records from file", idx + 1)
 
     @staticmethod
     def set_leader(marc_record: Record):
@@ -132,8 +134,8 @@ class Worker(main_base.MainBase):
             )
 
         logging.info(
-            f"Done. Transformation report written to "
-            f"{self.folder_structure.migration_reports_file.name}"
+            "Done. Transformation report written to %s",
+            self.folder_structure.migration_reports_file.name,
         )
 
 
@@ -207,9 +209,9 @@ def main():
         Worker.setup_logging(folder_structure)
         folder_structure.log_folder_structure()
 
-        logging.info(f"Okapi URL:\t{args.okapi_url}")
-        logging.info(f"Tenant Id:\t{args.tenant_id}")
-        logging.info(f"Username:   \t{args.username}")
+        logging.info("Okapi URL:\t%s", args.okapi_url)
+        logging.info("Tenant Id:\t%s", args.tenant_id)
+        logging.info("Username:   \t%s", args.username)
         logging.info("Password:   \tSecret")
         try:
             folio_client = FolioClient(

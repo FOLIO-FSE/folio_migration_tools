@@ -103,12 +103,13 @@ class HoldingsProcessor:
         self.created_objects_file.close()
         id_map = self.mapper.holdings_id_map
         logging.warning(
-            f"Saving map of {len(id_map)} old and new IDs "
-            f"to {self.folder_structure.holdings_id_map_path}"
+            "Saving map of %s old and new IDs to %s",
+            len(id_map),
+            self.folder_structure.holdings_id_map_path,
         )
         with open(self.folder_structure.holdings_id_map_path, "w+") as id_map_file:
             json.dump(id_map, id_map_file)
-        logging.warning(f"{self.records_count} records processed")
+        logging.warning("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# MFHD records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")

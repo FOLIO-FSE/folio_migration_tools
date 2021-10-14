@@ -8,14 +8,6 @@ class MigrationReport:
         self.report = {}
         self.stats = {}
 
-    @DeprecationWarning
-    def add_stats(self, measure_to_add, number=1):
-        """Add stats to general report. Deprecated"""
-        if measure_to_add not in self.stats:
-            self.stats[measure_to_add] = number
-        else:
-            self.stats[measure_to_add] += number
-
     def add(self, blurb_tuple: tuple, measure_to_add, number=1):
         """Add section header and values to migration report."""
         if blurb_tuple[0] not in self.report:

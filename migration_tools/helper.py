@@ -7,6 +7,7 @@ import requests
 from genericpath import isfile
 
 from migration_tools.custom_exceptions import TransformationProcessError
+from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 
 
@@ -70,22 +71,22 @@ class Helper:
         report_file.write("</details>   \n")
 
     @staticmethod
-    def write_migration_report(report_file, migration_report):
+    def write_migration_report(report_file, migration_report: MigrationReport):
         """Writes the migration report, including section headers, section blurbs, and values."""
         report_file.write(f"{Blurbs.Introduction}\n")
 
-        for a in migration_report:
-            blurb = migration_report[a].get("blurb_tuple")
+        for a in migration_report.report:
+            blurb = migration_report.report[a].get("blurb_tuple")
             report_file.write("   \n")
             report_file.write(f"## {blurb[0]}    \n")
             report_file.write(f"{blurb[1]}    \n")
             report_file.write(
-                f"<details><summary>Click to expand all {len(migration_report[a])} things</summary>     \n"
+                f"<details><summary>Click to expand all {len(migration_report.report[a])} things</summary>     \n"
             )
             report_file.write("   \n")
             report_file.write("Measure | Count   \n")
             report_file.write("--- | ---:   \n")
-            b = migration_report[a]
+            b = migration_report.report[a]
             sortedlist = [
                 (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
             ]
