@@ -65,8 +65,7 @@ class MapperBase:
         self.migration_report.add(
             Blurbs.GeneralStatistics, "Records failed due to an error"
         )
-        logging.error(error.message)
-        error.id = error.id or records_processed
+        error.id = error.index_or_id or records_processed
         error.log_it()
         self.num_criticalerrors += 1
         if (

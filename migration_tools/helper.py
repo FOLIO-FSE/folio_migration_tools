@@ -76,7 +76,7 @@ class Helper:
         report_file.write(f"{Blurbs.Introduction[1]}\n")
 
         for a in migration_report.report:
-            blurb = migration_report.report[a].get("blurb_tuple")
+            blurb = migration_report.report[a].get("blurb_tuple") or ("", "")
             report_file.write("   \n")
             report_file.write(f"## {blurb[0]}    \n")
             report_file.write(f"{blurb[1]}    \n")

@@ -34,7 +34,7 @@ class RulesMapperBase(MapperBase):
 
     def print_progress(self):
         self.parsed_records += 1
-        if self.parsed_records % 1000 == 0:
+        if self.parsed_records % 5000 == 0:
             elapsed = self.parsed_records / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
             logging.info(

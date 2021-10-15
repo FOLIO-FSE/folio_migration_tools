@@ -78,7 +78,7 @@ class Worker(MainBase):
     def work(self):
         logging.info("Starting....")
         for file_name in self.files:
-            logging.info("Processing %s",file_name)
+            logging.info("Processing %s", file_name)
             try:
                 self.process_single_file(file_name)
             except Exception as ee:
@@ -97,7 +97,9 @@ class Worker(MainBase):
 
     def process_single_file(self, file_name):
         with open(file_name, encoding="utf-8-sig") as records_file:
-            self.mapper.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                "Number of files processed"
+            )
             start = time.time()
             for idx, record in enumerate(
                 self.mapper.get_objects(records_file, file_name)
@@ -110,7 +112,9 @@ class Worker(MainBase):
                     self.mapper.handle_transformation_record_failed_error(idx, error)
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
-                self.mapper.add_general_statistics("Number of Legacy items in file")
+                self.mapper.migration_report.add_general_statistics(
+                    "Number of Legacy items in file"
+                )
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
@@ -197,7 +201,9 @@ class Worker(MainBase):
             c["callNumber"] = call_numbers[bwidx]
             c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
             c["id"] = str(uuid.uuid4())
-            self.mapper.add_general_statistics("Bound-with holdings created")
+            self.mapper.migration_report.add_general_statistics(
+                "Bound-with holdings created"
+            )
             yield c
 
     def merge_holding_in(self, folio_holding):
@@ -208,10 +214,14 @@ class Worker(MainBase):
             and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
         )
         if exclude or not existing_holding:
-            self.mapper.add_general_statistics("Unique Holdings created from Items")
+            self.mapper.migration_report.add_general_statistics(
+                "Unique Holdings created from Items"
+            )
             self.holdings[new_holding_key] = folio_holding
         else:
-            self.mapper.add_general_statistics("Holdings already created from Item")
+            self.mapper.migration_report.add_general_statistics(
+                "Holdings already created from Item"
+            )
             self.merge_holding(new_holding_key, existing_holding, folio_holding)
 
     def wrap_up(self):
@@ -230,7 +240,7 @@ class Worker(MainBase):
                             self.legacy_map[legacy_id] = {"id": holding["id"]}
 
                     Helper.write_to_file(holdings_file, holding)
-                    self.mapper.add_general_statistics(
+                    self.mapper.migration_report.add_general_statistics(
                         "Holdings Records Written to disk"
                     )
             with open(

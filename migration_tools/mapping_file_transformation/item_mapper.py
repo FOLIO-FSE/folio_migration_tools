@@ -190,7 +190,7 @@ class ItemMapper(MappingFileMapperBase):
                 self.migration_report.add(Blurbs.HoldingsRecordIdMapping, "Unmapped")
                 s = (
                     "Holdings id referenced in legacy item "
-                    "was not found amongst transformed Holdings records."
+                    "was not found amongst transformed Holdings records"
                 )
                 raise TransformationRecordFailedError(index_or_id, s, legacy_value)
             else:

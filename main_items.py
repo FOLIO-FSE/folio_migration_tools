@@ -211,7 +211,7 @@ class Worker(MainBase):
                     self.handle_circiulation_notes(folio_rec)
                     # TODO: turn this into a asynchrounous task
                     Helper.write_to_file(results_file, folio_rec)
-                    self.mapper.add_general_statistics(
+                    self.mapper.migration_report.add_general_statistics(
                         "Number of records written to disk"
                     )
                 except TransformationProcessError as process_error:
@@ -259,7 +259,7 @@ class Worker(MainBase):
             self.folder_structure.migration_reports_file, "w"
         ) as migration_report_file:
             logging.info(
-                "Writing migration- and mapping report to %s",
+                "Writing migration and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )
             Helper.write_migration_report(

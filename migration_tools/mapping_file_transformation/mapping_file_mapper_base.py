@@ -74,7 +74,7 @@ class MappingFileMapperBase(MapperBase):
     def setup_field_map(self):
         field_map = {}  # Map of folio_fields and source fields as an array
         for k in self.record_map["data"]:
-            if not self.field_map.get(k["folio_field"]):
+            if not field_map.get(k["folio_field"]):
                 field_map[k["folio_field"]] = [k["legacy_field"]]
             else:
                 field_map[k["folio_field"]].append(k["legacy_field"])
