@@ -19,7 +19,6 @@ class MapperBase:
         self.num_criticalerrors = 0
         self.num_exeptions = 0
         self.mapped_legacy_fields = {}
-        self.stats = {}
         self.schema_properties = None
 
     def report_legacy_mapping(self, field_name, present, mapped):

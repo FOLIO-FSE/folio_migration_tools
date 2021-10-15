@@ -36,7 +36,6 @@ class HoldingsProcessor:
 
     def print_progress(self):
         if self.records_count % 10000 == 0:
-            logging.info(self.mapper.stats)
             elapsed = self.records_count / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
             logging.info(f"{elapsed_formatted}\t\t{self.records_count}")
@@ -113,13 +112,6 @@ class HoldingsProcessor:
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# MFHD records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
-            report_file.write("## MFHD records transformation counters   \n")
-            Helper.print_dict_to_md_table(
-                self.mapper.stats,
-                report_file,
-                "Measure",
-                "Count",
-            )
             Helper.write_migration_report(report_file, self.mapper.migration_report)
             Helper.print_mapping_report(
                 report_file,
