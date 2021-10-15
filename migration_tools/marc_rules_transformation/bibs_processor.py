@@ -140,8 +140,8 @@ class BibsProcessor:
             self.mapper.wrap_up()
         except Exception:
             logging.exception("error during wrap up")
-        logging.info("Saving holdings created from bibs")
         if any(self.mapper.holdings_map):
+            logging.info("Saving holdings created from bibs")
             holdings_path = self.folders.data_folder / "folio_holdings_from_bibs.json"
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
