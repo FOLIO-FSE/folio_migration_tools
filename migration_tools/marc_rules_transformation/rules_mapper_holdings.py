@@ -116,8 +116,8 @@ class RulesMapperHoldings(RulesMapperBase):
         if " " in folio_holding["permanentLocationId"]:
             Helper.log_data_issue(
                 "".join(legacy_ids),
-                "Space in permanentLocationId.Was this MFHD attached to multiple holdings?",
-                " ",
+                "Space in permanentLocationId. Was this MFHD attached to multiple holdings?",
+                folio_holding["permanentLocationId"],
             )
             folio_holding["permanentLocationId"] = folio_holding[
                 "permanentLocationId"
@@ -184,14 +184,13 @@ class RulesMapperHoldings(RulesMapperBase):
                 folio_holding[
                     "holdingsTypeId"
                 ] = self.conditions.default_holdings_type_id
-                Helper.log_data_issue(legacy_ids, Blurbs.HoldingsTypeMapping[0], ldr06)
                 self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
                 )
                 Helper.log_data_issue(
                     legacy_ids,
-                    (f"{Blurbs.HoldingsTypeMapping[0]}. leaser 06 was unmapped."),
+                    (f"{Blurbs.HoldingsTypeMapping[0]}. leader 06 was unmapped."),
                     ldr06,
                 )
 

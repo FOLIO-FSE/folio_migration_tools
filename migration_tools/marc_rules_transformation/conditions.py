@@ -445,13 +445,10 @@ class Conditions:
             )
             return ""
         except Exception:
-            self.mapper.migration_report.add_general_statistics(
-                "Bib ids not found in instance id map"
-            )
             raise TransformationRecordFailedError(
                 "",
                 "Old instance id not in map",
-                f"{value} {marc_field.format_field()}",
+                f"{marc_field.format_field()}",
             )
 
     def condition_set_url_relationship(self, value, parameter, marc_field: field.Field):

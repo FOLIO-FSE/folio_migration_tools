@@ -31,7 +31,9 @@ class HoldingsStatementsParser:
         for pattern_field in marc_record.get_fields(pattern_tag):
             if "8" not in pattern_field:
                 raise TransformationFieldMappingError(
-                    "", "Subfield 8 not in field", pattern_field.format_field()
+                    "",
+                    f"{pattern_tag} subfield 8 not in field",
+                    pattern_field.format_field(),
                 )
             linked_value_fields = [
                 value_field
