@@ -214,6 +214,7 @@ class Worker(MainBase):
                     self.mapper.migration_report.add_general_statistics(
                         "Number of records written to disk"
                     )
+                    self.mapper.report_folio_mapping(folio_rec, self.mapper.schema)
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as data_error:

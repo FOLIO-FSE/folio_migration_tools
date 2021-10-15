@@ -106,6 +106,7 @@ class Worker(MainBase):
             ):
                 try:
                     self.process_holding(idx, record)
+
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as error:
@@ -143,6 +144,7 @@ class Worker(MainBase):
 
         for folio_holding in holdings_from_row:
             self.merge_holding_in(folio_holding)
+        self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_rec):
         # Add former ids

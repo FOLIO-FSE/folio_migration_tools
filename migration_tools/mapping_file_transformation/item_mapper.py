@@ -168,11 +168,7 @@ class ItemMapper(MappingFileMapperBase):
             )
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
-            ltid = self.get_mapped_value(self.loan_type_mapping, *value_tuple)
-            self.migration_report.add(
-                Blurbs.PermanentLoanTypeMapping, f"{folio_prop_name} -> {ltid}"
-            )
-            return ltid
+            return self.get_mapped_value(self.loan_type_mapping, *value_tuple)
         elif folio_prop_name.startswith("statisticalCodeIds"):
             statistical_code_id = self.get_statistical_codes(
                 legacy_item, folio_prop_name, index_or_id

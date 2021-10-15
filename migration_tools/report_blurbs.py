@@ -184,7 +184,7 @@ class Blurbs(NamedTuple):
     HoldingsRecordIdMapping = ("Holdings IDs mapped", "")
     UnmappedProperties = ("Unmapped properties", "")
     StatusMapping = ("Status mapping", "")
-    ReferenceDataMapping = ("ReferenceDataMapping", "")
+    ReferenceDataMapping = ("Reference Data Mapping", "")
     FieldMappingErrors = ("Field mapping errors", "")
     PropertiesExcludedFromSchema = (
         "Properties in Schema excluded from transformation",

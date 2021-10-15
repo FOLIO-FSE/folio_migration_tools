@@ -156,14 +156,9 @@ class MappingFileMapperBase(MapperBase):
                     f'{ref_dat_mapping.name} mapping - Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""',
                 )
                 return ""
-            Helper.log_data_issue(
-                index_or_id,
-                f"{folio_property_name} mapping failed. Check mapping files",
-                " - ".join(fieldvalues),
-            )
             self.migration_report.add(
                 Blurbs.ReferenceDataMapping,
-                f'{ref_dat_mapping.name} mapping - Unmapped -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
+                f'{ref_dat_mapping.name} mapping - Unmapped (Default value was set) -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
             )
             return ref_dat_mapping.default_id
         except IndexError as ee:
