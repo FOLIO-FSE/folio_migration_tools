@@ -15,6 +15,7 @@ from pymarc import MARCReader
 from pymarc.record import Record
 
 from migration_tools import main_base
+from migration_tools.colors import Bcolors
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -176,7 +177,8 @@ def parse_args():
         "-utf8",
         help=(
             "forcing UTF8 when parsing marc records. If you get a lot of encoding issues, test "
-            "changing this setting to False"
+            "changing this setting to False \n"
+            f"\n⚠ {Bcolors.WARNING}WARNING!{Bcolors.ENDC} ⚠ \nEven though setting this to False might make your migrations run smoother, it might lead to data loss in individual fields"
         ),
         default="True",
     )

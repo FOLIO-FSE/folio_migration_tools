@@ -511,14 +511,21 @@ class BibsRulesMapper(RulesMapperBase):
         elif self.hrid_handling == "001":
             value = marc_record["001"].value()
             if value in self.unique_001s:
-                self.migration_report.add(Blurbs.HridHandling, "Duplicate 001")
-                raise TransformationRecordFailedError(
-                    index_or_legacy_id, "Duplicate 001 for record", value
+                self.migration_report.add(
+                    Blurbs.HridHandling, "Duplicate 001. Creating HRID instead"
                 )
-
-            self.unique_001s.add(value)
-            folio_instance["hrid"] = value
-            self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
+                Helper.log_data_issue(
+                    index_or_legacy_id, "Duplicate 001 for record. HRID created", value
+                )
+                num_part = str(self.hrid_counter).zfill(11)
+                folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
+                new_001 = Field(tag="001", data=folio_instance["hrid"])
+                marc_record.add_ordered_field(new_001)
+                self.hrid_counter += 1
+            else:
+                self.unique_001s.add(value)
+                folio_instance["hrid"] = value
+                self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
         else:
             raise TransformationProcessError(
                 f"Unknown HRID handling: {self.hrid_handling}"
