@@ -34,16 +34,14 @@ class HoldingsProcessor:
             self.folder_structure.created_objects_path, "w+"
         )
 
-    def print_progress(self):
-        if self.records_count % 10000 == 0:
-            elapsed = self.records_count / (time.time() - self.start)
-            elapsed_formatted = "{0:.4g}".format(elapsed)
-            logging.info(f"{elapsed_formatted}\t\t{self.records_count}")
-            if self.failed_records_count / (self.records_count + 1) > 0.2:
-                logging.critical(
-                    "More than 20 percent of the records have failed. Halting"
-                )
-                sys.exit()
+    def exit_on_too_many_exceptions(self):
+        if (
+            self.records_count > 10000
+            and self.records_count % 10000 == 0
+            and self.failed_records_count / (self.records_count + 1) > 0.2
+        ):
+            logging.critical("More than 20 percent of the records have failed. Halting")
+            sys.exit()
 
     def process_record(self, marc_record):
         """processes a marc holdings record and saves it"""
@@ -67,15 +65,13 @@ class HoldingsProcessor:
             self.mapper.migration_report.add_general_statistics(
                 "Holdings records written to disk"
             )
-            self.print_progress()
+            self.exit_on_too_many_exceptions()
         except TransformationRecordFailedError as error:
             success = False
-            Helper.log_data_issue(error.index_or_id, error.message, error.data_value)
+            error.log_it()
             self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
             )
-            logging.error(error)
-            remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
         except TransformationProcessError as tpe:
             raise tpe  #  Raise, since it should be handled higher up
         except Exception as inst:

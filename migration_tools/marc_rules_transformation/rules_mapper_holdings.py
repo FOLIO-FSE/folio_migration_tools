@@ -115,7 +115,9 @@ class RulesMapperHoldings(RulesMapperBase):
     def pick_first_location_if_many(self, folio_holding, legacy_ids):
         if " " in folio_holding["permanentLocationId"]:
             Helper.log_data_issue(
-                "".join(legacy_ids), "Space in permanentLocationId.", legacy_ids
+                "".join(legacy_ids),
+                "Space in permanentLocationId.Was this MFHD attached to multiple holdings?",
+                " ",
             )
             folio_holding["permanentLocationId"] = folio_holding[
                 "permanentLocationId"

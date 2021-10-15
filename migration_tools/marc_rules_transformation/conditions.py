@@ -438,17 +438,16 @@ class Conditions:
         try:
             if value:
                 if value.strip() not in self.mapper.instance_id_map:
-                    Helper.log_data_issue(
-                        "", "Bib ids not found in instance id map", value
-                    )
-                    self.mapper.migration_report.add_general_statistics(
-                        "Bib ids not found in instance id map"
-                    )
+                    raise ValueError()
                 return self.mapper.instance_id_map[value.strip()]["folio_id"]
-            logging.info(f"no instance id {marc_field.format_field()}")
+            Helper.log_data_issue(
+                "", "No instance id provided", marc_field.format_field()
+            )
             return ""
         except Exception:
-            self.mapper.migration_report.add_general_statistics("bib id not in map")
+            self.mapper.migration_report.add_general_statistics(
+                "Bib ids not found in instance id map"
+            )
             raise TransformationRecordFailedError(
                 "",
                 "Old instance id not in map",
