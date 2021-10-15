@@ -169,14 +169,15 @@ class RulesMapperHoldings(RulesMapperBase):
                     Blurbs.HoldingsTypeMapping,
                     f"{ldr06} -> {holdings_type} -> {t[1]} ({t[0]}",
                 )
-                Helper.log_data_issue(
-                    legacy_ids,
-                    (
-                        "{Blurbs.HoldingsTypeMapping[0]} is 'unknown'. "
-                        "Check if this is correct"
-                    ),
-                    ldr06,
-                )
+                if holdings_type == "Unknown":
+                    Helper.log_data_issue(
+                        legacy_ids,
+                        (
+                            f"{Blurbs.HoldingsTypeMapping[0]} is 'unknown'. (leader 06 is set to 'u') "
+                            "Check if this is correct"
+                        ),
+                        ldr06,
+                    )
             else:
                 folio_holding[
                     "holdingsTypeId"
@@ -185,6 +186,11 @@ class RulesMapperHoldings(RulesMapperBase):
                 self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
+                )
+                Helper.log_data_issue(
+                    legacy_ids,
+                    (f"{Blurbs.HoldingsTypeMapping[0]}. leaser 06 was unmapped."),
+                    ldr06,
                 )
 
     def set_default_call_number_type_if_empty(self, folio_holding):

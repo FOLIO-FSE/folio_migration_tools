@@ -9,6 +9,7 @@ from migration_tools.custom_exceptions import (
 )
 from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 from pymarc import field
+from migration_tools.helper import Helper
 
 from migration_tools.report_blurbs import Blurbs
 
@@ -437,7 +438,12 @@ class Conditions:
         try:
             if value:
                 if value.strip() not in self.mapper.instance_id_map:
-                    logging.info(f"{value} not in instance id map")
+                    Helper.log_data_issue(
+                        "", "Bib ids not found in instance id map", value
+                    )
+                    self.mapper.migration_report.add_general_statistics(
+                        "Bib ids not found in instance id map"
+                    )
                 return self.mapper.instance_id_map[value.strip()]["folio_id"]
             logging.info(f"no instance id {marc_field.format_field()}")
             return ""

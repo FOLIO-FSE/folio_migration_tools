@@ -73,7 +73,7 @@ class Helper:
     @staticmethod
     def write_migration_report(report_file, migration_report: MigrationReport):
         """Writes the migration report, including section headers, section blurbs, and values."""
-        report_file.write(f"{Blurbs.Introduction}\n")
+        report_file.write(f"{Blurbs.Introduction[1]}\n")
 
         for a in migration_report.report:
             blurb = migration_report.report[a].get("blurb_tuple")

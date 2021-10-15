@@ -1,7 +1,5 @@
 import logging
-import collections
 import sys
-import traceback
 
 from migration_tools.custom_exceptions import (
     TransformationProcessError,

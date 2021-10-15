@@ -78,8 +78,8 @@ class MainBase:
             file_handler = logging.FileHandler(
                 filename=folder_structure.transformation_log_path,
             )
-            stream_handler.addFilter(ExcludeLevelFilter(25))
-            stream_handler.addFilter(ExcludeLevelFilter(26))
+            file_handler.addFilter(ExcludeLevelFilter(25))
+            file_handler.addFilter(ExcludeLevelFilter(26))
             # file_handler.addFilter(LevelFilter(0, 20))
             file_handler.setFormatter(file_formatter)
             file_handler.setLevel(logging.INFO)

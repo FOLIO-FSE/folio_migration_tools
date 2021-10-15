@@ -101,14 +101,14 @@ class HoldingsProcessor:
         """Finalizes the mapping by writing things out."""
         self.created_objects_file.close()
         id_map = self.mapper.holdings_id_map
-        logging.warning(
+        logging.info(
             "Saving map of %s old and new IDs to %s",
             len(id_map),
             self.folder_structure.holdings_id_map_path,
         )
         with open(self.folder_structure.holdings_id_map_path, "w+") as id_map_file:
             json.dump(id_map, id_map_file)
-        logging.warning("%s records processed", self.records_count)
+        logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# MFHD records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
@@ -120,4 +120,5 @@ class HoldingsProcessor:
                 self.mapper.mapped_legacy_fields,
             )
 
-        logging.info(f"Done. Transformation report written to {report_file.name}")
+        logging.info("Done. Transformation report written to %s", report_file.name)
+        logging.info("Done.")
