@@ -193,7 +193,10 @@ class Blurbs(NamedTuple):
     AddedValueFromParameter = ("Added value from parameter since value is empty", "")
     InstanceTypeMapping = ("Instance Type Mapping", "")
     StaffOnlyViaIndicator = ("Set note to staff only via indicator", "")
-    MappingsNotFoundForField = ("Mappings not found for field", "")
+    MappingsNotFoundForField = (
+        "Mappings not found for field",
+        "Library action: **REVIEW** <br/>These are the MARC tags that occurred in the bib records that did not have any mappings configured. If you think the contents of these fields would be valuable to have in Inventory, please tell your Implementation consultant. The MARC recors will still contain the data, so they will still be part of the data you export to your OPAC/Discovery system",
+    )
     PossibleCleaningTasks = ("Possible cleaning tasks", "")
     HoldingsStatementsParsing = (
         "Parsed Holdings statements from 58X/68X combinations",

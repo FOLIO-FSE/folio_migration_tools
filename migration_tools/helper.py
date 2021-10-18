@@ -19,7 +19,7 @@ class Helper:
         report_file.write(f"{h1} | {h2}   \n")
         report_file.write("--- | ---:   \n")
         for k, v in d_sorted.items():
-            report_file.write(f"{k} | {v:,}   \n")
+            report_file.write(f"{k or 'EMPTY'} | {v:,}   \n")
 
     @staticmethod
     def print_mapping_report(

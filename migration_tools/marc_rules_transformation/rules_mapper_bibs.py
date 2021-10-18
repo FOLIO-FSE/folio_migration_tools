@@ -503,6 +503,10 @@ class BibsRulesMapper(RulesMapperBase):
                     s = "Failed to create 035 from 001"
                     self.migration_report.add(Blurbs.HridHandling, s)
                     Helper.log_data_issue(index_or_legacy_id, s, marc_record["001"])
+                else:
+                    self.migration_report.add(
+                        Blurbs.HridHandling, "Legacy bib records without 001"
+                    )
             marc_record.add_ordered_field(new_001)
             self.migration_report.add(
                 Blurbs.HridHandling, "Created HRID using default settings"

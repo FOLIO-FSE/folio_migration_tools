@@ -75,7 +75,7 @@ class BibsProcessor:
                 Helper.write_to_file(self.results_file, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
                 self.mapper.migration_report.add_general_statistics(
-                    "Records successfully transformed"
+                    "Records successfully transformed into FOLIO objects"
                 )
                 for id_map_string in id_map_strings:
                     self.instance_id_map_file.write(f"{id_map_string}\n")
@@ -87,9 +87,6 @@ class BibsProcessor:
             self.mapper.migration_report.add(
                 Blurbs.FieldMappingErrors,
                 f"{value_error} for {index_or_legacy_id} ",
-            )
-            self.mapper.migration_report.add_general_statistics(
-                "Value Errors (records that failed transformation)"
             )
             self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
