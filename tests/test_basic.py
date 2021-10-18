@@ -1,5 +1,7 @@
 # content of test_sample.py
 import json
+import os
+from re import escape
 
 from pymarc.reader import MARCReader
 from migration_tools import mapper_base
@@ -178,3 +180,22 @@ def test_udec2():
         assert record1["911"]["a"] == "Biblioteca de Chilla n. Hemeroteca"
         my_tuple_json = record1.as_json()
         assert '"Biblioteca de Chilla n. Hemeroteca"' in my_tuple_json
+
+
+def test_ude2c():
+    path = "./tests/test_data/crashes.mrc"
+    assert os.path.isfile(path)
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+
+        for record in reader:
+            assert record is None
+            chunk = reader.current_chunk
+            print(type(reader.current_exception).__name__)
+            print(reader.current_exception)
+            reader2 = MARCReader(chunk)
+            rec2 = next(reader2)
+            print(rec2)
+            # assert rec2.title

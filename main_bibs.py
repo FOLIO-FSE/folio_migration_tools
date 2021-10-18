@@ -41,7 +41,8 @@ class Worker(main_base.MainBase):
         ]
         self.folio_client = folio_client
         logging.info("# of files to process: %s", len(self.files))
-        logging.info(json.dumps(self.files, sort_keys=True, indent=4))
+        for file_path in self.files:
+            logging.info("\t%s", file_path)
         self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
         self.bib_ids = set()

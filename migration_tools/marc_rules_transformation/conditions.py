@@ -522,7 +522,7 @@ class Conditions:
             self.mapper.migration_report.add(Blurbs.MappedAlternativeTitleTypes, t[1])
             return t[0]
         except Exception:
-            raise TransformationFieldMappingError(
+            raise TransformationProcessError(
                 f"Alternative title type not found for {parameter['name']} {marc_field}"
             )
 
