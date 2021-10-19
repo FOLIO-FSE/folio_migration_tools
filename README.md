@@ -55,15 +55,16 @@ For holdings mapping, you also need to map legacy locations to FOLIO locations. 
 ## Items-to-Inventory
 Items-to-Inventory mapping is based on a json structure where the CSV headers are matched against the target fields in the FOLIO items. To create a mapping file, use the [web tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation).
 
+![image](https://user-images.githubusercontent.com/1894384/137995011-dd6a78a7-61d7-46d8-a35c-363f65c33ce0.png)
+
+
 # Tests
 There is a test suite for Bibs-to-Instance mapping.
 ## Running the tests for the Rules mapper
 
 * Install the packages in the Pipfile
-* Make a copy of the test_config.json.template and add the necessary credentials.
-* Run ```pipenv run python3 -m unittest test_rules_mapper.TestRulesMapper```
+* Run ```pipenv run python3 pytest```
 
-Since you need to point your test towards a FOLIO tenant the Test suit is somwehat unstable. But it is still very useful for ironing out complex mapping issues.
 
 # Running the scripts
 For information on what files are needed and produced by the tools, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template).
