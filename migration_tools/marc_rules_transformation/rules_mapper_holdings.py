@@ -202,7 +202,9 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def set_default_location_if_empty(self, folio_holding):
         if not folio_holding.get("permanentLocationId", ""):
-            Helper.log_data_issue("", Blurbs.LocationMapping, "")
+            Helper.log_data_issue(
+                "", "Record location mapping failed. Setting Default mapping", ""
+            )
             folio_holding["permanentLocationId"] = self.conditions.default_location_id
         # special weird case. Likely needs fixing in the mapping rules.
 

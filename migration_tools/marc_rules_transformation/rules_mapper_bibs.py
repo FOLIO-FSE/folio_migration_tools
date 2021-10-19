@@ -36,6 +36,7 @@ class BibsRulesMapper(RulesMapperBase):
         super().__init__(folio_client, Conditions(folio_client, self, "bibs"))
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.folio = folio_client
+        self.folio_version = args.folio_version
         self.record_status = {}
         self.unique_001s = set()
         self.suppress = args.suppress

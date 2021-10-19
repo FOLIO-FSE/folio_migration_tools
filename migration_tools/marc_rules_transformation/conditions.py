@@ -1,5 +1,6 @@
 import logging
 import re
+import sys
 
 import pymarc
 from migration_tools.custom_exceptions import (
@@ -91,16 +92,20 @@ class Conditions:
         self.default_call_number_type_id = default_call_number_type_id
         logging.info(f"Default Callnumber type ID:\t{self.default_call_number_type_id}")
         self.default_call_number_type = next(
-            ct
-            for ct in self.folio.call_number_types
-            if ct["id"] == self.default_call_number_type_id
+            (
+                ct
+                for ct in self.folio.call_number_types
+                if ct["id"] == self.default_call_number_type_id
+            ),
+            None,
         )
         if not self.default_call_number_type:
             raise TransformationProcessError(
                 "",
                 (
                     f"No callnumber type with ID "
-                    f"{self.default_call_number_type_id} in FOLIO"
+                    f"{self.default_call_number_type_id} in FOLIO.\n"
+                    "Please specify another UUID as the default Callnumber Type"
                 ),
             )
         logging.info(
@@ -544,9 +549,7 @@ class Conditions:
                     for lm in self.mapper.location_map
                 }
         except Exception as ee:
-            raise TransformationProcessError(
-                "", f"{ee}", self.mapper.location_map.keys()
-            )
+            raise TransformationProcessError("", f"{ee}", self.mapper.location_map)
 
     def condition_set_location_id_by_code(
         self, value, parameter, marc_field: field.Field
@@ -588,6 +591,9 @@ class Conditions:
                 Blurbs.LocationMapping, f"'{value}' ({mapped_code}) -> {t[1]}"
             )
             return t[0]
+        except TransformationProcessError as tpe:
+            logging.critical(tpe)
+            sys.exit()
         except Exception:
             t = self.get_ref_data_tuple_by_code(
                 self.folio.locations, "locations", parameter["unspecifiedLocationCode"]
