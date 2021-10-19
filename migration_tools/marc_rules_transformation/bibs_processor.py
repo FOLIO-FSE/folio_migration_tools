@@ -13,7 +13,7 @@ from migration_tools.custom_exceptions import (
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
-
+from migration_tools.folio_releases import FOLIOReleases
 from migration_tools.report_blurbs import Blurbs
 
 
@@ -189,7 +189,7 @@ def get_srs_string(my_tuple, folio_version):
         "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
         "matchedId": my_tuple[2],
         "generation": 0,
-        "recordType": "MARC" if folio_version == "iris" else "MARC_BIB",
+        "recordType": "MARC" if folio_version == FOLIOReleases.IRIS else "MARC_BIB",
         "rawRecord": raw_record,
         "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": my_tuple[4]},
