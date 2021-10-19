@@ -1,21 +1,21 @@
 """ Class that processes each MARC record """
-from io import StringIO
+import json
 import logging
-from marc_to_folio.folder_structure import FolderStructure
-from marc_to_folio.helper import Helper
-from marc_to_folio.custom_exceptions import TransformationRecordFailedError
-from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
 import uuid
 from pymarc.field import Field
 from pymarc.leader import Leader
-from pymarc.writer import JSONWriter
-import time
-import json
-from datetime import datetime as dt
-import os.path
-from jsonschema import ValidationError, validate
 
+from pymarc.record import Record
+
+from migration_tools.custom_exceptions import (
+    TransformationRecordFailedError,
+)
+from migration_tools.folder_structure import FolderStructure
 from migration_tools.folio_releases import FOLIOReleases
+from migration_tools.helper import Helper
+from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
+
+from migration_tools.report_blurbs import Blurbs
 
 
 class BibsProcessor:
@@ -40,17 +40,20 @@ class BibsProcessor:
         self.srs_records_file = open(self.folders.srs_records_path, "w+")
         self.instance_id_map_file = open(self.folders.instance_id_map_path, "w+")
 
-    def process_record(self, idx, marc_record, inventory_only):
+    def process_record(self, idx, marc_record: Record, inventory_only):
 
         """processes a marc record and saves it"""
         try:
             index_or_legacy_id = self.mapper.get_legacy_ids(
-                marc_record, self.ils_flavour
+                marc_record, self.ils_flavour, idx
             )
-        except:
+        except TransformationRecordFailedError as trf:
+            trf.log_it()
+        except Exception as ee:
             index_or_legacy_id = [
                 f"Index in file: {idx}"
             ]  # Only used for reporting purposes
+            Helper.log_data_issue(index_or_legacy_id, "001 nor legacy id found", ee)
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
@@ -59,54 +62,50 @@ class BibsProcessor:
             )
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
-                self.mapper.add_to_migration_report(
-                    "Preceding and Succeeding titles", f"{len(prec_titles)}"
+                self.mapper.migration_report.add(
+                    Blurbs.PrecedingSuccedingTitles, f"{len(prec_titles)}"
                 )
                 del folio_rec["precedingTitles"]
             succ_titles = folio_rec.get("succeedingTitles", [])
             if succ_titles:
                 del folio_rec["succeedingTitles"]
-                self.mapper.add_to_migration_report(
-                    "Preceding and Succeeding titles", f"{len(succ_titles)}"
+                self.mapper.migration_report.add(
+                    Blurbs.PrecedingSuccedingTitles, f"{len(succ_titles)}"
                 )
             if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
                 Helper.write_to_file(self.results_file, folio_rec)
                 self.save_source_record(marc_record, folio_rec)
-                self.mapper.add_stats(
-                    self.mapper.stats, "Records successfully transformed"
+                self.mapper.migration_report.add_general_statistics(
+                    "Records successfully transformed into FOLIO objects"
                 )
                 for id_map_string in id_map_strings:
                     self.instance_id_map_file.write(f"{id_map_string}\n")
-                    self.mapper.add_stats(
-                        self.mapper.stats, "Lines written to identifier map"
+                    self.mapper.migration_report.add_general_statistics(
+                        "Lines written to identifier map"
                     )
 
         except ValueError as value_error:
-            self.mapper.add_to_migration_report(
-                "Records failed to migrate due to Value errors found in Transformation",
+            self.mapper.migration_report.add(
+                Blurbs.FieldMappingErrors,
                 f"{value_error} for {index_or_legacy_id} ",
             )
-            self.mapper.add_stats(
-                self.mapper.stats, "Value Errors (records that failed transformation)"
-            )
-            self.mapper.add_stats(
-                self.mapper.stats,
+            self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
             )
         except TransformationRecordFailedError as error:
-            self.mapper.add_stats(self.mapper.stats, "TransformationCriticalDataErrors")
-            self.mapper.add_stats(
-                self.mapper.stats,
-                "Records that failed transformation. Check log for details. Check log for details",
+            self.mapper.migration_report.add_general_statistics(
+                "Records that failed transformation. Check log for details",
             )
-            logging.critical(error)
+            error.id = index_or_legacy_id
+            error.log_it()
 
         except Exception as inst:
-            self.mapper.add_stats(
-                self.mapper.stats,
-                "Records that failed transformation. Check log for details. Check log for details",
+            self.mapper.migration_report.add_general_statistics(
+                "Records that failed transformation. Check log for details",
             )
-            self.mapper.add_stats(self.mapper.stats, "Transformation exceptions")
+            self.mapper.migration_report.add_general_statistics(
+                f"Transformation exceptions: {inst.__class__.__name__}",
+            )
             logging.error(type(inst))
             logging.error(inst.args)
             logging.error(inst)
@@ -118,19 +117,17 @@ class BibsProcessor:
     def validate_instance(self, folio_rec, marc_record, index_or_legacy_id: str):
         if not folio_rec.get("title", ""):
             s = f"No title in {index_or_legacy_id}"
-            self.mapper.add_to_migration_report("Records without titles", s)
+            self.mapper.migration_report.add(Blurbs.MissingTitles, s)
             logging.error(s)
-            self.mapper.add_stats(
-                self.mapper.stats,
-                "Records that failed transformation. Check log for details. Check log for details",
+            self.mapper.migration_report.add_general_statistics(
+                "Records that failed transformation. Check log for details",
             )
             return False
         if not folio_rec.get("instanceTypeId", ""):
             s = f"No Instance Type Id in {index_or_legacy_id}"
-            self.mapper.add_to_migration_report("Records without Instance Type Ids", s)
-            self.mapper.add_stats(
-                self.mapper.stats,
-                "Records that failed transformation. Check log for details. Check log for details",
+            self.mapper.migration_report.add(Blurbs.MissingInstanceTypeIds, s)
+            self.mapper.migration_report.add_general_statistics(
+                "Records that failed transformation. Check log for details",
             )
             return False
         return True
@@ -140,9 +137,9 @@ class BibsProcessor:
         try:
             self.mapper.wrap_up()
         except Exception:
-            logging.exception(f"error during wrap up")
-        logging.info("Saving holdings created from bibs")
+            logging.exception("error during wrap up")
         if any(self.mapper.holdings_map):
+            logging.info("Saving holdings created from bibs")
             holdings_path = self.folders.data_folder / "folio_holdings_from_bibs.json"
             with open(holdings_path, "w+") as holdings_file:
                 for key, holding in self.mapper.holdings_map.items():
@@ -166,7 +163,7 @@ class BibsProcessor:
             temp_leader = Leader(marc_record.leader)
             temp_leader[9] = "a"
             marc_record.leader = temp_leader
-        except:
+        except Exception:
             logging.exception(
                 f"Something is wrong with the marc records leader: {marc_record.leader}"
             )
@@ -203,10 +200,8 @@ def get_srs_string(my_tuple, folio_version):
         },
         "metadata": my_tuple[3],
         "state": "ACTUAL",
-        "leaderRecordStatus": parsed_record["content"]["leader"][5],
+        "leaderRecordStatus": parsed_record["content"]["leader"][5]
+        if parsed_record["content"]["leader"][5] in [*"acdnposx"]
+        else "d",
     }
-    if parsed_record["content"]["leader"][5] in [*"acdnposx"]:
-        record["leaderRecordStatus"] = parsed_record["content"]["leader"][5]
-    else:
-        record["leaderRecordStatus"] = "d"
     return f"{record['id']}\t{json.dumps(record)}"

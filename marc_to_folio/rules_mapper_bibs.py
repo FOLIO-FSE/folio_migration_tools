@@ -38,6 +38,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.record_status = {}
         self.unique_001s = set()
         self.migration_report = {}
+        self.folio_version = args.folio_version
         self.suppress = args.suppress
         self.ils_flavour = args.ils_flavour
         self.holdings_map = {}
