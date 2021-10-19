@@ -156,7 +156,7 @@ def parse_args():
     version_help = (
         "The FOLIO release you are targeting. Valid values include:\n"
         "\tiris\n"
-        "\tjuniper\n",
+        "\tjuniper\n"
     )
     parser.add_argument("--folio_version", default="juniper", help=version_help)
     parser.add_argument(
