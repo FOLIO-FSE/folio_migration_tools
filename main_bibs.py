@@ -156,6 +156,12 @@ def parse_args():
         "\tnone      \t- Use for ebooks and related records that will not need any legacy id:s\n"
     )
     parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
+    version_help = (
+        "The FOLIO release you are targeting. Valid values include:\n"
+        "\tiris\n"
+        "\tjuniper\n",
+    )
+    parser.add_argument("--folio_version", default="juniper", help=version_help)
     parser.add_argument(
         "--holdings_records",
         "-hold",
