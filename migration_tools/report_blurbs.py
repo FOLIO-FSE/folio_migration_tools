@@ -186,10 +186,6 @@ class Blurbs(NamedTuple):
     StatusMapping = ("Status mapping", "")
     ReferenceDataMapping = ("Reference Data Mapping", "")
     FieldMappingErrors = ("Field mapping errors", "")
-    PropertiesExcludedFromSchema = (
-        "Properties in Schema excluded from transformation",
-        "",
-    )
     AddedValueFromParameter = ("Added value from parameter since value is empty", "")
     InstanceTypeMapping = ("Instance Type Mapping", "")
     StaffOnlyViaIndicator = ("Set note to staff only via indicator", "")

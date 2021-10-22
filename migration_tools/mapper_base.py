@@ -20,11 +20,12 @@ class MapperBase:
         self.schema_properties = None
 
     def report_legacy_mapping(self, field_name, present, mapped):
-        if field_name not in self.mapped_legacy_fields:
-            self.mapped_legacy_fields[field_name] = [int(present), int(mapped)]
-        else:
-            self.mapped_legacy_fields[field_name][0] += int(present)
-            self.mapped_legacy_fields[field_name][1] += int(mapped)
+        if field_name:
+            if field_name not in self.mapped_legacy_fields:
+                self.mapped_legacy_fields[field_name] = [int(present), int(mapped)]
+            else:
+                self.mapped_legacy_fields[field_name][0] += int(present)
+                self.mapped_legacy_fields[field_name][1] += int(mapped)
 
     def report_folio_mapping(self, folio_record, schema):
         try:

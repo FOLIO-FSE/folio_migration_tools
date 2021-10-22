@@ -520,7 +520,9 @@ class BibsRulesMapper(RulesMapperBase):
                     Blurbs.HridHandling, "Duplicate 001. Creating HRID instead"
                 )
                 Helper.log_data_issue(
-                    index_or_legacy_id, "Duplicate 001 for record. HRID created", value
+                    index_or_legacy_id,
+                    "Duplicate 001 for record. HRID created for record",
+                    value,
                 )
                 num_part = str(self.hrid_counter).zfill(11)
                 folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"

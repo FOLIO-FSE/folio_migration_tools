@@ -234,10 +234,7 @@ class MappingFileMapperBase(MapperBase):
         if property_level1.get("description", "") == "Deprecated" or skip_property(
             property_name_level1, property_level1
         ):
-            self.migration_report.add(
-                Blurbs.PropertiesExcludedFromSchema,
-                property_name_level1,
-            )
+            pass
         elif property_level1["type"] == "object":
             if "properties" in property_level1:
                 self.map_object_props(
