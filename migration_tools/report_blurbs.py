@@ -173,7 +173,7 @@ class Blurbs(NamedTuple):
     )
     LanguageCodeSources = (
         "Language code sources in 041",
-        "Most language codes in MARC records come from this list: https://www.loc.gov/marc/languages/, But other codes are allowed. The controlled vocabulary needs to be stated in $2 and this is where the information in this list comes from. The mapping tools can not currently handle other language codes, and so cannot FOLIO. One solution is for the library to add extra data for these records in order to improve discoverability",
+        'Most language codes in MARC records come from this list: https://www.loc.gov/marc/languages/, But other codes are allowed. The controlled vocabulary needs to be stated in $2 and this is where the information in this list comes from. The mapping tools can not currently handle other language codes, and so cannot FOLIO. <br/>One solution is to migrate the codes into a string or/and replace the language code with the parent language (these languages are usually subgroups of other languages). Many times, these records already have the "super-language" recorded as well. The data will remain in the MARC records.',
     )
     FailedFiles = ("Failed files", "")
     BoundWithMappings = ("Bound-with mapping", "")
