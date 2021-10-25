@@ -110,7 +110,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.set_default_call_number_type_if_empty(folio_holding)
         self.set_default_location_if_empty(folio_holding)
         self.pick_first_location_if_many(folio_holding, legacy_ids)
-        self.parse_coded_holdings_statements(marc_record, folio_holding)
+        self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
 
     def pick_first_location_if_many(self, folio_holding, legacy_ids):
         if " " in folio_holding["permanentLocationId"]:
@@ -123,7 +123,9 @@ class RulesMapperHoldings(RulesMapperBase):
                 "permanentLocationId"
             ].split(" ")[0]
 
-    def parse_coded_holdings_statements(self, marc_record: Record, folio_holding):
+    def parse_coded_holdings_statements(
+        self, marc_record: Record, folio_holding, legacy_ids
+    ):
         # TODO: Should one be able to switch these things off?
         a = {
             "holdingsStatements": ("853", "863", "866"),

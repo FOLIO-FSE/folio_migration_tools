@@ -19,12 +19,14 @@ class HoldingsStatementsParser:
 
     @staticmethod
     def get_holdings_statements(
-        marc_record: Record, pattern_tag, value_tag, field_textual
+        marc_record: Record, pattern_tag, value_tag, field_textual, legacy_ids
     ):
         # Textual holdings statements
         return_dict = {"statements": [], "migration_report": [], "hlm_stmts": []}
         HoldingsStatementsParser.get_textual_statements(
-            marc_record, field_textual, return_dict
+            marc_record,
+            field_textual,
+            return_dict,
         )
 
         value_fields = marc_record.get_fields(value_tag)
@@ -60,8 +62,9 @@ class HoldingsStatementsParser:
                         return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
                     if parsed_dict["statement"]:
                         logging.info(
-                            f"HOLDINGS STATEMENT PATTERN\t{pattern_field}"
-                            f"\t{linked_value_field}\t{parsed_dict['statement']['statement']}"
+                            f"HOLDINGS STATEMENT PATTERN\t{legacy_ids}\t{pattern_field}"
+                            f"\t{linked_value_field}"
+                            f"\t{parsed_dict['statement']['statement']}"
                             f"\t{parsed_dict['statement']['note']}"
                             f"\t{parsed_dict['statement']['staffNote']}"
                         )
