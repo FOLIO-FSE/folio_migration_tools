@@ -135,7 +135,7 @@ class RulesMapperHoldings(RulesMapperBase):
         for key, v in a.items():
             try:
                 res = HoldingsStatementsParser.get_holdings_statements(
-                    marc_record, v[0], v[1], v[2]
+                    marc_record, v[0], v[1], v[2], legacy_ids
                 )
                 folio_holding[key] = res["statements"]
                 for mr in res["migration_report"]:
