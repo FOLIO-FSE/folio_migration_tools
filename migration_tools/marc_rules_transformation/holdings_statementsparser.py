@@ -33,7 +33,7 @@ class HoldingsStatementsParser:
         for pattern_field in marc_record.get_fields(pattern_tag):
             if "8" not in pattern_field:
                 raise TransformationFieldMappingError(
-                    "",
+                    legacy_ids,
                     f"{pattern_tag} subfield 8 not in field",
                     pattern_field.format_field(),
                 )
@@ -48,7 +48,7 @@ class HoldingsStatementsParser:
                 return_dict["migration_report"].append(
                     (
                         "Holdings statements",
-                        f"Missing linked fields for {pattern_tag} ({pattern_field})",
+                        f"Missing linked fields for {pattern_tag}",
                     )
                 )
 
