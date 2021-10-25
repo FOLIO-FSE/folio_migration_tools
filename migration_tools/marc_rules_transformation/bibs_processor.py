@@ -47,12 +47,11 @@ class BibsProcessor:
                 marc_record, self.ils_flavour, idx
             )
         except TransformationRecordFailedError as trf:
-            trf.log_it()
+            raise trf
         except Exception as ee:
-            index_or_legacy_id = [
-                f"Index in file: {idx}"
-            ]  # Only used for reporting purposes
-            Helper.log_data_issue(index_or_legacy_id, "001 nor legacy id found", ee)
+            raise TransformationRecordFailedError(
+                [f"Index in file: {idx}"], "001 nor legacy id found", ee
+            )
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
