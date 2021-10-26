@@ -442,8 +442,11 @@ def main():
             worker.work()
             worker.wrap_up()
     except TransformationProcessError as process_error:
+        logging.critical(process_error)
+        sys.exit()
+    except Exception as exception:
         logging.info("\n=======ERROR===========")
-        logging.info(f"{process_error}")
+        logging.info(f"{exception}")
         logging.info("\n=======Stack Trace===========")
         traceback.print_exc()
 
