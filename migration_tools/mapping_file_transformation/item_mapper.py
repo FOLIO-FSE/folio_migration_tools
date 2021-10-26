@@ -96,7 +96,8 @@ class ItemMapper(MappingFileMapperBase):
                 sys.exit()
             elif mapping["folio_name"] not in statuses:
                 logging.critical(
-                    f'{mapping["folio_name"]} in the mapping file is not a FOLIO item status'
+                    "%s in the mapping file is not a FOLIO item status",
+                    mapping["folio_name"],
                 )
                 sys.exit()
             elif mapping["legacy_code"] == "*":
@@ -107,7 +108,7 @@ class ItemMapper(MappingFileMapperBase):
                 sys.exit()
             elif not all(mapping.values()):
                 logging.critical(
-                    f"empty value in mapping {mapping.values()}. Check mapping file"
+                    "empty value in mapping %s. Check mapping file", mapping.values()
                 )
                 sys.exit()
             else:
@@ -176,20 +177,19 @@ class ItemMapper(MappingFileMapperBase):
             )
             return statistical_code_id
         elif folio_prop_name == "holdingsRecordId":
-            if legacy_value not in self.holdings_id_map:
-                self.migration_report.add_general_statistics(
-                    "Records failed because of failed holdings",
-                )
-                self.migration_report.add_general_statistics(
-                    "Items linked to a Holdingsrecord"
-                )
-                s = (
-                    "Holdings id referenced in legacy item "
-                    "was not found amongst transformed Holdings records"
-                )
-                raise TransformationRecordFailedError(index_or_id, s, legacy_value)
-            else:
+            if legacy_value in self.holdings_id_map:
                 return self.holdings_id_map[legacy_value]["id"]
+            self.migration_report.add_general_statistics(
+                "Records failed because of failed holdings",
+            )
+            self.migration_report.add_general_statistics(
+                "Items linked to a Holdingsrecord"
+            )
+            s = (
+                "Holdings id referenced in legacy item "
+                "was not found amongst transformed Holdings records"
+            )
+            raise TransformationRecordFailedError(index_or_id, s, legacy_value)
         elif len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
             if value not in [None, ""]:
