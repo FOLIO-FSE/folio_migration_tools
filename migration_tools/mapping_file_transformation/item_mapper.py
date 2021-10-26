@@ -33,9 +33,6 @@ class ItemMapper(MappingFileMapperBase):
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
-        self.migration_report.set(
-            Blurbs.HoldingsRecordIdMapping, "Unique holdings", len(self.holdings_id_map)
-        )
 
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
@@ -183,14 +180,15 @@ class ItemMapper(MappingFileMapperBase):
                 self.migration_report.add_general_statistics(
                     "Records failed because of failed holdings",
                 )
-                self.migration_report.add(Blurbs.HoldingsRecordIdMapping, "Unmapped")
+                self.migration_report.add_general_statistics(
+                    "Items linked to a Holdingsrecord"
+                )
                 s = (
                     "Holdings id referenced in legacy item "
                     "was not found amongst transformed Holdings records"
                 )
                 raise TransformationRecordFailedError(index_or_id, s, legacy_value)
             else:
-                self.migration_report.add(Blurbs.HoldingsRecordIdMapping, "Mapped")
                 return self.holdings_id_map[legacy_value]["id"]
         elif len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
