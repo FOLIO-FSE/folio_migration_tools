@@ -19,10 +19,11 @@ class RefDataMapping(object):
         self.key_type = key_type
         self.hybrid_mappings = []
         self.mapped_legacy_keys = []
+        self.default_id = ""
         self.default_name = ""
         self.cached_dict = {}
         self.setup_mappings()
-        logging.info(f"{self.name} reference data mapping. Done init")
+        logging.info("%s reference data mapping. Done init", self.name)
 
     def get_ref_data_tuple(self, key_value):
         ref_object = self.cached_dict.get(key_value.lower().strip(), ())
@@ -66,8 +67,8 @@ class RefDataMapping(object):
                             f"Mapping not found for {mapping}"
                         )
                     mapping["folio_id"] = t[0]
-            except TransformationProcessError as te:
-                raise te
+            except TransformationProcessError as transformation_process_error:
+                raise transformation_process_error
             except Exception:
                 logging.info(json.dumps(self.map, indent=4))
                 logging.exception("")
