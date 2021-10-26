@@ -443,6 +443,7 @@ def main():
             worker.wrap_up()
     except TransformationProcessError as process_error:
         logging.critical(process_error)
+        logging.critical("Halting.")
         sys.exit()
     except Exception as exception:
         logging.info("\n=======ERROR===========")
