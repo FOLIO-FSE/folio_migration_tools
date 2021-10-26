@@ -128,7 +128,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 raise TransformationRecordFailedError(index_or_id, s, new_legacy_value)
             else:
                 self.migration_report.add_general_statistics(
-                    "Records not matched to Instances"
+                    "Records matched to Instances"
                 )
                 entry = self.instance_id_map.get(
                     new_legacy_value, ""
