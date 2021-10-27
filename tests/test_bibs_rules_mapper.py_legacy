@@ -1,5 +1,5 @@
 import logging
-from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
+from migration_tools.rules_mapper_bibs import BibsRulesMapper
 import unittest
 from lxml import etree
 import pymarc

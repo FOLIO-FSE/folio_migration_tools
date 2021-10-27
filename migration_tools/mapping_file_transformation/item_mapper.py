@@ -1,23 +1,19 @@
-import csv
 import json
 import logging
-from marc_to_folio.mapping_file_transformation.ref_data_mapping import RefDataMapping
-from marc_to_folio.custom_exceptions import (
-    TransformationRecordFailedError,
-    TransformationProcessError,
-)
-from typing import List
-from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
-import re
-import uuid
-from datetime import datetime, time
-
-from typing import Dict
+import sys
+from datetime import datetime
+from typing import Dict, List
 
 from folioclient import FolioClient
+from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
+from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
+from migration_tools.report_blurbs import Blurbs
 
 
-class ItemMapper(MapperBase):
+class ItemMapper(MappingFileMapperBase):
     def __init__(
         self,
         folio_client: FolioClient,
@@ -33,13 +29,11 @@ class ItemMapper(MapperBase):
         temporary_location_mapping,
     ):
         item_schema = folio_client.get_item_schema()
-        super().__init__(folio_client, item_schema, items_map)
+        super().__init__(folio_client, item_schema, items_map, statistical_codes_map)
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
-        self.set_to_migration_report(
-            "Holdings IDs mapped", f"Unique holdings", len(self.holdings_id_map)
-        )
+
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         self.status_mapping = {}
@@ -70,14 +64,6 @@ class ItemMapper(MapperBase):
                 call_number_type_map,
                 "name",
             )
-        if statistical_codes_map:
-            self.statistical_codes_mapping = RefDataMapping(
-                self.folio_client,
-                "/statistical-codes",
-                "statisticalCodes",
-                statistical_codes_map,
-                "code",
-            )
         self.loan_type_mapping = RefDataMapping(
             self.folio_client, "/loan-types", "loantypes", loan_type_map, "name"
         )
@@ -100,30 +86,31 @@ class ItemMapper(MapperBase):
         for mapping in item_statuses_map:
             if "folio_name" not in mapping:
                 logging.critical(
-                    f"folio_name is not a column in the status mapping file"
+                    "folio_name is not a column in the status mapping file"
                 )
-                exit()
+                sys.exit()
             elif "legacy_code" not in mapping:
                 logging.critical(
-                    f"legacy_code is not a column in the status mapping file"
+                    "legacy_code is not a column in the status mapping file"
                 )
-                exit()
+                sys.exit()
             elif mapping["folio_name"] not in statuses:
                 logging.critical(
-                    f'{mapping["folio_name"]} in the mapping file is not a FOLIO item status'
+                    "%s in the mapping file is not a FOLIO item status",
+                    mapping["folio_name"],
                 )
-                exit()
+                sys.exit()
             elif mapping["legacy_code"] == "*":
                 logging.critical(
-                    f"* in status mapping not allowed. Available will be the default mapping. "
+                    "* in status mapping not allowed. Available will be the default mapping. "
                     "Please remove the row with the *"
                 )
-                exit()
+                sys.exit()
             elif not all(mapping.values()):
                 logging.critical(
-                    f"empty value in mapping {mapping.values()}. Check mapping file"
+                    "empty value in mapping %s. Check mapping file", mapping.values()
                 )
-                exit()
+                sys.exit()
             else:
                 self.status_mapping = {
                     v["legacy_code"]: v["folio_name"] for v in item_statuses_map
@@ -131,24 +118,37 @@ class ItemMapper(MapperBase):
         logging.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        logging.debug(f"get item property for {folio_prop_name}")
+        value_tuple = (legacy_item, folio_prop_name, index_or_id)
         if not self.use_map:
             return legacy_item[folio_prop_name]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        legacy_values = MapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
+        legacy_values = MappingFileMapperBase.get_legacy_vals(
+            legacy_item, legacy_item_keys
+        )
         legacy_value = " ".join(legacy_values).strip()
         if folio_prop_name == "permanentLocationId":
-            return self.get_mapped_value(self.location_mapping, legacy_item, False)
+            return self.get_mapped_value(
+                self.location_mapping,
+                *value_tuple,
+                False,
+            )
         elif folio_prop_name == "temporaryLocationId":
             temp_loc = self.get_mapped_value(
-                self.temp_location_mapping, legacy_item, True
+                self.temp_location_mapping,
+                *value_tuple,
+                True,
             )
-            self.add_to_migration_report("Temporary location mapping", f"{temp_loc}")
+            self.migration_report.add(Blurbs.TemporaryLocationMapping, f"{temp_loc}")
             return temp_loc
         elif folio_prop_name == "materialTypeId":
-            return self.get_material_type_id(legacy_item)
+            return self.get_mapped_value(
+                self.material_type_mapping,
+                *value_tuple,
+            )
         elif folio_prop_name == "itemLevelCallNumberTypeId":
-            return self.get_item_level_call_number_type_id(legacy_item)
+            return self.get_item_level_call_number_type_id(
+                legacy_item, folio_prop_name, index_or_id
+            )
         elif folio_prop_name == "status.name":
             return self.transform_status(legacy_value)
         elif folio_prop_name == "barcode":
@@ -156,38 +156,40 @@ class ItemMapper(MapperBase):
         elif folio_prop_name == "status.date":
             return datetime.utcnow().isoformat()
         elif folio_prop_name == "temporaryLoanTypeId":
-            ltid = self.get_mapped_value(self.temp_loan_type_mapping, legacy_item, True)
-            self.add_to_migration_report("Temporary Loan type mapping", f"{ltid}")
-            return ltid
-        elif folio_prop_name == "permanentLoanTypeId":
-            ltid = self.get_mapped_value(self.loan_type_mapping, legacy_item)
-            self.add_to_migration_report(
-                "Loan type mapping", f"{folio_prop_name} -> {ltid}"
+            ltid = self.get_mapped_value(
+                self.temp_loan_type_mapping,
+                *value_tuple,
+                True,
+            )
+            self.migration_report.add(
+                Blurbs.TemporaryLoanTypeMapping, f"{folio_prop_name} -> {ltid}"
             )
             return ltid
+        elif folio_prop_name == "permanentLoanTypeId":
+            return self.get_mapped_value(self.loan_type_mapping, *value_tuple)
         elif folio_prop_name.startswith("statisticalCodeIds"):
-            logging.debug(f"{folio_prop_name} propery in get_prop")
-            statistical_code_id = self.get_statistical_codes(legacy_item)
-            logging.debug(f"{folio_prop_name} -> {statistical_code_id}")
-            self.add_to_migration_report(
-                "Statistical code mapping",
+            statistical_code_id = self.get_statistical_codes(
+                legacy_item, folio_prop_name, index_or_id
+            )
+            self.migration_report.add(
+                Blurbs.StatisticalCodeMapping,
                 f"{folio_prop_name} -> {statistical_code_id}",
             )
             return statistical_code_id
         elif folio_prop_name == "holdingsRecordId":
-            if legacy_value not in self.holdings_id_map:
-                self.add_general_statistics(
-                    "Records failed because of failed holdings",
-                )
-                self.add_to_migration_report("Holdings IDs mapped", f"Unmapped")
-                s = (
-                    f"Holdings id referenced in legacy item with id '{legacy_value}' "
-                    "was not found amongst transformed Holdings records."
-                )
-                raise TransformationRecordFailedError(s, index_or_id)
-            else:
-                self.add_to_migration_report("Holdings IDs mapped", f"Mapped")
+            if legacy_value in self.holdings_id_map:
                 return self.holdings_id_map[legacy_value]["id"]
+            self.migration_report.add_general_statistics(
+                "Records failed because of failed holdings",
+            )
+            self.migration_report.add_general_statistics(
+                "Items linked to a Holdingsrecord"
+            )
+            s = (
+                "Holdings id referenced in legacy item "
+                "was not found amongst transformed Holdings records"
+            )
+            raise TransformationRecordFailedError(index_or_id, s, legacy_value)
         elif len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
             if value not in [None, ""]:
@@ -197,34 +199,25 @@ class ItemMapper(MapperBase):
         elif any(legacy_item_keys):
             return legacy_value
         else:
-            self.add_to_migration_report(
-                "Unmapped properties", f"{folio_prop_name} {legacy_item_keys}"
+            self.migration_report.add(
+                Blurbs.UnmappedProperties, f"{folio_prop_name} {legacy_item_keys}"
             )
             return ""
 
-    def get_statistical_codes(self, legacy_item: dict):
-        if self.statistical_codes_mapping:
-            return self.get_mapped_value(self.statistical_codes_mapping, legacy_item)
-        self.add_to_migration_report(
-            "Statistical code mapping",
-            "Mapping not setup",
-        )
-        return ""
-
-    def get_material_type_id(self, legacy_item: dict):
-        logging.debug(f"Material type mapping")
-        return self.get_mapped_value(self.material_type_mapping, legacy_item)
-
-    def get_item_level_call_number_type_id(self, legacy_item):
+    def get_item_level_call_number_type_id(
+        self, legacy_item, folio_prop_name: str, index_or_id
+    ):
         if self.call_number_mapping:
-            return self.get_mapped_value(self.call_number_mapping, legacy_item)
-        self.add_to_migration_report(
-            "Callnumber type mapping",
+            return self.get_mapped_value(
+                self.call_number_mapping, legacy_item, index_or_id, folio_prop_name
+            )
+        self.migration_report.add(
+            Blurbs.CallNumberTypeMapping,
             "Mapping not setup",
         )
         return ""
 
     def transform_status(self, legacy_value):
         status = self.status_mapping.get(legacy_value, "Available")
-        self.add_to_migration_report("Status mapping", f"{legacy_value} -> {status}")
+        self.migration_report.add(Blurbs.StatusMapping, f"'{legacy_value}' -> {status}")
         return status

@@ -1,8 +1,8 @@
 import json
 import logging
-from marc_to_folio.helper import Helper
-from marc_to_folio import custom_exceptions
-from typing import NamedTuple
+
+from migration_tools import custom_exceptions
+from migration_tools.helper import Helper
 
 
 class HoldingsHelper:
@@ -26,19 +26,19 @@ class HoldingsHelper:
             raise ee
 
     @staticmethod
-    def merge_holding(old_holdings_record, new_holdings_record):
+    def merge_holding(old_holdings_record: dict, new_holdings_record: dict):
         # TODO: Move to interface or parent class and make more generic
-        if old_holdings_record.get("notes", None):
+        if old_holdings_record.get("notes"):
             old_holdings_record["notes"].extend(new_holdings_record.get("notes", []))
             old_holdings_record["notes"] = dedupe(old_holdings_record.get("notes", []))
-        if old_holdings_record.get("holdingsStatements", None):
+        if old_holdings_record.get("holdingsStatements"):
             old_holdings_record["holdingsStatements"].extend(
                 new_holdings_record.get("holdingsStatements", [])
             )
             old_holdings_record["holdingsStatements"] = dedupe(
                 old_holdings_record["holdingsStatements"]
             )
-        if old_holdings_record.get("formerIds", None):
+        if old_holdings_record.get("formerIds"):
             old_holdings_record["formerIds"].extend(
                 new_holdings_record.get("formerIds", [])
             )

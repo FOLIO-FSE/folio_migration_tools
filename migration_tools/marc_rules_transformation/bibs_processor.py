@@ -165,7 +165,8 @@ class BibsProcessor:
             marc_record.leader = temp_leader
         except Exception:
             logging.exception(
-                f"Something is wrong with the marc records leader: {marc_record.leader}"
+                "Something is wrong with the marc records leader: %s",
+                marc_record.leader,
             )
         srs_record_string = get_srs_string(
             (

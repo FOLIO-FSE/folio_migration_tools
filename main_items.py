@@ -1,36 +1,33 @@
 '''Main "script."'''
-import argparse
 import csv
 import ctypes
 import json
 import logging
-from pathlib import Path
-import uuid
-
-import requests
-from marc_to_folio.folder_structure import FolderStructure
-from marc_to_folio import custom_exceptions
-from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
-from marc_to_folio.helper import Helper
-
-from argparse_prompt import PromptParser
-from marc_to_folio.main_base import MainBase
-import os
+import sys
 import time
 import traceback
+import uuid
 from os import listdir
 from os.path import isfile, join
-from typing import Dict, List
-from datetime import datetime
+from pathlib import Path
+from typing import List
 
-import pymarc
+import requests
+from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 
-from marc_to_folio.custom_exceptions import (
-    TransformationRecordFailedError,
+from migration_tools.custom_exceptions import (
     TransformationProcessError,
+    TransformationRecordFailedError,
 )
-from marc_to_folio.mapping_file_transformation.item_mapper import ItemMapper
+from migration_tools.folder_structure import FolderStructure
+from migration_tools.helper import Helper
+from migration_tools.main_base import MainBase
+from migration_tools.mapping_file_transformation.item_mapper import ItemMapper
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
+from migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -39,7 +36,7 @@ def setup_holdings_id_map(folder_structure: FolderStructure):
     logging.info("Loading holdings id map. This can take a while...")
     with open(folder_structure.holdings_id_map_path, "r") as holdings_id_map_file:
         holdings_id_map = json.load(holdings_id_map_file)
-        logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
+        logging.info("Loaded %s holdings ids", len(holdings_id_map))
         return holdings_id_map
 
 
@@ -50,11 +47,12 @@ class Worker(MainBase):
         self, source_files, folio_client: FolioClient, folder_structure: FolderStructure
     ):
         super().__init__()
+        self.total_records = 0
         self.folio_keys = []
         self.folder_structure = folder_structure
         self.folio_client = folio_client
         self.items_map = self.setup_records_map()
-        self.folio_keys = MapperBase.get_mapped_folio_properties_from_map(
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
         self.source_files = source_files
@@ -69,18 +67,26 @@ class Worker(MainBase):
         else:
             statcode_mapping = None
 
-        if "temporaryLoanTypeId" in self.folio_keys:
+        if self.folder_structure.temp_loan_type_map_path.is_file():
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
                 "temporaryLoanTypeId", self.folder_structure.temp_loan_type_map_path
             )
         else:
+            logging.info(
+                "%s not found. No temporary loan type mapping will be performed",
+                self.folder_structure.temp_loan_type_map_path,
+            )
             temporary_loan_type_mapping = None
 
-        if "temporaryLocationId" in self.folio_keys:
+        if self.folder_structure.temp_locations_map_path.is_file():
             temporary_location_mapping = self.load_ref_data_mapping_file(
                 "temporaryLocationId", self.folder_structure.temp_locations_map_path
             )
         else:
+            logging.info(
+                "%s not found. No temporary location mapping will be performed",
+                self.folder_structure.temp_locations_map_path,
+            )
             temporary_location_mapping = None
         self.mapper = ItemMapper(
             self.folio_client,
@@ -121,11 +127,14 @@ class Worker(MainBase):
                 with open(map_file_path) as map_file:
                     ref_data_map = list(csv.DictReader(map_file, dialect="tsv"))
                     logging.info(
-                        f"Found {len(ref_data_map)} rows in {folio_property_name} map"
+                        "Found %s rows in %s map",
+                        len(ref_data_map),
+                        folio_property_name,
                     )
                     logging.info(
-                        f'{",".join(ref_data_map[0].keys())} '
-                        f"will be used for determinig {folio_property_name}"
+                        "%s will be used for determinig %s",
+                        ",".join(ref_data_map[0].keys()),
+                        folio_property_name,
                     )
                     return ref_data_map
             except Exception as ee:
@@ -135,25 +144,26 @@ class Worker(MainBase):
                     "but forgot to add a mapping file?"
                 )
         else:
-            logging.info(f"No mapping setup for {folio_property_name}. ")
-            logging.info(f"{folio_property_name} will have default mapping if any ")
+            logging.info("No mapping setup for %s", folio_property_name)
+            logging.info("%s will have default mapping if any ", folio_property_name)
             logging.info(
-                f"Add a file named {map_file_path} and add the field to "
-                "the item.mapping.json file."
+                "Add a file named %s and add the field to "
+                "the item.mapping.json file.",
+                map_file_path,
             )
             return None
 
     def setup_records_map(self):
         with open(self.folder_structure.items_map_path) as items_mapper_f:
             items_map = json.load(items_mapper_f)
-            logging.info(f'{len(items_map["data"])} fields in item mapping file map')
+            logging.info("%s fields in item mapping file map", len(items_map["data"]))
             mapped_fields = (
                 f
                 for f in items_map["data"]
                 if f["legacy_field"] and f["legacy_field"] != "Not mapped"
             )
             logging.info(
-                f"{len(list(mapped_fields))} Mapped fields in item mapping file map"
+                "%s Mapped fields in item mapping file map", len(list(mapped_fields))
             )
             return items_map
 
@@ -161,7 +171,6 @@ class Worker(MainBase):
         logging.info("Starting....")
         with open(self.folder_structure.created_objects_path, "w+") as results_file:
             for file_name in self.source_files:
-                logging.info(f"Processing {file_name}")
                 try:
                     self.process_single_file(file_name, results_file)
                 except Exception as ee:
@@ -170,63 +179,80 @@ class Worker(MainBase):
                     logging.fatal(
                         "Check source files for empty lines or missing reference data. Halting"
                     )
-                    self.mapper.add_to_migration_report(
-                        "Failed files", f"{file_name} - {ee}"
+                    self.mapper.migration_report.add(
+                        Blurbs.FailedFiles, f"{file_name} - {ee}"
                     )
                     logging.fatal(error_str)
-                    exit()
+                    sys.exit()
         logging.info(
-            f"processed {self.total_records:,} records in {len(self.source_files)} files"
+            f"processed {self.total_records:,} records "
+            f"in {len(self.source_files)} files"
         )
 
     def process_single_file(self, file_name, results_file):
+        logging.info("Processing %s", file_name)
+        records_in_file = 0
         with open(file_name, encoding="utf-8-sig") as records_file:
-            self.mapper.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                "Number of files processed"
+            )
             start = time.time()
             for idx, record in enumerate(
                 self.mapper.get_objects(records_file, file_name)
             ):
                 try:
                     if idx == 0:
+                        logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
                     folio_rec = self.mapper.do_map(record, f"row {idx}")
-                    # TODO: Add more levels (recursive) to mapping
-                    for circ_note in folio_rec.get("circulationNotes", []):
-                        circ_note["id"] = str(uuid.uuid4())
-                        circ_note["source"] = {
-                            "id": self.folio_client.current_user,
-                            "personal": {"lastName": "Data", "firstName": "Migration"},
-                        }
+                    if idx == 0:
+                        logging.info("First FOLIO record:")
+                        logging.info(json.dumps(folio_rec, indent=4))
+                    self.handle_circiulation_notes(folio_rec)
+                    # TODO: turn this into a asynchrounous task
                     Helper.write_to_file(results_file, folio_rec)
-                    self.mapper.add_general_statistics(
+                    self.mapper.migration_report.add_general_statistics(
                         "Number of records written to disk"
                     )
+                    self.mapper.report_folio_mapping(folio_rec, self.mapper.schema)
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as data_error:
-                    self.mapper.handle_transformation_critical_error(idx, data_error)
+                    self.mapper.handle_transformation_record_failed_error(
+                        idx, data_error
+                    )
                 except AttributeError as attribute_error:
                     traceback.print_exc()
                     logging.fatal(attribute_error)
                     logging.info("Quitting...")
-                    exit()
+                    sys.exit()
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
-
-                self.mapper.add_to_migration_report(
-                    "General statistics",
+                self.mapper.migration_report.add(
+                    Blurbs.GeneralStatistics,
                     f"Number of Legacy items in {file_name}",
                 )
-                self.mapper.add_general_statistics("Number of Legacy items in total")
+                self.mapper.migration_report.add_general_statistics(
+                    "Number of Legacy items in total"
+                )
                 self.print_progress(idx, start)
+                records_in_file = idx + 1
 
             total_records = 0
-            total_records += idx
+            total_records += records_in_file
             logging.info(
-                f"Done processing {file_name} containing {idx:,} records. "
+                f"Done processing {file_name} containing {records_in_file:,} records. "
                 f"Total records processed: {total_records:,}"
             )
         self.total_records = total_records
+
+    def handle_circiulation_notes(self, folio_rec):
+        for circ_note in folio_rec.get("circulationNotes", []):
+            circ_note["id"] = str(uuid.uuid4())
+            circ_note["source"] = {
+                "id": self.folio_client.current_user,
+                "personal": {"lastName": "Data", "firstName": "Migration"},
+            }
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
@@ -234,10 +260,18 @@ class Worker(MainBase):
             self.folder_structure.migration_reports_file, "w"
         ) as migration_report_file:
             logging.info(
-                f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}"
+                "Writing migration and mapping report to %s",
+                self.folder_structure.migration_reports_file,
             )
-            self.mapper.write_migration_report(migration_report_file)
-            self.mapper.print_mapping_report(migration_report_file, self.total_records)
+            Helper.write_migration_report(
+                migration_report_file, self.mapper.migration_report
+            )
+            Helper.print_mapping_report(
+                migration_report_file,
+                self.total_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
         logging.info("All done!")
 
 
@@ -276,11 +310,11 @@ def parse_args():
     args = parser.parse_args()
     if len(args.time_stamp) != 15:
         logging.critical(f"Time stamp ({args.time_stamp}) is not set properly")
-        exit()
-    logging.info(f"\tOkapi URL:\t{args.okapi_url}")
-    logging.info(f"\tTenanti Id:\t{args.tenant_id}")
-    logging.info(f"\tUsername:\t{args.username}")
-    logging.info("\tPassword:\tSecret")
+        sys.exit()
+    logging.info("Okapi URL:\t%s", args.okapi_url)
+    logging.info("Tenant Id:\t%s", args.tenant_id)
+    logging.info("Username:   \t%s", args.username)
+    logging.info("Password:   \tSecret")
     return args
 
 
@@ -302,7 +336,7 @@ def main():
     ]
     logging.info("Files to process:")
     for f in files:
-        logging.info(f"\t{f}")
+        logging.info("\t%s", f)
 
     try:
         folio_client = FolioClient(
@@ -310,16 +344,17 @@ def main():
         )
     except requests.exceptions.SSLError:
         logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
-        exit()
+        sys.exit()
     try:
         worker = Worker(files, folio_client, folder_structure)
         worker.work()
         worker.wrap_up()
     except TransformationProcessError as pocess_error:
-        logging.critical(f"{pocess_error}")
+        logging.critical(pocess_error)
         logging.critical("Halting")
+        sys.exit()
     except Exception as process_error:
-        logging.info(f"=======ERROR in MAIN: {process_error}===========")
+        logging.info("======= UNKNOWN ERROR in MAIN: %s ===========", process_error)
         logging.exception("=======Stack Trace===========")
 
 

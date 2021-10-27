@@ -1,6 +1,6 @@
 import logging
+import sys
 from pathlib import Path
-import time
 
 
 class FolderStructure:
@@ -10,7 +10,7 @@ class FolderStructure:
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
             print("Base Folder Path is not a folder. Exiting.", flush=True)
-            exit()
+            sys.exit()
 
         self.data_folder = self.base_folder / "data"
         verify_folder(self.data_folder)
@@ -42,6 +42,15 @@ class FolderStructure:
         logging.info(f"Results folder is {self.results_folder}")
         logging.info(f"Data folder is {self.data_folder}")
         logging.info(f"Source records files folder is {self.legacy_records_folder}")
+        logging.info(f"Log file will be located at {self.transformation_log_path}")
+        logging.info(
+            f"Extra data will be stored at{self.transformation_extra_data_path}"
+        )
+        logging.info(f"Data issue reports {self.data_issue_file_path}")
+        logging.info(f"Created objects will be stored at  {self.created_objects_path}")
+        logging.info(
+            f"Migration report file will be saved at {self.migration_reports_file}"
+        )
 
     def setup_migration_file_structure(
         self, object_type: str, source_file_type: str = ""
@@ -61,22 +70,16 @@ class FolderStructure:
             / f"{object_type}_transformation_{self.time_stamp}.extradata"
         )
 
-        logging.info(f"Log file will be located at {self.transformation_log_path}")
-
+        self.data_issue_file_path = (
+            self.reports_folder / f"{object_type}_data_issues_{self.time_stamp}.tsv"
+        )
         self.created_objects_path = (
             self.results_folder / f"folio_{object_type}_{self.time_stamp}.json"
-        )
-
-        logging.info(
-            f"Created {object_type}s will be stored at  {self.created_objects_path}"
         )
 
         self.migration_reports_file = (
             self.reports_folder
             / f"{object_type}_transformation_report_{self.time_stamp}.md"
-        )
-        logging.info(
-            f"{object_type} migration report file will be saved at {self.migration_reports_file}"
         )
 
         self.srs_records_path = self.results_folder / f"srs_{self.time_stamp}.json"
@@ -137,6 +140,6 @@ def verify_folder(folder_path: Path):
     if not folder_path.is_dir():
         logging.critical(f"There is no folder located at {folder_path}. Exiting.")
         logging.critical(f"Create a folder by calling\n\tmkdir {folder_path}")
-        exit()
+        sys.exit()
     else:
         print(f"Located {folder_path}", flush=True)

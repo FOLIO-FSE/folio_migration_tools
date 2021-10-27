@@ -6,27 +6,30 @@ import ctypes
 import json
 import logging
 import os
+import sys
 import time
 import traceback
 import uuid
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile
 from typing import List
 
 import requests.exceptions
 from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
-from requests.api import request
 
-from marc_to_folio.custom_exceptions import (
-    TransformationRecordFailedError,
+from migration_tools.custom_exceptions import (
     TransformationProcessError,
+    TransformationRecordFailedError,
 )
-from marc_to_folio.folder_structure import FolderStructure
-from marc_to_folio.helper import Helper
-from marc_to_folio.main_base import MainBase
-from marc_to_folio.mapping_file_transformation.holdings_mapper import HoldingsMapper
-from marc_to_folio.mapping_file_transformation.mapper_base import MapperBase
+from migration_tools.folder_structure import FolderStructure
+from migration_tools.helper import Helper
+from migration_tools.main_base import MainBase
+from migration_tools.mapping_file_transformation.holdings_mapper import HoldingsMapper
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
+from migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -60,66 +63,59 @@ class Worker(MainBase):
         self.holdings_types = list(
             self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
         )
-        logging.info(f"{len(self.holdings_types)}\tholdings types in tenant")
+        logging.info("%s\tholdings types in tenant", len(self.holdings_types))
 
         self.default_holdings_type = next(
             (h["id"] for h in self.holdings_types if h["name"] == "Unmapped"), ""
         )
         if not self.default_holdings_type:
             raise TransformationProcessError(
-                f"Holdings type named Unmapped not found in FOLIO."
+                "Holdings type named Unmapped not found in FOLIO."
             )
+
         logging.info("Init done")
 
     def work(self):
         logging.info("Starting....")
         for file_name in self.files:
-            logging.info(f"Processing {file_name}")
+            logging.info("Processing %s", file_name)
             try:
                 self.process_single_file(file_name)
-
             except Exception as ee:
                 error_str = (
                     f"Processing of {file_name} failed:\n{ee}."
                     "Check source files for empty lines or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.add_to_migration_report(
-                    "Failed files", f"{file_name} - {ee}"
+                self.mapper.migration_report.add(
+                    Blurbs.FailedFiles, f"{file_name} - {ee}"
                 )
-                exit()
+                sys.exit()
         logging.info(
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
 
     def process_single_file(self, file_name):
         with open(file_name, encoding="utf-8-sig") as records_file:
-            self.mapper.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                "Number of files processed"
+            )
             start = time.time()
             for idx, record in enumerate(
                 self.mapper.get_objects(records_file, file_name)
             ):
                 try:
                     self.process_holding(idx, record)
-                except TransformationProcessError as process_error:
-                    logging.error(f"{idx}\t{process_error}")
-                except TransformationRecordFailedError as error:
-                    self.log_and_exit_if_too_many_errors(error, idx)
-                except Exception as excepion:
-                    self.num_exeptions += 1
-                    print("\n=======ERROR===========\n")
-                    print("\n=======Stack Trace===========")
-                    traceback.print_exc()
-                    print("\n============Data========")
-                    print(json.dumps(record, indent=4))
-                    print("\n=======Message===========")
-                    print(
-                        f"Row {idx:,} failed with the following Exception: {excepion} "
-                        f" of type {type(excepion).__name__}"
-                    )
-                    exit()
 
-                self.mapper.add_general_statistics("Number of Legacy items in file")
+                except TransformationProcessError as process_error:
+                    self.mapper.handle_transformation_process_error(idx, process_error)
+                except TransformationRecordFailedError as error:
+                    self.mapper.handle_transformation_record_failed_error(idx, error)
+                except Exception as excepion:
+                    self.mapper.handle_generic_exception(idx, excepion)
+                self.mapper.migration_report.add_general_statistics(
+                    "Number of Legacy items in file"
+                )
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
@@ -136,16 +132,19 @@ class Worker(MainBase):
         folio_rec = self.mapper.do_map(row, f"row # {idx}")
         folio_rec["holdingsTypeId"] = self.default_holdings_type
         holdings_from_row = []
-        if len(folio_rec["instanceId"]) == 1:  # Normal case.
+        if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
             holdings_from_row.append(folio_rec)
-        elif len(folio_rec["instanceId"]) > 1:  # Bound-with.
+        elif len(folio_rec.get("instanceId", [])) > 1:  # Bound-with.
             holdings_from_row.extend(self.create_bound_with_holdings(folio_rec))
         else:
-            logging.critical(f"No instance id at row {idx}")
+            raise TransformationRecordFailedError(
+                idx, "No instance id in parsed record", ""
+            )
 
         for folio_holding in holdings_from_row:
             self.merge_holding_in(folio_holding)
+        self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_rec):
         # Add former ids
@@ -193,18 +192,20 @@ class Worker(MainBase):
         else:
             folio_rec["notes"] = [note, note2]
 
-        for bwidx, id in enumerate(folio_rec["instanceId"]):
-            if not id:
+        for bwidx, index in enumerate(folio_rec["instanceId"]):
+            if not index:
                 raise ValueError(f"No ID for record {folio_rec}")
             call_numbers = ast.literal_eval(folio_rec["callNumber"])
             if isinstance(call_numbers, str):
                 call_numbers = [call_numbers]
             c = copy.deepcopy(folio_rec)
-            c["instanceId"] = id
+            c["instanceId"] = index
             c["callNumber"] = call_numbers[bwidx]
             c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
             c["id"] = str(uuid.uuid4())
-            self.mapper.add_general_statistics("Bound-with holdings created")
+            self.mapper.migration_report.add_general_statistics(
+                "Bound-with holdings created"
+            )
             yield c
 
     def merge_holding_in(self, folio_holding):
@@ -215,10 +216,14 @@ class Worker(MainBase):
             and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
         )
         if exclude or not existing_holding:
-            self.mapper.add_general_statistics("Unique Holdings created from Items")
+            self.mapper.migration_report.add_general_statistics(
+                "Unique Holdings created from Items"
+            )
             self.holdings[new_holding_key] = folio_holding
         else:
-            self.mapper.add_general_statistics("Holdings already created from Item")
+            self.mapper.migration_report.add_general_statistics(
+                "Holdings already created from Item"
+            )
             self.merge_holding(new_holding_key, existing_holding, folio_holding)
 
     def wrap_up(self):
@@ -232,14 +237,12 @@ class Worker(MainBase):
             ) as holdings_file:
                 for holding in self.holdings.values():
                     for legacy_id in holding["formerIds"]:
-                        logging.debug(f"Legacy id:{legacy_id}")
-
                         # Prevent the first item in a boundwith to be overwritten
                         if legacy_id not in self.legacy_map:
                             self.legacy_map[legacy_id] = {"id": holding["id"]}
 
                     Helper.write_to_file(holdings_file, holding)
-                    self.mapper.add_general_statistics(
+                    self.mapper.migration_report.add_general_statistics(
                         "Holdings Records Written to disk"
                     )
             with open(
@@ -253,8 +256,15 @@ class Worker(MainBase):
             logging.info(
                 f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}"
             )
-            self.mapper.write_migration_report(migration_report_file)
-            self.mapper.print_mapping_report(migration_report_file, self.total_records)
+            Helper.write_migration_report(
+                migration_report_file, self.mapper.migration_report
+            )
+            Helper.print_mapping_report(
+                migration_report_file,
+                self.total_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
         logging.info("All done!")
 
     @staticmethod
@@ -342,7 +352,7 @@ def parse_args():
     logging.info(f"\tOkapi URL:\t{args.okapi_url}")
     logging.info(f"\tTenanti Id:\t{args.tenant_id}")
     logging.info(f"\tUsername:\t{args.username}")
-    logging.info(f"\tPassword:\tSecret")
+    logging.info("\tPassword:\tSecret")
     return args
 
 
@@ -364,11 +374,11 @@ def main():
             args.okapi_url, args.tenant_id, args.username, args.password
         )
     except requests.exceptions.SSLError as sslerror:
-        logging.error(f"{sslerror}")
+        logging.error(sslerror)
         logging.error(
             "Network Error. Are you connected to the Internet? Do you need VPN? {}"
         )
-        exit()
+        sys.exit()
 
     # Source data files
     files = [
@@ -376,7 +386,7 @@ def main():
         for f in listdir(folder_structure.legacy_records_folder)
         if isfile(os.path.join(folder_structure.legacy_records_folder, f))
     ]
-    logging.info(f"Files to process:")
+    logging.info("Files to process:")
     for f in files:
         logging.info(f"\t{f}")
 
@@ -403,7 +413,7 @@ def main():
             logging.info(
                 f'{len(holdings_map["data"])} fields in holdings mapping file map'
             )
-            mapped_fields = MapperBase.get_mapped_folio_properties_from_map(
+            mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
                 holdings_map
             )
             logging.info(
@@ -432,8 +442,12 @@ def main():
             worker.work()
             worker.wrap_up()
     except TransformationProcessError as process_error:
+        logging.critical(process_error)
+        logging.critical("Halting.")
+        sys.exit()
+    except Exception as exception:
         logging.info("\n=======ERROR===========")
-        logging.info(f"{process_error}")
+        logging.info(f"{exception}")
         logging.info("\n=======Stack Trace===========")
         traceback.print_exc()
 

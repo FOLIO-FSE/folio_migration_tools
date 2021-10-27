@@ -1,26 +1,28 @@
 '''Main "script."'''
-import json
 import logging
 import os
+import sys
 import time
 from datetime import datetime as dt
 from os import listdir
-from os.path import dirname, isfile
+from os.path import isfile
 
+import requests
 from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from pymarc import MARCReader
 from pymarc.record import Record
-import requests
 
-from marc_to_folio import main_base
-from marc_to_folio.bibs_processor import BibsProcessor
-from marc_to_folio.custom_exceptions import (
+from migration_tools import main_base
+from migration_tools.colors import Bcolors
+from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from marc_to_folio.folder_structure import FolderStructure
-from marc_to_folio.rules_mapper_bibs import BibsRulesMapper
+from migration_tools.folder_structure import FolderStructure
+from migration_tools.helper import Helper
+from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
+from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 
 
 class Worker(main_base.MainBase):
@@ -28,6 +30,7 @@ class Worker(main_base.MainBase):
 
     def __init__(self, folio_client, folder_structure: FolderStructure, args):
         # msu special case
+        super().__init__()
         self.args = args
         self.folder_structure = folder_structure
         self.files = [
@@ -36,8 +39,9 @@ class Worker(main_base.MainBase):
             if isfile(os.path.join(folder_structure.legacy_records_folder, f))
         ]
         self.folio_client = folio_client
-        logging.info(f"# of files to process: {len(self.files)}")
-        logging.info(json.dumps(self.files, sort_keys=True, indent=4))
+        logging.info("# of files to process: %s", len(self.files))
+        for file_path in self.files:
+            logging.info("\t%s", file_path)
         self.mapper = BibsRulesMapper(self.folio_client, args)
         self.processor = None
         self.bib_ids = set()
@@ -69,41 +73,40 @@ class Worker(main_base.MainBase):
                         else:
                             logging.info("FORCE UTF-8 is set to FALSE")
                             reader.force_utf8 = False
-                        logging.info(f"running {file_name}")
-                        self.read_records(reader)
+                        logging.info("running %s", file_name)
+                        self.read_records(reader, file_name)
+                except TransformationProcessError as tpe:
+                    logging.critical(tpe)
+                    exit()
                 except Exception:
                     logging.exception(file_name, stack_info=True)
             # wrap up
             self.wrap_up()
 
-    def read_records(self, reader):
+    def read_records(self, reader, file_name):
         for idx, record in enumerate(reader):
-            self.mapper.add_stats(self.mapper.stats, "Records in file before parsing")
+            self.mapper.migration_report.add_general_statistics(
+                "Records in file before parsing"
+            )
             try:
                 if record is None:
-                    self.mapper.add_to_migration_report(
-                        "Bib records that failed to parse",
-                        f"{reader.current_exception} {reader.current_chunk}",
-                    )
-                    self.mapper.add_stats(
-                        self.mapper.stats,
+                    self.mapper.migration_report.add_general_statistics(
                         "Records with encoding errors - parsing failed",
                     )
                     raise TransformationRecordFailedError(
-                        f"Index in file:{idx}",
+                        f"Index in {file_name}:{idx}",
                         f"MARC parsing error: {reader.current_exception}",
                         reader.current_chunk,
                     )
                 else:
                     self.set_leader(record)
-                    self.mapper.add_stats(
-                        self.mapper.stats,
+                    self.mapper.migration_report.add_general_statistics(
                         "Records successfully parsed from MARC21",
                     )
                     self.processor.process_record(idx, record, False)
             except TransformationRecordFailedError as error:
-                logging.error(error)
-        logging.info(f"Done reading {idx} records from file")
+                error.log_it()
+        logging.info("Done reading %s records from file", idx + 1)
 
     @staticmethod
     def set_leader(marc_record: Record):
@@ -114,20 +117,19 @@ class Worker(main_base.MainBase):
         logging.info("Done. Wrapping up...")
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write(f"# Bibliographic records transformation results   \n")
+            report_file.write("# Bibliographic records transformation results   \n")
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
-            report_file.write(f"## Bibliographic records transformation counters   \n")
-            self.mapper.print_dict_to_md_table(
-                self.mapper.stats,
+            Helper.write_migration_report(report_file, self.mapper.migration_report)
+            Helper.print_mapping_report(
                 report_file,
-                "Measure",
-                "Count",
+                self.mapper.parsed_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
             )
-            self.mapper.write_migration_report(report_file)
-            self.mapper.print_mapping_report(report_file)
 
         logging.info(
-            f"Done. Transformation report written to {self.folder_structure.migration_reports_file}"
+            "Done. Transformation report written to %s",
+            self.folder_structure.migration_reports_file.name,
         )
 
 
@@ -181,7 +183,8 @@ def parse_args():
         "-utf8",
         help=(
             "forcing UTF8 when parsing marc records. If you get a lot of encoding issues, test "
-            "changing this setting to False"
+            "changing this setting to False \n"
+            f"\n⚠ {Bcolors.WARNING}WARNING!{Bcolors.ENDC} ⚠ \nEven though setting this to False might make your migrations run smoother, it might lead to data loss in individual fields"
         ),
         default="True",
     )
@@ -207,10 +210,10 @@ def main():
         Worker.setup_logging(folder_structure)
         folder_structure.log_folder_structure()
 
-        logging.info(f"Okapi URL:\t{args.okapi_url}")
-        logging.info(f"Tenant Id:\t{args.tenant_id}")
-        logging.info(f"Username:   \t{args.username}")
-        logging.info(f"Password:   \tSecret")
+        logging.info("Okapi URL:\t%s", args.okapi_url)
+        logging.info("Tenant Id:\t%s", args.tenant_id)
+        logging.info("Username:   \t%s", args.username)
+        logging.info("Password:   \tSecret")
         try:
             folio_client = FolioClient(
                 args.okapi_url, args.tenant_id, args.username, args.password
@@ -219,7 +222,7 @@ def main():
             logging.critical(
                 "SSL error. Check your VPN or Internet connection. Exiting"
             )
-            exit()
+            sys.exit()
         # Initiate Worker
         worker = Worker(folio_client, folder_structure, args)
         worker.work()
@@ -228,7 +231,7 @@ def main():
     except TransformationProcessError as process_error:
         logging.critical(process_error)
         logging.critical("Halting...")
-        exit()
+        sys.exit()
 
 
 if __name__ == "__main__":

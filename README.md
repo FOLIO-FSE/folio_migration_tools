@@ -2,9 +2,9 @@
 ![example workflow](https://github.com/FOLIO-FSE/MARC21-To-FOLIO/actions/workflows/python-app.yml/badge.svg)    
 A  set of Python3 script transforming MARC21 and Items in delimited files to FOLIO inventory objects.
 
-The scripts requires a FOLIO tenant with reference data set. The script will throw messages telling what reference data is missing. 
+The scripts requires a FOLIO tenant with reference data properly set up. The script will throw messages telling what reference data is missing. 
 
-When the files have been created, post them to FOLIO using the [service_tools](https://github.com/FOLIO-FSE/service_tools) set of programs.
+When the files have been created, post them to FOLIO using the [service_tools](https://github.com/FOLIO-FSE/service_tools) set of programs. Preferably BatchPoster
 
 ## Relevant FOLIO community documentation
 * [Instance Metadata Elements](https://docs.google.com/spreadsheets/d/1RCZyXUA5rK47wZqfFPbiRM0xnw8WnMCcmlttT7B3VlI/edit#gid=952741439)
@@ -17,7 +17,7 @@ When the files have been created, post them to FOLIO using the [service_tools](h
 * [MARC Mappings Information](https://wiki.folio.org/display/FOLIOtips/MARC+Mappings+Information)
 
 # FOLIO Inventory data migration process
-This template plays a vital part in a process together with other repos allowing you to perform bibliographic data migration from a legacy ILS into FOLIO. For more information on the process, head over to the linked repos below.
+[This template repository](https://github.com/FOLIO-FSE/migration_repo_template) plays a vital part in a process together with other repos allowing you to perform bibliographic data migration from a legacy ILS into FOLIO. For more information on the process, head over to the linked repos below.
 In order to perform migrations according to this process, you need to clone the following repositories:   
 * [MARC21-to-FOLIO](https://github.com/FOLIO-FSE/MARC21-To-FOLIO)
 * [service_tools](https://github.com/FOLIO-FSE/service_tools)
@@ -33,10 +33,21 @@ The scripts also relies on a folder with a set of mapping files. There is a [tem
 MARC mapping for Bib level records is based on the mapping-rules residing in a FOLIO tenant.
 Read more on this in the Readme in the [Source record manager Module repo](https://github.com/folio-org/mod-source-record-manager/blob/25283ebabf402b5870ae4b3846285230e785c17d/RuleProcessorApi.md).
 
+The trigger for this process it the main_bibs.py. In order to see what parameters are needed, just do pipenv run python main_bibs.py -h
+
+![image](https://user-images.githubusercontent.com/1894384/137994473-10fea92f-1966-41d5-bd41-d6be00594b58.png)   
+In the picture above, you can se the files needed and the files created as part of the proces.
+
 ### MFHD-to-Inventory
 #### Mapping rules
-This processing does not store the MARC records anywhere since this is not available in FOLIO yet. Only FOLIO Holdings records are created.
+This processing does not store the MARC records anywhere since this is not available in FOLIO yet (Planned for the Kiwi release). Only FOLIO Holdings records are created.
 MFHD-to-Inventory mapping also relies on mapping based on a similar JSON structure. This is not stored in the tenant and must be maintained by you. A template/example is available in [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
+
+If you do not have MFHD records available, you can build a mapping file [this web tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) from the Item data. This will generate Holdings records to connect to the items. 
+There are two scripts, depending on what source data you have: main_holdings_csv.py and main_holdings_marc.py
+
+![image](https://user-images.githubusercontent.com/1894384/137994847-f27f5e09-329e-4f75-a9fd-a83423d73068.png)
+
 
 #### Location mapping
 For holdings mapping, you also need to map legacy locations to FOLIO locations. An example map file is available at [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) 
@@ -44,15 +55,16 @@ For holdings mapping, you also need to map legacy locations to FOLIO locations. 
 ## Items-to-Inventory
 Items-to-Inventory mapping is based on a json structure where the CSV headers are matched against the target fields in the FOLIO items. To create a mapping file, use the [web tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation).
 
+![image](https://user-images.githubusercontent.com/1894384/137995011-dd6a78a7-61d7-46d8-a35c-363f65c33ce0.png)
+
+
 # Tests
 There is a test suite for Bibs-to-Instance mapping.
 ## Running the tests for the Rules mapper
 
 * Install the packages in the Pipfile
-* Make a copy of the test_config.json.template and add the necessary credentials.
-* Run ```pipenv run python3 -m unittest test_rules_mapper.TestRulesMapper```
+* Run ```pipenv run python3 pytest```
 
-Since you need to point your test towards a FOLIO tenant the Test suit is somwehat unstable. But it is still very useful for ironing out complex mapping issues.
 
 # Running the scripts
 For information on what files are needed and produced by the tools, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template).

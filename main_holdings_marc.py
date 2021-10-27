@@ -1,24 +1,29 @@
 '''Main "script."'''
-import argparse
 import csv
 import json
 import logging
+import os
+import sys
+from os import listdir
+from os.path import isfile
 
 import requests
-from marc_to_folio.folder_structure import FolderStructure
-import os
-from os import listdir
-from os.path import isfile, join
-
-import pymarc
 from argparse_prompt import PromptParser
 from folioclient.FolioClient import FolioClient
 from pymarc.reader import MARCReader
 
-from marc_to_folio.custom_exceptions import TransformationRecordFailedError
-from marc_to_folio.holdings_processor import HoldingsProcessor
-from marc_to_folio.main_base import MainBase
-from marc_to_folio.rules_mapper_holdings import RulesMapperHoldings
+from migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
+from migration_tools.folder_structure import FolderStructure
+from migration_tools.main_base import MainBase
+from migration_tools.marc_rules_transformation.holdings_processor import (
+    HoldingsProcessor,
+)
+from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
+    RulesMapperHoldings,
+)
 
 
 def parse_args():
@@ -50,11 +55,11 @@ def parse_args():
     print(args.time_stamp)
     if len(args.time_stamp) != 15:
         print(f"Time stamp ({args.time_stamp}) is not set properly")
-        exit()
-    print(f"\tOkapi URL:\t{args.okapi_url}")
-    print(f"\tTenanti Id:\t{args.tenant_id}")
-    print(f"\tUsername:\t{args.username}")
-    print(f"\tPassword:\tSecret")
+        sys.exit()
+    logging.info("Okapi URL:\t%s", args.okapi_url)
+    logging.info("Tenant Id:\t%s", args.tenant_id)
+    logging.info("Username:   \t%s", args.username)
+    logging.info("Password:   \tSecret")
     return args
 
 
@@ -72,7 +77,7 @@ def main():
         )
     except requests.exceptions.SSLError:
         logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
-        exit()
+        sys.exit()
 
     csv.register_dialect("tsv", delimiter="\t")
     files = [
@@ -122,6 +127,9 @@ def main():
                     reader.force_utf8 = True
                     logging.info(f"Running {records_file}")
                     read_records(reader, processor)
+            except TransformationProcessError as tpe:
+                logging.critical(tpe)
+                sys.exit()
             except Exception:
                 logging.exception(f"Failure in Main: {records_file}", stack_info=True)
         processor.wrap_up()
@@ -132,17 +140,14 @@ def read_records(reader, processor: HoldingsProcessor):
         try:
             if record is None:
                 raise TransformationRecordFailedError(
-                    (
-                        f"Index in file:{idx}"
-                        f"MARC parsing error: "
-                        f"{reader.current_exception}"
-                        f"{reader.current_chunk}"
-                    )
+                    f"Index in file:{idx}",
+                    f"MARC parsing error: {reader.current_exception}",
+                    f"{reader.current_chunk}",
                 )
             else:
                 processor.process_record(record)
         except TransformationRecordFailedError as error:
-            logging.error(error)
+            error.log_it()
         except ValueError as error:
             logging.error(error)
 
