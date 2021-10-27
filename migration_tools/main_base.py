@@ -70,6 +70,9 @@ class MainBase:
         else:
             logger.setLevel(logging.INFO)
             stream_handler.setLevel(logging.INFO)
+            stream_handler.addFilter(
+                ExcludeLevelFilter(30)
+            )  # Loose warnings from pymarc
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
