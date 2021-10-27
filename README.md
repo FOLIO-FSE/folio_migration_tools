@@ -25,6 +25,9 @@ In order to perform migrations according to this process, you need to clone the 
 
 # Part of a process
 The scripts rely on previous migrations steps, like the existance of a map file with legacy system IDs and their FOLIO equivalents. 
+The below picture shows the proposed migration steps for legacy objects into FOLIO:
+![image](https://user-images.githubusercontent.com/1894384/139079124-b31b716f-281b-4784-b73e-a4567ee3e097.png)
+
 
 # Mapping files
 The scripts also relies on a folder with a set of mapping files. There is a [template repository](https://github.com/FOLIO-FSE/migration_repo_template) with examples of the files needed and some documentation around it in the [Readme](https://github.com/FOLIO-FSE/migration_repo_template/blob/main/README.md). There is also a [web tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) for creating mapping files from delimited source files
