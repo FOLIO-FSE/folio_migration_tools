@@ -24,7 +24,7 @@
         <marc:datafield tag="541" ind1="0" ind2=" ">
             <marc:subfield code="a">Immediate source of acquisition</marc:subfield>
         </marc:datafield>
-        <marc:datafield tag="561" ind1="0" ind2=" ">
+        <marc:datafield tag="561" ind1="0" ind2="0">
             <marc:subfield code="a">Ownership and custodial history</marc:subfield>
         </marc:datafield>
         <marc:datafield tag="562" ind1="0" ind2=" ">
