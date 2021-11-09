@@ -1,7 +1,7 @@
 import csv
 import json
 import logging
-import uuid
+
 from abc import abstractmethod
 
 from folioclient import FolioClient
@@ -99,7 +99,6 @@ class MappingFileMapperBase(MapperBase):
     def instantiate_record(self):
         return {
             "metadata": self.folio_client.get_metadata_construct(),
-            "id": str(uuid.uuid4()),
             "type": "object",
         }
 

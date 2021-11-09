@@ -8,6 +8,8 @@ import typing
 import uuid
 import xml.etree.ElementTree as ET
 from typing import Generator, List
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 
 import pymarc
 import requests
@@ -70,7 +72,6 @@ class BibsRulesMapper(RulesMapperBase):
         self, marc_record: pymarc.Record, index_or_legacy_id
     ):
         folio_instance = {
-            "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
@@ -239,7 +240,13 @@ class BibsRulesMapper(RulesMapperBase):
         )
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = False
-
+        folio_instance["id"] = str(
+            FolioUUID(
+                self.folio_client.okapi_url,
+                FOLIONamespaces.instances,
+                legacy_id,
+            )
+        )
         self.handle_holdings(marc_record)
 
     def handle_holdings(self, marc_record: Record):

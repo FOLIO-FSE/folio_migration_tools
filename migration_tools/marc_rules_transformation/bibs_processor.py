@@ -6,7 +6,8 @@ from pymarc.field import Field
 from pymarc.leader import Leader
 
 from pymarc.record import Record
-
+from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
+from folioclient import FolioClient
 from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
@@ -23,7 +24,7 @@ class BibsProcessor:
     def __init__(
         self,
         mapper,
-        folio_client,
+        folio_client: FolioClient,
         results_file,
         folder_structure: FolderStructure,
         args,
@@ -72,7 +73,7 @@ class BibsProcessor:
                 )
             if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
                 Helper.write_to_file(self.results_file, folio_rec)
-                self.save_source_record(marc_record, folio_rec)
+                self.save_source_record(marc_record, folio_rec, index_or_legacy_id)
                 self.mapper.migration_report.add_general_statistics(
                     "Records successfully transformed into FOLIO objects"
                 )
@@ -145,9 +146,15 @@ class BibsProcessor:
         self.srs_records_file.close()
         self.instance_id_map_file.close()
 
-    def save_source_record(self, marc_record, instance):
+    def save_source_record(self, marc_record, instance, index_or_legacy_id):
         """Saves the source Marc_record to the Source record Storage module"""
-        srs_id = str(uuid.uuid4())
+        srs_id = str(
+            FolioUUID(
+                self.folio_client.okapi_url,
+                FOLIONamespaces.srs_records,
+                index_or_legacy_id,
+            )
+        )
 
         marc_record.add_ordered_field(
             Field(

@@ -5,6 +5,7 @@ import sys
 import time
 import traceback
 from datetime import datetime as dt
+from folio_uuid.folio_uuid import FolioUUID, FOLIONamespaces
 
 from jsonschema import ValidationError, validate
 from migration_tools.custom_exceptions import (
@@ -54,6 +55,13 @@ class HoldingsProcessor:
                 raise TransformationRecordFailedError(
                     self.records_count, "Missing formerIds", self.records_count
                 )
+            folio_rec["id"] = str(
+                FolioUUID(
+                    self.folio_client.okapi_url,
+                    FOLIONamespaces.items,
+                    folio_rec["formerIds"][0],
+                )
+            )
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
                     "".join(folio_rec.get("formerIds", [])),

@@ -43,7 +43,6 @@ class RulesMapperHoldings(RulesMapperBase):
          This is the main function"""
         self.print_progress()
         folio_holding = {
-            "id": str(uuid.uuid4()),
             "metadata": self.folio_client.get_metadata_construct(),
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])

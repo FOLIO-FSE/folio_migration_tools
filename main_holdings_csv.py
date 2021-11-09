@@ -13,6 +13,8 @@ import uuid
 from os import listdir
 from os.path import isfile
 from typing import List
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 
 import requests.exceptions
 from argparse_prompt import PromptParser
@@ -134,6 +136,13 @@ class Worker(MainBase):
         holdings_from_row = []
         if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
+            folio_rec["id"] = str(
+                FolioUUID(
+                    self.folio_client.okapi_url,
+                    FOLIONamespaces.holdings,
+                    folio_rec["formerIds"][0],
+                )
+            )
             holdings_from_row.append(folio_rec)
         elif len(folio_rec.get("instanceId", [])) > 1:  # Bound-with.
             holdings_from_row.extend(self.create_bound_with_holdings(folio_rec))
@@ -141,7 +150,6 @@ class Worker(MainBase):
             raise TransformationRecordFailedError(
                 idx, "No instance id in parsed record", ""
             )
-
         for folio_holding in holdings_from_row:
             self.merge_holding_in(folio_holding)
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
@@ -202,6 +210,8 @@ class Worker(MainBase):
             c["instanceId"] = index
             c["callNumber"] = call_numbers[bwidx]
             c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
+            # TODO: Make these UUIDs deterministic as well when moving to the
+            # new FOLIO BW model
             c["id"] = str(uuid.uuid4())
             self.mapper.migration_report.add_general_statistics(
                 "Bound-with holdings created"

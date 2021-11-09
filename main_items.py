@@ -11,6 +11,8 @@ from os import listdir
 from os.path import isfile, join
 from pathlib import Path
 from typing import List
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 
 import requests
 from argparse_prompt import PromptParser
@@ -205,6 +207,13 @@ class Worker(MainBase):
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
                     folio_rec = self.mapper.do_map(record, f"row {idx}")
+                    folio_rec["id"] = str(
+                        FolioUUID(
+                            self.folio_client.okapi_url,
+                            FOLIONamespaces.items,
+                            folio_rec["formerIds"][0],
+                        )
+                    )
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
