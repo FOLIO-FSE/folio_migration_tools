@@ -36,3 +36,8 @@ jobs:
         python main_holdings_marc.py -h
         python main_holdings_csv.py -h
         python main_items.py -h
+    - name: clone repo_template
+      uses: actions/checkout@master
+      with:
+        repository: FOLIO-FSE/migration_repo_template
+        path: ./migration_repo_template
