@@ -29,7 +29,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest --cov-report xml:coverage-reports/coverage-1.xml --cov-report term --cov=marc_to_folio tests/
+        pytest --cov-report xml:coverage-reports/coverage-1.xml --cov-report term --cov=migration_tools tests/
     - name: Make sure the code can run
       run: |
         python main_bibs.py -h
