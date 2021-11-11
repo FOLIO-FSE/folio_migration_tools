@@ -49,6 +49,5 @@ jobs:
         PASSWORD: ${{ secrets.PASSWORD }}
         TENANT_ID: ${{ secrets.TENANT_ID }}
       run: |
-        echo $OKAPI_URL
-        python main_bibs.py ./migration_repo_template $OKAPI_URL $TENANT_ID $USERNAME --password "$PASSWORD" --ils_flavour 001 --folio_version juniper --holdings_records False --force_utf_8 True --hrid_handling default ----suppress False 
+        python main_bibs.py ./migration_repo_template $OKAPI_URL $TENANT_ID $USERNAME --password $PASSWORD --ils_flavour 001 --folio_version juniper --holdings_records False --force_utf_8 True --hrid_handling default ----suppress False 
     
