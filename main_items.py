@@ -139,10 +139,10 @@ class Worker(MainBase):
                         folio_property_name,
                     )
                     return ref_data_map
-            except Exception as ee:
+            except Exception as exception:
                 raise TransformationProcessError(
                     f"{folio_property_name} not mapped in legacy->folio mapping file "
-                    f"({map_file_path}) ({ee}). Did you map this field, "
+                    f"({map_file_path}) ({exception}). Did you map this field, "
                     "but forgot to add a mapping file?"
                 )
         else:
@@ -175,18 +175,18 @@ class Worker(MainBase):
             for file_name in self.source_files:
                 try:
                     self.process_single_file(file_name, results_file)
-                except Exception as ee:
-                    error_str = f"\n\nProcessing of {file_name} failed:\n{ee}."
+                except Exception as exception:
+                    error_str = f"\n\nProcessing of {file_name} failed:\n{exception}."
                     logging.exception(error_str, stack_info=True)
                     logging.fatal(
                         "Check source files for empty lines or missing reference data. Halting"
                     )
                     self.mapper.migration_report.add(
-                        Blurbs.FailedFiles, f"{file_name} - {ee}"
+                        Blurbs.FailedFiles, f"{file_name} - {exception}"
                     )
                     logging.fatal(error_str)
                     sys.exit()
-        logging.info(
+        logging.info(  # pylint: disable=logging-fstring-interpolation
             f"processed {self.total_records:,} records "
             f"in {len(self.source_files)} files"
         )
@@ -206,13 +206,8 @@ class Worker(MainBase):
                     if idx == 0:
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
-                    folio_rec = self.mapper.do_map(record, f"row {idx}")
-                    folio_rec["id"] = str(
-                        FolioUUID(
-                            self.folio_client.okapi_url,
-                            FOLIONamespaces.items,
-                            folio_rec["formerIds"][0],
-                        )
+                    folio_rec, legacy_id = self.mapper.do_map(
+                        record, f"row {idx}", FOLIONamespaces.items
                     )
                     if idx == 0:
                         logging.info("First FOLIO record:")
@@ -249,7 +244,7 @@ class Worker(MainBase):
 
             total_records = 0
             total_records += records_in_file
-            logging.info(
+            logging.info(  # pylint: disable=logging-fstring-interpolation
                 f"Done processing {file_name} containing {records_in_file:,} records. "
                 f"Total records processed: {total_records:,}"
             )
@@ -318,7 +313,7 @@ def parse_args():
     )
     args = parser.parse_args()
     if len(args.time_stamp) != 15:
-        logging.critical(f"Time stamp ({args.time_stamp}) is not set properly")
+        logging.critical("Time stamp (%s) is not set properly", args.time_stamp)
         sys.exit()
     logging.info("Okapi URL:\t%s", args.okapi_url)
     logging.info("Tenant Id:\t%s", args.tenant_id)
@@ -331,10 +326,13 @@ def main():
     """Main Method. Used for bootstrapping."""
     args = parse_args()
     folder_structure: FolderStructure = FolderStructure(
-        args.base_folder, args.time_stamp
+        args.base_folder,  # pylint: disable=no-member
+        args.time_stamp,  # pylint: disable=no-member
     )
     folder_structure.setup_migration_file_structure("item")
-    MainBase.setup_logging(folder_structure, args.log_level_debug)
+    MainBase.setup_logging(
+        folder_structure, args.log_level_debug  # pylint: disable=no-member
+    )
     folder_structure.log_folder_structure()
 
     # Source data files
@@ -344,12 +342,15 @@ def main():
         if isfile(join(folder_structure.legacy_records_folder, f))
     ]
     logging.info("Files to process:")
-    for f in files:
-        logging.info("\t%s", f)
+    for filename in files:
+        logging.info("\t%s", filename)
 
     try:
         folio_client = FolioClient(
-            args.okapi_url, args.tenant_id, args.username, args.password
+            args.okapi_url,  # pylint: disable=no-member
+            args.tenant_id,  # pylint: disable=no-member
+            args.username,  # pylint: disable=no-member
+            args.password,  # pylint: disable=no-member
         )
     except requests.exceptions.SSLError:
         logging.critical("SSL error. Check your VPN or Internet connection. Exiting")

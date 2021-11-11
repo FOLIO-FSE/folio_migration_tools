@@ -2,23 +2,18 @@
 import json
 import os
 from re import escape
+from unittest.mock import Mock, patch
+from folio_uuid import FolioUUID, FOLIONamespaces
 
-from pymarc.reader import MARCReader
+import pymarc
 from migration_tools import mapper_base
-from migration_tools.helper import Helper
-from migration_tools.mapper_base import MapperBase
 from migration_tools.mapping_file_transformation import mapping_file_mapper_base
+from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
-from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
-    MappingFileMapperBase,
-)
-from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
-from unittest.mock import Mock, patch
-import pymarc
-
 from migration_tools.report_blurbs import Blurbs
+from pymarc.reader import MARCReader
 
 
 def func(x):
@@ -27,6 +22,15 @@ def func(x):
 
 def test_answer2():
     assert func(4) == 5
+
+
+def test_deterministic_uuid_generation_holdings():
+    deterministic_uuid = FolioUUID(
+        "https://okapi-bugfest-juniper.folio.ebsco.com",
+        FOLIONamespaces.holdings,
+        "000000167",
+    )
+    assert "a0b4c8a2-01fd-50fd-8158-81bd551412a0" == str(deterministic_uuid)
 
 
 def test_is_hybrid_default_mapping():
@@ -130,7 +134,6 @@ def test_get_marc_textual_stmt():
     res = HoldingsStatementsParser.get_holdings_statements(
         record, "853", "863", "866", ["apa"]
     )
-    # print(json.dumps(res, indent=4))
     stmt = "v.1:no. 1(1943:July 3)-v.1:no.52(1944:June 24)"
     stmt2 = "Some statement without note"
     stmt3 = "v.29 (2011)"

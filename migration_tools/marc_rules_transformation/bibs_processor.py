@@ -1,6 +1,7 @@
 """ Class that processes each MARC record """
 import json
 import logging
+from typing import List
 import uuid
 from pymarc.field import Field
 from pymarc.leader import Leader
@@ -44,9 +45,7 @@ class BibsProcessor:
 
         """processes a marc record and saves it"""
         try:
-            index_or_legacy_id = self.mapper.get_legacy_ids(
-                marc_record, self.ils_flavour, idx
-            )
+            legacy_ids = self.mapper.get_legacy_ids(marc_record, self.ils_flavour, idx)
         except TransformationRecordFailedError as trf:
             raise trf
         except Exception as ee:
@@ -57,7 +56,7 @@ class BibsProcessor:
         try:
             # Transform the MARC21 to a FOLIO record
             (folio_rec, id_map_strings) = self.mapper.parse_bib(
-                index_or_legacy_id, marc_record, inventory_only
+                legacy_ids, marc_record, inventory_only
             )
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
@@ -71,9 +70,9 @@ class BibsProcessor:
                 self.mapper.migration_report.add(
                     Blurbs.PrecedingSuccedingTitles, f"{len(succ_titles)}"
                 )
-            if self.validate_instance(folio_rec, marc_record, index_or_legacy_id):
+            if self.validate_instance(folio_rec, marc_record, legacy_ids):
                 Helper.write_to_file(self.results_file, folio_rec)
-                self.save_source_record(marc_record, folio_rec, index_or_legacy_id)
+                self.save_source_record(marc_record, folio_rec, legacy_ids)
                 self.mapper.migration_report.add_general_statistics(
                     "Records successfully transformed into FOLIO objects"
                 )
@@ -86,7 +85,7 @@ class BibsProcessor:
         except ValueError as value_error:
             self.mapper.migration_report.add(
                 Blurbs.FieldMappingErrors,
-                f"{value_error} for {index_or_legacy_id} ",
+                f"{value_error} for {legacy_ids} ",
             )
             self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
@@ -95,7 +94,7 @@ class BibsProcessor:
             self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
             )
-            error.id = index_or_legacy_id
+            error.id = legacy_ids
             error.log_it()
 
         except Exception as inst:
@@ -146,13 +145,13 @@ class BibsProcessor:
         self.srs_records_file.close()
         self.instance_id_map_file.close()
 
-    def save_source_record(self, marc_record, instance, index_or_legacy_id):
+    def save_source_record(self, marc_record, instance, legacy_ids: List[str]):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(
             FolioUUID(
                 self.folio_client.okapi_url,
                 FOLIONamespaces.srs_records,
-                index_or_legacy_id,
+                str(legacy_ids[0]),
             )
         )
 

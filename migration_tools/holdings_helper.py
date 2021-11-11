@@ -22,7 +22,7 @@ class HoldingsHelper:
             )
             return "-".join([instance_id, call_number, location_id, ""])
         except Exception as ee:
-            print(holding)
+            logging.error(json.dumps(holding, indent=4))
             raise ee
 
     @staticmethod
@@ -68,7 +68,7 @@ class HoldingsHelper:
         holdings_id_dict_path = Helper.setup_path(result_path, "holdings_id_map.json")
         with open(holdings_id_dict_path, "r") as holdings_id_map_file:
             holdings_id_map = json.load(holdings_id_map_file)
-            logging.info(f"Loaded {len(holdings_id_map)} holdings ids")
+            logging.info("Loaded %s holdings ids", len(holdings_id_map))
             return holdings_id_map
 
 

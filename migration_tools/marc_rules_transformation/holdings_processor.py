@@ -51,17 +51,6 @@ class HoldingsProcessor:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record, self.records_count)
-            if not any(folio_rec.get("formerIds", [])):
-                raise TransformationRecordFailedError(
-                    self.records_count, "Missing formerIds", self.records_count
-                )
-            folio_rec["id"] = str(
-                FolioUUID(
-                    self.folio_client.okapi_url,
-                    FOLIONamespaces.items,
-                    folio_rec["formerIds"][0],
-                )
-            )
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
                     "".join(folio_rec.get("formerIds", [])),

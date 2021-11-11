@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Dict, List
 
 from folioclient import FolioClient
+from folio_uuid.folio_uuid import FOLIONamespaces
 from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -29,7 +30,13 @@ class ItemMapper(MappingFileMapperBase):
         temporary_location_mapping,
     ):
         item_schema = folio_client.get_item_schema()
-        super().__init__(folio_client, item_schema, items_map, statistical_codes_map)
+        super().__init__(
+            folio_client,
+            item_schema,
+            items_map,
+            statistical_codes_map,
+            FOLIONamespaces.items,
+        )
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map

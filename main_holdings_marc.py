@@ -52,9 +52,9 @@ def parse_args():
         help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
     )
     args = parser.parse_args()
-    print(args.time_stamp)
+    logging.info(args.time_stamp)
     if len(args.time_stamp) != 15:
-        print(f"Time stamp ({args.time_stamp}) is not set properly")
+        logging.info("Time stamp (%s) is not set properly", args.time_stamp)
         sys.exit()
     logging.info("Okapi URL:\t%s", args.okapi_url)
     logging.info("Tenant Id:\t%s", args.tenant_id)
@@ -66,14 +66,20 @@ def parse_args():
 def main():
     """Main method. Magic starts here."""
     args = parse_args()
-    folder_structure = FolderStructure(args.base_folder, args.time_stamp)
+    folder_structure = FolderStructure(
+        args.base_folder,  # pylint: disable=no-member
+        args.time_stamp,  # pylint: disable=no-member
+    )
     folder_structure.setup_migration_file_structure("holdingsrecord")
     MainBase.setup_logging(folder_structure)
     folder_structure.log_folder_structure()
 
     try:
         folio_client = FolioClient(
-            args.okapi_url, args.tenant_id, args.username, args.password
+            args.okapi_url,  # pylint: disable=no-member
+            args.tenant_id,  # pylint: disable=no-member
+            args.username,  # pylint: disable=no-member
+            args.password,  # pylint: disable=no-member
         )
     except requests.exceptions.SSLError:
         logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
@@ -98,15 +104,15 @@ def main():
                     end="\r",
                 )
             instance_id_map[map_object["legacy_id"]] = map_object
-        logging.info(f"loaded {index} migrated instance IDs")
+        logging.info("loaded %s migrated instance IDs", index)
 
         location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
         rules_file = json.load(mapping_rules_file)
 
-        logging.info(f"Locations in map: {len(location_map)}")
+        logging.info("Locations in map: %s", len(location_map))
         logging.info(any(location_map))
-        logging.info(f'Default location code {rules_file["defaultLocationCode"]}')
-        logging.info(f"{len(instance_id_map)} Instance ids in map")
+        logging.info("Default location code %s", rules_file["defaultLocationCode"])
+        logging.info("%s Instance ids in map", len(instance_id_map))
         mapper = RulesMapperHoldings(
             folio_client,
             instance_id_map,
@@ -117,7 +123,10 @@ def main():
         mapper.mappings = rules_file["rules"]
 
         processor = HoldingsProcessor(
-            mapper, folio_client, folder_structure, args.suppress
+            mapper,
+            folio_client,
+            folder_structure,
+            args.suppress,  # pylint: disable=no-member
         )
         for records_file in files:
             try:
@@ -125,13 +134,13 @@ def main():
                     reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                     reader.hide_utf8_warnings = True
                     reader.force_utf8 = True
-                    logging.info(f"Running {records_file}")
+                    logging.info("Running %s", records_file)
                     read_records(reader, processor)
             except TransformationProcessError as tpe:
                 logging.critical(tpe)
                 sys.exit()
             except Exception:
-                logging.exception(f"Failure in Main: {records_file}", stack_info=True)
+                logging.exception("Failure in Main: %s", records_file, stack_info=True)
         processor.wrap_up()
 
 

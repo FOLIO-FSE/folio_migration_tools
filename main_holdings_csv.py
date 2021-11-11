@@ -13,11 +13,10 @@ import uuid
 from os import listdir
 from os.path import isfile
 from typing import List
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
 
 import requests.exceptions
 from argparse_prompt import PromptParser
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient.FolioClient import FolioClient
 
 from migration_tools.custom_exceptions import (
@@ -93,7 +92,7 @@ class Worker(MainBase):
                     Blurbs.FailedFiles, f"{file_name} - {ee}"
                 )
                 sys.exit()
-        logging.info(
+        logging.info(  # pylint: disable=logging-fstring-interpolation
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
 
@@ -121,34 +120,29 @@ class Worker(MainBase):
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
-                    logging.info(
+                    logging.info(  # pylint: disable=logging-fstring-interpolation
                         f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
                     )
             self.total_records += idx
-            logging.info(
+            logging.info(  # pylint: disable=logging-fstring-interpolation
                 f"Done processing {file_name} containing {idx:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
 
     def process_holding(self, idx, row):
-        folio_rec = self.mapper.do_map(row, f"row # {idx}")
+        folio_rec, legacy_id = self.mapper.do_map(
+            row, f"row # {idx}", FOLIONamespaces.holdings
+        )
         folio_rec["holdingsTypeId"] = self.default_holdings_type
         holdings_from_row = []
         if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
-            folio_rec["id"] = str(
-                FolioUUID(
-                    self.folio_client.okapi_url,
-                    FOLIONamespaces.holdings,
-                    folio_rec["formerIds"][0],
-                )
-            )
             holdings_from_row.append(folio_rec)
         elif len(folio_rec.get("instanceId", [])) > 1:  # Bound-with.
             holdings_from_row.extend(self.create_bound_with_holdings(folio_rec))
         else:
             raise TransformationRecordFailedError(
-                idx, "No instance id in parsed record", ""
+                legacy_id, "No instance id in parsed record", ""
             )
         for folio_holding in holdings_from_row:
             self.merge_holding_in(folio_holding)
@@ -239,8 +233,9 @@ class Worker(MainBase):
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
         if any(self.holdings):
-            print(
-                f"Saving holdings created to {self.folder_structure.created_objects_path}"
+            logging.info(
+                "Saving holdings created to %s",
+                self.folder_structure.created_objects_path,
             )
             with open(
                 self.folder_structure.created_objects_path, "w+"
@@ -259,13 +254,15 @@ class Worker(MainBase):
                 self.folder_structure.holdings_id_map_path, "w"
             ) as legacy_map_path_file:
                 json.dump(self.legacy_map, legacy_map_path_file)
-                logging.info(f"Wrote {len(self.legacy_map)} id:s to legacy map")
+                logging.info("Wrote %s id:s to legacy map", len(self.legacy_map))
         with open(
             self.folder_structure.migration_reports_file, "w"
         ) as migration_report_file:
             logging.info(
-                f"Writing migration- and mapping report to {self.folder_structure.migration_reports_file}"
+                "Writing migration- and mapping report to %s",
+                self.folder_structure.migration_reports_file,
             )
+
             Helper.write_migration_report(
                 migration_report_file, self.mapper.migration_report
             )
@@ -294,9 +291,9 @@ class Worker(MainBase):
                 holding["permanentLocationId"] if "l" in fields_criteria else ""
             )
             return "-".join([instance_id, call_number, location_id, ""])
-        except Exception as ee:
-            print(holding)
-            raise ee
+        except Exception as exception:
+            logging.error(json.dumps(holding, indent=4))
+            raise exception
 
     def merge_holding(self, key, old_holdings_record, new_holdings_record):
         # TODO: Move to interface or parent class and make more generic
@@ -359,10 +356,10 @@ def parse_args():
         help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
     )
     args = parser.parse_args()
-    logging.info(f"\tOkapi URL:\t{args.okapi_url}")
-    logging.info(f"\tTenanti Id:\t{args.tenant_id}")
-    logging.info(f"\tUsername:\t{args.username}")
-    logging.info("\tPassword:\tSecret")
+    logging.info("Okapi URL:\t%s", args.okapi_url)
+    logging.info("Tenant Id:\t%s", args.tenant_id)
+    logging.info("Username:   \t%s", args.username)
+    logging.info("Password:   \tSecret")
     return args
 
 
@@ -375,7 +372,9 @@ def main():
     """Main Method. Used for bootstrapping."""
     csv.register_dialect("tsv", delimiter="\t")
     args = parse_args()
-    folder_structure = FolderStructure(args.base_folder, args.time_stamp)
+    folder_structure = FolderStructure(
+        args.base_folder, args.time_stamp  # pylint: disable=no-member
+    )  # pylint: disable=no-member
     folder_structure.setup_migration_file_structure("holdingsrecord", "item")
     Worker.setup_logging(folder_structure, args.log_level_debug)
     folder_structure.log_folder_structure()
@@ -397,8 +396,8 @@ def main():
         if isfile(os.path.join(folder_structure.legacy_records_folder, f))
     ]
     logging.info("Files to process:")
-    for f in files:
-        logging.info(f"\t{f}")
+    for filename in files:
+        logging.info("\t%s", filename)
 
     # All the paths...
     try:
@@ -418,22 +417,23 @@ def main():
                     print(f"{index} instance ids loaded to map", end="\r")
                 map_object = json.loads(json_string)
                 instance_id_map[map_object["legacy_id"]] = map_object
-            logging.info(f"Loaded {index} migrated instance IDs")
+            logging.info("Loaded %s migrated instance IDs", index)
             holdings_map = json.load(holdings_mapper_f)
             logging.info(
-                f'{len(holdings_map["data"])} fields in holdings mapping file map'
+                "%s fields in holdings mapping file map", len(holdings_map["data"])
             )
             mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
                 holdings_map
             )
             logging.info(
-                f"{len(list(mapped_fields))} Mapped fields in holdings mapping file map"
+                "%s mapped fields in holdings mapping file map",
+                len(list(mapped_fields)),
             )
             location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
             call_number_type_map = list(
                 csv.DictReader(callnumber_type_map_f, dialect="tsv")
             )
-            logging.info(f"Found {len(location_map)} rows in location map")
+            logging.info("Found %s rows in location map", len(location_map))
 
             mapper = HoldingsMapper(
                 folio_client,
@@ -457,7 +457,7 @@ def main():
         sys.exit()
     except Exception as exception:
         logging.info("\n=======ERROR===========")
-        logging.info(f"{exception}")
+        logging.info(exception)
         logging.info("\n=======Stack Trace===========")
         traceback.print_exc()
 
