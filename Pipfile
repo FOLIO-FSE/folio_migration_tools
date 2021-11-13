@@ -49,8 +49,5 @@ Markdown = "==3.3.4"
 folioclient = "*"
 folio-uuid = "0.2.0"
 
-[requires]
-python_version = "3.9"
-
 [pipenv]
 allow_prereleases = true
