@@ -101,7 +101,6 @@ class MapperBase:
 
 def flatten(my_dict: dict, path=""):
     for k, v in iter(my_dict.items()):
-        # print(f"{type(v).__name__} {k} {path}")
         if v:
             if isinstance(v, list):
                 for e in v:

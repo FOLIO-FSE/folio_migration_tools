@@ -339,6 +339,7 @@ class RulesMapperBase(MapperBase):
         self.migration_report.add(
             Blurbs.PrecedingSuccedingTitles, f"{e_parent} created"
         )
+        # TODO: Make these uuids deterministic
         new_entity = {
             "id": str(uuid.uuid4()),
             "title": entity.get("title"),

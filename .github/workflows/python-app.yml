@@ -29,10 +29,20 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest --cov-report xml:coverage-reports/coverage-1.xml --cov-report term --cov=marc_to_folio tests/
+        pytest --cov-report xml:coverage-reports/coverage-1.xml --cov-report term --cov=migration_tools tests/
     - name: Make sure the code can run
       run: |
         python main_bibs.py -h
         python main_holdings_marc.py -h
         python main_holdings_csv.py -h
         python main_items.py -h
+    - name: clone repo_template
+      uses: actions/checkout@master
+      with:
+        repository: FOLIO-FSE/migration_repo_template
+        path: ./migration_repo_template
+    - name: run it
+      shell: bash
+      run: |
+        python main_bibs.py ./migration_repo_template https://okapi-bugfest-juniper.folio.ebsco.com fs09000000 folio --password folio --ils_flavour 001 --folio_version juniper --holdings_records False --force_utf_8 True --hrid_handling default --suppress False 
+    

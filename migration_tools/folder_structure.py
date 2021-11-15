@@ -5,11 +5,11 @@ from pathlib import Path
 
 class FolderStructure:
     def __init__(self, base_path: Path, time_stamp: str):
-        print("Setting up folder structure", flush=True)
+        logging.info("Setting up folder structure")
         self.time_stamp = time_stamp
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
-            print("Base Folder Path is not a folder. Exiting.", flush=True)
+            logging.critical("Base Folder Path is not a folder. Exiting.")
             sys.exit()
 
         self.data_folder = self.base_folder / "data"
@@ -35,21 +35,21 @@ class FolderStructure:
         verify_git_ignore(gitignore)
 
     def log_folder_structure(self):
-        logging.info(f"Mapping files folder is {self.mapping_files_folder}")
+        logging.info("Mapping files folder is %s", self.mapping_files_folder)
         logging.info("Git ignore is set up correctly")
-        logging.info(f"Base folder is {self.base_folder}")
-        logging.info(f"Reports and logs folder is {self.reports_folder}")
-        logging.info(f"Results folder is {self.results_folder}")
-        logging.info(f"Data folder is {self.data_folder}")
-        logging.info(f"Source records files folder is {self.legacy_records_folder}")
-        logging.info(f"Log file will be located at {self.transformation_log_path}")
+        logging.info("Base folder is %s", self.base_folder)
+        logging.info("Reports and logs folder is %s", self.reports_folder)
+        logging.info("Results folder is %s", self.results_folder)
+        logging.info("Data folder is %s", self.data_folder)
+        logging.info("Source records files folder is %s", self.legacy_records_folder)
+        logging.info("Log file will be located at %s", self.transformation_log_path)
         logging.info(
-            f"Extra data will be stored at{self.transformation_extra_data_path}"
+            "Extra data will be stored at%s", self.transformation_extra_data_path
         )
-        logging.info(f"Data issue reports {self.data_issue_file_path}")
-        logging.info(f"Created objects will be stored at  {self.created_objects_path}")
+        logging.info("Data issue reports %s", self.data_issue_file_path)
+        logging.info("Created objects will be stored at  %s", self.created_objects_path)
         logging.info(
-            f"Migration report file will be saved at {self.migration_reports_file}"
+            "Migration report file will be saved at %s", self.migration_reports_file
         )
 
     def setup_migration_file_structure(
@@ -133,13 +133,13 @@ def verify_git_ignore(gitignore: Path):
             f.write("data/\n")
         if "*.data" not in contents:
             f.write("*.data\n")
-    logging.info(f"Made sure there was a valid .gitignore file at {gitignore}")
+    logging.info("Made sure there was a valid .gitignore file at %s", gitignore)
 
 
 def verify_folder(folder_path: Path):
     if not folder_path.is_dir():
-        logging.critical(f"There is no folder located at {folder_path}. Exiting.")
-        logging.critical(f"Create a folder by calling\n\tmkdir {folder_path}")
+        logging.critical("There is no folder located at %s. Exiting.", folder_path)
+        logging.critical("Create a folder by calling\n\tmkdir %s", folder_path)
         sys.exit()
     else:
-        print(f"Located {folder_path}", flush=True)
+        logging.info("Located %s", folder_path)

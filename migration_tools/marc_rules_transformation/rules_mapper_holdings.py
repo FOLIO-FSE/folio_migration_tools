@@ -1,5 +1,7 @@
 import uuid
 from typing import List
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 
 from pymarc.field import Field
 from pymarc.record import Record
@@ -43,7 +45,6 @@ class RulesMapperHoldings(RulesMapperBase):
          This is the main function"""
         self.print_progress()
         folio_holding = {
-            "id": str(uuid.uuid4()),
             "metadata": self.folio_client.get_metadata_construct(),
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
@@ -68,12 +69,20 @@ class RulesMapperHoldings(RulesMapperBase):
                 ),
                 "",
             )
+
         if not folio_holding.get("instanceId", ""):
             raise TransformationRecordFailedError(
                 self.parsed_records,
                 "No Instance id mapped. ",
                 folio_holding["formerIds"],
             )
+        folio_holding["id"] = str(
+            FolioUUID(
+                self.folio_client.okapi_url,
+                FOLIONamespaces.holdings,
+                str(folio_holding["formerIds"][0]).strip(),
+            )
+        )
         self.perform_additional_mapping(
             marc_record, folio_holding, folio_holding["formerIds"]
         )

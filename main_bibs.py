@@ -1,8 +1,7 @@
 '''Main "script."'''
-import json
-import sys
 import logging
 import os
+import sys
 import time
 from datetime import datetime as dt
 from os import listdir
@@ -224,7 +223,7 @@ def main():
         worker = Worker(folio_client, folder_structure, args)
         worker.work()
     except FileNotFoundError as fne:
-        print(f"{fne}")
+        logging.error(fne)
     except TransformationProcessError as process_error:
         logging.critical(process_error)
         logging.critical("Halting...")

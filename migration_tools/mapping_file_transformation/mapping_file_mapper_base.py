@@ -1,15 +1,16 @@
 import csv
 import json
 import logging
-import uuid
 from abc import abstractmethod
+from uuid import UUID
 
+from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
+    TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.helper import Helper
 from migration_tools.mapper_base import MapperBase
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.report_blurbs import Blurbs
@@ -19,22 +20,45 @@ empty_vals = ["Not mapped", None, ""]
 
 class MappingFileMapperBase(MapperBase):
     def __init__(
-        self, folio_client: FolioClient, schema, record_map, statistical_codes_map
+        self,
+        folio_client: FolioClient,
+        schema,
+        record_map,
+        statistical_codes_map,
+        uuid_namespace: UUID,
     ):
         super().__init__()
+        self.uuid_namespace = uuid_namespace
         self.schema = schema
         self.total_records = 0
         self.folio_client = folio_client
         self.use_map = True  # Legacy
         self.record_map = record_map
+        self.record_map = record_map
         self.ref_data_dicts = {}
         self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
         self.field_map = self.setup_field_map()
+        if "legacyIdentifier" not in self.field_map:
+            raise TransformationProcessError(
+                "property legacyIdentifier is not in map. Add this property "
+                "to the mapping file as if it was a FOLIO property"
+            )
+        try:
+            self.legacy_id_property_name = self.field_map["legacyIdentifier"][0]
+            logging.info(
+                "Legacy identifier will be mapped from %s", self.legacy_id_property_name
+            )
+        except Exception as exception:
+            raise TransformationProcessError(
+                f"property legacyIdentifier not setup in map: "
+                f"{self.field_map.get('legacyIdentifier', '') ({exception})}"
+            )
+        del self.field_map["legacyIdentifier"]
         self.validate_map()
         self.mapped_from_values = {}
         for k in self.record_map["data"]:
-            if k["value"] not in [None, ""]:
+            if k["value"] not in [None, ""] and k["folio_field"] != "legacyIdentifier":
                 self.mapped_from_values[k["folio_field"]] = k["value"]
         logging.info(
             "Mapped values:\n%s",
@@ -53,6 +77,7 @@ class MappingFileMapperBase(MapperBase):
         for k in self.record_map["data"]:
             if (
                 k["legacy_field"] not in self.empty_vals
+                # or k["folio_field"] != "legacyIdentifier"
                 or k["value"] not in self.empty_vals
             ):
                 legacy_fields.add(k["legacy_field"])
@@ -92,16 +117,35 @@ class MappingFileMapperBase(MapperBase):
             for k in the_map["data"]
             if (
                 k["legacy_field"] not in empty_vals
+                # and k["folio_field"] != "legacyIdentifier"
                 or k.get("value", "") not in empty_vals
             )
         ]
 
-    def instantiate_record(self):
-        return {
-            "metadata": self.folio_client.get_metadata_construct(),
-            "id": str(uuid.uuid4()),
-            "type": "object",
-        }
+    def instantiate_record(
+        self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces
+    ):
+        legacy_id = legacy_object.get(self.legacy_id_property_name)
+        if not legacy_id:
+            raise TransformationRecordFailedError(
+                index_or_id,
+                "Could not get a value from legacy object from the property "
+                f"{self.legacy_id_property_name}. Check mapping and data",
+            )
+        return (
+            {
+                "id": str(
+                    FolioUUID(
+                        self.folio_client.okapi_url,
+                        object_type,
+                        legacy_id,
+                    )
+                ),
+                "metadata": self.folio_client.get_metadata_construct(),
+                "type": "object",
+            },
+            legacy_id,
+        )
 
     def get_statistical_codes(
         self, legacy_item: dict, folio_prop_name: str, index_or_id
@@ -146,30 +190,46 @@ class MappingFileMapperBase(MapperBase):
                 raise StopIteration()
             self.migration_report.add(
                 Blurbs.ReferenceDataMapping,
-                f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} -> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}',
+                (
+                    f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} '
+                    f'-> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}'
+                ),
             )
             return right_mapping["folio_id"]
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
                     Blurbs.ReferenceDataMapping,
-                    f'{ref_dat_mapping.name} mapping - Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""',
+                    (
+                        f"{ref_dat_mapping.name} mapping - Not to be mapped. "
+                        f'(No default) -- {" - ".join(fieldvalues)} -> ""'
+                    ),
                 )
                 return ""
             self.migration_report.add(
                 Blurbs.ReferenceDataMapping,
-                f'{ref_dat_mapping.name} mapping - Unmapped (Default value was set) -- {" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}',
+                (
+                    f"{ref_dat_mapping.name} mapping - Unmapped (Default value was set) -- "
+                    f'{" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}'
+                ),
             )
             return ref_dat_mapping.default_id
-        except IndexError as ee:
+        except IndexError as exception:
             raise TransformationRecordFailedError(
                 index_or_id,
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee} is not a recognized field in the legacy data.",
+                (
+                    f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
+                    f"({ref_dat_mapping.mapped_legacy_keys}) {exception} is not "
+                    "a recognized field in the legacy data."
+                ),
             )
-        except Exception as ee:
+        except Exception as exception:
             raise TransformationRecordFailedError(
                 index_or_id,
-                f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} ({ref_dat_mapping.mapped_legacy_keys}) {ee}",
+                (
+                    f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
+                    f"({ref_dat_mapping.mapped_legacy_keys}) {exception}"
+                ),
             )
 
     @staticmethod
@@ -206,22 +266,26 @@ class MappingFileMapperBase(MapperBase):
             "This method needs to be implemented in a implementing class"
         )
 
-    def do_map(self, legacy_object, index_or_id: str):
-        folio_object = self.instantiate_record()
+    def do_map(
+        self, legacy_object, index_or_id: str, object_type: FOLIONamespaces
+    ) -> tuple[dict, str]:
+        folio_object, legacy_id = self.instantiate_record(
+            legacy_object, index_or_id, object_type
+        )
         for property_name_level1, property_level1 in self.schema["properties"].items():
             try:
                 self.map_level1_property(
                     property_name_level1,
                     property_level1,
                     folio_object,
-                    index_or_id,
+                    legacy_id,
                     legacy_object,
                 )
             except TransformationFieldMappingError as data_error:
-                self.handle_transformation_field_mapping_error(index_or_id, data_error)
+                self.handle_transformation_field_mapping_error(legacy_id, data_error)
 
-        self.validate_object(folio_object, index_or_id)
-        return folio_object
+        self.validate_object(folio_object, legacy_id)
+        return (folio_object, legacy_id)
 
     def map_level1_property(
         self,
@@ -267,21 +331,21 @@ class MappingFileMapperBase(MapperBase):
                 legacy_object, property_name_level1, folio_object, index_or_id
             )
 
-    def validate_object(self, folio_object, index_or_id):
+    def validate_object(self, folio_object, legacy_id):
         required = self.schema["required"]
         missing = []
         for required_prop in required:
             if required_prop not in folio_object:
-                if index_or_id == "row 1":
+                if legacy_id == "row 1":
                     logging.info(json.dumps(folio_object, indent=4))
                 missing.append(f"Missing: {required_prop}")
             elif not folio_object[required_prop]:
-                if index_or_id == "row 1":
+                if legacy_id == "row 1":
                     logging.info(json.dumps(folio_object, indent=4))
                 missing.append(f"Empty: {required_prop}")
         if any(missing):
             raise TransformationRecordFailedError(
-                index_or_id,
+                legacy_id,
                 "One or many required properties empty",
                 json.dumps(missing),
             )
@@ -412,9 +476,9 @@ class MappingFileMapperBase(MapperBase):
         try:
             for idx, row in enumerate(reader):
                 yield row
-        except Exception as ee:
-            logging.error(f"{ee} at row {idx}")
-            raise ee
+        except Exception as exception:
+            logging.error(f"{exception} at row {idx}")
+            raise exception
 
     def has_property(self, legacy_object, folio_prop_name: str):
         if not self.use_map:

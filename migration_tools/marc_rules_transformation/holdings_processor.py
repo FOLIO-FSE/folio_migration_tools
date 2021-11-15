@@ -5,6 +5,7 @@ import sys
 import time
 import traceback
 from datetime import datetime as dt
+from folio_uuid.folio_uuid import FolioUUID, FOLIONamespaces
 
 from jsonschema import ValidationError, validate
 from migration_tools.custom_exceptions import (
@@ -50,10 +51,6 @@ class HoldingsProcessor:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record, self.records_count)
-            if not any(folio_rec.get("formerIds", [])):
-                raise TransformationRecordFailedError(
-                    self.records_count, "Missing formerIds", self.records_count
-                )
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
                     "".join(folio_rec.get("formerIds", [])),
