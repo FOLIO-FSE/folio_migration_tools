@@ -36,3 +36,13 @@ jobs:
         python main_holdings_marc.py -h
         python main_holdings_csv.py -h
         python main_items.py -h
+    - name: clone repo_template
+      uses: actions/checkout@master
+      with:
+        repository: FOLIO-FSE/migration_repo_template
+        path: ./migration_repo_template
+    - name: run it
+      shell: bash
+      run: |
+        python main_bibs.py ./migration_repo_template https://okapi-bugfest-juniper.folio.ebsco.com fs09000000 folio --password folio --ils_flavour 001 --folio_version juniper --holdings_records False --force_utf_8 True --hrid_handling default --suppress False 
+    

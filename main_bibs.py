@@ -227,7 +227,7 @@ def main():
         worker = Worker(folio_client, folder_structure, args)
         worker.work()
     except FileNotFoundError as fne:
-        print(f"{fne}")
+        logging.error(fne)
     except TransformationProcessError as process_error:
         logging.critical(process_error)
         logging.critical("Halting...")

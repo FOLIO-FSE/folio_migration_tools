@@ -8,6 +8,8 @@ import typing
 import uuid
 import xml.etree.ElementTree as ET
 from typing import Generator, List
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 
 import pymarc
 import requests
@@ -71,7 +73,6 @@ class BibsRulesMapper(RulesMapperBase):
         self, marc_record: pymarc.Record, index_or_legacy_id
     ):
         folio_instance = {
-            "id": str(uuid.uuid4()),
             "metadata": self.folio.get_metadata_construct(),
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
@@ -215,32 +216,40 @@ class BibsRulesMapper(RulesMapperBase):
             )
         return mappings
 
-    def perform_additional_parsing(self, folio_instance, marc_record, legacy_id):
+    def perform_additional_parsing(
+        self, folio_instance: dict, marc_record: Record, legacy_ids: List[str]
+    ):
         """Do stuff not easily captured by the mapping rules"""
         folio_instance["source"] = "MARC"
         folio_instance["instanceFormatIds"] = list(
-            set(self.get_instance_format_ids(marc_record, legacy_id))
+            set(self.get_instance_format_ids(marc_record, legacy_ids))
         )
 
         folio_instance["instanceTypeId"] = self.get_instance_type_id(
-            marc_record, legacy_id
+            marc_record, legacy_ids
         )
 
         folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(
-            marc_record, legacy_id
+            marc_record, legacy_ids
         )
         if "languages" in folio_instance:
             folio_instance["languages"].extend(
-                self.get_languages(marc_record, legacy_id)
+                self.get_languages(marc_record, legacy_ids)
             )
         else:
-            folio_instance["languages"] = self.get_languages(marc_record, legacy_id)
+            folio_instance["languages"] = self.get_languages(marc_record, legacy_ids)
         folio_instance["languages"] = list(
-            self.filter_langs(folio_instance["languages"], marc_record, legacy_id)
+            self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = False
-
+        folio_instance["id"] = str(
+            FolioUUID(
+                str(self.folio_client.okapi_url),
+                FOLIONamespaces.instances,
+                str(legacy_ids[0]),
+            )
+        )
         self.handle_holdings(marc_record)
 
     def handle_holdings(self, marc_record: Record):

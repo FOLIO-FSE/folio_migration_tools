@@ -116,7 +116,7 @@ class Helper:
 
     @staticmethod
     def log_data_issue(index_or_id, message, legacy_value):
-        logging.log(26, f"DATA ISSUE\t{index_or_id}\t{message}\t{legacy_value}")
+        logging.log(26, "DATA ISSUE\t%s\t%s\t%s", index_or_id, message, legacy_value)
 
     @staticmethod
     def write_to_file(file, folio_record, pg_dump=False):
@@ -141,9 +141,8 @@ class Helper:
             req = requests.get(latest_path)
             req.raise_for_status()
             latest = json.loads(req.text)
-            # print(json.dumps(latest, indent=4))
             latest_tag = latest["tag_name"]
-            logging.info(f"Latest tag of {repo} is {latest_tag}")
+            logging.info("Latest tag of %s is %s", repo, latest_tag)
             latest_path = f"https://raw.githubusercontent.com/{owner}/{repo}/{latest_tag}/{filepath}"
             logging.info(latest_path)
             req = requests.get(latest_path)
