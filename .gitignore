@@ -1,7 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-coverage-reports/
+
 *$py.class
 .vscode/
 Pipfile.lock
@@ -105,6 +105,7 @@ ENV/
 results/
 # own stuff
 tests/test_config.json
+coverage-reports/
 tests/test_config_rules.json
 marc_xml_dump.xml
 srs.json
