@@ -22,7 +22,7 @@ class Conditions:
         mapper: RulesMapperBase,
         object_type,
         default_location_code="",
-        default_call_number_type_id="",
+        default_call_number_type_name="",
     ):
         self.default_location_code = default_location_code
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
@@ -37,7 +37,7 @@ class Conditions:
             self.setup_reference_data_for_bibs()
         else:
             self.setup_reference_data_for_items_and_holdings(
-                default_call_number_type_id
+                default_call_number_type_name
             )
         self.condition_cache = {}
 
@@ -68,7 +68,9 @@ class Conditions:
         )
         logging.info(f"Contributor type:\t{self.default_contributor_type['id']}")
 
-    def setup_reference_data_for_items_and_holdings(self, default_call_number_type_id):
+    def setup_reference_data_for_items_and_holdings(
+        self, default_call_number_type_name
+    ):
         logging.info(f"{len(self.folio.locations)}\tlocations")
         self.default_call_number_type = {}
         logging.info(f"{len(self.folio.holding_note_types)}\tholding_note_types")
@@ -89,13 +91,11 @@ class Conditions:
 
         # Set defaults
         logging.info("Defaults")
-        self.default_call_number_type_id = default_call_number_type_id
-        logging.info(f"Default Callnumber type ID:\t{self.default_call_number_type_id}")
         self.default_call_number_type = next(
             (
                 ct
                 for ct in self.folio.call_number_types
-                if ct["id"] == self.default_call_number_type_id
+                if ct["name"] == default_call_number_type_name
             ),
             None,
         )
@@ -103,13 +103,13 @@ class Conditions:
             raise TransformationProcessError(
                 "",
                 (
-                    f"No callnumber type with ID "
-                    f"{self.default_call_number_type_id} in FOLIO.\n"
+                    f"No callnumber type with name "
+                    f"{default_call_number_type_name} in FOLIO.\n"
                     "Please specify another UUID as the default Callnumber Type"
                 ),
             )
         logging.info(
-            f"Default Callnumber type Name:\t{self.default_call_number_type['name']}"
+            "Default Callnumber type Name:\t%s", self.default_call_number_type["name"]
         )
         t = self.get_ref_data_tuple_by_name(
             self.holdings_types, "holdings_types", "Unmapped"

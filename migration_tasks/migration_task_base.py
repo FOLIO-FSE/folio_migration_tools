@@ -6,7 +6,10 @@ from abc import abstractmethod
 from argparse_prompt import PromptParser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.migration_configuration import MigrationConfiguration
 
@@ -19,17 +22,23 @@ class MigrationTaskBase:
 
     def __init__(self, configuration: MigrationConfiguration):
         print("MigrationTaskBase init")
+
         self.folio_client: FolioClient = configuration.folio_client
         self.folder_structure: FolderStructure = configuration.folder_structure
         self.configuration: MigrationConfiguration = configuration
-        self.folder_structure.setup_migration_file_structure()
+        self.configuration.object_type = self.get_object_type()
+        try:
+            self.folder_structure.setup_migration_file_structure()
+            # Initiate Worker
+        except FileNotFoundError as fne:
+            logging.error(fne)
+        except TransformationProcessError as process_error:
+            logging.critical(process_error)
+            logging.critical("Halting...")
+            sys.exit()
         self.num_exeptions: int = 0
         self.setup_logging()
         self.folder_structure.log_folder_structure()
-
-    @abstractmethod
-    def setup_and_validate_configuration(self):
-        raise NotImplementedError()
 
     @abstractmethod
     def wrap_up(self):
