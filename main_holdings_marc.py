@@ -71,8 +71,6 @@ def main():
         args.time_stamp,  # pylint: disable=no-member
     )
     folder_structure.setup_migration_file_structure("holdingsrecord")
-    MainBase.setup_logging(folder_structure)
-    folder_structure.log_folder_structure()
 
     try:
         folio_client = FolioClient(

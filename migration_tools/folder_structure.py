@@ -2,10 +2,13 @@ import logging
 import sys
 from pathlib import Path
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
+
 
 class FolderStructure:
-    def __init__(self, base_path: Path, time_stamp: str):
+    def __init__(self, base_path: Path, object_type: FOLIONamespaces, time_stamp: str):
         logging.info("Setting up folder structure")
+        self.object_type: FOLIONamespaces = object_type
         self.time_stamp = time_stamp
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
@@ -15,10 +18,10 @@ class FolderStructure:
         self.data_folder = self.base_folder / "data"
         verify_folder(self.data_folder)
 
-        verify_folder(self.data_folder / "instance")
-        verify_folder(self.data_folder / "holdingsrecord")
-        verify_folder(self.data_folder / "item")
-        verify_folder(self.data_folder / "users")
+        verify_folder(self.data_folder / str(FOLIONamespaces.instances.name).lower())
+        verify_folder(self.data_folder / str(FOLIONamespaces.holdings.name).lower())
+        verify_folder(self.data_folder / str(FOLIONamespaces.items.name).lower())
+        verify_folder(self.data_folder / str(FOLIONamespaces.users.name).lower())
         self.archive_folder = self.base_folder / "archive"
         verify_folder(self.data_folder)
 
@@ -52,34 +55,35 @@ class FolderStructure:
             "Migration report file will be saved at %s", self.migration_reports_file
         )
 
-    def setup_migration_file_structure(
-        self, object_type: str, source_file_type: str = ""
-    ):
+    def setup_migration_file_structure(self, source_file_type: str = ""):
+        object_type_string = str(self.object_type.name).lower()
         if source_file_type:
             self.legacy_records_folder = self.data_folder / source_file_type
         else:
-            self.legacy_records_folder = self.data_folder / object_type
+            self.legacy_records_folder = self.data_folder / object_type_string
         verify_folder(self.legacy_records_folder)
 
         self.transformation_log_path = (
-            self.reports_folder / f"{object_type}_transformation_{self.time_stamp}.log"
+            self.reports_folder
+            / f"{object_type_string}_transformation_{self.time_stamp}.log"
         )
 
         self.transformation_extra_data_path = (
             self.results_folder
-            / f"{object_type}_transformation_{self.time_stamp}.extradata"
+            / f"{object_type_string}_transformation_{self.time_stamp}.extradata"
         )
 
         self.data_issue_file_path = (
-            self.reports_folder / f"{object_type}_data_issues_{self.time_stamp}.tsv"
+            self.reports_folder
+            / f"{object_type_string}_data_issues_{self.time_stamp}.tsv"
         )
         self.created_objects_path = (
-            self.results_folder / f"folio_{object_type}_{self.time_stamp}.json"
+            self.results_folder / f"folio_{object_type_string}_{self.time_stamp}.json"
         )
 
         self.migration_reports_file = (
             self.reports_folder
-            / f"{object_type}_transformation_report_{self.time_stamp}.md"
+            / f"{object_type_string}_transformation_report_{self.time_stamp}.md"
         )
 
         self.srs_records_path = self.results_folder / f"srs_{self.time_stamp}.json"
