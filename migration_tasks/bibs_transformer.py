@@ -29,16 +29,6 @@ class BibsTransformer(MigrationTaskBase):
     def __init__(self, configuration: MigrationConfiguration):
         configuration.object_type = FOLIONamespaces.instances
         super().__init__(configuration)
-        try:
-            self.folder_structure.setup_migration_file_structure()
-            # Initiate Worker
-        except FileNotFoundError as fne:
-            logging.error(fne)
-        except TransformationProcessError as process_error:
-            logging.critical(process_error)
-            logging.critical("Halting...")
-            sys.exit()
-
         # Old init
         self.files = [
             f
@@ -90,8 +80,6 @@ class BibsTransformer(MigrationTaskBase):
                         "File %s failed for unknown reason. Halting", file_name
                     )
                     sys.exit()
-            # wrap up
-            self.wrap_up()
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
@@ -138,8 +126,8 @@ class BibsTransformer(MigrationTaskBase):
         logging.info("Done reading %s records from file", idx + 1)
 
     @staticmethod
-    def add_arguments(parser):
-        MigrationTaskBase.add_common_arguments(parser)
+    def add_arguments(sub_parser):
+        MigrationTaskBase.add_common_arguments(sub_parser)
         flavourhelp = (
             "The kind of ILS the records are coming from and how legacy bibliographic "
             "IDs are to be handled\nOptions:\n"
@@ -153,10 +141,10 @@ class BibsTransformer(MigrationTaskBase):
             "\t990a \t- bib id in 990 $a and 001\n "
             "\tnone      \t- Use for ebooks and related records that will not need any legacy id:s\n"
         )
-        parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
+        sub_parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
         version_help = "The FOLIO release you are targeting. Valid values include:\n\t->iris\n\t->juniper\n"
-        parser.add_argument("--folio_version", default="juniper", help=version_help)
-        parser.add_argument(
+        sub_parser.add_argument("--folio_version", default="juniper", help=version_help)
+        sub_parser.add_argument(
             "--holdings_records",
             "-hold",
             help="Create holdings records based on relevant MARC fields",
@@ -173,7 +161,7 @@ class BibsTransformer(MigrationTaskBase):
             "\t\t In the absence of a 001 to derive the HRID from, the script will fall "
             "back on the default HRID handling."
         )
-        parser.add_argument(
+        sub_parser.add_argument(
             "--force_utf_8",
             "-utf8",
             help=(
@@ -183,10 +171,10 @@ class BibsTransformer(MigrationTaskBase):
             ),
             default="True",
         )
-        parser.add_argument(
+        sub_parser.add_argument(
             "--hrid_handling", "-hh", help=hrid_handling, default="default"
         )
-        parser.add_argument(
+        sub_parser.add_argument(
             "--suppress",
             "-ds",
             help="This batch of records are to be suppressed in FOLIO.",

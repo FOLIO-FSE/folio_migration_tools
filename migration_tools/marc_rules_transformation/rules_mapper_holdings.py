@@ -26,11 +26,15 @@ class RulesMapperHoldings(RulesMapperBase):
         instance_id_map,
         location_map,
         default_location_code,
-        default_call_number_type_id,
+        default_call_number_type_name,
     ):
         self.instance_id_map = instance_id_map
         self.conditions = Conditions(
-            folio, self, "holdings", default_location_code, default_call_number_type_id
+            folio,
+            self,
+            "holdings",
+            default_location_code,
+            default_call_number_type_name,
         )
         self.folio = folio
         super().__init__(folio, self.conditions)
@@ -209,7 +213,7 @@ class RulesMapperHoldings(RulesMapperBase):
         if not folio_holding.get("callNumberTypeId", ""):
             folio_holding[
                 "callNumberTypeId"
-            ] = self.conditions.default_call_number_type_id
+            ] = self.conditions.default_call_number_type["id"]
 
     def set_default_location_if_empty(self, folio_holding):
         if not folio_holding.get("permanentLocationId", ""):

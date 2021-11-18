@@ -1,9 +1,10 @@
-from folioclient import FolioClient
-import requests.exceptions
+import logging
 
+import requests.exceptions
 from argparse_prompt import PromptParser
+
+from migration_tasks import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from migration_tasks import migration_task_base
-from migration_tasks import *
 from migration_tools.migration_configuration import MigrationConfiguration
 
 
@@ -15,9 +16,9 @@ def parse_args(task_classes):
         sub_parser = subs.add_parser(task_class.__name__)
         try:
             task_class.add_arguments(sub_parser)
-        except Exception as ee:
+        except Exception as exception:
             print(task_class.__name__)
-            raise ee
+            raise exception
     return parser.parse_args()
 
 
@@ -29,6 +30,8 @@ def main():
         configuration = MigrationConfiguration(args, task_class.get_object_type())
         task_obj = task_class(configuration)
         task_obj.do_work()
+        logging.info("Work done, wrapping up")
+        task_obj.wrap_up()
     except requests.exceptions.SSLError:
         print("\nSSL error. Are you connected to the Internet and the VPN?")
 
