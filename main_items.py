@@ -330,11 +330,6 @@ def main():
         args.time_stamp,  # pylint: disable=no-member
     )
     folder_structure.setup_migration_file_structure("item")
-    MainBase.setup_logging(
-        folder_structure, args.log_level_debug  # pylint: disable=no-member
-    )
-    folder_structure.log_folder_structure()
-
     # Source data files
     files = [
         join(folder_structure.legacy_records_folder, f)
