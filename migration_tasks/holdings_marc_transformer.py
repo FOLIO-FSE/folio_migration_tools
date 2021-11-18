@@ -4,33 +4,22 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime as dt
 from os import listdir
 from os.path import isfile
 
-import requests
-from argparse_prompt import PromptParser
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient.FolioClient import FolioClient
-from migration_tools.colors import Bcolors
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.folder_structure import FolderStructure
-from migration_tools.helper import Helper
-from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from migration_tools.marc_rules_transformation.holdings_processor import (
     HoldingsProcessor,
 )
-from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
 from migration_tools.migration_configuration import MigrationConfiguration
 from pymarc import MARCReader
-from pymarc.reader import MARCReader
-from pymarc.record import Record
 
 from migration_tasks.migration_task_base import MigrationTaskBase
 
