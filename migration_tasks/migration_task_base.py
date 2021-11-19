@@ -142,15 +142,6 @@ class MigrationTaskBase:
         parser.add_argument("base_folder", help="path base folder", type=str)
         parser.add_argument("--password", help="the api users password", secure=True)
         parser.add_argument(
-            "--timestamp",
-            help=(
-                "timestamp or migration identifier. "
-                "Used to chain multiple runs together"
-            ),
-            default=time.strftime("%Y%m%d-%H%M%S"),
-            secure=False,
-        )
-        parser.add_argument(
             "--log_level_debug",
             "-debug",
             help="Set log level to debug",

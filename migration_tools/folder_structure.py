@@ -6,7 +6,9 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 class FolderStructure:
-    def __init__(self, base_path: Path, object_type: FOLIONamespaces, time_stamp: str):
+    def __init__(
+        self, base_path: Path, object_type: FOLIONamespaces, time_stamp: str = ""
+    ):
         logging.info("Setting up folder structure")
         self.object_type: FOLIONamespaces = object_type
         self.time_stamp = time_stamp
@@ -59,6 +61,9 @@ class FolderStructure:
         object_type_string = str(self.object_type.name).lower()
         if source_file_type:
             self.legacy_records_folder = self.data_folder / source_file_type
+        elif self.object_type == FOLIONamespaces.other:
+            self.legacy_records_folder = self.data_folder
+
         else:
             self.legacy_records_folder = self.data_folder / object_type_string
         verify_folder(self.legacy_records_folder)

@@ -385,6 +385,14 @@ class HoldingsCSVTransformer(MigrationTaskBase):
     def add_arguments(sub_parser):
         MigrationTaskBase.add_common_arguments(sub_parser)
         sub_parser.add_argument(
+            "timestamp",
+            help=(
+                "timestamp or migration identifier. "
+                "Used to chain multiple runs together"
+            ),
+            secure=False,
+        )
+        sub_parser.add_argument(
             "--suppress",
             "-ds",
             help="This batch of records are to be suppressed in FOLIO.",
