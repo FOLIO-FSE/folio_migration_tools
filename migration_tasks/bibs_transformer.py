@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from datetime import datetime as dt
+import time
 from os import listdir
 from os.path import isfile
 
@@ -180,6 +181,15 @@ class BibsTransformer(MigrationTaskBase):
             help="This batch of records are to be suppressed in FOLIO.",
             default=False,
             type=bool,
+        )
+        sub_parser.add_argument(
+            "--timestamp",
+            help=(
+                "timestamp or migration identifier. "
+                "Used to chain multiple runs together"
+            ),
+            default=time.strftime("%Y%m%d-%H%M%S"),
+            secure=False,
         )
 
     @staticmethod

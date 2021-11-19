@@ -116,6 +116,14 @@ class ItemsTransformer(MigrationTaskBase):
     def add_arguments(sub_parser):
         MigrationTaskBase.add_common_arguments(sub_parser)
         sub_parser.add_argument(
+            "timestamp",
+            help=(
+                "timestamp or migration identifier. "
+                "Used to chain multiple runs together"
+            ),
+            secure=False,
+        )
+        sub_parser.add_argument(
             "--default_call_number_type_name",
             help=(
                 "Name of the default callnumber type. Needs to exist "

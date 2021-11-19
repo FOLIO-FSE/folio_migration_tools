@@ -1,15 +1,14 @@
 import json
 import logging
 import os
-from argparse_prompt import PromptParser
 import time
 import traceback
 from abc import abstractmethod
-from folio_uuid import FOLIONamespaces
 from datetime import datetime
 
 import requests
 from folioclient import FolioClient
+from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from migration_tasks.migration_task_base import MigrationTaskBase
 from migration_tools.migration_configuration import MigrationConfiguration
@@ -21,27 +20,31 @@ def write_failed_batch_to_file(batch, file):
 
 
 class BatchPoster(MigrationTaskBase):
+    @staticmethod
+    def get_object_type() -> FOLIONamespaces:
+        return FOLIONamespaces.other
+
     def __init__(self, configuration: MigrationConfiguration):
         super().__init__(configuration)
         self.failed_ids = []
         self.first_batch = True
-        self.object_name = configuration.object_name
-        self.api_path = list_objects()[configuration.object_name]
+        self.object_name = self.configuration.args.object_name
+        self.api_path = list_objects()[self.object_name]
         self.failed_objects = []
-        object_name_formatted = configuration.object_name.replace(" ", "").lower()
+        object_name_formatted = self.object_name.replace(" ", "").lower()
         time_stamp = time.strftime("%Y%m%d-%H%M%S")
         self.failed_recs_path = os.path.join(
-            configuration.results_folder,
+            self.folder_structure.results_folder,
             f"failed_{object_name_formatted}_records_{time_stamp}.json",
         )
-        self.batch_size = configuration.batch_size
+        self.batch_size = self.configuration.args.batch_size
         self.processed = 0
         self.failed_batches = 0
         self.failed_records = 0
         self.processed_rows = 0
         self.users_created = 0
         self.users_updated = 0
-        self.objects_file = configuration.objects_file
+        self.objects_file = self.configuration.args.objects_file
         self.users_per_group = {}
         self.failed_fields = set()
         self.num_failures = 0
@@ -55,7 +58,7 @@ class BatchPoster(MigrationTaskBase):
             self.failed_recs_path, "w"
         ) as failed_recs_file:
             last_row = ""
-            for idx, row in enumerate(rows):
+            for num_records, row in enumerate(rows, start=1):
                 last_row = row
                 if self.processed_rows < self.start:
                     continue
@@ -63,7 +66,7 @@ class BatchPoster(MigrationTaskBase):
                     try:
                         self.processed_rows += 1
                         json_rec = json.loads(row.split("\t")[-1])
-                        if idx == 1:
+                        if num_records == 1:
                             print(json.dumps(json_rec, indent=True))
                         batch.append(json_rec)
                         if len(batch) == int(self.batch_size):
@@ -82,31 +85,45 @@ class BatchPoster(MigrationTaskBase):
                         traceback.print_exc()
                         print("=======================", flush=True)
                     except Exception as exception:
-                        logging.exception(f"{exception}")
-                        logging.error(f"Failed row: {last_row}")
+                        logging.exception("%s", exception)
+                        logging.error("Failed row: %s", last_row)
                         self.failed_batches += 1
                         self.failed_records += len(batch)
                         write_failed_batch_to_file(batch, failed_recs_file)
                         batch = []
                         self.num_failures += 0
                         if self.num_failures > 50:
-                            logging.error(f"Exceeded number of failures at row {idx}")
+                            logging.error(
+                                "Exceeded number of failures at row %s", num_records
+                            )
                             raise exception
                             # Last batch
-            self.post_batch(batch, failed_recs_file)
-        logging.info(f"Done posting {idx} records. ")
+            if any(batch):
+                self.post_batch(batch, failed_recs_file)
+        logging.info("Done posting %s records. ", (num_records))
         logging.info(
-            f"Failed records: {self.failed_records} failed records in {self.failed_batches} "
-            f"failed batches. Failed records saved to {self.failed_recs_path}"
+            (
+                "Failed records: %s failed records in %s "
+                "failed batches. Failed records saved to %s"
+            ),
+            self.failed_records,
+            self.failed_batches,
+            self.failed_recs_path,
         )
 
     def post_batch(self, batch, failed_recs_file):
         response = self.do_post(batch)
         if response.status_code == 201:
             logging.info(
-                f"Posting successful! Total rows: {self.processed_rows} Total failed: {self.failed_records} "
-                f"in {response.elapsed.total_seconds()}s "
-                f"Batch Size: {len(batch)} Request size: {get_req_size(response)} "
+                (
+                    "Posting successful! Total rows: %s Total failed: %s "
+                    "in {response.elapsed.total_seconds()}s "
+                    "Batch Size: %s Request size: %s "
+                ),
+                self.processed_rows,
+                self.failed_records,
+                len(batch),
+                get_req_size(response),
             )
         elif response.status_code == 200:
             json_report = json.loads(response.text)
@@ -116,10 +133,17 @@ class BatchPoster(MigrationTaskBase):
             if json_report.get("failedRecords", 0) > 0:
                 failed_recs_file.write(response.text)
             logging.info(
-                f"Posting successful! Total rows: {self.processed_rows} Total failed: {self.failed_records} "
-                f"created: {self.users_created} updated: {self.users_updated} "
-                f"in {response.elapsed.total_seconds()}s "
-                f"Batch Size: {len(batch)} Request size: {get_req_size(response)} "
+                (
+                    "Posting successful! Total rows: %s Total failed: %s "
+                    "created: %s updated: %s in %ss Batch Size: %s Request size: %s "
+                ),
+                self.processed_rows,
+                self.failed_records,
+                self.users_created,
+                self.users_updated,
+                response.elapsed.total_seconds(),
+                len(batch),
+                get_req_size(response),
             )
         elif response.status_code == 422:
             resp = json.loads(response.text)
@@ -152,21 +176,25 @@ class BatchPoster(MigrationTaskBase):
         )
 
     def wrap_up(self):
-        raise NotImplementedError()
+        logging.info("Done. Wrapping up")
 
     @staticmethod
     @abstractmethod
-    def add_arguments(parser: PromptParser):
-        MigrationTaskBase.add_common_arguments(parser)
-        MigrationTaskBase.add_argument(parser, "objects_file", "path data file")
-        MigrationTaskBase.add_argument(parser, "batch_size", "batch size")
-        MigrationTaskBase.add_argument(
-            parser,
-            "results_folder",
-            "Folder where failing records and logs will be stored",
+    def add_arguments(sub_parser):
+        MigrationTaskBase.add_common_arguments(sub_parser)
+        sub_parser.add_argument(
+            "--timestamp",
+            help=(
+                "timestamp or migration identifier. "
+                "Used to chain multiple runs together"
+            ),
+            default=time.strftime("%Y%m%d-%H%M%S"),
+            secure=False,
         )
+        MigrationTaskBase.add_argument(sub_parser, "objects_file", "path data file")
+        MigrationTaskBase.add_argument(sub_parser, "batch_size", "batch size")
         MigrationTaskBase.add_argument(
-            parser,
+            sub_parser,
             "object_name",
             "What objects to batch post",
             choices=list(list_objects().keys()),
