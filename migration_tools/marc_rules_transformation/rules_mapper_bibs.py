@@ -70,11 +70,18 @@ class BibsRulesMapper(RulesMapperBase):
         self.start = time.time()
 
     def perform_initial_preparation(
-        self, marc_record: pymarc.Record, index_or_legacy_id
+        self, marc_record: pymarc.Record, index_or_legacy_id, legacy_ids
     ):
         folio_instance = {
             "metadata": self.folio.get_metadata_construct(),
         }
+        folio_instance["id"] = str(
+            FolioUUID(
+                str(self.folio_client.okapi_url),
+                FOLIONamespaces.instances,
+                str(legacy_ids[-1]),
+            )
+        )
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
         self.handle_hrid(folio_instance, marc_record, index_or_legacy_id)
         if marc_record.leader[5] == "d":
@@ -97,7 +104,7 @@ class BibsRulesMapper(RulesMapperBase):
         ignored_subsequent_fields = set()
         bad_tags = set()  # "907"
         folio_instance = self.perform_initial_preparation(
-            marc_record, index_or_legacy_id
+            marc_record, index_or_legacy_id, legacy_ids
         )
         for marc_field in marc_record:
             self.report_marc_stats(
@@ -243,13 +250,6 @@ class BibsRulesMapper(RulesMapperBase):
         )
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = False
-        folio_instance["id"] = str(
-            FolioUUID(
-                str(self.folio_client.okapi_url),
-                FOLIONamespaces.instances,
-                str(legacy_ids[0]),
-            )
-        )
         self.handle_holdings(marc_record)
 
     def handle_holdings(self, marc_record: Record):
