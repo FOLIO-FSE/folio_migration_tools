@@ -6,13 +6,13 @@ import os.path
 import time
 import traceback
 from abc import abstractmethod
-from datetime import datetime as dt, timedelta
+from datetime import datetime as dt
+from datetime import timedelta
 
 import requests
 from dateutil import parser as du_parser
+from migration_tools.migration_configuration import MigrationConfiguration
 from requests import HTTPError
-
-from migration_tasks.migration_task_base import MigrationTaskBase
 
 from migration_tasks.circulation_helper import (
     CirculationHelper,
@@ -20,7 +20,7 @@ from migration_tasks.circulation_helper import (
     TransactionResult,
 )
 from migration_tasks.custom_dict import InsensitiveDictReader
-from migration_tools.migration_configuration import MigrationConfiguration
+from migration_tasks.migration_task_base import MigrationTaskBase
 
 
 class OpenLoansMigrator(MigrationTaskBase):
@@ -33,7 +33,9 @@ class OpenLoansMigrator(MigrationTaskBase):
         self.results_folder = os.path.join(self.client_folder, "results")
 
         self.service_point_id = configuration.service_point_id
-        self.circulation_helper = CirculationHelper(folio_client, self.service_point_id)
+        self.circulation_helper = CirculationHelper(
+            self.folio_client, self.service_point_id
+        )
         csv.register_dialect("tsv", delimiter="\t")
         self.valid_legacy_loans = []
         file_path = os.path.join(
