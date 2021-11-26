@@ -260,6 +260,7 @@ class BibsRulesMapper(RulesMapperBase):
             f005 = marc_record["005"].data[0:14]
             parsed_date = datetime.datetime.strptime(f005, "%Y%m%d%H%M%S").isoformat()
             folio_instance["metadata"]["updatedDate"] = parsed_date
+            self.report_legacy_mapping("005", True, True)
         except Exception as exception:
             if "005" in marc_record:
                 Helper.log_data_issue(
@@ -277,6 +278,7 @@ class BibsRulesMapper(RulesMapperBase):
             date_str_parsed = datetime.datetime.strptime(date_str, "%Y%m%d")
             folio_instance["metadata"]["createdDate"] = date_str_parsed.isoformat()
             folio_instance["catalogedDate"] = date_str_parsed.strftime("%Y-%m-%d")
+            self.report_legacy_mapping("008", True, True)
         except Exception as exception:
             if "008" in marc_record:
                 Helper.log_data_issue(
@@ -361,12 +363,12 @@ class BibsRulesMapper(RulesMapperBase):
             if match:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f"336$a -Successful matching on  {match_template} ({f336a})",
+                    f"336$a - Successful matching on  {match_template} ({f336a})",
                 )
             else:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f"336$a -Unsuccessful matching on  {match_template} ({f336a})",
+                    f"336$a - Unsuccessful matching on  {match_template} ({f336a})",
                 )
                 Helper.log_data_issue(
                     legacy_id,
@@ -380,7 +382,7 @@ class BibsRulesMapper(RulesMapperBase):
 
         if "336" in marc_record and "b" not in marc_record["336"]:
             self.migration_report.add(
-                Blurbs.RecourceTypeMapping, f"Subfield b not in 336"
+                Blurbs.RecourceTypeMapping, "Subfield b not in 336"
             )
             Helper.log_data_issue(
                 legacy_id,
@@ -397,7 +399,7 @@ class BibsRulesMapper(RulesMapperBase):
             if not t:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f'Code {marc_record["336"]["b"]} not found in FOLIO (from 336$b)',
+                    f'336$b - Code {marc_record["336"]["b"]} not found in FOLIO ()',
                 )
                 Helper.log_data_issue(
                     legacy_id,
@@ -406,7 +408,8 @@ class BibsRulesMapper(RulesMapperBase):
                 )
             else:
                 self.migration_report.add(
-                    Blurbs.RecourceTypeMapping, f"{t[1]} (from 336$b)"
+                    Blurbs.RecourceTypeMapping,
+                    f'336$b {t[1]} mapped from {marc_record["336"]["b"]}',
                 )
                 return_id = t[0]
 
@@ -471,12 +474,15 @@ class BibsRulesMapper(RulesMapperBase):
         all_338s = marc_record.get_fields("338")
         for fidx, f in enumerate(all_338s):
             source = f["2"] if "2" in f else "Not set"
-            self.migration_report.add(
-                Blurbs.InstanceFormat,
-                f"338$2 (Source) is set to {source}. "
-                "Everything starting with rdacarrier will get mapped.",
-            )
-            if source.strip().startswith("rdacarrier"):
+            if not source.strip().startswith("rdacarrier"):
+                self.migration_report.add(
+                    Blurbs.InstanceFormat,
+                    (
+                        "InstanceFormat not mapped since 338$2 (Source) "
+                        f"is set to {source}. "
+                    ),
+                )
+            else:
                 if "b" not in f and "a" in f:
                     self.migration_report.add(
                         Blurbs.InstanceFormat,
@@ -557,6 +563,7 @@ class BibsRulesMapper(RulesMapperBase):
             )
             self.hrid_counter += 1
         elif self.hrid_handling == "001":
+            self.report_legacy_mapping("001", True, True)
             value = marc_record["001"].value()
             if value in self.unique_001s:
                 self.migration_report.add(
