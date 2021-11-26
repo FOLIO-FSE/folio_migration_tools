@@ -1,5 +1,6 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
+import datetime
 import json
 import logging
 import sys
@@ -247,9 +248,42 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["languages"] = list(
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
+        self.set_cataloged_date(marc_record, folio_instance, legacy_ids)
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = False
         self.handle_holdings(marc_record)
+
+    def set_005_as_updated_date(
+        self, marc_record: Record, folio_instance: dict, legacy_ids
+    ):
+        try:
+            f005 = marc_record["005"].data[0:14]
+            parsed_date = datetime.datetime.strptime(f005, "%Y%m%d%H%M%S").isoformat()
+            folio_instance["metadata"]["updatedDate"] = parsed_date
+        except Exception as exception:
+            if "005" in marc_record:
+                Helper.log_data_issue(
+                    legacy_ids,
+                    f"Could not parse Last transaction date from 005 {exception}",
+                    marc_record["005"].data,
+                )
+
+    def set_cataloged_date(self, marc_record: Record, folio_instance: dict, legacy_ids):
+        try:
+            first_six = "".join(marc_record["008"].data[0:6])
+            date_str = (
+                f"19{first_six}" if int(first_six[0:2]) > 69 else f"20{first_six}"
+            )
+            date_str_parsed = datetime.datetime.strptime(date_str, "%Y%m%d")
+            folio_instance["metadata"]["createdDate"] = date_str_parsed.isoformat()
+            folio_instance["catalogedDate"] = date_str_parsed.strftime("%Y-%m-%d")
+        except Exception as exception:
+            if "008" in marc_record:
+                Helper.log_data_issue(
+                    legacy_ids,
+                    f"Could not parse cat date from 008 {exception}",
+                    marc_record["008"].data,
+                )
 
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:

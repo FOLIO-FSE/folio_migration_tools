@@ -4,7 +4,7 @@ import os
 from re import escape
 from unittest.mock import Mock, patch
 from folio_uuid import FolioUUID, FOLIONamespaces
-
+import datetime
 import pymarc
 from migration_tools import mapper_base
 from migration_tools.mapping_file_transformation import mapping_file_mapper_base
@@ -22,6 +22,27 @@ def func(x):
 
 def test_answer2():
     assert func(4) == 5
+
+
+def test_datetime_from_005():
+    f005_1 = "19940223151047.0"
+    parsed_date = datetime.datetime.strptime(f005_1[0:14], "%Y%m%d%H%M%S").isoformat()
+    assert len(f005_1[0:14]) == 14
+    assert parsed_date == "1994-02-23T15:10:47"
+
+
+def test_date_from_008():
+    f008 = "170309s2017\\\\quc\\\\\o\\\\\000\0\fre\d"
+    first_six = f008[0:6]
+    date_str = f"19{first_six}" if int(first_six[0:2]) > 69 else f"20{first_six}"
+    date_str_parsed = datetime.datetime.strptime(date_str, "%Y%m%d").strftime(
+        "%Y-%m-%d"
+    )
+    print(datetime.datetime.strptime(date_str, "%Y%m%d").isoformat())
+
+    assert date_str_parsed == "2017-03-09"
+    assert len(first_six) == 6
+    assert date_str == "20170309"
 
 
 def test_deterministic_uuid_generation_holdings():
@@ -202,5 +223,5 @@ def test_ude2c():
             print(reader.current_exception)
             reader2 = MARCReader(chunk)
             rec2 = next(reader2)
-            print(rec2)
+            # print(rec2)
             # assert rec2.title
