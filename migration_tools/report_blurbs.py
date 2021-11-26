@@ -2,10 +2,11 @@ from enum import Enum
 from typing import NamedTuple
 
 
-class KindOfBlurb(Enum):
+class ReportSection(Enum):
     GENERAL = "General statistics"
     LIBRARY_ACTION = "Library action needed"
-    ADDITIONAL_INFORMATION = "Additional indformation"
+    ADDITIONAL_INFORMATION = "Additional information"
+    TECHNICAL = "Technical information"
 
 
 class Blurbs(NamedTuple):

@@ -414,7 +414,7 @@ class BibsRulesMapper(RulesMapperBase):
                 match = next(
                     f
                     for f in self.folio.instance_formats
-                    if f["name"] == match_template
+                    if f["name"].lower().replace(" ", "") == match_template
                 )
                 self.migration_report.add(
                     Blurbs.InstanceFormat,
