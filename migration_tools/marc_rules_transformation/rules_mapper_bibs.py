@@ -247,6 +247,7 @@ class BibsRulesMapper(RulesMapperBase):
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
         self.set_cataloged_date(marc_record, folio_instance, legacy_ids)
+        self.set_005_as_updated_date(marc_record, folio_instance, legacy_ids)
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = False
         self.handle_holdings(marc_record)
