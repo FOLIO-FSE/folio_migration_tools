@@ -416,7 +416,17 @@ def main():
                 if index % 100000 == 0:
                     print(f"{index} instance ids loaded to map", end="\r")
                 map_object = json.loads(json_string)
-                instance_id_map[map_object["legacy_id"]] = map_object
+                if map_object["legacy_id"] not in instance_id_map:
+                    instance_id_map[map_object["legacy_id"]] = map_object
+                else:
+                    Helper.log_data_issue(
+                        map_object["legacy_id"],
+                        "Duplicate legacy id in ID map",
+                        map_object["legacy_id"],
+                    )
+                    logging.error(
+                        "Duplicate legacy id in ID map: %s", map_object["legacy_id"]
+                    )
             logging.info("Loaded %s migrated instance IDs", index)
             holdings_map = json.load(holdings_mapper_f)
             logging.info(
