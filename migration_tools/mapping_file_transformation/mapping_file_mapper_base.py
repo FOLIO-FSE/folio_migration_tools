@@ -89,10 +89,12 @@ class MappingFileMapperBase(MapperBase):
                     )
 
         logging.info(
-            f"Mapped legacy fields:\n{json.dumps(list(legacy_fields), indent=4, sort_keys=True)}"
+            "Mapped legacy fields:\n%s",
+            json.dumps(list(legacy_fields), indent=4, sort_keys=True),
         )
         logging.info(
-            f"Mapped FOLIO fields:\n{json.dumps(self.folio_keys, indent=4, sort_keys=True)}"
+            "Mapped FOLIO fields:\n%s",
+            json.dumps(self.folio_keys, indent=4, sort_keys=True),
         )
         csv.register_dialect("tsv", delimiter="\t")
 
@@ -477,7 +479,7 @@ class MappingFileMapperBase(MapperBase):
             for idx, row in enumerate(reader):
                 yield row
         except Exception as exception:
-            logging.error(f"{exception} at row {idx}")
+            logging.error("%s at row %s", exception, idx)
             raise exception
 
     def has_property(self, legacy_object, folio_prop_name: str):
