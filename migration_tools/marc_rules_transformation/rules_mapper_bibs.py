@@ -187,8 +187,6 @@ class BibsRulesMapper(RulesMapperBase):
                     f"map_field_according_to_mapping {marc_field.tag} {marc_field.format_field()} {json.dumps(mappings)}"
                 )
                 raise ee
-        else:
-            self.migration_report.add(Blurbs.MappingsNotFoundForField, marc_field.tag)
 
     def report_marc_stats(
         self, marc_field, bad_tags, index_or_legacy_id, ignored_subsequent_fields
