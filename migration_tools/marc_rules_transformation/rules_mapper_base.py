@@ -113,7 +113,6 @@ class RulesMapperBase(MapperBase):
                 f"19{first_six}" if int(first_six[0:2]) > 69 else f"20{first_six}"
             )
             date_str_parsed = datetime.datetime.strptime(date_str, "%Y%m%d")
-            folio_object["metadata"]["createdDate"] = date_str_parsed.isoformat()
             if "title" in folio_object:  # only instance has titles
                 folio_object["catalogedDate"] = date_str_parsed.strftime("%Y-%m-%d")
         except Exception as exception:

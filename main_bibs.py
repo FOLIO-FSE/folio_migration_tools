@@ -167,11 +167,9 @@ def parse_args():
     date_help = (
         "\n"
         "False: (Default)\n"
-        "\tmetadata.createdDate and metadata.updatedDate will be set to UTC NOW.\n"
+        "\tCatalog Date will be empty\n"
         "True:\n"
-        "\tSetting this to true will enable the following for Instances:\n"
-        "\t1. parse 005 to metadata.updatedDate\n"
-        "\t2. add catalogedDate and metadata.createdDate from 008[00-05]"
+        "\tSetting this to true will add catalogedDate from 008[00-05]"
     )
     parser.add_argument("--dates_from_marc", help=date_help, default=False, type=bool)
     hrid_handling = (

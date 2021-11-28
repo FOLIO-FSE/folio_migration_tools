@@ -249,7 +249,6 @@ class BibsRulesMapper(RulesMapperBase):
         )
         if self.set_dates_from_marc:
             self.use_008_for_dates(marc_record, folio_instance, legacy_ids)
-            self.set_005_as_updated_date(marc_record, folio_instance, legacy_ids)
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = False
         self.handle_holdings(marc_record)
