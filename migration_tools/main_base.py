@@ -1,10 +1,12 @@
 import logging
 import logging.handlers
 import sys
+import json
 import time
 
 from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.folder_structure import FolderStructure
+from migration_tools.helper import Helper
 
 
 class MainBase:
@@ -32,6 +34,28 @@ class MainBase:
             logging.info(
                 f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} "
             )
+
+    @staticmethod
+    def load_instance_id_map(instance_id_map_file):
+        instance_id_map = {}
+        for index, json_string in enumerate(instance_id_map_file, start=1):
+            # {"legacy_id", "folio_id","instanceLevelCallNumber"}
+            if index % 100000 == 0:
+                print(f"{index} instance ids loaded to map", end="\r")
+            map_object = json.loads(json_string)
+            if map_object["legacy_id"] not in instance_id_map:
+                instance_id_map[map_object["legacy_id"]] = map_object
+            else:
+                Helper.log_data_issue(
+                    map_object["legacy_id"],
+                    "Duplicate legacy id in ID map",
+                    map_object["legacy_id"],
+                )
+                logging.error(
+                    "Duplicate legacy id in ID map: %s", map_object["legacy_id"]
+                )
+        logging.info("Loaded %s migrated instance IDs", index)
+        return instance_id_map
 
     @staticmethod
     def setup_logging(folder_structure: FolderStructure = None, debug=False):
