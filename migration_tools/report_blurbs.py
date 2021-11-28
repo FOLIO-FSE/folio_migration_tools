@@ -192,6 +192,6 @@ class Blurbs(NamedTuple):
     StaffOnlyViaIndicator = ("Set note to staff only via indicator", "")
     PossibleCleaningTasks = ("Possible cleaning tasks", "")
     HoldingsStatementsParsing = (
-        "Parsed Holdings statements from 58X/68X combinations",
+        "Parsed Holdings statements from 85X/86X combinations",
         "",
     )
