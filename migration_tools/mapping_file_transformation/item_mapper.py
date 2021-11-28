@@ -3,6 +3,7 @@ import logging
 import sys
 from datetime import datetime
 from typing import Dict, List
+from uuid import uuid4
 
 from folioclient import FolioClient
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -10,6 +11,7 @@ from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from migration_tools.helper import Helper
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.report_blurbs import Blurbs
 
@@ -40,7 +42,7 @@ class ItemMapper(MappingFileMapperBase):
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
-
+        self.unique_barcodes = set()
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         self.status_mapping = {}
@@ -159,7 +161,19 @@ class ItemMapper(MappingFileMapperBase):
         elif folio_prop_name == "status.name":
             return self.transform_status(legacy_value)
         elif folio_prop_name == "barcode":
-            return next((v for v in legacy_values if v), "")
+            barcode = next((v for v in legacy_values if v), "")
+            if barcode.strip() and barcode in self.unique_barcodes:
+                Helper.log_data_issue(
+                    index_or_id, "Duplicate barcode", "-".join(legacy_values)
+                )
+                logging.error("Duplicate barcode found")
+                self.migration_report.add_general_statistics("Duplicate barcodes")
+                return f"{barcode}-{uuid4()}"
+            else:
+                if barcode.strip():
+                    self.unique_barcodes.add(barcode)
+                return barcode
+
         elif folio_prop_name == "status.date":
             return datetime.utcnow().isoformat()
         elif folio_prop_name == "temporaryLoanTypeId":
