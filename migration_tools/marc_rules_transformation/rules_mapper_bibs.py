@@ -38,6 +38,7 @@ class BibsRulesMapper(RulesMapperBase):
     ):
         super().__init__(folio_client, Conditions(folio_client, self, "bibs"))
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
+        self.set_dates_from_marc = args.dates_from_marc
         self.folio = folio_client
         self.folio_version = args.folio_version
         self.record_status = {}
@@ -246,45 +247,12 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["languages"] = list(
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
-        self.set_cataloged_date(marc_record, folio_instance, legacy_ids)
-        self.set_005_as_updated_date(marc_record, folio_instance, legacy_ids)
+        if self.set_dates_from_marc:
+            self.use_008_for_dates(marc_record, folio_instance, legacy_ids)
+            self.set_005_as_updated_date(marc_record, folio_instance, legacy_ids)
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = False
         self.handle_holdings(marc_record)
-
-    def set_005_as_updated_date(
-        self, marc_record: Record, folio_instance: dict, legacy_ids
-    ):
-        try:
-            f005 = marc_record["005"].data[0:14]
-            parsed_date = datetime.datetime.strptime(f005, "%Y%m%d%H%M%S").isoformat()
-            folio_instance["metadata"]["updatedDate"] = parsed_date
-            self.report_legacy_mapping("005", True, True)
-        except Exception as exception:
-            if "005" in marc_record:
-                Helper.log_data_issue(
-                    legacy_ids,
-                    f"Could not parse Last transaction date from 005 {exception}",
-                    marc_record["005"].data,
-                )
-
-    def set_cataloged_date(self, marc_record: Record, folio_instance: dict, legacy_ids):
-        try:
-            first_six = "".join(marc_record["008"].data[0:6])
-            date_str = (
-                f"19{first_six}" if int(first_six[0:2]) > 69 else f"20{first_six}"
-            )
-            date_str_parsed = datetime.datetime.strptime(date_str, "%Y%m%d")
-            folio_instance["metadata"]["createdDate"] = date_str_parsed.isoformat()
-            folio_instance["catalogedDate"] = date_str_parsed.strftime("%Y-%m-%d")
-            self.report_legacy_mapping("008", True, True)
-        except Exception as exception:
-            if "008" in marc_record:
-                Helper.log_data_issue(
-                    legacy_ids,
-                    f"Could not parse cat date from 008 {exception}",
-                    marc_record["008"].data,
-                )
 
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:
@@ -562,7 +530,6 @@ class BibsRulesMapper(RulesMapperBase):
             )
             self.hrid_counter += 1
         elif self.hrid_handling == "001":
-            self.report_legacy_mapping("001", True, True)
             value = marc_record["001"].value()
             if value in self.unique_001s:
                 self.migration_report.add(

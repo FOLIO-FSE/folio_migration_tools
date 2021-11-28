@@ -39,6 +39,12 @@ def parse_args():
         help="UUID of the default callnumber type",
         default="95467209-6d7b-468b-94df-0f5d7ad2747d",
     )
+    date_help = (
+        "Setting this to true will enable the following for Holdingsrecords:\n"
+        "\t1. parse 005 to metadata.updatedDate\n"
+        "\t2. add metadata.createdDate from 008[00-05]"
+    )
+    parser.add_argument("--dates_from_marc", help=date_help, default=False, type=bool)
     parser.add_argument(
         "--suppress",
         "-ds",
@@ -119,6 +125,7 @@ def main():
             location_map,
             rules_file["defaultLocationCode"],
             args.default_call_number_type_id,
+            args,
         )
         mapper.mappings = rules_file["rules"]
 

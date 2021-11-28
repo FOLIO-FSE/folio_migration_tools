@@ -164,6 +164,12 @@ def parse_args():
         default=False,
         type=bool,
     )
+    date_help = (
+        "Setting this to true will enable the following for Instances:\n"
+        "\t1. parse 005 to metadata.updatedDate\n"
+        "\t2. add catalogedDate and metadata.createdDate from 008[00-05]"
+    )
+    parser.add_argument("--dates_from_marc", help=date_help, default=False, type=bool)
     hrid_handling = (
         "HRID Handling\n"
         "This overrides any HRID/001 setting from the mapping rules\n"

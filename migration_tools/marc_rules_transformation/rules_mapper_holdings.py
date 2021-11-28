@@ -27,7 +27,9 @@ class RulesMapperHoldings(RulesMapperBase):
         location_map,
         default_location_code,
         default_call_number_type_id,
+        args,
     ):
+        self.set_dates_from_marc = args.dates_from_marc
         self.instance_id_map = instance_id_map
         self.conditions = Conditions(
             folio, self, "holdings", default_location_code, default_call_number_type_id
@@ -115,6 +117,9 @@ class RulesMapperHoldings(RulesMapperBase):
         self, marc_record: Record, folio_holding, legacy_ids: List[str]
     ):
         """Perform additional tasks not easily handled in the mapping rules"""
+        if self.set_dates_from_marc:
+            self.set_005_as_updated_date(marc_record, folio_holding, legacy_ids)
+            self.use_008_for_dates(marc_record, folio_holding, legacy_ids)
         self.set_holdings_type(marc_record, folio_holding, legacy_ids)
         self.set_default_call_number_type_if_empty(folio_holding)
         self.set_default_location_if_empty(folio_holding)
