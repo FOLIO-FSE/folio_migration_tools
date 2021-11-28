@@ -166,7 +166,7 @@ def parse_args():
     )
     date_help = (
         "\n"
-        "False:\n"
+        "False: (Default)\n"
         "\tmetadata.createdDate and metadata.updatedDate will be set to UTC NOW.\n"
         "True:\n"
         "\tSetting this to true will enable the following for Instances:\n"
