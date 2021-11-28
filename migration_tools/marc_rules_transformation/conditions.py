@@ -491,7 +491,7 @@ class Conditions:
                 Blurbs.CallNumberTypeMapping,
                 (
                     f'Unhandled call number type in ind1: "{marc_field.indicator1}". '
-                    " Returning default Callnumber Type"
+                    f' Returning default Callnumber type: {self.default_call_number_type["name"]}'
                 ),
             )
             return self.default_call_number_type["id"]
@@ -507,7 +507,10 @@ class Conditions:
 
         self.mapper.migration_report.add(
             Blurbs.CallNumberTypeMapping,
-            "Mapping failed. Setting default CallNumber type.",
+            (
+                "Mapping failed. Setting default CallNumber type: "
+                f'{self.default_call_number_type["name"]}'
+            ),
         )
 
         return self.default_call_number_type["id"]
