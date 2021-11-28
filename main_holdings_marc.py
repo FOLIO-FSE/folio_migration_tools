@@ -40,7 +40,11 @@ def parse_args():
         default="95467209-6d7b-468b-94df-0f5d7ad2747d",
     )
     date_help = (
-        "Setting this to true will enable the following for Holdingsrecords:\n"
+        "\n"
+        "False:\n"
+        "\tmetadata.createdDate and metadata.updatedDate will be set to UTC NOW.\n"
+        "True:\n"
+        "\tSetting this to true will enable the following for Instances:\n"
         "\t1. parse 005 to metadata.updatedDate\n"
         "\t2. add metadata.createdDate from 008[00-05]"
     )
