@@ -323,13 +323,6 @@ def parse_args():
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("--password", help="the api users password", secure=True)
 
-    parser.add_argument(
-        "--suppress",
-        "-ds",
-        help="This batch of records are to be suppressed in FOLIO.",
-        default=False,
-        type=bool,
-    )
     flavourhelp = (
         "What criterias do you want to use when merging holdings?\t "
         "All these parameters need to be the same in order to become "
