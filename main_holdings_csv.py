@@ -115,7 +115,7 @@ class Worker(MainBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of Legacy items in file"
+                    "Number of rows in legacy data file file(s)"
                 )
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
@@ -226,7 +226,7 @@ class Worker(MainBase):
             self.holdings[new_holding_key] = folio_holding
         else:
             self.mapper.migration_report.add_general_statistics(
-                "Holdings already created from Item"
+                "Holdings already created from rows in file(s)"
             )
             self.merge_holding(new_holding_key, existing_holding, folio_holding)
 
@@ -248,7 +248,7 @@ class Worker(MainBase):
 
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
-                        "Holdings Records Written to disk"
+                        "Holdings Records written to disk"
                     )
             with open(
                 self.folder_structure.holdings_id_map_path, "w"

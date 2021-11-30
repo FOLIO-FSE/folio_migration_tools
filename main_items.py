@@ -237,7 +237,7 @@ class Worker(MainBase):
                     f"Number of Legacy items in {file_name}",
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of Legacy items in total"
+                    "Number of legacy items in total"
                 )
                 self.print_progress(idx, start)
                 records_in_file = idx + 1
