@@ -1,3 +1,4 @@
+import enum
 import logging
 import os
 import sys
@@ -5,41 +6,68 @@ from datetime import datetime as dt
 import time
 from os import listdir
 from os.path import isfile
+from migration_tools.library_configuration import (
+    IlsFlavour,
+    FolioRelease,
+    FileDefinition,
+)
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+import pydantic
 from migration_tools.colors import Bcolors
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    IlsFlavour,
+    LibraryConfiguration,
+    HridHandling,
+)
 from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from migration_tools.migration_configuration import MigrationConfiguration
 from pymarc import MARCReader
 from pymarc.record import Record
+from datetime import datetime
+from typing import List, Optional
+from pydantic import BaseModel
 
 from migration_tasks.migration_task_base import MigrationTaskBase
 
 
 class BibsTransformer(MigrationTaskBase):
+    class TaskConfiguration(BaseModel):
+        name: str
+        migration_task_type: str
+        use_tenant_mapping_rules: bool
+        hrid_handling: HridHandling
+        files: List[FileDefinition]
+        ils_flavour: IlsFlavour
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.instances
 
-    def __init__(self, configuration: MigrationConfiguration):
-        configuration.object_type = FOLIONamespaces.instances
-        super().__init__(configuration)
+    def __init__(
+        self,
+        # configuration: MigrationConfiguration,
+        task_config: TaskConfiguration,
+        library_config: LibraryConfiguration,
+    ):
+
+        super().__init__(library_config)
+        self.task_config = task_config
         # Old init
-        self.files = [
-            f
-            for f in listdir(self.folder_structure.legacy_records_folder)
-            if isfile(os.path.join(self.folder_structure.legacy_records_folder, f))
-        ]
+        self.files = [f for f in self.task_config.files if isfile(f.path)]
+        print(self.files)
         logging.info("# of files to process: %s", len(self.files))
         for file_path in self.files:
             logging.info("\t%s", file_path)
-        self.mapper = BibsRulesMapper(self.folio_client, self.configuration.args)
+        self.mapper = BibsRulesMapper(self.folio_client, library_config, task_config)
         self.processor = None
         self.bib_ids = set()
         logging.info("Init done")
@@ -54,31 +82,25 @@ class BibsTransformer(MigrationTaskBase):
                 self.folio_client,
                 created_records_file,
                 self.folder_structure,
-                self.configuration.args,
             )
-            for file_name in self.files:
+            for file_obj in self.files:
                 try:
                     with open(
-                        self.folder_structure.legacy_records_folder / file_name,
+                        file_obj.path,
                         "rb",
                     ) as marc_file:
                         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                         reader.hide_utf8_warnings = True
-                        if self.configuration.args.force_utf_8 == "True":
-                            logging.info("FORCE UTF-8 is set to TRUE")
-                            reader.force_utf8 = True
-                        else:
-                            logging.info("FORCE UTF-8 is set to FALSE")
-                            reader.force_utf8 = False
-                        logging.info("running %s", file_name)
-                        self.read_records(reader, file_name)
+                        reader.force_utf8 = False
+                        logging.info("running %s", file_obj.path)
+                        self.read_records(reader, file_obj)
                 except TransformationProcessError as tpe:
                     logging.critical(tpe)
                     sys.exit()
                 except Exception:
-                    logging.exception(file_name, stack_info=True)
+                    logging.exception(file_obj, stack_info=True)
                     logging.critical(
-                        "File %s failed for unknown reason. Halting", file_name
+                        "File %s failed for unknown reason. Halting", file_obj.path
                     )
                     sys.exit()
 
@@ -101,7 +123,7 @@ class BibsTransformer(MigrationTaskBase):
             self.folder_structure.migration_reports_file.name,
         )
 
-    def read_records(self, reader, file_name):
+    def read_records(self, reader, source_file: FileDefinition):
         for idx, record in enumerate(reader):
             self.mapper.migration_report.add_general_statistics(
                 "Records in file before parsing"
@@ -112,7 +134,7 @@ class BibsTransformer(MigrationTaskBase):
                         "Records with encoding errors - parsing failed",
                     )
                     raise TransformationRecordFailedError(
-                        f"Index in {file_name}:{idx}",
+                        f"Index in {source_file.path}:{idx}",
                         f"MARC parsing error: {reader.current_exception}",
                         reader.current_chunk,
                     )
@@ -121,7 +143,7 @@ class BibsTransformer(MigrationTaskBase):
                     self.mapper.migration_report.add_general_statistics(
                         "Records successfully parsed from MARC21",
                     )
-                    self.processor.process_record(idx, record, False)
+                    self.processor.process_record(idx, record, source_file.suppressed)
             except TransformationRecordFailedError as error:
                 error.log_it()
         logging.info("Done reading %s records from file", idx + 1)
@@ -145,13 +167,7 @@ class BibsTransformer(MigrationTaskBase):
         sub_parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
         version_help = "The FOLIO release you are targeting. Valid values include:\n\t->iris\n\t->juniper\n"
         sub_parser.add_argument("--folio_version", default="juniper", help=version_help)
-        sub_parser.add_argument(
-            "--holdings_records",
-            "-hold",
-            help="Create holdings records based on relevant MARC fields",
-            default=False,
-            type=bool,
-        )
+
         hrid_handling = (
             "HRID Handling\n"
             "This overrides any HRID/001 setting from the mapping rules\n"

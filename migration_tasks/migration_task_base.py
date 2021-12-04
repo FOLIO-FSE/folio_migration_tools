@@ -6,6 +6,7 @@ from abc import abstractmethod
 from argparse_prompt import PromptParser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
+from migration_tools import library_configuration
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -20,13 +21,22 @@ class MigrationTaskBase:
     def get_object_type() -> FOLIONamespaces:
         raise NotImplementedError()
 
-    def __init__(self, configuration: MigrationConfiguration):
+    def __init__(
+        self, library_configuration: library_configuration.LibraryConfiguration
+    ):
         print("MigrationTaskBase init")
+        self.folio_client: FolioClient = FolioClient(
+            library_configuration.okapi_url,
+            library_configuration.tenant_id,
+            library_configuration.okapi_username,
+            library_configuration.okapi_password,
+        )
+        self.folder_structure: FolderStructure = FolderStructure(
+            library_configuration.base_folder, self.get_object_type()
+        )
 
-        self.folio_client: FolioClient = configuration.folio_client
-        self.folder_structure: FolderStructure = configuration.folder_structure
-        self.configuration: MigrationConfiguration = configuration
-        self.configuration.object_type = self.get_object_type()
+        self.library_configuration = library_configuration
+        self.object_type = self.get_object_type()
         try:
             self.folder_structure.setup_migration_file_structure()
             # Initiate Worker
@@ -39,6 +49,7 @@ class MigrationTaskBase:
         self.num_exeptions: int = 0
         self.setup_logging()
         self.folder_structure.log_folder_structure()
+        print("MigrationTaskBase init done")
 
     @abstractmethod
     def wrap_up(self):
@@ -49,18 +60,11 @@ class MigrationTaskBase:
         raise NotImplementedError
 
     @staticmethod
-    @abstractmethod
-    def add_arguments(sub_parser):
-        """Add arguments needed for a specific migration task. In this method
-        call the add_argument method"""
-        raise NotImplementedError
-
-    @staticmethod
     def add_argument(parser, destination, help, **kwargs):
         parser.add_argument(dest=destination, help=help, **kwargs)
 
     def setup_logging(self):
-        debug = self.configuration.log_level_debug
+        debug = self.library_configuration.log_level_debug
         DATA_OUTPUT_LVL_NUM = 25
         logging.addLevelName(DATA_OUTPUT_LVL_NUM, "DATA_OUTPUT")
 
@@ -136,18 +140,12 @@ class MigrationTaskBase:
 
     @staticmethod
     def add_common_arguments(parser: PromptParser):
-        parser.add_argument("okapi_url", help="OKAPI base url")
+
+        """parser.add_argument("okapi_url", help="OKAPI base url")
         parser.add_argument("tenant_id", help="id of the FOLIO tenant.")
         parser.add_argument("username", help="the api user")
         parser.add_argument("base_folder", help="path base folder", type=str)
-        parser.add_argument("--password", help="the api users password", secure=True)
-        parser.add_argument(
-            "--log_level_debug",
-            "-debug",
-            help="Set log level to debug",
-            default=False,
-            type=bool,
-        )
+        parser.add_argument("--password", help="the api users password", secure=True)"""
 
     def log_and_exit_if_too_many_errors(
         self, error: TransformationRecordFailedError, idx

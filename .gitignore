@@ -112,3 +112,4 @@ srs.json
 srs_marc_records.json
 srs_raw_records.json
 coverage-reports/coverage-1.xml
+tests/test_data/bibsTransformation.json
