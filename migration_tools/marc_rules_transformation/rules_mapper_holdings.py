@@ -25,7 +25,6 @@ class RulesMapperHoldings(RulesMapperBase):
         folio,
         instance_id_map,
         location_map,
-        default_location_code,
         default_call_number_type_name,
     ):
         self.instance_id_map = instance_id_map
@@ -33,7 +32,6 @@ class RulesMapperHoldings(RulesMapperBase):
             folio,
             self,
             "holdings",
-            default_location_code,
             default_call_number_type_name,
         )
         self.folio = folio

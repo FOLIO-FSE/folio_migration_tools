@@ -22,8 +22,11 @@ class MigrationTaskBase:
         raise NotImplementedError()
 
     def __init__(
-        self, library_configuration: library_configuration.LibraryConfiguration
+        self,
+        library_configuration: library_configuration.LibraryConfiguration,
+        task_configuration,
     ):
+
         print("MigrationTaskBase init")
         self.folio_client: FolioClient = FolioClient(
             library_configuration.okapi_url,
@@ -32,7 +35,10 @@ class MigrationTaskBase:
             library_configuration.okapi_password,
         )
         self.folder_structure: FolderStructure = FolderStructure(
-            library_configuration.base_folder, self.get_object_type()
+            library_configuration.base_folder,
+            self.get_object_type(),
+            task_configuration.name,
+            library_configuration.iteration_identifier,
         )
 
         self.library_configuration = library_configuration

@@ -11,7 +11,7 @@ class HridHandling(str, Enum):
 
 
 class FileDefinition(BaseModel):
-    path: str
+    file_name: str
     suppressed: Optional[bool] = False
 
 
@@ -43,3 +43,5 @@ class LibraryConfiguration(BaseModel):
     library_name: str
     log_level_debug: bool
     folio_release: FolioRelease
+    iteration_identifier: str
+    add_time_stamp_to_file_names: Optional[bool] = True

@@ -2,6 +2,7 @@ import csv
 import json
 import logging
 from abc import abstractmethod
+from pathlib import Path
 from uuid import UUID
 
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
@@ -469,8 +470,8 @@ class MappingFileMapperBase(MapperBase):
                 folio_object[prop] = mapped_prop
             self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
 
-    def get_objects(self, source_file, file_name: str):
-        if file_name.endswith("tsv"):
+    def get_objects(self, source_file, file_name: Path):
+        if str(file_name).endswith("tsv"):
             reader = csv.DictReader(source_file, dialect="tsv")
         else:
             reader = csv.DictReader(source_file)

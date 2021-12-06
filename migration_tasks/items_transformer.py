@@ -10,15 +10,25 @@ import uuid
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic.main import BaseModel
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+
+from migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    HridHandling,
+    IlsFlavour,
+    LibraryConfiguration,
+)
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import FileDefinition, HridHandling
 from migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -32,21 +42,48 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
 class ItemsTransformer(MigrationTaskBase):
+    class TaskConfiguration(BaseModel):
+        name: str
+        migration_task_type: str
+        hrid_handling: HridHandling
+        files: List[FileDefinition]
+        items_mapping_file_name: str
+        location_map_file_name: str
+        default_call_number_type_name: str
+        temp_location_map_file_name: Optional[str] = ""
+        material_types_map_file_name: str
+        loan_types_map_file_name: str
+        temp_loan_types_map_file_name: Optional[str] = ""
+        statistical_codes_map_file_name: str
+        item_statuses_map_file_name: str
+        call_number_type_map_file_name: str
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.items
 
-    def __init__(self, configuration: MigrationConfiguration):
+    def __init__(
+        self,
+        # configuration: MigrationConfiguration,
+        task_config: TaskConfiguration,
+        library_config: LibraryConfiguration,
+    ):
         csv.register_dialect("tsv", delimiter="\t")
-        super().__init__(configuration)
-        self.source_files = [
-            join(self.folder_structure.legacy_records_folder, f)
-            for f in listdir(self.folder_structure.legacy_records_folder)
-            if isfile(join(self.folder_structure.legacy_records_folder, f))
+        super().__init__(library_config, task_config)
+        self.task_config = task_config
+        self.files = [
+            f
+            for f in self.task_config.files
+            if isfile(self.folder_structure.legacy_records_folder / f.file_name)
         ]
+        if not any(self.files):
+            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            raise TransformationProcessError(
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+            )
         logging.info("Files to process:")
-        for filename in self.source_files:
-            logging.info("\t%s", filename)
+        for filename in self.files:
+            logging.info("\t%s", filename.file_name)
 
         self.total_records = 0
         self.folio_keys = []
@@ -58,13 +95,17 @@ class ItemsTransformer(MigrationTaskBase):
         if "statisticalCodes" in self.folio_keys:
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
-                self.folder_structure.statistical_codes_map_path,
+                self.folder_structure.mapping_files_folder
+                / self.task_config.statistical_codes_map_file_name,
                 False,
             )
         else:
             statcode_mapping = None
 
-        if self.folder_structure.temp_loan_type_map_path.is_file():
+        if (
+            self.folder_structure.mapping_files_folder
+            / self.task_config.temp_loan_types_map_file_name
+        ).is_file():
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
                 "temporaryLoanTypeId", self.folder_structure.temp_loan_type_map_path
             )
@@ -75,7 +116,10 @@ class ItemsTransformer(MigrationTaskBase):
             )
             temporary_loan_type_mapping = None
 
-        if self.folder_structure.temp_locations_map_path.is_file():
+        if (
+            self.folder_structure.mapping_files_folder
+            / self.task_config.temp_location_map_file_name
+        ).is_file():
             temporary_location_mapping = self.load_ref_data_mapping_file(
                 "temporaryLocationId", self.folder_structure.temp_locations_map_path
             )
@@ -89,17 +133,24 @@ class ItemsTransformer(MigrationTaskBase):
             self.folio_client,
             self.items_map,
             self.load_ref_data_mapping_file(
-                "materialTypeId", self.folder_structure.material_type_map_path
+                "materialTypeId",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.material_types_map_file_name,
             ),
             self.load_ref_data_mapping_file(
-                "permanentLoanTypeId", self.folder_structure.loan_type_map_path
+                "permanentLoanTypeId",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.loan_types_map_file_name,
             ),
             self.load_ref_data_mapping_file(
-                "permanentLocationId", self.folder_structure.locations_map_path
+                "permanentLocationId",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.location_map_file_name,
             ),
             self.load_ref_data_mapping_file(
                 "itemLevelCallNumberTypeId",
-                self.folder_structure.call_number_type_map_path,
+                self.folder_structure.mapping_files_folder
+                / self.task_config.call_number_type_map_file_name,
                 False,
             ),
             setup_holdings_id_map(self.folder_structure),
@@ -142,7 +193,7 @@ class ItemsTransformer(MigrationTaskBase):
     def do_work(self):
         logging.info("Starting....")
         with open(self.folder_structure.created_objects_path, "w+") as results_file:
-            for file_name in self.source_files:
+            for file_name in self.files:
                 try:
                     self.process_single_file(file_name, results_file)
                 except Exception as exception:
@@ -157,12 +208,14 @@ class ItemsTransformer(MigrationTaskBase):
                     logging.fatal(error_str)
                     sys.exit()
         logging.info(  # pylint: disable=logging-fstring-interpolation
-            f"processed {self.total_records:,} records "
-            f"in {len(self.source_files)} files"
+            f"processed {self.total_records:,} records " f"in {len(self.files)} files"
         )
 
     def setup_records_map(self):
-        with open(self.folder_structure.items_map_path) as items_mapper_f:
+        with open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.items_mapping_file_name
+        ) as items_mapper_f:
             items_map = json.load(items_mapper_f)
             logging.info("%s fields in item mapping file map", len(items_map["data"]))
             mapped_fields = (
@@ -213,16 +266,17 @@ class ItemsTransformer(MigrationTaskBase):
             )
             return None
 
-    def process_single_file(self, file_name, results_file):
-        logging.info("Processing %s", file_name)
+    def process_single_file(self, file_name: FileDefinition, results_file):
+        full_path = self.folder_structure.legacy_records_folder / file_name.file_name
+        logging.info("Processing %s", full_path)
         records_in_file = 0
-        with open(file_name, encoding="utf-8-sig") as records_file:
+        with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
                 "Number of files processed"
             )
             start = time.time()
             for idx, record in enumerate(
-                self.mapper.get_objects(records_file, file_name)
+                self.mapper.get_objects(records_file, full_path)
             ):
                 try:
                     if idx == 0:

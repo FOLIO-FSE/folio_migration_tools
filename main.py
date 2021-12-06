@@ -13,10 +13,18 @@ from pydantic import ValidationError
 
 def parse_args():
     """Parse CLI Arguments"""
-    parser = ArgumentParser()
+    parser = PromptParser()
     parser.add_argument("configuration_path", help="Path to configuration file")
+    parser.add_argument("task_name", help="Path to configuration file")
     parser.add_argument(
-        "task_name", help="Name of the Migration Task you want to invoke"
+        "--okapi_password", help="pasword for the tenant in the configuration file"
+    )
+    parser.add_argument(
+        "--base_folder_path",
+        help=(
+            "path to the base folder for this library. "
+            " Built on migration_repo_template"
+        ),
     )
     return parser.parse_args()
 
@@ -29,7 +37,14 @@ def main():
         args = parse_args()
         with open(args.configuration_path) as config_file_path:
             try:
-                config_file = humps.decamelize(json.load(config_file_path))
+                config_file_humped = json.load(config_file_path)
+                config_file_humped["libraryInformation"][
+                    "okapiPassword"
+                ] = args.okapi_password
+                config_file_humped["libraryInformation"][
+                    "baseFolder"
+                ] = args.base_folder_path
+                config_file = humps.decamelize(config_file_humped)
                 library_config = LibraryConfiguration(
                     **config_file["library_information"]
                 )
@@ -39,19 +54,37 @@ def main():
                     for t in config_file["migration_tasks"]
                     if t["name"] == args.task_name
                 )
-                print(library_config.schema_json(indent=2))
-                task_class = next(
-                    tc
-                    for tc in task_classes
-                    if tc.__name__ == migration_task_config["migration_task_type"]
-                )
-                print(json.dumps(migration_task_config))
-                task_config = task_class.TaskConfiguration(**migration_task_config)
-                # configuration = MigrationConfiguration(args, task_class.get_object_type())
-                task_obj = task_class(task_config, library_config)
-                task_obj.do_work()
+                # This is how to get the schema print(library_config.schema_json(indent=2))
+                try:
+                    task_class = next(
+                        tc
+                        for tc in task_classes
+                        if tc.__name__ == migration_task_config["migration_task_type"]
+                    )
+                    task_config = task_class.TaskConfiguration(**migration_task_config)
+                    # configuration = MigrationConfiguration(args, task_class.get_object_type())
+                    task_obj = task_class(task_config, library_config)
+                    task_obj.do_work()
+                    task_obj.wrap_up()
+                except StopIteration as stop_iteration:
+                    print(
+                        f'Referenced task {migration_task_config["migration_task_type"]} '
+                        "is not a valid option. Update your task to incorporate "
+                        f"one of {json.dumps([tc.__name__ for tc in task_classes], indent=4)}"
+                    )
+
             except ValidationError as e:
                 print(e.json())
+                print("Validation errors in configuration file:")
+                print("==========================================")
+
+                for validation_message in json.loads(e.json()):
+                    print(
+                        f"{validation_message['msg']}\t"
+                        f"{'-'.join(str(x) for x in validation_message['loc'])}"
+                    )
+                print("Halting")
+
             # task_obj.do_work()
             logging.info("Work done, wrapping up")
         # task_obj.wrap_up()

@@ -21,10 +21,8 @@ class Conditions:
         folio,
         mapper: RulesMapperBase,
         object_type,
-        default_location_code="",
         default_call_number_type_name="",
     ):
-        self.default_location_code = default_location_code
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
         self.filter_last_chars = r",$"
@@ -43,10 +41,10 @@ class Conditions:
 
     def setup_reference_data_for_bibs(self):
         logging.info("Setting up reference data for bib transformation")
-        logging.info(f"{len(self.folio.contrib_name_types)}\tcontrib_name_types")
-        logging.info(f"{len(self.folio.contributor_types)}\tcontributor_types")
-        logging.info(f"{len(self.folio.alt_title_types )}\talt_title_types")
-        logging.info(f"{len(self.folio.identifier_types)}\tidentifier_types")
+        logging.info("%s\tcontrib_name_types", len(self.folio.contrib_name_types))
+        logging.info("%s\tcontributor_types", len(self.folio.contributor_types))
+        logging.info("%s\talt_title_types", len(self.folio.alt_title_types))
+        logging.info("%s\tidentifier_types", len(self.folio.identifier_types))
         # Raise for empty settings
         if not self.folio.contributor_types:
             raise TransformationProcessError("", "No contributor_types in FOLIO")
@@ -62,23 +60,23 @@ class Conditions:
         # Set defaults
         logging.info("Setting defaults")
         self.default_contributor_name_type = self.folio.contrib_name_types[0]["id"]
-        logging.info(f"Contributor name type:\t{self.default_contributor_name_type}")
+        logging.info("Contributor name type:\t%s", self.default_contributor_name_type)
         self.default_contributor_type = next(
             ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
         )
-        logging.info(f"Contributor type:\t{self.default_contributor_type['id']}")
+        logging.info("Contributor type:\t%s", self.default_contributor_type["id"])
 
     def setup_reference_data_for_items_and_holdings(
         self, default_call_number_type_name
     ):
         logging.info(f"{len(self.folio.locations)}\tlocations")
         self.default_call_number_type = {}
-        logging.info(f"{len(self.folio.holding_note_types)}\tholding_note_types")
-        logging.info(f"{len(self.folio.call_number_types)}\tcall_number_types")
+        logging.info("%s\tholding_note_types", len(self.folio.holding_note_types))
+        logging.info("%s\tcall_number_types", len(self.folio.call_number_types))
         self.holdings_types = list(
             self.folio.folio_get_all("/holdings-types", "holdingsTypes")
         )
-        logging.info(f"{len(self.holdings_types)}\tholdings types")
+        logging.info("%s\tholdings types", len(self.holdings_types))
         # Raise for empty settings
         if not self.folio.holding_note_types:
             raise TransformationProcessError("", "No holding_note_types in FOLIO")
@@ -119,23 +117,6 @@ class Conditions:
         else:
             raise TransformationProcessError(
                 "Holdings type Unmapped not set in client: Please add one to the tenant."
-            )
-
-        if not self.default_location_code:
-            raise TransformationProcessError(
-                "Default location code is not set up. Make sure it is set up"
-            )
-
-        logging.info(f"Default location code is {self.default_location_code}")
-        t = self.get_ref_data_tuple_by_code(
-            self.folio.locations, "locations", self.default_location_code
-        )
-        if t:
-            self.default_location_id = t[0]
-            logging.info(f"Default location id is {self.default_location_id}")
-        else:
-            raise TransformationProcessError(
-                "", f"Default location for {self.default_location_code} is not set up"
             )
 
     def setup_reference_data_for_all(self):

@@ -12,14 +12,20 @@ import traceback
 import uuid
 from os import listdir
 from os.path import isfile
-from typing import List
+from typing import List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic.main import BaseModel
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
+)
 from migration_tools.mapping_file_transformation.holdings_mapper import HoldingsMapper
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -33,14 +39,31 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
 
 
-class HoldingsCSVTransformer(MigrationTaskBase):
+class HoldingsCsvTransformer(MigrationTaskBase):
+    class TaskConfiguration(BaseModel):
+        name: str
+        migration_task_type: str
+        hrid_handling: HridHandling
+        files: List[FileDefinition]
+        holdings_map_file_name: str
+        location_map_file_name: str
+        default_call_number_type_name: str
+        call_number_type_map_file_name: Optional[str]
+        holdings_merge_criteria: Optional[str] = "clb"
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.holdings
 
-    def __init__(self, configuration: MigrationConfiguration):
-        super().__init__(configuration)
+    def __init__(
+        self,
+        # configuration: MigrationConfiguration,
+        task_config: TaskConfiguration,
+        library_config: LibraryConfiguration,
+    ):
+        super().__init__(library_config, task_config)
         try:
+            self.task_config = task_config
             self.files = self.list_source_files()
             self.mapper = HoldingsMapper(
                 self.folio_client,
@@ -52,11 +75,10 @@ class HoldingsCSVTransformer(MigrationTaskBase):
             self.holdings = {}
             self.total_records = 0
             self.legacy_map = {}
-            self.holdings_merge_criteria = (
-                self.configuration.args.holdings_merge_criteria
-            )
-            if "_" in self.holdings_merge_criteria:
-                self.excluded_hold_type_id = self.holdings_merge_criteria.split("_")[-1]
+            if "_" in self.task_config.holdings_merge_criteria:
+                self.excluded_hold_type_id = (
+                    self.task_config.holdings_merge_criteria.split("_")[-1]
+                )
                 logging.info(self.excluded_hold_type_id)
 
             self.results_path = self.folder_structure.created_objects_path
@@ -86,7 +108,9 @@ class HoldingsCSVTransformer(MigrationTaskBase):
 
     def load_call_number_type_map(self):
         with open(
-            self.folder_structure.call_number_type_map_path, "r"
+            self.folder_structure.mapping_files_folder
+            / self.task_config.call_number_type_map_file_name,
+            "r",
         ) as callnumber_type_map_f:
             call_number_type_map = list(
                 csv.DictReader(callnumber_type_map_f, dialect="tsv")
@@ -97,13 +121,19 @@ class HoldingsCSVTransformer(MigrationTaskBase):
             return call_number_type_map
 
     def load_location_map(self):
-        with open(self.folder_structure.locations_map_path) as location_map_f:
+        with open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.location_map_file_name
+        ) as location_map_f:
             location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
             logging.info("Found %s rows in location map", len(location_map))
             return location_map
 
     def load_mapped_fields(self):
-        with open(self.folder_structure.holdings_map_path) as holdings_mapper_f:
+        with open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.holdings_map_file_name
+        ) as holdings_mapper_f:
             holdings_map = json.load(holdings_mapper_f)
             logging.info(
                 "%s fields in holdings mapping file map", len(holdings_map["data"])
@@ -120,10 +150,15 @@ class HoldingsCSVTransformer(MigrationTaskBase):
     def list_source_files(self):
         # Source data files
         files = [
-            os.path.join(self.folder_structure.legacy_records_folder, f)
-            for f in listdir(self.folder_structure.legacy_records_folder)
-            if isfile(os.path.join(self.folder_structure.legacy_records_folder, f))
+            self.folder_structure.data_folder / "items" / f.file_name
+            for f in self.task_config.files
+            if isfile(self.folder_structure.data_folder / "items" / f.file_name)
         ]
+        if not any(files):
+            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            raise TransformationProcessError(
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+            )
         logging.info("Files to process:")
         for filename in files:
             logging.info("\t%s", filename)
@@ -326,10 +361,12 @@ class HoldingsCSVTransformer(MigrationTaskBase):
         logging.info("All done!")
 
     def merge_holding_in(self, folio_holding):
-        new_holding_key = self.to_key(folio_holding, self.holdings_merge_criteria)
+        new_holding_key = self.to_key(
+            folio_holding, self.task_config.holdings_merge_criteria
+        )
         existing_holding = self.holdings.get(new_holding_key, None)
         exclude = (
-            self.holdings_merge_criteria.startswith("u_")
+            self.task_config.holdings_merge_criteria.startswith("u_")
             and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
         )
         if exclude or not existing_holding:

@@ -6,11 +6,18 @@ import os
 import sys
 from os import listdir
 from os.path import isfile
+from typing import List
+from pydantic import BaseModel
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
+)
+from migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
 )
 from migration_tools.marc_rules_transformation.holdings_processor import (
     HoldingsProcessor,
@@ -25,14 +32,83 @@ from migration_tasks.migration_task_base import MigrationTaskBase
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):
+    class TaskConfiguration(BaseModel):
+        name: str
+        migration_task_type: str
+        use_tenant_mapping_rules: bool
+        hrid_handling: HridHandling
+        files: List[FileDefinition]
+        migration_task_prefix: str
+        mfhd_mapping_file_name: str
+        location_map_file_name: str
+        default_call_number_type_name: str
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.holdings
 
-    def __init__(self, configuration: MigrationConfiguration):
+    def __init__(
+        self,
+        # configuration: MigrationConfiguration,
+        task_config: TaskConfiguration,
+        library_config: LibraryConfiguration,
+    ):
         csv.register_dialect("tsv", delimiter="\t")
-        super().__init__(configuration)
+        super().__init__(library_config, task_config)
         self.instance_id_map = {}
+        self.task_config = task_config
+
+    def do_work(self):
+        files = [
+            f
+            for f in self.task_config.files
+            if isfile(self.folder_structure.legacy_records_folder / f.path)
+        ]
+        with open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.location_map_file_name
+        ) as location_map_f, open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.mfhd_mapping_file_name
+        ) as mapping_rules_file:
+            self.load_instance_id_map()
+            location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
+            rules_file = json.load(mapping_rules_file)
+            logging.info("Locations in map: %s", len(location_map))
+            logging.info(any(location_map))
+            logging.info("Default location code %s", rules_file["defaultLocationCode"])
+            logging.info("%s Instance ids in map", len(self.instance_id_map))
+            mapper = RulesMapperHoldings(
+                self.folio_client,
+                self.instance_id_map,
+                location_map,
+                self.task_config.default_call_number_type_name,
+            )
+            mapper.mappings = rules_file["rules"]
+
+            processor = HoldingsProcessor(mapper, self.folder_structure)
+            for file_def in files:
+                try:
+                    with open(
+                        self.folder_structure.legacy_records_folder / file_def.path,
+                        "rb",
+                    ) as marc_file:
+                        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+                        reader.hide_utf8_warnings = True
+                        reader.force_utf8 = True
+                        logging.info("Running %s", file_def.path)
+                        read_records(reader, processor, file_def)
+                except TransformationProcessError as tpe:
+                    logging.critical(tpe)
+                    sys.exit()
+                except Exception:
+                    logging.exception(
+                        "Failure in Main: %s", file_def.path, stack_info=True
+                    )
+            processor.wrap_up()
+
+    def wrap_up(self):
+        logging.info("wapping up")
 
     def load_instance_id_map(self):
         with open(self.folder_structure.instance_id_map_path) as instance_id_map_file:
@@ -47,86 +123,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 self.instance_id_map[map_object["legacy_id"]] = map_object
         logging.info("loaded %s migrated instance IDs", (index + 1))
 
-    def do_work(self):
-        files = [
-            os.path.join(self.folder_structure.legacy_records_folder, f)
-            for f in listdir(self.folder_structure.legacy_records_folder)
-            if isfile(os.path.join(self.folder_structure.legacy_records_folder, f))
-        ]
-        with open(self.folder_structure.locations_map_path) as location_map_f, open(
-            self.folder_structure.mfhd_rules_path
-        ) as mapping_rules_file:
-            self.load_instance_id_map()
-            location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
-            rules_file = json.load(mapping_rules_file)
-            logging.info("Locations in map: %s", len(location_map))
-            logging.info(any(location_map))
-            logging.info("Default location code %s", rules_file["defaultLocationCode"])
-            logging.info("%s Instance ids in map", len(self.instance_id_map))
-            mapper = RulesMapperHoldings(
-                self.folio_client,
-                self.instance_id_map,
-                location_map,
-                rules_file["defaultLocationCode"],
-                self.configuration.args.default_call_number_type_name,
-            )
-            mapper.mappings = rules_file["rules"]
 
-            processor = HoldingsProcessor(
-                mapper,
-                self.folio_client,
-                self.folder_structure,
-                self.configuration.args.suppress,  # pylint: disable=no-member
-            )
-            for records_file in files:
-                try:
-                    with open(records_file, "rb") as marc_file:
-                        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
-                        reader.hide_utf8_warnings = True
-                        reader.force_utf8 = True
-                        logging.info("Running %s", records_file)
-                        read_records(reader, processor)
-                except TransformationProcessError as tpe:
-                    logging.critical(tpe)
-                    sys.exit()
-                except Exception:
-                    logging.exception(
-                        "Failure in Main: %s", records_file, stack_info=True
-                    )
-            processor.wrap_up()
-
-    def wrap_up(self):
-        logging.info("wapping up")
-
-    @staticmethod
-    def add_arguments(sub_parser):
-        MigrationTaskBase.add_common_arguments(sub_parser)
-        sub_parser.add_argument(
-            "timestamp",
-            help=(
-                "timestamp or migration identifier. "
-                "Used to chain multiple runs together"
-            ),
-            secure=False,
-        )
-        sub_parser.add_argument(
-            "--default_call_number_type_name",
-            help=(
-                "Name of the default callnumber type. Needs to exist "
-                " in the tenant verbatim"
-            ),
-            default="Other scheme",
-        )
-        sub_parser.add_argument(
-            "--suppress",
-            "-ds",
-            help="This batch of records are to be suppressed in FOLIO.",
-            default=False,
-            type=bool,
-        )
-
-
-def read_records(reader, processor: HoldingsProcessor):
+def read_records(reader, processor: HoldingsProcessor, file_def: FileDefinition):
     for idx, record in enumerate(reader):
         try:
             if record is None:
@@ -136,7 +134,7 @@ def read_records(reader, processor: HoldingsProcessor):
                     f"{reader.current_chunk}",
                 )
             else:
-                processor.process_record(record)
+                processor.process_record(record, file_def)
         except TransformationRecordFailedError as error:
             error.log_it()
         except ValueError as error:

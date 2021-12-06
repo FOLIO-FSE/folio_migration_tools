@@ -2,18 +2,15 @@ import enum
 import logging
 import os
 import sys
-from datetime import datetime as dt
 import time
+from datetime import datetime
+from datetime import datetime as dt
 from os import listdir
 from os.path import isfile
-from migration_tools.library_configuration import (
-    IlsFlavour,
-    FolioRelease,
-    FileDefinition,
-)
+from typing import List, Optional
 
-from folio_uuid.folio_namespaces import FOLIONamespaces
 import pydantic
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from migration_tools.colors import Bcolors
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -23,18 +20,16 @@ from migration_tools.helper import Helper
 from migration_tools.library_configuration import (
     FileDefinition,
     FolioRelease,
+    HridHandling,
     IlsFlavour,
     LibraryConfiguration,
-    HridHandling,
 )
 from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from migration_tools.migration_configuration import MigrationConfiguration
+from pydantic import BaseModel
 from pymarc import MARCReader
 from pymarc.record import Record
-from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel
 
 from migration_tasks.migration_task_base import MigrationTaskBase
 
@@ -59,10 +54,19 @@ class BibsTransformer(MigrationTaskBase):
         library_config: LibraryConfiguration,
     ):
 
-        super().__init__(library_config)
+        super().__init__(library_config, task_config)
         self.task_config = task_config
         # Old init
-        self.files = [f for f in self.task_config.files if isfile(f.path)]
+        self.files = [
+            f
+            for f in self.task_config.files
+            if isfile(self.folder_structure.legacy_records_folder / f.file_name)
+        ]
+        if not any(self.files):
+            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            raise TransformationProcessError(
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+            )
         print(self.files)
         logging.info("# of files to process: %s", len(self.files))
         for file_path in self.files:
@@ -86,13 +90,14 @@ class BibsTransformer(MigrationTaskBase):
             for file_obj in self.files:
                 try:
                     with open(
-                        file_obj.path,
+                        self.folder_structure.legacy_records_folder
+                        / file_obj.file_name,
                         "rb",
                     ) as marc_file:
                         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                         reader.hide_utf8_warnings = True
                         reader.force_utf8 = False
-                        logging.info("running %s", file_obj.path)
+                        logging.info("running %s", file_obj.file_name)
                         self.read_records(reader, file_obj)
                 except TransformationProcessError as tpe:
                     logging.critical(tpe)
@@ -100,7 +105,7 @@ class BibsTransformer(MigrationTaskBase):
                 except Exception:
                     logging.exception(file_obj, stack_info=True)
                     logging.critical(
-                        "File %s failed for unknown reason. Halting", file_obj.path
+                        "File %s failed for unknown reason. Halting", file_obj.file_name
                     )
                     sys.exit()
 
@@ -134,7 +139,7 @@ class BibsTransformer(MigrationTaskBase):
                         "Records with encoding errors - parsing failed",
                     )
                     raise TransformationRecordFailedError(
-                        f"Index in {source_file.path}:{idx}",
+                        f"Index in {source_file.file_name}:{idx}",
                         f"MARC parsing error: {reader.current_exception}",
                         reader.current_chunk,
                     )
