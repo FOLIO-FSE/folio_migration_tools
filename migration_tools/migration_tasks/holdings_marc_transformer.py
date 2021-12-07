@@ -25,7 +25,6 @@ from migration_tools.marc_rules_transformation.holdings_processor import (
 from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
-from migration_tools.migration_configuration import MigrationConfiguration
 from pymarc import MARCReader
 
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
@@ -48,7 +47,6 @@ class HoldingsMarcTransformer(MigrationTaskBase):
 
     def __init__(
         self,
-        # configuration: MigrationConfiguration,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
     ):

@@ -2,14 +2,23 @@ import json
 import logging
 import os
 import time
+import sys
 import traceback
 from abc import abstractmethod
 from datetime import datetime
+from migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 
 import requests
+from pydantic import BaseModel
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.custom_exceptions import TransformationRecordFailedError
-from migration_tools.migration_configuration import MigrationConfiguration
+from migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
+from migration_tools.library_configuration import FileDefinition
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 
@@ -19,39 +28,49 @@ def write_failed_batch_to_file(batch, file):
 
 
 class BatchPoster(MigrationTaskBase):
+    class TaskConfiguration(BaseModel):
+        name: str
+        migration_task_type: str
+        object_type: str
+        file: FileDefinition
+        batch_size: int
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.other
 
-    def __init__(self, configuration: MigrationConfiguration):
-        super().__init__(configuration)
+    def __init__(
+        self,
+        task_config: TaskConfiguration,
+        library_config: LibraryConfiguration,
+    ):
+        super().__init__(library_config, task_config)
+        self.task_config = task_config
         self.failed_ids = []
         self.first_batch = True
-        self.object_name = self.configuration.args.object_name
-        self.api_path = list_objects()[self.object_name]
+        self.api_path = list_objects(self.task_config.object_type)
+
         self.failed_objects = []
-        object_name_formatted = self.object_name.replace(" ", "").lower()
+        object_name_formatted = self.task_config.object_type.replace(" ", "").lower()
         time_stamp = time.strftime("%Y%m%d-%H%M%S")
-        self.failed_recs_path = os.path.join(
-            self.folder_structure.results_folder,
-            f"failed_{object_name_formatted}_records_{time_stamp}.json",
+        self.failed_recs_path = (
+            self.folder_structure.results_folder
+            / f"failed_{object_name_formatted}_records_{time_stamp}.json"
         )
-        self.batch_size = self.configuration.args.batch_size
+        self.batch_size = self.task_config.batch_size
         self.processed = 0
         self.failed_batches = 0
         self.failed_records = 0
         self.users_created = 0
         self.users_updated = 0
-        self.objects_file = self.configuration.args.objects_file
         self.users_per_group = {}
         self.failed_fields = set()
         self.num_failures = 0
 
     def do_work(self):
         batch = []
-        with open(self.objects_file) as rows, open(
-            self.failed_recs_path, "w"
-        ) as failed_recs_file:
+        path = self.folder_structure.results_folder / self.task_config.file.file_name
+        with open(path) as rows, open(self.failed_recs_path, "w") as failed_recs_file:
             last_row = ""
             for num_records, row in enumerate(rows, start=1):
                 last_row = row
@@ -78,15 +97,6 @@ class BatchPoster(MigrationTaskBase):
                         exception, last_row, batch, num_records, failed_recs_file
                     )
         logging.info("Done posting %s records. ", (num_records))
-        logging.info(
-            (
-                "Failed records: %s failed records in %s "
-                "failed batches. Failed records saved to %s"
-            ),
-            self.failed_records,
-            self.failed_batches,
-            self.failed_recs_path,
-        )
 
     def handle_generic_exception(
         self, exception, last_row, batch, num_records, failed_recs_file
@@ -111,7 +121,7 @@ class BatchPoster(MigrationTaskBase):
         )
         logging.info(
             "Failing row, either the one shown here or the next row in %s",
-            self.objects_file,
+            self.task_config.file.file_name,
         )
         logging.info(last_row)
         logging.info("=========Stack trace==============")
@@ -124,11 +134,12 @@ class BatchPoster(MigrationTaskBase):
             logging.info(
                 (
                     "Posting successful! Total rows: %s Total failed: %s "
-                    "in {response.elapsed.total_seconds()}s "
+                    "in %ss "
                     "Batch Size: %s Request size: %s "
                 ),
                 num_records,
                 self.failed_records,
+                response.elapsed.total_seconds(),
                 len(batch),
                 get_req_size(response),
             )
@@ -139,10 +150,20 @@ class BatchPoster(MigrationTaskBase):
             self.failed_records += json_report.get("failedRecords", 0)
             if json_report.get("failedRecords", 0) > 0:
                 failed_recs_file.write(response.text)
+            if json_report.get("failedUsers", []):
+                logging.error("Errormessage: %s", json_report.get("error", []))
+                for failed_user in json_report.get("failedUsers"):
+                    logging.error(
+                        "User failed. %s\t%s\t%s",
+                        failed_user.get("username", ""),
+                        failed_user.get("externalSystemId", ""),
+                        failed_user.get("errorMessage", ""),
+                    )
             logging.info(
                 (
                     "Posting successful! Total rows: %s Total failed: %s "
                     "created: %s updated: %s in %ss Batch Size: %s Request size: %s "
+                    "Message from server: %s"
                 ),
                 num_records,
                 self.failed_records,
@@ -151,6 +172,7 @@ class BatchPoster(MigrationTaskBase):
                 response.elapsed.total_seconds(),
                 len(batch),
                 get_req_size(response),
+                json_report.get("message", ""),
             )
         elif response.status_code == 422:
             resp = json.loads(response.text)
@@ -171,7 +193,7 @@ class BatchPoster(MigrationTaskBase):
             )
 
     def do_post(self, batch):
-        kind = list_objects()[self.object_name]
+        kind = list_objects(self.task_config.object_type)
         path = kind["api_endpoint"]
         url = self.folio_client.okapi_url + path
         if kind["object_name"] == "users":
@@ -186,45 +208,32 @@ class BatchPoster(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Done. Wrapping up")
-
-    @staticmethod
-    @abstractmethod
-    def add_arguments(sub_parser):
-        MigrationTaskBase.add_common_arguments(sub_parser)
-        sub_parser.add_argument(
-            "--timestamp",
-            help=(
-                "timestamp or migration identifier. "
-                "Used to chain multiple runs together"
+        logging.info(
+            (
+                "Failed records: %s failed records in %s "
+                "failed batches. Failed records saved to %s"
             ),
-            default=time.strftime("%Y%m%d-%H%M%S"),
-            secure=False,
-        )
-        MigrationTaskBase.add_argument(sub_parser, "objects_file", "path data file")
-        MigrationTaskBase.add_argument(sub_parser, "batch_size", "batch size")
-        MigrationTaskBase.add_argument(
-            sub_parser,
-            "object_name",
-            "What objects to batch post",
-            choices=list(list_objects().keys()),
+            self.failed_records,
+            self.failed_batches,
+            self.failed_recs_path,
         )
 
 
-def list_objects():
-    return {
+def list_objects(object_type: str):
+    choices = {
         "Items": {
             "object_name": "items",
-            "api_endpoint": "/item-storage/batch/synchronous",
+            "api_endpoint": "/item-storage/batch/synchronous?upsert=true",
             "total_records": False,
         },
         "Holdings": {
             "object_name": "holdingsRecords",
-            "api_endpoint": "/holdings-storage/batch/synchronous",
+            "api_endpoint": "/holdings-storage/batch/synchronous?upsert=true",
             "total_records": False,
         },
         "Instances": {
             "object_name": "instances",
-            "api_endpoint": "/instance-storage/batch/synchronous",
+            "api_endpoint": "/instance-storage/batch/synchronous?upsert=true",
             "total_records": False,
         },
         "SRS": {
@@ -238,6 +247,13 @@ def list_objects():
             "total_records": True,
         },
     }
+    try:
+        return choices[object_type]
+    except KeyError:
+        key_string = ",".join(choices.keys())
+        print("", f"Wrong type. Only one of {key_string} are allowed")
+        print("Halting")
+        sys.exit()
 
 
 def chunks(records, number_of_chunks):

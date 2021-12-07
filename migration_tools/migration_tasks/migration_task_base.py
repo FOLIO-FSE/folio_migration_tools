@@ -12,7 +12,6 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.folder_structure import FolderStructure
-from migration_tools.migration_configuration import MigrationConfiguration
 
 
 class MigrationTaskBase:
