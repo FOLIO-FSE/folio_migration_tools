@@ -15,7 +15,6 @@ from os.path import isfile
 from typing import List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic.main import BaseModel
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -30,10 +29,10 @@ from migration_tools.mapping_file_transformation.holdings_mapper import Holdings
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from migration_tools.migration_configuration import MigrationConfiguration
 from migration_tools.report_blurbs import Blurbs
+from pydantic.main import BaseModel
 
-from migration_tasks.migration_task_base import MigrationTaskBase
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
@@ -57,7 +56,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def __init__(
         self,
-        # configuration: MigrationConfiguration,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
     ):
@@ -112,22 +110,24 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             / self.task_config.call_number_type_map_file_name,
             "r",
         ) as callnumber_type_map_f:
-            call_number_type_map = list(
-                csv.DictReader(callnumber_type_map_f, dialect="tsv")
+            return self.load_ref_data_map_from_file(
+                callnumber_type_map_f, "Found %s rows in call number type map"
             )
-            logging.info(
-                "Found %s rows in call number type map", len(call_number_type_map)
-            )
-            return call_number_type_map
 
     def load_location_map(self):
         with open(
             self.folder_structure.mapping_files_folder
             / self.task_config.location_map_file_name
         ) as location_map_f:
-            location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
-            logging.info("Found %s rows in location map", len(location_map))
-            return location_map
+            return self.load_ref_data_map_from_file(
+                location_map_f, "Found %s rows in location map"
+            )
+
+    # TODO Rename this here and in `load_call_number_type_map` and `load_location_map`
+    def load_ref_data_map_from_file(self, file, message):
+        ref_dat_map = list(csv.DictReader(file, dialect="tsv"))
+        logging.info(message, len(ref_dat_map))
+        return ref_dat_map
 
     def load_mapped_fields(self):
         with open(

@@ -7,13 +7,14 @@ from typing import Dict
 import requests
 from folioclient import FolioClient
 
+from migration_tools.migration_report import MigrationReport
+
 
 class UserMapperBase:
     def __init__(self, folio_client: FolioClient):
-        self.stats = {}
         self.legacy_id_map: Dict[str, str] = {}
 
-        self.migration_report = {}
+        self.migration_report = MigrationReport()
         self.folio_client = folio_client
         self.mapped_folio_fields = {}
         self.ref_data_dicts = {}
@@ -29,7 +30,7 @@ class UserMapperBase:
         print("--- | --- | --- :")
         for k, v in d_sorted.items():
             mp = v / total_records
-            mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
+            mapped_per = "{:.0%}".format(max(mp, 0))
             print(f"{k} | {mapped_per} | {v} ")
         print("\n## Mapped Legacy fields")
         d_sorted = {
@@ -39,40 +40,41 @@ class UserMapperBase:
         print("--- | --- | --- :")
         for k, v in d_sorted.items():
             mp = v / total_records
-            mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
+            mapped_per = "{:.0%}".format(max(mp, 0))
             print(f"{k} | {mapped_per} | {v}")
 
     def report_legacy_mapping(self, legacy_object):
         for field_name, value in legacy_object.items():
             v = 1 if value else 0
             if field_name not in self.mapped_legacy_fields:
-                self.mapped_legacy_fields[field_name] = v
+                self.mapped_legacy_fields[field_name] = [1, v]
             else:
-                self.mapped_legacy_fields[field_name] += v
+                self.mapped_legacy_fields[field_name][0] += 1
+                self.mapped_legacy_fields[field_name][1] += v
 
     def report_folio_mapping(self, folio_object):
         flat_object = flatten(folio_object)
         for field_name, value in flat_object.items():
             v = 1 if value else 0
             if field_name not in self.mapped_folio_fields:
-                self.mapped_folio_fields[field_name] = v
+                self.mapped_folio_fields[field_name] = [1, v]
             else:
-                self.mapped_folio_fields[field_name] += v
+                self.mapped_folio_fields[field_name][0] += 1
+                self.mapped_folio_fields[field_name][1] += v
 
     def instantiate_user(self):
         user_id = str(uuid.uuid4())
-        folio_user = {
+        return {
             "metadata": self.folio_client.get_metadata_construct(),
             "id": user_id,
             "type": "object",
             "personal": {},
             "customFields": {},
         }
-        return folio_user
 
     def validate(self, folio_user):
         failures = []
-        self.add_to_migration_report(
+        self.migration_report.add(
             "Number of addresses per user",
             len(folio_user["personal"].get("addresses", [])),
         )
@@ -80,20 +82,20 @@ class UserMapperBase:
         for req in req_fields:
             if req not in folio_user:
                 failures.append(req)
-                self.add_to_migration_report(
+                self.migration_report.add(
                     "Failed records that needs to get fixed",
                     f"Required field {req} is missing from {folio_user['username']}",
                 )
         if not folio_user["personal"].get("lastName", ""):
             failures.append("lastName")
-            self.add_to_migration_report(
+            self.migration_report.add(
                 "Failed records that needs to get fixed",
                 f"Required field personal.lastName is missing from {folio_user['username']}",
             )
-        if len(failures) > 0:
-            self.add_to_migration_report("User validation", "Total failed users")
+        if failures:
+            self.migration_report.add("User validation", "Total failed users")
             for failure in failures:
-                self.add_to_migration_report("User validation", f"{failure}")
+                self.migration_report.add("User validation", f"{failure}")
             raise ValueError(
                 f"Record {folio_user['username']} failed validation {failures}"
             )
@@ -128,7 +130,7 @@ class UserMapperBase:
             report_file.write("--- | --- | --- | ---:\n")
             for k, v in d_sorted.items():
                 mp = v / total_records
-                mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
+                mapped_per = "{:.0%}".format(max(mp, 0))
                 report_file.write(f"{k} | {mapped_per} | {v} \n")
             report_file.write("\n## Mapped Legacy fields\n")
             d_sorted = {
@@ -139,7 +141,7 @@ class UserMapperBase:
             report_file.write("--- | --- | --- | ---:\n")
             for k, v in d_sorted.items():
                 mp = v / total_records
-                mapped_per = "{:.0%}".format(mp if mp > 0 else 0)
+                mapped_per = "{:.0%}".format(max(mp, 0))
                 report_file.write(f"{k} | {mapped_per} | {v}\n")
 
     @staticmethod
@@ -149,14 +151,6 @@ class UserMapperBase:
         print("--- | ---:")
         for k, v in d_sorted.items():
             print(f"{k} | {v}")
-
-    def add_to_migration_report(self, header, measure_to_add):
-        if header not in self.migration_report:
-            self.migration_report[header] = {}
-        if measure_to_add not in self.migration_report[header]:
-            self.migration_report[header][measure_to_add] = 1
-        else:
-            self.migration_report[header][measure_to_add] += 1
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")

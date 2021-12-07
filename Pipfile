@@ -48,6 +48,7 @@ wrapt = "==1.12.1"
 Markdown = "==3.3.4"
 folioclient = "*"
 folio-uuid = "0.2.0"
+pydantic = "*"
 
 [requires]
 python_version = "3.9"

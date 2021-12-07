@@ -6,60 +6,51 @@ import os.path
 import time
 import traceback
 from abc import abstractmethod
-from datetime import datetime as dt
-from datetime import timedelta
+from datetime import datetime as dt, timedelta
 
 import requests
 from dateutil import parser as du_parser
-from migration_tools.migration_configuration import MigrationConfiguration
 from requests import HTTPError
 
-from migration_tasks.circulation_helper import (
+from migration_tools.circulation_helper import (
     CirculationHelper,
     LegacyLoan,
-    TransactionResult,
+    LegacyRequest,
 )
-from migration_tasks.custom_dict import InsensitiveDictReader
-from migration_tasks.migration_task_base import MigrationTaskBase
+from migration_tools.migration_tasks.custom_dict import InsensitiveDictReader
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from migration_tools.migration_configuration import MigrationConfiguration
 
 
-class OpenLoansMigrator(MigrationTaskBase):
+class OpenRequestsMigrator(MigrationTaskBase):
     """Migrates Open Loans using the various Business logic apis for Circulation"""
 
     def __init__(self, configuration: MigrationConfiguration):
         super().__init__(configuration)
-        self.client_folder = configuration.client_folder
-        self.reports_folder = os.path.join(self.client_folder, "reports")
-        self.results_folder = os.path.join(self.client_folder, "results")
-
-        self.service_point_id = configuration.service_point_id
-        self.circulation_helper = CirculationHelper(
-            self.folio_client, self.service_point_id
-        )
+        self.circulation_helper = CirculationHelper(self.folio_client, "")
         csv.register_dialect("tsv", delimiter="\t")
-        self.valid_legacy_loans = []
+        self.valid_legacy_requests = []
         file_path = os.path.join(
             self.results_folder, f'test_{time.strftime("%Y%m%d-%H%M%S")}.tsv'
         )
         with open(file_path, "w+", encoding="utf-8") as test_file:
             test_file.write("test")
-        with open(configuration.open_loans_file, "r", encoding="utf-8") as loans_file:
-            self.valid_legacy_loans = list(
-                self.load_and_validate_legacy_loans(
-                    InsensitiveDictReader(loans_file, dialect="tsv")
+        with open(args.open_requests_file, "r", encoding="utf-8") as requests_file:
+            self.valid_legacy_requests = list(
+                self.load_and_validate_legacy_requests(
+                    InsensitiveDictReader(requests_file, dialect="tsv")
                 )
             )
             logging.info(
-                f"Loaded and validated {len(self.valid_legacy_loans)} loans in file"
+                f"Loaded and validated {len(self.valid_legacy_requests)} requests in file"
             )
         self.patron_item_combos = set()
         self.t0 = time.time()
-        self.num_duplicate_loans = 0
+        self.num_duplicate_requests = 0
         self.skipped_since_already_added = 0
         self.processed_items = set()
-        self.failed = {}
-        self.num_legacy_loans_processed = 0
-        self.failed_and_not_dupe = {}
+        self.num_legacy_requests_processed = 0
+        self.failed_requests: set = set()
 
         self.starting_point = 0  # TODO: Set as arg
         logging.info("Init completed")
@@ -69,185 +60,121 @@ class OpenLoansMigrator(MigrationTaskBase):
 
         if self.starting_point > 0:
             logging.info(f"Skipping {self.starting_point} records")
-        for num_loans, legacy_loan in enumerate(
-            self.valid_legacy_loans[self.starting_point :]
+
+        for num_requests, legacy_request in enumerate(
+            self.valid_legacy_requests[self.starting_point :]
         ):
             t0_migration = time.time()
-            self.add_stats("Processed loans")
+            self.add_stats("Processed requests")
             try:
-                res_checkout = (
-                    self.circulation_helper.check_out_by_barcode_override_iris(
-                        legacy_loan
-                    )
+                patron = self.circulation_helper.get_user_by_barcode(
+                    legacy_request.patron_barcode
                 )
-                self.add_stats(res_checkout.migration_report_message)
-
-                if not res_checkout.was_successful:
-                    res_checkout = self.handle_checkout_failure(
-                        legacy_loan, res_checkout
+                if not patron:
+                    logging.error(
+                        f"No user with barcode {legacy_request.patron_barcode} found in FOLIO"
                     )
-                    if not res_checkout.was_successful:
-                        self.add_stats("Loan failed a second time")
+                    self.add_stats("No user with barcode")
+                    self.failed_requests.add(legacy_request)
+                item = self.circulation_helper.get_item_by_barcode(
+                    legacy_request.item_barcode
+                )
+                if not item:
+                    logging.error(
+                        f"No item with barcode {legacy_request.item_barcode} found in FOLIO"
+                    )
+                    self.add_stats("No item with barcode")
+                    self.failed_requests.add(legacy_request)
+                if patron and item:
+                    legacy_request.patron_id = patron.get("id")
+                    legacy_request.item_id = item.get("id")
+                    if item["status"]["name"] in [
+                        "Available",
+                        "Aged to lost",
+                        "Missing",
+                    ]:
+                        legacy_request.request_type = "Page"
                         logging.info(
-                            f"Loan failed a second time. Item barcode {legacy_loan.item_barcode}"
+                            f'Setting request to Page, since the status is {item["status"]["name"]}'
                         )
-                        if legacy_loan.item_barcode not in self.failed:
-                            self.failed[legacy_loan.item_barcode] = legacy_loan
-                        continue
-                    else:
-                        self.add_stats("Successfully checked out the second time")
-                        logging.info("Successfully checked out the second time")
-                else:
-                    if not res_checkout.folio_loan:
-                        pass
-                    else:
-                        if legacy_loan.renewal_count > 0:
-                            self.update_open_loan(res_checkout.folio_loan, legacy_loan)
-                            self.add_stats("Updated renewal count for loan")
-                        # set new statuses
-                        if legacy_loan.next_item_status == "Declared lost":
-                            self.declare_lost(res_checkout.folio_loan)
-                        elif legacy_loan.next_item_status == "Claimed returned":
-                            self.claim_returned(res_checkout.folio_loan)
-                        elif legacy_loan.next_item_status not in [
-                            "Available",
-                            "",
-                            "Checked out",
-                        ]:
-                            self.set_item_status(legacy_loan)
-                if num_loans % 25 == 0:
-                    self.print_dict_to_md_table(self.stats)
-                    logging.info(
-                        f"{timings(self.t0, t0_migration, num_loans)} {num_loans}"
+                    # we have everything we need. Let's get to it.
+                    res_request = self.circulation_helper.create_request(
+                        self.folio_client, legacy_request
                     )
+                    if res_request:
+                        # logging.info(item["status"]["name"])
+                        self.add_stats(f'Successful statuses: {item["status"]["name"]}')
+                        self.add_stats("Successfully processed requests")
+                        logging.info("Successfully processed requests")
+                    else:
+                        logging.error(
+                            f'Unsuccessfully processed requests.ItemBarcode {legacy_request.item_barcode} Status: {item["status"]["name"]}'
+                        )
+                        self.add_stats(
+                            f'Unsuccessful statuses: {item["status"]["name"]}'
+                        )
+                        self.add_stats("Unsuccessfully processed requests")
+                        self.failed_requests.add(legacy_request)
+
             except Exception as ee:  # Catch other exceptions than HTTP errors
                 logging.info(
-                    f"Error in row {num_loans}  Item barcode: {legacy_loan.item_barcode} "
-                    f"Patron barcode: {legacy_loan.patron_barcode} {ee}"
+                    f"Error in row {num_requests}  Item barcode: {legacy_request.item_barcode} "
+                    f"Patron barcode: {legacy_request.patron_barcode} {ee}"
                 )
                 traceback.print_exc()
                 raise ee
-
-        self.wrap_up()
-
-    def handle_checkout_failure(self, legacy_loan, folio_checkout):
-        if folio_checkout.error_message == "5XX":
-            return folio_checkout
-        if folio_checkout.error_message.startswith(
-            "No patron with barcode"
-        ) or folio_checkout.error_message.startswith("Patron barcode already detected"):
-            return folio_checkout
-        elif folio_checkout.error_message.startswith("No item with barcode"):
-            return folio_checkout
-        elif folio_checkout.error_message.startswith(
-            "Cannot check out item that already has an open loan"
-        ):
-            return TransactionResult(True, "", "", "")
-        elif folio_checkout.error_message.startswith("Aged to lost for item"):
-            logging.debug("Setting Available")
-            legacy_loan.next_item_status = "Available"
-            self.set_item_status(legacy_loan)
-            res_checkout = self.circulation_helper.check_out_by_barcode_override_iris(
-                legacy_loan
-            )
-            legacy_loan.next_item_status = "Aged to lost"
-            self.set_item_status(legacy_loan)
-            logging.debug(
-                f"Successfully Checked out Aged to lost item and put the status back"
-            )
-            return res_checkout
-        elif folio_checkout.error_message == "Declared lost":
-            return folio_checkout
-        elif folio_checkout.error_message.startswith(
-            "Cannot check out to inactive user"
-        ):
-            logging.info(
-                "Cannot check out to inactive user. Activating and trying again"
-            )
-            user = self.get_user_by_barcode(legacy_loan.patron_barcode)
-            expiration_date = user.get("expirationDate", dt.isoformat(dt.now()))
-            user["expirationDate"] = dt.isoformat(dt.now() + timedelta(days=1))
-            self.activate_user(user)
-            logging.debug("Successfully Activated user")
-            res = self.circulation_helper.check_out_by_barcode_override_iris(
-                legacy_loan
-            )  # checkout_and_update
-            self.add_stats(res.migration_report_message)
-            self.deactivate_user(user, expiration_date)
-            logging.debug("Successfully Deactivated user again")
-            self.add_stats("Handled inactive users")
-            return res
-        else:
-            self.add_stats(f"Other checkout failure: {folio_checkout.error_message}")
-            # First failure. Add to list of failed loans
-            if legacy_loan.item_barcode not in self.failed:
-                self.failed[legacy_loan.item_barcode] = legacy_loan
-            # Second Failure. For duplicate rows. Needs cleaning...
-            else:
-                logging.debug(
-                    f"Loan already in failed. item barcode {legacy_loan.item_barcode} "
-                    f"Patron barcode: {legacy_loan.patron_barcode}"
-                )
-                self.failed_and_not_dupe[legacy_loan.item_barcode] = [
-                    legacy_loan,
-                    self.failed[legacy_loan.item_barcode],
-                ]
+            if num_requests % 25 == 0:
+                self.print_dict_to_md_table(self.stats)
                 logging.info(
-                    f"Duplicate loans (or failed twice) item barcode"
-                    f"{legacy_loan.item_barcode} patron barcode: {legacy_loan.patron_barcode}"
+                    f"SUMMARY: {timings(self.t0, t0_migration, num_requests)} {num_requests}"
                 )
-                self.add_stats(f"Duplicate loans (or failed twice)")
-                del self.failed[legacy_loan.item_barcode]
-            return TransactionResult(False, "", "", "")
+        self.wrap_up()
 
     @staticmethod
     @abstractmethod
     def add_arguments(parser):
         MigrationTaskBase.add_common_arguments(parser)
         MigrationTaskBase.add_argument(
-            parser, "open_loans_file", help="File to TSV file containing Open Loans"
-        )
-        MigrationTaskBase.add_argument(
-            parser, "service_point_id", "Id of the service point where checkout occurs"
+            parser, "open_requests_file", help="File to TSV file containing Open Loans"
         )
         MigrationTaskBase.add_argument(
             parser, "client_folder", "Must contain a results and a reports folder"
         )
 
-    def load_and_validate_legacy_loans(self, loans_reader):
+    def load_and_validate_legacy_requests(self, loans_reader):
         num_bad = 0
         barcodes = set()
         duplicate_barcodes = set()
         logging.info("Validating legacy loans in file...")
-        for legacy_loan_count, legacy_loan_dict in enumerate(loans_reader):
+        for legacy_request_count, legacy_request_dict in enumerate(loans_reader):
             try:
-                legacy_loan = LegacyLoan(legacy_loan_dict, legacy_loan_count)
-                if any(legacy_loan.errors):
+                legacy_request = LegacyRequest(
+                    legacy_request_dict, legacy_request_count
+                )
+                if any(legacy_request.errors):
                     num_bad += 1
-                    for error in legacy_loan.errors:
+                    for error in legacy_request.errors:
                         self.add_to_migration_report(error[0], error[1])
                 else:
-                    yield legacy_loan
+                    yield legacy_request
             except ValueError as ve:
                 logging.exception(ve)
         logging.info(
-            f"Done validating {legacy_loan_count} legacy loans with {num_bad} rotten apples"
+            f"Done validating {legacy_request_count} legacy requests with {num_bad} rotten apples"
         )
 
     def wrap_up(self):
-        # wrap up
-        for k, v in self.failed.items():
-            self.failed_and_not_dupe[k] = [v.to_dict()]
+        logging.info(json.dumps(list(self.circulation_helper.missing_patron_barcodes)))
+        logging.info(json.dumps(list(self.circulation_helper.missing_item_barcodes)))
 
-        logging.info("## Loan migration counters")
+        logging.info("## Request migration counters")
         logging.info("Title | Number")
         logging.info("--- | ---:")
-        logging.info(f"Failed items/loans | {len(self.failed_and_not_dupe)}")
-        logging.info(f"Total Rows in file  | {self.num_legacy_loans_processed}")
+        logging.info(f"Total Rows in file  | {self.num_legacy_requests_processed}")
         super().wrap_up()
         self.circulation_helper.wrap_up()
         file_path = os.path.join(
-            self.results_folder, f'failed_loans_{time.strftime("%Y%m%d-%H%M%S")}.tsv'
+            self.results_folder, f'failed_requests_{time.strftime("%Y%m%d-%H%M%S")}.tsv'
         )
         csv_columns = [
             "due_date",
@@ -262,17 +189,9 @@ class OpenLoansMigrator(MigrationTaskBase):
                 failed_loans_file, fieldnames=csv_columns, dialect="tsv"
             )
             writer.writeheader()
-            for k, failed_loan in self.failed_and_not_dupe.items():
-                writer.writerow(failed_loan[0])
-        logging.info(json.dumps(self.failed_and_not_dupe, sort_keys=True, indent=4))
-
-    def handle_previously_failed_loans(self, loan):
-        if loan["item_id"] in self.failed:
-            logging.info(
-                f"Loan succeeded but failed previously. Removing from failed    "
-            )
-            # this loan har previously failed. It can now be removed from failures:
-            del self.failed[loan["item_id"]]
+            for failed in self.failed_requests:
+                writer.writerow(failed.to_dict())
+        logging.info(json.dumps(list(self.failed_requests), sort_keys=True, indent=4))
 
     def update_open_loan(self, folio_loan, legacy_loan: LegacyLoan):
         due_date = du_parser.isoparse(str(legacy_loan.due_date))
@@ -362,40 +281,6 @@ class OpenLoansMigrator(MigrationTaskBase):
             )
             self.stats(f"Unsuccessfully declared loan {folio_loan} as Claimed returned")
         # TODO: Exception handling
-
-    def set_item_status(self, legacy_loan: LegacyLoan):
-        try:
-            # Get Item by barcode, update status.
-            item_url = f'{self.folio_client.okapi_url}/item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
-            resp = requests.get(item_url, headers=self.folio_client.okapi_headers)
-            resp.raise_for_status()
-            data = resp.json()
-            folio_item = data["items"][0]
-            folio_item["status"]["name"] = legacy_loan.next_item_status
-            if self.update_item(folio_item):
-                self.add_stats(
-                    f"Successfully set item status to {legacy_loan.next_item_status}"
-                )
-                logging.debug(
-                    f"Successfully set item with barcode "
-                    f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
-                )
-            else:
-                if legacy_loan.item_barcode not in self.failed:
-                    self.failed[legacy_loan.item_barcode] = legacy_loan
-                logging.error(
-                    f"Error when setting item with barcode "
-                    f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
-                )
-                self.add_stats(
-                    f"Error setting item status to {legacy_loan.next_item_status}"
-                )
-        except Exception as ee:
-            logging.error(
-                f"{resp.status_code} when trying to set item with barcode "
-                f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status} {ee}"
-            )
-            raise ee
 
     def activate_user(self, user):
         user["active"] = True

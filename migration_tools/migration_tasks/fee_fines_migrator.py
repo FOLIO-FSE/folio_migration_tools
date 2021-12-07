@@ -8,10 +8,12 @@ from abc import abstractmethod
 import requests
 from requests import HTTPError
 
-from migration_tasks.circulation_helper import LegacyFeeFine
-from migration_tasks.custom_dict import InsensitiveDictReader
-from migration_tasks.migration_task_base import MigrationTaskBase
-from migration_tools.migration_configuration import MigrationConfiguration
+from migration_tools.circulation_helper import LegacyFeeFine
+from migration_tools.migration_tasks.custom_dict import InsensitiveDictReader
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from migration_tools.migration_configuration import (
+    MigrationConfiguration,
+)
 
 
 class MigrateFeesAndFines(MigrationTaskBase):

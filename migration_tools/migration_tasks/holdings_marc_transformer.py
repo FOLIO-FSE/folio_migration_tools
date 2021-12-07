@@ -28,7 +28,7 @@ from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
 from migration_tools.migration_configuration import MigrationConfiguration
 from pymarc import MARCReader
 
-from migration_tasks.migration_task_base import MigrationTaskBase
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):
@@ -38,7 +38,6 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         use_tenant_mapping_rules: bool
         hrid_handling: HridHandling
         files: List[FileDefinition]
-        migration_task_prefix: str
         mfhd_mapping_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
@@ -62,8 +61,13 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         files = [
             f
             for f in self.task_config.files
-            if isfile(self.folder_structure.legacy_records_folder / f.path)
+            if isfile(self.folder_structure.legacy_records_folder / f.file_name)
         ]
+        if not any(files):
+            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            raise TransformationProcessError(
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+            )
         with open(
             self.folder_structure.mapping_files_folder
             / self.task_config.location_map_file_name
@@ -90,20 +94,21 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             for file_def in files:
                 try:
                     with open(
-                        self.folder_structure.legacy_records_folder / file_def.path,
+                        self.folder_structure.legacy_records_folder
+                        / file_def.file_name,
                         "rb",
                     ) as marc_file:
                         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                         reader.hide_utf8_warnings = True
                         reader.force_utf8 = True
-                        logging.info("Running %s", file_def.path)
+                        logging.info("Running %s", file_def.file_name)
                         read_records(reader, processor, file_def)
                 except TransformationProcessError as tpe:
                     logging.critical(tpe)
                     sys.exit()
                 except Exception:
                     logging.exception(
-                        "Failure in Main: %s", file_def.path, stack_info=True
+                        "Failure in Main: %s", file_def.file_name, stack_info=True
                     )
             processor.wrap_up()
 

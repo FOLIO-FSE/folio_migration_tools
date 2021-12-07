@@ -7,36 +7,30 @@ import sys
 import time
 import traceback
 import uuid
-from os import listdir
-from os.path import isfile, join
+from os.path import isfile
 from pathlib import Path
 from typing import List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic.main import BaseModel
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-
-from migration_tools.library_configuration import (
-    FileDefinition,
-    FolioRelease,
-    HridHandling,
-    IlsFlavour,
-    LibraryConfiguration,
-)
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
-from migration_tools.library_configuration import FileDefinition, HridHandling
+from migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
+)
 from migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from migration_tools.migration_configuration import MigrationConfiguration
 from migration_tools.report_blurbs import Blurbs
+from pydantic.main import BaseModel
 
-from migration_tasks.migration_task_base import MigrationTaskBase
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -64,7 +58,6 @@ class ItemsTransformer(MigrationTaskBase):
 
     def __init__(
         self,
-        # configuration: MigrationConfiguration,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
     ):
@@ -208,7 +201,7 @@ class ItemsTransformer(MigrationTaskBase):
                     logging.fatal(error_str)
                     sys.exit()
         logging.info(  # pylint: disable=logging-fstring-interpolation
-            f"processed {self.total_records:,} records " f"in {len(self.files)} files"
+            f"processed {self.total_records:,} records in {len(self.files)} files"
         )
 
     def setup_records_map(self):

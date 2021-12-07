@@ -1,14 +1,14 @@
-from argparse import ArgumentParser
-import logging
 import json
+import logging
+
+import humps
 import requests.exceptions
 from argparse_prompt import PromptParser
-from migration_tools.library_configuration import LibraryConfiguration
-from migration_tasks import *  # pylint: disable=wildcard-import, unused-wildcard-import
-from migration_tasks import migration_task_base
-from migration_tools.migration_configuration import MigrationConfiguration
-import humps
 from pydantic import ValidationError
+
+from migration_tools.library_configuration import LibraryConfiguration
+from migration_tools.migration_tasks import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from migration_tools.migration_tasks import migration_task_base
 
 
 def parse_args():
@@ -31,9 +31,7 @@ def parse_args():
 
 def main():
     try:
-        task_classes = migration_tasks = [
-            t for t in inheritors(migration_task_base.MigrationTaskBase)
-        ]
+        task_classes = [t for t in inheritors(migration_task_base.MigrationTaskBase)]
         args = parse_args()
         with open(args.configuration_path) as config_file_path:
             try:
@@ -62,11 +60,10 @@ def main():
                         if tc.__name__ == migration_task_config["migration_task_type"]
                     )
                     task_config = task_class.TaskConfiguration(**migration_task_config)
-                    # configuration = MigrationConfiguration(args, task_class.get_object_type())
                     task_obj = task_class(task_config, library_config)
                     task_obj.do_work()
                     task_obj.wrap_up()
-                except StopIteration as stop_iteration:
+                except StopIteration:
                     print(
                         f'Referenced task {migration_task_config["migration_task_type"]} '
                         "is not a valid option. Update your task to incorporate "

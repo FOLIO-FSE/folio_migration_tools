@@ -1,15 +1,10 @@
-import enum
 import logging
-import os
 import sys
 import time
-from datetime import datetime
 from datetime import datetime as dt
-from os import listdir
 from os.path import isfile
 from typing import List, Optional
 
-import pydantic
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from migration_tools.colors import Bcolors
 from migration_tools.custom_exceptions import (
@@ -19,26 +14,24 @@ from migration_tools.custom_exceptions import (
 from migration_tools.helper import Helper
 from migration_tools.library_configuration import (
     FileDefinition,
-    FolioRelease,
     HridHandling,
     IlsFlavour,
     LibraryConfiguration,
 )
 from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
-from migration_tools.migration_configuration import MigrationConfiguration
 from pydantic import BaseModel
 from pymarc import MARCReader
 from pymarc.record import Record
 
-from migration_tasks.migration_task_base import MigrationTaskBase
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 
 class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
         migration_task_type: str
-        use_tenant_mapping_rules: bool
+        use_tenant_mapping_rules: Optional[bool] = True
         hrid_handling: HridHandling
         files: List[FileDefinition]
         ils_flavour: IlsFlavour
@@ -49,7 +42,6 @@ class BibsTransformer(MigrationTaskBase):
 
     def __init__(
         self,
-        # configuration: MigrationConfiguration,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
     ):
