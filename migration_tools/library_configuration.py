@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic.types import DirectoryPath
 from enum import Enum
 
@@ -15,6 +15,8 @@ class FileDefinition(BaseModel):
 
 
 class IlsFlavour(str, Enum):
+    """ """
+
     aleph = "aleph"
     voyager = "voyager"
     sierra = "sierra"
@@ -36,11 +38,20 @@ class LibraryConfiguration(BaseModel):
     tenant_id: str
     okapi_username: str
     okapi_password: str
-    ftp_password: Optional[str] = ""
-    ftp_user_name: Optional[str] = ""
-    base_folder: DirectoryPath
+    base_folder: DirectoryPath = Field(
+        description=(
+            "The base folder for migration. "
+            "Should ideally be a github clone of the migration_repo_template"
+        )
+    )
     library_name: str
     log_level_debug: bool
-    folio_release: FolioRelease
+    folio_release: FolioRelease = Field(
+        description=(
+            "The Flavour of the ILS you are migrating from. This choice is "
+            "maninly tied to the handling of legacy identifiers and thereby the "
+            "deterministic UUIDs generated from them."
+        )
+    )
     iteration_identifier: str
     add_time_stamp_to_file_names: Optional[bool] = True
