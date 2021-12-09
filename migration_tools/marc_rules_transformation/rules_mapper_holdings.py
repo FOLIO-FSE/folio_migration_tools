@@ -214,7 +214,9 @@ class RulesMapperHoldings(RulesMapperBase):
     def set_default_location_if_empty(self, folio_holding):
         if not folio_holding.get("permanentLocationId", ""):
             Helper.log_data_issue(
-                "", "Record location mapping failed. Setting Default mapping", ""
+                "",
+                "Record location mapping failed. Setting Default mapping",
+                ":".join(folio_holding.get("formerIds", [])),
             )
             folio_holding["permanentLocationId"] = self.conditions.default_location_id
         # special weird case. Likely needs fixing in the mapping rules.

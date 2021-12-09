@@ -489,7 +489,10 @@ class Conditions:
         if not call_number_type_name_temp:
             self.mapper.migration_report.add(
                 Blurbs.CallNumberTypeMapping,
-                f'Unhandled call number type in ind1: "{marc_field.indicator1}"',
+                (
+                    f'Unhandled call number type in ind1: "{marc_field.indicator1}". '
+                    f' Returning default Callnumber type: {self.default_call_number_type["name"]}'
+                ),
             )
             return self.default_call_number_type["id"]
         t = self.get_ref_data_tuple_by_name(
@@ -504,7 +507,10 @@ class Conditions:
 
         self.mapper.migration_report.add(
             Blurbs.CallNumberTypeMapping,
-            "Mapping failed. Setting default CallNumber type.",
+            (
+                "Mapping failed. Setting default CallNumber type: "
+                f'{self.default_call_number_type["name"]}'
+            ),
         )
 
         return self.default_call_number_type["id"]

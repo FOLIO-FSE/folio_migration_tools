@@ -44,5 +44,5 @@ jobs:
     - name: run it
       shell: bash
       run: |
-        python main_bibs.py ./migration_repo_template https://okapi-bugfest-juniper.folio.ebsco.com fs09000000 folio --password folio --ils_flavour 001 --folio_version juniper --holdings_records False --force_utf_8 True --hrid_handling default --suppress False 
+        python main_bibs.py ./migration_repo_template https://okapi-bugfest-juniper.folio.ebsco.com fs09000000 folio --password folio --ils_flavour 001 --folio_version juniper --holdings_records False --force_utf_8 True --hrid_handling default --suppress False --dates_from_marc False 
     

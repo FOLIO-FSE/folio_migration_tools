@@ -115,7 +115,7 @@ class Worker(MainBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of Legacy items in file"
+                    "Number of rows in legacy data file file(s)"
                 )
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
@@ -226,7 +226,7 @@ class Worker(MainBase):
             self.holdings[new_holding_key] = folio_holding
         else:
             self.mapper.migration_report.add_general_statistics(
-                "Holdings already created from Item"
+                "Holdings already created from rows in file(s)"
             )
             self.merge_holding(new_holding_key, existing_holding, folio_holding)
 
@@ -248,7 +248,7 @@ class Worker(MainBase):
 
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
-                        "Holdings Records Written to disk"
+                        "Holdings Records written to disk"
                     )
             with open(
                 self.folder_structure.holdings_id_map_path, "w"
@@ -323,13 +323,6 @@ def parse_args():
     parser.add_argument("username", help=("the api user"))
     parser.add_argument("--password", help="the api users password", secure=True)
 
-    parser.add_argument(
-        "--suppress",
-        "-ds",
-        help="This batch of records are to be suppressed in FOLIO.",
-        default=False,
-        type=bool,
-    )
     flavourhelp = (
         "What criterias do you want to use when merging holdings?\t "
         "All these parameters need to be the same in order to become "
@@ -410,14 +403,7 @@ def main():
         ) as holdings_mapper_f, open(
             folder_structure.locations_map_path
         ) as location_map_f:
-            instance_id_map = {}
-            for index, json_string in enumerate(instance_id_map_file):
-                # {"legacy_id", "folio_id","instanceLevelCallNumber"}
-                if index % 100000 == 0:
-                    print(f"{index} instance ids loaded to map", end="\r")
-                map_object = json.loads(json_string)
-                instance_id_map[map_object["legacy_id"]] = map_object
-            logging.info("Loaded %s migrated instance IDs", index)
+            instance_id_map = MainBase.load_instance_id_map(instance_id_map_file)
             holdings_map = json.load(holdings_mapper_f)
             logging.info(
                 "%s fields in holdings mapping file map", len(holdings_map["data"])

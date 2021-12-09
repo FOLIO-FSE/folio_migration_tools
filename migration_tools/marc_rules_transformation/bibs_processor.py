@@ -5,6 +5,7 @@ from typing import List
 import uuid
 from pymarc.field import Field
 from pymarc.leader import Leader
+from migration_tools.helper import Helper
 
 from pymarc.record import Record
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
@@ -41,6 +42,7 @@ class BibsProcessor:
         self.folders = folder_structure
         self.srs_records_file = open(self.folders.srs_records_path, "w+")
         self.instance_id_map_file = open(self.folders.instance_id_map_path, "w+")
+        self.instance_identifiers = set()
 
     def process_record(self, idx, marc_record: Record, inventory_only):
 
@@ -78,10 +80,31 @@ class BibsProcessor:
                 self.mapper.migration_report.add_general_statistics(
                     "Records successfully transformed into FOLIO objects"
                 )
+
+                anyone = False
                 for id_map_string in id_map_strings:
-                    self.instance_id_map_file.write(f"{id_map_string}\n")
-                    self.mapper.migration_report.add_general_statistics(
-                        "Lines written to identifier map"
+                    if id_map_string not in self.instance_identifiers:
+                        self.instance_id_map_file.write(f"{id_map_string}\n")
+                        self.mapper.migration_report.add_general_statistics(
+                            "Lines written to identifier map"
+                        )
+                        self.instance_identifiers.add(id_map_string)
+                        anyone = True
+                    else:
+                        s = (
+                            "Duplicate Instance identifiers "
+                            f"for ILS setting {self.ils_flavour}"
+                        )
+                        self.mapper.migration_report.add_general_statistics(s)
+                        Helper.log_data_issue(
+                            id_map_string, s, "-".join(id_map_strings)
+                        )
+                        logging.error(s)
+                if not anyone:
+                    s = "Failed records. No unique bib identifiers in legacy record"
+                    self.mapper.migration_report.add_general_statistics(s)
+                    raise TransformationRecordFailedError(
+                        "Duplicate recod identifier. See logs. Record Failed"
                     )
 
         except ValueError as value_error:

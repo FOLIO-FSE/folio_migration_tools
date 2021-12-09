@@ -11,10 +11,11 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+import datetime
 from migration_tools.helper import Helper
 from migration_tools.mapper_base import MapperBase
 from migration_tools.report_blurbs import Blurbs
-from pymarc.field import Field
+from pymarc import Field, Record
 
 
 class RulesMapperBase(MapperBase):
@@ -88,6 +89,38 @@ class RulesMapperBase(MapperBase):
                     folio_record,
                     e_per_subfield,
                     index_or_legacy_id,
+                )
+
+    @staticmethod
+    def set_005_as_updated_date(marc_record: Record, folio_object: dict, legacy_ids):
+        try:
+            f005 = marc_record["005"].data[0:14]
+            parsed_date = datetime.datetime.strptime(f005, "%Y%m%d%H%M%S").isoformat()
+            folio_object["metadata"]["updatedDate"] = parsed_date
+        except Exception as exception:
+            if "005" in marc_record:
+                Helper.log_data_issue(
+                    legacy_ids,
+                    f"Could not parse Last transaction date from 005 {exception}",
+                    marc_record["005"].data,
+                )
+
+    @staticmethod
+    def use_008_for_dates(marc_record: Record, folio_object: dict, legacy_ids):
+        try:
+            first_six = "".join(marc_record["008"].data[0:6])
+            date_str = (
+                f"19{first_six}" if int(first_six[0:2]) > 69 else f"20{first_six}"
+            )
+            date_str_parsed = datetime.datetime.strptime(date_str, "%Y%m%d")
+            if "title" in folio_object:  # only instance has titles
+                folio_object["catalogedDate"] = date_str_parsed.strftime("%Y-%m-%d")
+        except Exception as exception:
+            if "008" in marc_record:
+                Helper.log_data_issue(
+                    legacy_ids,
+                    f"Could not parse cat date from 008 {exception}",
+                    marc_record["008"].data,
                 )
 
     def get_value_from_condition(

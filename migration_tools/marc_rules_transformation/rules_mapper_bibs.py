@@ -1,5 +1,6 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
+import datetime
 import json
 import logging
 import sys
@@ -37,6 +38,7 @@ class BibsRulesMapper(RulesMapperBase):
     ):
         super().__init__(folio_client, Conditions(folio_client, self, "bibs"))
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
+        self.set_dates_from_marc = args.dates_from_marc
         self.folio = folio_client
         self.folio_version = args.folio_version
         self.record_status = {}
@@ -187,8 +189,6 @@ class BibsRulesMapper(RulesMapperBase):
                     f"map_field_according_to_mapping {marc_field.tag} {marc_field.format_field()} {json.dumps(mappings)}"
                 )
                 raise ee
-        else:
-            self.migration_report.add(Blurbs.MappingsNotFoundForField, marc_field.tag)
 
     def report_marc_stats(
         self, marc_field, bad_tags, index_or_legacy_id, ignored_subsequent_fields
@@ -248,6 +248,8 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["languages"] = list(
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
+        if self.set_dates_from_marc:
+            self.use_008_for_dates(marc_record, folio_instance, legacy_ids)
         folio_instance["discoverySuppress"] = bool(self.suppress)
         folio_instance["staffSuppress"] = False
         self.handle_holdings(marc_record)
@@ -328,12 +330,12 @@ class BibsRulesMapper(RulesMapperBase):
             if match:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f"336$a -Successful matching on  {match_template} ({f336a})",
+                    f"336$a - Successful matching on  {match_template} ({f336a})",
                 )
             else:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f"336$a -Unsuccessful matching on  {match_template} ({f336a})",
+                    f"336$a - Unsuccessful matching on  {match_template} ({f336a})",
                 )
                 Helper.log_data_issue(
                     legacy_id,
@@ -364,7 +366,7 @@ class BibsRulesMapper(RulesMapperBase):
             if not t:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f'Code {marc_record["336"]["b"]} not found in FOLIO (from 336$b)',
+                    f'336$b - Code {marc_record["336"]["b"]} not found in FOLIO ()',
                 )
                 Helper.log_data_issue(
                     legacy_id,
@@ -373,7 +375,8 @@ class BibsRulesMapper(RulesMapperBase):
                 )
             else:
                 self.migration_report.add(
-                    Blurbs.RecourceTypeMapping, f"{t[1]} (from 336$b)"
+                    Blurbs.RecourceTypeMapping,
+                    f'336$b {t[1]} mapped from {marc_record["336"]["b"]}',
                 )
                 return_id = t[0]
 
@@ -415,7 +418,7 @@ class BibsRulesMapper(RulesMapperBase):
                 match = next(
                     f
                     for f in self.folio.instance_formats
-                    if f["name"] == match_template
+                    if f["name"].lower().replace(" ", "") == match_template
                 )
                 self.migration_report.add(
                     Blurbs.InstanceFormat,
@@ -438,12 +441,15 @@ class BibsRulesMapper(RulesMapperBase):
         all_338s = marc_record.get_fields("338")
         for fidx, f in enumerate(all_338s):
             source = f["2"] if "2" in f else "Not set"
-            self.migration_report.add(
-                Blurbs.InstanceFormat,
-                f"338$2 (Source) is set to {source}. "
-                "Everything starting with rdacarrier will get mapped.",
-            )
-            if source.strip().startswith("rdacarrier"):
+            if not source.strip().startswith("rdacarrier"):
+                self.migration_report.add(
+                    Blurbs.InstanceFormat,
+                    (
+                        "InstanceFormat not mapped since 338$2 (Source) "
+                        f"is set to {source}. "
+                    ),
+                )
+            else:
                 if "b" not in f and "a" in f:
                     self.migration_report.add(
                         Blurbs.InstanceFormat,

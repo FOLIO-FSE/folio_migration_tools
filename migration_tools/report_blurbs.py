@@ -2,10 +2,11 @@ from enum import Enum
 from typing import NamedTuple
 
 
-class KindOfBlurb(Enum):
+class ReportSection(Enum):
     GENERAL = "General statistics"
     LIBRARY_ACTION = "Library action needed"
-    ADDITIONAL_INFORMATION = "Additional indformation"
+    ADDITIONAL_INFORMATION = "Additional information"
+    TECHNICAL = "Technical information"
 
 
 class Blurbs(NamedTuple):
@@ -189,12 +190,8 @@ class Blurbs(NamedTuple):
     AddedValueFromParameter = ("Added value from parameter since value is empty", "")
     InstanceTypeMapping = ("Instance Type Mapping", "")
     StaffOnlyViaIndicator = ("Set note to staff only via indicator", "")
-    MappingsNotFoundForField = (
-        "Mappings not found for field",
-        "Library action: **REVIEW** <br/>These are the MARC tags that occurred in the bib records that did not have any mappings configured. If you think the contents of these fields would be valuable to have in Inventory, please tell your Implementation consultant. The MARC recors will still contain the data, so they will still be part of the data you export to your OPAC/Discovery system",
-    )
     PossibleCleaningTasks = ("Possible cleaning tasks", "")
     HoldingsStatementsParsing = (
-        "Parsed Holdings statements from 58X/68X combinations",
+        "Parsed Holdings statements from 85X/86X combinations",
         "",
     )

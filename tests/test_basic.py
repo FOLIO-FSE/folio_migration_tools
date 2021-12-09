@@ -3,15 +3,18 @@ import json
 import os
 from re import escape
 from unittest.mock import Mock, patch
-from folio_uuid import FolioUUID, FOLIONamespaces
 
+from folio_uuid import FolioUUID, FOLIONamespaces
+import datetime
 import pymarc
+from pymarc.record import Record, Field
 from migration_tools import mapper_base
 from migration_tools.mapping_file_transformation import mapping_file_mapper_base
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
+from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 from migration_tools.report_blurbs import Blurbs
 from pymarc.reader import MARCReader
 
@@ -22,6 +25,51 @@ def func(x):
 
 def test_answer2():
     assert func(4) == 5
+
+
+def test_datetime_from_005():
+    f005_1 = "19940223151047.0"
+    record = Record()
+    record.add_field(Field(tag="005", data=f005_1))
+    instance = {
+        "metadata": {
+            "createdDate": datetime.datetime.utcnow().isoformat(),
+            "updatedDate": datetime.datetime.utcnow().isoformat(),
+        }
+    }
+    RulesMapperBase.set_005_as_updated_date(record, instance, "some_id")
+    assert instance["metadata"]["updatedDate"] == "1994-02-23T15:10:47"
+
+
+def test_date_from_008():
+    f008 = "170309s2017\\\\quc\\\\\o\\\\\000\0\fre\d"
+    record = Record()
+    record.add_field(Field(tag="008", data=f008))
+    instance = {
+        "title": "some title",
+        "metadata": {
+            "createdDate": datetime.datetime.utcnow().isoformat(),
+            "updatedDate": datetime.datetime.utcnow().isoformat(),
+        },
+    }
+    RulesMapperBase.use_008_for_dates(record, instance, "some_id")
+    assert instance["catalogedDate"] == "2017-03-09"
+    # assert instance["metadata"]["createdDate"] == "2017-03-09T00:00:00"
+
+
+def test_date_from_008_holding():
+    f008 = "170309s2017\\\\quc\\\\\o\\\\\000\0\fre\d"
+    record = Record()
+    record.add_field(Field(tag="008", data=f008))
+    holding = {
+        "metadata": {
+            "createdDate": datetime.datetime.utcnow().isoformat(),
+            "updatedDate": datetime.datetime.utcnow().isoformat(),
+        }
+    }
+    RulesMapperBase.use_008_for_dates(record, holding, "some_id")
+    assert "catalogedDate" not in holding
+    # assert holding["metadata"]["createdDate"] == "2017-03-09T00:00:00"
 
 
 def test_deterministic_uuid_generation_holdings():
@@ -202,5 +250,5 @@ def test_ude2c():
             print(reader.current_exception)
             reader2 = MARCReader(chunk)
             rec2 = next(reader2)
-            print(rec2)
+            # print(rec2)
             # assert rec2.title

@@ -168,6 +168,14 @@ def parse_args():
         default=False,
         type=bool,
     )
+    date_help = (
+        "\n"
+        "False: (Default)\n"
+        "\tCatalog Date will be empty\n"
+        "True:\n"
+        "\tSetting this to true will add catalogedDate from 008[00-05]"
+    )
+    parser.add_argument("--dates_from_marc", help=date_help, default=False, type=bool)
     hrid_handling = (
         "HRID Handling\n"
         "This overrides any HRID/001 setting from the mapping rules\n"

@@ -68,6 +68,12 @@ class HoldingsStatementsParser:
                             f"\t{parsed_dict['statement']['note']}"
                             f"\t{parsed_dict['statement']['staffNote']}"
                         )
+                        return_dict["migration_report"].append(
+                            (
+                                "Holdings statements",
+                                f"From {pattern_tag}",
+                            )
+                        )
                         return_dict["statements"].append(parsed_dict["statement"])
 
         return_dict["statements"] = dedupe_list_of_dict(return_dict["statements"])
