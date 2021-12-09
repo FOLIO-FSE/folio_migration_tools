@@ -1,12 +1,23 @@
 import logging
 import sys
 from pathlib import Path
+import time
+
+from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 class FolderStructure:
-    def __init__(self, base_path: Path, time_stamp: str):
+    def __init__(
+        self,
+        base_path: Path,
+        object_type: FOLIONamespaces,
+        migration_task_name: str,
+        iteration_identifier: str,
+    ):
         logging.info("Setting up folder structure")
-        self.time_stamp = time_stamp
+        self.object_type: FOLIONamespaces = object_type
+        self.migration_task_name = migration_task_name
+        self.iteration_identifier = iteration_identifier
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
             logging.critical("Base Folder Path is not a folder. Exiting.")
@@ -15,10 +26,10 @@ class FolderStructure:
         self.data_folder = self.base_folder / "data"
         verify_folder(self.data_folder)
 
-        verify_folder(self.data_folder / "instance")
-        verify_folder(self.data_folder / "holdingsrecord")
-        verify_folder(self.data_folder / "item")
-        verify_folder(self.data_folder / "users")
+        verify_folder(self.data_folder / str(FOLIONamespaces.instances.name).lower())
+        verify_folder(self.data_folder / str(FOLIONamespaces.holdings.name).lower())
+        verify_folder(self.data_folder / str(FOLIONamespaces.items.name).lower())
+        verify_folder(self.data_folder / str(FOLIONamespaces.users.name).lower())
         self.archive_folder = self.base_folder / "archive"
         verify_folder(self.data_folder)
 
@@ -52,72 +63,54 @@ class FolderStructure:
             "Migration report file will be saved at %s", self.migration_reports_file
         )
 
-    def setup_migration_file_structure(
-        self, object_type: str, source_file_type: str = ""
-    ):
+    def setup_migration_file_structure(self, source_file_type: str = ""):
+        file_template = f"{self.iteration_identifier}_{self.migration_task_name}"
+        object_type_string = str(self.object_type.name).lower()
         if source_file_type:
             self.legacy_records_folder = self.data_folder / source_file_type
+        elif self.object_type == FOLIONamespaces.other:
+            self.legacy_records_folder = self.data_folder
+
         else:
-            self.legacy_records_folder = self.data_folder / object_type
+            self.legacy_records_folder = self.data_folder / object_type_string
         verify_folder(self.legacy_records_folder)
 
-        self.transformation_log_path = (
-            self.reports_folder / f"{object_type}_transformation_{self.time_stamp}.log"
+        self.transformation_log_path = self.reports_folder / (
+            f"log_{object_type_string}_{file_template}.log"
         )
 
         self.transformation_extra_data_path = (
-            self.results_folder
-            / f"{object_type}_transformation_{self.time_stamp}.extradata"
+            self.results_folder / f"extradata_{self.iteration_identifier}.extradata"
         )
 
         self.data_issue_file_path = (
-            self.reports_folder / f"{object_type}_data_issues_{self.time_stamp}.tsv"
+            self.reports_folder
+            / f"data_issues_log_{object_type_string}_{file_template}.tsv"
         )
         self.created_objects_path = (
-            self.results_folder / f"folio_{object_type}_{self.time_stamp}.json"
+            self.results_folder / f"folio_{object_type_string}_{file_template}.json"
         )
 
         self.migration_reports_file = (
             self.reports_folder
-            / f"{object_type}_transformation_report_{self.time_stamp}.md"
+            / f"transformation_report_{object_type_string}_{file_template}.md"
         )
 
-        self.srs_records_path = self.results_folder / f"srs_{self.time_stamp}.json"
+        self.srs_records_path = self.results_folder / f"folio_srs_{file_template}.json"
+
         self.instance_id_map_path = (
-            self.results_folder / f"instance_id_map_{self.time_stamp}.json"
-        )
-        self.holdings_from_bibs_path = (
-            self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
+            self.results_folder / f"instance_id_map_{self.iteration_identifier}.json"
         )
 
-        self.holdings_from_csv_path = (
-            self.results_folder / f"holdings_from_csv_{self.time_stamp}.json"
-        )
         self.holdings_id_map_path = (
-            self.results_folder / f"holdings_id_map_{self.time_stamp}.json"
-        )
-
-        self.holdings_from_mfhd_path = (
-            self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
-        )
-        self.holdings_from_c_records_path = (
-            self.results_folder / f"holdings_from_bibs_{self.time_stamp}.json"
+            self.results_folder / f"holdings_id_map_{self.iteration_identifier}.json"
         )
 
         # Mapping files
-        self.locations_map_path = self.mapping_files_folder / "locations.tsv"
         self.temp_locations_map_path = self.mapping_files_folder / "temp_locations.tsv"
-        self.mfhd_rules_path = self.mapping_files_folder / "mfhd_rules.json"
-        self.items_map_path = self.mapping_files_folder / "item_mapping.json"
-        self.holdings_map_path = (
-            self.mapping_files_folder / "holdingsrecord_mapping.json"
-        )
         self.material_type_map_path = self.mapping_files_folder / "material_types.tsv"
         self.loan_type_map_path = self.mapping_files_folder / "loan_types.tsv"
         self.temp_loan_type_map_path = self.mapping_files_folder / "temp_loan_types.tsv"
-        self.call_number_type_map_path = (
-            self.mapping_files_folder / "call_number_type_mapping.tsv"
-        )
         self.statistical_codes_map_path = self.mapping_files_folder / "statcodes.tsv"
         self.item_statuses_map_path = self.mapping_files_folder / "item_statuses.tsv"
 

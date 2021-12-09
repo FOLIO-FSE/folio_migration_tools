@@ -6,6 +6,7 @@ import time
 import traceback
 from datetime import datetime as dt
 from folio_uuid.folio_uuid import FolioUUID, FOLIONamespaces
+from migration_tools.library_configuration import FileDefinition
 
 from jsonschema import ValidationError, validate
 from migration_tools.custom_exceptions import (
@@ -22,15 +23,12 @@ from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
 class HoldingsProcessor:
     """the processor"""
 
-    def __init__(
-        self, mapper, folio_client, folder_structure: FolderStructure, suppress: bool
-    ):
+    def __init__(self, mapper, folder_structure: FolderStructure):
         self.folder_structure: FolderStructure = folder_structure
         self.records_count = 0
         self.failed_records_count = 0
         self.mapper: RulesMapperHoldings = mapper
         self.start = time.time()
-        self.suppress = suppress
         self.created_objects_file = open(
             self.folder_structure.created_objects_path, "w+"
         )
@@ -44,7 +42,7 @@ class HoldingsProcessor:
             logging.critical("More than 20 percent of the records have failed. Halting")
             sys.exit()
 
-    def process_record(self, marc_record):
+    def process_record(self, marc_record, file_def: FileDefinition):
         """processes a marc holdings record and saves it"""
         success = True
         try:
@@ -57,7 +55,7 @@ class HoldingsProcessor:
                     "Missing instance ids. Something is wrong.",
                     "",
                 )
-            folio_rec["discoverySuppress"] = self.suppress
+            folio_rec["discoverySuppress"] = file_def.suppressed
             Helper.write_to_file(self.created_objects_file, folio_rec)
             self.mapper.migration_report.add_general_statistics(
                 "Holdings records written to disk"

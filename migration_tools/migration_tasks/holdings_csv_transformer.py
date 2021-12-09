@@ -12,71 +12,173 @@ import traceback
 import uuid
 from os import listdir
 from os.path import isfile
-from typing import List
+from typing import List, Optional
 
-import requests.exceptions
-from argparse_prompt import PromptParser
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient.FolioClient import FolioClient
-
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
-from migration_tools.main_base import MainBase
+from migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
+)
 from migration_tools.mapping_file_transformation.holdings_mapper import HoldingsMapper
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
 from migration_tools.report_blurbs import Blurbs
+from pydantic.main import BaseModel
+
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
+csv.register_dialect("tsv", delimiter="\t")
 
 
-class Worker(MainBase):
-    """Class that is responsible for the acutal work"""
+class HoldingsCsvTransformer(MigrationTaskBase):
+    class TaskConfiguration(BaseModel):
+        name: str
+        migration_task_type: str
+        hrid_handling: HridHandling
+        files: List[FileDefinition]
+        holdings_map_file_name: str
+        location_map_file_name: str
+        default_call_number_type_name: str
+        call_number_type_map_file_name: Optional[str]
+        holdings_merge_criteria: Optional[str] = "clb"
+
+    @staticmethod
+    def get_object_type() -> FOLIONamespaces:
+        return FOLIONamespaces.holdings
 
     def __init__(
         self,
-        folio_client: FolioClient,
-        mapper: HoldingsMapper,
-        files,
-        folder_structure: FolderStructure,
-        holdings_merge_criteria,
+        task_config: TaskConfiguration,
+        library_config: LibraryConfiguration,
     ):
-        super().__init__()
-        self.holdings = {}
-        self.total_records = 0
-        self.folder_structure = folder_structure
-        self.folio_client = folio_client
-        self.files = files
-        self.legacy_map = {}
-        self.holdings_merge_criteria = holdings_merge_criteria
-        if "_" in self.holdings_merge_criteria:
-            self.excluded_hold_type_id = self.holdings_merge_criteria.split("_")[-1]
-            logging.info(self.excluded_hold_type_id)
-
-        self.results_path = self.folder_structure.created_objects_path
-        self.mapper = mapper
-        self.failed_files: List[str] = list()
-        self.holdings_types = list(
-            self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
-        )
-        logging.info("%s\tholdings types in tenant", len(self.holdings_types))
-
-        self.default_holdings_type = next(
-            (h["id"] for h in self.holdings_types if h["name"] == "Unmapped"), ""
-        )
-        if not self.default_holdings_type:
-            raise TransformationProcessError(
-                "Holdings type named Unmapped not found in FOLIO."
+        super().__init__(library_config, task_config)
+        try:
+            self.task_config = task_config
+            self.files = self.list_source_files()
+            self.mapper = HoldingsMapper(
+                self.folio_client,
+                self.load_mapped_fields(),
+                self.load_location_map(),
+                self.load_call_number_type_map(),
+                self.load_instance_id_map(),
             )
+            self.holdings = {}
+            self.total_records = 0
+            self.legacy_map = {}
+            if "_" in self.task_config.holdings_merge_criteria:
+                self.excluded_hold_type_id = (
+                    self.task_config.holdings_merge_criteria.split("_")[-1]
+                )
+                logging.info(self.excluded_hold_type_id)
 
+            self.results_path = self.folder_structure.created_objects_path
+            self.failed_files: List[str] = list()
+            self.holdings_types = list(
+                self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
+            )
+            logging.info("%s\tholdings types in tenant", len(self.holdings_types))
+
+            self.default_holdings_type = next(
+                (h["id"] for h in self.holdings_types if h["name"] == "Unmapped"), ""
+            )
+            if not self.default_holdings_type:
+                raise TransformationProcessError(
+                    "Holdings type named Unmapped not found in FOLIO."
+                )
+        except TransformationProcessError as process_error:
+            logging.critical(process_error)
+            logging.critical("Halting.")
+            sys.exit()
+        except Exception as exception:
+            logging.info("\n=======ERROR===========")
+            logging.info(exception)
+            logging.info("\n=======Stack Trace===========")
+            traceback.print_exc()
         logging.info("Init done")
 
-    def work(self):
+    def load_call_number_type_map(self):
+        with open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.call_number_type_map_file_name,
+            "r",
+        ) as callnumber_type_map_f:
+            return self.load_ref_data_map_from_file(
+                callnumber_type_map_f, "Found %s rows in call number type map"
+            )
+
+    def load_location_map(self):
+        with open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.location_map_file_name
+        ) as location_map_f:
+            return self.load_ref_data_map_from_file(
+                location_map_f, "Found %s rows in location map"
+            )
+
+    # TODO Rename this here and in `load_call_number_type_map` and `load_location_map`
+    def load_ref_data_map_from_file(self, file, message):
+        ref_dat_map = list(csv.DictReader(file, dialect="tsv"))
+        logging.info(message, len(ref_dat_map))
+        return ref_dat_map
+
+    def load_mapped_fields(self):
+        with open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.holdings_map_file_name
+        ) as holdings_mapper_f:
+            holdings_map = json.load(holdings_mapper_f)
+            logging.info(
+                "%s fields in holdings mapping file map", len(holdings_map["data"])
+            )
+            mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+                holdings_map
+            )
+            logging.info(
+                "%s mapped fields in holdings mapping file map",
+                len(list(mapped_fields)),
+            )
+            return holdings_map
+
+    def list_source_files(self):
+        # Source data files
+        files = [
+            self.folder_structure.data_folder / "items" / f.file_name
+            for f in self.task_config.files
+            if isfile(self.folder_structure.data_folder / "items" / f.file_name)
+        ]
+        if not any(files):
+            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            raise TransformationProcessError(
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+            )
+        logging.info("Files to process:")
+        for filename in files:
+            logging.info("\t%s", filename)
+        return files
+
+    def load_instance_id_map(self):
+        res = {}
+        with open(
+            self.folder_structure.instance_id_map_path, "r"
+        ) as instance_id_map_file:
+            for index, json_string in enumerate(instance_id_map_file):
+                # Format:{"legacy_id", "folio_id","instanceLevelCallNumber"}
+                if index % 100000 == 0:
+                    print(f"{index} instance ids loaded to map", end="\r")
+                map_object = json.loads(json_string)
+                res[map_object["legacy_id"]] = map_object
+        logging.info("Loaded %s migrated instance IDs", (index + 1))
+        return res
+
+    def do_work(self):
         logging.info("Starting....")
         for file_name in self.files:
             logging.info("Processing %s", file_name)
@@ -102,9 +204,11 @@ class Worker(MainBase):
                 "Number of files processed"
             )
             start = time.time()
+            records_processed = 0
             for idx, record in enumerate(
                 self.mapper.get_objects(records_file, file_name)
             ):
+                records_processed = idx + 1
                 try:
                     self.process_holding(idx, record)
 
@@ -115,7 +219,7 @@ class Worker(MainBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of rows in legacy data file file(s)"
+                    "Number of Legacy items in file"
                 )
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
@@ -123,9 +227,9 @@ class Worker(MainBase):
                     logging.info(  # pylint: disable=logging-fstring-interpolation
                         f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
                     )
-            self.total_records += idx
+            self.total_records = records_processed
             logging.info(  # pylint: disable=logging-fstring-interpolation
-                f"Done processing {file_name} containing {idx:,} records. "
+                f"Done processing {file_name} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
 
@@ -212,24 +316,6 @@ class Worker(MainBase):
             )
             yield c
 
-    def merge_holding_in(self, folio_holding):
-        new_holding_key = self.to_key(folio_holding, self.holdings_merge_criteria)
-        existing_holding = self.holdings.get(new_holding_key, None)
-        exclude = (
-            self.holdings_merge_criteria.startswith("u_")
-            and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
-        )
-        if exclude or not existing_holding:
-            self.mapper.migration_report.add_general_statistics(
-                "Unique Holdings created from Items"
-            )
-            self.holdings[new_holding_key] = folio_holding
-        else:
-            self.mapper.migration_report.add_general_statistics(
-                "Holdings already created from rows in file(s)"
-            )
-            self.merge_holding(new_holding_key, existing_holding, folio_holding)
-
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
         if any(self.holdings):
@@ -248,7 +334,7 @@ class Worker(MainBase):
 
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
-                        "Holdings Records written to disk"
+                        "Holdings Records Written to disk"
                     )
             with open(
                 self.folder_structure.holdings_id_map_path, "w"
@@ -274,13 +360,32 @@ class Worker(MainBase):
             )
         logging.info("All done!")
 
+    def merge_holding_in(self, folio_holding):
+        new_holding_key = self.to_key(
+            folio_holding, self.task_config.holdings_merge_criteria
+        )
+        existing_holding = self.holdings.get(new_holding_key, None)
+        exclude = (
+            self.task_config.holdings_merge_criteria.startswith("u_")
+            and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
+        )
+        if exclude or not existing_holding:
+            self.mapper.migration_report.add_general_statistics(
+                "Unique Holdings created from Items"
+            )
+            self.holdings[new_holding_key] = folio_holding
+        else:
+            self.mapper.migration_report.add_general_statistics(
+                "Holdings already created from Item"
+            )
+            self.merge_holding(new_holding_key, existing_holding, folio_holding)
+
     @staticmethod
     def to_key(holding, fields_criteria):
         """creates a key if key values in holding record
         to determine uniquenes"""
         try:
-            """creates a key of key values in holding record
-            to determine uniquenes"""
+            # creates a key of key values in holding record to determine uniquenes
             call_number = (
                 "".join(holding.get("callNumber", "").split())
                 if "c" in fields_criteria
@@ -313,140 +418,39 @@ class Worker(MainBase):
             )
             self.holdings[key]["formerIds"] = list(set(self.holdings[key]["formerIds"]))
 
-
-def parse_args():
-    """Parse CLI Arguments"""
-    parser = PromptParser()
-    parser.add_argument("base_folder", help="Base folder of the client.")
-    parser.add_argument("okapi_url", help=("OKAPI base url"))
-    parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
-    parser.add_argument("username", help=("the api user"))
-    parser.add_argument("--password", help="the api users password", secure=True)
-
-    flavourhelp = (
-        "What criterias do you want to use when merging holdings?\t "
-        "All these parameters need to be the same in order to become "
-        "the same Holdings record in FOLIO. \n"
-        "\tclb\t-\tCallNumber, Location, Bib ID\n"
-        "\tlb\t-\tLocation and Bib ID only\n"
-        "\tclb_7b94034e-ac0d-49c9-9417-0631a35d506b\t-\t "
-        "Exclude bound-with holdings from merging. Requires a "
-        "Holdings type in the tenant with this Id"
-    )
-    parser.add_argument(
-        "--holdings_merge_criteria", "-hmc", default="clb", help=flavourhelp
-    )
-    parser.add_argument(
-        "--log_level_debug",
-        "-debug",
-        help="Set log level to debug",
-        default=False,
-        type=bool,
-    )
-    parser.add_argument(
-        "--time_stamp",
-        "-ts",
-        help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
-    )
-    args = parser.parse_args()
-    logging.info("Okapi URL:\t%s", args.okapi_url)
-    logging.info("Tenant Id:\t%s", args.tenant_id)
-    logging.info("Username:   \t%s", args.username)
-    logging.info("Password:   \tSecret")
-    return args
+    @staticmethod
+    def add_arguments(sub_parser):
+        MigrationTaskBase.add_common_arguments(sub_parser)
+        sub_parser.add_argument(
+            "timestamp",
+            help=(
+                "timestamp or migration identifier. "
+                "Used to chain multiple runs together"
+            ),
+            secure=False,
+        )
+        sub_parser.add_argument(
+            "--suppress",
+            "-ds",
+            help="This batch of records are to be suppressed in FOLIO.",
+            default=False,
+            type=bool,
+        )
+        flavourhelp = (
+            "What criterias do you want to use when merging holdings?\t "
+            "All these parameters need to be the same in order to become "
+            "the same Holdings record in FOLIO. \n"
+            "\tclb\t-\tCallNumber, Location, Bib ID\n"
+            "\tlb\t-\tLocation and Bib ID only\n"
+            "\tclb_7b94034e-ac0d-49c9-9417-0631a35d506b\t-\t "
+            "Exclude bound-with holdings from merging. Requires a "
+            "Holdings type in the tenant with this Id"
+        )
+        sub_parser.add_argument(
+            "--holdings_merge_criteria", "-hmc", default="clb", help=flavourhelp
+        )
 
 
 def dedupe(list_of_dicts):
     # TODO: Move to interface or parent class
     return [dict(t) for t in {tuple(d.items()) for d in list_of_dicts}]
-
-
-def main():
-    """Main Method. Used for bootstrapping."""
-    csv.register_dialect("tsv", delimiter="\t")
-    args = parse_args()
-    folder_structure = FolderStructure(
-        args.base_folder, args.time_stamp  # pylint: disable=no-member
-    )  # pylint: disable=no-member
-    folder_structure.setup_migration_file_structure("holdingsrecord", "item")
-    Worker.setup_logging(folder_structure, args.log_level_debug)
-    folder_structure.log_folder_structure()
-    try:
-        folio_client = FolioClient(
-            args.okapi_url, args.tenant_id, args.username, args.password
-        )
-    except requests.exceptions.SSLError as sslerror:
-        logging.error(sslerror)
-        logging.error(
-            "Network Error. Are you connected to the Internet? Do you need VPN? {}"
-        )
-        sys.exit()
-
-    # Source data files
-    files = [
-        os.path.join(folder_structure.legacy_records_folder, f)
-        for f in listdir(folder_structure.legacy_records_folder)
-        if isfile(os.path.join(folder_structure.legacy_records_folder, f))
-    ]
-    logging.info("Files to process:")
-    for filename in files:
-        logging.info("\t%s", filename)
-
-    # All the paths...
-    try:
-        with open(
-            folder_structure.call_number_type_map_path, "r"
-        ) as callnumber_type_map_f, open(
-            folder_structure.instance_id_map_path, "r"
-        ) as instance_id_map_file, open(
-            folder_structure.holdings_map_path
-        ) as holdings_mapper_f, open(
-            folder_structure.locations_map_path
-        ) as location_map_f:
-            instance_id_map = MainBase.load_instance_id_map(instance_id_map_file)
-            holdings_map = json.load(holdings_mapper_f)
-            logging.info(
-                "%s fields in holdings mapping file map", len(holdings_map["data"])
-            )
-            mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
-                holdings_map
-            )
-            logging.info(
-                "%s mapped fields in holdings mapping file map",
-                len(list(mapped_fields)),
-            )
-            location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
-            call_number_type_map = list(
-                csv.DictReader(callnumber_type_map_f, dialect="tsv")
-            )
-            logging.info("Found %s rows in location map", len(location_map))
-
-            mapper = HoldingsMapper(
-                folio_client,
-                holdings_map,
-                location_map,
-                call_number_type_map,
-                instance_id_map,
-            )
-            worker = Worker(
-                folio_client,
-                mapper,
-                files,
-                folder_structure,
-                args.holdings_merge_criteria,
-            )
-            worker.work()
-            worker.wrap_up()
-    except TransformationProcessError as process_error:
-        logging.critical(process_error)
-        logging.critical("Halting.")
-        sys.exit()
-    except Exception as exception:
-        logging.info("\n=======ERROR===========")
-        logging.info(exception)
-        logging.info("\n=======Stack Trace===========")
-        traceback.print_exc()
-
-
-if __name__ == "__main__":
-    main()

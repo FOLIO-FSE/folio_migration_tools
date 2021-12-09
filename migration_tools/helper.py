@@ -26,13 +26,15 @@ class Helper:
         report_file, total_records: int, mapped_folio_fields, mapped_legacy_fields
     ):
 
+        details_start = (
+            "<details><summary>Click to expand field report</summary>     \n\n"
+        )
+        details_end = "</details>   \n"
         report_file.write("\n## Mapped FOLIO fields\n")
         # report_file.write(f"{blurbs[header]}\n")
 
         d_sorted = {k: mapped_folio_fields[k] for k in sorted(mapped_folio_fields)}
-        report_file.write(
-            "<details><summary>Click to expand field report</summary>     \n\n"
-        )
+        report_file.write(details_start)
 
         report_file.write("FOLIO Field | Mapped | Unmapped  \n")
         report_file.write("--- | --- | ---:  \n")
@@ -42,18 +44,15 @@ class Helper:
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
-                f"{k} | {(mapped if mapped > 0 else 0):,} ({mapped_per}) | {unmapped:,}  \n"
+                f"{k} | {max(mapped, 0):,} ({mapped_per}) | {unmapped:,}  \n"
             )
-        report_file.write("</details>   \n")
+        report_file.write(details_end)
 
         report_file.write("\n## Mapped Legacy fields\n")
         # report_file.write(f"{blurbs[header]}\n")
 
         d_sorted = {k: mapped_legacy_fields[k] for k in sorted(mapped_legacy_fields)}
-        report_file.write(
-            "<details><summary>Click to expand field report</summary>     \n\n"
-        )
-
+        report_file.write(details_start)
         report_file.write("Legacy Field | Present | Mapped | Unmapped  \n")
         report_file.write("--- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
@@ -66,9 +65,9 @@ class Helper:
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
-                f"{k} | {(present if present > 0 else 0):,} ({present_per}) | {(mapped if mapped > 0 else 0):,} ({mapped_per}) | {unmapped:,}  \n"
+                f"{k} | {max(present, 0):,} ({present_per}) | {max(mapped, 0):,} ({mapped_per}) | {unmapped:,}  \n"
             )
-        report_file.write("</details>   \n")
+        report_file.write(details_end)
 
     @staticmethod
     def write_migration_report(report_file, migration_report: MigrationReport):
