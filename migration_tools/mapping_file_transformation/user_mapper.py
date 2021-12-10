@@ -180,7 +180,7 @@ class UserMapper(UserMapperBase):
             reader = csv.DictReader(source_file)
         for idx, row in enumerate(reader):
             if len(row.keys()) < 3:
-                raise TransformationRecordFailedError(
+                raise TransformationProcessError(
                     idx, "something is wrong source file row", json.dumps(row)
                 )
             yield row
