@@ -517,14 +517,26 @@ class BibsRulesMapper(RulesMapperBase):
             folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             try:
-                new_035 = Field(
-                    tag="035",
-                    indicators=["0", "0"],
-                    subfields=["a", marc_record["001"].value()],
+                f_001 = marc_record["001"].value()
+                f_003 = marc_record["003"].value() if "003" in marc_record else ""
+                self.migration_report.add(
+                    Blurbs.HridHandling, f"Values in 003: {f_003}"
                 )
+                if not self.task_configuration.deactivate_035_from_001:
+                    str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
+                    new_035 = Field(
+                        tag="035",
+                        indicators=["0", "0"],
+                        subfields=["a", str_035],
+                    )
+                    marc_record.add_ordered_field(new_035)
+                    self.migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
+                else:
+                    self.migration_report.add(
+                        Blurbs.HridHandling, "035 generation from 001 turned off"
+                    )
                 marc_record.remove_fields("001")
-                marc_record.add_ordered_field(new_035)
-                self.migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
+
             except Exception:
                 if "001" in marc_record:
                     s = "Failed to create 035 from 001"

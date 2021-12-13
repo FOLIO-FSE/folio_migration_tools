@@ -54,4 +54,4 @@ class LibraryConfiguration(BaseModel):
         )
     )
     iteration_identifier: str
-    add_time_stamp_to_file_names: Optional[bool] = True
+    add_time_stamp_to_file_names: Optional[bool] = False

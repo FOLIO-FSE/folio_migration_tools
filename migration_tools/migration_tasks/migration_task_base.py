@@ -38,6 +38,7 @@ class MigrationTaskBase:
             self.get_object_type(),
             task_configuration.name,
             library_configuration.iteration_identifier,
+            library_configuration.add_time_stamp_to_file_names,
         )
 
         self.library_configuration = library_configuration

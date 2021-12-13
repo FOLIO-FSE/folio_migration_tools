@@ -30,6 +30,7 @@ from migration_tools.migration_tasks.migration_task_base import MigrationTaskBas
 class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
+        deactivate_035_from_001: Optional[bool] = False
         migration_task_type: str
         use_tenant_mapping_rules: Optional[bool] = True
         hrid_handling: HridHandling

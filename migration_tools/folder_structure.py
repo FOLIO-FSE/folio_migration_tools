@@ -13,10 +13,12 @@ class FolderStructure:
         object_type: FOLIONamespaces,
         migration_task_name: str,
         iteration_identifier: str,
+        add_time_stamp_to_file_names: bool,
     ):
         logging.info("Setting up folder structure")
         self.object_type: FOLIONamespaces = object_type
         self.migration_task_name = migration_task_name
+        self.add_time_stamp_to_file_names = add_time_stamp_to_file_names
         self.iteration_identifier = iteration_identifier
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
@@ -64,7 +66,14 @@ class FolderStructure:
         )
 
     def setup_migration_file_structure(self, source_file_type: str = ""):
-        file_template = f"{self.iteration_identifier}_{self.migration_task_name}"
+        time_str = (
+            f'_{time.strftime("%Y%m%d-%H%M%S")}'
+            if self.add_time_stamp_to_file_names
+            else ""
+        )
+        file_template = (
+            f"{self.iteration_identifier}{time_str}_{self.migration_task_name}"
+        )
         object_type_string = str(self.object_type.name).lower()
         if source_file_type:
             self.legacy_records_folder = self.data_folder / source_file_type
