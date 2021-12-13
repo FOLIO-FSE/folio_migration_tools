@@ -106,7 +106,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
         id_map_strings = ""
         ignored_subsequent_fields = set()
-        bad_tags = set()  # "907"
+        bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
         folio_instance = self.perform_initial_preparation(
             marc_record, index_or_legacy_id, legacy_ids
         )
@@ -127,7 +127,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.validate(folio_instance, legacy_ids)
         self.dedupe_rec(folio_instance)
-        # marc_record.remove_fields(*list(bad_tags))
+        marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(folio_instance, self.instance_json_schema)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate

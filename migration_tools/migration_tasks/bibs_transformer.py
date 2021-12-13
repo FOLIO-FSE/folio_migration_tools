@@ -36,6 +36,7 @@ class BibsTransformer(MigrationTaskBase):
         hrid_handling: HridHandling
         files: List[FileDefinition]
         ils_flavour: IlsFlavour
+        tags_to_delete: Optional[List[str]] = []
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
