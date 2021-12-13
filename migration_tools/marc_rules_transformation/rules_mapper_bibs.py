@@ -73,9 +73,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio)
         self.start = time.time()
 
-    def perform_initial_preparation(
-        self, marc_record: pymarc.Record, index_or_legacy_id, legacy_ids
-    ):
+    def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
         folio_instance = {
             "metadata": self.folio.get_metadata_construct(),
         }
@@ -87,23 +85,18 @@ class BibsRulesMapper(RulesMapperBase):
             )
         )
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
-        self.handle_hrid(folio_instance, marc_record, index_or_legacy_id)
+        self.handle_hrid(folio_instance, marc_record, legacy_ids)
         if marc_record.leader[5] == "d":
             Helper.log_data_issue(
-                index_or_legacy_id, "d in leader. Is this correct?", marc_record.leader
+                legacy_ids, "d in leader. Is this correct?", marc_record.leader
             )
         return folio_instance
 
-    def parse_bib(
-        self, index_or_legacy_id, marc_record: pymarc.Record, suppressed: bool
-    ):
+    def parse_bib(self, legacy_id, marc_record: pymarc.Record, suppressed: bool):
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function"""
         self.print_progress()
-        legacy_ids = self.get_legacy_ids(
-            marc_record, self.task_configuration.ils_flavour, index_or_legacy_id
-        )
         id_map_strings = ""
         ignored_subsequent_fields = set()
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
@@ -510,9 +503,7 @@ class BibsRulesMapper(RulesMapperBase):
                                 if len(combined_code) == 2:
                                     yield get_folio_id(combined_code)
 
-    def handle_hrid(
-        self, folio_instance, marc_record: Record, index_or_legacy_id
-    ) -> None:
+    def handle_hrid(self, folio_instance, marc_record: Record, legacy_ids) -> None:
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if self.hrid_handling == "default" or "001" not in marc_record:
             num_part = str(self.hrid_counter).zfill(11)
@@ -543,7 +534,7 @@ class BibsRulesMapper(RulesMapperBase):
                 if "001" in marc_record:
                     s = "Failed to create 035 from 001"
                     self.migration_report.add(Blurbs.HridHandling, s)
-                    Helper.log_data_issue(index_or_legacy_id, s, marc_record["001"])
+                    Helper.log_data_issue(legacy_ids, s, marc_record["001"])
                 else:
                     self.migration_report.add(
                         Blurbs.HridHandling, "Legacy bib records without 001"
@@ -560,7 +551,7 @@ class BibsRulesMapper(RulesMapperBase):
                     Blurbs.HridHandling, "Duplicate 001. Creating HRID instead"
                 )
                 Helper.log_data_issue(
-                    index_or_legacy_id,
+                    legacy_ids,
                     "Duplicate 001 for record. HRID created for record",
                     value,
                 )
@@ -702,22 +693,19 @@ class BibsRulesMapper(RulesMapperBase):
             elif not language_value.strip():
                 continue
             elif language_value not in forbidden_values:
-                legacy_id = self.get_legacy_ids(
-                    marc_record, self.task_configuration.ils_flavour, index_or_legacy_id
-                )
                 m = "Unrecognized language codes in record"
-                Helper.log_data_issue(legacy_id, m, language_value)
+                Helper.log_data_issue(index_or_legacy_id, m, language_value)
                 self.migration_report.add(
                     Blurbs.UnrecognizedLanguageCodes,
                     f"{m}: {language_value}",
                 )
 
     def get_legacy_ids(
-        self, marc_record: Record, ils_flavour: str, index_or_legacy_id: str
+        self, marc_record: Record, ils_flavour: IlsFlavour, index_or_legacy_id: str
     ) -> List[str]:
         if ils_flavour in {IlsFlavour.sierra, IlsFlavour.millennium}:
             return get_iii_bib_id(marc_record)
-        elif ils_flavour in {IlsFlavour.tag907y}:
+        elif ils_flavour == IlsFlavour.tag907y:
             try:
                 return [marc_record["907"]["y"]]
             except Exception:
