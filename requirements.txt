@@ -24,7 +24,7 @@ iniconfig==1.1.1
 isort==5.9.2
 jsonschema==4.0.0a2
 lazy-object-proxy==1.6.0
-lxml==4.6.3
+lxml==4.6.5
 markdown==3.3.4
 mccabe==0.6.1
 mypy-extensions==0.4.3
