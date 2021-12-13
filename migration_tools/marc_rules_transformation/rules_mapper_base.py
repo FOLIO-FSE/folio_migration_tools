@@ -53,13 +53,13 @@ class RulesMapperBase(MapperBase):
                 rec[key] = res
 
     def map_field_according_to_mapping(
-        self, marc_field: pymarc.Field, mappings, folio_record, index_or_legacy_id
+        self, marc_field: pymarc.Field, mappings, folio_record, legacy_ids
     ):
         for mapping in mappings:
             if "entity" not in mapping:
                 target = mapping["target"]
                 if has_conditions(mapping):
-                    values = self.apply_rules(marc_field, mapping, index_or_legacy_id)
+                    values = self.apply_rules(marc_field, mapping, legacy_ids)
                     # TODO: add condition to customize this hardcoded thing
                     if marc_field.tag == "655":
                         values[0] = f"Genre: {values[0]}"
@@ -88,7 +88,7 @@ class RulesMapperBase(MapperBase):
                     mapping["entity"],
                     folio_record,
                     e_per_subfield,
-                    index_or_legacy_id,
+                    legacy_ids,
                 )
 
     @staticmethod
@@ -156,7 +156,7 @@ class RulesMapperBase(MapperBase):
             value1 = marc_field.format_field() if marc_field else ""
             return self.apply_rule(value1, condition_types, marc_field, parameter)
 
-    def apply_rules(self, marc_field: pymarc.Field, mapping, index_or_legacy_id):
+    def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
         try:
             values = []
             value = ""
@@ -311,7 +311,7 @@ class RulesMapperBase(MapperBase):
         entity_mapping,
         folio_record,
         e_per_subfield,
-        index_or_legacy_id,
+        legacy_ids,
     ):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if e_per_subfield:
@@ -322,7 +322,7 @@ class RulesMapperBase(MapperBase):
                     subfields=[sf_tuple[0], sf_tuple[1]],
                 )
                 entity = self.create_entity(
-                    entity_mapping, temp_field, e_parent, index_or_legacy_id
+                    entity_mapping, temp_field, e_parent, legacy_ids
                 )
                 if (type(entity) is dict and any(entity.values())) or (
                     type(entity) is list and any(entity)
@@ -330,7 +330,7 @@ class RulesMapperBase(MapperBase):
                     self.add_entity_to_record(entity, e_parent, folio_record)
         else:
             entity = self.create_entity(
-                entity_mapping, marc_field, e_parent, index_or_legacy_id
+                entity_mapping, marc_field, e_parent, legacy_ids
             )
             if e_parent in ["precedingTitles", "succeedingTitles"]:
                 self.create_preceding_succeeding_titles(

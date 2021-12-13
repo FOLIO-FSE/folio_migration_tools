@@ -92,7 +92,7 @@ class BibsRulesMapper(RulesMapperBase):
             )
         return folio_instance
 
-    def parse_bib(self, legacy_id, marc_record: pymarc.Record, suppressed: bool):
+    def parse_bib(self, legacy_ids, marc_record: pymarc.Record, suppressed: bool):
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function"""
@@ -100,19 +100,17 @@ class BibsRulesMapper(RulesMapperBase):
         id_map_strings = ""
         ignored_subsequent_fields = set()
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
-        folio_instance = self.perform_initial_preparation(
-            marc_record, index_or_legacy_id, legacy_ids
-        )
+        folio_instance = self.perform_initial_preparation(marc_record, legacy_ids)
         for marc_field in marc_record:
             self.report_marc_stats(
-                marc_field, bad_tags, index_or_legacy_id, ignored_subsequent_fields
+                marc_field, bad_tags, legacy_ids, ignored_subsequent_fields
             )
             if marc_field.tag not in ignored_subsequent_fields:
                 self.process_marc_field(
                     folio_instance,
                     marc_field,
                     ignored_subsequent_fields,
-                    index_or_legacy_id,
+                    legacy_ids,
                 )
 
         self.perform_additional_parsing(
@@ -170,7 +168,7 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance,
         marc_field,
         ignored_subsequent_fields,
-        index_or_legacy_id,
+        legacy_ids,
     ):
         if marc_field.tag == "880" and "6" in marc_field:
             mappings = self.perform_proxy_mapping(marc_field)
@@ -183,7 +181,7 @@ class BibsRulesMapper(RulesMapperBase):
         if mappings:
             try:
                 self.map_field_according_to_mapping(
-                    marc_field, mappings, folio_instance, index_or_legacy_id
+                    marc_field, mappings, folio_instance, legacy_ids
                 )
                 if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                     ignored_subsequent_fields.add(marc_field.tag)
@@ -194,10 +192,10 @@ class BibsRulesMapper(RulesMapperBase):
                 raise ee
 
     def report_marc_stats(
-        self, marc_field, bad_tags, index_or_legacy_id, ignored_subsequent_fields
+        self, marc_field, bad_tags, legacy_ids, ignored_subsequent_fields
     ):
         self.migration_report.add_general_statistics("Total number of Tags processed")
-        self.report_bad_tags(marc_field, bad_tags, index_or_legacy_id)
+        self.report_bad_tags(marc_field, bad_tags, legacy_ids)
         mapped = marc_field.tag in self.mappings
         if marc_field.tag in ignored_subsequent_fields:
             mapped = False
@@ -308,7 +306,7 @@ class BibsRulesMapper(RulesMapperBase):
                 f"Update them manually. {json.dumps(self.hrid_settings)}"
             )
 
-    def report_bad_tags(self, marc_field, bad_tags, index_or_legacy_id):
+    def report_bad_tags(self, marc_field, bad_tags, legacy_ids):
         if (
             (not marc_field.tag.isnumeric())
             and marc_field.tag != "LDR"
@@ -316,7 +314,7 @@ class BibsRulesMapper(RulesMapperBase):
         ):
             self.migration_report.add(Blurbs.NonNumericTagsInRecord, marc_field.tag)
             message = "Non-numeric tags in records"
-            Helper.log_data_issue(index_or_legacy_id, message, marc_field.tag)
+            Helper.log_data_issue(legacy_ids, message, marc_field.tag)
             bad_tags.add(marc_field.tag)
 
     def get_instance_type_id(self, marc_record, legacy_id):
