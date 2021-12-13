@@ -132,11 +132,13 @@ class BibsRulesMapper(RulesMapperBase):
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         id_map_strings = []
-        self.handle_legacy_ids(marc_record, legacy_ids, id_map_strings, folio_instance)
+        self.handle_legacy_ids(
+            marc_record, legacy_ids, id_map_strings, folio_instance, suppressed
+        )
         return folio_instance, id_map_strings
 
     def handle_legacy_ids(
-        self, marc_record, legacy_ids, id_map_strings, folio_instance
+        self, marc_record, legacy_ids, id_map_strings, folio_instance, suppressed
     ):
         for legacy_id in legacy_ids:
             if legacy_id and self.task_configuration.ils_flavour in [
@@ -157,7 +159,7 @@ class BibsRulesMapper(RulesMapperBase):
                             "legacy_id": legacy_id,
                             "folio_id": folio_instance["id"],
                             "instanceLevelCallNumber": instance_level_call_number,
-                            "suppressed": self.suppress,
+                            "suppressed": suppressed,
                         }
                     )
                 )
