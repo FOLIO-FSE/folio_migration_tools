@@ -142,9 +142,9 @@ class BibsRulesMapper(RulesMapperBase):
     ):
         for legacy_id in legacy_ids:
             if legacy_id and self.task_configuration.ils_flavour in [
-                "sierra",
-                "iii",
-                "907y",
+                IlsFlavour.sierra,
+                IlsFlavour.millennium,
+                IlsFlavour.tag907y,
             ]:
                 instance_level_call_number = (
                     marc_record["099"].format_field() if "099" in marc_record else ""
