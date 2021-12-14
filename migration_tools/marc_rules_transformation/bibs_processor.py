@@ -2,22 +2,18 @@
 import json
 import logging
 from typing import List
-import uuid
-from pymarc.field import Field
-from pymarc.leader import Leader
-from migration_tools.helper import Helper
 
-from pymarc.record import Record
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (
-    TransformationRecordFailedError,
-)
+from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
-from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from migration_tools.library_configuration import FolioRelease
+from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from migration_tools.report_blurbs import Blurbs
+from pymarc.field import Field
+from pymarc.leader import Leader
+from pymarc.record import Record
 
 
 class BibsProcessor:

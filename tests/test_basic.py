@@ -86,7 +86,7 @@ def test_is_hybrid_default_mapping():
     mock = Mock(spec=RefDataMapping)
     mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
     res = RefDataMapping.is_hybrid_default_mapping(mock, mappings[0])
-    assert res == False
+    assert res is False
 
 
 def test_get_hybrid_mapping():

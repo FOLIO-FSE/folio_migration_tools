@@ -1,6 +1,5 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
-import datetime
 import json
 import logging
 import sys
@@ -705,11 +704,14 @@ class BibsRulesMapper(RulesMapperBase):
             return get_iii_bib_id(marc_record)
         elif ils_flavour == IlsFlavour.tag907y:
             try:
-                return [marc_record["907"]["y"]]
+                return list(set(marc_record["907"].field.get_subfields("a", "y")))
             except Exception:
                 raise TransformationRecordFailedError(
                     index_or_legacy_id,
-                    "907 $y is missing, although it is required for this legacy ILS choice",
+                    (
+                        "907 $y and $a is missing is missing, although they is "
+                        "required for this legacy ILS choice"
+                    ),
                     marc_record.as_json(),
                 )
         elif ils_flavour == IlsFlavour.tagf990a:
