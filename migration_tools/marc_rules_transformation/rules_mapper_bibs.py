@@ -704,7 +704,7 @@ class BibsRulesMapper(RulesMapperBase):
             return get_iii_bib_id(marc_record)
         elif ils_flavour == IlsFlavour.tag907y:
             try:
-                return list(set(marc_record["907"].field.get_subfields("a", "y")))
+                return list(set(marc_record["907"].get_subfields("a", "y")))
             except Exception:
                 raise TransformationRecordFailedError(
                     index_or_legacy_id,
