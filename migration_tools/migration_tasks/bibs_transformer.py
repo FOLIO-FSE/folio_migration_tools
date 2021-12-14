@@ -50,7 +50,6 @@ class BibsTransformer(MigrationTaskBase):
 
         super().__init__(library_config, task_config)
         self.task_config = task_config
-        # Old init
         self.files = [
             f
             for f in self.task_config.files
@@ -123,29 +122,34 @@ class BibsTransformer(MigrationTaskBase):
         )
 
     def read_records(self, reader, source_file: FileDefinition):
-        for idx, record in enumerate(reader):
-            self.mapper.migration_report.add_general_statistics(
-                "Records in file before parsing"
-            )
-            try:
-                if record is None:
-                    self.mapper.migration_report.add_general_statistics(
-                        "Records with encoding errors - parsing failed",
-                    )
-                    raise TransformationRecordFailedError(
-                        f"Index in {source_file.file_name}:{idx}",
-                        f"MARC parsing error: {reader.current_exception}",
-                        reader.current_chunk,
-                    )
-                else:
-                    self.set_leader(record)
-                    self.mapper.migration_report.add_general_statistics(
-                        "Records successfully parsed from MARC21",
-                    )
-                    self.processor.process_record(idx, record, source_file.suppressed)
-            except TransformationRecordFailedError as error:
-                error.log_it()
-        logging.info("Done reading %s records from file", idx + 1)
+        with open(self.folder_structure.failed_bibs_file, "wb") as failed_bibs_file:
+            for idx, record in enumerate(reader):
+                self.mapper.migration_report.add_general_statistics(
+                    "Records in file before parsing"
+                )
+                try:
+                    if record is None:
+                        self.mapper.migration_report.add_general_statistics(
+                            "Records with encoding errors - parsing failed",
+                        )
+                        failed_bibs_file.write(reader.current_chunk)
+                        raise TransformationRecordFailedError(
+                            f"Index in {source_file.file_name}:{idx}",
+                            f"MARC parsing error: {reader.current_exception}",
+                            "Failed records stored in results/failed_bib_records.mrc",
+                        )
+
+                    else:
+                        self.set_leader(record)
+                        self.mapper.migration_report.add_general_statistics(
+                            "Records successfully parsed from MARC21",
+                        )
+                        self.processor.process_record(
+                            idx, record, source_file.suppressed
+                        )
+                except TransformationRecordFailedError as error:
+                    error.log_it()
+            logging.info("Done reading %s records from file", idx + 1)
 
     @staticmethod
     def add_arguments(sub_parser):

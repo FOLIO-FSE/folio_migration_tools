@@ -10,12 +10,13 @@ class MigrationReport:
 
     def add(self, blurb_tuple: tuple, measure_to_add, number=1):
         """Add section header and values to migration report."""
-        if blurb_tuple[0] not in self.report:
-            self.report[blurb_tuple[0]] = {"blurb_tuple": blurb_tuple}
-        if measure_to_add not in self.report[blurb_tuple[0]]:
-            self.report[blurb_tuple[0]][measure_to_add] = number
-        else:
+        try:
             self.report[blurb_tuple[0]][measure_to_add] += number
+        except KeyError:
+            if blurb_tuple[0] not in self.report:
+                self.report[blurb_tuple[0]] = {"blurb_tuple": blurb_tuple}
+            if measure_to_add not in self.report[blurb_tuple[0]]:
+                self.report[blurb_tuple[0]][measure_to_add] = number
 
     def set(self, blurb, measure_to_add: str, number: int):
         """set a section value  to a specific number"""

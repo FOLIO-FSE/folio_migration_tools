@@ -19,7 +19,11 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
-from migration_tools.library_configuration import IlsFlavour, LibraryConfiguration
+from migration_tools.library_configuration import (
+    HridHandling,
+    IlsFlavour,
+    LibraryConfiguration,
+)
 from migration_tools.marc_rules_transformation.conditions import Conditions
 from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 
@@ -261,24 +265,24 @@ class BibsRulesMapper(RulesMapperBase):
             holdingsfields = marc_record.get_fields(
                 "852", "866", "867", "868", "865", "864", "863"
             )
-            f852s = [f for f in holdingsfields if f.tag == "852"]
-            f86xs = [
+            f852s = (f for f in holdingsfields if f.tag == "852")
+            f86xs = (
                 f
                 for f in holdingsfields
                 if f.tag in ["866", "867", "868", "865", "864", "863"]
-            ]
+            )
             if f852s and not f86xs:
                 self.migration_report.add(
                     Blurbs.HoldingsGenerationFromBibs,
                     "Records with 852s but no 86X",
                 )
-            elif f852s:
+            elif any(f852s):
                 self.migration_report.add(
                     Blurbs.HoldingsGenerationFromBibs,
                     "Records with both 852s and at least one 86X",
                 )
 
-            elif f86xs:
+            elif any(f86xs):
                 self.migration_report.add(
                     Blurbs.HoldingsGenerationFromBibs,
                     "Records without 852s but with 86X",
@@ -502,7 +506,7 @@ class BibsRulesMapper(RulesMapperBase):
 
     def handle_hrid(self, folio_instance, marc_record: Record, legacy_ids) -> None:
         """Create HRID if not mapped. Add hrid as MARC record 001"""
-        if self.hrid_handling == "default" or "001" not in marc_record:
+        if self.hrid_handling == HridHandling.default or "001" not in marc_record:
             num_part = str(self.hrid_counter).zfill(11)
             folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
@@ -541,7 +545,7 @@ class BibsRulesMapper(RulesMapperBase):
                 Blurbs.HridHandling, "Created HRID using default settings"
             )
             self.hrid_counter += 1
-        elif self.hrid_handling == "001":
+        elif self.hrid_handling == HridHandling.preserve001:
             value = marc_record["001"].value()
             if value in self.unique_001s:
                 self.migration_report.add(
@@ -641,7 +645,7 @@ class BibsRulesMapper(RulesMapperBase):
                     languages.add(lang_code.replace(" ", ""))
                 elif langlength > 3 and langlength % 3 == 0:
                     lc = lang_code.replace(" ", "")
-                    new_codes = [lc[i : i + 3] for i in range(0, len(lc), 3)]
+                    new_codes = (lc[i : i + 3] for i in range(0, len(lc), 3))
                     languages.update(new_codes)
                     languages.discard(lang_code)
             languages.update()

@@ -13,14 +13,14 @@ from migration_tools.migration_tasks import migration_task_base
 
 def parse_args():
     """Parse CLI Arguments"""
-    task_classes = [t for t in inheritors(migration_task_base.MigrationTaskBase)]
+    task_classes = iter(inheritors(migration_task_base.MigrationTaskBase))
     parser = PromptParser()
     parser.add_argument("configuration_path", help="Path to configuration file")
     parser.add_argument(
         "task_name",
         help=(
             "Task name. One of one of "
-            f'{", ".join([tc.__name__ for tc in task_classes])}'
+            f'{", ".join((tc.__name__ for tc in task_classes))}'
         ),
     )
     parser.add_argument(

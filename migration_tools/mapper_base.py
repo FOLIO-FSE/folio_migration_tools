@@ -21,19 +21,19 @@ class MapperBase:
 
     def report_legacy_mapping(self, field_name, present, mapped):
         if field_name:
-            if field_name not in self.mapped_legacy_fields:
-                self.mapped_legacy_fields[field_name] = [int(present), int(mapped)]
-            else:
+            try:
                 self.mapped_legacy_fields[field_name][0] += int(present)
                 self.mapped_legacy_fields[field_name][1] += int(mapped)
+            except KeyError:
+                self.mapped_legacy_fields[field_name] = [int(present), int(mapped)]
 
     def report_folio_mapping(self, folio_record, schema):
         try:
             for field_name in flatten(folio_record):
-                if field_name not in self.mapped_folio_fields:
-                    self.mapped_folio_fields[field_name] = [1]
-                else:
+                try:
                     self.mapped_folio_fields[field_name][0] += 1
+                except KeyError:
+                    self.mapped_folio_fields[field_name] = [1]
             if not self.schema_properties:
                 self.schema_properties = schema["properties"].keys()
 

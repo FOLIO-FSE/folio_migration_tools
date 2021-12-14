@@ -23,6 +23,7 @@ class RulesMapperBase(MapperBase):
         super().__init__()
         self.parsed_records = 0
         self.start = time.time()
+        self.last_batch_time = time.time()
         self.folio_client: FolioClient = folio_client
         self.holdings_json_schema = fetch_holdings_schema()
         self.instance_json_schema = get_instance_schema()
@@ -35,12 +36,16 @@ class RulesMapperBase(MapperBase):
 
     def print_progress(self):
         self.parsed_records += 1
-        if self.parsed_records % 5000 == 0:
+        num_recs = 5000
+        if self.parsed_records % num_recs == 0:
             elapsed = self.parsed_records / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
+            elapsed_last = num_recs / (time.time() - self.last_batch_time)
+            elapsed_formatted_last = "{0:.4g}".format(elapsed_last)
             logging.info(
-                f"{elapsed_formatted} records/sec.\t\t{self.parsed_records:,} records processed"
+                f"{elapsed_formatted_last} (avg. {elapsed_formatted}) records/sec.\t\t{self.parsed_records:,} records processed"
             )
+            self.last_batch_time = time.time()
 
     def dedupe_rec(self, rec):
         # remove duplicates
@@ -128,9 +133,8 @@ class RulesMapperBase(MapperBase):
         mapping,
         marc_field,
     ):
-        condition_types = [
-            x.strip() for x in mapping["rules"][0]["conditions"][0]["type"].split(",")
-        ]
+        stripped_conds = mapping["rules"][0]["conditions"][0]["type"].split(",")
+        condition_types = map(str.strip, stripped_conds)
         parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
         if mapping.get("applyRulesOnConcatenatedData", ""):
             value = " ".join(marc_field.get_subfields(*mapping["subfield"]))

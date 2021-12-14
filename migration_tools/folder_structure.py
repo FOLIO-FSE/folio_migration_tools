@@ -100,6 +100,15 @@ class FolderStructure:
             self.results_folder / f"folio_{object_type_string}_{file_template}.json"
         )
 
+        self.failed_bibs_file = (
+            self.results_folder
+            / f"failed_bib_records_{self.iteration_identifier}{time_str}.mrc"
+        )
+        self.failed_mfhds_file = (
+            self.results_folder
+            / f"failed_mfhd_records_{self.iteration_identifier}{time_str}.mrc"
+        )
+
         self.migration_reports_file = (
             self.reports_folder
             / f"transformation_report_{object_type_string}_{file_template}.md"
