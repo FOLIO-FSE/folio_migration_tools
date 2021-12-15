@@ -60,7 +60,7 @@ class BibsRulesMapper(RulesMapperBase):
         logging.info(
             f"HRID handling is set to: '{self.task_configuration.hrid_handling}'"
         )
-        self.hrid_handling = self.task_configuration.hrid_handling
+        self.hrid_handling: HridHandling = self.task_configuration.hrid_handling
         logging.info("Fetching mapping rules from the tenant")
         self.mappings = self.folio.folio_get_single_object("/mapping-rules")
         logging.info("Fetching valid language codes...")
@@ -369,18 +369,22 @@ class BibsRulesMapper(RulesMapperBase):
                 return_id = get_folio_id_by_name(marc_record["336"]["a"])
 
         if "336" in marc_record and "b" in marc_record["336"]:
+            f336_b = marc_record["336"]["b"].lower().replace(" ", "")
+            f336_b_norm = f336_b.lower().replace(" ", "")
             t = self.conditions.get_ref_data_tuple_by_code(
-                self.folio.instance_types, "instance_types", marc_record["336"]["b"]
+                self.folio.instance_types,
+                "instance_types",
+                f336_b_norm,
             )
             if not t:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f'336$b - Code {marc_record["336"]["b"]} not found in FOLIO ()',
+                    f"336$b - Code {f336_b_norm} not found in FOLIO ({f336_b})",
                 )
                 Helper.log_data_issue(
                     legacy_id,
                     "instance type code (336$b) not found in FOLIO",
-                    marc_record["336"]["b"],
+                    f336_b_norm,
                 )
             else:
                 self.migration_report.add(
