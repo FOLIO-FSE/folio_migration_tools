@@ -622,7 +622,7 @@ class Conditions:
                 Blurbs.InstanceTypeMapping,
                 (
                     f"Unhandled MARC tag {marc_field.tag}. Instance Type ID is only mapped "
-                    "from 008 and 336 "
+                    "from 336 "
                 ),
             )
         return ""  # functionality moved

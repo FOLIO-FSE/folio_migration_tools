@@ -179,9 +179,10 @@ class BibsRulesMapper(RulesMapperBase):
         if marc_field.tag == "880" and "6" in marc_field:
             mappings = self.perform_proxy_mapping(marc_field)
         else:
+            tags_to_ignore = {"880", "001", "008"}
             mappings = (
                 self.mappings.get(marc_field.tag, {})
-                if marc_field.tag not in ["880", "001", "008"]
+                if marc_field.tag not in tags_to_ignore
                 else []
             )
         if mappings:

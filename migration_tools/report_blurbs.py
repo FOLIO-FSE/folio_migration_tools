@@ -75,7 +75,7 @@ class Blurbs(NamedTuple):
         "**NO ACTION REQUIRED** <br/>This is a coding anomaly that FSE will look into.  <br/>Usually, the library does not have to do anything about it.<br/> One thing to look at is if there are many repeated subfields or unexpected patterns of subfields in the table.",
     )
     RecourceTypeMapping = (
-        "Resource Type Mapping (336, 008)",
+        "Resource Type Mapping (336)",
         "Library action: **REVIEW** <br/>The created FOLIO instances contain the following Instance type values. The library should review the total number for each value against what they would expect to see mapped.",
     )
     MappedAlternativeTitleTypes = (

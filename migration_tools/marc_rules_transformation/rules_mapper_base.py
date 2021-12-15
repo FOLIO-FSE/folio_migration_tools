@@ -62,30 +62,9 @@ class RulesMapperBase(MapperBase):
     ):
         for mapping in mappings:
             if "entity" not in mapping:
-                target = mapping["target"]
-                if has_conditions(mapping):
-                    values = self.apply_rules(marc_field, mapping, legacy_ids)
-                    # TODO: add condition to customize this hardcoded thing
-                    if marc_field.tag == "655":
-                        values[0] = f"Genre: {values[0]}"
-                    self.add_value_to_target(folio_record, target, values)
-                elif has_value_to_add(mapping):
-                    value = mapping["rules"][0]["value"]
-                    # Stupid construct to avoid bool("false") == True
-                    if value == "true":
-                        self.add_value_to_target(folio_record, target, [True])
-                    elif value == "false":
-                        self.add_value_to_target(folio_record, target, [False])
-                    else:
-                        self.add_value_to_target(folio_record, target, [value])
-                else:
-                    # Adding stuff without rules/Conditions.
-                    # Might need more complex mapping for arrays etc
-                    if any(mapping["subfield"]):
-                        value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-                    else:
-                        value = marc_field.format_field() if marc_field else ""
-                    self.add_value_to_target(folio_record, target, [value])
+                self.handle_normal_mapping(
+                    mapping, marc_field, folio_record, legacy_ids
+                )
             else:
                 e_per_subfield = mapping.get("entityPerRepeatedSubfield", False)
                 self.handle_entity_mapping(
@@ -95,6 +74,34 @@ class RulesMapperBase(MapperBase):
                     e_per_subfield,
                     legacy_ids,
                 )
+
+    def handle_normal_mapping(
+        self, mapping, marc_field: pymarc.Field, folio_record, legacy_ids
+    ):
+        target = mapping["target"]
+        if has_conditions(mapping):
+            values = self.apply_rules(marc_field, mapping, legacy_ids)
+            # TODO: add condition to customize this hardcoded thing
+            if marc_field.tag == "655":
+                values[0] = f"Genre: {values[0]}"
+            self.add_value_to_target(folio_record, target, values)
+        elif has_value_to_add(mapping):
+            value = mapping["rules"][0]["value"]
+            # Stupid construct to avoid bool("false") == True
+            if value == "true":
+                self.add_value_to_target(folio_record, target, [True])
+            elif value == "false":
+                self.add_value_to_target(folio_record, target, [False])
+            else:
+                self.add_value_to_target(folio_record, target, [value])
+        else:
+            # Adding stuff without rules/Conditions.
+            # Might need more complex mapping for arrays etc
+            if any(mapping["subfield"]):
+                value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+            else:
+                value = marc_field.format_field() if marc_field else ""
+            self.add_value_to_target(folio_record, target, [value])
 
     @staticmethod
     def set_005_as_updated_date(marc_record: Record, folio_object: dict, legacy_ids):
@@ -188,6 +195,7 @@ class RulesMapperBase(MapperBase):
             fme.log_it()
             return []
         except TransformationRecordFailedError as trfe:
+            trfe.log_it()
             trfe.data_value = (
                 f"{trfe.data_value} MARCField: {marc_field} "
                 f"Mapping: {json.dumps(mapping)}"
@@ -202,7 +210,6 @@ class RulesMapperBase(MapperBase):
         targets = target_string.split(".")
         if len(targets) == 1:
             self.add_value_to_first_level_target(rec, target_string, value)
-
         else:
             schema_parent = None
             parent = None
