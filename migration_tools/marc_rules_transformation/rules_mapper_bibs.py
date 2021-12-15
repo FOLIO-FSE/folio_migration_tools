@@ -87,9 +87,10 @@ class BibsRulesMapper(RulesMapperBase):
                 str(legacy_ids[-1]),
             )
         )
-        self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
+        leader_05 = marc_record.leader[5]
+        self.migration_report.add(Blurbs.RecordStatus, leader_05 or "Empty")
         self.handle_hrid(folio_instance, marc_record, legacy_ids)
-        if marc_record.leader[5] == "d":
+        if leader_05 == "d":
             Helper.log_data_issue(
                 legacy_ids, "d in leader. Is this correct?", marc_record.leader
             )
@@ -123,6 +124,8 @@ class BibsRulesMapper(RulesMapperBase):
         self.dedupe_rec(folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(folio_instance, self.instance_json_schema)
+        if suppressed:
+            self.migration_report.add_general_statistics("Suppressed from discovery")
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         id_map_strings = []
@@ -512,11 +515,20 @@ class BibsRulesMapper(RulesMapperBase):
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             try:
                 f_001 = marc_record["001"].value()
-                f_003 = marc_record["003"].value() if "003" in marc_record else ""
-                self.migration_report.add(
-                    Blurbs.HridHandling, f"Values in 003: {f_003}"
+                f_003 = (
+                    marc_record["003"].value().strip()
+                    if "003" in marc_record
+                    else "003 missing from record"
                 )
-                if not self.task_configuration.deactivate_035_from_001:
+                self.migration_report.add(
+                    Blurbs.HridHandling,
+                    f"Values in 003: {f_003 if f_003 else 'Empty'}",
+                )
+                if self.task_configuration.deactivate_035_from_001:
+                    self.migration_report.add(
+                        Blurbs.HridHandling, "035 generation from 001 turned off"
+                    )
+                else:
                     str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
                     new_035 = Field(
                         tag="035",
@@ -525,10 +537,6 @@ class BibsRulesMapper(RulesMapperBase):
                     )
                     marc_record.add_ordered_field(new_035)
                     self.migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
-                else:
-                    self.migration_report.add(
-                        Blurbs.HridHandling, "035 generation from 001 turned off"
-                    )
                 marc_record.remove_fields("001")
 
             except Exception:
