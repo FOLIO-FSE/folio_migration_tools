@@ -81,6 +81,19 @@ def test_deterministic_uuid_generation_holdings():
     assert "a0b4c8a2-01fd-50fd-8158-81bd551412a0" == str(deterministic_uuid)
 
 
+def test_dedupe():
+    rec = {
+        "identifiers": [
+            {"id": "001", "value": "val1"},
+            {"id": "001", "value": "val1"},
+            {"id": "001", "value": "val2"},
+            {"id": "002", "value": "val1"},
+        ]
+    }
+    RulesMapperBase.dedupe_rec(rec)
+    assert len(rec["identifiers"]) == 3
+
+
 def test_is_hybrid_default_mapping():
     mappings = [{"location": "*", "loan_type": "*", "material_type": "*"}]
     mock = Mock(spec=RefDataMapping)

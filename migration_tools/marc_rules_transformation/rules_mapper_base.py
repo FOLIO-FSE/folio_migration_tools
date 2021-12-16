@@ -47,7 +47,8 @@ class RulesMapperBase(MapperBase):
             )
             self.last_batch_time = time.time()
 
-    def dedupe_rec(self, rec):
+    @staticmethod
+    def dedupe_rec(rec):
         # remove duplicates
         for key, value in rec.items():
             if isinstance(value, list):
@@ -55,7 +56,7 @@ class RulesMapperBase(MapperBase):
                 for v in value:
                     if v not in res:
                         res.append(v)
-                rec[key] = res
+                rec[key] = list(res)
 
     def map_field_according_to_mapping(
         self, marc_field: pymarc.Field, mappings, folio_record, legacy_ids

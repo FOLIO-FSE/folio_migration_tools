@@ -1,5 +1,7 @@
+import json
 import logging
 import sys
+from textwrap import indent
 import time
 from datetime import datetime as dt
 from os.path import isfile
@@ -30,7 +32,7 @@ from migration_tools.migration_tasks.migration_task_base import MigrationTaskBas
 class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
-        deactivate_035_from_001: Optional[bool] = False
+        deactivate035_from001: Optional[bool] = False
         migration_task_type: str
         use_tenant_mapping_rules: Optional[bool] = True
         hrid_handling: HridHandling
@@ -50,6 +52,7 @@ class BibsTransformer(MigrationTaskBase):
 
         super().__init__(library_config, task_config)
         self.task_config = task_config
+        logging.info(task_config.json(indent=4))
         self.files = [
             f
             for f in self.task_config.files
@@ -60,7 +63,7 @@ class BibsTransformer(MigrationTaskBase):
             raise TransformationProcessError(
                 f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
             )
-        print(self.files)
+        logging.info(self.files)
         logging.info("# of files to process: %s", len(self.files))
         for file_path in self.files:
             logging.info("\t%s", file_path)

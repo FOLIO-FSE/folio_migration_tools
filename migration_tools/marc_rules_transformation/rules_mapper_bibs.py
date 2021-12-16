@@ -529,7 +529,7 @@ class BibsRulesMapper(RulesMapperBase):
                     Blurbs.HridHandling,
                     f"Values in 003: {f_003 if f_003 else 'Empty'}",
                 )
-                if self.task_configuration.deactivate_035_from_001:
+                if self.task_configuration.deactivate035_from001:
                     self.migration_report.add(
                         Blurbs.HridHandling, "035 generation from 001 turned off"
                     )
