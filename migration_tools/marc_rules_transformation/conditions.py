@@ -52,8 +52,6 @@ class Conditions:
             raise TransformationProcessError("", "No contributor name types in FOLIO")
         if not self.folio.identifier_types:
             raise TransformationProcessError("", "No identifier_types in FOLIO")
-        if not self.folio.identifier_types:
-            raise TransformationProcessError("", "No identifier_types in FOLIO")
         if not self.folio.alt_title_types:
             raise TransformationProcessError("", "No alt_title_types in FOLIO")
 

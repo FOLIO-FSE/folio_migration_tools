@@ -199,12 +199,19 @@ def test_get_marc_textual_stmt():
     stmt2 = "Some statement without note"
     stmt3 = "v.29 (2011)"
     stmt4 = "v.1 (1948)-v.27 (2007)"
+    stmt5 = "v.253:no.2 (2006:Jan. 09)"
+    stmt6 = "v.34:no.48(2005:Nov.)-v.35:no.2(2006:Jan.)"
+
+    print(res["statements"])
     assert any(res["statements"])
     assert any(stmt in f["statement"] for f in res["statements"])
     assert any(stmt3 in f["statement"] for f in res["statements"])
     assert any(stmt4 in f["statement"] for f in res["statements"])
     assert any("Some note" in f["note"] for f in res["statements"])
     assert any(stmt2 in f["statement"] for f in res["statements"])
+    assert any(stmt5 in f["statement"] for f in res["statements"])
+    # assert any(stmt6 in f["statement"] for f in res["statements"])
+
     assert any("Missing linked fields for 853" in f[1] for f in res["migration_report"])
 
 

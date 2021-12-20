@@ -13,6 +13,7 @@ import uuid
 from os import listdir
 from os.path import isfile
 from typing import List, Optional
+from folio_uuid import FolioUUID
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from migration_tools.custom_exceptions import (
@@ -47,6 +48,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         holdings_map_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
+        holdings_type_uuid_for_boundwiths: Optional[str]
         call_number_type_map_file_name: Optional[str]
         holdings_merge_criteria: Optional[str] = "clb"
 
@@ -252,10 +254,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.merge_holding_in(folio_holding)
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
-    def create_bound_with_holdings(self, folio_rec):
+    def create_bound_with_holdings(self, folio_holding):
         # Add former ids
         temp_ids = []
-        for former_id in folio_rec.get("formerIds", []):
+        for former_id in folio_holding.get("formerIds", []):
             if (
                 former_id.startswith("[")
                 and former_id.endswith("]")
@@ -271,50 +273,40 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 temp_ids.extend(ids)
             else:
                 temp_ids.append(former_id)
-        folio_rec["formerIds"] = temp_ids
-
-        # Add note
-        note = {
-            "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e",  # Default binding note type
-            "note": (
-                f'This Record is a Bound-with. It is bound with {len(folio_rec["instanceId"])} '
-                "instances. Below is a json structure allowing you to move this into the future "
-                "Bound-with functionality in FOLIO\n"
-                f'{{"instances": {json.dumps(folio_rec["instanceId"], indent=4)}}}'
-            ),
-            "staffOnly": True,
-        }
-        note2 = {
-            "holdingsNoteTypeId": "e19eabab-a85c-4aef-a7b2-33bd9acef24e",  # Default binding note type
-            "note": (
-                f'This Record is a Bound-with. It is bound with {len(folio_rec["instanceId"])} other records. '
-                "In order to locate the other records, make a search for the Class mark, but without brackets."
-            ),
-            "staffOnly": False,
-        }
-        if "notes" in folio_rec:
-            folio_rec["notes"].append(note)
-            folio_rec["notes"].append(note2)
-        else:
-            folio_rec["notes"] = [note, note2]
-
-        for bwidx, index in enumerate(folio_rec["instanceId"]):
-            if not index:
-                raise ValueError(f"No ID for record {folio_rec}")
-            call_numbers = ast.literal_eval(folio_rec["callNumber"])
+        folio_holding["formerIds"] = temp_ids
+        for bwidx, instance_id in enumerate(folio_holding["instanceId"]):
+            if not instance_id:
+                raise ValueError(f"No ID for record {folio_holding}")
+            call_numbers = ast.literal_eval(folio_holding["callNumber"])
             if isinstance(call_numbers, str):
                 call_numbers = [call_numbers]
-            c = copy.deepcopy(folio_rec)
-            c["instanceId"] = index
-            c["callNumber"] = call_numbers[bwidx]
-            c["holdingsTypeId"] = "7b94034e-ac0d-49c9-9417-0631a35d506b"
+            bound_with_holding = copy.deepcopy(folio_holding)
+            bound_with_holding["instanceId"] = instance_id
+            bound_with_holding["callNumber"] = call_numbers[bwidx]
+            if not self.task_config.holdings_type_uuid_for_boundwiths:
+                raise TransformationProcessError(
+                    "",
+                    (
+                        "Boundwith UUID not added to task configuration."
+                        "Add a property to holdingsTypeUuidForBoundwiths to "
+                        "the task configuration"
+                    ),
+                    "",
+                )
+            bound_with_holding[
+                "holdingsTypeId"
+            ] = self.task_config.holdings_type_uuid_for_boundwiths
             # TODO: Make these UUIDs deterministic as well when moving to the
             # new FOLIO BW model
-            c["id"] = str(uuid.uuid4())
+            bound_with_holding["id"] = str(
+                FolioUUID(
+                    FOLIONamespaces.holdings, f'{folio_holding["id"]}-{instance_id}'
+                )
+            )
             self.mapper.migration_report.add_general_statistics(
                 "Bound-with holdings created"
             )
-            yield c
+            yield bound_with_holding
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
