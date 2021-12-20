@@ -59,6 +59,7 @@ class BatchPoster(MigrationTaskBase):
         self.users_per_group = {}
         self.failed_fields = set()
         self.num_failures = 0
+        self.num_posted = 0
 
     def do_work(self):
         batch = []
@@ -69,27 +70,67 @@ class BatchPoster(MigrationTaskBase):
                 last_row = row
                 if row.strip():
                     try:
-                        json_rec = json.loads(row.split("\t")[-1])
-                        if num_records == 1:
-                            logging.info(json.dumps(json_rec, indent=True))
-                        batch.append(json_rec)
-                        if len(batch) == int(self.batch_size):
-                            self.post_batch(batch, failed_recs_file, num_records)
-                            batch = []
+                        if self.task_config.object_type == "Extradata":
+                            self.post_extra_data(row, num_records, failed_recs_file)
+                            if num_records % 50 == 0:
+                                logging.info(
+                                    "%s records posted successfully. %s failed",
+                                    self.num_posted,
+                                    self.num_failures,
+                                )
+                        else:
+                            json_rec = json.loads(row.split("\t")[-1])
+                            if num_records == 1:
+                                logging.info(json.dumps(json_rec, indent=True))
+                            batch.append(json_rec)
+                            if len(batch) == int(self.batch_size):
+                                self.post_batch(batch, failed_recs_file, num_records)
+                                batch = []
                     except UnicodeDecodeError as unicode_error:
                         self.handle_unicode_error(unicode_error, last_row)
                     except Exception as exception:
                         self.handle_generic_exception(
                             exception, last_row, batch, num_records, failed_recs_file
                         )
-            if any(batch):
-                try:
-                    self.post_batch(batch, failed_recs_file, num_records)
-                except Exception as exception:
-                    self.handle_generic_exception(
-                        exception, last_row, batch, num_records, failed_recs_file
-                    )
-        logging.info("Done posting %s records. ", (num_records))
+                if self.task_config.object_type != "Extradata" and any(batch):
+                    try:
+                        self.post_batch(batch, failed_recs_file, num_records)
+                    except Exception as exception:
+                        self.handle_generic_exception(
+                            exception, last_row, batch, num_records, failed_recs_file
+                        )
+            logging.info("Done posting %s records. ", (num_records))
+
+    def post_extra_data(self, row: str, num_records: int, failed_recs_file):
+        (object_name, data) = row.split("\t")
+        endpoint = get_extradata_endpoint(object_name)
+        url = f"{self.folio_client.okapi_url}/{endpoint}"
+        body = data
+        response = self.post_objects(url, body)
+        if response.status_code == 201:
+            self.num_posted += 1
+        elif response.status_code == 422:
+            self.num_failures += 1
+            error_msg = json.loads(response.text)["errors"][0]["message"]
+            logging.error(
+                "Row %s\tHTTP %s\t %s", num_records, response.status_code, error_msg
+            )
+            if (
+                "id value already exists"
+                not in json.loads(response.text)["errors"][0]["message"]
+            ):
+                failed_recs_file.write(row)
+        else:
+            self.num_failures += 1
+            logging.error(
+                "Row %s\tHTTP %s\t%s", num_records, response.status_code, response.text
+            )
+            failed_recs_file.write(row)
+
+    def post_objects(self, url, body):
+        return requests.post(
+            url, headers=self.folio_client.okapi_headers, data=body.encode("utf-8")
+        )
 
     def handle_generic_exception(
         self, exception, last_row, batch, num_records, failed_recs_file
@@ -201,19 +242,29 @@ class BatchPoster(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Done. Wrapping up")
-        logging.info(
-            (
-                "Failed records: %s failed records in %s "
-                "failed batches. Failed records saved to %s"
-            ),
-            self.failed_records,
-            self.failed_batches,
-            self.failed_recs_path,
-        )
+        if self.task_config.object_type != "Extradata":
+            logging.info(
+                (
+                    "Failed records: %s failed records in %s "
+                    "failed batches. Failed records saved to %s"
+                ),
+                self.failed_records,
+                self.failed_batches,
+                self.failed_recs_path,
+            )
+        else:
+            logging.info(
+                "Done posting % records. % failed", self.num_posted, self.num_failures
+            )
 
 
 def list_objects(object_type: str):
     choices = {
+        "Extradata": {
+            "object_name": "",
+            "api_endpoint": "",
+            "total_records": False,
+        },
         "Items": {
             "object_name": "items",
             "api_endpoint": "/item-storage/batch/synchronous?upsert=true",
@@ -253,6 +304,16 @@ def chunks(records, number_of_chunks):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(records), number_of_chunks):
         yield records[i : i + number_of_chunks]
+
+
+def get_extradata_endpoint(object_name):
+    object_types = {
+        "precedingSucceedingTitles": "preceding-succeeding-titles",
+        "precedingTitles": "preceding-succeeding-titles",
+        "succeedingTitles": "preceding-succeeding-titles",
+        "boundwithPart": "inventory-storage/bound-with-parts",
+    }
+    return object_types[object_name]
 
 
 def get_human_readable(size, precision=2):
