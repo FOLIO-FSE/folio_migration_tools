@@ -203,9 +203,6 @@ class ItemMapper(MappingFileMapperBase):
             self.migration_report.add_general_statistics(
                 "Records failed because of failed holdings",
             )
-            self.migration_report.add_general_statistics(
-                "Items linked to a Holdingsrecord"
-            )
             s = (
                 "Holdings id referenced in legacy item "
                 "was not found amongst transformed Holdings records"
