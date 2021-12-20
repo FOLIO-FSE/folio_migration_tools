@@ -48,6 +48,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         holdings_map_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
+        default_holdings_type_id: str
         holdings_type_uuid_for_boundwiths: Optional[str]
         call_number_type_map_file_name: Optional[str]
         holdings_merge_criteria: Optional[str] = "clb"
@@ -89,12 +90,25 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             logging.info("%s\tholdings types in tenant", len(self.holdings_types))
 
             self.default_holdings_type = next(
-                (h["id"] for h in self.holdings_types if h["name"] == "Unmapped"), ""
+                (
+                    h
+                    for h in self.holdings_types
+                    if h["id"] == self.task_config.default_holdings_type_id
+                ),
+                "",
             )
             if not self.default_holdings_type:
                 raise TransformationProcessError(
-                    "Holdings type named Unmapped not found in FOLIO."
+                    (
+                        "Holdings type with ID "
+                        f"{self.task_config.default_holdings_type_id} "
+                        "not found in FOLIO."
+                    )
                 )
+            logging.info(
+                "%s will be used as default holdings type",
+                self.default_holdings_type["name"],
+            )
         except TransformationProcessError as process_error:
             logging.critical(process_error)
             logging.critical("Halting.")
@@ -239,7 +253,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         folio_rec, legacy_id = self.mapper.do_map(
             row, f"row # {idx}", FOLIONamespaces.holdings
         )
-        folio_rec["holdingsTypeId"] = self.default_holdings_type
+        folio_rec["holdingsTypeId"] = self.default_holdings_type["id"]
         holdings_from_row = []
         if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]

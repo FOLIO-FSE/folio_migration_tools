@@ -107,15 +107,6 @@ class Conditions:
         logging.info(
             "Default Callnumber type Name:\t%s", self.default_call_number_type["name"]
         )
-        t = self.get_ref_data_tuple_by_name(
-            self.holdings_types, "holdings_types", "Unmapped"
-        )
-        if t:
-            self.default_holdings_type_id = t[0]
-        else:
-            raise TransformationProcessError(
-                "Holdings type Unmapped not set in client: Please add one to the tenant."
-            )
 
     def setup_reference_data_for_all(self):
         logging.info(

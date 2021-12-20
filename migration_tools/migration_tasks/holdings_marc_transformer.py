@@ -40,6 +40,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         mfhd_mapping_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
+        default_holdings_type_id: str
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -54,6 +55,25 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         super().__init__(library_config, task_config)
         self.instance_id_map = {}
         self.task_config = task_config
+        self.default_holdings_type = next(
+            (
+                h
+                for h in self.holdings_types
+                if h["id"] == self.task_config.default_holdings_type_id
+            ),
+            "",
+        )
+        if not self.default_holdings_type:
+            raise TransformationProcessError(
+                (
+                    f"Holdings type with ID {self.task_config.default_holdings_type_id}"
+                    " not found in FOLIO."
+                )
+            )
+        logging.info(
+            "%s will be used as default holdings type",
+            self.default_holdings_type["name"],
+        )
 
     def do_work(self):
         files = [
@@ -85,6 +105,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 self.instance_id_map,
                 location_map,
                 self.task_config.default_call_number_type_name,
+                self.task_config.default_holdings_type_id,
             )
             mapper.mappings = rules_file["rules"]
 
