@@ -245,7 +245,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
             holdings_from_row.append(folio_rec)
         elif len(folio_rec.get("instanceId", [])) > 1:  # Bound-with.
-            holdings_from_row.extend(self.create_bound_with_holdings(folio_rec))
+            holdings_from_row.extend(
+                self.create_bound_with_holdings(folio_rec, legacy_id)
+            )
         else:
             raise TransformationRecordFailedError(
                 legacy_id, "No instance id in parsed record", ""
@@ -254,7 +256,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.merge_holding_in(folio_holding)
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
-    def create_bound_with_holdings(self, folio_holding):
+    def create_bound_with_holdings(self, folio_holding, legacy_id: str):
+        item_uuid = FolioUUID(
+            self.folio_client.okapi_url,
+            FOLIONamespaces.items,
+            legacy_id,
+        )
         # Add former ids
         temp_ids = []
         for former_id in folio_holding.get("formerIds", []):
@@ -296,17 +303,29 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             bound_with_holding[
                 "holdingsTypeId"
             ] = self.task_config.holdings_type_uuid_for_boundwiths
-            # TODO: Make these UUIDs deterministic as well when moving to the
-            # new FOLIO BW model
             bound_with_holding["id"] = str(
                 FolioUUID(
                     FOLIONamespaces.holdings, f'{folio_holding["id"]}-{instance_id}'
                 )
             )
+            self.generate_boundwith_part(legacy_id, bound_with_holding)
             self.mapper.migration_report.add_general_statistics(
                 "Bound-with holdings created"
             )
             yield bound_with_holding
+
+    @staticmethod
+    def generate_boundwith_part(self, legacy_id, bound_with_holding):
+        part = {
+            "id": str(uuid.uuid4()),
+            "holdingsRecordId": bound_with_holding["id"],
+            "itemId": FolioUUID(
+                self.folio_client.okapi_url,
+                FOLIONamespaces.items,
+                legacy_id,
+            ),
+        }
+        logging.log(25, f"boundwithPart\t{json.dumps(part)}")
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")

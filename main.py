@@ -24,7 +24,9 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "--okapi_password", help="pasword for the tenant in the configuration file"
+        "--okapi_password",
+        help="pasword for the tenant in the configuration file",
+        secure=True,
     )
     parser.add_argument(
         "--base_folder_path",
