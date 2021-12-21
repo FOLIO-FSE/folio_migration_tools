@@ -329,10 +329,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         part = {
             "id": str(uuid.uuid4()),
             "holdingsRecordId": bound_with_holding["id"],
-            "itemId": FolioUUID(
-                self.folio_client.okapi_url,
-                FOLIONamespaces.items,
-                legacy_id,
+            "itemId": str(
+                FolioUUID(
+                    self.folio_client.okapi_url,
+                    FOLIONamespaces.items,
+                    legacy_id,
+                )
             ),
         }
         logging.log(25, f"boundwithPart\t{json.dumps(part)}")
