@@ -2,6 +2,7 @@ import logging
 import sys
 import time
 from abc import abstractmethod
+import json
 
 from argparse_prompt import PromptParser
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -64,6 +65,22 @@ class MigrationTaskBase:
     @abstractmethod
     def do_work(self):
         raise NotImplementedError
+
+    @staticmethod
+    def load_id_map(map_path):
+        id_map = {}
+        with open(map_path) as id_map_file:
+            for index, json_string in enumerate(id_map_file):
+                # {"legacy_id", "folio_id","suppressed"}
+                map_object = json.loads(json_string)
+                if index % 50000 == 0:
+                    print(
+                        f"{(index+1)} ids loaded to map {map_object['legacy_id']}",
+                        end="\r",
+                    )
+                id_map[map_object["legacy_id"]] = map_object
+        logging.info("Loaded %s migrated IDs", (index + 1))
+        return id_map
 
     @staticmethod
     def add_argument(parser, destination, help, **kwargs):

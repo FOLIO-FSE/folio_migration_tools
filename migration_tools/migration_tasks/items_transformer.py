@@ -146,7 +146,7 @@ class ItemsTransformer(MigrationTaskBase):
                 / self.task_config.call_number_type_map_file_name,
                 False,
             ),
-            setup_holdings_id_map(self.folder_structure),
+            self.load_id_map(self.folder_structure.holdings_id_map_path),
             statcode_mapping,
             self.load_ref_data_mapping_file(
                 "status.name", self.folder_structure.item_statuses_map_path, False
@@ -346,11 +346,3 @@ class ItemsTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
-
-
-def setup_holdings_id_map(folder_structure: FolderStructure):
-    logging.info("Loading holdings id map. This can take a while...")
-    with open(folder_structure.holdings_id_map_path, "r") as holdings_id_map_file:
-        holdings_id_map = json.load(holdings_id_map_file)
-        logging.info("Loaded %s holdings ids", len(holdings_id_map))
-        return holdings_id_map

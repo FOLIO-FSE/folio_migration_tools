@@ -89,14 +89,14 @@ class HoldingsProcessor:
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
         self.created_objects_file.close()
-        id_map = self.mapper.holdings_id_map
         logging.info(
             "Saving map of %s old and new IDs to %s",
-            len(id_map),
+            len(self.mapper.holdings_id_map),
             self.folder_structure.holdings_id_map_path,
         )
-        with open(self.folder_structure.holdings_id_map_path, "w+") as id_map_file:
-            json.dump(id_map, id_map_file)
+        self.mapper.save_id_map_file(
+            self.folder_structure.holdings_id_map_path, self.mapper.holdings_id_map
+        )
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# MFHD records transformation results   \n")

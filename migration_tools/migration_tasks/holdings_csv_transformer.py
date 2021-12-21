@@ -71,11 +71,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.load_mapped_fields(),
                 self.load_location_map(),
                 self.load_call_number_type_map(),
-                self.load_instance_id_map(),
+                self.load_id_map(self.folder_structure.instance_id_map_path),
             )
             self.holdings = {}
             self.total_records = 0
-            self.legacy_map = {}
+            self.holdings_id_map = self.load_id_map(
+                self.folder_structure.holdings_id_map_path
+            )
             if "_" in self.task_config.holdings_merge_criteria:
                 self.excluded_hold_type_id = (
                     self.task_config.holdings_merge_criteria.split("_")[-1]
@@ -271,11 +273,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
-        item_uuid = FolioUUID(
-            self.folio_client.okapi_url,
-            FOLIONamespaces.items,
-            legacy_id,
-        )
         # Add former ids
         temp_ids = []
         for former_id in folio_holding.get("formerIds", []):
@@ -354,18 +351,18 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 for holding in self.holdings.values():
                     for legacy_id in holding["formerIds"]:
                         # Prevent the first item in a boundwith to be overwritten
-                        if legacy_id not in self.legacy_map:
-                            self.legacy_map[legacy_id] = {"id": holding["id"]}
+                        if legacy_id not in self.holdings_id_map:
+                            self.holdings_id_map[
+                                legacy_id
+                            ] = self.mapper.get_id_map_string(legacy_id, holding)
 
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
                         "Holdings Records Written to disk"
                     )
-            with open(
-                self.folder_structure.holdings_id_map_path, "w"
-            ) as legacy_map_path_file:
-                json.dump(self.legacy_map, legacy_map_path_file)
-                logging.info("Wrote %s id:s to legacy map", len(self.legacy_map))
+            self.mapper.save_id_map_file(
+                self.folder_structure.holdings_id_map_path, self.holdings_id_map
+            )
         with open(
             self.folder_structure.migration_reports_file, "w"
         ) as migration_report_file:

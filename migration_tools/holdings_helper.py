@@ -63,14 +63,6 @@ class HoldingsHelper:
                 prev_holdings[stored_key] = stored_holding
             return prev_holdings
 
-    @staticmethod
-    def setup_holdings_id_map(result_path):
-        holdings_id_dict_path = Helper.setup_path(result_path, "holdings_id_map.json")
-        with open(holdings_id_dict_path, "r") as holdings_id_map_file:
-            holdings_id_map = json.load(holdings_id_map_file)
-            logging.info("Loaded %s holdings ids", len(holdings_id_map))
-            return holdings_id_map
-
 
 def dedupe(list_of_dicts):
     # TODO: Move to interface or parent class

@@ -1,10 +1,13 @@
 import logging
+from pathlib import Path
 import sys
+import json
 
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from migration_tools.folder_structure import FolderStructure
 from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 
@@ -83,6 +86,10 @@ class MapperBase:
             )
             sys.exit()
 
+    @staticmethod
+    def get_id_map_string(legacy_id, folio_record):
+        return json.dumps({"legacy_id": legacy_id, "folio_id": folio_record["id"]})
+
     def handle_generic_exception(self, idx, excepion: Exception):
         self.num_exeptions += 1
         print("\n=======ERROR===========")
@@ -97,6 +104,13 @@ class MapperBase:
                 self.num_exeptions,
             )
             sys.exit()
+
+    @staticmethod
+    def save_id_map_file(path, legacy_map: dict):
+        with open(path, "w") as legacy_map_file:
+            for id_string in legacy_map:
+                legacy_map_file.write(f"{json.dumps(id_string)}\n")
+            logging.info("Wrote %s id:s to legacy map", len(legacy_map))
 
 
 def flatten(my_dict: dict, path=""):

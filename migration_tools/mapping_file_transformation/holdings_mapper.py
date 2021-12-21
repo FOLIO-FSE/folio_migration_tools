@@ -56,7 +56,7 @@ class HoldingsMapper(MappingFileMapperBase):
         elif folio_prop_name == "temporaryLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name, True)
         elif folio_prop_name == "callNumber":
-            if legacy_value.startswith("["):
+            if legacy_value.startswith("[") and len(legacy_value.split(",")) > 1:
                 self.migration_report.add_general_statistics(
                     "Bound-with items callnumber identified"
                 )
@@ -67,7 +67,7 @@ class HoldingsMapper(MappingFileMapperBase):
                         f"{len(legacy_value.split(','))}"
                     ),
                 )
-            return legacy_value
+            return legacy_value.removeprefix("[").removesuffix("]")
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(
                 legacy_item, folio_prop_name, index_or_id

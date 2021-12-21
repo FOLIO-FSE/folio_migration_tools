@@ -93,59 +93,50 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.folder_structure.mapping_files_folder
             / self.task_config.mfhd_mapping_file_name
         ) as mapping_rules_file:
-            self.load_instance_id_map()
-            location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
-            rules_file = json.load(mapping_rules_file)
-            logging.info("Locations in map: %s", len(location_map))
-            logging.info(any(location_map))
-            logging.info("Default location code %s", rules_file["defaultLocationCode"])
-            logging.info("%s Instance ids in map", len(self.instance_id_map))
-            mapper = RulesMapperHoldings(
-                self.folio_client,
-                self.instance_id_map,
-                location_map,
-                self.task_config.default_call_number_type_name,
-                self.task_config.default_holdings_type_id,
-            )
-            mapper.mappings = rules_file["rules"]
+            self.do_actual_work(location_map_f, mapping_rules_file, files)
 
-            processor = HoldingsProcessor(mapper, self.folder_structure)
-            for file_def in files:
-                try:
-                    with open(
-                        self.folder_structure.legacy_records_folder
-                        / file_def.file_name,
-                        "rb",
-                    ) as marc_file:
-                        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
-                        reader.hide_utf8_warnings = True
-                        reader.force_utf8 = True
-                        logging.info("Running %s", file_def.file_name)
-                        read_records(reader, processor, file_def)
-                except TransformationProcessError as tpe:
-                    logging.critical(tpe)
-                    sys.exit()
-                except Exception:
-                    logging.exception(
-                        "Failure in Main: %s", file_def.file_name, stack_info=True
-                    )
-            processor.wrap_up()
+    def do_actual_work(self, location_map_f, mapping_rules_file, files):
+        self.instance_id_map = self.load_id_map(
+            self.folder_structure.instance_id_map_path
+        )
+        location_map = list(csv.DictReader(location_map_f, dialect="tsv"))
+        rules_file = json.load(mapping_rules_file)
+        logging.info("Locations in map: %s", len(location_map))
+        logging.info(any(location_map))
+        logging.info("Default location code %s", rules_file["defaultLocationCode"])
+        logging.info("%s Instance ids in map", len(self.instance_id_map))
+        mapper = RulesMapperHoldings(
+            self.folio_client,
+            self.instance_id_map,
+            location_map,
+            self.task_config.default_call_number_type_name,
+            self.task_config.default_holdings_type_id,
+        )
+        mapper.mappings = rules_file["rules"]
+
+        processor = HoldingsProcessor(mapper, self.folder_structure)
+        for file_def in files:
+            try:
+                with open(
+                    self.folder_structure.legacy_records_folder / file_def.file_name,
+                    "rb",
+                ) as marc_file:
+                    reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+                    reader.hide_utf8_warnings = True
+                    reader.force_utf8 = True
+                    logging.info("Running %s", file_def.file_name)
+                    read_records(reader, processor, file_def)
+            except TransformationProcessError as tpe:
+                logging.critical(tpe)
+                sys.exit()
+            except Exception:
+                logging.exception(
+                    "Failure in Main: %s", file_def.file_name, stack_info=True
+                )
+        processor.wrap_up()
 
     def wrap_up(self):
         logging.info("wapping up")
-
-    def load_instance_id_map(self):
-        with open(self.folder_structure.instance_id_map_path) as instance_id_map_file:
-            for index, json_string in enumerate(instance_id_map_file):
-                # {"legacy_id", "folio_id","instanceLevelCallNumber", "suppressed"}
-                map_object = json.loads(json_string)
-                if index % 50000 == 0:
-                    print(
-                        f"{(index+1)} instance ids loaded to map {map_object['legacy_id']}",
-                        end="\r",
-                    )
-                self.instance_id_map[map_object["legacy_id"]] = map_object
-        logging.info("loaded %s migrated instance IDs", (index + 1))
 
 
 def read_records(reader, processor: HoldingsProcessor, file_def: FileDefinition):
