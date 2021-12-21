@@ -63,6 +63,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         library_config: LibraryConfiguration,
     ):
         super().__init__(library_config, task_config)
+        self.default_holdings_type = None
         try:
             self.task_config = task_config
             self.files = self.list_source_files()
@@ -92,11 +93,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             logging.info("%s\tholdings types in tenant", len(self.holdings_types))
 
             self.default_holdings_type = next(
-                (
-                    h
-                    for h in self.holdings_types
-                    if h["id"] == self.task_config.default_holdings_type_id
-                )
+                h
+                for h in self.holdings_types
+                if h["id"] == self.task_config.default_holdings_type_id
             )
             if not self.default_holdings_type:
                 raise TransformationProcessError(

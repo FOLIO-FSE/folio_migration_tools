@@ -1,3 +1,4 @@
+from genericpath import isfile
 import logging
 import sys
 import time
@@ -68,6 +69,11 @@ class MigrationTaskBase:
 
     @staticmethod
     def load_id_map(map_path):
+        if not isfile(map_path):
+            logging.warn(
+                "No legacy id map found at %s. Will build one from scratch", map_path
+            )
+            return {}
         id_map = {}
         with open(map_path) as id_map_file:
             for index, json_string in enumerate(id_map_file):
