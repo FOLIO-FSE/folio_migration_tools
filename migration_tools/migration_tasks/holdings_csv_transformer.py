@@ -325,7 +325,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             yield bound_with_holding
 
-    @staticmethod
     def generate_boundwith_part(self, legacy_id, bound_with_holding):
         part = {
             "id": str(uuid.uuid4()),
