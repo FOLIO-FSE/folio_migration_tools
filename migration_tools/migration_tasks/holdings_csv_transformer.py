@@ -355,7 +355,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         if legacy_id not in self.holdings_id_map:
                             self.holdings_id_map[
                                 legacy_id
-                            ] = self.mapper.get_id_map_string(legacy_id, holding)
+                            ] = self.mapper.get_id_map_dict(legacy_id, holding)
 
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(

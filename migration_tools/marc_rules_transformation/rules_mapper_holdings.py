@@ -92,7 +92,7 @@ class RulesMapperHoldings(RulesMapperBase):
         )
         self.dedupe_rec(folio_holding)
         for identifier in folio_holding["formerIds"]:
-            self.holdings_id_map[identifier] = self.get_id_map_string(
+            self.holdings_id_map[identifier] = self.get_id_map_dict(
                 identifier, folio_holding
             )
         self.report_folio_mapping(folio_holding, self.schema)

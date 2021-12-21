@@ -87,8 +87,8 @@ class MapperBase:
             sys.exit()
 
     @staticmethod
-    def get_id_map_string(legacy_id, folio_record):
-        return json.dumps({"legacy_id": legacy_id, "folio_id": folio_record["id"]})
+    def get_id_map_dict(legacy_id, folio_record):
+        return {"legacy_id": legacy_id, "folio_id": folio_record["id"]}
 
     def handle_generic_exception(self, idx, excepion: Exception):
         self.num_exeptions += 1
