@@ -108,7 +108,7 @@ class MapperBase:
     @staticmethod
     def save_id_map_file(path, legacy_map: dict):
         with open(path, "w") as legacy_map_file:
-            for id_string in legacy_map:
+            for id_string in legacy_map.values():
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
             logging.info("Wrote %s id:s to legacy map", len(legacy_map))
 
