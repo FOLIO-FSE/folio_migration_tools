@@ -314,7 +314,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             ] = self.task_config.holdings_type_uuid_for_boundwiths
             bound_with_holding["id"] = str(
                 FolioUUID(
-                    FOLIONamespaces.holdings, f'{folio_holding["id"]}-{instance_id}'
+                    self.folio_client.okapi_url,
+                    FOLIONamespaces.holdings,
+                    f'{folio_holding["id"]}-{instance_id}',
                 )
             )
             self.generate_boundwith_part(legacy_id, bound_with_holding)
