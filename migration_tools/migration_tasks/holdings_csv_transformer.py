@@ -96,8 +96,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     h
                     for h in self.holdings_types
                     if h["id"] == self.task_config.default_holdings_type_id
-                ),
-                "",
+                )
             )
             if not self.default_holdings_type:
                 raise TransformationProcessError(
