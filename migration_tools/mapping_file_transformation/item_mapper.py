@@ -199,7 +199,7 @@ class ItemMapper(MappingFileMapperBase):
             return statistical_code_id
         elif folio_prop_name == "holdingsRecordId":
             if legacy_value in self.holdings_id_map:
-                return self.holdings_id_map[legacy_value]["id"]
+                return self.holdings_id_map[legacy_value]["folio_id"]
             self.migration_report.add_general_statistics(
                 "Records failed because of failed holdings",
             )
