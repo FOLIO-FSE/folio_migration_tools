@@ -131,6 +131,10 @@ class ItemMapper(MappingFileMapperBase):
         if not self.use_map:
             return legacy_item[folio_prop_name]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+        # IF there is a value mapped, return that one
+        if len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
+            return self.mapped_from_values.get(folio_prop_name, "")
+
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )
@@ -208,12 +212,6 @@ class ItemMapper(MappingFileMapperBase):
                 "was not found amongst transformed Holdings records"
             )
             raise TransformationRecordFailedError(index_or_id, s, legacy_value)
-        elif len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            if value not in [None, ""]:
-                return value
-            else:
-                return legacy_value
         elif any(legacy_item_keys):
             return legacy_value
         else:

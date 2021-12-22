@@ -47,6 +47,9 @@ class HoldingsMapper(MappingFileMapperBase):
         if not self.use_map:
             return legacy_item[folio_prop_name]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+        # IF there is a value mapped, return that one
+        if len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
+            return self.mapped_from_values.get(folio_prop_name, "")
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )
@@ -78,11 +81,6 @@ class HoldingsMapper(MappingFileMapperBase):
             )
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(legacy_value, index_or_id)
-        elif len(legacy_item_keys) == 1:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            if value in [None, ""]:
-                return legacy_value
-            return value
         elif any(legacy_item_keys):
             return legacy_values
         else:
