@@ -74,6 +74,8 @@ class MappingFileMapperBase(MapperBase):
                 statistical_codes_map,
                 "code",
             )
+        else:
+            self.statistical_codes_mapping = None
         self.mapped_from_legacy_data = {}
         for k in self.record_map["data"]:
             if (
