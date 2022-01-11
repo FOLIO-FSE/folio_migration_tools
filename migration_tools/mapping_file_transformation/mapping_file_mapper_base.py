@@ -352,7 +352,7 @@ class MappingFileMapperBase(MapperBase):
             raise TransformationRecordFailedError(
                 legacy_id,
                 "One or many required properties empty",
-                json.dumps(missing),
+                f"{json.dumps(missing)} - {json.dumps(folio_object)}",
             )
 
         del folio_object["type"]
