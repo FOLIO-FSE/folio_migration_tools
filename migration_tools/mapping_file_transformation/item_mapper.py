@@ -170,7 +170,6 @@ class ItemMapper(MappingFileMapperBase):
                 Helper.log_data_issue(
                     index_or_id, "Duplicate barcode", "-".join(legacy_values)
                 )
-                logging.error("Duplicate barcode found")
                 self.migration_report.add_general_statistics("Duplicate barcodes")
                 return f"{barcode}-{uuid4()}"
             else:
