@@ -26,27 +26,6 @@ class HoldingsHelper:
             raise ee
 
     @staticmethod
-    def merge_holding(old_holdings_record: dict, new_holdings_record: dict):
-        # TODO: Move to interface or parent class and make more generic
-        if old_holdings_record.get("notes"):
-            old_holdings_record["notes"].extend(new_holdings_record.get("notes", []))
-            old_holdings_record["notes"] = dedupe(old_holdings_record.get("notes", []))
-        if old_holdings_record.get("holdingsStatements"):
-            old_holdings_record["holdingsStatements"].extend(
-                new_holdings_record.get("holdingsStatements", [])
-            )
-            old_holdings_record["holdingsStatements"] = dedupe(
-                old_holdings_record["holdingsStatements"]
-            )
-        if old_holdings_record.get("formerIds"):
-            old_holdings_record["formerIds"].extend(
-                new_holdings_record.get("formerIds", [])
-            )
-            old_holdings_record["formerIds"] = list(
-                set(old_holdings_record["formerIds"])
-            )
-
-    @staticmethod
     def load_previously_generated_holdings(holdings_file_path, fields_criteria):
         with open(holdings_file_path) as holdings_file:
             prev_holdings = {}
