@@ -279,7 +279,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 and former_id.endswith("]")
                 and "," in former_id
             ):
-                ids = (
+                ids = list(
                     former_id[1:-1]
                     .replace('"', "")
                     .replace(" ", "")
@@ -383,25 +383,25 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         logging.info("All done!")
 
-    def merge_holding_in(self, folio_holding):
+    def merge_holding_in(self, new_folio_holding):
         new_holding_key = self.to_key(
-            folio_holding, self.task_config.holdings_merge_criteria
+            new_folio_holding, self.task_config.holdings_merge_criteria
         )
         existing_holding = self.holdings.get(new_holding_key, None)
         exclude = (
             self.task_config.holdings_merge_criteria.startswith("u_")
-            and folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
+            and new_folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
         )
         if exclude or not existing_holding:
             self.mapper.migration_report.add_general_statistics(
                 "Unique Holdings created from Items"
             )
-            self.holdings[new_holding_key] = folio_holding
+            self.holdings[new_holding_key] = new_folio_holding
         else:
             self.mapper.migration_report.add_general_statistics(
                 "Holdings already created from Item"
             )
-            self.merge_holding(new_holding_key, existing_holding, folio_holding)
+            self.merge_holding(new_holding_key, new_folio_holding)
 
     @staticmethod
     def to_key(holding, fields_criteria):
@@ -423,7 +423,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             logging.error(json.dumps(holding, indent=4))
             raise exception
 
-    def merge_holding(self, key, old_holdings_record, new_holdings_record):
+    def merge_holding(self, key, new_holdings_record):
         # TODO: Move to interface or parent class and make more generic
         if self.holdings[key].get("notes", None):
             self.holdings[key]["notes"].extend(new_holdings_record.get("notes", []))
@@ -435,7 +435,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.holdings[key]["holdingsStatements"] = dedupe(
                 self.holdings[key]["holdingsStatements"]
             )
-        if self.holdings[key].get("formerIds", None):
+        if self.holdings[key].get("formerIds", []):
             self.holdings[key]["formerIds"].extend(
                 new_holdings_record.get("formerIds", [])
             )
