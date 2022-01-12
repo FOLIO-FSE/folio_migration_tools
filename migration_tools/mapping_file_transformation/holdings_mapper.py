@@ -82,7 +82,7 @@ class HoldingsMapper(MappingFileMapperBase):
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(legacy_value, index_or_id)
         elif any(legacy_item_keys):
-            return legacy_values
+            return legacy_value
         else:
             # edge case
             return ""

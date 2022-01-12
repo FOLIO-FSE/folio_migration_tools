@@ -359,11 +359,11 @@ class MappingFileMapperBase(MapperBase):
 
     @staticmethod
     def get_legacy_vals(legacy_item, legacy_item_keys):
-        return [
+        return {
             legacy_item[k]
             for k in legacy_item_keys
             if legacy_item.get(k, "") not in ["", None]
-        ]
+        }
 
     def map_object_props(
         self,
