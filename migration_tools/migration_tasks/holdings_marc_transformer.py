@@ -55,6 +55,9 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         super().__init__(library_config, task_config)
         self.instance_id_map = {}
         self.task_config = task_config
+        self.holdings_types = list(
+            self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
+        )
         self.default_holdings_type = next(
             (
                 h
