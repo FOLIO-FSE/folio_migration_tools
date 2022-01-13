@@ -87,7 +87,7 @@ def main():
                 for validation_message in json.loads(e.json()):
                     print(
                         f"{validation_message['msg']}\t"
-                        f"{'-'.join(str(x) for x in validation_message['loc'])}"
+                        f"{', '.join(humps.camelize(str(x)) for x in validation_message['loc'])}"
                     )
                 print("Halting")
 
