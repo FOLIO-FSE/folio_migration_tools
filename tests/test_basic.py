@@ -1,4 +1,5 @@
 # content of test_sample.py
+import ast
 import json
 import os
 from re import escape
@@ -187,6 +188,12 @@ def test_get_marc_record():
     file_path = "./tests/test_data/default/test_get_record.xml"
     record = pymarc.parse_xml_to_array(file_path)[0]
     assert record["001"].value() == "21964516"
+
+
+def test_eval():
+    cnr = "['973 B967a', '']"
+    a = ast.literal_eval(cnr)
+    assert isinstance(a, list)
 
 
 def test_get_marc_textual_stmt():

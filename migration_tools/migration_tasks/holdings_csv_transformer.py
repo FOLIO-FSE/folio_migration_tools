@@ -293,12 +293,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         for bwidx, instance_id in enumerate(folio_holding["instanceId"]):
             if not instance_id:
                 raise ValueError(f"No ID for record {folio_holding}")
-            call_numbers = ast.literal_eval(folio_holding["callNumber"])
-            if isinstance(call_numbers, str):
-                call_numbers = [call_numbers]
+
             bound_with_holding = copy.deepcopy(folio_holding)
             bound_with_holding["instanceId"] = instance_id
-            bound_with_holding["callNumber"] = call_numbers[bwidx]
+            if folio_holding.get("callNumber", None):
+                call_numbers = ast.literal_eval(folio_holding["callNumber"])
+                if isinstance(call_numbers, str):
+                    call_numbers = [call_numbers]
+                bound_with_holding["callNumber"] = call_numbers[bwidx]
             if not self.task_config.holdings_type_uuid_for_boundwiths:
                 raise TransformationProcessError(
                     "",
