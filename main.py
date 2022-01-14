@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 
 import humps
 import requests.exceptions
@@ -55,13 +56,22 @@ def main():
                 library_config = LibraryConfiguration(
                     **config_file["library_information"]
                 )
-
-                migration_task_config = next(
-                    t
-                    for t in config_file["migration_tasks"]
-                    if t["name"] == args.task_name
-                )
-                # This is how to get the schema print(library_config.schema_json(indent=2))
+                try:
+                    migration_task_config = next(
+                        t
+                        for t in config_file["migration_tasks"]
+                        if t["name"] == args.task_name
+                    )
+                except StopIteration:
+                    task_names = [
+                        t.get("name", "") for t in config_file["migration_tasks"]
+                    ]
+                    print(
+                        f"Referenced task name {args.task_name} not found in the "
+                        f'configuration file. Use one of {", ".join(task_names)}'
+                        "\nHalting..."
+                    )
+                    sys.exit()
                 try:
                     task_class = next(
                         tc
@@ -78,6 +88,7 @@ def main():
                         "is not a valid option. Update your task to incorporate "
                         f"one of {json.dumps([tc.__name__ for tc in task_classes], indent=4)}"
                     )
+                    sys.exit()
 
             except ValidationError as e:
                 print(e.json())
