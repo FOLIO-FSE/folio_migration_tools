@@ -51,6 +51,7 @@ class BatchPoster(MigrationTaskBase):
             / f"failed_{object_name_formatted}_records_{time_stamp}.json"
         )
         self.batch_size = self.task_config.batch_size
+        logging.log("Batch size is %s", self.batch_size)
         self.processed = 0
         self.failed_batches = 0
         self.failed_records = 0
