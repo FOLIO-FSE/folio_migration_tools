@@ -85,9 +85,6 @@ class BatchPoster(MigrationTaskBase):
                                 logging.info(json.dumps(json_rec, indent=True))
                             batch.append(json_rec)
                             if len(batch) == int(self.batch_size):
-                                logging.info(
-                                    "%s - %s", len(batch), int(self.batch_size)
-                                )
                                 self.post_batch(batch, failed_recs_file, num_records)
                                 batch = []
                     except UnicodeDecodeError as unicode_error:
@@ -96,13 +93,13 @@ class BatchPoster(MigrationTaskBase):
                         self.handle_generic_exception(
                             exception, last_row, batch, num_records, failed_recs_file
                         )
-                if self.task_config.object_type != "Extradata" and any(batch):
-                    try:
-                        self.post_batch(batch, failed_recs_file, num_records)
-                    except Exception as exception:
-                        self.handle_generic_exception(
-                            exception, last_row, batch, num_records, failed_recs_file
-                        )
+            if self.task_config.object_type != "Extradata" and any(batch):
+                try:
+                    self.post_batch(batch, failed_recs_file, num_records)
+                except Exception as exception:
+                    self.handle_generic_exception(
+                        exception, last_row, batch, num_records, failed_recs_file
+                    )
             logging.info("Done posting %s records. ", (num_records))
 
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
