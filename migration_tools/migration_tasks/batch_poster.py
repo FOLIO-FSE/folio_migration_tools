@@ -89,7 +89,7 @@ class BatchPoster(MigrationTaskBase):
                                 batch = []
                     except UnicodeDecodeError as unicode_error:
                         self.handle_unicode_error(unicode_error, last_row)
-                    except Exception as exception:
+                    except TransformationRecordFailedError as exception:
                         self.handle_generic_exception(
                             exception, last_row, batch, num_records, failed_recs_file
                         )
@@ -142,11 +142,10 @@ class BatchPoster(MigrationTaskBase):
         self.failed_records += len(batch)
         write_failed_batch_to_file(batch, failed_recs_file)
         batch = []
-        self.num_failures += 0
-        if self.num_failures > 50:
-            logging.error("Exceeded number of failures at row %s", num_records)
-            raise exception
-            # Last batch
+        if self.failed_batches > 50:
+            logging.error("Exceeded number of failed batches at row %s", num_records)
+            logging.critical("Halting")
+            sys.exit()
 
     def handle_unicode_error(self, unicode_error, last_row):
         logging.info("=========ERROR==============")
