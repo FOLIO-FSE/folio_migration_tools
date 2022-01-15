@@ -136,11 +136,14 @@ class BatchPoster(MigrationTaskBase):
     def handle_generic_exception(
         self, exception, last_row, batch, num_records, failed_recs_file
     ):
-        logging.exception("%s", exception)
-        logging.error("Failed row: %s", last_row)
+        logging.error("%s", exception)
+        # logging.error("Failed row: %s", last_row)
         self.failed_batches += 1
         self.failed_records += len(batch)
         write_failed_batch_to_file(batch, failed_recs_file)
+        logging.info(
+            "Resetting batch...Number of failed batches: %s", self.failed_batches
+        )
         batch = []
         if self.failed_batches > 50:
             logging.error("Exceeded number of failed batches at row %s", num_records)
