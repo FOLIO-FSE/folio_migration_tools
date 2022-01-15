@@ -85,6 +85,9 @@ class BatchPoster(MigrationTaskBase):
                                 logging.info(json.dumps(json_rec, indent=True))
                             batch.append(json_rec)
                             if len(batch) == int(self.batch_size):
+                                logging.info(
+                                    "%s - %s", len(batch), int(self.batch_size)
+                                )
                                 self.post_batch(batch, failed_recs_file, num_records)
                                 batch = []
                     except UnicodeDecodeError as unicode_error:
