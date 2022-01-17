@@ -80,6 +80,7 @@ class BatchPoster(MigrationTaskBase):
                                     self.num_failures,
                                 )
                         else:
+
                             json_rec = json.loads(row.split("\t")[-1])
                             if num_records == 1:
                                 logging.info(json.dumps(json_rec, indent=True))
@@ -93,6 +94,8 @@ class BatchPoster(MigrationTaskBase):
                         self.handle_generic_exception(
                             exception, last_row, batch, num_records, failed_recs_file
                         )
+                        batch = []
+
             if self.task_config.object_type != "Extradata" and any(batch):
                 try:
                     self.post_batch(batch, failed_recs_file, num_records)
@@ -145,7 +148,7 @@ class BatchPoster(MigrationTaskBase):
             "Resetting batch...Number of failed batches: %s", self.failed_batches
         )
         batch = []
-        if self.failed_batches > 50:
+        if self.failed_batches > 50000:
             logging.error("Exceeded number of failed batches at row %s", num_records)
             logging.critical("Halting")
             sys.exit()
@@ -221,12 +224,16 @@ class BatchPoster(MigrationTaskBase):
                 json.dumps(resp, indent=4),
             )
         else:
+            try:
+                resp = json.dumps(response, indent=4)
+            except:
+                resp = response
             raise TransformationRecordFailedError(
                 "",
                 f"HTTP {response.status_code}\t"
                 f"Request size: {get_req_size(response)}"
                 f"{datetime.utcnow().isoformat()} UTC\n",
-                json.dumps(response, indent=4),
+                resp,
             )
 
     def do_post(self, batch):
