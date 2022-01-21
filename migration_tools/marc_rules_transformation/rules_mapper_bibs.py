@@ -521,14 +521,12 @@ class BibsRulesMapper(RulesMapperBase):
             try:
                 f_001 = marc_record["001"].value()
                 f_003 = (
-                    marc_record["003"].value().strip()
-                    if "003" in marc_record
-                    else "003 missing from record"
+                    marc_record["003"].value().strip() if "003" in marc_record else ""
                 )
                 self.migration_report.add(
-                    Blurbs.HridHandling,
-                    f"Values in 003: {f_003 if f_003 else 'Empty'}",
+                    Blurbs.HridHandling, f'Values in 003: {f_003 or "Empty"}'
                 )
+
                 if self.task_configuration.deactivate035_from001:
                     self.migration_report.add(
                         Blurbs.HridHandling, "035 generation from 001 turned off"
