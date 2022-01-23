@@ -258,6 +258,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
             holdings_from_row.append(folio_rec)
+
         elif len(folio_rec.get("instanceId", [])) > 1:  # Bound-with.
             holdings_from_row.extend(
                 self.create_bound_with_holdings(folio_rec, legacy_id)
@@ -267,7 +268,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 legacy_id, "No instance id in parsed record", ""
             )
         for folio_holding in holdings_from_row:
-            self.merge_holding_in(folio_holding)
+            self.merge_holding_in(
+                folio_holding, len(folio_rec.get("instanceId", [])) > 1
+            )
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
@@ -385,7 +388,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         logging.info("All done!")
 
-    def merge_holding_in(self, new_folio_holding):
+    def merge_holding_in(self, new_folio_holding, is_boundwith: bool):
         new_holding_key = self.to_key(
             new_folio_holding, self.task_config.holdings_merge_criteria
         )
@@ -394,7 +397,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.task_config.holdings_merge_criteria.startswith("u_")
             and new_folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
         )
-        if exclude or not existing_holding:
+        if is_boundwith or exclude or not existing_holding:
             self.mapper.migration_report.add_general_statistics(
                 "Unique Holdings created from Items"
             )
