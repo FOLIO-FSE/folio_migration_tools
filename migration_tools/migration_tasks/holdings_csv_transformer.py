@@ -389,24 +389,31 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         logging.info("All done!")
 
     def merge_holding_in(self, new_folio_holding, is_boundwith: bool):
-        new_holding_key = self.to_key(
-            new_folio_holding, self.task_config.holdings_merge_criteria
-        )
-        existing_holding = self.holdings.get(new_holding_key, None)
-        exclude = (
-            self.task_config.holdings_merge_criteria.startswith("u_")
-            and new_folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
-        )
-        if is_boundwith or exclude or not existing_holding:
+        if is_boundwith:
+            unique_holding_key = str(uuid.uuid4())
+            self.holdings[unique_holding_key] = new_folio_holding
             self.mapper.migration_report.add_general_statistics(
-                "Unique Holdings created from Items"
+                "Unique BW Holdings created from Items"
             )
-            self.holdings[new_holding_key] = new_folio_holding
         else:
-            self.mapper.migration_report.add_general_statistics(
-                "Holdings already created from Item"
+            new_holding_key = self.to_key(
+                new_folio_holding, self.task_config.holdings_merge_criteria
             )
-            self.merge_holding(new_holding_key, new_folio_holding)
+            existing_holding = self.holdings.get(new_holding_key, None)
+            exclude = (
+                self.task_config.holdings_merge_criteria.startswith("u_")
+                and new_folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
+            )
+            if exclude or not existing_holding:
+                self.mapper.migration_report.add_general_statistics(
+                    "Unique Holdings created from Items"
+                )
+                self.holdings[new_holding_key] = new_folio_holding
+            else:
+                self.mapper.migration_report.add_general_statistics(
+                    "Holdings already created from Item"
+                )
+                self.merge_holding(new_holding_key, new_folio_holding)
 
     @staticmethod
     def to_key(holding, fields_criteria):
