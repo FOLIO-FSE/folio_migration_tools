@@ -232,6 +232,11 @@ class RulesMapperVanilla(unittest.TestCase):
         message = "Should add identifiers: 010, 019, 020, 022, 024, 028, 035"
         xpath = "//marc:datafield[@tag='010' or @tag='020' or @tag='022' or @tag='024' or @tag='028' or @tag='035' or @tag='019']"
         record = self.default_map("test_identifiers.xml", xpath)
+        expected_concatenated_identifiers = [
+            ["9780307264755", "9780307264766", "9780307264777"],
+            ["0027-3473", "1560-15605", "0046-2254"],
+            ["a 1", "a 2"],
+        ]
         expected_identifiers = [
             "(OCoLC)ocn898162644",
             "19049386",
@@ -241,19 +246,10 @@ class RulesMapperVanilla(unittest.TestCase):
             "244170452",
             "62874189",
             "2008011507",
-            "a 1",
-            "a 2",
             "9780307264787",
             "9780071842013 (paperback) 200 SEK",
             "0071842012 (paperback)",
-            "9780307264777",
-            "9780307264755",
-            "9780307264766",
             "0376-4583",
-            "0027-3473 1560-15605 0046-2254",
-            "1560-15605 0027-3473 0046-2254",
-            "0027-3473 0046-2254 1560-15605",
-            "1560-15605 0046-2254 0027-3473",
             "0027-3475",
             "0027-3476",
             "1234-1232",
@@ -265,29 +261,28 @@ class RulesMapperVanilla(unittest.TestCase):
         ]
         m = message + "\n" + record[1]
         folio_uuid_pattern = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-        for id in record[0]["identifiers"]:
-            with self.subTest(id["value"]):
+        ids_in_rec = list([id["value"] for id in record[0]["identifiers"]])
+        for expected_id in expected_identifiers:
+            with self.subTest(expected_id):
                 self.assertIn(
-                    id["value"],
-                    expected_identifiers,
-                    f"{json.dumps(id, indent=4)}- {m}",
-                )
-                self.assertTrue(
-                    re.match(folio_uuid_pattern, id["identifierTypeId"]),
-                    f"{json.dumps(id, indent=4)}- {m} - {json.dumps(record[0]['identifiers'], indent=4)}",
+                    expected_id,
+                    ids_in_rec,
+                    f"{json.dumps(expected_id, indent=4)}- {m}",
                 )
 
-        identifiers = [f["identifierTypeId"] for f in record[0]["identifiers"]]
-        with self.subTest(id["value"]):
-            self.assertTrue(
-                all(identifiers), json.dumps(record[0]["identifiers"], indent=4)
+        type_ids_in_recs = list(
+            [id["identifierTypeId"] for id in record[0]["identifiers"]]
+        )
+        self.assertTrue(
+            all(re.match(folio_uuid_pattern, type_id) for type_id in type_ids_in_recs)
+        )
+        identifiers = [f["value"] for f in record[0]["identifiers"]]
+        self.assertTrue(all(identifiers), json.dumps(identifiers, indent=4))
+
+        for i in type_ids_in_recs:
+            self.assertEqual(
+                1, len(str.split(i)), json.dumps(type_ids_in_recs, indent=4)
             )
-
-        with self.subTest(id["value"]):
-            for i in identifiers:
-                self.assertEqual(
-                    1, len(str.split(i)), json.dumps(record[0]["identifiers"], indent=4)
-                )
 
     def test_series(self):
         message = (
