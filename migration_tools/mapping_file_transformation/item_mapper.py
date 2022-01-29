@@ -131,6 +131,10 @@ class ItemMapper(MappingFileMapperBase):
         if not self.use_map:
             return legacy_item[folio_prop_name]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+        # IF there is a value mapped, return that one
+        if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
+            return self.mapped_from_values.get(folio_prop_name, "")
+
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )
@@ -166,7 +170,6 @@ class ItemMapper(MappingFileMapperBase):
                 Helper.log_data_issue(
                     index_or_id, "Duplicate barcode", "-".join(legacy_values)
                 )
-                logging.error("Duplicate barcode found")
                 self.migration_report.add_general_statistics("Duplicate barcodes")
                 return f"{barcode}-{uuid4()}"
             else:
@@ -199,24 +202,15 @@ class ItemMapper(MappingFileMapperBase):
             return statistical_code_id
         elif folio_prop_name == "holdingsRecordId":
             if legacy_value in self.holdings_id_map:
-                return self.holdings_id_map[legacy_value]["id"]
+                return self.holdings_id_map[legacy_value]["folio_id"]
             self.migration_report.add_general_statistics(
                 "Records failed because of failed holdings",
-            )
-            self.migration_report.add_general_statistics(
-                "Items linked to a Holdingsrecord"
             )
             s = (
                 "Holdings id referenced in legacy item "
                 "was not found amongst transformed Holdings records"
             )
             raise TransformationRecordFailedError(index_or_id, s, legacy_value)
-        elif len(legacy_item_keys) == 1 or folio_prop_name in self.mapped_from_values:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            if value not in [None, ""]:
-                return value
-            else:
-                return legacy_value
         elif any(legacy_item_keys):
             return legacy_value
         else:

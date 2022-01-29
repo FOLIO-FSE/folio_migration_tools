@@ -26,27 +26,6 @@ class HoldingsHelper:
             raise ee
 
     @staticmethod
-    def merge_holding(old_holdings_record: dict, new_holdings_record: dict):
-        # TODO: Move to interface or parent class and make more generic
-        if old_holdings_record.get("notes"):
-            old_holdings_record["notes"].extend(new_holdings_record.get("notes", []))
-            old_holdings_record["notes"] = dedupe(old_holdings_record.get("notes", []))
-        if old_holdings_record.get("holdingsStatements"):
-            old_holdings_record["holdingsStatements"].extend(
-                new_holdings_record.get("holdingsStatements", [])
-            )
-            old_holdings_record["holdingsStatements"] = dedupe(
-                old_holdings_record["holdingsStatements"]
-            )
-        if old_holdings_record.get("formerIds"):
-            old_holdings_record["formerIds"].extend(
-                new_holdings_record.get("formerIds", [])
-            )
-            old_holdings_record["formerIds"] = list(
-                set(old_holdings_record["formerIds"])
-            )
-
-    @staticmethod
     def load_previously_generated_holdings(holdings_file_path, fields_criteria):
         with open(holdings_file_path) as holdings_file:
             prev_holdings = {}
@@ -62,14 +41,6 @@ class HoldingsHelper:
                     raise custom_exceptions.TransformationRecordFailedError(message)
                 prev_holdings[stored_key] = stored_holding
             return prev_holdings
-
-    @staticmethod
-    def setup_holdings_id_map(result_path):
-        holdings_id_dict_path = Helper.setup_path(result_path, "holdings_id_map.json")
-        with open(holdings_id_dict_path, "r") as holdings_id_map_file:
-            holdings_id_map = json.load(holdings_id_map_file)
-            logging.info("Loaded %s holdings ids", len(holdings_id_map))
-            return holdings_id_map
 
 
 def dedupe(list_of_dicts):

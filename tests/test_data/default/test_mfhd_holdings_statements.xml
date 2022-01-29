@@ -41,7 +41,7 @@
                         <subfield code="i">1948-2007</subfield>
                          <subfield code="w">g</subfield>
                     </datafield>
-                     <datafield ind1="4" ind2="0" tag="863">
+                    <datafield ind1="4" ind2="0" tag="863">
                         <subfield code="8">1.2</subfield>
                         <subfield code="a">29-</subfield>
                         <subfield code="i">2011-</subfield>
@@ -49,10 +49,44 @@
                     <datafield ind1=" " ind2=" " tag="853">
                         <subfield code="8">5</subfield>
                         <subfield code="a">Some pattern</subfield>
+                    </datafield>                    
+                    <datafield ind1=" " ind2="0" tag="853">
+                        <subfield code="8">6</subfield>
+                        <subfield code="a">v.</subfield>
+                        <subfield code="b">no.</subfield>
+                        <subfield code="i">(year)</subfield>
+                        <subfield code="j">(month)</subfield>
+                        <subfield code="k">(day)</subfield>
                     </datafield>
-
-
-
+                    <datafield ind1=" " ind2="0" tag="863">
+                        <subfield code="8">6.1</subfield>
+                        <subfield code="a">253</subfield>
+                        <subfield code="b">2</subfield>
+                        <subfield code="i">2006</subfield>
+                        <subfield code="j">01</subfield>
+                        <subfield code="k">09</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="853">
+                        <subfield code="8">7</subfield>
+                        <subfield code="a">v.</subfield>
+                        <subfield code="b">no.</subfield>
+                        <subfield code="i">(year)</subfield>
+                        <subfield code="j">(month)</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="863">
+                        <subfield code="8">6.1</subfield>
+                        <subfield code="a">34</subfield>
+                        <subfield code="b">48</subfield>
+                        <subfield code="i">2005</subfield>
+                        <subfield code="j">11</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2="0" tag="863">
+                        <subfield code="8">6.2</subfield>
+                        <subfield code="a">35</subfield>
+                        <subfield code="b">2</subfield>
+                        <subfield code="i">2006</subfield>
+                        <subfield code="j">01</subfield>
+                    </datafield>
                 </record>
             </metadata>
             <about>

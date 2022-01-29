@@ -1,4 +1,5 @@
 # content of test_sample.py
+import ast
 import json
 import os
 from re import escape
@@ -11,6 +12,7 @@ from pymarc.record import Record, Field
 from migration_tools import mapper_base
 from migration_tools.mapping_file_transformation import mapping_file_mapper_base
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
+from migration_tools.marc_rules_transformation import rules_mapper_bibs
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
@@ -27,51 +29,6 @@ def test_answer2():
     assert func(4) == 5
 
 
-def test_datetime_from_005():
-    f005_1 = "19940223151047.0"
-    record = Record()
-    record.add_field(Field(tag="005", data=f005_1))
-    instance = {
-        "metadata": {
-            "createdDate": datetime.datetime.utcnow().isoformat(),
-            "updatedDate": datetime.datetime.utcnow().isoformat(),
-        }
-    }
-    RulesMapperBase.set_005_as_updated_date(record, instance, "some_id")
-    assert instance["metadata"]["updatedDate"] == "1994-02-23T15:10:47"
-
-
-def test_date_from_008():
-    f008 = "170309s2017\\\\quc\\\\\o\\\\\000\0\fre\d"
-    record = Record()
-    record.add_field(Field(tag="008", data=f008))
-    instance = {
-        "title": "some title",
-        "metadata": {
-            "createdDate": datetime.datetime.utcnow().isoformat(),
-            "updatedDate": datetime.datetime.utcnow().isoformat(),
-        },
-    }
-    RulesMapperBase.use_008_for_dates(record, instance, "some_id")
-    assert instance["catalogedDate"] == "2017-03-09"
-    # assert instance["metadata"]["createdDate"] == "2017-03-09T00:00:00"
-
-
-def test_date_from_008_holding():
-    f008 = "170309s2017\\\\quc\\\\\o\\\\\000\0\fre\d"
-    record = Record()
-    record.add_field(Field(tag="008", data=f008))
-    holding = {
-        "metadata": {
-            "createdDate": datetime.datetime.utcnow().isoformat(),
-            "updatedDate": datetime.datetime.utcnow().isoformat(),
-        }
-    }
-    RulesMapperBase.use_008_for_dates(record, holding, "some_id")
-    assert "catalogedDate" not in holding
-    # assert holding["metadata"]["createdDate"] == "2017-03-09T00:00:00"
-
-
 def test_deterministic_uuid_generation_holdings():
     deterministic_uuid = FolioUUID(
         "https://okapi-bugfest-juniper.folio.ebsco.com",
@@ -81,12 +38,25 @@ def test_deterministic_uuid_generation_holdings():
     assert "a0b4c8a2-01fd-50fd-8158-81bd551412a0" == str(deterministic_uuid)
 
 
+def test_dedupe():
+    rec = {
+        "identifiers": [
+            {"id": "001", "value": "val1"},
+            {"id": "001", "value": "val1"},
+            {"id": "001", "value": "val2"},
+            {"id": "002", "value": "val1"},
+        ]
+    }
+    RulesMapperBase.dedupe_rec(rec)
+    assert len(rec["identifiers"]) == 3
+
+
 def test_is_hybrid_default_mapping():
     mappings = [{"location": "*", "loan_type": "*", "material_type": "*"}]
     mock = Mock(spec=RefDataMapping)
     mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
     res = RefDataMapping.is_hybrid_default_mapping(mock, mappings[0])
-    assert res == False
+    assert res is False
 
 
 def test_get_hybrid_mapping():
@@ -176,6 +146,12 @@ def test_get_marc_record():
     assert record["001"].value() == "21964516"
 
 
+def test_eval():
+    cnr = "['973 B967a', '']"
+    a = ast.literal_eval(cnr)
+    assert isinstance(a, list)
+
+
 def test_get_marc_textual_stmt():
     file_path = "./tests/test_data/default/test_mfhd_holdings_statements.xml"
     record = pymarc.parse_xml_to_array(file_path)[0]
@@ -186,12 +162,19 @@ def test_get_marc_textual_stmt():
     stmt2 = "Some statement without note"
     stmt3 = "v.29 (2011)"
     stmt4 = "v.1 (1948)-v.27 (2007)"
+    stmt5 = "v.253:no.2 (2006:Jan. 09)"
+    stmt6 = "v.34:no.48(2005:Nov.)-v.35:no.2(2006:Jan.)"
+
+    print(res["statements"])
     assert any(res["statements"])
     assert any(stmt in f["statement"] for f in res["statements"])
     assert any(stmt3 in f["statement"] for f in res["statements"])
     assert any(stmt4 in f["statement"] for f in res["statements"])
     assert any("Some note" in f["note"] for f in res["statements"])
     assert any(stmt2 in f["statement"] for f in res["statements"])
+    assert any(stmt5 in f["statement"] for f in res["statements"])
+    # assert any(stmt6 in f["statement"] for f in res["statements"])
+
     assert any("Missing linked fields for 853" in f[1] for f in res["migration_report"])
 
 
@@ -252,3 +235,7 @@ def test_ude2c():
             rec2 = next(reader2)
             # print(rec2)
             # assert rec2.title
+
+
+# def test_identifier_rules_mapping_single_subfield():
+#    assert False

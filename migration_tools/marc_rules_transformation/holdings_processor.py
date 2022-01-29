@@ -5,15 +5,14 @@ import sys
 import time
 import traceback
 from datetime import datetime as dt
-from folio_uuid.folio_uuid import FolioUUID, FOLIONamespaces
 
-from jsonschema import ValidationError, validate
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import FileDefinition
 from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
@@ -22,15 +21,12 @@ from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
 class HoldingsProcessor:
     """the processor"""
 
-    def __init__(
-        self, mapper, folio_client, folder_structure: FolderStructure, suppress: bool
-    ):
+    def __init__(self, mapper, folder_structure: FolderStructure):
         self.folder_structure: FolderStructure = folder_structure
         self.records_count = 0
         self.failed_records_count = 0
         self.mapper: RulesMapperHoldings = mapper
         self.start = time.time()
-        self.suppress = suppress
         self.created_objects_file = open(
             self.folder_structure.created_objects_path, "w+"
         )
@@ -44,7 +40,7 @@ class HoldingsProcessor:
             logging.critical("More than 20 percent of the records have failed. Halting")
             sys.exit()
 
-    def process_record(self, marc_record):
+    def process_record(self, marc_record, file_def: FileDefinition):
         """processes a marc holdings record and saves it"""
         success = True
         try:
@@ -57,7 +53,7 @@ class HoldingsProcessor:
                     "Missing instance ids. Something is wrong.",
                     "",
                 )
-            folio_rec["discoverySuppress"] = self.suppress
+            folio_rec["discoverySuppress"] = file_def.suppressed
             Helper.write_to_file(self.created_objects_file, folio_rec)
             self.mapper.migration_report.add_general_statistics(
                 "Holdings records written to disk"
@@ -93,14 +89,14 @@ class HoldingsProcessor:
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
         self.created_objects_file.close()
-        id_map = self.mapper.holdings_id_map
         logging.info(
             "Saving map of %s old and new IDs to %s",
-            len(id_map),
+            len(self.mapper.holdings_id_map),
             self.folder_structure.holdings_id_map_path,
         )
-        with open(self.folder_structure.holdings_id_map_path, "w+") as id_map_file:
-            json.dump(id_map, id_map_file)
+        self.mapper.save_id_map_file(
+            self.folder_structure.holdings_id_map_path, self.mapper.holdings_id_map
+        )
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# MFHD records transformation results   \n")

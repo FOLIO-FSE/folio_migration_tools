@@ -1,16 +1,19 @@
 import types
-from migration_tools.rules_mapper_bibs import BibsRulesMapper
+from migration_tools.library_configuration import HridHandling
+from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 import unittest
 from lxml import etree
 import pymarc
 import json
+import re
 from types import SimpleNamespace
 from collections import namedtuple
 from jsonschema import validate
 from folioclient.FolioClient import FolioClient
+from migration_tools.migration_tasks.bibs_transformer import BibsTransformer
 
 
-class TestRulesMapperVanilla(unittest.TestCase):
+class RulesMapperVanilla(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         with open("./tests/test_config.json") as settings_file:
@@ -24,8 +27,15 @@ class TestRulesMapperVanilla(unittest.TestCase):
                 cls.config.username,
                 cls.config.password,
             )
+            conf = BibsTransformer.TaskConfiguration(
+                name="test",
+                migration_task_type="BibsTransformer",
+                hrid_handling=HridHandling.default,
+                files=[],
+                ils_flavour="sierra",
+            )
             args_dict = {"suppress": False, "ils_flavour": "voyager"}
-            cls.mapper = BibsRulesMapper(cls.folio, SimpleNamespace(**args_dict))
+            cls.mapper = BibsRulesMapper(cls.folio, SimpleNamespace(**args_dict), conf)
             cls.instance_schema = cls.folio.get_instance_json_schema()
             print("Done setupclass in test")
 
@@ -36,7 +46,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
         }
         file_path = f"./tests/test_data/default/{file_name}"
         record = pymarc.parse_xml_to_array(file_path)[0]
-        (result, other) = self.mapper.parse_bib(record, "source")
+        (result, other) = self.mapper.parse_bib(["legacy_id"], record, False)
         if self.config.validate_json_schema:
             validate(result, self.instance_schema)
         root = etree.parse(file_path)
@@ -66,6 +76,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
     def test_strange_isbn(self):
         xpath = "//marc:datafield[@tag='020']"
         record = self.default_map("isbn_c.xml", xpath)
+        self.assertTrue(record[0].get("identifiers", None))
         identifiers = list(f["identifierTypeId"] for f in record[0]["identifiers"])
         self.assertTrue(all(identifiers))
         for i in identifiers:
@@ -221,34 +232,62 @@ class TestRulesMapperVanilla(unittest.TestCase):
         message = "Should add identifiers: 010, 019, 020, 022, 024, 028, 035"
         xpath = "//marc:datafield[@tag='010' or @tag='020' or @tag='022' or @tag='024' or @tag='028' or @tag='035' or @tag='019']"
         record = self.default_map("test_identifiers.xml", xpath)
+        expected_identifiers = [
+            "(OCoLC)ocn898162644",
+            "19049386",
+            "PJC 222013 Paris Jazz Corner Productions",
+            "1234-1231",
+            "677051564",
+            "244170452",
+            "62874189",
+            "2008011507",
+            "a 1",
+            "a 2",
+            "9780307264787",
+            "9780071842013 (paperback) 200 SEK",
+            "0071842012 (paperback)",
+            "9780307264777",
+            "9780307264755",
+            "9780307264766",
+            "0376-4583",
+            "0027-3473 1560-15605 0046-2254",
+            "1560-15605 0027-3473 0046-2254",
+            "0027-3473 0046-2254 1560-15605",
+            "1560-15605 0046-2254 0027-3473",
+            "0027-3475",
+            "0027-3476",
+            "1234-1232",
+            "7822183031",
+            "M011234564",
+            "(OCoLC)898162644",
+            "a only",
+            "z only",
+        ]
         m = message + "\n" + record[1]
-        # TODO: Test identifier type id in additional mappers
-        identifier_values = list(i["value"] for i in record[0]["identifiers"])
-        self.assertIn("2008011507", identifier_values, m)
-        self.assertIn("9780307264787", identifier_values, m)
-        self.assertIn("9780071842013 (paperback)", identifier_values, m)
-        self.assertIn("0071842012 (paperback)", identifier_values, m)
-        self.assertIn("9780307264755 9780307264766 9780307264777", identifier_values, m)
-        self.assertIn("0376-4583", identifier_values, m)
-        self.assertIn("0027-3475", identifier_values, m)
-        self.assertIn("0027-3476", identifier_values, m)
-        self.assertIn("1234-1232", identifier_values, m)
-        self.assertIn("1560-15605", identifier_values, m)
-        self.assertIn("0046-2254", identifier_values, m)
-        self.assertIn("7822183031", identifier_values, m)
-        self.assertIn("M011234564", identifier_values, m)
-        # self.assertIn("PJC 222013", identifier_values, m)
-        self.assertIn("(OCoLC)898162644", identifier_values, m)
-        self.assertIn("a only", identifier_values, m)
-        self.assertIn("z only", identifier_values, m)
-        self.assertIn("0027-3473", identifier_values, m)
-        identifiers = list(f["identifierTypeId"] for f in record[0]["identifiers"])
-        self.assertTrue(all(identifiers))
-        for i in identifiers:
-            self.assertEqual(1, len(str.split(i)))
-        # self.assertIn('62874189', identifier_values, m)
-        # self.assertIn('244170452', identifier_values, m)
-        # self.assertIn('677051564', identifier_values, m)
+        folio_uuid_pattern = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        for id in record[0]["identifiers"]:
+            with self.subTest(id["value"]):
+                self.assertIn(
+                    id["value"],
+                    expected_identifiers,
+                    f"{json.dumps(id, indent=4)}- {m}",
+                )
+                self.assertTrue(
+                    re.match(folio_uuid_pattern, id["identifierTypeId"]),
+                    f"{json.dumps(id, indent=4)}- {m} - {json.dumps(record[0]['identifiers'], indent=4)}",
+                )
+
+        identifiers = [f["identifierTypeId"] for f in record[0]["identifiers"]]
+        with self.subTest(id["value"]):
+            self.assertTrue(
+                all(identifiers), json.dumps(record[0]["identifiers"], indent=4)
+            )
+
+        with self.subTest(id["value"]):
+            for i in identifiers:
+                self.assertEqual(
+                    1, len(str.split(i)), json.dumps(record[0]["identifiers"], indent=4)
+                )
 
     def test_series(self):
         message = (
@@ -315,7 +354,7 @@ class TestRulesMapperVanilla(unittest.TestCase):
             self.assertIn("Lous, Christian Carl, 1724-1804", contributors, m)
         with self.subTest("700$e (contributor)"):
             self.assertIn("Weaver, James L", contributors, m)
-        print(json.dumps(record[0]["contributors"], indent=4))
+        # print(json.dumps(record[0]["contributors"], indent=4))
         with self.subTest("111$acde, no contrib type id"):
             self.assertIn("Wolfcon Durham 2018", contributors, m)
         with self.subTest("111$abbde4"):

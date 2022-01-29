@@ -25,12 +25,15 @@ class RulesMapperHoldings(RulesMapperBase):
         folio,
         instance_id_map,
         location_map,
-        default_location_code,
-        default_call_number_type_id,
+        default_call_number_type_name,
+        default_holdings_type_id,
     ):
         self.instance_id_map = instance_id_map
         self.conditions = Conditions(
-            folio, self, "holdings", default_location_code, default_call_number_type_id
+            folio,
+            self,
+            "holdings",
+            default_call_number_type_name,
         )
         self.folio = folio
         super().__init__(folio, self.conditions)
@@ -38,6 +41,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
+        self.default_holdings_type_id = default_holdings_type_id
 
     def parse_hold(self, marc_record, index_or_legacy_id, inventory_only=False):
         """Parses a mfhd recod into a FOLIO Inventory instance object
@@ -88,7 +92,9 @@ class RulesMapperHoldings(RulesMapperBase):
         )
         self.dedupe_rec(folio_holding)
         for identifier in folio_holding["formerIds"]:
-            self.holdings_id_map[identifier] = {"id": folio_holding["id"]}
+            self.holdings_id_map[identifier] = self.get_id_map_dict(
+                identifier, folio_holding
+            )
         self.report_folio_mapping(folio_holding, self.schema)
         return folio_holding
 
@@ -192,9 +198,11 @@ class RulesMapperHoldings(RulesMapperBase):
                         ldr06,
                     )
             else:
-                folio_holding[
-                    "holdingsTypeId"
-                ] = self.conditions.default_holdings_type_id
+                if not self.default_holdings_type_id:
+                    raise TransformationProcessError(
+                        "No default_holdings_type_id set up. Add to task configuration"
+                    )
+                folio_holding["holdingsTypeId"] = self.default_holdings_type_id
                 self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
@@ -209,7 +217,7 @@ class RulesMapperHoldings(RulesMapperBase):
         if not folio_holding.get("callNumberTypeId", ""):
             folio_holding[
                 "callNumberTypeId"
-            ] = self.conditions.default_call_number_type_id
+            ] = self.conditions.default_call_number_type["id"]
 
     def set_default_location_if_empty(self, folio_holding):
         if not folio_holding.get("permanentLocationId", ""):

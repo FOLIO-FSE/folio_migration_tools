@@ -137,6 +137,7 @@ def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
     cron_to = ""
     hlm_stmt = ""
     year = False
+
     for chron_level in [cl for cl in "ijkl" if cl in linked_value_field]:
         desc = pattern_field[chron_level] or ""
         if linked_value_field[chron_level]:
@@ -147,7 +148,7 @@ def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
             val, *val_rest = linked_value_field[chron_level].split("-")
             if desc == "(month)":
                 try:
-                    val = calendar.month_abbr[int(val)]
+                    val = f"{calendar.month_abbr[int(val)]}."
                 except Exception:
                     pass
                 if "".join(val_rest):
@@ -156,8 +157,8 @@ def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
                     except Exception:
                         pass
                 if year:
-                    cron_from = f"{val} {cron_from}  "
-                    cron_to = f"{''.join(val_rest)} {cron_to}"
+                    cron_from = f"{cron_from.strip()}:{val} "
+                    cron_to = f"{cron_to}:{''.join(val_rest)} "
             else:
                 if "season" in desc:
                     val = get_season(val)

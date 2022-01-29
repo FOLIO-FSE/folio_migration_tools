@@ -23,9 +23,10 @@ class RulesMapperBase(MapperBase):
         super().__init__()
         self.parsed_records = 0
         self.start = time.time()
+        self.last_batch_time = time.time()
         self.folio_client: FolioClient = folio_client
-        self.holdings_json_schema = fetch_holdings_schema()
-        self.instance_json_schema = get_instance_schema()
+        self.holdings_json_schema = self.fetch_holdings_schema()
+        self.instance_json_schema = self.get_instance_schema()
         self.schema = {}
         self.conditions = conditions
         self.item_json_schema = ""
@@ -33,16 +34,22 @@ class RulesMapperBase(MapperBase):
         self.schema_properties = None
         logging.info("Current user id is %s", self.folio_client.current_user)
 
+    # TODO: Rebuild and move
     def print_progress(self):
         self.parsed_records += 1
-        if self.parsed_records % 5000 == 0:
+        num_recs = 5000
+        if self.parsed_records % num_recs == 0:
             elapsed = self.parsed_records / (time.time() - self.start)
             elapsed_formatted = "{0:.4g}".format(elapsed)
+            elapsed_last = num_recs / (time.time() - self.last_batch_time)
+            elapsed_formatted_last = "{0:.4g}".format(elapsed_last)
             logging.info(
-                f"{elapsed_formatted} records/sec.\t\t{self.parsed_records:,} records processed"
+                f"{elapsed_formatted_last} (avg. {elapsed_formatted}) records/sec.\t\t{self.parsed_records:,} records processed"
             )
+            self.last_batch_time = time.time()
 
-    def dedupe_rec(self, rec):
+    @staticmethod
+    def dedupe_rec(rec):
         # remove duplicates
         for key, value in rec.items():
             if isinstance(value, list):
@@ -50,51 +57,57 @@ class RulesMapperBase(MapperBase):
                 for v in value:
                     if v not in res:
                         res.append(v)
-                rec[key] = res
+                rec[key] = list(res)
 
     def map_field_according_to_mapping(
-        self, marc_field: pymarc.Field, mappings, folio_record, index_or_legacy_id
+        self, marc_field: pymarc.Field, mappings, folio_record, legacy_ids
     ):
         for mapping in mappings:
             if "entity" not in mapping:
-                target = mapping["target"]
-                if has_conditions(mapping):
-                    values = self.apply_rules(marc_field, mapping, index_or_legacy_id)
-                    # TODO: add condition to customize this hardcoded thing
-                    if marc_field.tag == "655":
-                        values[0] = f"Genre: {values[0]}"
-                    self.add_value_to_target(folio_record, target, values)
-                elif has_value_to_add(mapping):
-                    value = mapping["rules"][0]["value"]
-                    # Stupid construct to avoid bool("false") == True
-                    if value == "true":
-                        self.add_value_to_target(folio_record, target, [True])
-                    elif value == "false":
-                        self.add_value_to_target(folio_record, target, [False])
-                    else:
-                        self.add_value_to_target(folio_record, target, [value])
-                else:
-                    # Adding stuff without rules/Conditions.
-                    # Might need more complex mapping for arrays etc
-                    if any(mapping["subfield"]):
-                        value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-                    else:
-                        value = marc_field.format_field() if marc_field else ""
-                    self.add_value_to_target(folio_record, target, [value])
+                self.handle_normal_mapping(
+                    mapping, marc_field, folio_record, legacy_ids
+                )
             else:
-                e_per_subfield = mapping.get("entityPerRepeatedSubfield", False)
                 self.handle_entity_mapping(
                     marc_field,
                     mapping["entity"],
                     folio_record,
-                    e_per_subfield,
-                    index_or_legacy_id,
+                    mapping.get("entityPerRepeatedSubfield", False),
+                    legacy_ids,
                 )
+
+    def handle_normal_mapping(
+        self, mapping, marc_field: pymarc.Field, folio_record, legacy_ids
+    ):
+        target = mapping["target"]
+        if has_conditions(mapping):
+            values = self.apply_rules(marc_field, mapping, legacy_ids)
+            # TODO: add condition to customize this hardcoded thing
+            if marc_field.tag == "655":
+                values[0] = f"Genre: {values[0]}"
+            self.add_value_to_target(folio_record, target, values)
+        elif has_value_to_add(mapping):
+            value = mapping["rules"][0]["value"]
+            # Stupid construct to avoid bool("false") == True
+            if value == "true":
+                self.add_value_to_target(folio_record, target, [True])
+            elif value == "false":
+                self.add_value_to_target(folio_record, target, [False])
+            else:
+                self.add_value_to_target(folio_record, target, [value])
+        else:
+            # Adding stuff without rules/Conditions.
+            # Might need more complex mapping for arrays etc
+            if any(mapping["subfield"]):
+                value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+            else:
+                value = marc_field.format_field() if marc_field else ""
+            self.add_value_to_target(folio_record, target, [value])
 
     @staticmethod
     def set_005_as_updated_date(marc_record: Record, folio_object: dict, legacy_ids):
         try:
-            f005 = marc_record["005"].data[0:14]
+            f005 = marc_record["005"].data[:14]
             parsed_date = datetime.datetime.strptime(f005, "%Y%m%d%H%M%S").isoformat()
             folio_object["metadata"]["updatedDate"] = parsed_date
         except Exception as exception:
@@ -108,10 +121,8 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def use_008_for_dates(marc_record: Record, folio_object: dict, legacy_ids):
         try:
-            first_six = "".join(marc_record["008"].data[0:6])
-            date_str = (
-                f"19{first_six}" if int(first_six[0:2]) > 69 else f"20{first_six}"
-            )
+            first_six = "".join(marc_record["008"].data[:6])
+            date_str = f"19{first_six}" if int(first_six[:2]) > 69 else f"20{first_six}"
             date_str_parsed = datetime.datetime.strptime(date_str, "%Y%m%d")
             if "title" in folio_object:  # only instance has titles
                 folio_object["catalogedDate"] = date_str_parsed.strftime("%Y-%m-%d")
@@ -128,35 +139,24 @@ class RulesMapperBase(MapperBase):
         mapping,
         marc_field,
     ):
-        condition_types = [
-            x.strip() for x in mapping["rules"][0]["conditions"][0]["type"].split(",")
-        ]
+        stripped_conds = mapping["rules"][0]["conditions"][0]["type"].split(",")
+        condition_types = list(map(str.strip, stripped_conds))
         parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
         if mapping.get("applyRulesOnConcatenatedData", ""):
             value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
             return self.apply_rule(value, condition_types, marc_field, parameter)
         elif mapping.get("subfield", []):
-            if mapping.get("ignoreSubsequentFields", False):
-                subfields = []
-                for sf in mapping["subfield"]:
-                    next_subfield = next(iter(marc_field.get_subfields(sf)), "")
-                    subfields.append(next_subfield)
-                return " ".join(
-                    self.apply_rule(x, condition_types, marc_field, parameter)
-                    for x in subfields
-                )
-            else:
-                subfields = marc_field.get_subfields(*mapping["subfield"])
-                x = [
-                    self.apply_rule(x, condition_types, marc_field, parameter)
-                    for x in subfields
-                ]
-                return " ".join(set(x))
+            subfields = marc_field.get_subfields(*mapping["subfield"])
+            x = [
+                self.apply_rule(x, condition_types, marc_field, parameter)
+                for x in subfields
+            ]
+            return " ".join(set(x))
         else:
             value1 = marc_field.format_field() if marc_field else ""
             return self.apply_rule(value1, condition_types, marc_field, parameter)
 
-    def apply_rules(self, marc_field: pymarc.Field, mapping, index_or_legacy_id):
+    def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
         try:
             values = []
             value = ""
@@ -184,6 +184,7 @@ class RulesMapperBase(MapperBase):
             fme.log_it()
             return []
         except TransformationRecordFailedError as trfe:
+            trfe.log_it()
             trfe.data_value = (
                 f"{trfe.data_value} MARCField: {marc_field} "
                 f"Mapping: {json.dumps(mapping)}"
@@ -198,7 +199,6 @@ class RulesMapperBase(MapperBase):
         targets = target_string.split(".")
         if len(targets) == 1:
             self.add_value_to_first_level_target(rec, target_string, value)
-
         else:
             schema_parent = None
             parent = None
@@ -310,27 +310,24 @@ class RulesMapperBase(MapperBase):
         marc_field,
         entity_mapping,
         folio_record,
-        e_per_subfield,
-        index_or_legacy_id,
+        entity_per_repeated_subfield,
+        legacy_ids,
     ):
         e_parent = entity_mapping[0]["target"].split(".")[0]
-        if e_per_subfield:
-            for sf_tuple in grouped(marc_field.subfields, 2):
-                temp_field = Field(
-                    tag=marc_field.tag,
-                    indicators=marc_field.indicators,
-                    subfields=[sf_tuple[0], sf_tuple[1]],
-                )
+        if entity_per_repeated_subfield:
+            for temp_field in self.grouped(marc_field):
                 entity = self.create_entity(
-                    entity_mapping, temp_field, e_parent, index_or_legacy_id
+                    entity_mapping, temp_field, e_parent, legacy_ids
                 )
-                if (type(entity) is dict and any(entity.values())) or (
-                    type(entity) is list and any(entity)
+                if (type(entity) is dict and all(entity.values())) or (
+                    type(entity) is list and all(entity)
                 ):
-                    self.add_entity_to_record(entity, e_parent, folio_record)
+                    self.add_entity_to_record(
+                        entity, e_parent, folio_record, self.schema
+                    )
         else:
             entity = self.create_entity(
-                entity_mapping, marc_field, e_parent, index_or_legacy_id
+                entity_mapping, marc_field, e_parent, legacy_ids
             )
             if e_parent in ["precedingTitles", "succeedingTitles"]:
                 self.create_preceding_succeeding_titles(
@@ -354,7 +351,7 @@ class RulesMapperBase(MapperBase):
                     and any(v for k, v in entity.items())
                 )
             ):
-                self.add_entity_to_record(entity, e_parent, folio_record)
+                self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
             else:
                 sfs = " - ".join(
                     f"{f[0]}:{('has_value' if f[1].strip() else 'empty')}"
@@ -366,7 +363,7 @@ class RulesMapperBase(MapperBase):
                     f"{marc_field.tag} {sfs} ->>-->> {e_parent} {pattern}  ",
                 )
                 # Experimental
-                # self.add_entity_to_record(entity, e_parent, rec)
+                # self.add_entity_to_record(entity, e_parent, rec, self.schema)
 
     def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
         self.migration_report.add(
@@ -400,12 +397,13 @@ class RulesMapperBase(MapperBase):
 
     def apply_rule(self, value, condition_types, marc_field, parameter):
         v = value
-        for condition_type in condition_types:
+        for condition_type in iter(condition_types):
             v = self.conditions.get_condition(condition_type, v, parameter, marc_field)
         return v
 
-    def add_entity_to_record(self, entity, entity_parent_key, rec):
-        sch = self.schema["properties"]
+    @staticmethod
+    def add_entity_to_record(entity, entity_parent_key, rec, schema):
+        sch = schema["properties"]
         if sch[entity_parent_key]["type"] == "array":
             if entity_parent_key not in rec:
                 rec[entity_parent_key] = [entity]
@@ -414,23 +412,54 @@ class RulesMapperBase(MapperBase):
         else:
             rec[entity_parent_key] = entity
 
+    @staticmethod
+    def get_instance_schema():
+        logging.info("Fetching Instance schema...")
+        instance_schema = Helper.get_latest_from_github(
+            "folio-org", "mod-inventory-storage", "ramls/instance.json"
+        )
+        logging.info("done")
+        return instance_schema
 
-def fetch_holdings_schema():
-    logging.info("Fetching HoldingsRecord schema...")
-    holdings_record_schema = Helper.get_latest_from_github(
-        "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
-    )
-    logging.info("done")
-    return holdings_record_schema
+    @staticmethod
+    def fetch_holdings_schema():
+        logging.info("Fetching HoldingsRecord schema...")
+        holdings_record_schema = Helper.get_latest_from_github(
+            "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
+        )
+        logging.info("done")
+        return holdings_record_schema
 
-
-def get_instance_schema():
-    logging.info("Fetching Instance schema...")
-    instance_schema = Helper.get_latest_from_github(
-        "folio-org", "mod-inventory-storage", "ramls/instance.json"
-    )
-    logging.info("done")
-    return instance_schema
+    @staticmethod
+    def grouped(marc_field: Field):
+        "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
+        unique_subfields = []
+        repeated_subfields = []
+        results = list()
+        for sf, sf_vals in marc_field.subfields_as_dict().items():
+            if len(sf_vals) == 1:
+                unique_subfields.extend([sf, sf_vals[0]])
+            else:
+                for sf_val in sf_vals:
+                    repeated_subfields.append([sf, sf_val])
+        if any(repeated_subfields):
+            for repeated_subfield in repeated_subfields:
+                new_subfields = [repeated_subfield[0], repeated_subfield[1]]
+                new_subfields.extend(unique_subfields)
+                temp_field = Field(
+                    tag=marc_field.tag,
+                    indicators=marc_field.indicators,
+                    subfields=new_subfields,
+                )
+                results.append(temp_field)
+        else:
+            temp_field = Field(
+                tag=marc_field.tag,
+                indicators=marc_field.indicators,
+                subfields=unique_subfields,
+            )
+            results.append(temp_field)
+        return results
 
 
 def has_conditions(mapping):
@@ -449,8 +478,3 @@ def is_array_of_strings(schema_property):
 def is_array_of_objects(schema_property):
     sc_prop_type = schema_property.get("type", "string")
     return sc_prop_type == "array" and schema_property["items"]["type"] == "object"
-
-
-def grouped(iterable, n):
-    "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
-    return zip(*[iter(iterable)] * n)

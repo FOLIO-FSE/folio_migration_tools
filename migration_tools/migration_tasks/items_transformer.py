@@ -7,69 +7,98 @@ import sys
 import time
 import traceback
 import uuid
-from os import listdir
-from os.path import isfile, join
+from os.path import isfile
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
-
-import requests
-from argparse_prompt import PromptParser
-from folioclient.FolioClient import FolioClient
-
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
-from migration_tools.main_base import MainBase
+from migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
+)
 from migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
 from migration_tools.report_blurbs import Blurbs
+from pydantic.main import BaseModel
+
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
-def setup_holdings_id_map(folder_structure: FolderStructure):
-    logging.info("Loading holdings id map. This can take a while...")
-    with open(folder_structure.holdings_id_map_path, "r") as holdings_id_map_file:
-        holdings_id_map = json.load(holdings_id_map_file)
-        logging.info("Loaded %s holdings ids", len(holdings_id_map))
-        return holdings_id_map
+class ItemsTransformer(MigrationTaskBase):
+    class TaskConfiguration(BaseModel):
+        name: str
+        migration_task_type: str
+        hrid_handling: HridHandling
+        files: List[FileDefinition]
+        items_mapping_file_name: str
+        location_map_file_name: str
+        default_call_number_type_name: str
+        temp_location_map_file_name: Optional[str] = ""
+        material_types_map_file_name: str
+        loan_types_map_file_name: str
+        temp_loan_types_map_file_name: Optional[str] = ""
+        statistical_codes_map_file_name: str
+        item_statuses_map_file_name: str
+        call_number_type_map_file_name: str
 
-
-class Worker(MainBase):
-    """Class that is responsible for the acutal work"""
+    @staticmethod
+    def get_object_type() -> FOLIONamespaces:
+        return FOLIONamespaces.items
 
     def __init__(
-        self, source_files, folio_client: FolioClient, folder_structure: FolderStructure
+        self,
+        task_config: TaskConfiguration,
+        library_config: LibraryConfiguration,
     ):
-        super().__init__()
+        csv.register_dialect("tsv", delimiter="\t")
+        super().__init__(library_config, task_config)
+        self.task_config = task_config
+        self.files = [
+            f
+            for f in self.task_config.files
+            if isfile(self.folder_structure.legacy_records_folder / f.file_name)
+        ]
+        if not any(self.files):
+            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            raise TransformationProcessError(
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+            )
+        logging.info("Files to process:")
+        for filename in self.files:
+            logging.info("\t%s", filename.file_name)
+
         self.total_records = 0
         self.folio_keys = []
-        self.folder_structure = folder_structure
-        self.folio_client = folio_client
         self.items_map = self.setup_records_map()
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
-        self.source_files = source_files
-        csv.register_dialect("tsv", delimiter="\t")
         self.failed_files: List[str] = list()
         if "statisticalCodes" in self.folio_keys:
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
-                self.folder_structure.statistical_codes_map_path,
+                self.folder_structure.mapping_files_folder
+                / self.task_config.statistical_codes_map_file_name,
                 False,
             )
         else:
             statcode_mapping = None
 
-        if self.folder_structure.temp_loan_type_map_path.is_file():
+        if (
+            self.folder_structure.mapping_files_folder
+            / self.task_config.temp_loan_types_map_file_name
+        ).is_file():
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
                 "temporaryLoanTypeId", self.folder_structure.temp_loan_type_map_path
             )
@@ -80,7 +109,10 @@ class Worker(MainBase):
             )
             temporary_loan_type_mapping = None
 
-        if self.folder_structure.temp_locations_map_path.is_file():
+        if (
+            self.folder_structure.mapping_files_folder
+            / self.task_config.temp_location_map_file_name
+        ).is_file():
             temporary_location_mapping = self.load_ref_data_mapping_file(
                 "temporaryLocationId", self.folder_structure.temp_locations_map_path
             )
@@ -94,20 +126,27 @@ class Worker(MainBase):
             self.folio_client,
             self.items_map,
             self.load_ref_data_mapping_file(
-                "materialTypeId", self.folder_structure.material_type_map_path
+                "materialTypeId",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.material_types_map_file_name,
             ),
             self.load_ref_data_mapping_file(
-                "permanentLoanTypeId", self.folder_structure.loan_type_map_path
+                "permanentLoanTypeId",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.loan_types_map_file_name,
             ),
             self.load_ref_data_mapping_file(
-                "permanentLocationId", self.folder_structure.locations_map_path
+                "permanentLocationId",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.location_map_file_name,
             ),
             self.load_ref_data_mapping_file(
                 "itemLevelCallNumberTypeId",
-                self.folder_structure.call_number_type_map_path,
+                self.folder_structure.mapping_files_folder
+                / self.task_config.call_number_type_map_file_name,
                 False,
             ),
-            setup_holdings_id_map(self.folder_structure),
+            self.load_id_map(self.folder_structure.holdings_id_map_path),
             statcode_mapping,
             self.load_ref_data_mapping_file(
                 "status.name", self.folder_structure.item_statuses_map_path, False
@@ -116,6 +155,71 @@ class Worker(MainBase):
             temporary_location_mapping,
         )
         logging.info("Init done")
+
+    @staticmethod
+    def add_arguments(sub_parser):
+        MigrationTaskBase.add_common_arguments(sub_parser)
+        sub_parser.add_argument(
+            "timestamp",
+            help=(
+                "timestamp or migration identifier. "
+                "Used to chain multiple runs together"
+            ),
+            secure=False,
+        )
+        sub_parser.add_argument(
+            "--default_call_number_type_name",
+            help=(
+                "Name of the default callnumber type. Needs to exist "
+                " in the tenant verbatim"
+            ),
+            default="Other scheme",
+        )
+        sub_parser.add_argument(
+            "--suppress",
+            "-ds",
+            help="This batch of records are to be suppressed in FOLIO.",
+            default=False,
+            type=bool,
+        )
+
+    def do_work(self):
+        logging.info("Starting....")
+        with open(self.folder_structure.created_objects_path, "w+") as results_file:
+            for file_name in self.files:
+                try:
+                    self.process_single_file(file_name, results_file)
+                except Exception as exception:
+                    error_str = f"\n\nProcessing of {file_name} failed:\n{exception}."
+                    logging.exception(error_str, stack_info=True)
+                    logging.fatal(
+                        "Check source files for empty lines or missing reference data. Halting"
+                    )
+                    self.mapper.migration_report.add(
+                        Blurbs.FailedFiles, f"{file_name} - {exception}"
+                    )
+                    logging.fatal(error_str)
+                    sys.exit()
+        logging.info(  # pylint: disable=logging-fstring-interpolation
+            f"processed {self.total_records:,} records in {len(self.files)} files"
+        )
+
+    def setup_records_map(self):
+        with open(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.items_mapping_file_name
+        ) as items_mapper_f:
+            items_map = json.load(items_mapper_f)
+            logging.info("%s fields in item mapping file map", len(items_map["data"]))
+            mapped_fields = (
+                f
+                for f in items_map["data"]
+                if f["legacy_field"] and f["legacy_field"] != "Not mapped"
+            )
+            logging.info(
+                "%s Mapped fields in item mapping file map", len(list(mapped_fields))
+            )
+            return items_map
 
     def load_ref_data_mapping_file(
         self, folio_property_name: str, map_file_path: Path, required: bool = True
@@ -155,52 +259,17 @@ class Worker(MainBase):
             )
             return None
 
-    def setup_records_map(self):
-        with open(self.folder_structure.items_map_path) as items_mapper_f:
-            items_map = json.load(items_mapper_f)
-            logging.info("%s fields in item mapping file map", len(items_map["data"]))
-            mapped_fields = (
-                f
-                for f in items_map["data"]
-                if f["legacy_field"] and f["legacy_field"] != "Not mapped"
-            )
-            logging.info(
-                "%s Mapped fields in item mapping file map", len(list(mapped_fields))
-            )
-            return items_map
-
-    def work(self):
-        logging.info("Starting....")
-        with open(self.folder_structure.created_objects_path, "w+") as results_file:
-            for file_name in self.source_files:
-                try:
-                    self.process_single_file(file_name, results_file)
-                except Exception as exception:
-                    error_str = f"\n\nProcessing of {file_name} failed:\n{exception}."
-                    logging.exception(error_str, stack_info=True)
-                    logging.fatal(
-                        "Check source files for empty lines or missing reference data. Halting"
-                    )
-                    self.mapper.migration_report.add(
-                        Blurbs.FailedFiles, f"{file_name} - {exception}"
-                    )
-                    logging.fatal(error_str)
-                    sys.exit()
-        logging.info(  # pylint: disable=logging-fstring-interpolation
-            f"processed {self.total_records:,} records "
-            f"in {len(self.source_files)} files"
-        )
-
-    def process_single_file(self, file_name, results_file):
-        logging.info("Processing %s", file_name)
+    def process_single_file(self, file_name: FileDefinition, results_file):
+        full_path = self.folder_structure.legacy_records_folder / file_name.file_name
+        logging.info("Processing %s", full_path)
         records_in_file = 0
-        with open(file_name, encoding="utf-8-sig") as records_file:
+        with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
                 "Number of files processed"
             )
             start = time.time()
             for idx, record in enumerate(
-                self.mapper.get_objects(records_file, file_name)
+                self.mapper.get_objects(records_file, full_path)
             ):
                 try:
                     if idx == 0:
@@ -277,96 +346,3 @@ class Worker(MainBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
-
-
-def parse_args():
-    """Parse CLI Arguments"""
-    parser = PromptParser()
-    parser.add_argument("base_folder", help="Base folder of the client.")
-    parser.add_argument("okapi_url", help=("OKAPI base url"))
-    parser.add_argument("tenant_id", help=("id of the FOLIO tenant."))
-    parser.add_argument("username", help=("the api user"))
-    parser.add_argument("--password", help="the api users password", secure=True)
-    parser.add_argument(
-        "--default_call_number_type_id",
-        help="UUID of the default callnumber type",
-        default="95467209-6d7b-468b-94df-0f5d7ad2747d",
-    )
-    parser.add_argument(
-        "--suppress",
-        "-ds",
-        help="This batch of records are to be suppressed in FOLIO.",
-        default=False,
-        type=bool,
-    )
-    parser.add_argument(
-        "--time_stamp",
-        "-ts",
-        help="Time Stamp String (YYYYMMDD-HHMMSS) from Instance transformation. Required",
-    )
-    parser.add_argument(
-        "--log_level_debug",
-        "-debug",
-        help="Set log level to debug",
-        default=False,
-        type=bool,
-    )
-    args = parser.parse_args()
-    if len(args.time_stamp) != 15:
-        logging.critical("Time stamp (%s) is not set properly", args.time_stamp)
-        sys.exit()
-    logging.info("Okapi URL:\t%s", args.okapi_url)
-    logging.info("Tenant Id:\t%s", args.tenant_id)
-    logging.info("Username:   \t%s", args.username)
-    logging.info("Password:   \tSecret")
-    return args
-
-
-def main():
-    """Main Method. Used for bootstrapping."""
-    args = parse_args()
-    folder_structure: FolderStructure = FolderStructure(
-        args.base_folder,  # pylint: disable=no-member
-        args.time_stamp,  # pylint: disable=no-member
-    )
-    folder_structure.setup_migration_file_structure("item")
-    MainBase.setup_logging(
-        folder_structure, args.log_level_debug  # pylint: disable=no-member
-    )
-    folder_structure.log_folder_structure()
-
-    # Source data files
-    files = [
-        join(folder_structure.legacy_records_folder, f)
-        for f in listdir(folder_structure.legacy_records_folder)
-        if isfile(join(folder_structure.legacy_records_folder, f))
-    ]
-    logging.info("Files to process:")
-    for filename in files:
-        logging.info("\t%s", filename)
-
-    try:
-        folio_client = FolioClient(
-            args.okapi_url,  # pylint: disable=no-member
-            args.tenant_id,  # pylint: disable=no-member
-            args.username,  # pylint: disable=no-member
-            args.password,  # pylint: disable=no-member
-        )
-    except requests.exceptions.SSLError:
-        logging.critical("SSL error. Check your VPN or Internet connection. Exiting")
-        sys.exit()
-    try:
-        worker = Worker(files, folio_client, folder_structure)
-        worker.work()
-        worker.wrap_up()
-    except TransformationProcessError as pocess_error:
-        logging.critical(pocess_error)
-        logging.critical("Halting")
-        sys.exit()
-    except Exception as process_error:
-        logging.info("======= UNKNOWN ERROR in MAIN: %s ===========", process_error)
-        logging.exception("=======Stack Trace===========")
-
-
-if __name__ == "__main__":
-    main()
