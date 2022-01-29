@@ -26,6 +26,7 @@ class MigrationTaskBase:
         self,
         library_configuration: library_configuration.LibraryConfiguration,
         task_configuration,
+        use_logging: bool = True
     ):
 
         print("MigrationTaskBase init")
@@ -55,7 +56,7 @@ class MigrationTaskBase:
             logging.critical("Halting...")
             sys.exit()
         self.num_exeptions: int = 0
-        self.setup_logging()
+        if use_logging: self.setup_logging()
         self.folder_structure.log_folder_structure()
         print("MigrationTaskBase init done")
 
