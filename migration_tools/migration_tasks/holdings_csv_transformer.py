@@ -61,8 +61,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        use_logging: bool = True,
     ):
-        super().__init__(library_config, task_config)
+        super().__init__(library_config, task_config, use_logging)
         self.default_holdings_type = None
         try:
             self.task_config = task_config
