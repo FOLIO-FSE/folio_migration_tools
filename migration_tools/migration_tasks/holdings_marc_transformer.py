@@ -113,6 +113,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             location_map,
             self.task_config.default_call_number_type_name,
             self.task_config.default_holdings_type_id,
+            self.library_configuration,
         )
         mapper.mappings = rules_file["rules"]
 

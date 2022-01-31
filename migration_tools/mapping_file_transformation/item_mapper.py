@@ -8,6 +8,7 @@ from uuid import uuid4
 from folioclient import FolioClient
 from folio_uuid.folio_uuid import FOLIONamespaces
 from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -30,6 +31,7 @@ class ItemMapper(MappingFileMapperBase):
         item_statuses_map,
         temporary_loan_type_mapping,
         temporary_location_mapping,
+        library_configuration: LibraryConfiguration,
     ):
         item_schema = folio_client.get_item_schema()
         super().__init__(
@@ -38,6 +40,7 @@ class ItemMapper(MappingFileMapperBase):
             items_map,
             statistical_codes_map,
             FOLIONamespaces.items,
+            library_configuration,
         )
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map

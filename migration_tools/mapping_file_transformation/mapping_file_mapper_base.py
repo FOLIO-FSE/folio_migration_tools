@@ -12,6 +12,7 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.mapper_base import MapperBase
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.report_blurbs import Blurbs
@@ -27,8 +28,9 @@ class MappingFileMapperBase(MapperBase):
         record_map,
         statistical_codes_map,
         uuid_namespace: UUID,
+        library_configuration: LibraryConfiguration,
     ):
-        super().__init__()
+        super().__init__(library_configuration)
         self.uuid_namespace = uuid_namespace
         self.schema = schema
         self.total_records = 0
@@ -40,22 +42,6 @@ class MappingFileMapperBase(MapperBase):
         self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
         self.field_map = self.setup_field_map()
-        if "legacyIdentifier" not in self.field_map:
-            raise TransformationProcessError(
-                "property legacyIdentifier is not in map. Add this property "
-                "to the mapping file as if it was a FOLIO property"
-            )
-        try:
-            self.legacy_id_property_name = self.field_map["legacyIdentifier"][0]
-            logging.info(
-                "Legacy identifier will be mapped from %s", self.legacy_id_property_name
-            )
-        except Exception as exception:
-            raise TransformationProcessError(
-                f"property legacyIdentifier not setup in map: "
-                f"{self.field_map.get('legacyIdentifier', '') ({exception})}"
-            )
-        del self.field_map["legacyIdentifier"]
         self.validate_map()
         self.mapped_from_values = {}
         for k in self.record_map["data"]:
@@ -108,6 +94,22 @@ class MappingFileMapperBase(MapperBase):
                 field_map[k["folio_field"]] = [k["legacy_field"]]
             else:
                 field_map[k["folio_field"]].append(k["legacy_field"])
+        if "legacyIdentifier" not in field_map:
+            raise TransformationProcessError(
+                "property legacyIdentifier is not in map. Add this property "
+                "to the mapping file as if it was a FOLIO property"
+            )
+        try:
+            self.legacy_id_property_name = field_map["legacyIdentifier"][0]
+            logging.info(
+                "Legacy identifier will be mapped from %s", self.legacy_id_property_name
+            )
+        except Exception as exception:
+            raise TransformationProcessError(
+                f"property legacyIdentifier not setup in map: "
+                f"{field_map.get('legacyIdentifier', '') ({exception})}"
+            )
+        del field_map["legacyIdentifier"]
         return field_map
 
     def validate_map(self):
