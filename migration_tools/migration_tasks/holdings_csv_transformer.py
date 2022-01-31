@@ -374,10 +374,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )
-
-            Helper.write_migration_report(
-                migration_report_file, self.mapper.migration_report
-            )
+            self.mapper.migration_report.write_migration_report(migration_report_file)
             Helper.print_mapping_report(
                 migration_report_file,
                 self.total_records,
