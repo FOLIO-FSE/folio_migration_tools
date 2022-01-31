@@ -51,9 +51,13 @@ folio-uuid = "0.2.0"
 pydantic = "*"
 pyhumps = "*"
 joblib = "*"
+parameterized = "*"
 
 [requires]
 python_version = "3.9"
 
 [pipenv]
 allow_prereleases = true
+
+[scripts]
+test = "pytest"
