@@ -37,8 +37,14 @@ jobs:
         pipenv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     
     - name: Run test suite
+      shell: bash
+      env:
+        PASSWORD: ${{ secrets.PASSWORD }}
+        TENANT_ID: ${{ secrets.TENANT_ID }}
+        OKAPI_URL: ${{ secrets.OKAPI_URL }}
+        USERNAME: ${{ secrets.USERNAME }}
       run: |
-        pipenv run pytest --password ${{ secrets.PASSWORD }} --tenant_id ${{ secrets.TENANT_ID }} --okapi_url ${{ secrets.OKAPI_URL }} --username ${{ secrets.USERNAME }} -s
+        pipenv run pytest --password "$PASSWORD" --tenant_id "$TENANT_ID" --okapi_url "$OKAPI_URL" --username "$USERNAME" -s
     
     - name: Make sure the code can run
       run: |
