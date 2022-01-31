@@ -199,13 +199,12 @@ class BibsProcessor:
                 srs_id,
                 self.folio_client.get_metadata_construct(),
                 suppress,
-            ),
-            self.mapper.library_configuration.folio_release,
+            )
         )
         self.srs_records_file.write(f"{srs_record_string}\n")
 
 
-def get_srs_string(my_tuple, folio_version):
+def get_srs_string(my_tuple):
     my_tuple_json = my_tuple[0].as_json()
     raw_record = {"id": my_tuple[2], "content": my_tuple_json}
     parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple_json)}
@@ -215,7 +214,7 @@ def get_srs_string(my_tuple, folio_version):
         "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
         "matchedId": my_tuple[2],
         "generation": 0,
-        "recordType": "MARC" if folio_version == FolioRelease.iris else "MARC_BIB",
+        "recordType": "MARC_BIB",
         "rawRecord": raw_record,
         "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": my_tuple[4]},
