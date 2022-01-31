@@ -1,10 +1,13 @@
 import logging
+from pathlib import Path
 import sys
+import json
 
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from migration_tools.folder_structure import FolderStructure
 from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 
@@ -21,19 +24,19 @@ class MapperBase:
 
     def report_legacy_mapping(self, field_name, present, mapped):
         if field_name:
-            if field_name not in self.mapped_legacy_fields:
-                self.mapped_legacy_fields[field_name] = [int(present), int(mapped)]
-            else:
+            try:
                 self.mapped_legacy_fields[field_name][0] += int(present)
                 self.mapped_legacy_fields[field_name][1] += int(mapped)
+            except KeyError:
+                self.mapped_legacy_fields[field_name] = [int(present), int(mapped)]
 
     def report_folio_mapping(self, folio_record, schema):
         try:
             for field_name in flatten(folio_record):
-                if field_name not in self.mapped_folio_fields:
-                    self.mapped_folio_fields[field_name] = [1]
-                else:
+                try:
                     self.mapped_folio_fields[field_name][0] += 1
+                except KeyError:
+                    self.mapped_folio_fields[field_name] = [1]
             if not self.schema_properties:
                 self.schema_properties = schema["properties"].keys()
 
@@ -83,6 +86,10 @@ class MapperBase:
             )
             sys.exit()
 
+    @staticmethod
+    def get_id_map_dict(legacy_id, folio_record):
+        return {"legacy_id": legacy_id, "folio_id": folio_record["id"]}
+
     def handle_generic_exception(self, idx, excepion: Exception):
         self.num_exeptions += 1
         print("\n=======ERROR===========")
@@ -97,6 +104,13 @@ class MapperBase:
                 self.num_exeptions,
             )
             sys.exit()
+
+    @staticmethod
+    def save_id_map_file(path, legacy_map: dict):
+        with open(path, "w") as legacy_map_file:
+            for id_string in legacy_map.values():
+                legacy_map_file.write(f"{json.dumps(id_string)}\n")
+            logging.info("Wrote %s id:s to legacy map", len(legacy_map))
 
 
 def flatten(my_dict: dict, path=""):

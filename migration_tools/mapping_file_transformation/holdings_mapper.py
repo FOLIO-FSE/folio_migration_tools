@@ -47,6 +47,9 @@ class HoldingsMapper(MappingFileMapperBase):
         if not self.use_map:
             return legacy_item[folio_prop_name]
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+        # IF there is a value mapped, return that one
+        if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
+            return self.mapped_from_values.get(folio_prop_name, "")
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )
@@ -56,7 +59,7 @@ class HoldingsMapper(MappingFileMapperBase):
         elif folio_prop_name == "temporaryLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name, True)
         elif folio_prop_name == "callNumber":
-            if legacy_value.startswith("["):
+            if legacy_value.startswith("[") and len(legacy_value.split(",")) > 1:
                 self.migration_report.add_general_statistics(
                     "Bound-with items callnumber identified"
                 )
@@ -67,7 +70,7 @@ class HoldingsMapper(MappingFileMapperBase):
                         f"{len(legacy_value.split(','))}"
                     ),
                 )
-            return legacy_value
+            return legacy_value.removeprefix("[").removesuffix("]")
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(
                 legacy_item, folio_prop_name, index_or_id
@@ -78,13 +81,8 @@ class HoldingsMapper(MappingFileMapperBase):
             )
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(legacy_value, index_or_id)
-        elif len(legacy_item_keys) == 1:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            if value in [None, ""]:
-                return legacy_value
-            return value
         elif any(legacy_item_keys):
-            return legacy_values
+            return legacy_value
         else:
             # edge case
             return ""

@@ -33,11 +33,16 @@
                         <subfield code="a">a only</subfield>
                     </datafield>
                     <datafield tag="020" ind1=" " ind2=" ">
+                        <subfield code="a">a 1</subfield>
+                        <subfield code="a">a 2</subfield>
+                    </datafield>
+                    <datafield tag="020" ind1=" " ind2=" ">
                         <subfield code="z">z only</subfield>
                     </datafield>
                     <datafield ind1=" " ind2=" " tag="020">
                         <subfield code="a">9780071842013</subfield>
                         <subfield code="q">(paperback)</subfield>
+                        <subfield code="c">200 SEK</subfield>
                     </datafield>
                     <datafield ind1=" " ind2=" " tag="020">
                         <subfield code="a">0071842012</subfield>

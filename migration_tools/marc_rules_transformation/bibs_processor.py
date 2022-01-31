@@ -2,23 +2,23 @@
 import json
 import logging
 from typing import List
-import uuid
-from pymarc.field import Field
-from pymarc.leader import Leader
-from migration_tools.helper import Helper
 
-from pymarc.record import Record
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (
-    TransformationRecordFailedError,
-)
+from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.folio_releases import FOLIOReleases
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import FolioRelease
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
+<<<<<<< HEAD
 
+=======
+>>>>>>> develop
 from migration_tools.report_blurbs import Blurbs
+from pymarc.field import Field
+from pymarc.leader import Leader
+from pymarc.record import Record
 
 
 class BibsProcessor:
@@ -26,29 +26,26 @@ class BibsProcessor:
 
     def __init__(
         self,
-        mapper,
+        mapper: BibsRulesMapper,
         folio_client: FolioClient,
         results_file,
         folder_structure: FolderStructure,
-        args,
     ):
-        self.ils_flavour = args.ils_flavour
-        self.suppress = args.suppress
         self.results_file = results_file
         self.folio_client = folio_client
         self.instance_schema = folio_client.get_instance_json_schema()
         self.mapper: BibsRulesMapper = mapper
-        self.args = args
         self.folders = folder_structure
         self.srs_records_file = open(self.folders.srs_records_path, "w+")
         self.instance_id_map_file = open(self.folders.instance_id_map_path, "w+")
         self.instance_identifiers = set()
 
-    def process_record(self, idx, marc_record: Record, inventory_only):
-
+    def process_record(self, idx, marc_record: Record, suppressed: bool):
         """processes a marc record and saves it"""
         try:
-            legacy_ids = self.mapper.get_legacy_ids(marc_record, self.ils_flavour, idx)
+            legacy_ids = self.mapper.get_legacy_ids(
+                marc_record, self.mapper.task_configuration.ils_flavour, idx
+            )
         except TransformationRecordFailedError as trf:
             trf.log_it()
         except Exception as ee:
@@ -60,7 +57,7 @@ class BibsProcessor:
         try:
             # Transform the MARC21 to a FOLIO record
             (folio_rec, id_map_strings) = self.mapper.parse_bib(
-                legacy_ids, marc_record, inventory_only
+                legacy_ids, marc_record, suppressed
             )
             prec_titles = folio_rec.get("precedingTitles", [])
             if prec_titles:
@@ -76,7 +73,7 @@ class BibsProcessor:
                 )
             if self.validate_instance(folio_rec, marc_record, legacy_ids):
                 Helper.write_to_file(self.results_file, folio_rec)
-                self.save_source_record(marc_record, folio_rec, legacy_ids)
+                self.save_source_record(marc_record, folio_rec, legacy_ids, suppressed)
                 self.mapper.migration_report.add_general_statistics(
                     "Records successfully transformed into FOLIO objects"
                 )
@@ -93,7 +90,7 @@ class BibsProcessor:
                     else:
                         s = (
                             "Duplicate Instance identifiers "
-                            f"for ILS setting {self.ils_flavour}"
+                            f"for ILS setting {self.mapper.task_configuration.ils_flavour}"
                         )
                         self.mapper.migration_report.add_general_statistics(s)
                         Helper.log_data_issue(
@@ -170,7 +167,9 @@ class BibsProcessor:
         self.srs_records_file.close()
         self.instance_id_map_file.close()
 
-    def save_source_record(self, marc_record, instance, legacy_ids: List[str]):
+    def save_source_record(
+        self, marc_record, instance, legacy_ids: List[str], suppress: bool
+    ):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = str(
             FolioUUID(
@@ -203,9 +202,9 @@ class BibsProcessor:
                 instance,
                 srs_id,
                 self.folio_client.get_metadata_construct(),
-                self.suppress,
+                suppress,
             ),
-            self.mapper.folio_version,
+            self.mapper.library_configuration.folio_release,
         )
         self.srs_records_file.write(f"{srs_record_string}\n")
 
@@ -220,7 +219,7 @@ def get_srs_string(my_tuple, folio_version):
         "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
         "matchedId": my_tuple[2],
         "generation": 0,
-        "recordType": "MARC" if folio_version == FOLIOReleases.IRIS else "MARC_BIB",
+        "recordType": "MARC" if folio_version == FolioRelease.iris else "MARC_BIB",
         "rawRecord": raw_record,
         "parsedRecord": parsed_record,
         "additionalInfo": {"suppressDiscovery": my_tuple[4]},
