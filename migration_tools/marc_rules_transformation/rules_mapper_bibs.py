@@ -49,12 +49,6 @@ class BibsRulesMapper(RulesMapperBase):
         self.task_configuration = task_configuration
         self.record_status = {}
         self.unique_001s = set()
-<<<<<<< HEAD
-        self.folio_version = args.folio_version
-        self.suppress = args.suppress
-        self.ils_flavour = args.ils_flavour
-=======
->>>>>>> develop
         self.holdings_map = {}
         self.id_map = {}
         self.srs_recs = []

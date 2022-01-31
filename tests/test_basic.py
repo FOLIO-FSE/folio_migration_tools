@@ -2,18 +2,13 @@
 import ast
 import json
 import os
-from re import escape
 from unittest.mock import Mock, patch
 
 from folio_uuid import FolioUUID, FOLIONamespaces
-import datetime
 import pymarc
-from pymarc.record import Record, Field
-import pytest
 from migration_tools import mapper_base
 from migration_tools.mapping_file_transformation import mapping_file_mapper_base
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
-from migration_tools.marc_rules_transformation import rules_mapper_bibs
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )

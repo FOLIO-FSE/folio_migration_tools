@@ -1,5 +1,4 @@
 """ Class that processes each MARC record """
-import json
 import logging
 import sys
 import time
@@ -66,7 +65,7 @@ class HoldingsProcessor:
                 "Records that failed transformation. Check log for details",
             )
         except TransformationProcessError as tpe:
-            raise tpe  #  Raise, since it should be handled higher up
+            raise tpe  # Raise, since it should be handled higher up
         except Exception as inst:
             success = False
             traceback.print_exc()

@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 import sys
 import json
 
@@ -7,7 +6,6 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.folder_structure import FolderStructure
 from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 
