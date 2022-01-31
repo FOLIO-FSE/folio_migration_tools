@@ -1,13 +1,6 @@
-import argparse
-import types
-from black import assert_equivalent
-from matplotlib import use
-from parameterized import parameterized
-from inflection import parameterize
 import pytest
 from migration_tools.library_configuration import HridHandling
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
-import unittest
 from lxml import etree
 import pymarc
 import json
