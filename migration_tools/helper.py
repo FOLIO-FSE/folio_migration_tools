@@ -13,19 +13,9 @@ from migration_tools.report_blurbs import Blurbs
 
 class Helper:
     @staticmethod
-    def print_dict_to_md_table(my_dict, report_file, h1="Measure", h2="Number"):
-        # TODO: Move to interface or parent class
-        d_sorted = {k: my_dict[k] for k in sorted(my_dict)}
-        report_file.write(f"{h1} | {h2}   \n")
-        report_file.write("--- | ---:   \n")
-        for k, v in d_sorted.items():
-            report_file.write(f"{k or 'EMPTY'} | {v:,}   \n")
-
-    @staticmethod
     def print_mapping_report(
         report_file, total_records: int, mapped_folio_fields, mapped_legacy_fields
     ):
-
         details_start = (
             "<details><summary>Click to expand field report</summary>     \n\n"
         )
@@ -70,50 +60,6 @@ class Helper:
         report_file.write(details_end)
 
     @staticmethod
-    def write_migration_report(report_file, migration_report: MigrationReport):
-        """Writes the migration report, including section headers, section blurbs, and values."""
-        report_file.write(f"{Blurbs.Introduction[1]}\n")
-
-        for a in migration_report.report:
-            blurb = migration_report.report[a].get("blurb_tuple") or ("", "")
-            report_file.write("   \n")
-            report_file.write(f"## {blurb[0]}    \n")
-            report_file.write(f"{blurb[1]}    \n")
-            report_file.write(
-                f"<details><summary>Click to expand all {len(migration_report.report[a])} things</summary>     \n"
-            )
-            report_file.write("   \n")
-            report_file.write("Measure | Count   \n")
-            report_file.write("--- | ---:   \n")
-            b = migration_report.report[a]
-            sortedlist = [
-                (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
-            ]
-            for b in sortedlist:
-                report_file.write(f"{b[0] or 'EMPTY'} | {b[1]:,}   \n")
-            report_file.write("</details>   \n")
-
-    @staticmethod
-    def flatten_dict(dictionary_to_flatten):
-        df = pd.json_normalize(dictionary_to_flatten, sep=".")
-        return df.to_dict(orient="records")[0]
-
-    @staticmethod
-    def setup_path(path, filename):
-        new_path = ""
-        try:
-            new_path = os.path.join(path, filename)
-        except Exception:
-            raise TransformationProcessError(
-                f"Something went wrong when joining {path} and {filename} into a path"
-            )
-        if not isfile(new_path):
-            raise TransformationProcessError(
-                f"No file called {filename} present in {path}"
-            )
-        return new_path
-
-    @staticmethod
     def log_data_issue(index_or_id, message, legacy_value):
         logging.log(26, "DATA ISSUE\t%s\t%s\t%s", index_or_id, message, legacy_value)
 
@@ -149,10 +95,3 @@ class Helper:
             return json.loads(req.text)
         except Exception:
             logging.exception(latest_path)
-
-
-def as_str(s):
-    try:
-        return str(s), ""
-    except ValueError:
-        return "", s
