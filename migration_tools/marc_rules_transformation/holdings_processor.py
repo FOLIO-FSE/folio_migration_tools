@@ -101,7 +101,7 @@ class HoldingsProcessor:
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# MFHD records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
-            Helper.write_migration_report(report_file, self.mapper.migration_report)
+            self.mapper.migration_report.write_migration_report(report_file)
             Helper.print_mapping_report(
                 report_file,
                 self.mapper.parsed_records,
