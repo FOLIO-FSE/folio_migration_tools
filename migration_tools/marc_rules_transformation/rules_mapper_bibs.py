@@ -43,10 +43,13 @@ class BibsRulesMapper(RulesMapperBase):
         library_configuration: LibraryConfiguration,
         task_configuration,
     ):
-        super().__init__(folio_client, Conditions(folio_client, self, "bibs"))
+        super().__init__(
+            folio_client,
+            library_configuration,
+            Conditions(folio_client, self, "bibs"),
+        )
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.folio = folio_client
-        self.library_configuration: LibraryConfiguration = library_configuration
         self.task_configuration = task_configuration
         self.record_status = {}
         self.unique_001s = set()

@@ -1,4 +1,3 @@
-import uuid
 from typing import List
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -11,6 +10,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.marc_rules_transformation.conditions import Conditions
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -27,6 +27,7 @@ class RulesMapperHoldings(RulesMapperBase):
         location_map,
         default_call_number_type_name,
         default_holdings_type_id,
+        library_configuration: LibraryConfiguration,
     ):
         self.instance_id_map = instance_id_map
         self.conditions = Conditions(
@@ -36,7 +37,7 @@ class RulesMapperHoldings(RulesMapperBase):
             default_call_number_type_name,
         )
         self.folio = folio
-        super().__init__(folio, self.conditions)
+        super().__init__(folio, library_configuration, self.conditions)
         self.location_map = location_map
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}

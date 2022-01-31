@@ -6,13 +6,16 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 
 
 class MapperBase:
-    def __init__(self):
+    def __init__(self, library_configuration: LibraryConfiguration):
         logging.info("MapperBase initiating")
+        self.library_configuration: LibraryConfiguration = library_configuration
+
         self.mapped_folio_fields = {}
         self.migration_report = MigrationReport()
         self.num_criticalerrors = 0
@@ -71,11 +74,17 @@ class MapperBase:
         error.log_it()
         self.num_criticalerrors += 1
         if (
-            self.num_criticalerrors / (records_processed + 1) > 0.2
-            and self.num_criticalerrors > 5000
+            self.num_criticalerrors / (records_processed + 1)
+            > (self.library_configuration.failed_percentage_threshold / 100)
+            and self.num_criticalerrors
+            > self.library_configuration.failed_records_threshold
         ):
             logging.fatal(
-                "Stopping. More than %s critical data errors", self.num_criticalerrors
+                (
+                    "Stopping. More than %s critical data errors. "
+                    "Threshold reached. Fix error or raise the bar."
+                ),
+                self.num_criticalerrors,
             )
             logging.error(
                 "Errors: %s\terrors/records: %s",
