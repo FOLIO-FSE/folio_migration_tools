@@ -31,7 +31,7 @@ class HoldingsProcessor:
         self.created_objects_file = open(
             self.folder_structure.created_objects_path, "w+"
         )
-        self.srs_records_file = open(self.folders.srs_records_path, "w+")
+        self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
 
     def exit_on_too_many_exceptions(self):
         if (
