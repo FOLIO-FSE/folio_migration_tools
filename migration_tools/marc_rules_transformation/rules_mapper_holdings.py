@@ -16,9 +16,6 @@ from migration_tools.marc_rules_transformation.holdings_statementsparser import 
     HoldingsStatementsParser,
 )
 from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
-from migration_tools.migration_tasks.holdings_marc_transformer import (
-    HoldingsMarcTransformer,
-)
 from migration_tools.report_blurbs import Blurbs
 
 
@@ -28,7 +25,7 @@ class RulesMapperHoldings(RulesMapperBase):
         folio,
         instance_id_map,
         location_map,
-        task_configuration: HoldingsMarcTransformer.TaskConfiguration,
+        task_configuration,
         library_configuration: LibraryConfiguration,
     ):
         self.instance_id_map = instance_id_map
