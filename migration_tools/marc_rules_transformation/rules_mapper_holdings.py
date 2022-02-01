@@ -47,7 +47,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.ref_data_dicts = {}
         self.default_holdings_type_id = self.task_configuration.default_holdings_type_id
 
-    def parse_hold(self, marc_record, index_or_legacy_id, inventory_only=False):
+    def parse_hold(self, marc_record, index_or_legacy_id):
         """Parses a mfhd recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://docs.google.com/spreadsheets/d/1ac95azO1R41_PGkeLhc6uybAKcfpe6XLyd9-F4jqoTo/edit#gid=301923972
          This is the main function"""
@@ -57,9 +57,11 @@ class RulesMapperHoldings(RulesMapperBase):
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
         ignored_subsequent_fields = set()
-
+        num_852s = 0
         for marc_field in marc_record:
             try:
+                if marc_field.tag == "852":
+                    num_852s += 1
                 self.process_marc_field(
                     marc_field,
                     ignored_subsequent_fields,
@@ -68,6 +70,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 )
             except TransformationFieldMappingError as tfme:
                 tfme.log_it()
+        if num_852s > 1:
+            Helper.log_data_issue(index_or_legacy_id, "More than 1 852 found", "")
         if not folio_holding.get("formerIds", []):
             raise TransformationProcessError(
                 self.parsed_records,
