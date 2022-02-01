@@ -5,16 +5,14 @@ import csv
 import ctypes
 import json
 import logging
-import os
 import sys
 import time
 import traceback
 import uuid
-from os import listdir
 from os.path import isfile
 from typing import List, Optional
-from folio_uuid import FolioUUID
 
+from folio_uuid import FolioUUID
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -30,10 +28,9 @@ from migration_tools.mapping_file_transformation.holdings_mapper import Holdings
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from migration_tools.report_blurbs import Blurbs
 from pydantic.main import BaseModel
-
-from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
@@ -74,6 +71,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.load_location_map(),
                 self.load_call_number_type_map(),
                 self.load_id_map(self.folder_structure.instance_id_map_path),
+                library_config,
             )
             self.holdings = {}
             self.total_records = 0
@@ -377,10 +375,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )
-
-            Helper.write_migration_report(
-                migration_report_file, self.mapper.migration_report
-            )
+            self.mapper.migration_report.write_migration_report(migration_report_file)
             Helper.print_mapping_report(
                 migration_report_file,
                 self.total_records,

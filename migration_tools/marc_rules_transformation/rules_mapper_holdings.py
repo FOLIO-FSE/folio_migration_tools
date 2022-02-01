@@ -1,4 +1,3 @@
-import uuid
 from typing import List
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -11,6 +10,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.marc_rules_transformation.conditions import Conditions
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -25,25 +25,26 @@ class RulesMapperHoldings(RulesMapperBase):
         folio,
         instance_id_map,
         location_map,
-        default_call_number_type_name,
-        default_holdings_type_id,
+        task_configuration,
+        library_configuration: LibraryConfiguration,
     ):
         self.instance_id_map = instance_id_map
+        self.task_configuration = task_configuration
         self.conditions = Conditions(
             folio,
             self,
             "holdings",
-            default_call_number_type_name,
+            self.task_configuration.default_call_number_type_name,
         )
         self.folio = folio
-        super().__init__(folio, self.conditions)
+        super().__init__(folio, library_configuration, self.conditions)
         self.location_map = location_map
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        self.default_holdings_type_id = default_holdings_type_id
+        self.default_holdings_type_id = self.task_configuration.default_holdings_type_id
 
-    def parse_hold(self, marc_record, index_or_legacy_id, inventory_only=False):
+    def parse_hold(self, marc_record, index_or_legacy_id):
         """Parses a mfhd recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://docs.google.com/spreadsheets/d/1ac95azO1R41_PGkeLhc6uybAKcfpe6XLyd9-F4jqoTo/edit#gid=301923972
          This is the main function"""
@@ -53,9 +54,11 @@ class RulesMapperHoldings(RulesMapperBase):
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
         ignored_subsequent_fields = set()
-
+        num_852s = 0
         for marc_field in marc_record:
             try:
+                if marc_field.tag == "852":
+                    num_852s += 1
                 self.process_marc_field(
                     marc_field,
                     ignored_subsequent_fields,
@@ -64,6 +67,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 )
             except TransformationFieldMappingError as tfme:
                 tfme.log_it()
+        if num_852s > 1:
+            Helper.log_data_issue(index_or_legacy_id, "More than 1 852 found", "")
         if not folio_holding.get("formerIds", []):
             raise TransformationProcessError(
                 self.parsed_records,

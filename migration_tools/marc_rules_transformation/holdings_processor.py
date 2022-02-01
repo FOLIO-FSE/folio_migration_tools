@@ -1,10 +1,11 @@
 """ Class that processes each MARC record """
-import json
 import logging
 import sys
 import time
 import traceback
 from datetime import datetime as dt
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pymarc import Record
 
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -30,17 +31,19 @@ class HoldingsProcessor:
         self.created_objects_file = open(
             self.folder_structure.created_objects_path, "w+"
         )
+        self.srs_records_file = open(self.folders.srs_records_path, "w+")
 
     def exit_on_too_many_exceptions(self):
         if (
-            self.records_count > 10000
-            and self.records_count % 10000 == 0
-            and self.failed_records_count / (self.records_count + 1) > 0.2
+            self.failed_records_count / (self.records_count + 1)
+            > (self.mapper.library_configuration.failed_percentage_threshold / 100)
+            and self.failed_records_count
+            > self.mapper.library_configuration.failed_records_threshold
         ):
             logging.critical("More than 20 percent of the records have failed. Halting")
             sys.exit()
 
-    def process_record(self, marc_record, file_def: FileDefinition):
+    def process_record(self, marc_record: Record, file_def: FileDefinition):
         """processes a marc holdings record and saves it"""
         success = True
         try:
@@ -58,6 +61,20 @@ class HoldingsProcessor:
             self.mapper.migration_report.add_general_statistics(
                 "Holdings records written to disk"
             )
+            if self.mapper.task_configuration.create_source_records:
+                self.mapper.save_source_record(
+                    self.srs_records_file,
+                    FOLIONamespaces.holdings,
+                    self.folio_client,
+                    marc_record,
+                    folio_rec,
+                    folio_rec["formerIds"][0],
+                    file_def.suppressed,
+                )
+                self.mapper.migration_report.add_general_statistics(
+                    "SRS records written to disk"
+                )
+
             self.exit_on_too_many_exceptions()
         except TransformationRecordFailedError as error:
             success = False
@@ -66,7 +83,7 @@ class HoldingsProcessor:
                 "Records that failed transformation. Check log for details",
             )
         except TransformationProcessError as tpe:
-            raise tpe  #  Raise, since it should be handled higher up
+            raise tpe  # Raise, since it should be handled higher up
         except Exception as inst:
             success = False
             traceback.print_exc()
@@ -101,13 +118,14 @@ class HoldingsProcessor:
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# MFHD records transformation results   \n")
             report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
-            Helper.write_migration_report(report_file, self.mapper.migration_report)
+            self.mapper.migration_report.write_migration_report(report_file)
             Helper.print_mapping_report(
                 report_file,
                 self.mapper.parsed_records,
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        self.srs_records_file.close()
 
         logging.info("Done. Transformation report written to %s", report_file.name)
         logging.info("Done.")

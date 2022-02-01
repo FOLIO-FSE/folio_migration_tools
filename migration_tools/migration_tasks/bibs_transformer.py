@@ -1,7 +1,5 @@
-import json
 import logging
 import sys
-from textwrap import indent
 import time
 from datetime import datetime as dt
 from os.path import isfile
@@ -22,11 +20,10 @@ from migration_tools.library_configuration import (
 )
 from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic import BaseModel
 from pymarc import MARCReader
 from pymarc.record import Record
-
-from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 
 class BibsTransformer(MigrationTaskBase):
@@ -112,7 +109,7 @@ class BibsTransformer(MigrationTaskBase):
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# Bibliographic records transformation results   \n")
             report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
-            Helper.write_migration_report(report_file, self.mapper.migration_report)
+            self.mapper.migration_report.write_migration_report(report_file)
             Helper.print_mapping_report(
                 report_file,
                 self.mapper.parsed_records,

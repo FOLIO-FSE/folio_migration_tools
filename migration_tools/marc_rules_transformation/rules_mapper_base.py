@@ -1,26 +1,34 @@
+import datetime
 import json
 import logging
 import time
+from typing import List
 import uuid
 from textwrap import wrap
 
 import pymarc
+from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-import datetime
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.mapper_base import MapperBase
 from migration_tools.report_blurbs import Blurbs
-from pymarc import Field, Record
+from pymarc import Field, Record, Leader
 
 
 class RulesMapperBase(MapperBase):
-    def __init__(self, folio_client: FolioClient, conditions=None):
-        super().__init__()
+    def __init__(
+        self,
+        folio_client: FolioClient,
+        library_configuration: LibraryConfiguration,
+        conditions=None,
+    ):
+        super().__init__(library_configuration)
         self.parsed_records = 0
         self.start = time.time()
         self.last_batch_time = time.time()
@@ -460,6 +468,103 @@ class RulesMapperBase(MapperBase):
             )
             results.append(temp_field)
         return results
+
+    @staticmethod
+    def save_source_record(
+        srs_records_file,
+        record_type: FOLIONamespaces,
+        folio_client: FolioClient,
+        marc_record: Record,
+        folio_record,
+        legacy_ids: List[str],
+        suppress: bool,
+    ):
+        """Saves the source Marc_record to the Source record Storage module"""
+        srs_id = str(
+            FolioUUID(
+                folio_client.okapi_url,
+                FOLIONamespaces.srs_records,
+                str(legacy_ids[0]),
+            )
+        )
+
+        marc_record.add_ordered_field(
+            Field(
+                tag="999",
+                indicators=["f", "f"],
+                subfields=["i", folio_record["id"], "s", srs_id],
+            )
+        )
+        # Since they all should be UTF encoded, make the leader align.
+        try:
+            temp_leader = Leader(marc_record.leader)
+            temp_leader[9] = "a"
+            marc_record.leader = temp_leader
+        except Exception:
+            logging.exception(
+                "Something is wrong with the marc records leader: %s",
+                marc_record.leader,
+            )
+        srs_record_string = RulesMapperBase.get_srs_string(
+            marc_record,
+            folio_record,
+            srs_id,
+            folio_client.get_metadata_construct(),
+            suppress,
+            record_type,
+        )
+        srs_records_file.write(f"{srs_record_string}\n")
+
+    @staticmethod
+    def get_srs_string(
+        marc_record: Record,
+        folio_object: dict,
+        srs_id,
+        metadata_obj,
+        suppress,
+        record_type: FOLIONamespaces,
+    ):
+        record_types = {
+            FOLIONamespaces.holdings: "MARC_HOLDING",
+            FOLIONamespaces.instances: "MARC_BIB",
+            FOLIONamespaces.athorities: "MARC_AUTHORITY",
+            FOLIONamespaces.edifact: "EDIFACT",
+        }
+
+        id_holders = {
+            FOLIONamespaces.instances: {
+                "instanceId": folio_object["id"],
+                "instanceHrid": folio_object["hrid"],
+            },
+            FOLIONamespaces.holdings: {
+                "holdingsId": folio_object["id"],
+                "holdingsHrid": folio_object["hrid"],
+            },
+            FOLIONamespaces.athorities: {},
+            FOLIONamespaces.edifact: {},
+        }
+
+        my_tuple_json = marc_record.as_json()
+        raw_record = {"id": srs_id, "content": my_tuple_json}
+        parsed_record = {"id": srs_id, "content": json.loads(my_tuple_json)}
+        record = {
+            "id": srs_id,
+            "deleted": False,
+            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
+            "matchedId": srs_id,
+            "generation": 0,
+            "recordType": record_types.get(record_type),
+            "rawRecord": raw_record,
+            "parsedRecord": parsed_record,
+            "additionalInfo": {"suppressDiscovery": suppress},
+            "externalIdsHolder": id_holders.get(record_type),
+            "metadata": metadata_obj,
+            "state": "ACTUAL",
+            "leaderRecordStatus": parsed_record["content"]["leader"][5]
+            if parsed_record["content"]["leader"][5] in [*"acdnposx"]
+            else "d",
+        }
+        return json.dumps(record)
 
 
 def has_conditions(mapping):

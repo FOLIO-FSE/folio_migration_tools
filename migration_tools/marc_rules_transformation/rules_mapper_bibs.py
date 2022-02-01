@@ -20,6 +20,7 @@ from migration_tools.custom_exceptions import (
 )
 from migration_tools.helper import Helper
 from migration_tools.library_configuration import (
+    FolioRelease,
     HridHandling,
     IlsFlavour,
     LibraryConfiguration,
@@ -42,10 +43,13 @@ class BibsRulesMapper(RulesMapperBase):
         library_configuration: LibraryConfiguration,
         task_configuration,
     ):
-        super().__init__(folio_client, Conditions(folio_client, self, "bibs"))
+        super().__init__(
+            folio_client,
+            library_configuration,
+            Conditions(folio_client, self, "bibs"),
+        )
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.folio = folio_client
-        self.library_configuration: LibraryConfiguration = library_configuration
         self.task_configuration = task_configuration
         self.record_status = {}
         self.unique_001s = set()
@@ -62,7 +66,12 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.hrid_handling: HridHandling = self.task_configuration.hrid_handling
         logging.info("Fetching mapping rules from the tenant")
-        self.mappings = self.folio.folio_get_single_object("/mapping-rules")
+        rules_endpoint = (
+            "/mapping-rules"
+            if self.library_configuration.folio_release == FolioRelease.juniper
+            else "/mapping-rules/marc-bib"
+        )
+        self.mappings = self.folio.folio_get_single_object(rules_endpoint)
         logging.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
         self.unmapped_tags = {}

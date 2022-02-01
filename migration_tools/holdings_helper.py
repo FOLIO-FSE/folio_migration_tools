@@ -2,7 +2,6 @@ import json
 import logging
 
 from migration_tools import custom_exceptions
-from migration_tools.helper import Helper
 
 
 class HoldingsHelper:

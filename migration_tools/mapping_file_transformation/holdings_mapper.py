@@ -3,6 +3,7 @@ import ast
 from folioclient import FolioClient
 from folio_uuid.folio_uuid import FOLIONamespaces
 from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -18,6 +19,7 @@ class HoldingsMapper(MappingFileMapperBase):
         location_map,
         call_number_type_map,
         instance_id_map,
+        library_configuration: LibraryConfiguration,
         statistical_codes_map=None,
     ):
         holdings_schema = folio_client.get_holdings_schema()
@@ -28,6 +30,7 @@ class HoldingsMapper(MappingFileMapperBase):
             holdings_map,
             statistical_codes_map,
             FOLIONamespaces.holdings,
+            library_configuration,
         )
         self.holdings_map = holdings_map
 

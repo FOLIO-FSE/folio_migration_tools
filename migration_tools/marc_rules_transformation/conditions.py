@@ -140,6 +140,13 @@ class Conditions:
     def condition_trim(self, value, parameter, marc_field: field.Field):
         return value.strip()
 
+    def condition_concat_subfields_by_name(
+        self, value, parameter, marc_field: field.Field
+    ):
+        subfields_to_concat = parameter.get("subfieldsToConcat", [])
+        concat_string = " ".join(marc_field.get_subfields(*subfields_to_concat))
+        return f"{value} {concat_string}"
+
     def condition_get_value_if_subfield_is_empty(
         self, value, parameter, marc_field: field.Field
     ):
