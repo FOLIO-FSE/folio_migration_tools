@@ -16,6 +16,9 @@ from migration_tools.marc_rules_transformation.holdings_statementsparser import 
     HoldingsStatementsParser,
 )
 from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
+from migration_tools.migration_tasks.holdings_marc_transformer import (
+    HoldingsMarcTransformer,
+)
 from migration_tools.report_blurbs import Blurbs
 
 
@@ -25,16 +28,16 @@ class RulesMapperHoldings(RulesMapperBase):
         folio,
         instance_id_map,
         location_map,
-        default_call_number_type_name,
-        default_holdings_type_id,
+        task_configuration: HoldingsMarcTransformer.TaskConfiguration,
         library_configuration: LibraryConfiguration,
     ):
         self.instance_id_map = instance_id_map
+        self.task_configuration = task_configuration
         self.conditions = Conditions(
             folio,
             self,
             "holdings",
-            default_call_number_type_name,
+            self.task_configuration.default_call_number_type_name,
         )
         self.folio = folio
         super().__init__(folio, library_configuration, self.conditions)
@@ -42,7 +45,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        self.default_holdings_type_id = default_holdings_type_id
+        self.default_holdings_type_id = self.task_configuration.default_holdings_type_id
 
     def parse_hold(self, marc_record, index_or_legacy_id, inventory_only=False):
         """Parses a mfhd recod into a FOLIO Inventory instance object

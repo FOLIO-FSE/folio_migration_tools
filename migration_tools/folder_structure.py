@@ -114,7 +114,9 @@ class FolderStructure:
             / f"transformation_report_{object_type_string}_{file_template}.md"
         )
 
-        self.srs_records_path = self.results_folder / f"folio_srs_{file_template}.json"
+        self.srs_records_path = (
+            self.results_folder / f"folio_srs_{object_type_string}_{file_template}.json"
+        )
 
         self.instance_id_map_path = (
             self.results_folder / f"instance_id_map_{self.iteration_identifier}.json"

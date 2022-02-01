@@ -5,7 +5,7 @@ import logging
 import sys
 from os import listdir
 from os.path import isfile
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -40,6 +40,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         location_map_file_name: str
         default_call_number_type_name: str
         default_holdings_type_id: str
+        create_source_records: bool
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -111,8 +112,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.folio_client,
             self.instance_id_map,
             location_map,
-            self.task_config.default_call_number_type_name,
-            self.task_config.default_holdings_type_id,
+            self.task_config,
             self.library_configuration,
         )
         mapper.mappings = rules_file["rules"]
