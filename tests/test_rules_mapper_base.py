@@ -1,6 +1,8 @@
 import datetime
 import json
 from unittest.mock import Mock, patch
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from uuid import uuid4
 
 from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 from pymarc.reader import MARCReader
@@ -113,6 +115,33 @@ def test_grouped():
                 mapping = {"subfield": ["a"]}
                 subfields = tf.get_subfields(*mapping["subfield"])
                 assert subfields
+
+
+def test_get_srs_string_bib():
+    path = "./tests/test_data/two020a.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        instance = {"id": str(uuid4()), "hrid": "my hrid"}
+        metadata = {}
+        id_holder = {
+            "instanceId": instance["id"],
+            "instanceHrid": instance["hrid"],
+        }
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record1 = None
+        for record in reader:
+            record1 = record
+            srs_record_string = RulesMapperBase.get_srs_string(
+                record1,
+                instance,
+                str(uuid4()),
+                metadata,
+                True,
+                FOLIONamespaces.instances,
+            )
+            assert '"recordType": "MARC_BIB"' in srs_record_string
+            assert json.dumps(id_holder) in srs_record_string
 
 
 def test_get_instance_schema():
