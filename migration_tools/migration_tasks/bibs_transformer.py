@@ -45,9 +45,10 @@ class BibsTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        use_logging: bool = True,
     ):
 
-        super().__init__(library_config, task_config)
+        super().__init__(library_config, task_config, use_logging)
         self.task_config = task_config
         logging.info(task_config.json(indent=4))
         self.files = [

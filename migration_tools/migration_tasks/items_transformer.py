@@ -60,9 +60,10 @@ class ItemsTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        super().__init__(library_config, task_config)
+        super().__init__(library_config, task_config, use_logging)
         self.task_config = task_config
         self.files = [
             f

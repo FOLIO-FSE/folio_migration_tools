@@ -50,9 +50,10 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        super().__init__(library_config, task_config)
+        super().__init__(library_config, task_config, use_logging)
         self.instance_id_map = {}
         self.task_config = task_config
         self.holdings_types = list(
