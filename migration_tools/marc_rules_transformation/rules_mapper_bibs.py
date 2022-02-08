@@ -544,7 +544,6 @@ class BibsRulesMapper(RulesMapperBase):
                     str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
                     new_035 = Field(
                         tag="035",
-                        indicators=["0", "0"],
                         subfields=["a", str_035],
                     )
                     marc_record.add_ordered_field(new_035)
@@ -747,7 +746,7 @@ class BibsRulesMapper(RulesMapperBase):
                 return list(res)
         elif ils_flavour == IlsFlavour.aleph:
             return self.get_aleph_bib_id(marc_record)
-        elif ils_flavour in {IlsFlavour.voyager, "voyager", "001"}:
+        elif ils_flavour in {IlsFlavour.voyager, "voyager", IlsFlavour.tag001}:
             try:
                 return [marc_record["001"].format_field().strip()]
             except Exception:
