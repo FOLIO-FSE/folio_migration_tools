@@ -32,7 +32,7 @@ class BibsTransformer(MigrationTaskBase):
         deactivate035_from001: Optional[bool] = False
         migration_task_type: str
         use_tenant_mapping_rules: Optional[bool] = True
-        hrid_handling: HridHandling
+        hrid_handling: Optional[HridHandling] = HridHandling.default
         files: List[FileDefinition]
         ils_flavour: IlsFlavour
         tags_to_delete: Optional[List[str]] = []
