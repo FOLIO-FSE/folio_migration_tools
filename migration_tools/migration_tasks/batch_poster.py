@@ -93,7 +93,7 @@ class BatchPoster(MigrationTaskBase):
                         self.handle_unicode_error(unicode_error, last_row)
                     except TransformationProcessError as tpe:
                         self.handle_generic_exception(
-                            exception, last_row, batch, num_records, failed_recs_file
+                            tpe, last_row, batch, num_records, failed_recs_file
                         )
                         logging.critical("Halting %s", tpe)
                     except TransformationRecordFailedError as exception:
