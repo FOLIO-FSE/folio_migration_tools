@@ -6,6 +6,8 @@ from typing import Dict
 
 import requests
 from folioclient import FolioClient
+from folio_uuid import FolioUUID, FOLIONamespaces
+from migration_tools.custom_exceptions import TransformationProcessError
 from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.mapper_base import MapperBase
 
@@ -67,8 +69,12 @@ class UserMapperBase(MapperBase):
                 self.mapped_folio_fields[field_name][0] += 1
                 self.mapped_folio_fields[field_name][1] += v
 
-    def instantiate_user(self):
-        user_id = str(uuid.uuid4())
+    def instantiate_user(self, legacy_id):
+        if not legacy_id:
+            raise TransformationProcessError("Legacy id not present")
+        user_id = str(
+            FolioUUID(self.folio_client.okapi_url, FOLIONamespaces.users, legacy_id)
+        )
         return {
             "metadata": self.folio_client.get_metadata_construct(),
             "id": user_id,

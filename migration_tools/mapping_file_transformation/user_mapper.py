@@ -66,7 +66,7 @@ class UserMapper(UserMapperBase):
             logging.critical(tpe)
             sys.exit()
 
-    def do_map(self, legacy_user, user_map, idx):
+    def do_map(self, legacy_user, user_map, legacy_id):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             user_map
         )
@@ -78,7 +78,8 @@ class UserMapper(UserMapperBase):
             logging.info(f"Found {len(self.custom_props)} Custom fields to be mapped.")
         # TODO: Create ID-Legacy ID Mapping file!
         # TODO: Check for ID duplicates (barcodes, externalsystemID:s, usernames, emails?)
-        folio_user = self.instantiate_user()
+
+        folio_user = self.instantiate_user(legacy_id)
         for prop_name, prop in self.user_schema["properties"].items():
             self.add_prop(legacy_user, user_map, folio_user, prop_name, prop)
 
@@ -109,7 +110,7 @@ class UserMapper(UserMapperBase):
         missing.update(empty)
         if any(list(missing)):
             raise TransformationRecordFailedError(
-                f"\"{folio_user.get('barcode', '')}\" (barcode) {idx} (index in file)",
+                f"\"{folio_user.get('barcode', '')}\" (barcode) {legacy_id} (index in file)",
                 "Required properties missing or empty",
                 f"{', '.join(list(missing))}",
             )
@@ -185,9 +186,11 @@ class UserMapper(UserMapperBase):
                             )
                         )
                     else:
-                        folio_user[actual_prop_name] = self.get_prop(
-                            legacy_object, user_map, actual_prop_name, idx
-                        )
+                        folio_user[actual_prop_name] = [
+                            self.get_prop(
+                                legacy_object, user_map, actual_prop_name, idx
+                            )
+                        ]
                 if prop_name in folio_user and not any(folio_user.get(prop_name, [])):
                     del folio_user[prop_name]
             else:

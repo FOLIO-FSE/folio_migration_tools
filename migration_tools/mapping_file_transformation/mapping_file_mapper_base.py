@@ -170,103 +170,6 @@ class MappingFileMapperBase(MapperBase):
         )
         return ""
 
-    def get_mapped_value(
-        self,
-        ref_dat_mapping: RefDataMapping,
-        legacy_object,
-        index_or_id,
-        folio_property_name="",
-        prevent_default=False,
-    ):
-        # Gets mapped value from mapping file, translated to the right FOLIO UUID
-        try:
-            # Get the values in the fields that will be used for mapping
-            fieldvalues = [
-                legacy_object.get(k) for k in ref_dat_mapping.mapped_legacy_keys
-            ]
-
-            # Gets the first line in the map satisfying all legacy mapping values.
-            # Case insensitive, strips away whitespace
-            # TODO: add option for Wild card matching in individual columns
-            right_mapping = self.get_ref_data_mapping(legacy_object, ref_dat_mapping)
-            if not right_mapping:
-                # Not all fields matched. Could it be a hybrid wildcard map?
-                right_mapping = self.get_hybrid_mapping(legacy_object, ref_dat_mapping)
-
-            if not right_mapping:
-                raise StopIteration()
-            self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
-                (
-                    f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} '
-                    f'-> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}'
-                ),
-            )
-            return right_mapping["folio_id"]
-        except StopIteration:
-            if prevent_default:
-                self.migration_report.add(
-                    Blurbs.ReferenceDataMapping,
-                    (
-                        f"{ref_dat_mapping.name} mapping - Not to be mapped. "
-                        f'(No default) -- {" - ".join(fieldvalues)} -> ""'
-                    ),
-                )
-                return ""
-            self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
-                (
-                    f"{ref_dat_mapping.name} mapping - Unmapped (Default value was set) -- "
-                    f'{" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}'
-                ),
-            )
-            return ref_dat_mapping.default_id
-        except IndexError as exception:
-            raise TransformationRecordFailedError(
-                index_or_id,
-                (
-                    f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                    f"({ref_dat_mapping.mapped_legacy_keys}) {exception} is not "
-                    "a recognized field in the legacy data."
-                ),
-            )
-        except Exception as exception:
-            raise TransformationRecordFailedError(
-                index_or_id,
-                (
-                    f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                    f"({ref_dat_mapping.mapped_legacy_keys}) {exception}"
-                ),
-            )
-
-    @staticmethod
-    def get_hybrid_mapping(legacy_object, rdm: RefDataMapping):
-        highest_match = None
-        highest_match_number = 0
-        for mapping in rdm.hybrid_mappings:
-            match_numbers = []
-            for k in rdm.mapped_legacy_keys:
-                if mapping[k].strip() == legacy_object[k].strip():
-                    match_numbers.append(10)
-                elif mapping[k].strip() == "*":
-                    match_numbers.append(1)
-            summa = sum(match_numbers)
-            if summa > highest_match_number and min(match_numbers) > 0:
-                highest_match_number = summa
-                highest_match = mapping
-        return highest_match
-
-    @staticmethod
-    def get_ref_data_mapping(legacy_object, rdm: RefDataMapping):
-        for mapping in rdm.regular_mappings:
-            match_number = sum(
-                legacy_object[k].strip() == mapping[k].strip()
-                for k in rdm.mapped_legacy_keys
-            )
-            if match_number == len(rdm.mapped_legacy_keys):
-                return mapping
-        return None
-
     @abstractmethod
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         raise NotImplementedError(
@@ -455,8 +358,7 @@ class MappingFileMapperBase(MapperBase):
             if prop_name in self.folio_keys and self.has_property(
                 legacy_object, prop_name
             ):
-                mapped_prop = self.get_prop(legacy_object, prop_name, index_or_id)
-                if mapped_prop:
+                if mapped_prop := self.get_prop(legacy_object, prop_name, index_or_id):
                     if prop in folio_object and mapped_prop not in folio_object.get(
                         prop, []
                     ):
@@ -469,8 +371,7 @@ class MappingFileMapperBase(MapperBase):
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
-            mapped_prop = self.get_prop(legacy_object, prop, index_or_id)
-            if mapped_prop:
+            if mapped_prop := self.get_prop(legacy_object, prop, index_or_id):
                 folio_object[prop] = mapped_prop
             self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
 
@@ -533,10 +434,9 @@ class MappingFileMapperBase(MapperBase):
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"
-        ref_object = self.ref_data_dicts.get(dict_key, {}).get(
+        if ref_object := self.ref_data_dicts.get(dict_key, {}).get(
             key_value.lower().strip(), ()
-        )
-        if ref_object:
+        ):
             return ref_object
         d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
         self.ref_data_dicts[dict_key] = d

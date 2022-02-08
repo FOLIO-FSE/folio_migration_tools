@@ -11,9 +11,11 @@ class RefDataMapping(object):
         self, folio_client: FolioClient, ref_data_path, array_name, the_map, key_type
     ):
         self.name = array_name
-        logging.info(f"{self.name} reference data mapping. Initializing")
-        logging.info(f"Fetching {self.name} reference data from FOLIO")
-        self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name))
+        logging.info("%s reference data mapping. Initializing", self.name)
+        logging.info("Fetching %s reference data from FOLIO", self.name)
+        self.ref_data = list(
+            folio_client.folio_get_all(ref_data_path, array_name, "", 1000)
+        )
         self.map = the_map
         self.regular_mappings = []
         self.key_type = key_type
@@ -30,7 +32,7 @@ class RefDataMapping(object):
         if ref_object:
             return ref_object
         self.cached_dict = {
-            r[self.key_type].lower(): (r["id"], r["name"]) for r in self.ref_data
+            r[self.key_type].lower(): (r["id"], r[self.key_type]) for r in self.ref_data
         }
         return self.cached_dict.get(key_value.lower().strip(), ())
 
@@ -69,11 +71,11 @@ class RefDataMapping(object):
                     mapping["folio_id"] = t[0]
             except TransformationProcessError as transformation_process_error:
                 raise transformation_process_error
-            except Exception:
+            except Exception as ee:
                 logging.info(json.dumps(self.map, indent=4))
-                logging.exception("")
+                logging.exception(ee)
                 raise TransformationProcessError(
-                    f'{mapping[f"folio_{self.key_type}"]} could not be found in FOLIO'
+                    f'"{mapping[f"folio_{self.key_type}"]}" could not be found in FOLIO'
                 )
         self.post_validate_map()
         logging.info(
@@ -148,5 +150,6 @@ def get_mapped_legacy_keys(mapping):
     return [
         k
         for k in mapping.keys()
-        if k not in ["folio_code", "folio_id", "folio_name", "legacy_code"]
+        if k
+        not in ["folio_group", "folio_code", "folio_id", "folio_name", "legacy_code"]
     ]

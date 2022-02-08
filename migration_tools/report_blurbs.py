@@ -14,6 +14,8 @@ class Blurbs(NamedTuple):
         "Introduction",
         "<br/>Data errors preventing records from being migrated are marked **FIX BEFORE MIGRATION**. The library is advised to clean up these errors in the source data.<br/><br/> The sections related to field counts and mapping results are marked **REVIEW**. These do not indicate errors preventing records from being migrated, but may point to data anomalies or in the mappings. The library should review these to make sure that the numbers are what one would expect, knowing the source data. Is this the expected number of serials? Is this the expected number of cartographic materials?",
     )
+    DepartmentsMapping = ("Departments mappings", "")
+    MissingRequiredProperties = ("Missing or empty required properties", "")
     MappedLegacyFields = (
         "Mapped Legacy Fields",
         "Library action: **REVIEW** <br/>This table lists all the MARC fields in the source data, and whether it has been mapped to a FOLIO instance record field. The library should examine the MARC tags with a high 'Unmapped' figure and determine if these MARC tags contain data that you would like mapped to the FOLIO instance record.",
@@ -116,6 +118,12 @@ class Blurbs(NamedTuple):
         "Locations - Unmapped legacy codes",
         "",
     )
+    UserGroupMapping = ("User group mapping", "")
+    DefaultValuesAdded = (
+        "Default values added",
+        "The values below was added to all records from the value field in the mapping file instead of coming from the source records",
+    )
+    UsersPerPatronType = ("Users per patron type", "")
     MappedLocations = ("Mapped Locations", "")
     Leader06 = ("Leader 06 (Holdings type)", "")
     Section3 = ("__Section 3: items", "The entries below seem to be related to items")
