@@ -3,6 +3,7 @@ import re
 import sys
 
 import pymarc
+from folioclient import FolioClient
 from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -18,7 +19,7 @@ from migration_tools.report_blurbs import Blurbs
 class Conditions:
     def __init__(
         self,
-        folio,
+        folio: FolioClient,
         mapper: RulesMapperBase,
         object_type,
         default_call_number_type_name="",
@@ -72,7 +73,7 @@ class Conditions:
         logging.info("%s\tholding_note_types", len(self.folio.holding_note_types))
         logging.info("%s\tcall_number_types", len(self.folio.call_number_types))
         self.holdings_types = list(
-            self.folio.folio_get_all("/holdings-types", "holdingsTypes")
+            self.folio.folio_get_all("/holdings-types", "holdingsTypes", "", 1000)
         )
         logging.info("%s\tholdings types", len(self.holdings_types))
         # Raise for empty settings
@@ -114,7 +115,7 @@ class Conditions:
         )
         logging.info(f"{len(self.folio.class_types)}\tclass_types")
         self.statistical_codes = list(
-            self.folio.folio_get_all("/statistical-codes", "statisticalCodes")
+            self.folio.folio_get_all("/statistical-codes", "statisticalCodes", "", 1000)
         )
         logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")
 
