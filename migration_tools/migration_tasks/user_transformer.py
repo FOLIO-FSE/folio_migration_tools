@@ -6,12 +6,16 @@ import sys
 from typing import Dict, List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from migration_tools import migration_report
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
 from migration_tools.library_configuration import FileDefinition, LibraryConfiguration
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
 from migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic import BaseModel
@@ -22,6 +26,7 @@ class UserTransformer(MigrationTaskBase):
         name: str
         migration_task_type: str
         group_map_path: str
+        departments_map_path: str
         use_group_map: Optional[bool] = True
         user_mapping_file_name: str
         user_file: FileDefinition
@@ -39,28 +44,59 @@ class UserTransformer(MigrationTaskBase):
         super().__init__(library_config, task_config, use_logging)
         self.task_config = task_config
         self.total_records = 0
+
+        self.user_map = self.setup_records_map(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.user_mapping_file_name
+        )
+        self.folio_keys = []
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+            self.user_map
+        )
         # Properties
         self.failed_ids = []
         self.failed_objects = []
-        csv.register_dialect("tsv", delimiter="\t")
-        if self.task_config.use_group_map:
-            with open(
+        if (
+            self.folder_structure.mapping_files_folder / self.task_config.group_map_path
+        ).is_file():
+            group_mapping = self.load_ref_data_mapping_file(
+                "patronGroup",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.group_map_path,
-                "r",
-            ) as group_map_file:
-                self.mapper = UserMapper(
-                    self.folio_client,
-                    task_config,
-                    library_config,
-                    list(csv.DictReader(group_map_file, dialect="tsv")),
-                )
-        else:
-            self.mapper = UserMapper(
-                self.folio_client,
-                task_config,
-                library_config,
+                self.folio_keys,
             )
+        else:
+            logging.info(
+                "%s not found. No patronGroup mapping will be performed",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.departments_map_path,
+            )
+            group_mapping = []
+
+        if (
+            self.folder_structure.mapping_files_folder
+            / self.task_config.departments_map_path
+        ).is_file():
+            departments_mapping = self.load_ref_data_mapping_file(
+                "departments",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.departments_map_path,
+                self.folio_keys,
+            )
+        else:
+            logging.info(
+                "%s not found. No departments mapping will be performed",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.departments_map_path,
+            )
+            departments_mapping = []
+        self.mapper = UserMapper(
+            self.folio_client,
+            task_config,
+            library_config,
+            departments_mapping,
+            group_mapping,
+        )
         print("UserTransformer init done")
 
     def do_work(self):
@@ -107,6 +143,9 @@ class UserTransformer(MigrationTaskBase):
                         if self.total_records % 1000 == 0:
                             logging.info(f"{self.total_records} users processed.")
                     except TransformationRecordFailedError as tre:
+                        self.mapper.migration_report.add_general_statistics(
+                            "Records failed"
+                        )
                         Helper.log_data_issue(
                             tre.index_or_id, tre.message, tre.data_value
                         )
@@ -117,13 +156,15 @@ class UserTransformer(MigrationTaskBase):
                         sys.exit()
                     except ValueError as ve:
                         logging.error(ve)
+                        raise ve
                     except Exception as ee:
+                        logging.error(ee)
                         logging.error(self.total_records)
                         logging.error(json.dumps(legacy_user))
                         self.mapper.migration_report.add_general_statistics(
                             "Failed user transformations"
                         )
-                        raise ee
+                        logging.error(ee, exc_info=True)
                     finally:
                         if self.total_records == 1:
                             print_email_warning()

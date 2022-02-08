@@ -2,6 +2,9 @@ import csv
 import json
 import logging
 from datetime import datetime
+import sys
+from textwrap import indent
+from tokenize import group
 from typing import Dict
 
 from dateutil.parser import parse
@@ -10,60 +13,119 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
+from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.mapping_file_transformation.user_mapper_base import UserMapperBase
+from migration_tools.report_blurbs import Blurbs
 
 
 class UserMapper(UserMapperBase):
     def __init__(
-        self, folio_client: FolioClient, task_config, library_config, groups_map=None
+        self,
+        folio_client: FolioClient,
+        task_config,
+        library_config,
+        departments_mapping,
+        groups_map,
     ):
-        super().__init__(folio_client)
-        if groups_map is None:
-            groups_map = []
-        self.task_config = task_config
-        self.library_config = library_config
-        self.groups_map = {}
-        self.user_schema = UserMapperBase.get_latest_from_github(
-            "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
-        )
-        self.ids_dict: Dict[str, set] = {}
-        self.custom_props = {}
-        folio_group_names = [
-            g["group"] for g in list(self.folio_client.get_all("/groups", "usergroups"))
-        ]
-        logging.info(f"Fetched {len(folio_group_names)} groups from FOLIO")
-        print(json.dumps(groups_map, indent=4))
-        for m in groups_map:
-            if m["folio_name"] in folio_group_names:
-                self.groups_map[m["legacy_code"]] = m["folio_name"]
-            else:
-                raise TransformationProcessError(
-                    f'FOLIO name {m["folio_name"]} from map is not in FOLIO '
+        try:
+            super().__init__(folio_client, library_config)
+            self.task_config = task_config
+            self.folio_keys = []
+            self.library_config = library_config
+            self.user_schema = UserMapperBase.get_latest_from_github(
+                "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
+            )
+            self.ids_dict: Dict[str, set] = {}
+            self.custom_props = {}
+            # TODO: Use RefDataMapping
+            if departments_mapping:
+                self.departments_mapping = RefDataMapping(
+                    self.folio_client,
+                    "/departments",
+                    "departments",
+                    departments_mapping,
+                    "name",
                 )
+            else:
+                self.departments_mapping = None
+            if groups_map:
+                self.groups_mapping = RefDataMapping(
+                    self.folio_client,
+                    "/groups",
+                    "usergroups",
+                    groups_map,
+                    "group",
+                )
+            else:
+                self.departments_mapping = None
+            logging.info("Init done.")
+        except TransformationProcessError as tpe:
+            logging.critical(tpe)
+            sys.exit()
 
     def do_map(self, legacy_user, user_map, idx):
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+            user_map
+        )
         if not self.custom_props:
             for m in user_map["data"]:
                 if "customFields" in m["folio_field"]:
                     sub_property = m["folio_field"].split(".")[-1]
                     self.custom_props[sub_property] = m["legacy_field"]
-            logging.debug(f"Found {len(self.custom_props)} Custom fields to be mapped.")
-
+            logging.info(f"Found {len(self.custom_props)} Custom fields to be mapped.")
         # TODO: Create ID-Legacy ID Mapping file!
         # TODO: Check for ID duplicates (barcodes, externalsystemID:s, usernames, emails?)
         folio_user = self.instantiate_user()
         for prop_name, prop in self.user_schema["properties"].items():
-            if prop.get("description", "") == "Deprecated":
-                continue
-            if prop_name == "metadata":
-                continue
-            if prop["type"] == "object":
-                if "customFields" in prop_name:
-                    for k, v in self.custom_props.items():
-                        legacy_value = legacy_user.get(v, "")
-                        if legacy_value:
-                            folio_user["customFields"][k] = legacy_value
-                    continue
+            self.add_prop(legacy_user, user_map, folio_user, prop_name, prop)
+
+        folio_user["personal"]["preferredContactTypeId"] = "Email"
+        folio_user["active"] = True
+        folio_user["requestPreference"] = {
+            "userId": folio_user["id"],
+            "holdShelf": True,
+            "delivery": False,
+            "metadata": self.folio_client.get_metadata_construct(),
+        }
+        required = self.user_schema["required"]
+        missing = set()
+        empty = set()
+        for required_prop in required:
+            if required_prop not in folio_user:
+                missing.add(required_prop)
+                self.migration_report.add(
+                    Blurbs.MissingRequiredProperties,
+                    f"{required_prop} missing. Record failed",
+                )
+            elif not folio_user[required_prop]:
+                self.migration_report.add(
+                    Blurbs.MissingRequiredProperties,
+                    f"{required_prop} empty. Record failed",
+                )
+                empty.add(required_prop)
+        missing.update(empty)
+        if any(list(missing)):
+            raise TransformationRecordFailedError(
+                f"\"{folio_user.get('barcode', '')}\" (barcode) {idx} (index in file)",
+                "Required properties missing or empty",
+                f"{', '.join(list(missing))}",
+            )
+
+        self.report_folio_mapping(folio_user)
+        self.report_legacy_mapping(legacy_user)
+        return folio_user
+
+    def add_prop(self, legacy_object, user_map, folio_user, prop_name, prop):
+        if prop["type"] == "object":
+            if "customFields" in prop_name:
+                for k, v in self.custom_props.items():
+                    if legacy_value := legacy_object.get(v, ""):
+                        folio_user["customFields"][k] = legacy_value
+
+            else:
                 folio_user[prop_name] = {}
                 prop_key = prop_name
                 if "properties" in prop:
@@ -78,18 +140,19 @@ class UserMapper(UserMapperBase):
                                     logging.warning(f"Array: {sub_prop_key2} ")
                         elif sub_prop["type"] == "array":
                             folio_user[prop_name][sub_prop_name] = []
-                            for i in range(0, 5):
+                            for i in range(5):
                                 if sub_prop["items"]["type"] == "object":
-                                    temp = {}
-                                    for sub_prop_name2, sub_prop2 in sub_prop["items"][
-                                        "properties"
-                                    ].items():
-                                        temp[sub_prop_name2] = self.get_prop(
-                                            legacy_user,
+                                    temp = {
+                                        sub_prop_name2: self.get_prop(
+                                            legacy_object,
                                             user_map,
                                             sub_prop_key + "." + sub_prop_name2,
                                             i,
                                         )
+                                        for sub_prop_name2, sub_prop2 in sub_prop[
+                                            "items"
+                                        ]["properties"].items()
+                                    }
                                     if all(
                                         value == ""
                                         for key, value in temp.items()
@@ -102,68 +165,35 @@ class UserMapper(UserMapperBase):
                                     mkey = sub_prop_key + "." + sub_prop_name2
                                     folio_user[prop_name][
                                         sub_prop_name
-                                    ] = self.get_prop(legacy_user, mkey, i)
+                                    ] = self.get_prop(legacy_object, mkey, i)
 
                         else:
                             folio_user[prop_name][sub_prop_name] = self.get_prop(
-                                legacy_user, user_map, sub_prop_key
+                                legacy_object, user_map, sub_prop_key
                             )
-
-            elif prop["type"] == "array":
-                """if prop["items"]["type"] == "object":
-                    self.map_objects_array_props(
-                        legacy_object,
-                        prop_name,
-                        prop["items"]["properties"],
-                        folio_object,
-                        index_or_id,
-                    )
-                elif prop["items"]["type"] == "string":
-                    self.map_string_array_props(
-                        legacy_object, prop_name, folio_object, index_or_id
-                    )
-                else:
-                """
-                # handle departments
-                self.migration_report.add("Unhandled array", prop_name)
+                if folio_user[prop_name] == {}:
+                    del folio_user[prop_name]
+        elif prop["type"] == "array":
+            if prop["items"]["type"] == "string":
+                prop_names = [p for p in self.folio_keys if p.startswith(prop_name)]
+                for idx, arr_prop_name in enumerate(prop_names):
+                    actual_prop_name = arr_prop_name.split("[")[0]
+                    if any(folio_user.get(actual_prop_name, [])):
+                        folio_user[actual_prop_name].append(
+                            self.get_prop(
+                                legacy_object, user_map, actual_prop_name, idx
+                            )
+                        )
+                    else:
+                        folio_user[actual_prop_name] = self.get_prop(
+                            legacy_object, user_map, actual_prop_name, idx
+                        )
+                if prop_name in folio_user and not any(folio_user.get(prop_name, [])):
+                    del folio_user[prop_name]
             else:
-                self.map_basic_props(legacy_user, user_map, prop_name, folio_user)
-                """ elif prop == "customFields":
-                    custom_fields = [c for c in legacy_user if c.startswith("customField")]
-                    if any(custom_fields):
-                        for custom_field in custom_fields:
-                            folio_user["customFields"][custom_field.split('.')[1]] = legacy_user[custom_field]
-                            self.add_to_migration_report("General",
-                                                         f"Custom field {custom_field.split('.')[1]} added")
-                            """
-
-            """ for prop in legacy_user:
-            if prop not in mapped_legacy_props:
-               """
-
-        folio_user["personal"]["preferredContactTypeId"] = "Email"
-        folio_user["active"] = True
-        folio_user["requestPreference"] = {
-            "userId": folio_user["id"],
-            "holdShelf": True,
-            "delivery": False,
-            "metadata": self.folio_client.get_metadata_construct(),
-        }
-        required = self.user_schema["required"]
-        for required_prop in required:
-            if required_prop not in folio_user:
-                print(json.dumps(folio_user))
-                raise TransformationRecordFailedError(
-                    f"Required property {required_prop} missing for \"{folio_user.get('barcode', '')}\" (barcode) {idx} (index in file)"
-                )
-            elif not folio_user[required_prop]:
-                raise TransformationRecordFailedError(
-                    f"Required property {required_prop} empty for \"{folio_user.get('barcode', '')}\" (barcode) {idx} (index in file)"
-                )
-        del folio_user["tags"]
-        self.report_folio_mapping(folio_user)
-        self.report_legacy_mapping(legacy_user)
-        return folio_user
+                logging.info("Edge case %s", prop_name)
+        else:
+            self.map_basic_props(legacy_object, user_map, prop_name, folio_user)
 
     def map_basic_props(self, legacy_user, user_map, prop, folio_user):
         if (
@@ -188,34 +218,49 @@ class UserMapper(UserMapperBase):
     def get_prop(self, legacy_user, user_map, folio_prop_name, i=0):
         legacy_user_key = get_legacy_user_key(folio_prop_name, user_map["data"], i)
         value = get_legacy__user_value(folio_prop_name, user_map["data"], i)
+
         # The value is set on the mapping. Return this instead of the default field
         if value:
             self.migration_report.add(
-                "Default values added", f"{value} added to {folio_prop_name}"
+                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
             )
             return value
 
         if folio_prop_name == "personal.addresses.id":
             return "not needed"
+        elif folio_prop_name.split("[")[0] == "departments":
+            legacy_dept = legacy_user.get(legacy_user_key, "")
+            gid = self.get_mapped_name(
+                self.departments_mapping,
+                legacy_user,
+                id,
+                folio_prop_name.split("[")[0],
+                True,
+            )
+            self.migration_report.add(
+                Blurbs.DepartmentsMapping, f"{legacy_dept} -> {gid}"
+            )
+            return gid
         elif folio_prop_name == "patronGroup":
             legacy_group = legacy_user.get(legacy_user_key, "")
-            if self.task_config.use_group_map:
-                mapped_legacy_group = self.groups_map.get(legacy_group, "")
-                if not mapped_legacy_group:
-                    logging.fatal(
-                        f"Patron group {legacy_group} not in groups map!. Halting"
-                    )
-                    exit()
-                self.migration_report.add(
-                    "User group mapping", f"{legacy_group} -> {mapped_legacy_group}"
+            if self.groups_mapping:
+                gid = self.get_mapped_name(
+                    self.groups_mapping,
+                    legacy_user,
+                    id,
+                    "",
+                    True,
                 )
-                return self.groups_map[legacy_group]
+                self.migration_report.add(
+                    Blurbs.UserGroupMapping, f"{legacy_group} -> {gid}"
+                )
+                return gid
             else:
                 self.migration_report.add(
-                    "User group mapping",
+                    Blurbs.UserGroupMapping,
                     f"{legacy_group} -> {legacy_group} (one to one)",
                 )
-                self.migration_report.add("Users per patron type", legacy_group)
+                self.migration_report.add(Blurbs.UsersPerPatronType, legacy_group)
                 return legacy_group
         elif folio_prop_name in ["expirationDate", "enrollmentDate"]:
             try:
@@ -245,7 +290,7 @@ class UserMapper(UserMapperBase):
             (
                 k["legacy_field"]
                 for k in user_map["data"]
-                if k["folio_field"] == folio_prop_name
+                if k["folio_field"].split("[")[0] == folio_prop_name
             ),
             "",
         )
@@ -264,7 +309,7 @@ class UserMapper(UserMapperBase):
         )
         if value:
             self.migration_report.add(
-                "Default values added", f"{value} added to {folio_prop_name}"
+                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
             )
             return value
         return next(
@@ -280,6 +325,7 @@ def get_legacy__user_value(folio_prop_name, data, i):
             k.get("value", "")
             for k in data
             if k["folio_field"].replace(f"[{i}]", "") == folio_prop_name
+            or k["folio_field"] == folio_prop_name
         ),
         "",
     )

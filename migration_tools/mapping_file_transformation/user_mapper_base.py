@@ -6,12 +6,17 @@ from typing import Dict
 
 import requests
 from folioclient import FolioClient
+from migration_tools.library_configuration import LibraryConfiguration
+from migration_tools.mapper_base import MapperBase
 
 from migration_tools.migration_report import MigrationReport
 
 
-class UserMapperBase:
-    def __init__(self, folio_client: FolioClient):
+class UserMapperBase(MapperBase):
+    def __init__(
+        self, folio_client: FolioClient, library_configuration: LibraryConfiguration
+    ):
+        super().__init__(library_configuration)
         self.legacy_id_map: Dict[str, str] = {}
 
         self.migration_report = MigrationReport()
