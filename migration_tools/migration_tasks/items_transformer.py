@@ -81,16 +81,20 @@ class ItemsTransformer(MigrationTaskBase):
 
         self.total_records = 0
         self.folio_keys = []
-        self.items_map = self.setup_records_map()
+        self.items_map = self.setup_records_map(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.items_mapping_file_name
+        )
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
-        self.failed_files: List[str] = list()
+        self.failed_files: List[str] = []
         if "statisticalCodes" in self.folio_keys:
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.statistical_codes_map_file_name,
+                self.folio_keys,
                 False,
             )
         else:
@@ -101,7 +105,9 @@ class ItemsTransformer(MigrationTaskBase):
             / self.task_config.temp_loan_types_map_file_name
         ).is_file():
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
-                "temporaryLoanTypeId", self.folder_structure.temp_loan_type_map_path
+                "temporaryLoanTypeId",
+                self.folder_structure.temp_loan_type_map_path,
+                self.folio_keys,
             )
         else:
             logging.info(
@@ -115,7 +121,9 @@ class ItemsTransformer(MigrationTaskBase):
             / self.task_config.temp_location_map_file_name
         ).is_file():
             temporary_location_mapping = self.load_ref_data_mapping_file(
-                "temporaryLocationId", self.folder_structure.temp_locations_map_path
+                "temporaryLocationId",
+                self.folder_structure.temp_locations_map_path,
+                self.folio_keys,
             )
         else:
             logging.info(
@@ -130,27 +138,34 @@ class ItemsTransformer(MigrationTaskBase):
                 "materialTypeId",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.material_types_map_file_name,
+                self.folio_keys,
             ),
             self.load_ref_data_mapping_file(
                 "permanentLoanTypeId",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.loan_types_map_file_name,
+                self.folio_keys,
             ),
             self.load_ref_data_mapping_file(
                 "permanentLocationId",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.location_map_file_name,
+                self.folio_keys,
             ),
             self.load_ref_data_mapping_file(
                 "itemLevelCallNumberTypeId",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.call_number_type_map_file_name,
+                self.folio_keys,
                 False,
             ),
             self.load_id_map(self.folder_structure.holdings_id_map_path),
             statcode_mapping,
             self.load_ref_data_mapping_file(
-                "status.name", self.folder_structure.item_statuses_map_path, False
+                "status.name",
+                self.folder_structure.item_statuses_map_path,
+                self.folio_keys,
+                False,
             ),
             temporary_loan_type_mapping,
             temporary_location_mapping,
@@ -205,61 +220,6 @@ class ItemsTransformer(MigrationTaskBase):
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
 
-    def setup_records_map(self):
-        with open(
-            self.folder_structure.mapping_files_folder
-            / self.task_config.items_mapping_file_name
-        ) as items_mapper_f:
-            items_map = json.load(items_mapper_f)
-            logging.info("%s fields in item mapping file map", len(items_map["data"]))
-            mapped_fields = (
-                f
-                for f in items_map["data"]
-                if f["legacy_field"] and f["legacy_field"] != "Not mapped"
-            )
-            logging.info(
-                "%s Mapped fields in item mapping file map", len(list(mapped_fields))
-            )
-            return items_map
-
-    def load_ref_data_mapping_file(
-        self, folio_property_name: str, map_file_path: Path, required: bool = True
-    ):
-        if (
-            folio_property_name in self.folio_keys
-            or required
-            or folio_property_name.startswith("statisticalCodeIds")
-        ):
-            try:
-                with open(map_file_path) as map_file:
-                    ref_data_map = list(csv.DictReader(map_file, dialect="tsv"))
-                    logging.info(
-                        "Found %s rows in %s map",
-                        len(ref_data_map),
-                        folio_property_name,
-                    )
-                    logging.info(
-                        "%s will be used for determinig %s",
-                        ",".join(ref_data_map[0].keys()),
-                        folio_property_name,
-                    )
-                    return ref_data_map
-            except Exception as exception:
-                raise TransformationProcessError(
-                    f"{folio_property_name} not mapped in legacy->folio mapping file "
-                    f"({map_file_path}) ({exception}). Did you map this field, "
-                    "but forgot to add a mapping file?"
-                )
-        else:
-            logging.info("No mapping setup for %s", folio_property_name)
-            logging.info("%s will have default mapping if any ", folio_property_name)
-            logging.info(
-                "Add a file named %s and add the field to "
-                "the item.mapping.json file.",
-                map_file_path,
-            )
-            return None
-
     def process_single_file(self, file_name: FileDefinition, results_file):
         full_path = self.folder_structure.legacy_records_folder / file_name.file_name
         logging.info("Processing %s", full_path)
@@ -312,13 +272,11 @@ class ItemsTransformer(MigrationTaskBase):
                 self.print_progress(idx, start)
                 records_in_file = idx + 1
 
-            total_records = 0
-            total_records += records_in_file
             logging.info(  # pylint: disable=logging-fstring-interpolation
                 f"Done processing {file_name} containing {records_in_file:,} records. "
-                f"Total records processed: {total_records:,}"
+                f"Total records processed: {records_in_file:,}"
             )
-        self.total_records = total_records
+        self.total_records += records_in_file
 
     def handle_circiulation_notes(self, folio_rec):
         for circ_note in folio_rec.get("circulationNotes", []):
