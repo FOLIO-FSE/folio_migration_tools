@@ -7,7 +7,10 @@ from datetime import datetime
 
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from migration_tools.library_configuration import FileDefinition, LibraryConfiguration
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic import BaseModel
@@ -88,6 +91,11 @@ class BatchPoster(MigrationTaskBase):
                                 batch = []
                     except UnicodeDecodeError as unicode_error:
                         self.handle_unicode_error(unicode_error, last_row)
+                    except TransformationProcessError as tpe:
+                        self.handle_generic_exception(
+                            exception, last_row, batch, num_records, failed_recs_file
+                        )
+                        logging.critical("Halting %s", tpe)
                     except TransformationRecordFailedError as exception:
                         self.handle_generic_exception(
                             exception, last_row, batch, num_records, failed_recs_file
@@ -221,10 +229,16 @@ class BatchPoster(MigrationTaskBase):
                 f"{datetime.utcnow().isoformat()} UTC\n",
                 json.dumps(resp, indent=4),
             )
+        elif response.status_code == 400:
+            # Likely a json parsing error
+            print(response.text)
+            raise TransformationProcessError("HTTP 400. Somehting is wrong. Quitting")
         else:
             try:
+                print(response.text)
                 resp = json.dumps(response, indent=4)
             except:
+                print()
                 resp = response
             raise TransformationRecordFailedError(
                 "",

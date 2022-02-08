@@ -225,9 +225,7 @@ class UserTransformer(MigrationTaskBase):
 
     @staticmethod
     def clean_user(folio_user):
-        addresses = folio_user.get("personal", {}).get("addresses", [])
-
-        if addresses:
+        if addresses := folio_user.get("personal", {}).get("addresses", []):
             primary_address_exists = False
 
             for address in addresses:
