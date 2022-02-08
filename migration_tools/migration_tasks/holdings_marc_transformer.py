@@ -40,7 +40,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         location_map_file_name: str
         default_call_number_type_name: str
         default_holdings_type_id: str
-        create_source_records: bool
+        create_source_records: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
