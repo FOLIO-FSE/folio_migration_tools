@@ -33,6 +33,29 @@ class HoldingsProcessor:
             self.folder_structure.created_objects_path, "w+"
         )
         self.srs_records_file = open(self.folders.srs_records_path, "w+")
+        self.setup_holdings_sources()
+
+    def setup_holdings_sources(self):
+        if library_configuration.FolioRelease != FolioRelease.juniper:
+            holdings_sources = self.mapper.folio_client.folio_get_all(
+                "/holdings-sources", "holdingsRecordsSources"
+            )
+            logging.info(
+                "Fetched %s holdingsRecordsSources from tenant", len(holdings_sources)
+            )
+            self.holdingssources = {
+                n["name"].upper(): n["id"] for n in holdings_sources
+            }
+            if "FOLIO" not in self.holdingssources:
+                raise TransformationProcessError(
+                    "No holdings source with name FOLIO in tenant"
+                )
+            if "MARC" not in self.holdingssources:
+                raise TransformationProcessError(
+                    "No holdings source with name MARC in tenant"
+                )
+        else:
+            self.holdingssources = {}
 
     def exit_on_too_many_exceptions(self):
         if (
@@ -58,10 +81,10 @@ class HoldingsProcessor:
                     "",
                 )
             folio_rec["discoverySuppress"] = file_def.suppressed
-            # if library_configuration.FolioRelease == FolioRelease.kiwi and self.mapper.task_configuration.create_source_records...
-            raise NotImplementedError(
-                "Add source for holdingsrecords from holdings ref data"
+            self.set_source_id(
+                self.mapper.task_configuration, folio_rec, self.holdingssources
             )
+
             Helper.write_to_file(self.created_objects_file, folio_rec)
             self.mapper.migration_report.add_general_statistics(
                 "Holdings records written to disk"
@@ -107,6 +130,14 @@ class HoldingsProcessor:
                     and folio_rec.get("formerIds", "")
                 ):
                     self.mapper.remove_from_id_map(folio_rec["formerIds"])
+
+    @staticmethod
+    def set_source_id(task_configuration, folio_rec, holdingssources):
+        if library_configuration.FolioRelease != FolioRelease.juniper:
+            if task_configuration.create_source_records:
+                folio_rec["sourceId"] = holdingssources.get("MARC")
+            else:
+                folio_rec["sourceId"] = holdingssources.get("FOLIO")
 
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
