@@ -6,6 +6,7 @@ import traceback
 from datetime import datetime as dt
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Record
+from migration_tools import library_configuration
 
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -13,7 +14,7 @@ from migration_tools.custom_exceptions import (
 )
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
-from migration_tools.library_configuration import FileDefinition
+from migration_tools.library_configuration import FileDefinition, FolioRelease
 from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
@@ -57,6 +58,10 @@ class HoldingsProcessor:
                     "",
                 )
             folio_rec["discoverySuppress"] = file_def.suppressed
+            # if library_configuration.FolioRelease == FolioRelease.kiwi and self.mapper.task_configuration.create_source_records...
+            raise NotImplementedError(
+                "Add source for holdingsrecords from holdings ref data"
+            )
             Helper.write_to_file(self.created_objects_file, folio_rec)
             self.mapper.migration_report.add_general_statistics(
                 "Holdings records written to disk"
