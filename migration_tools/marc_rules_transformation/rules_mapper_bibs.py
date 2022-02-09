@@ -544,6 +544,7 @@ class BibsRulesMapper(RulesMapperBase):
                     str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
                     new_035 = Field(
                         tag="035",
+                        indicators=[" ", " "],
                         subfields=["a", str_035],
                     )
                     marc_record.add_ordered_field(new_035)
