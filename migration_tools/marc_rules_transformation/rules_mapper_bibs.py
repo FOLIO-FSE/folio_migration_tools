@@ -168,7 +168,12 @@ class BibsRulesMapper(RulesMapperBase):
             elif legacy_id:
                 id_map_strings.append(
                     json.dumps(
-                        {"legacy_id": legacy_id, "folio_id": folio_instance["id"]}
+                        {
+                            "legacy_id": legacy_id,
+                            "folio_id": folio_instance["id"],
+                            "instance_hrid": folio_instance["hrid"],
+                            "suppressed": suppressed,
+                        }
                     )
                 )
             else:
