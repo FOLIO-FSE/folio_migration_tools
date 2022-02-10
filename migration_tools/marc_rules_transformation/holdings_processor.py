@@ -7,7 +7,7 @@ from datetime import datetime as dt
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Record
 from migration_tools import library_configuration
-
+from pymarc import Field
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -92,6 +92,14 @@ class HoldingsProcessor:
                 "Holdings records written to disk"
             )
             if self.mapper.task_configuration.create_source_records:
+                for former_id in folio_rec["formerIds"]:
+                    new_035 = Field(
+                        tag="035",
+                        indicators=[" ", " "],
+                        subfields=["a", former_id],
+                    )
+                    marc_record.add_ordered_field(new_035)
+
                 self.mapper.save_source_record(
                     self.srs_records_file,
                     FOLIONamespaces.holdings,
