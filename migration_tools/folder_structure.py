@@ -16,6 +16,7 @@ class FolderStructure:
         add_time_stamp_to_file_names: bool,
     ):
         logging.info("Setting up folder structure")
+
         self.object_type: FOLIONamespaces = object_type
         self.migration_task_name = migration_task_name
         self.add_time_stamp_to_file_names = add_time_stamp_to_file_names
@@ -43,7 +44,6 @@ class FolderStructure:
 
         self.mapping_files_folder = self.base_folder / "mapping_files"
         verify_folder(self.mapping_files_folder)
-
         gitignore = self.base_folder / ".gitignore"
         verify_git_ignore(gitignore)
 
@@ -136,7 +136,7 @@ class FolderStructure:
 
 
 def verify_git_ignore(gitignore: Path):
-    with open(gitignore, "a+") as f:
+    with open(gitignore, "r+") as f:
         contents = f.read()
         if "results/" not in contents:
             f.write("results/\n")
