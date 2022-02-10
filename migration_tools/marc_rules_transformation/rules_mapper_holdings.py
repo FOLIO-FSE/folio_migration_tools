@@ -128,12 +128,11 @@ class RulesMapperHoldings(RulesMapperBase):
         """Perform additional tasks not easily handled in the mapping rules"""
         self.set_holdings_type(marc_record, folio_holding, legacy_ids)
         self.set_default_call_number_type_if_empty(folio_holding)
-        self.set_default_location_if_empty(folio_holding)
         self.pick_first_location_if_many(folio_holding, legacy_ids)
         self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
 
     def pick_first_location_if_many(self, folio_holding, legacy_ids):
-        if " " in folio_holding["permanentLocationId"]:
+        if " " in folio_holding.get("permanentLocationId", ""):
             Helper.log_data_issue(
                 "".join(legacy_ids),
                 "Space in permanentLocationId. Was this MFHD attached to multiple holdings?",
@@ -223,16 +222,6 @@ class RulesMapperHoldings(RulesMapperBase):
             folio_holding[
                 "callNumberTypeId"
             ] = self.conditions.default_call_number_type["id"]
-
-    def set_default_location_if_empty(self, folio_holding):
-        if not folio_holding.get("permanentLocationId", ""):
-            Helper.log_data_issue(
-                "",
-                "Record location mapping failed. Setting Default mapping",
-                ":".join(folio_holding.get("formerIds", [])),
-            )
-            folio_holding["permanentLocationId"] = self.conditions.default_location_id
-        # special weird case. Likely needs fixing in the mapping rules.
 
     def remove_from_id_map(self, former_ids):
         """removes the ID from the map in case parsing failed"""
