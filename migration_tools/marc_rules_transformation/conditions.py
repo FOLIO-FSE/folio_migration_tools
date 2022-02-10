@@ -578,19 +578,8 @@ class Conditions:
         except TransformationProcessError as tpe:
             logging.critical(tpe)
             sys.exit()
-        except Exception:
-            t = self.get_ref_data_tuple_by_code(
-                self.folio.locations, "locations", parameter["unspecifiedLocationCode"]
-            )
-            if not t:
-                raise TransformationProcessError(
-                    f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
-                )
-            self.mapper.migration_report.add(
-                Blurbs.LocationMapping,
-                f"Unmapped. Set default location. '{value}' ({mapped_code}) -> {t[1]}",
-            )
-            return t[0]
+        except Exception as ee:
+            raise ee
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
