@@ -92,7 +92,14 @@ class HoldingsProcessor:
                 "Holdings records written to disk"
             )
             if self.mapper.task_configuration.create_source_records:
+
                 for former_id in folio_rec["formerIds"]:
+                    if a := self.mapper.instance_id_map.get(former_id, ""):
+                        print(a)
+                        new_004 = Field(tag="004", data=a["instance_hrid"])
+                        marc_record.remove_fields("004")
+                        marc_record.add_ordered_field(new_004)
+
                     new_035 = Field(
                         tag="035",
                         indicators=[" ", " "],
