@@ -28,7 +28,7 @@ class RulesMapperBase(MapperBase):
         library_configuration: LibraryConfiguration,
         conditions=None,
     ):
-        super().__init__(library_configuration)
+        super().__init__(library_configuration, folio_client)
         self.parsed_records = 0
         self.start = time.time()
         self.last_batch_time = time.time()

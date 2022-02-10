@@ -6,6 +6,7 @@ from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from folioclient import FolioClient
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.migration_report import MigrationReport
@@ -13,10 +14,21 @@ from migration_tools.report_blurbs import Blurbs
 
 
 class MapperBase:
-    def __init__(self, library_configuration: LibraryConfiguration):
+    def __init__(
+        self,
+        library_configuration: LibraryConfiguration,
+        folio_client: FolioClient,
+    ):
         logging.info("MapperBase initiating")
+        self.folio_client = folio_client
+        self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.library_configuration: LibraryConfiguration = library_configuration
-
+        self.hrid_settings = self.folio_client.folio_get_single_object(self.hrid_path)
+        self.instance_hrid_prefix = self.hrid_settings["instances"]["prefix"]
+        self.instance_hrid_counter = self.hrid_settings["instances"]["startNumber"]
+        logging.info(
+            f"Fetched HRID settings. HRID prefix is {self.instance_hrid_prefix}"
+        )
         self.mapped_folio_fields = {}
         self.migration_report = MigrationReport()
         self.num_criticalerrors = 0
@@ -291,8 +303,8 @@ def flatten(my_dict: dict, path=""):
             if isinstance(v, list):
                 for e in v:
                     if isinstance(e, dict):
-                        yield from (flatten(dict(e), path + "." + k))
+                        yield from flatten(dict(e), f"{path}.{k}")
             elif isinstance(v, dict):
-                yield from flatten(dict(v), path + "." + k)
+                yield from flatten(dict(v), f"{path}.{k}")
             else:
-                yield (path + "." + k).strip(".")
+                yield f"{path}.{k}".strip(".")

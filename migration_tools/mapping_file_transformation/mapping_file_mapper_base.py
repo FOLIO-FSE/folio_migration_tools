@@ -30,7 +30,7 @@ class MappingFileMapperBase(MapperBase):
         uuid_namespace: UUID,
         library_configuration: LibraryConfiguration,
     ):
-        super().__init__(library_configuration)
+        super().__init__(library_configuration, folio_client)
         self.uuid_namespace = uuid_namespace
         self.schema = schema
         self.total_records = 0

@@ -18,7 +18,7 @@ class UserMapperBase(MapperBase):
     def __init__(
         self, folio_client: FolioClient, library_configuration: LibraryConfiguration
     ):
-        super().__init__(library_configuration)
+        super().__init__(library_configuration, folio_client)
         self.legacy_id_map: Dict[str, str] = {}
 
         self.migration_report = MigrationReport()
