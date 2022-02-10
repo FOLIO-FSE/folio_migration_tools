@@ -48,7 +48,6 @@ class BibsRulesMapper(RulesMapperBase):
             library_configuration,
             Conditions(folio_client, self, "bibs"),
         )
-        self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.folio = folio_client
         self.task_configuration = task_configuration
         self.record_status = {}
@@ -78,10 +77,6 @@ class BibsRulesMapper(RulesMapperBase):
         self.unmapped_conditions = {}
         self.instance_relationships = {}
         self.instance_relationship_types = {}
-        self.hrid_settings = self.folio.folio_get_single_object(self.hrid_path)
-        self.hrid_prefix = self.hrid_settings["instances"]["prefix"]
-        self.hrid_counter = self.hrid_settings["instances"]["startNumber"]
-        logging.info(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio)
         self.start = time.time()
 
@@ -165,6 +160,7 @@ class BibsRulesMapper(RulesMapperBase):
                             "legacy_id": legacy_id,
                             "folio_id": folio_instance["id"],
                             "instanceLevelCallNumber": instance_level_call_number,
+                            "instance_hrid": folio_instance["hrid"],
                             "suppressed": suppressed,
                         }
                     )
@@ -304,7 +300,7 @@ class BibsRulesMapper(RulesMapperBase):
     def wrap_up(self):
         logging.info("Mapper wrapping up")
         logging.info("Setting HRID counter to current +1")
-        self.hrid_settings["instances"]["startNumber"] = self.hrid_counter + 1
+        self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter + 1
         try:
             url = self.folio_client.okapi_url + self.hrid_path
             resp = requests.put(
@@ -524,8 +520,8 @@ class BibsRulesMapper(RulesMapperBase):
     def handle_hrid(self, folio_instance, marc_record: Record, legacy_ids) -> None:
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if self.hrid_handling == HridHandling.default or "001" not in marc_record:
-            num_part = str(self.hrid_counter).zfill(11)
-            folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
+            num_part = str(self.instance_hrid_counter).zfill(11)
+            folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             try:
                 f_001 = marc_record["001"].value()
@@ -564,7 +560,7 @@ class BibsRulesMapper(RulesMapperBase):
             self.migration_report.add(
                 Blurbs.HridHandling, "Created HRID using default settings"
             )
-            self.hrid_counter += 1
+            self.instance_hrid_counter += 1
         elif self.hrid_handling == HridHandling.preserve001:
             value = marc_record["001"].value()
             if value in self.unique_001s:
@@ -576,11 +572,11 @@ class BibsRulesMapper(RulesMapperBase):
                     "Duplicate 001 for record. HRID created for record",
                     value,
                 )
-                num_part = str(self.hrid_counter).zfill(11)
-                folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
+                num_part = str(self.instance_hrid_counter).zfill(11)
+                folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
                 new_001 = Field(tag="001", data=folio_instance["hrid"])
                 marc_record.add_ordered_field(new_001)
-                self.hrid_counter += 1
+                self.instance_hrid_counter += 1
             else:
                 self.unique_001s.add(value)
                 folio_instance["hrid"] = value
