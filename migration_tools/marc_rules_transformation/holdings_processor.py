@@ -32,13 +32,15 @@ class HoldingsProcessor:
         self.created_objects_file = open(
             self.folder_structure.created_objects_path, "w+"
         )
-        self.srs_records_file = open(self.folders.srs_records_path, "w+")
+        self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
         self.setup_holdings_sources()
 
     def setup_holdings_sources(self):
         if library_configuration.FolioRelease != FolioRelease.juniper:
-            holdings_sources = self.mapper.folio_client.folio_get_all(
-                "/holdings-sources", "holdingsRecordsSources"
+            holdings_sources = list(
+                self.mapper.folio_client.folio_get_all(
+                    "/holdings-sources", "holdingsRecordsSources"
+                )
             )
             logging.info(
                 "Fetched %s holdingsRecordsSources from tenant", len(holdings_sources)
@@ -93,7 +95,7 @@ class HoldingsProcessor:
                 self.mapper.save_source_record(
                     self.srs_records_file,
                     FOLIONamespaces.holdings,
-                    self.folio_client,
+                    self.mapper.folio_client,
                     marc_record,
                     folio_rec,
                     folio_rec["formerIds"][0],
