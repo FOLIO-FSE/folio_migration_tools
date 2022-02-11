@@ -26,9 +26,14 @@ class MapperBase:
         self.hrid_settings = self.folio_client.folio_get_single_object(self.hrid_path)
         self.instance_hrid_prefix = self.hrid_settings["instances"]["prefix"]
         self.instance_hrid_counter = self.hrid_settings["instances"]["startNumber"]
-        logging.info(
-            f"Fetched HRID settings. HRID prefix is {self.instance_hrid_prefix}"
-        )
+        self.holdings_hrid_prefix = self.hrid_settings["holdings"]["prefix"]
+        self.holdings_hrid_counter = self.hrid_settings["holdings"]["startNumber"]
+        logging.info("Fetched HRID settings.")
+        logging.info("Instance HRID prefix is %s", self.instance_hrid_prefix)
+        logging.info("Instance start number is %s", self.instance_hrid_counter)
+        logging.info("Holdings HRID prefix is %s", self.instance_hrid_prefix)
+        logging.info("Holdings start number is %s", self.holdings_hrid_counter)
+
         self.mapped_folio_fields = {}
         self.migration_report = MigrationReport()
         self.num_criticalerrors = 0

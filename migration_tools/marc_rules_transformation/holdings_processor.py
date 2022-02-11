@@ -18,6 +18,7 @@ from migration_tools.library_configuration import FileDefinition, FolioRelease
 from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
+from migration_tools.report_blurbs import Blurbs
 
 
 class HoldingsProcessor:
@@ -92,11 +93,10 @@ class HoldingsProcessor:
                 "Holdings records written to disk"
             )
             if self.mapper.task_configuration.create_source_records:
-
+                self.add_hrid_to_records(folio_rec, marc_record)
                 for former_id in folio_rec["formerIds"]:
-                    if a := self.mapper.instance_id_map.get(former_id, ""):
-                        print(a)
-                        new_004 = Field(tag="004", data=a["instance_hrid"])
+                    if map_entity := self.mapper.instance_id_map.get(former_id, ""):
+                        new_004 = Field(tag="004", data=map_entity["instance_hrid"])
                         marc_record.remove_fields("004")
                         marc_record.add_ordered_field(new_004)
 
@@ -147,6 +147,14 @@ class HoldingsProcessor:
                     and folio_rec.get("formerIds", "")
                 ):
                     self.mapper.remove_from_id_map(folio_rec["formerIds"])
+
+    def add_hrid_to_records(self, folio_record: dict, marc_record: Record):
+        num_part = str(self.mapper.holdings_hrid_counter).zfill(11)
+        folio_record["hrid"] = f"{self.mapper.holdings_hrid_prefix}{num_part}"
+        new_001 = Field(tag="001", data=folio_record["hrid"])
+        marc_record.remove_fields("001")
+        marc_record.add_ordered_field(new_001)
+        self.mapper.holdings_hrid_counter += 1
 
     @staticmethod
     def set_source_id(task_configuration, folio_rec, holdingssources):
