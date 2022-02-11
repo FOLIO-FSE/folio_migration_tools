@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import sys
@@ -538,6 +539,19 @@ class Conditions:
     def condition_set_location_id_by_code(
         self, value, parameter, marc_field: field.Field
     ):
+        self.mapper.migration_report.add(
+            Blurbs.Exceptions,
+            (
+                "set_location_id_by_code condition used in rules. "
+                "Switch to set_permanent_location_id"
+            ),
+        )
+        return self.condition_set_permanent_location_id(value, parameter, marc_field)
+
+    def condition_set_permanent_location_id(
+        self, value, parameter, marc_field: field.Field
+    ):
+        json.dumps(self.mapper.location_map)
         # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
             try:
@@ -567,19 +581,20 @@ class Conditions:
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value.strip()
         # Get the FOLIO UUID for the code and return it
-        try:
-            t = self.get_ref_data_tuple_by_code(
-                self.folio.locations, "locations", mapped_code
-            )
+        t = self.get_ref_data_tuple_by_code(
+            self.folio.locations, "locations", mapped_code
+        )
+        if not t:
             self.mapper.migration_report.add(
-                Blurbs.LocationMapping, f"'{value}' ({mapped_code}) -> {t[1]}"
+                Blurbs.LocationMapping, f"Unmapped code: '{value}'"
             )
-            return t[0]
-        except TransformationProcessError as tpe:
-            logging.critical(tpe)
-            sys.exit()
-        except Exception as ee:
-            raise ee
+            raise TransformationRecordFailedError(
+                "", "Could not map location from legacy code", value
+            )
+        self.mapper.migration_report.add(
+            Blurbs.LocationMapping, f"'{value}' ({mapped_code}) -> {t[1]}"
+        )
+        return t[0]
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
