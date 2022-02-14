@@ -17,6 +17,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 
+<<<<<<< HEAD:src/folio_migration_tools/migration_tasks/organizations_transformer.py
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.library_configuration import (
@@ -35,6 +36,12 @@ from pydantic.main import BaseModel
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
+=======
+from migration_tools.helper import Helper
+from migration_tools.library_configuration import FileDefinition, LibraryConfiguration
+from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from pydantic import BaseModel
+>>>>>>> 921cbcd (create orgs transformer):migration_tools/migration_tasks/organizations_transformer.py
 
 class OrganizationsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
@@ -69,18 +76,22 @@ class OrganizationsTransformer(MigrationTaskBase):
         logging.info("Files to process:")
         for filename in self.files:
             logging.info("\t%s", filename.file_name)
+<<<<<<< HEAD:src/folio_migration_tools/migration_tasks/organizations_transformer.py
         
         self.total_records = 0
         self.items_map = self.setup_records_map(
             self.folder_structure.mapping_files_folder
             / self.task_config.items_mapping_file_name
         )
+=======
+>>>>>>> 921cbcd (create orgs transformer):migration_tools/migration_tasks/organizations_transformer.py
     
     def wrap_up(self):
         logging.info("Wrapping up!")
 
     def do_work(self):
         logging.info("Getting started!")
+<<<<<<< HEAD:src/folio_migration_tools/migration_tasks/organizations_transformer.py
         for filename in self.files:
             try:
                 logging.info("\t%s", filename.file_name)
@@ -93,14 +104,20 @@ class OrganizationsTransformer(MigrationTaskBase):
                 print(f"Something unexpected happend! {e}")
                 raise e
 
+=======
+>>>>>>> 921cbcd (create orgs transformer):migration_tools/migration_tasks/organizations_transformer.py
 
         # Create organization
         # Create contacts
         # Create credentials
 
         # TODO Hemläxa: använd json-fil med fungerande mappning
+<<<<<<< HEAD:src/folio_migration_tools/migration_tasks/organizations_transformer.py
         # TODO Sapa ett megaorganisationsobjekt
         # TODO Skapa schema av objektet med något verktyg!
+=======
+        # TODO Skapa schema av den med något verktyg!
+>>>>>>> 921cbcd (create orgs transformer):migration_tools/migration_tasks/organizations_transformer.py
         # TODO Behöver schemat motsvaras av ett objekt? T.ex.
         
         '''
@@ -132,6 +149,7 @@ class OrganizationsTransformer(MigrationTaskBase):
                 }
             ]
         }
+<<<<<<< HEAD:src/folio_migration_tools/migration_tasks/organizations_transformer.py
         '''
 
     def process_single_file(self, file_name):
@@ -168,3 +186,6 @@ class OrganizationsTransformer(MigrationTaskBase):
                 f"Done processing {file_name} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
+=======
+        '''
+>>>>>>> 921cbcd (create orgs transformer):migration_tools/migration_tasks/organizations_transformer.py
