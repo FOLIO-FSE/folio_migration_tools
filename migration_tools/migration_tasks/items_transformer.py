@@ -169,6 +169,7 @@ class ItemsTransformer(MigrationTaskBase):
             ),
             temporary_loan_type_mapping,
             temporary_location_mapping,
+            self.library_configuration,
         )
         logging.info("Init done")
 
