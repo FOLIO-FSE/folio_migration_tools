@@ -172,7 +172,7 @@ class HoldingsProcessor:
                 folio_rec["hrid"] = f"{self.mapper.instance_hrid_prefix}{num_part}"
                 new_001 = Field(tag="001", data=folio_rec["hrid"])
                 marc_record.add_ordered_field(new_001)
-                self.instance_hrid_counter += 1
+                self.mapper.instance_hrid_counter += 1
             else:
                 self.unique_001s.add(value)
                 folio_rec["hrid"] = value
