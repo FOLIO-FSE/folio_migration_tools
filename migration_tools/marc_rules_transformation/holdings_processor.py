@@ -14,7 +14,11 @@ from migration_tools.custom_exceptions import (
 )
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
-from migration_tools.library_configuration import FileDefinition, FolioRelease
+from migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    HridHandling,
+)
 from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
@@ -27,6 +31,7 @@ class HoldingsProcessor:
     def __init__(self, mapper, folder_structure: FolderStructure):
         self.folder_structure: FolderStructure = folder_structure
         self.records_count = 0
+        self.unique_001s = set()
         self.failed_records_count = 0
         self.mapper: RulesMapperHoldings = mapper
         self.start = time.time()
@@ -87,38 +92,12 @@ class HoldingsProcessor:
             self.set_source_id(
                 self.mapper.task_configuration, folio_rec, self.holdingssources
             )
-
+            self.set_hrid(marc_record, folio_rec)
+            self.save_srs_record(marc_record, file_def, folio_rec)
             Helper.write_to_file(self.created_objects_file, folio_rec)
             self.mapper.migration_report.add_general_statistics(
                 "Holdings records written to disk"
             )
-            if self.mapper.task_configuration.create_source_records:
-                self.add_hrid_to_records(folio_rec, marc_record)
-                for former_id in folio_rec["formerIds"]:
-                    if map_entity := self.mapper.instance_id_map.get(former_id, ""):
-                        new_004 = Field(tag="004", data=map_entity["instance_hrid"])
-                        marc_record.remove_fields("004")
-                        marc_record.add_ordered_field(new_004)
-
-                    new_035 = Field(
-                        tag="035",
-                        indicators=[" ", " "],
-                        subfields=["a", former_id],
-                    )
-                    marc_record.add_ordered_field(new_035)
-
-                self.mapper.save_source_record(
-                    self.srs_records_file,
-                    FOLIONamespaces.holdings,
-                    self.mapper.folio_client,
-                    marc_record,
-                    folio_rec,
-                    folio_rec["formerIds"][0],
-                    file_def.suppressed,
-                )
-                self.mapper.migration_report.add_general_statistics(
-                    "SRS records written to disk"
-                )
 
             self.exit_on_too_many_exceptions()
         except TransformationRecordFailedError as error:
@@ -148,7 +127,66 @@ class HoldingsProcessor:
                 ):
                     self.mapper.remove_from_id_map(folio_rec["formerIds"])
 
+    def save_srs_record(self, marc_record, file_def, folio_rec):
+        if self.mapper.task_configuration.create_source_records:
+            self.add_hrid_to_records(folio_rec, marc_record)
+            for former_id in folio_rec["formerIds"]:
+                if map_entity := self.mapper.instance_id_map.get(former_id, ""):
+                    new_004 = Field(tag="004", data=map_entity["instance_hrid"])
+                    marc_record.remove_fields("004")
+                    marc_record.add_ordered_field(new_004)
+                if self.mapper.task_configuration.hrid_handling == HridHandling.default:
+                    new_035 = Field(
+                        tag="035",
+                        indicators=[" ", " "],
+                        subfields=["a", former_id],
+                    )
+                    marc_record.add_ordered_field(new_035)
+
+            self.mapper.save_source_record(
+                self.srs_records_file,
+                FOLIONamespaces.holdings,
+                self.mapper.folio_client,
+                marc_record,
+                folio_rec,
+                folio_rec["formerIds"][0],
+                file_def.suppressed,
+            )
+            self.mapper.migration_report.add_general_statistics(
+                "SRS records written to disk"
+            )
+
+    def set_hrid(self, marc_record, folio_rec):
+        if self.mapper.task_configuration.hrid_handling == HridHandling.preserve001:
+            value = marc_record["001"].value()
+            if value in self.unique_001s:
+                self.mapper.migration_report.add(
+                    Blurbs.HridHandling, "Duplicate 001. Creating HRID instead"
+                )
+                Helper.log_data_issue(
+                    folio_rec["formerIds"],
+                    "Duplicate 001 for record. HRID created for record",
+                    value,
+                )
+                num_part = str(self.mapper.instance_hrid_counter).zfill(11)
+                folio_rec["hrid"] = f"{self.mapper.instance_hrid_prefix}{num_part}"
+                new_001 = Field(tag="001", data=folio_rec["hrid"])
+                marc_record.add_ordered_field(new_001)
+                self.instance_hrid_counter += 1
+            else:
+                self.unique_001s.add(value)
+                folio_rec["hrid"] = value
+                self.mapper.migration_report.add(
+                    Blurbs.HridHandling, "Took HRID from 001"
+                )
+
     def add_hrid_to_records(self, folio_record: dict, marc_record: Record):
+        if (
+            "hrid" in folio_record
+            and "001" in marc_record
+            and marc_record["001"].value() == folio_record["hrid"]
+        ):
+            return
         num_part = str(self.mapper.holdings_hrid_counter).zfill(11)
         folio_record["hrid"] = f"{self.mapper.holdings_hrid_prefix}{num_part}"
         new_001 = Field(tag="001", data=folio_record["hrid"])
@@ -187,6 +225,7 @@ class HoldingsProcessor:
                 self.mapper.mapped_legacy_fields,
             )
         self.srs_records_file.close()
+        self.mapper.wrap_up()
 
         logging.info("Done. Transformation report written to %s", report_file.name)
         logging.info("Done.")

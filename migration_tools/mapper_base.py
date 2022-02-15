@@ -1,6 +1,7 @@
 import logging
 import sys
 import json
+import requests
 
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -300,6 +301,31 @@ class MapperBase:
             for id_string in legacy_map.values():
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
             logging.info("Wrote %s id:s to legacy map", len(legacy_map))
+
+    def store_hrid_settings(self):
+        logging.info("Setting HRID counter to current +1")
+        try:
+            self.hrid_settings["instances"]["startNumber"] = (
+                self.instance_hrid_counter + 1
+            )
+            self.hrid_settings["holdings"]["startNumber"] = (
+                self.holdings_hrid_counter + 1
+            )
+            url = self.folio_client.okapi_url + self.hrid_path
+            resp = requests.put(
+                url,
+                data=json.dumps(self.hrid_settings),
+                headers=self.folio_client.okapi_headers,
+            )
+            resp.raise_for_status()
+            logging.info("%s Successfully set HRID settings.", resp.status_code)
+            a = self.folio_client.folio_get_single_object(self.hrid_path)
+            logging.info("Current hrid settings: %s", json.dumps(a, indent=4))
+        except Exception:
+            logging.exception(
+                f"Something went wrong when setting the HRID settings. "
+                f"Update them manually. {json.dumps(self.hrid_settings)}"
+            )
 
 
 def flatten(my_dict: dict, path=""):

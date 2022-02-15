@@ -304,24 +304,7 @@ class BibsRulesMapper(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
-        logging.info("Setting HRID counter to current +1")
-        self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter + 1
-        try:
-            url = self.folio_client.okapi_url + self.hrid_path
-            resp = requests.put(
-                url,
-                data=json.dumps(self.hrid_settings),
-                headers=self.folio_client.okapi_headers,
-            )
-            resp.raise_for_status()
-            logging.info("%s Successfully set HRID settings.", resp.status_code)
-            a = self.folio_client.folio_get_single_object(self.hrid_path)
-            logging.info("Current hrid settings: %s", json.dumps(a, indent=4))
-        except Exception:
-            logging.exception(
-                f"Something went wrong when setting the HRID settings. "
-                f"Update them manually. {json.dumps(self.hrid_settings)}"
-            )
+        self.store_hrid_settings()
 
     def report_bad_tags(self, marc_field, bad_tags, legacy_ids):
         if (

@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -164,6 +165,10 @@ class RulesMapperHoldings(RulesMapperBase):
             except TransformationFieldMappingError as tfme:
                 Helper.log_data_issue(tfme.index_or_id, tfme.message, tfme.data_value)
                 self.migration_report.add(Blurbs.FieldMappingErrors, tfme.message)
+
+    def wrap_up(self):
+        logging.info("Mapper wrapping up")
+        self.store_hrid_settings()
 
     def set_holdings_type(self, marc_record: Record, folio_holding, legacy_ids):
         # Holdings type mapping
