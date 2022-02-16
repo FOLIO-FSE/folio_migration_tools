@@ -48,7 +48,7 @@ class ItemsTransformer(MigrationTaskBase):
         material_types_map_file_name: str
         loan_types_map_file_name: str
         temp_loan_types_map_file_name: Optional[str] = ""
-        statistical_codes_map_file_name: str
+        statistical_codes_map_file_name: Optional[str] = ""
         item_statuses_map_file_name: str
         call_number_type_map_file_name: str
 
