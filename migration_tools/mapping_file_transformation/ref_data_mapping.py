@@ -122,7 +122,7 @@ class RefDataMapping(object):
     def post_validate_map(self):
         if not self.default_id:
             raise TransformationProcessError(
-                f"No default {self.name} set up in map."
+                f"No fallback {self.name} set up in map."
                 f"Add a row to mapping file with *:s in all legacy columns and a valid {self.name} value"
             )
         for mapping in self.map:
