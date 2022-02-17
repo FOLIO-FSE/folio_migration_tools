@@ -136,8 +136,11 @@ class ItemMapper(MappingFileMapperBase):
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
         # IF there is a value mapped, return that one
         if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            return self.mapped_from_values.get(folio_prop_name, "")
-
+            value = self.mapped_from_values.get(folio_prop_name, "")
+            self.migration_report.add(
+                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
+            )
+            return value
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )
