@@ -144,6 +144,7 @@ class RulesMapperBase(MapperBase):
 
     def get_value_from_condition(
         self,
+        legacy_id,
         mapping,
         marc_field,
     ):
@@ -152,24 +153,30 @@ class RulesMapperBase(MapperBase):
         parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
         if mapping.get("applyRulesOnConcatenatedData", ""):
             value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-            return self.apply_rule(value, condition_types, marc_field, parameter)
+            return self.apply_rule(
+                legacy_id, value, condition_types, marc_field, parameter
+            )
         elif mapping.get("subfield", []):
             subfields = marc_field.get_subfields(*mapping["subfield"])
             x = [
-                self.apply_rule(x, condition_types, marc_field, parameter)
+                self.apply_rule(legacy_id, x, condition_types, marc_field, parameter)
                 for x in subfields
             ]
             return " ".join(set(x))
         else:
             value1 = marc_field.format_field() if marc_field else ""
-            return self.apply_rule(value1, condition_types, marc_field, parameter)
+            return self.apply_rule(
+                legacy_id, value1, condition_types, marc_field, parameter
+            )
 
     def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
         try:
             values = []
             value = ""
             if has_conditions(mapping):
-                value = self.get_value_from_condition(mapping, marc_field)
+                value = self.get_value_from_condition(
+                    ",".join(legacy_ids), mapping, marc_field
+                )
             elif has_value_to_add(mapping):
                 value = mapping["rules"][0]["value"]
                 if value == "false":
@@ -403,10 +410,12 @@ class RulesMapperBase(MapperBase):
             )
         logging.log(25, f"{e_parent}\t{json.dumps(new_entity)}")
 
-    def apply_rule(self, value, condition_types, marc_field, parameter):
+    def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):
         v = value
         for condition_type in iter(condition_types):
-            v = self.conditions.get_condition(condition_type, v, parameter, marc_field)
+            v = self.conditions.get_condition(
+                condition_type, legacy_id, v, parameter, marc_field
+            )
         return v
 
     @staticmethod
