@@ -203,3 +203,4 @@ class Blurbs(NamedTuple):
         "Parsed Holdings statements from 85X/86X combinations",
         "",
     )
+    MaterialTypeMapping = ("Mapped Material Types", "")

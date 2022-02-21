@@ -35,7 +35,12 @@ class HoldingsMapper(MappingFileMapperBase):
         self.holdings_map = holdings_map
 
         self.location_mapping = RefDataMapping(
-            self.folio_client, "/locations", "locations", location_map, "code"
+            self.folio_client,
+            "/locations",
+            "locations",
+            location_map,
+            "code",
+            Blurbs.LocationMapping,
         )
         if call_number_type_map:
             self.call_number_mapping = RefDataMapping(
@@ -44,6 +49,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 "callNumberTypes",
                 call_number_type_map,
                 "name",
+                Blurbs.CallNumberTypeMapping,
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):

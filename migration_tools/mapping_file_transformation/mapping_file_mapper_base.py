@@ -59,6 +59,7 @@ class MappingFileMapperBase(MapperBase):
                 "statisticalCodes",
                 statistical_codes_map,
                 "code",
+                Blurbs.StatisticalCodeMapping,
             )
         else:
             self.statistical_codes_mapping = None

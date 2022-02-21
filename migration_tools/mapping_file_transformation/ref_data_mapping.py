@@ -4,13 +4,21 @@ import sys
 
 from folioclient import FolioClient
 from migration_tools.custom_exceptions import TransformationProcessError
+from migration_tools.report_blurbs import Blurbs
 
 
 class RefDataMapping(object):
     def __init__(
-        self, folio_client: FolioClient, ref_data_path, array_name, the_map, key_type
+        self,
+        folio_client: FolioClient,
+        ref_data_path,
+        array_name,
+        the_map,
+        key_type,
+        blurb: Blurbs,
     ):
         self.name = array_name
+        self.blurb = blurb
         logging.info("%s reference data mapping. Initializing", self.name)
         logging.info("Fetching %s reference data from FOLIO", self.name)
         self.ref_data = list(

@@ -48,6 +48,7 @@ class UserMapper(UserMapperBase):
                     "departments",
                     departments_mapping,
                     "name",
+                    Blurbs.DepartmentsMapping,
                 )
             else:
                 self.departments_mapping = None
@@ -58,6 +59,7 @@ class UserMapper(UserMapperBase):
                     "usergroups",
                     groups_map,
                     "group",
+                    Blurbs.UserGroupMapping,
                 )
             else:
                 self.departments_mapping = None

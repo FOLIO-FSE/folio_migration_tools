@@ -92,7 +92,7 @@ class MapperBase:
             if not right_mapping:
                 raise StopIteration()
             self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
+                ref_dat_mapping.blurb,
                 (
                     f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} '
                     f'-> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}'
@@ -103,7 +103,7 @@ class MapperBase:
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
-                    Blurbs.ReferenceDataMapping,
+                    ref_dat_mapping.blurb,
                     (
                         f"{ref_dat_mapping.name} mapping - Not to be mapped. "
                         f'(No default) -- {" - ".join(fieldvalues)} -> ""'
@@ -111,7 +111,7 @@ class MapperBase:
                 )
                 return ""
             self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
+                ref_dat_mapping.blurb,
                 (
                     f"{ref_dat_mapping.name} mapping - Unmapped (Default value was set) -- "
                     f'{" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}'
@@ -163,7 +163,7 @@ class MapperBase:
             if not right_mapping:
                 raise StopIteration()
             self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
+                ref_dat_mapping.blurb,
                 (
                     f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} '
                     f'-> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}'
@@ -173,7 +173,7 @@ class MapperBase:
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
-                    Blurbs.ReferenceDataMapping,
+                    ref_dat_mapping.blurb,
                     (
                         f"{ref_dat_mapping.name} mapping - Not to be mapped. "
                         f'(No default) -- {" - ".join(fieldvalues)} -> ""'
@@ -181,7 +181,7 @@ class MapperBase:
                 )
                 return ""
             self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
+                ref_dat_mapping.blurb,
                 (
                     f"{ref_dat_mapping.name} mapping - Unmapped (Default value was set) -- "
                     f'{" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}'
