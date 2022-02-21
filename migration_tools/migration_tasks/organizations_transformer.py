@@ -17,10 +17,24 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 
+from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
-from migration_tools.library_configuration import FileDefinition, LibraryConfiguration
+from migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
+
+# TODO Create OrganizationMapper 
+# TODO from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
+from migration_tools.report_blurbs import Blurbs
+from pydantic.main import BaseModel
+
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from pydantic import BaseModel
+
+csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 class OrganizationsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
@@ -55,19 +69,41 @@ class OrganizationsTransformer(MigrationTaskBase):
         logging.info("Files to process:")
         for filename in self.files:
             logging.info("\t%s", filename.file_name)
+        
+        self.total_records = 0
+        self.folio_keys = []
+        self.items_map = self.setup_records_map()
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+            self.items_map
+        )
+        self.failed_files: List[str] = list()
     
     def wrap_up(self):
         logging.info("Wrapping up!")
 
+
     def do_work(self):
         logging.info("Getting started!")
+        for filename in self.files:
+            try:
+                logging.info("\t%s", filename.file_name)
+                self.do_actual_work(filename)
+            # Something goes really wrong and we want to stop the script
+            except TransformationProcessError as tpe:
+                logging.critical(tpe)
+                sys.exit()
+            except Exception as e:
+                print(f"Something unexpected happend! {e}")
+                raise e
+
 
         # Create organization
         # Create contacts
         # Create credentials
 
         # TODO Hemläxa: använd json-fil med fungerande mappning
-        # TODO Skapa schema av den med något verktyg!
+        # TODO Sapa ett megaorganisationsobjekt
+        # TODO Skapa schema av objektet med något verktyg!
         # TODO Behöver schemat motsvaras av ett objekt? T.ex.
         
         '''
@@ -100,3 +136,15 @@ class OrganizationsTransformer(MigrationTaskBase):
             ]
         }
         '''
+
+
+    def do_actual_work(self, filename):
+        for i in range(1,5):
+            logging.info(i)
+            try:
+                if i == 2:
+                    raise TransformationRecordFailedError("","I like everyone equally", str(i))
+            except TransformationRecordFailedError as trfe:
+                trfe.log_it()
+
+        raise TransformationProcessError("","Error reading file with name", filename.file_name)
