@@ -88,7 +88,6 @@ class ItemsTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
-        self.failed_files: List[str] = []
         if "statisticalCodes" in self.folio_keys:
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
@@ -172,33 +171,6 @@ class ItemsTransformer(MigrationTaskBase):
             self.library_configuration,
         )
         logging.info("Init done")
-
-    @staticmethod
-    def add_arguments(sub_parser):
-        MigrationTaskBase.add_common_arguments(sub_parser)
-        sub_parser.add_argument(
-            "timestamp",
-            help=(
-                "timestamp or migration identifier. "
-                "Used to chain multiple runs together"
-            ),
-            secure=False,
-        )
-        sub_parser.add_argument(
-            "--default_call_number_type_name",
-            help=(
-                "Name of the default callnumber type. Needs to exist "
-                " in the tenant verbatim"
-            ),
-            default="Other scheme",
-        )
-        sub_parser.add_argument(
-            "--suppress",
-            "-ds",
-            help="This batch of records are to be suppressed in FOLIO.",
-            default=False,
-            type=bool,
-        )
 
     def do_work(self):
         logging.info("Starting....")
