@@ -64,6 +64,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self.default_holdings_type = None
         try:
             self.task_config = task_config
+            self.bound_with_keys = set()
             self.files = self.list_source_files()
             self.mapper = HoldingsMapper(
                 self.folio_client,
@@ -85,7 +86,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 logging.info(self.excluded_hold_type_id)
 
             self.results_path = self.folder_structure.created_objects_path
-            self.failed_files: List[str] = list()
             self.holdings_types = list(
                 self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
             )
@@ -268,7 +268,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         for folio_holding in holdings_from_row:
             self.merge_holding_in(
-                folio_holding, len(folio_rec.get("instanceId", [])) > 1
+                folio_holding, folio_rec.get("instanceId", []), legacy_id
             )
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
@@ -384,14 +384,26 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         logging.info("All done!")
 
-    def merge_holding_in(self, new_folio_holding, is_boundwith: bool):
-        if is_boundwith:
-            unique_holding_key = str(uuid.uuid4())
-            self.holdings[unique_holding_key] = new_folio_holding
-            self.mapper.migration_report.add_general_statistics(
-                "Unique BW Holdings created from Items"
+    def merge_holding_in(self, new_folio_holding, instance_ids: list, legacy_id: str):
+        if len(instance_ids) > 1:  # Is boundwith
+            bw_key = (
+                f"bw_{new_folio_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
             )
-        else:
+            if bw_key not in self.bound_with_keys:
+                self.bound_with_keys.add(bw_key)
+                self.holdings[bw_key] = new_folio_holding
+                self.mapper.migration_report.add_general_statistics(
+                    "Unique BW Holdings created from Items"
+                )
+            else:
+                self.mapper.migration_report.add_general_statistics(
+                    "BW Items found tied to previously created BW Holdings"
+                )
+                self.merge_holding(bw_key, new_folio_holding)
+                self.holdings_id_map[legacy_id] = self.mapper.get_id_map_dict(
+                    legacy_id, self.holdings[bw_key]
+                )
+        else:  # Regular
             new_holding_key = self.to_key(
                 new_folio_holding, self.task_config.holdings_merge_criteria
             )
