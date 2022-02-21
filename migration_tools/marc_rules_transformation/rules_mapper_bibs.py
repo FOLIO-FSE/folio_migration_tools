@@ -373,12 +373,12 @@ class BibsRulesMapper(RulesMapperBase):
             if not t:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f"336$b - Code {f336_b_norm} not found in FOLIO ({f336_b})",
+                    f"336$b - Code {f336_b_norm} ('{f336_b}') not found in FOLIO ",
                 )
                 Helper.log_data_issue(
                     legacy_id,
                     "instance type code (336$b) not found in FOLIO",
-                    f336_b_norm,
+                    f336_b,
                 )
             else:
                 self.migration_report.add(
@@ -413,7 +413,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
                 self.migration_report.add(
                     Blurbs.InstanceFormat,
-                    f"Code {code} not found in FOLIO",
+                    f"Code '{code}' not found in FOLIO",
                 )
                 return ""
 
