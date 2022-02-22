@@ -47,7 +47,7 @@ class RulesMapperHoldings(RulesMapperBase):
             self.task_configuration.fallback_holdings_type_id
         )
 
-    def parse_hold(self, marc_record, index_or_legacy_id):
+    def parse_hold(self, marc_record, index_or_legacy_ids):
         """Parses a mfhd recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://tinyurl.com/3rh52e2x
          This is the main function"""
@@ -66,12 +66,12 @@ class RulesMapperHoldings(RulesMapperBase):
                     marc_field,
                     ignored_subsequent_fields,
                     folio_holding,
-                    index_or_legacy_id,
+                    index_or_legacy_ids,
                 )
             except TransformationFieldMappingError as tfme:
                 tfme.log_it()
         if num_852s > 1:
-            Helper.log_data_issue(index_or_legacy_id, "More than 1 852 found", "")
+            Helper.log_data_issue(index_or_legacy_ids, "More than 1 852 found", "")
         if not folio_holding.get("formerIds", []):
             raise TransformationProcessError(
                 self.parsed_records,
@@ -111,7 +111,7 @@ class RulesMapperHoldings(RulesMapperBase):
         marc_field: Field,
         ignored_subsequent_fields,
         folio_holding,
-        index_or_legacy_id,
+        index_or_legacy_ids,
     ):
         self.migration_report.add_general_statistics("Total number of Tags processed")
         if marc_field.tag not in self.mappings:
@@ -119,7 +119,7 @@ class RulesMapperHoldings(RulesMapperBase):
         elif marc_field.tag not in ignored_subsequent_fields:
             mappings = self.mappings[marc_field.tag]
             self.map_field_according_to_mapping(
-                marc_field, mappings, folio_holding, [index_or_legacy_id]
+                marc_field, mappings, folio_holding, index_or_legacy_ids
             )
             self.report_legacy_mapping(marc_field.tag, True, True)
             if any(m.get("ignoreSubsequentFields", False) for m in mappings):

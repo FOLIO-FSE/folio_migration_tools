@@ -81,7 +81,7 @@ class HoldingsProcessor:
         try:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.mapper.parse_hold(marc_record, self.records_count)
+            folio_rec = self.mapper.parse_hold(marc_record, [str(self.records_count)])
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
                     "".join(folio_rec.get("formerIds", [])),
