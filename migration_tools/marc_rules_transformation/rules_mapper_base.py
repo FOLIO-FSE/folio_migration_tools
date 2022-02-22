@@ -52,7 +52,8 @@ class RulesMapperBase(MapperBase):
             elapsed_last = num_recs / (time.time() - self.last_batch_time)
             elapsed_formatted_last = "{0:.4g}".format(elapsed_last)
             logging.info(
-                f"{elapsed_formatted_last} (avg. {elapsed_formatted}) records/sec.\t\t{self.parsed_records:,} records processed"
+                f"{elapsed_formatted_last} (avg. {elapsed_formatted}) "
+                f"records/sec.\t\t{self.parsed_records:,} records processed"
             )
             self.last_batch_time = time.time()
 

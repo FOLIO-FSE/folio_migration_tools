@@ -49,7 +49,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def parse_hold(self, marc_record, index_or_legacy_id):
         """Parses a mfhd recod into a FOLIO Inventory instance object
-        Community mapping suggestion: https://docs.google.com/spreadsheets/d/1ac95azO1R41_PGkeLhc6uybAKcfpe6XLyd9-F4jqoTo/edit#gid=301923972
+        Community mapping suggestion: https://tinyurl.com/3rh52e2x
          This is the main function"""
         self.print_progress()
         folio_holding = {

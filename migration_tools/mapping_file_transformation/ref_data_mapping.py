@@ -144,7 +144,12 @@ class RefDataMapping(object):
                 and "legacy_code" not in mapping
             ):
                 logging.critical(
-                    f"field names from {self.mapped_legacy_keys} missing in map legacy_code is not a column in the {self.name} mapping file"
+                    (
+                        "field names from %s missing in map legacy_code is "
+                        "not a column in the %s mapping file"
+                    ),
+                    self.mapped_legacy_keys,
+                    self.name,
                 )
                 sys.exit()
             elif not all(mapping.values()):

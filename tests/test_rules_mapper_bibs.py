@@ -9,9 +9,6 @@ from lxml import etree
 import pymarc
 import json
 import re
-from types import SimpleNamespace
-from collections import namedtuple
-from jsonschema import validate
 from folioclient.FolioClient import FolioClient
 from migration_tools.migration_tasks.bibs_transformer import BibsTransformer
 

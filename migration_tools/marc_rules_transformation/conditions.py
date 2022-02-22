@@ -1,7 +1,5 @@
-import json
 import logging
 import re
-import sys
 
 import pymarc
 from folioclient import FolioClient
