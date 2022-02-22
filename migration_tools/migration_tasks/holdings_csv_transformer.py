@@ -1,4 +1,3 @@
-'''Main "script."'''
 import ast
 import copy
 import csv
@@ -29,7 +28,6 @@ from migration_tools.mapping_file_transformation.mapping_file_mapper_base import
     MappingFileMapperBase,
 )
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from migration_tools.report_blurbs import Blurbs
 from pydantic.main import BaseModel
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -61,7 +59,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         use_logging: bool = True,
     ):
         super().__init__(library_config, task_config, use_logging)
-        self.default_holdings_type = None
+        self.fallback_holdings_type = None
         try:
             self.task_config = task_config
             self.bound_with_keys = set()
@@ -91,12 +89,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             logging.info("%s\tholdings types in tenant", len(self.holdings_types))
 
-            self.default_holdings_type = next(
+            self.fallback_holdings_type = next(
                 h
                 for h in self.holdings_types
                 if h["id"] == self.task_config.fallback_holdings_type_id
             )
-            if not self.default_holdings_type:
+            if not self.fallback_holdings_type:
                 raise TransformationProcessError(
                     (
                         "Holdings type with ID "
@@ -106,7 +104,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 )
             logging.info(
                 "%s will be used as default holdings type",
-                self.default_holdings_type["name"],
+                self.fallback_holdings_type["name"],
             )
         except TransformationProcessError as process_error:
             logging.critical(process_error)
@@ -202,16 +200,55 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             except Exception as ee:
                 error_str = (
                     f"Processing of {file_name} failed:\n{ee}."
-                    "Check source files for empty lines or missing reference data"
+                    "\nCheck source files for empty lines or missing reference data"
                 )
-                logging.exception(error_str)
-                self.mapper.migration_report.add(
-                    Blurbs.FailedFiles, f"{file_name} - {ee}"
-                )
+                logging.critical(error_str)
+                print(f"\n{error_str}\nHalting")
                 sys.exit()
         logging.info(  # pylint: disable=logging-fstring-interpolation
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
+
+    def wrap_up(self):
+        logging.info("Done. Wrapping up...")
+        if any(self.holdings):
+            logging.info(
+                "Saving holdings created to %s",
+                self.folder_structure.created_objects_path,
+            )
+            with open(
+                self.folder_structure.created_objects_path, "w+"
+            ) as holdings_file:
+                for holding in self.holdings.values():
+                    for legacy_id in holding["formerIds"]:
+                        # Prevent the first item in a boundwith to be overwritten
+                        if legacy_id not in self.holdings_id_map:
+                            self.holdings_id_map[
+                                legacy_id
+                            ] = self.mapper.get_id_map_dict(legacy_id, holding)
+
+                    Helper.write_to_file(holdings_file, holding)
+                    self.mapper.migration_report.add_general_statistics(
+                        "Holdings Records Written to disk"
+                    )
+            self.mapper.save_id_map_file(
+                self.folder_structure.holdings_id_map_path, self.holdings_id_map
+            )
+        with open(
+            self.folder_structure.migration_reports_file, "w"
+        ) as migration_report_file:
+            logging.info(
+                "Writing migration- and mapping report to %s",
+                self.folder_structure.migration_reports_file,
+            )
+            self.mapper.migration_report.write_migration_report(migration_report_file)
+            Helper.print_mapping_report(
+                migration_report_file,
+                self.total_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
+        logging.info("All done!")
 
     def process_single_file(self, file_name):
         with open(file_name, encoding="utf-8-sig") as records_file:
@@ -229,7 +266,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         legacy_record, f"row # {idx}", FOLIONamespaces.holdings
                     )
                     self.post_process_holding(folio_rec, legacy_id)
-
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as error:
@@ -252,7 +288,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
 
     def post_process_holding(self, folio_rec: dict, legacy_id: str):
-        folio_rec["holdingsTypeId"] = self.default_holdings_type["id"]
+        if not folio_rec.get("holdingsTypeId", ""):
+            folio_rec["holdingsTypeId"] = self.fallback_holdings_type["id"]
+
         holdings_from_row = []
         if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
@@ -323,13 +361,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     f'{folio_holding["id"]}-{instance_id}',
                 )
             )
-            self.generate_boundwith_part(legacy_id, bound_with_holding)
             self.mapper.migration_report.add_general_statistics(
                 "Bound-with holdings created"
             )
             yield bound_with_holding
 
-    def generate_boundwith_part(self, legacy_id, bound_with_holding):
+    def generate_boundwith_part(self, legacy_id: str, bound_with_holding: dict):
         part = {
             "id": str(uuid.uuid4()),
             "holdingsRecordId": bound_with_holding["id"],
@@ -343,48 +380,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         }
         logging.log(25, f"boundwithPart\t{json.dumps(part)}")
 
-    def wrap_up(self):
-        logging.info("Done. Wrapping up...")
-        if any(self.holdings):
-            logging.info(
-                "Saving holdings created to %s",
-                self.folder_structure.created_objects_path,
-            )
-            with open(
-                self.folder_structure.created_objects_path, "w+"
-            ) as holdings_file:
-                for holding in self.holdings.values():
-                    for legacy_id in holding["formerIds"]:
-                        # Prevent the first item in a boundwith to be overwritten
-                        if legacy_id not in self.holdings_id_map:
-                            self.holdings_id_map[
-                                legacy_id
-                            ] = self.mapper.get_id_map_dict(legacy_id, holding)
-
-                    Helper.write_to_file(holdings_file, holding)
-                    self.mapper.migration_report.add_general_statistics(
-                        "Holdings Records Written to disk"
-                    )
-            self.mapper.save_id_map_file(
-                self.folder_structure.holdings_id_map_path, self.holdings_id_map
-            )
-        with open(
-            self.folder_structure.migration_reports_file, "w"
-        ) as migration_report_file:
-            logging.info(
-                "Writing migration- and mapping report to %s",
-                self.folder_structure.migration_reports_file,
-            )
-            self.mapper.migration_report.write_migration_report(migration_report_file)
-            Helper.print_mapping_report(
-                migration_report_file,
-                self.total_records,
-                self.mapper.mapped_folio_fields,
-                self.mapper.mapped_legacy_fields,
-            )
-        logging.info("All done!")
-
-    def merge_holding_in(self, new_folio_holding, instance_ids: list, legacy_id: str):
+    def merge_holding_in(
+        self, new_folio_holding: dict, instance_ids: list, legacy_id: str
+    ):
         if len(instance_ids) > 1:  # Is boundwith
             bw_key = (
                 f"bw_{new_folio_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
@@ -392,14 +390,17 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             if bw_key not in self.bound_with_keys:
                 self.bound_with_keys.add(bw_key)
                 self.holdings[bw_key] = new_folio_holding
+                self.generate_boundwith_part(legacy_id, new_folio_holding)
                 self.mapper.migration_report.add_general_statistics(
                     "Unique BW Holdings created from Items"
                 )
+
             else:
                 self.mapper.migration_report.add_general_statistics(
                     "BW Items found tied to previously created BW Holdings"
                 )
                 self.merge_holding(bw_key, new_folio_holding)
+                self.generate_boundwith_part(legacy_id, self.holdings[bw_key])
                 self.holdings_id_map[legacy_id] = self.mapper.get_id_map_dict(
                     legacy_id, self.holdings[bw_key]
                 )
@@ -424,74 +425,67 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.merge_holding(new_holding_key, new_folio_holding)
 
     @staticmethod
-    def to_key(holding, fields_criteria):
-        """creates a key if key values in holding record
-        to determine uniquenes"""
+    def to_key(holdings_record: dict, fields_criteria: str) -> str:
+        """Creates a key from values determined by the fields_crieteria in a holding
+        record to determine uniquenes
+
+        Args:
+            holdings_record (dict): The Holdingsrecord
+            fields_criteria (str): the criteria. c = callnumber, l = location, b = instance id
+
+        Raises:
+            exception: _description_
+
+        Returns:
+            str: The generated key
+        """
+
         try:
             # creates a key of key values in holding record to determine uniquenes
             call_number = (
-                "".join(holding.get("callNumber", "").split())
+                "".join(holdings_record.get("callNumber", "").split())
                 if "c" in fields_criteria
                 else ""
             )
-            instance_id = holding["instanceId"] if "b" in fields_criteria else ""
+            instance_id = (
+                holdings_record["instanceId"] if "b" in fields_criteria else ""
+            )
             location_id = (
-                holding["permanentLocationId"] if "l" in fields_criteria else ""
+                holdings_record["permanentLocationId"] if "l" in fields_criteria else ""
             )
             return "-".join([instance_id, call_number, location_id, ""])
         except Exception as exception:
-            logging.error(json.dumps(holding, indent=4))
-            raise exception
+            logging.error(json.dumps(holdings_record, indent=4))
+            raise exception from exception
 
-    def merge_holding(self, key, new_holdings_record):
-        # TODO: Move to interface or parent class and make more generic
-        if self.holdings[key].get("notes", None):
-            self.holdings[key]["notes"].extend(new_holdings_record.get("notes", []))
-            self.holdings[key]["notes"] = dedupe(self.holdings[key].get("notes", []))
-        if self.holdings[key].get("holdingsStatements", None):
-            self.holdings[key]["holdingsStatements"].extend(
+    def merge_holding(self, holdings_key: str, new_holdings_record: dict):
+        """Merge an incoming holding with an existing holding
+
+        Args:
+            holdings_key (str): the key representing this holding based on the match criteria
+            new_holdings_record (dict): the incoming holdingsrecord
+        """
+        if self.holdings[holdings_key].get("notes", None):
+            self.holdings[holdings_key]["notes"].extend(
+                new_holdings_record.get("notes", [])
+            )
+            self.holdings[holdings_key]["notes"] = dedupe(
+                self.holdings[holdings_key].get("notes", [])
+            )
+        if self.holdings[holdings_key].get("holdingsStatements", None):
+            self.holdings[holdings_key]["holdingsStatements"].extend(
                 new_holdings_record.get("holdingsStatements", [])
             )
-            self.holdings[key]["holdingsStatements"] = dedupe(
-                self.holdings[key]["holdingsStatements"]
+            self.holdings[holdings_key]["holdingsStatements"] = dedupe(
+                self.holdings[holdings_key]["holdingsStatements"]
             )
-        if self.holdings[key].get("formerIds", []):
-            self.holdings[key]["formerIds"].extend(
+        if self.holdings[holdings_key].get("formerIds", []):
+            self.holdings[holdings_key]["formerIds"].extend(
                 new_holdings_record.get("formerIds", [])
             )
-            self.holdings[key]["formerIds"] = list(set(self.holdings[key]["formerIds"]))
-
-    @staticmethod
-    def add_arguments(sub_parser):
-        MigrationTaskBase.add_common_arguments(sub_parser)
-        sub_parser.add_argument(
-            "timestamp",
-            help=(
-                "timestamp or migration identifier. "
-                "Used to chain multiple runs together"
-            ),
-            secure=False,
-        )
-        sub_parser.add_argument(
-            "--suppress",
-            "-ds",
-            help="This batch of records are to be suppressed in FOLIO.",
-            default=False,
-            type=bool,
-        )
-        flavourhelp = (
-            "What criterias do you want to use when merging holdings?\t "
-            "All these parameters need to be the same in order to become "
-            "the same Holdings record in FOLIO. \n"
-            "\tclb\t-\tCallNumber, Location, Bib ID\n"
-            "\tlb\t-\tLocation and Bib ID only\n"
-            "\tclb_7b94034e-ac0d-49c9-9417-0631a35d506b\t-\t "
-            "Exclude bound-with holdings from merging. Requires a "
-            "Holdings type in the tenant with this Id"
-        )
-        sub_parser.add_argument(
-            "--holdings_merge_criteria", "-hmc", default="clb", help=flavourhelp
-        )
+            self.holdings[holdings_key]["formerIds"] = list(
+                set(self.holdings[holdings_key]["formerIds"])
+            )
 
 
 def dedupe(list_of_dicts):
