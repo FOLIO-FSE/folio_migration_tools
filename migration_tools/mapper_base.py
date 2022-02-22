@@ -288,7 +288,7 @@ class MapperBase:
             f"of type {type(excepion).__name__}"
         )
         logging.error(excepion, exc_info=True)
-        if self.num_exeptions > 500:
+        if self.num_exeptions > 50:
             logging.fatal(
                 "Stopping. More than %s unhandled exceptions. Code needs fixing",
                 self.num_exeptions,
