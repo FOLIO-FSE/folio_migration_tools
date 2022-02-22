@@ -1,18 +1,13 @@
 """ Class that processes each MARC record """
-import json
 import logging
-from typing import List
 
-from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
+from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
-from migration_tools.library_configuration import FolioRelease
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from migration_tools.report_blurbs import Blurbs
-from pymarc.field import Field
-from pymarc.leader import Leader
 from pymarc.record import Record
 
 
@@ -68,7 +63,15 @@ class BibsProcessor:
                 )
             if self.validate_instance(folio_rec, marc_record, legacy_ids):
                 Helper.write_to_file(self.results_file, folio_rec)
-                self.save_source_record(marc_record, folio_rec, legacy_ids, suppressed)
+                self.mapper.save_source_record(
+                    self.srs_records_file,
+                    FOLIONamespaces.instances,
+                    self.folio_client,
+                    marc_record,
+                    folio_rec,
+                    legacy_ids,
+                    suppressed,
+                )
                 self.mapper.migration_report.add_general_statistics(
                     "Records successfully transformed into FOLIO objects"
                 )
@@ -161,71 +164,3 @@ class BibsProcessor:
                     Helper.write_to_file(holdings_file, holding)
         self.srs_records_file.close()
         self.instance_id_map_file.close()
-
-    def save_source_record(
-        self, marc_record, instance, legacy_ids: List[str], suppress: bool
-    ):
-        """Saves the source Marc_record to the Source record Storage module"""
-        srs_id = str(
-            FolioUUID(
-                self.folio_client.okapi_url,
-                FOLIONamespaces.srs_records,
-                str(legacy_ids[0]),
-            )
-        )
-
-        marc_record.add_ordered_field(
-            Field(
-                tag="999",
-                indicators=["f", "f"],
-                subfields=["i", instance["id"], "s", srs_id],
-            )
-        )
-        # Since they all should be UTF encoded, make the leader align.
-        try:
-            temp_leader = Leader(marc_record.leader)
-            temp_leader[9] = "a"
-            marc_record.leader = temp_leader
-        except Exception:
-            logging.exception(
-                "Something is wrong with the marc records leader: %s",
-                marc_record.leader,
-            )
-        srs_record_string = get_srs_string(
-            (
-                marc_record,
-                instance,
-                srs_id,
-                self.folio_client.get_metadata_construct(),
-                suppress,
-            ),
-            self.mapper.library_configuration.folio_release,
-        )
-        self.srs_records_file.write(f"{srs_record_string}\n")
-
-
-def get_srs_string(my_tuple, folio_version):
-    my_tuple_json = my_tuple[0].as_json()
-    raw_record = {"id": my_tuple[2], "content": my_tuple_json}
-    parsed_record = {"id": my_tuple[2], "content": json.loads(my_tuple_json)}
-    record = {
-        "id": my_tuple[2],
-        "deleted": False,
-        "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
-        "matchedId": my_tuple[2],
-        "generation": 0,
-        "recordType": "MARC" if folio_version == FolioRelease.iris else "MARC_BIB",
-        "rawRecord": raw_record,
-        "parsedRecord": parsed_record,
-        "additionalInfo": {"suppressDiscovery": my_tuple[4]},
-        "externalIdsHolder": {
-            "instanceId": my_tuple[1]["id"],
-            "instanceHrid": my_tuple[1]["hrid"],
-        },
-        "metadata": my_tuple[3],
-        "state": "ACTUAL",
-        "leaderRecordStatus": parsed_record["content"]["leader"][5]
-        if parsed_record["content"]["leader"][5] in [*"acdnposx"]
-        else "d",
-    }
-    return f"{record['id']}\t{json.dumps(record)}"

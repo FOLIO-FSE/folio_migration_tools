@@ -5,7 +5,7 @@ import logging
 import sys
 from os import listdir
 from os.path import isfile
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -39,7 +39,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         mfhd_mapping_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
-        default_holdings_type_id: str
+        fallback_holdings_type_id: str
+        create_source_records: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -49,9 +50,10 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        super().__init__(library_config, task_config)
+        super().__init__(library_config, task_config, use_logging)
         self.instance_id_map = {}
         self.task_config = task_config
         self.holdings_types = list(
@@ -61,14 +63,14 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             (
                 h
                 for h in self.holdings_types
-                if h["id"] == self.task_config.default_holdings_type_id
+                if h["id"] == self.task_config.fallback_holdings_type_id
             ),
             "",
         )
         if not self.default_holdings_type:
             raise TransformationProcessError(
                 (
-                    f"Holdings type with ID {self.task_config.default_holdings_type_id}"
+                    f"Holdings type with ID {self.task_config.fallback_holdings_type_id}"
                     " not found in FOLIO."
                 )
             )
@@ -111,8 +113,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.folio_client,
             self.instance_id_map,
             location_map,
-            self.task_config.default_call_number_type_name,
-            self.task_config.default_holdings_type_id,
+            self.task_config,
+            self.library_configuration,
         )
         mapper.mappings = rules_file["rules"]
 

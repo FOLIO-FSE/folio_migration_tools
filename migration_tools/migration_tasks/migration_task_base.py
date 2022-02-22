@@ -1,5 +1,7 @@
+import csv
 from genericpath import isfile
 import logging
+from pathlib import Path
 import sys
 import time
 from abc import abstractmethod
@@ -26,6 +28,7 @@ class MigrationTaskBase:
         self,
         library_configuration: library_configuration.LibraryConfiguration,
         task_configuration,
+        use_logging: bool = True,
     ):
 
         print("MigrationTaskBase init")
@@ -55,7 +58,8 @@ class MigrationTaskBase:
             logging.critical("Halting...")
             sys.exit()
         self.num_exeptions: int = 0
-        self.setup_logging()
+        if use_logging:
+            self.setup_logging()
         self.folder_structure.log_folder_structure()
         print("MigrationTaskBase init done")
 
@@ -167,6 +171,20 @@ class MigrationTaskBase:
         logging.getLogger().addHandler(data_issue_file_handler)
         logger.info("Logging set up")
 
+    def setup_records_map(self, mapping_file_path):
+        with open(mapping_file_path) as mapping_file:
+            field_map = json.load(mapping_file)
+            logging.info("%s fields in mapping file map", len(field_map["data"]))
+            mapped_fields = (
+                f
+                for f in field_map["data"]
+                if f["legacy_field"] and f["legacy_field"] != "Not mapped"
+            )
+            logging.info(
+                "%s Mapped fields in mapping file map", len(list(mapped_fields))
+            )
+            return field_map
+
     @staticmethod
     def add_common_arguments(parser: PromptParser):
 
@@ -197,6 +215,48 @@ class MigrationTaskBase:
             logging.info(
                 f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} "
             )
+
+    def load_ref_data_mapping_file(
+        self,
+        folio_property_name: str,
+        map_file_path: Path,
+        folio_keys,
+        required: bool = True,
+    ):
+        if (
+            folio_property_name in folio_keys
+            or required
+            or folio_property_name.startswith("statisticalCodeIds")
+        ):
+            try:
+                with open(map_file_path) as map_file:
+                    ref_data_map = list(csv.DictReader(map_file, dialect="tsv"))
+                    logging.info(
+                        "Found %s rows in %s map",
+                        len(ref_data_map),
+                        folio_property_name,
+                    )
+                    logging.info(
+                        "%s will be used for determinig %s",
+                        ",".join(ref_data_map[0].keys()),
+                        folio_property_name,
+                    )
+                    return ref_data_map
+            except Exception as exception:
+                raise TransformationProcessError(
+                    f"{folio_property_name} not mapped in legacy->folio mapping file "
+                    f"({map_file_path}) ({exception}). Did you map this field, "
+                    "but forgot to add a mapping file?"
+                )
+        else:
+            logging.info("No mapping setup for %s", folio_property_name)
+            logging.info("%s will have default mapping if any ", folio_property_name)
+            logging.info(
+                "Add a file named %s and add the field to "
+                "the item.mapping.json file.",
+                map_file_path,
+            )
+            return None
 
 
 class ExcludeLevelFilter(logging.Filter):

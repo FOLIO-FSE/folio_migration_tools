@@ -1,13 +1,14 @@
 import pytest
-from migration_tools.library_configuration import HridHandling
+from migration_tools.library_configuration import (
+    FolioRelease,
+    HridHandling,
+    LibraryConfiguration,
+)
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from lxml import etree
 import pymarc
 import json
 import re
-from types import SimpleNamespace
-from collections import namedtuple
-from jsonschema import validate
 from folioclient.FolioClient import FolioClient
 from migration_tools.migration_tasks.bibs_transformer import BibsTransformer
 
@@ -28,10 +29,18 @@ def mapper(pytestconfig):
         files=[],
         ils_flavour="sierra",
     )
-    args_dict = {"suppress": False, "ils_flavour": "voyager"}
-    m = BibsRulesMapper(folio, SimpleNamespace(**args_dict), conf)
-
-    return m
+    lib = LibraryConfiguration(
+        okapi_url=pytestconfig.getoption("okapi_url"),
+        tenant_id=pytestconfig.getoption("tenant_id"),
+        okapi_username=pytestconfig.getoption("username"),
+        okapi_password=pytestconfig.getoption("password"),
+        folio_release=FolioRelease.kiwi,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="I have no clue",
+        base_folder="/",
+    )
+    return BibsRulesMapper(folio, lib, conf)
 
 
 def default_map(file_name, xpath, the_mapper):

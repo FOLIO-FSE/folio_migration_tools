@@ -1,8 +1,8 @@
 import logging
 import re
-import sys
 
 import pymarc
+from folioclient import FolioClient
 from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -18,7 +18,7 @@ from migration_tools.report_blurbs import Blurbs
 class Conditions:
     def __init__(
         self,
-        folio,
+        folio: FolioClient,
         mapper: RulesMapperBase,
         object_type,
         default_call_number_type_name="",
@@ -72,7 +72,7 @@ class Conditions:
         logging.info("%s\tholding_note_types", len(self.folio.holding_note_types))
         logging.info("%s\tcall_number_types", len(self.folio.call_number_types))
         self.holdings_types = list(
-            self.folio.folio_get_all("/holdings-types", "holdingsTypes")
+            self.folio.folio_get_all("/holdings-types", "holdingsTypes", "", 1000)
         )
         logging.info("%s\tholdings types", len(self.holdings_types))
         # Raise for empty settings
@@ -114,7 +114,7 @@ class Conditions:
         )
         logging.info(f"{len(self.folio.class_types)}\tclass_types")
         self.statistical_codes = list(
-            self.folio.folio_get_all("/statistical-codes", "statisticalCodes")
+            self.folio.folio_get_all("/statistical-codes", "statisticalCodes", "", 1000)
         )
         logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")
 
@@ -123,25 +123,36 @@ class Conditions:
             raise TransformationProcessError("", "No class_types in FOLIO")
 
     def get_condition(
-        self, name, value, parameter=None, marc_field: field.Field = None
+        self, name, legacy_id, value, parameter=None, marc_field: field.Field = None
     ):
         try:
-            return self.condition_cache.get(name)(value, parameter, marc_field)
+            return self.condition_cache.get(name)(
+                legacy_id, value, parameter, marc_field
+            )
         # Exception should only handle the missing condition from the cache.
         # All other exceptions should propagate up
         except Exception:
             attr = getattr(self, "condition_" + str(name))
             self.condition_cache[name] = attr
-            return attr(value, parameter, marc_field)
+            return attr(legacy_id, value, parameter, marc_field)
 
-    def condition_trim_period(self, value, parameter, marc_field: field.Field):
+    def condition_trim_period(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         return value.strip().rstrip(".").rstrip(",")
 
-    def condition_trim(self, value, parameter, marc_field: field.Field):
+    def condition_trim(self, legacy_id, value, parameter, marc_field: field.Field):
         return value.strip()
 
+    def condition_concat_subfields_by_name(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        subfields_to_concat = parameter.get("subfieldsToConcat", [])
+        concat_string = " ".join(marc_field.get_subfields(*subfields_to_concat))
+        return f"{value} {concat_string}"
+
     def condition_get_value_if_subfield_is_empty(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         if value.strip():
             return value.strip()
@@ -151,7 +162,9 @@ class Conditions:
         )
         return parameter["value"]
 
-    def condition_remove_ending_punc(self, value, parameter, marc_field: field.Field):
+    def condition_remove_ending_punc(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         v = value
         chars = ".;:,/+=- "
         while any(v) > 0 and v[-1] in chars:
@@ -159,7 +172,7 @@ class Conditions:
         return v
 
     def condition_set_instance_format_id(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         # This method only handles the simple case of 2-character codes of RDA in the first 338$b
         # Other cases are handled in performAddidtionalParsing in the mapper class
@@ -181,7 +194,7 @@ class Conditions:
             return ""
 
     def condition_remove_prefix_by_indicator(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         """Returns the index title according to the rules"""
         ind2 = marc_field.indicator2
@@ -192,17 +205,25 @@ class Conditions:
         num_take = int(ind2)
         return re.sub(reg_str, "", value[num_take:])
 
-    def condition_capitalize(self, value, parameter, marc_field: field.Field):
+    def condition_capitalize(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         return value.capitalize()
 
-    def condition_clean_isbn(self, value, parameter, marc_field: field.Field):
+    def condition_clean_isbn(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         return value
 
-    def condition_set_issuance_mode_id(self, value, parameter, marc_field: field.Field):
+    def condition_set_issuance_mode_id(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         # mode of issuance is handled elsewhere in the mapping.
         return ""
 
-    def condition_set_publisher_role(self, value, parameter, marc_field: field.Field):
+    def condition_set_publisher_role(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         roles = {
             "0": "Production",
             "1": "Publication",
@@ -218,7 +239,7 @@ class Conditions:
         return role
 
     def condition_set_identifier_type_id_by_value(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         if "oclc_regex" in parameter:
             if re.match(parameter["oclc_regex"], value):
@@ -247,12 +268,14 @@ class Conditions:
         my_id = identifier_type["id"]
         if not my_id:
             raise TransformationFieldMappingError(
-                "", f"no matching identifier_types in {parameter['names']}", marc_field
+                legacy_id,
+                f"no matching identifier_types in {parameter['names']}",
+                marc_field,
             )
         return my_id
 
     def condition_set_holding_note_type_id_by_name(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         try:
             t = self.get_ref_data_tuple_by_name(
@@ -263,14 +286,14 @@ class Conditions:
         except Exception as ee:
             logging.error(ee)
             raise TransformationRecordFailedError(
-                "unknown",
+                legacy_id,
                 f'Holdings note type mapping error.\tParameter: {parameter.get("name", "")}\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
             )
 
     def condition_set_classification_type_id(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         try:
             t = self.get_ref_data_tuple_by_name(
@@ -280,16 +303,20 @@ class Conditions:
             return t[0]
         except Exception:
             raise TransformationRecordFailedError(
-                "unknown",
+                legacy_id,
                 f'Classification mapping error.\tParameter: "{parameter.get("name", "")}"\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
             )
 
-    def condition_char_select(self, value, parameter, marc_field: field.Field):
+    def condition_char_select(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         return value[parameter["from"] : parameter["to"]]
 
-    def condition_set_receipt_status(self, value, parameter, marc_field: field.Field):
+    def condition_set_receipt_status(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         if len(value) < 7:
             self.mapper.migration_report.add(
                 Blurbs.ReceiptStatusMapping, f"008 is too short: {value}"
@@ -318,7 +345,7 @@ class Conditions:
             return "Unknown"
 
     def condition_set_identifier_type_id_by_name(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         try:
             t = self.get_ref_data_tuple_by_name(
@@ -330,14 +357,14 @@ class Conditions:
             return t[0]
         except Exception:
             raise TransformationRecordFailedError(
-                "",
+                legacy_id,
                 f'Unmapped identifier name type: "{parameter["name"]}"\tMARC Field: {marc_field}'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 {parameter["name"]},
             )
 
     def condition_set_contributor_name_type_id(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         try:
             t = self.get_ref_data_tuple_by_name(
@@ -353,7 +380,9 @@ class Conditions:
             )
             return self.default_contributor_name_type
 
-    def condition_set_note_type_id(self, value, parameter, marc_field: field.Field):
+    def condition_set_note_type_id(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
@@ -369,7 +398,7 @@ class Conditions:
             )
 
     def condition_set_contributor_type_id(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         for subfield in marc_field.get_subfields("4"):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
@@ -380,6 +409,11 @@ class Conditions:
                 self.mapper.migration_report.add(
                     Blurbs.ContributorTypeMapping,
                     f'Mapping failed for $4 "{subfield}" ({normalized_subfield}) ',
+                )
+                Helper.log_data_issue(
+                    legacy_id,
+                    "Mapping failed for $4",
+                    f'{subfield}" ({normalized_subfield}) ',
                 )
             else:
                 self.mapper.migration_report.add(
@@ -397,7 +431,12 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     Blurbs.ContributorTypeMapping,
-                    f'Mapping failed for $e "{normalized_subfield}" ({subfield}) ',
+                    f'Mapping failed for $e "{subfield}" ({normalized_subfield}) ',
+                )
+                Helper.log_data_issue(
+                    legacy_id,
+                    "Mapping failed for $e",
+                    f'{subfield}" ({normalized_subfield}) ',
                 )
             else:
                 self.mapper.migration_report.add(
@@ -408,7 +447,7 @@ class Conditions:
         return self.default_contributor_type["id"]
 
     def condition_set_instance_id_by_map(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         try:
             if value:
@@ -421,18 +460,20 @@ class Conditions:
             return ""
         except Exception:
             raise TransformationRecordFailedError(
-                "",
+                legacy_id,
                 "Old instance id not in map",
                 f"{marc_field.format_field()}",
             )
 
-    def condition_set_url_relationship(self, value, parameter, marc_field: field.Field):
+    def condition_set_url_relationship(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         return self._extracted_from_condition_set_electronic_access_relations_id_2(
             "8", marc_field
         )
 
     def condition_set_call_number_type_by_indicator(
-        self, value, parameter, marc_field: pymarc.Field
+        self, legacy_id, value, parameter, marc_field: pymarc.Field
     ):
         first_level_map = {
             "0": "Library of Congress classification",
@@ -486,7 +527,7 @@ class Conditions:
         return self.default_call_number_type["id"]
 
     def condition_set_contributor_type_text(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         for subfield in marc_field.get_subfields("4", "e"):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
@@ -495,7 +536,9 @@ class Conditions:
                     return cont_type["name"]
         return self.default_contributor_type["name"]
 
-    def condition_set_alternative_title_type_id(self, value, parameter, marc_field):
+    def condition_set_alternative_title_type_id(
+        self, legacy_id, value, parameter, marc_field
+    ):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.alt_title_types, "alt_title_types", parameter["name"]
@@ -504,7 +547,8 @@ class Conditions:
             return t[0]
         except Exception:
             raise TransformationProcessError(
-                f"Alternative title type not found for {parameter['name']} {marc_field}"
+                legacy_id,
+                f"Alternative title type not found for {parameter['name']} {marc_field}",
             )
 
     def setup_location_code_from_second_column(self):
@@ -528,7 +572,21 @@ class Conditions:
             raise TransformationProcessError("", f"{ee}", self.mapper.location_map)
 
     def condition_set_location_id_by_code(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        self.mapper.migration_report.add(
+            Blurbs.Exceptions,
+            (
+                "set_location_id_by_code condition used in rules. "
+                "Deprecated condition. Switch to set_permanent_location_id"
+            ),
+        )
+        return self.condition_set_permanent_location_id(
+            legacy_id, value, parameter, marc_field
+        )
+
+    def condition_set_permanent_location_id(
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
@@ -541,7 +599,7 @@ class Conditions:
             except KeyError as ke:
                 if "folio_code" in str(ke):
                     raise TransformationProcessError(
-                        "Your location map lacks the column folio_code"
+                        legacy_id, "Your location map lacks the column folio_code"
                     )
                 if "legacy_code" in str(ke):
                     logging.info(
@@ -559,30 +617,20 @@ class Conditions:
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value.strip()
         # Get the FOLIO UUID for the code and return it
-        try:
-            t = self.get_ref_data_tuple_by_code(
-                self.folio.locations, "locations", mapped_code
-            )
+        t = self.get_ref_data_tuple_by_code(
+            self.folio.locations, "locations", mapped_code
+        )
+        if not t:
             self.mapper.migration_report.add(
-                Blurbs.LocationMapping, f"'{value}' ({mapped_code}) -> {t[1]}"
+                Blurbs.LocationMapping, f"Unmapped code: '{value}'"
             )
-            return t[0]
-        except TransformationProcessError as tpe:
-            logging.critical(tpe)
-            sys.exit()
-        except Exception:
-            t = self.get_ref_data_tuple_by_code(
-                self.folio.locations, "locations", parameter["unspecifiedLocationCode"]
+            raise TransformationRecordFailedError(
+                legacy_id, "Could not map location from legacy code", value
             )
-            if not t:
-                raise TransformationProcessError(
-                    f"DefaultLocation not found: {parameter['unspecifiedLocationCode']} {marc_field}"
-                )
-            self.mapper.migration_report.add(
-                Blurbs.LocationMapping,
-                f"Unmapped. Set default location. '{value}' ({mapped_code}) -> {t[1]}",
-            )
-            return t[0]
+        self.mapper.migration_report.add(
+            Blurbs.LocationMapping, f"'{value}' ({mapped_code}) -> {t[1]}"
+        )
+        return t[0]
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
@@ -602,10 +650,14 @@ class Conditions:
         self.ref_data_dicts[dict_key] = d
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())
 
-    def condition_remove_substring(self, value, parameter, marc_field: field.Field):
+    def condition_remove_substring(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         return value.replace(parameter["substring"], "")
 
-    def condition_set_instance_type_id(self, value, parameter, marc_field: field.Field):
+    def condition_set_instance_type_id(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         if marc_field.tag not in ["008", "336"]:
             self.mapper.migration_report.add(
                 Blurbs.InstanceTypeMapping,
@@ -617,7 +669,7 @@ class Conditions:
         return ""  # functionality moved
 
     def condition_set_electronic_access_relations_id(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         return self._extracted_from_condition_set_electronic_access_relations_id_2(
             "3", marc_field
@@ -649,7 +701,7 @@ class Conditions:
         return t[0]
 
     def condition_set_note_staff_only_via_indicator(
-        self, value, parameter, marc_field: field.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         """Returns true of false depending on the first indicator"""
         # https://www.loc.gov/marc/bibliographic/bd541.html

@@ -29,8 +29,8 @@ class IlsFlavour(str, Enum):
 
 
 class FolioRelease(str, Enum):
+    kiwi = "kiwi"
     juniper = "juniper"
-    iris = "iris"
 
 
 class LibraryConfiguration(BaseModel):
@@ -44,6 +44,8 @@ class LibraryConfiguration(BaseModel):
             "Should ideally be a github clone of the migration_repo_template"
         )
     )
+    failed_records_threshold: Optional[int] = 5000
+    failed_percentage_threshold: Optional[int] = 20
     library_name: str
     log_level_debug: bool
     folio_release: FolioRelease = Field(

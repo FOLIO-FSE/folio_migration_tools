@@ -1,4 +1,4 @@
-import uuid
+import logging
 from typing import List
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -11,6 +11,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.marc_rules_transformation.conditions import Conditions
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -25,27 +26,30 @@ class RulesMapperHoldings(RulesMapperBase):
         folio,
         instance_id_map,
         location_map,
-        default_call_number_type_name,
-        default_holdings_type_id,
+        task_configuration,
+        library_configuration: LibraryConfiguration,
     ):
         self.instance_id_map = instance_id_map
+        self.task_configuration = task_configuration
         self.conditions = Conditions(
             folio,
             self,
             "holdings",
-            default_call_number_type_name,
+            self.task_configuration.default_call_number_type_name,
         )
         self.folio = folio
-        super().__init__(folio, self.conditions)
+        super().__init__(folio, library_configuration, self.conditions)
         self.location_map = location_map
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        self.default_holdings_type_id = default_holdings_type_id
+        self.fallback_holdings_type_id = (
+            self.task_configuration.fallback_holdings_type_id
+        )
 
-    def parse_hold(self, marc_record, index_or_legacy_id, inventory_only=False):
+    def parse_hold(self, marc_record, index_or_legacy_id):
         """Parses a mfhd recod into a FOLIO Inventory instance object
-        Community mapping suggestion: https://docs.google.com/spreadsheets/d/1ac95azO1R41_PGkeLhc6uybAKcfpe6XLyd9-F4jqoTo/edit#gid=301923972
+        Community mapping suggestion: https://tinyurl.com/3rh52e2x
          This is the main function"""
         self.print_progress()
         folio_holding = {
@@ -53,9 +57,11 @@ class RulesMapperHoldings(RulesMapperBase):
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
         ignored_subsequent_fields = set()
-
+        num_852s = 0
         for marc_field in marc_record:
             try:
+                if marc_field.tag == "852":
+                    num_852s += 1
                 self.process_marc_field(
                     marc_field,
                     ignored_subsequent_fields,
@@ -64,6 +70,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 )
             except TransformationFieldMappingError as tfme:
                 tfme.log_it()
+        if num_852s > 1:
+            Helper.log_data_issue(index_or_legacy_id, "More than 1 852 found", "")
         if not folio_holding.get("formerIds", []):
             raise TransformationProcessError(
                 self.parsed_records,
@@ -123,12 +131,11 @@ class RulesMapperHoldings(RulesMapperBase):
         """Perform additional tasks not easily handled in the mapping rules"""
         self.set_holdings_type(marc_record, folio_holding, legacy_ids)
         self.set_default_call_number_type_if_empty(folio_holding)
-        self.set_default_location_if_empty(folio_holding)
         self.pick_first_location_if_many(folio_holding, legacy_ids)
         self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
 
     def pick_first_location_if_many(self, folio_holding, legacy_ids):
-        if " " in folio_holding["permanentLocationId"]:
+        if " " in folio_holding.get("permanentLocationId", ""):
             Helper.log_data_issue(
                 "".join(legacy_ids),
                 "Space in permanentLocationId. Was this MFHD attached to multiple holdings?",
@@ -160,6 +167,10 @@ class RulesMapperHoldings(RulesMapperBase):
             except TransformationFieldMappingError as tfme:
                 Helper.log_data_issue(tfme.index_or_id, tfme.message, tfme.data_value)
                 self.migration_report.add(Blurbs.FieldMappingErrors, tfme.message)
+
+    def wrap_up(self):
+        logging.info("Mapper wrapping up")
+        self.store_hrid_settings()
 
     def set_holdings_type(self, marc_record: Record, folio_holding, legacy_ids):
         # Holdings type mapping
@@ -198,11 +209,11 @@ class RulesMapperHoldings(RulesMapperBase):
                         ldr06,
                     )
             else:
-                if not self.default_holdings_type_id:
+                if not self.fallback_holdings_type_id:
                     raise TransformationProcessError(
-                        "No default_holdings_type_id set up. Add to task configuration"
+                        "No fallbackHoldingsTypeId set up. Add to task configuration"
                     )
-                folio_holding["holdingsTypeId"] = self.default_holdings_type_id
+                folio_holding["holdingsTypeId"] = self.fallback_holdings_type_id
                 self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
@@ -218,16 +229,6 @@ class RulesMapperHoldings(RulesMapperBase):
             folio_holding[
                 "callNumberTypeId"
             ] = self.conditions.default_call_number_type["id"]
-
-    def set_default_location_if_empty(self, folio_holding):
-        if not folio_holding.get("permanentLocationId", ""):
-            Helper.log_data_issue(
-                "",
-                "Record location mapping failed. Setting Default mapping",
-                ":".join(folio_holding.get("formerIds", [])),
-            )
-            folio_holding["permanentLocationId"] = self.conditions.default_location_id
-        # special weird case. Likely needs fixing in the mapping rules.
 
     def remove_from_id_map(self, former_ids):
         """removes the ID from the map in case parsing failed"""

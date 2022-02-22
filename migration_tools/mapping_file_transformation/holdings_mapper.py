@@ -3,6 +3,7 @@ import ast
 from folioclient import FolioClient
 from folio_uuid.folio_uuid import FOLIONamespaces
 from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -18,6 +19,7 @@ class HoldingsMapper(MappingFileMapperBase):
         location_map,
         call_number_type_map,
         instance_id_map,
+        library_configuration: LibraryConfiguration,
         statistical_codes_map=None,
     ):
         holdings_schema = folio_client.get_holdings_schema()
@@ -28,11 +30,17 @@ class HoldingsMapper(MappingFileMapperBase):
             holdings_map,
             statistical_codes_map,
             FOLIONamespaces.holdings,
+            library_configuration,
         )
         self.holdings_map = holdings_map
 
         self.location_mapping = RefDataMapping(
-            self.folio_client, "/locations", "locations", location_map, "code"
+            self.folio_client,
+            "/locations",
+            "locations",
+            location_map,
+            "code",
+            Blurbs.LocationMapping,
         )
         if call_number_type_map:
             self.call_number_mapping = RefDataMapping(
@@ -41,6 +49,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 "callNumberTypes",
                 call_number_type_map,
                 "name",
+                Blurbs.CallNumberTypeMapping,
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
@@ -49,7 +58,11 @@ class HoldingsMapper(MappingFileMapperBase):
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
         # IF there is a value mapped, return that one
         if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            return self.mapped_from_values.get(folio_prop_name, "")
+            value = self.mapped_from_values.get(folio_prop_name, "")
+            self.migration_report.add(
+                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
+            )
+            return value
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )

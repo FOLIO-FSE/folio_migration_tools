@@ -8,6 +8,7 @@ from uuid import uuid4
 from folioclient import FolioClient
 from folio_uuid.folio_uuid import FOLIONamespaces
 from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -30,6 +31,7 @@ class ItemMapper(MappingFileMapperBase):
         item_statuses_map,
         temporary_loan_type_mapping,
         temporary_location_mapping,
+        library_configuration: LibraryConfiguration,
     ):
         item_schema = folio_client.get_item_schema()
         super().__init__(
@@ -38,6 +40,7 @@ class ItemMapper(MappingFileMapperBase):
             items_map,
             statistical_codes_map,
             FOLIONamespaces.items,
+            library_configuration,
         )
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
@@ -53,6 +56,7 @@ class ItemMapper(MappingFileMapperBase):
                 "loantypes",
                 temporary_loan_type_mapping,
                 "name",
+                Blurbs.TemporaryLoanTypeMapping,
             )
         if temporary_location_mapping:
             self.temp_location_mapping = RefDataMapping(
@@ -61,6 +65,7 @@ class ItemMapper(MappingFileMapperBase):
                 "locations",
                 temporary_location_mapping,
                 "code",
+                Blurbs.TemporaryLocationMapping,
             )
 
         if item_statuses_map:
@@ -72,17 +77,33 @@ class ItemMapper(MappingFileMapperBase):
                 "callNumberTypes",
                 call_number_type_map,
                 "name",
+                Blurbs.CallNumberTypeMapping,
             )
         self.loan_type_mapping = RefDataMapping(
-            self.folio_client, "/loan-types", "loantypes", loan_type_map, "name"
+            self.folio_client,
+            "/loan-types",
+            "loantypes",
+            loan_type_map,
+            "name",
+            Blurbs.PermanentLoanTypeMapping,
         )
 
         self.material_type_mapping = RefDataMapping(
-            self.folio_client, "/material-types", "mtypes", material_type_map, "name"
+            self.folio_client,
+            "/material-types",
+            "mtypes",
+            material_type_map,
+            "name",
+            Blurbs.MaterialTypeMapping,
         )
 
         self.location_mapping = RefDataMapping(
-            self.folio_client, "/locations", "locations", location_map, "code"
+            self.folio_client,
+            "/locations",
+            "locations",
+            location_map,
+            "code",
+            Blurbs.LocationMapping,
         )
 
     def perform_additional_mappings(self):
@@ -133,8 +154,11 @@ class ItemMapper(MappingFileMapperBase):
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
         # IF there is a value mapped, return that one
         if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            return self.mapped_from_values.get(folio_prop_name, "")
-
+            value = self.mapped_from_values.get(folio_prop_name, "")
+            self.migration_report.add(
+                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
+            )
+            return value
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )

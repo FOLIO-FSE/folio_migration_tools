@@ -20,6 +20,7 @@ from migration_tools.custom_exceptions import (
 )
 from migration_tools.helper import Helper
 from migration_tools.library_configuration import (
+    FolioRelease,
     HridHandling,
     IlsFlavour,
     LibraryConfiguration,
@@ -42,10 +43,12 @@ class BibsRulesMapper(RulesMapperBase):
         library_configuration: LibraryConfiguration,
         task_configuration,
     ):
-        super().__init__(folio_client, Conditions(folio_client, self, "bibs"))
-        self.hrid_path = "/hrid-settings-storage/hrid-settings"
+        super().__init__(
+            folio_client,
+            library_configuration,
+            Conditions(folio_client, self, "bibs"),
+        )
         self.folio = folio_client
-        self.library_configuration: LibraryConfiguration = library_configuration
         self.task_configuration = task_configuration
         self.record_status = {}
         self.unique_001s = set()
@@ -62,17 +65,18 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.hrid_handling: HridHandling = self.task_configuration.hrid_handling
         logging.info("Fetching mapping rules from the tenant")
-        self.mappings = self.folio.folio_get_single_object("/mapping-rules")
+        rules_endpoint = (
+            "/mapping-rules"
+            if self.library_configuration.folio_release == FolioRelease.juniper
+            else "/mapping-rules/marc-bib"
+        )
+        self.mappings = self.folio.folio_get_single_object(rules_endpoint)
         logging.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
         self.unmapped_tags = {}
         self.unmapped_conditions = {}
         self.instance_relationships = {}
         self.instance_relationship_types = {}
-        self.hrid_settings = self.folio.folio_get_single_object(self.hrid_path)
-        self.hrid_prefix = self.hrid_settings["instances"]["prefix"]
-        self.hrid_counter = self.hrid_settings["instances"]["startNumber"]
-        logging.info(f"Fetched HRID settings. HRID prefix is {self.hrid_prefix}")
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio)
         self.start = time.time()
 
@@ -156,6 +160,7 @@ class BibsRulesMapper(RulesMapperBase):
                             "legacy_id": legacy_id,
                             "folio_id": folio_instance["id"],
                             "instanceLevelCallNumber": instance_level_call_number,
+                            "instance_hrid": folio_instance["hrid"],
                             "suppressed": suppressed,
                         }
                     )
@@ -163,7 +168,12 @@ class BibsRulesMapper(RulesMapperBase):
             elif legacy_id:
                 id_map_strings.append(
                     json.dumps(
-                        {"legacy_id": legacy_id, "folio_id": folio_instance["id"]}
+                        {
+                            "legacy_id": legacy_id,
+                            "folio_id": folio_instance["id"],
+                            "instance_hrid": folio_instance["hrid"],
+                            "suppressed": suppressed,
+                        }
                     )
                 )
             else:
@@ -294,24 +304,7 @@ class BibsRulesMapper(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
-        logging.info("Setting HRID counter to current +1")
-        self.hrid_settings["instances"]["startNumber"] = self.hrid_counter + 1
-        try:
-            url = self.folio_client.okapi_url + self.hrid_path
-            resp = requests.put(
-                url,
-                data=json.dumps(self.hrid_settings),
-                headers=self.folio_client.okapi_headers,
-            )
-            resp.raise_for_status()
-            logging.info("%s Successfully set HRID settings.", resp.status_code)
-            a = self.folio_client.folio_get_single_object(self.hrid_path)
-            logging.info("Current hrid settings: %s", json.dumps(a, indent=4))
-        except Exception:
-            logging.exception(
-                f"Something went wrong when setting the HRID settings. "
-                f"Update them manually. {json.dumps(self.hrid_settings)}"
-            )
+        self.store_hrid_settings()
 
     def report_bad_tags(self, marc_field, bad_tags, legacy_ids):
         if (
@@ -380,12 +373,12 @@ class BibsRulesMapper(RulesMapperBase):
             if not t:
                 self.migration_report.add(
                     Blurbs.RecourceTypeMapping,
-                    f"336$b - Code {f336_b_norm} not found in FOLIO ({f336_b})",
+                    f"336$b - Code {f336_b_norm} ('{f336_b}') not found in FOLIO ",
                 )
                 Helper.log_data_issue(
                     legacy_id,
                     "instance type code (336$b) not found in FOLIO",
-                    f336_b_norm,
+                    f336_b,
                 )
             else:
                 self.migration_report.add(
@@ -420,7 +413,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
                 self.migration_report.add(
                     Blurbs.InstanceFormat,
-                    f"Code {code} not found in FOLIO",
+                    f"Code '{code}' not found in FOLIO",
                 )
                 return ""
 
@@ -515,8 +508,8 @@ class BibsRulesMapper(RulesMapperBase):
     def handle_hrid(self, folio_instance, marc_record: Record, legacy_ids) -> None:
         """Create HRID if not mapped. Add hrid as MARC record 001"""
         if self.hrid_handling == HridHandling.default or "001" not in marc_record:
-            num_part = str(self.hrid_counter).zfill(11)
-            folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
+            num_part = str(self.instance_hrid_counter).zfill(11)
+            folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             try:
                 f_001 = marc_record["001"].value()
@@ -535,7 +528,7 @@ class BibsRulesMapper(RulesMapperBase):
                     str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
                     new_035 = Field(
                         tag="035",
-                        indicators=["0", "0"],
+                        indicators=[" ", " "],
                         subfields=["a", str_035],
                     )
                     marc_record.add_ordered_field(new_035)
@@ -555,7 +548,7 @@ class BibsRulesMapper(RulesMapperBase):
             self.migration_report.add(
                 Blurbs.HridHandling, "Created HRID using default settings"
             )
-            self.hrid_counter += 1
+            self.instance_hrid_counter += 1
         elif self.hrid_handling == HridHandling.preserve001:
             value = marc_record["001"].value()
             if value in self.unique_001s:
@@ -567,11 +560,11 @@ class BibsRulesMapper(RulesMapperBase):
                     "Duplicate 001 for record. HRID created for record",
                     value,
                 )
-                num_part = str(self.hrid_counter).zfill(11)
-                folio_instance["hrid"] = f"{self.hrid_prefix}{num_part}"
+                num_part = str(self.instance_hrid_counter).zfill(11)
+                folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
                 new_001 = Field(tag="001", data=folio_instance["hrid"])
                 marc_record.add_ordered_field(new_001)
-                self.hrid_counter += 1
+                self.instance_hrid_counter += 1
             else:
                 self.unique_001s.add(value)
                 folio_instance["hrid"] = value
@@ -738,7 +731,7 @@ class BibsRulesMapper(RulesMapperBase):
                 return list(res)
         elif ils_flavour == IlsFlavour.aleph:
             return self.get_aleph_bib_id(marc_record)
-        elif ils_flavour in {IlsFlavour.voyager, "voyager", "001"}:
+        elif ils_flavour in {IlsFlavour.voyager, "voyager", IlsFlavour.tag001}:
             try:
                 return [marc_record["001"].format_field().strip()]
             except Exception:
