@@ -119,7 +119,7 @@ class RulesMapperHoldings(RulesMapperBase):
         elif marc_field.tag not in ignored_subsequent_fields:
             mappings = self.mappings[marc_field.tag]
             self.map_field_according_to_mapping(
-                marc_field, mappings, folio_holding, index_or_legacy_id
+                marc_field, mappings, folio_holding, [index_or_legacy_id]
             )
             self.report_legacy_mapping(marc_field.tag, True, True)
             if any(m.get("ignoreSubsequentFields", False) for m in mappings):
