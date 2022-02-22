@@ -43,7 +43,9 @@ class RulesMapperHoldings(RulesMapperBase):
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        self.default_holdings_type_id = self.task_configuration.default_holdings_type_id
+        self.fallback_holdings_type_id = (
+            self.task_configuration.fallback_holdings_type_id
+        )
 
     def parse_hold(self, marc_record, index_or_legacy_id):
         """Parses a mfhd recod into a FOLIO Inventory instance object
@@ -207,11 +209,11 @@ class RulesMapperHoldings(RulesMapperBase):
                         ldr06,
                     )
             else:
-                if not self.default_holdings_type_id:
+                if not self.fallback_holdings_type_id:
                     raise TransformationProcessError(
-                        "No default_holdings_type_id set up. Add to task configuration"
+                        "No fallbackHoldingsTypeId set up. Add to task configuration"
                     )
-                folio_holding["holdingsTypeId"] = self.default_holdings_type_id
+                folio_holding["holdingsTypeId"] = self.fallback_holdings_type_id
                 self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",

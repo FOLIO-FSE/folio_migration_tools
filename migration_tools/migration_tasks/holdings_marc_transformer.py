@@ -39,7 +39,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         mfhd_mapping_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
-        default_holdings_type_id: str
+        fallback_holdings_type_id: str
         create_source_records: Optional[bool] = False
 
     @staticmethod
@@ -63,14 +63,14 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             (
                 h
                 for h in self.holdings_types
-                if h["id"] == self.task_config.default_holdings_type_id
+                if h["id"] == self.task_config.fallback_holdings_type_id
             ),
             "",
         )
         if not self.default_holdings_type:
             raise TransformationProcessError(
                 (
-                    f"Holdings type with ID {self.task_config.default_holdings_type_id}"
+                    f"Holdings type with ID {self.task_config.fallback_holdings_type_id}"
                     " not found in FOLIO."
                 )
             )

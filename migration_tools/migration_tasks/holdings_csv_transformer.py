@@ -45,7 +45,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         holdings_map_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
-        default_holdings_type_id: str
+        fallback_holdings_type_id: str
         holdings_type_uuid_for_boundwiths: Optional[str]
         call_number_type_map_file_name: Optional[str]
         holdings_merge_criteria: Optional[str] = "clb"
@@ -94,13 +94,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.default_holdings_type = next(
                 h
                 for h in self.holdings_types
-                if h["id"] == self.task_config.default_holdings_type_id
+                if h["id"] == self.task_config.fallback_holdings_type_id
             )
             if not self.default_holdings_type:
                 raise TransformationProcessError(
                     (
                         "Holdings type with ID "
-                        f"{self.task_config.default_holdings_type_id} "
+                        f"{self.task_config.fallback_holdings_type_id} "
                         "not found in FOLIO."
                     )
                 )
@@ -220,12 +220,15 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             start = time.time()
             records_processed = 0
-            for idx, record in enumerate(
+            for idx, legacy_record in enumerate(
                 self.mapper.get_objects(records_file, file_name)
             ):
                 records_processed = idx + 1
                 try:
-                    self.process_holding(idx, record)
+                    folio_rec, legacy_id = self.mapper.do_map(
+                        legacy_record, f"row # {idx}", FOLIONamespaces.holdings
+                    )
+                    self.post_process_holding(folio_rec, legacy_id)
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -248,10 +251,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 f"Total records processed: {self.total_records:,}"
             )
 
-    def process_holding(self, idx, row):
-        folio_rec, legacy_id = self.mapper.do_map(
-            row, f"row # {idx}", FOLIONamespaces.holdings
-        )
+    def post_process_holding(self, folio_rec: dict, legacy_id: str):
         folio_rec["holdingsTypeId"] = self.default_holdings_type["id"]
         holdings_from_row = []
         if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
