@@ -110,8 +110,8 @@ class RefDataMapping(object):
             raise TransformationProcessError(
                 f"Column folio_{self.key_type} missing from {self.name} map file"
             )
-        folio_values_from_map = (f[f"folio_{self.key_type}"] for f in self.map)
-        folio_values_from_folio = (r[self.key_type] for r in self.ref_data)
+        folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
+        folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
         folio_values_not_in_map = list(
             {f for f in folio_values_from_folio if f not in folio_values_from_map}
         )
