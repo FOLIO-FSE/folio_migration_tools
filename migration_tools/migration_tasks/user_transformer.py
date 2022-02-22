@@ -238,16 +238,6 @@ class UserTransformer(MigrationTaskBase):
             if not primary_address_exists:
                 addresses[0]["primaryAddress"] = True
 
-    @staticmethod
-    @abstractmethod
-    def add_arguments(parser):
-        MigrationTaskBase.add_common_arguments(parser)
-        MigrationTaskBase.add_argument(
-            parser,
-            "client_folder",
-            "Client folder for current migration. Assumes a certain folder structure.",
-        )
-
 
 def print_email_warning():
     s = (
