@@ -157,7 +157,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 index_or_id, "No instance id mapped from", legacy_value
             )
 
-    def get_legacy_bib_ids(self, legacy_value: str, index_or_id: str):
+    def get_legacy_bib_ids(self, legacy_value: str, index_or_id: str) -> list[str]:
         if not legacy_value.startswith("["):
             return [legacy_value]
         try:

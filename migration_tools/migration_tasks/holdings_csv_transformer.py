@@ -18,6 +18,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
+from migration_tools.holdings_helper import HoldingsHelper
 from migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -27,8 +28,11 @@ from migration_tools.mapping_file_transformation.holdings_mapper import Holdings
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from migration_tools.migration_report import MigrationReport
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic.main import BaseModel
+
+from migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
@@ -46,7 +50,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         fallback_holdings_type_id: str
         holdings_type_uuid_for_boundwiths: Optional[str]
         call_number_type_map_file_name: Optional[str]
-        holdings_merge_criteria: Optional[str] = "clb"
+        holdings_merge_criteria: Optional[list[str]] = [
+            "instanceId",
+            "permanentLocationId",
+            "callNumber",
+        ]
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -77,17 +85,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.holdings_id_map = self.load_id_map(
                 self.folder_structure.holdings_id_map_path
             )
-            if "_" in self.task_config.holdings_merge_criteria:
-                self.excluded_hold_type_id = (
-                    self.task_config.holdings_merge_criteria.split("_")[-1]
-                )
-                logging.info(self.excluded_hold_type_id)
 
             self.results_path = self.folder_structure.created_objects_path
             self.holdings_types = list(
                 self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
             )
             logging.info("%s\tholdings types in tenant", len(self.holdings_types))
+            self.validate_merge_criterias()
 
             self.fallback_holdings_type = next(
                 h
@@ -250,6 +254,26 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         logging.info("All done!")
 
+    def validate_merge_criterias(self):
+        holdings_schema = self.folio_client.get_holdings_schema()
+        properties = holdings_schema["properties"].keys()
+        print(properties)
+        print(self.task_config.holdings_merge_criteria)
+        res = [
+            mc
+            for mc in self.task_config.holdings_merge_criteria
+            if mc not in properties
+        ]
+        if any(res):
+            logging.critical(
+                (
+                    "Merge criteria(s) is not a property of a holdingsrecord: %s"
+                    "check the merge criteria names and try again"
+                ),
+                ", ".join(res),
+            )
+            sys.exit()
+
     def process_single_file(self, file_name):
         with open(file_name, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
@@ -292,7 +316,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             folio_rec["holdingsTypeId"] = self.fallback_holdings_type["id"]
 
         holdings_from_row = []
-        if len(folio_rec.get("instanceId", [])) == 1:  # Normal case.
+        all_instance_ids = folio_rec.get("instanceId", [])
+        if len(all_instance_ids) == 1:  # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
             holdings_from_row.append(folio_rec)
 
@@ -305,9 +330,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 legacy_id, "No instance id in parsed record", ""
             )
         for folio_holding in holdings_from_row:
-            self.merge_holding_in(
-                folio_holding, folio_rec.get("instanceId", []), legacy_id
-            )
+            self.merge_holding_in(folio_holding, all_instance_ids, legacy_id)
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
@@ -405,58 +428,21 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     legacy_id, self.holdings[bw_key]
                 )
         else:  # Regular
-            new_holding_key = self.to_key(
-                new_folio_holding, self.task_config.holdings_merge_criteria
+            new_holding_key = HoldingsHelper.to_key(
+                new_folio_holding,
+                self.task_config.holdings_merge_criteria,
+                self.mapper.migration_report,
             )
-            existing_holding = self.holdings.get(new_holding_key, None)
-            exclude = (
-                self.task_config.holdings_merge_criteria.startswith("u_")
-                and new_folio_holding["holdingsTypeId"] == self.excluded_hold_type_id
-            )
-            if exclude or not existing_holding:
-                self.mapper.migration_report.add_general_statistics(
-                    "Unique Holdings created from Items"
-                )
-                self.holdings[new_holding_key] = new_folio_holding
-            else:
+            if self.holdings.get(new_holding_key, None):
                 self.mapper.migration_report.add_general_statistics(
                     "Holdings already created from Item"
                 )
                 self.merge_holding(new_holding_key, new_folio_holding)
-
-    @staticmethod
-    def to_key(holdings_record: dict, fields_criteria: str) -> str:
-        """Creates a key from values determined by the fields_crieteria in a holding
-        record to determine uniquenes
-
-        Args:
-            holdings_record (dict): The Holdingsrecord
-            fields_criteria (str): the criteria. c = callnumber, l = location, b = instance id
-
-        Raises:
-            exception: _description_
-
-        Returns:
-            str: The generated key
-        """
-
-        try:
-            # creates a key of key values in holding record to determine uniquenes
-            call_number = (
-                "".join(holdings_record.get("callNumber", "").split())
-                if "c" in fields_criteria
-                else ""
-            )
-            instance_id = (
-                holdings_record["instanceId"] if "b" in fields_criteria else ""
-            )
-            location_id = (
-                holdings_record["permanentLocationId"] if "l" in fields_criteria else ""
-            )
-            return "-".join([instance_id, call_number, location_id, ""])
-        except Exception as exception:
-            logging.error(json.dumps(holdings_record, indent=4))
-            raise exception from exception
+            else:
+                self.mapper.migration_report.add_general_statistics(
+                    "Unique Holdings created from Items"
+                )
+                self.holdings[new_holding_key] = new_folio_holding
 
     def merge_holding(self, holdings_key: str, new_holdings_record: dict):
         """Merge an incoming holding with an existing holding
