@@ -328,15 +328,25 @@ class MappingFileMapperBase(MapperBase):
             folio_object[property_name_level1] = temp_object
 
     def map_objects_array_props(
-        self, legacy_object, prop_name, properties, folio_object, index_or_id
+        self,
+        legacy_object,
+        prop_name: str,
+        sub_properties,
+        folio_object: dict,
+        index_or_id,
     ):
         resulting_array = []
-        for i in range(9):
+        keys_to_map = {
+            k.split(".")[0] for k in self.folio_keys if k.startswith(prop_name)
+        }
+        for object_key in keys_to_map:
             temp_object = {}
             for prop in (
-                k for k, p in properties.items() if not p.get("folio:isVirtual", False)
+                k
+                for k, p in sub_properties.items()
+                if not p.get("folio:isVirtual", False)
             ):
-                prop_path = f"{prop_name}[{i}].{prop}"
+                prop_path = f"{object_key}.{prop}"
                 if prop_path in self.folio_keys:
                     res = self.get_prop(legacy_object, prop_path, index_or_id)
                     self.report_legacy_mapping(
@@ -348,14 +358,12 @@ class MappingFileMapperBase(MapperBase):
                 (v or (isinstance(v, bool)) for k, v in temp_object.items())
             ):
                 resulting_array.append(temp_object)
-            # else:
-            #    logging..trace(f"empty temp object {json.dumps(temp_object, indent=4)}")
         if any(resulting_array):
             folio_object[prop_name] = resulting_array
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
-        for i in range(9):
-            prop_name = f"{prop}[{i}]"
+        keys_to_map = [k for k in self.folio_keys if k.startswith(prop)]
+        for prop_name in keys_to_map:
             if prop_name in self.folio_keys and self.has_property(
                 legacy_object, prop_name
             ):
