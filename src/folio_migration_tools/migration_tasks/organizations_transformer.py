@@ -25,7 +25,7 @@ from migration_tools.library_configuration import (
 )
 
 # TODO Create OrganizationMapper 
-# TODO from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
+from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -71,16 +71,13 @@ class OrganizationsTransformer(MigrationTaskBase):
             logging.info("\t%s", filename.file_name)
         
         self.total_records = 0
-        self.folio_keys = []
-        self.items_map = self.setup_records_map()
-        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
-            self.items_map
+        self.items_map = self.setup_records_map(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.items_mapping_file_name
         )
-        self.failed_files: List[str] = list()
     
     def wrap_up(self):
         logging.info("Wrapping up!")
-
 
     def do_work(self):
         logging.info("Getting started!")
@@ -137,14 +134,37 @@ class OrganizationsTransformer(MigrationTaskBase):
         }
         '''
 
+    def process_single_file(self, file_name):
+        with open(file_name, encoding="utf-8-sig") as records_file:
+            self.mapper.migration_report.add_general_statistics(
+                "Number of files processed"
+            )
+            start = time.time()
+            records_processed = 0
+            for idx, record in enumerate(
+                self.mapper.get_objects(records_file, file_name)
+            ):
+                records_processed = idx + 1
+                try:
+                    self.process_holding(idx, record)
 
-    def do_actual_work(self, filename):
-        for i in range(1,5):
-            logging.info(i)
-            try:
-                if i == 2:
-                    raise TransformationRecordFailedError("","I like everyone equally", str(i))
-            except TransformationRecordFailedError as trfe:
-                trfe.log_it()
-
-        raise TransformationProcessError("","Error reading file with name", filename.file_name)
+                except TransformationProcessError as process_error:
+                    self.mapper.handle_transformation_process_error(idx, process_error)
+                except TransformationRecordFailedError as error:
+                    self.mapper.handle_transformation_record_failed_error(idx, error)
+                except Exception as excepion:
+                    self.mapper.handle_generic_exception(idx, excepion)
+                self.mapper.migration_report.add_general_statistics(
+                    "Number of Legacy items in file"
+                )
+                if idx > 1 and idx % 10000 == 0:
+                    elapsed = idx / (time.time() - start)
+                    elapsed_formatted = "{0:.4g}".format(elapsed)
+                    logging.info(  # pylint: disable=logging-fstring-interpolation
+                        f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
+                    )
+            self.total_records = records_processed
+            logging.info(  # pylint: disable=logging-fstring-interpolation
+                f"Done processing {file_name} containing {self.total_records:,} records. "
+                f"Total records processed: {self.total_records:,}"
+            )
