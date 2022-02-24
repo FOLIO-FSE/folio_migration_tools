@@ -25,7 +25,11 @@ from migration_tools.library_configuration import (
 )
 
 # TODO Create OrganizationMapper 
+<<<<<<< HEAD
 # TODO from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
+=======
+from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
+>>>>>>> 71e25e7 (add organization_mapper #146)
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -71,17 +75,27 @@ class OrganizationsTransformer(MigrationTaskBase):
             logging.info("\t%s", filename.file_name)
         
         self.total_records = 0
+<<<<<<< HEAD
         self.folio_keys = []
         self.items_map = self.setup_records_map()
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
         self.failed_files: List[str] = list()
+=======
+        self.items_map = self.setup_records_map(
+            self.folder_structure.mapping_files_folder
+            / self.task_config.items_mapping_file_name
+        )
+>>>>>>> 71e25e7 (add organization_mapper #146)
     
     def wrap_up(self):
         logging.info("Wrapping up!")
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 71e25e7 (add organization_mapper #146)
     def do_work(self):
         logging.info("Getting started!")
         for filename in self.files:
