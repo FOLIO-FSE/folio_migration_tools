@@ -91,33 +91,13 @@ class UserMapper(UserMapperBase):
             "delivery": False,
             "metadata": self.folio_client.get_metadata_construct(),
         }
-        required = self.user_schema["required"]
-        missing = set()
-        empty = set()
-        for required_prop in required:
-            if required_prop not in folio_user:
-                missing.add(required_prop)
-                self.migration_report.add(
-                    Blurbs.MissingRequiredProperties,
-                    f"{required_prop} missing. Record failed",
-                )
-            elif not folio_user[required_prop]:
-                self.migration_report.add(
-                    Blurbs.MissingRequiredProperties,
-                    f"{required_prop} empty. Record failed",
-                )
-                empty.add(required_prop)
-        missing.update(empty)
-        if any(list(missing)):
-            raise TransformationRecordFailedError(
-                f"\"{folio_user.get('barcode', '')}\" (barcode) {legacy_id} (index in file)",
-                "Required properties missing or empty",
-                f"{', '.join(list(missing))}",
-            )
+        clean_folio_object = self.validate_required_properties(
+            legacy_id, folio_user, self.user_schema
+        )
 
-        self.report_folio_mapping(folio_user)
+        self.report_folio_mapping(clean_folio_object)
         self.report_legacy_mapping(legacy_user)
-        return folio_user
+        return clean_folio_object
 
     def add_prop(self, legacy_object, user_map, folio_user, prop_name, prop):
         if prop["type"] == "object":

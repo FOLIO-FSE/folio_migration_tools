@@ -195,8 +195,10 @@ class MappingFileMapperBase(MapperBase):
             except TransformationFieldMappingError as data_error:
                 self.handle_transformation_field_mapping_error(legacy_id, data_error)
 
-        self.validate_object(folio_object, legacy_id)
-        return (folio_object, legacy_id)
+        clean_folio_object = self.validate_required_properties(
+            legacy_id, folio_object, self.schema
+        )
+        return (clean_folio_object, legacy_id)
 
     def map_level1_property(
         self,
@@ -241,27 +243,6 @@ class MappingFileMapperBase(MapperBase):
             self.map_basic_props(
                 legacy_object, property_name_level1, folio_object, index_or_id
             )
-
-    def validate_object(self, folio_object, legacy_id):
-        required = self.schema["required"]
-        missing = []
-        for required_prop in required:
-            if required_prop not in folio_object:
-                if legacy_id == "row 1":
-                    logging.info(json.dumps(folio_object, indent=4))
-                missing.append(f"Missing: {required_prop}")
-            elif not folio_object[required_prop]:
-                if legacy_id == "row 1":
-                    logging.info(json.dumps(folio_object, indent=4))
-                missing.append(f"Empty: {required_prop}")
-        if any(missing):
-            raise TransformationRecordFailedError(
-                legacy_id,
-                "One or many required properties empty",
-                f"{json.dumps(missing)} - {json.dumps(folio_object)}",
-            )
-
-        del folio_object["type"]
 
     @staticmethod
     def get_legacy_vals(legacy_item, legacy_item_keys):

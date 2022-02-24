@@ -299,6 +299,37 @@ class MapperBase:
                 f"Update them manually. {json.dumps(self.hrid_settings)}"
             )
 
+    @staticmethod
+    def validate_required_properties(legacy_id, folio_object: dict, schema: dict):
+        cleaned_folio_object = MapperBase.clean_none_props(folio_object)
+        required = schema["required"]
+        missing = []
+        for required_prop in required:
+            if required_prop not in cleaned_folio_object:
+                missing.append(f"Missing: {required_prop}")
+            elif not cleaned_folio_object[required_prop]:
+                missing.append(f"Empty: {required_prop}")
+        if any(missing):
+            raise TransformationRecordFailedError(
+                legacy_id,
+                "One or many required properties empty",
+                f"{json.dumps(missing)}",
+            )
+        cleaned_folio_object.pop("type", None)
+        return cleaned_folio_object
+
+    @staticmethod
+    def clean_none_props(d: dict):
+        clean = {}
+        for k, v in d.items():
+            if isinstance(v, dict):
+                nested = MapperBase.clean_none_props(v)
+                if len(nested.keys()) > 0:
+                    clean[k] = nested
+            elif v is not None:
+                clean[k] = v
+        return clean
+
 
 def flatten(my_dict: dict, path=""):
     for k, v in iter(my_dict.items()):

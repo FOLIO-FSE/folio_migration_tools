@@ -98,13 +98,18 @@ class RulesMapperHoldings(RulesMapperBase):
         self.perform_additional_mapping(
             marc_record, folio_holding, folio_holding["formerIds"]
         )
-        self.dedupe_rec(folio_holding)
-        for identifier in folio_holding["formerIds"]:
+        cleaned_folio_holding = self.validate_required_properties(
+            "-".join(folio_holding.get("formerIds")),
+            folio_holding,
+            self.holdings_json_schema,
+        )
+        self.dedupe_rec(cleaned_folio_holding)
+        for identifier in cleaned_folio_holding["formerIds"]:
             self.holdings_id_map[identifier] = self.get_id_map_dict(
-                identifier, folio_holding
+                identifier, cleaned_folio_holding
             )
-        self.report_folio_mapping(folio_holding, self.schema)
-        return folio_holding
+        self.report_folio_mapping(cleaned_folio_holding, self.schema)
+        return cleaned_folio_holding
 
     def process_marc_field(
         self,
