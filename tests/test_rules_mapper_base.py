@@ -46,6 +46,25 @@ def test_date_from_008():
     # assert instance["metadata"]["createdDate"] == "2017-03-09T00:00:00"
 
 
+def test_remove_subfields():
+    marc_field = Field(
+        tag="338",
+        indicators=["0", "1"],
+        subfields=[
+            "b",
+            "ac",
+            "b",
+            "ab",
+            "i",
+            "ba",
+        ],
+    )
+    new_field = RulesMapperBase.remove_repeated_subfields(marc_field)
+    assert len(new_field.subfields_as_dict()) == len(marc_field.subfields_as_dict())
+    assert len(marc_field.subfields) == 6
+    assert len(new_field.subfields) == 4
+
+
 def test_date_from_008_holding():
     f008 = "170309s2017\\\\quc\\\\\o\\\\\000\0\fre\d"
     record = Record()
