@@ -161,6 +161,7 @@ def test_get_srs_string_bib():
             )
             assert '"recordType": "MARC_BIB"' in srs_record_string
             assert json.dumps(id_holder) in srs_record_string
+            assert "snapshotId" not in record
 
 
 def test_get_instance_schema():

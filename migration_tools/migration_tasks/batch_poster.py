@@ -4,6 +4,7 @@ import sys
 import time
 import traceback
 from datetime import datetime
+from uuid import uuid4
 
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -43,7 +44,7 @@ class BatchPoster(MigrationTaskBase):
         self.failed_ids = []
         self.first_batch = True
         self.api_path = list_objects(self.task_config.object_type)
-
+        self.snapshot_id = str(uuid4())
         self.failed_objects = []
         object_name_formatted = self.task_config.object_type.replace(" ", "").lower()
         time_stamp = time.strftime("%Y%m%d-%H%M%S")
@@ -66,6 +67,8 @@ class BatchPoster(MigrationTaskBase):
     def do_work(self):
         batch = []
         path = self.folder_structure.results_folder / self.task_config.file.file_name
+        if self.task_config.object_type == "SRS":
+            self.create_snapshot()
         with open(path) as rows, open(self.failed_recs_path, "w") as failed_recs_file:
             last_row = ""
             for num_records, row in enumerate(rows, start=1):
@@ -74,15 +77,10 @@ class BatchPoster(MigrationTaskBase):
                     try:
                         if self.task_config.object_type == "Extradata":
                             self.post_extra_data(row, num_records, failed_recs_file)
-                            if num_records % 50 == 0:
-                                logging.info(
-                                    "%s records posted successfully. %s failed",
-                                    self.num_posted,
-                                    self.num_failures,
-                                )
                         else:
-
                             json_rec = json.loads(row.split("\t")[-1])
+                            if self.task_config.object_type == "SRS":
+                                json_rec["snapshotId"] = self.snapshot_id
                             if num_records == 1:
                                 logging.info(json.dumps(json_rec, indent=True))
                             batch.append(json_rec)
@@ -136,6 +134,12 @@ class BatchPoster(MigrationTaskBase):
                 "Row %s\tHTTP %s\t%s", num_records, response.status_code, response.text
             )
             failed_recs_file.write(row)
+        if num_records % 50 == 0:
+            logging.info(
+                "%s records posted successfully. %s failed",
+                self.num_posted,
+                self.num_failures,
+            )
 
     def post_objects(self, url, body):
         return requests.post(
@@ -233,6 +237,10 @@ class BatchPoster(MigrationTaskBase):
             # Likely a json parsing error
             print(response.text)
             raise TransformationProcessError("HTTP 400. Somehting is wrong. Quitting")
+        elif self.task_config.object_type == "SRS" and response.status_code == 500:
+            logging.info("Post failed. Waiting 30 seconds until reposting")
+            time.sleep(30)
+            self.post_batch(batch, failed_recs_file, num_records)
         else:
             try:
                 print(response.text)
@@ -278,6 +286,54 @@ class BatchPoster(MigrationTaskBase):
             logging.info(
                 "Done posting % records. % failed", self.num_posted, self.num_failures
             )
+        if self.task_config.object_type == "SRS":
+            self.commit_snapshot()
+
+    def create_snapshot(self):
+        snapshot = {
+            "jobExecutionId": self.snapshot_id,
+            "status": "PARSING_IN_PROGRESS",
+            "processingStartedDate": datetime.utcnow().isoformat(
+                timespec="milliseconds"
+            ),
+        }
+        try:
+            url = f"{self.folio_client.okapi_url}/source-storage/snapshots"
+            res = requests.post(
+                url, data=json.dumps(snapshot), headers=self.folio_client.okapi_headers
+            )
+            res.raise_for_status()
+            logging.info("Posted Snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
+            get_url = f"{self.folio_client.okapi_url}/source-storage/snapshots/{self.snapshot_id}"
+            getted = False
+            while not getted:
+                logging.info("Sleeping while waiting for the snapshot to get created")
+                time.sleep(5)
+                res = requests.get(get_url, headers=self.folio_client.okapi_headers)
+                if res.status_code == 200:
+                    getted = True
+                else:
+                    logging.info(res.status_code)
+        except Exception as ee:
+            logging.exception(ee)
+            print("Could not post snapshot")
+            sys.exit()
+
+    def commit_snapshot(self):
+        snapshot = {"jobExecutionId": self.snapshot_id, "status": "COMMITTED"}
+        try:
+            url = f"{self.folio_client.okapi_url}/source-storage/snapshots/{self.snapshot_id}"
+            res = requests.put(
+                url, data=json.dumps(snapshot), headers=self.folio_client.okapi_headers
+            )
+            res.raise_for_status()
+            logging.info(
+                "Posted Committed snapshot to FOLIO: %s", json.dumps(snapshot, indent=4)
+            )
+        except Exception:
+            logging.exception("Could not commit snapshot")
+            print("Could not commit snapshot")
+            sys.exit()
 
 
 def list_objects(object_type: str):
@@ -286,33 +342,40 @@ def list_objects(object_type: str):
             "object_name": "",
             "api_endpoint": "",
             "total_records": False,
+            "addSnapshotId": False,
         },
         "Items": {
             "object_name": "items",
             "api_endpoint": "/item-storage/batch/synchronous?upsert=true",
             "total_records": False,
+            "addSnapshotId": False,
         },
         "Holdings": {
             "object_name": "holdingsRecords",
             "api_endpoint": "/holdings-storage/batch/synchronous?upsert=true",
             "total_records": False,
+            "addSnapshotId": False,
         },
         "Instances": {
             "object_name": "instances",
             "api_endpoint": "/instance-storage/batch/synchronous?upsert=true",
             "total_records": False,
+            "addSnapshotId": False,
         },
         "SRS": {
             "object_name": "records",
             "api_endpoint": "/source-storage/batch/records",
             "total_records": True,
+            "addSnapshotId": True,
         },
         "Users": {
             "object_name": "users",
             "api_endpoint": "/user-import",
             "total_records": True,
+            "addSnapshotId": False,
         },
     }
+
     try:
         return choices[object_type]
     except KeyError:
