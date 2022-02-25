@@ -343,7 +343,7 @@ class RulesMapperBase(MapperBase):
                         entity, e_parent, folio_record, self.schema
                     )
         else:
-            if mapping.get("ignoreSubsequentSubFields", False):
+            if mapping.get("ignoreSubsequentSubfields", False):
                 marc_field = self.remove_repeated_subfields(marc_field)
             entity = self.create_entity(
                 entity_mapping, marc_field, e_parent, legacy_ids
