@@ -575,7 +575,6 @@ class RulesMapperBase(MapperBase):
         record = {
             "id": srs_id,
             "deleted": False,
-            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
             "matchedId": srs_id,
             "generation": 0,
             "recordType": record_types.get(record_type),
