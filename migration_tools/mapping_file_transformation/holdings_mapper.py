@@ -138,7 +138,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 and legacy_instance_id not in self.instance_id_map
             ):
                 self.migration_report.add_general_statistics(
-                    "Records successfully matched to Instances"
+                    "Records not matched to Instances"
                 )
                 s = "Bib id not in instance id map."
                 raise TransformationRecordFailedError(index_or_id, s, new_legacy_value)
