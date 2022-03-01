@@ -64,6 +64,46 @@ class HoldingsHelper:
                 prev_holdings[stored_key] = stored_holding
             return prev_holdings
 
+    @staticmethod
+    def load_previously_generated_holdings(
+        holdings_file_path,
+        fields_criteria: list[str],
+        migration_report: MigrationReport,
+    ):
+        with open(holdings_file_path) as holdings_file:
+            prev_holdings = {}
+            for row in holdings_file:
+                stored_holding = json.loads(row.split("\t")[-1])
+                stored_key = HoldingsHelper.to_key(stored_holding, fields_criteria)
+                if stored_key in prev_holdings:
+                    message = (
+                        f"Previously stored holdings key {stored_key} already exists in the "
+                        f"list of previously stored Holdings. You have likely not used the same "
+                        f"matching criterias ({fields_criteria}) as you did in the previous process"
+                    )
+                    raise custom_exceptions.TransformationRecordFailedError(message)
+                prev_holdings[stored_key] = stored_holding
+            return prev_holdings
+
+    @staticmethod
+    def merge_holding(holdings_record, incoming_holdings) -> dict:
+        extend_list("holdingsStatementsForIndexes", holdings_record, incoming_holdings)
+        extend_list("holdingsStatements", holdings_record, incoming_holdings)
+        extend_list(
+            "holdingsStatementsForSupplements", holdings_record, incoming_holdings
+        )
+        extend_list("notes", holdings_record, incoming_holdings)
+        holdings_record["notes"] = dedupe(holdings_record.get("notes", []))
+        extend_list("formerIds", holdings_record, incoming_holdings)
+        holdings_record["formerIds"] = list(set(holdings_record["formerIds"]))
+        extend_list("electronicAccess", holdings_record, incoming_holdings)
+        return holdings_record
+
+
+def extend_list(prop_name: str, holdings_record: dict, incoming_holdings: dict):
+    holdings_record[prop_name] = holdings_record.get(prop_name, [])
+    holdings_record[prop_name].extend(incoming_holdings.get(prop_name, []))
+
 
 def dedupe(list_of_dicts):
     # TODO: Move to interface or parent class
