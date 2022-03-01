@@ -86,7 +86,7 @@ class HoldingsHelper:
             return prev_holdings
 
     @staticmethod
-    def merge_holding(holdings_record, incoming_holdings) -> dict:
+    def merge_holding(holdings_record:dict, incoming_holdings:dict) -> dict:
         extend_list("holdingsStatementsForIndexes", holdings_record, incoming_holdings)
         extend_list("holdingsStatements", holdings_record, incoming_holdings)
         extend_list(

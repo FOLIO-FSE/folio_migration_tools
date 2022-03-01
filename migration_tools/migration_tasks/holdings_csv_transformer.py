@@ -28,11 +28,9 @@ from migration_tools.mapping_file_transformation.holdings_mapper import Holdings
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from migration_tools.migration_report import MigrationReport
 from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic.main import BaseModel
 
-from migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
@@ -445,33 +443,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.holdings[new_holding_key] = new_folio_holding
 
     def merge_holding(self, holdings_key: str, new_holdings_record: dict):
-        """Merge an incoming holding with an existing holding
-
-        Args:
-            holdings_key (str): the key representing this holding based on the match criteria
-            new_holdings_record (dict): the incoming holdingsrecord
-        """
-        if self.holdings[holdings_key].get("notes", None):
-            self.holdings[holdings_key]["notes"].extend(
-                new_holdings_record.get("notes", [])
-            )
-            self.holdings[holdings_key]["notes"] = dedupe(
-                self.holdings[holdings_key].get("notes", [])
-            )
-        if self.holdings[holdings_key].get("holdingsStatements", None):
-            self.holdings[holdings_key]["holdingsStatements"].extend(
-                new_holdings_record.get("holdingsStatements", [])
-            )
-            self.holdings[holdings_key]["holdingsStatements"] = dedupe(
-                self.holdings[holdings_key]["holdingsStatements"]
-            )
-        if self.holdings[holdings_key].get("formerIds", []):
-            self.holdings[holdings_key]["formerIds"].extend(
-                new_holdings_record.get("formerIds", [])
-            )
-            self.holdings[holdings_key]["formerIds"] = list(
-                set(self.holdings[holdings_key]["formerIds"])
-            )
+        self.holdings[holdings_key] = HoldingsHelper.merge_holding(
+            self.holdings[holdings_key], new_holdings_record
+        )
 
 
 def dedupe(list_of_dicts):
