@@ -41,8 +41,11 @@ def test_clean_none_props():
         "d": {"e": None, "f": "aaa"},
         "g": {},
         "h": "actual value",
+        "i": ["", "j"],
     }
     cleaned = MapperBase.clean_none_props(record)
     for ck in ["a"]:
         assert ck not in cleaned.keys()
     assert "e" not in cleaned["d"]
+    assert len(cleaned["i"]) == 1
+    assert next(iter(cleaned["i"])) == "j"

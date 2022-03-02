@@ -326,6 +326,8 @@ class MapperBase:
                 nested = MapperBase.clean_none_props(v)
                 if len(nested.keys()) > 0:
                     clean[k] = nested
+            elif isinstance(v, list):
+                clean[k] = list(filter(None, v))
             elif v is not None:
                 clean[k] = v
         return clean
