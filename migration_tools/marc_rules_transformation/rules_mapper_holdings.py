@@ -73,7 +73,17 @@ class RulesMapperHoldings(RulesMapperBase):
                 tfme.log_it()
         if num_852s > 1:
             Helper.log_data_issue(index_or_legacy_ids, "More than 1 852 found", "")
-        if not folio_holding.get("formerIds", [])[0]:
+        if former_id := next(
+            (id for id in folio_holding.get("formerIds", []) if id), ""
+        ):
+            folio_holding["id"] = str(
+                FolioUUID(
+                    self.folio_client.okapi_url,
+                    FOLIONamespaces.holdings,
+                    str(former_id).strip(),
+                )
+            )
+        else:
             raise TransformationProcessError(
                 self.parsed_records,
                 (
