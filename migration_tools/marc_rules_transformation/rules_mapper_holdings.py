@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import List
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -79,7 +80,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     "No former ids mapped. Update mapping file so "
                     "that a field is mapped to the formerIds"
                 ),
-                "",
+                json.dumps(folio_holding),
             )
 
         if not folio_holding.get("instanceId", ""):
