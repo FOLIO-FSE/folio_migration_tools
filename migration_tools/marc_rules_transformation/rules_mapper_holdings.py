@@ -72,7 +72,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 tfme.log_it()
         if num_852s > 1:
             Helper.log_data_issue(index_or_legacy_ids, "More than 1 852 found", "")
-        if not folio_holding.get("formerIds", []):
+        if not folio_holding.get("formerIds", [])[0]:
             raise TransformationProcessError(
                 self.parsed_records,
                 (
@@ -83,7 +83,7 @@ class RulesMapperHoldings(RulesMapperBase):
             )
 
         if not folio_holding.get("instanceId", ""):
-            raise TransformationRecordFailedError(
+            raise TransformationProcessError(
                 self.parsed_records,
                 "No Instance id mapped. ",
                 folio_holding["formerIds"],

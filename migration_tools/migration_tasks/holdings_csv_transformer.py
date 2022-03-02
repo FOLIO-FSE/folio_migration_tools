@@ -45,6 +45,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         holdings_map_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
+        previously_generated_holdings_files: Optional[list[str]] = []
         fallback_holdings_type_id: str
         holdings_type_uuid_for_boundwiths: Optional[str]
         call_number_type_map_file_name: Optional[str]
@@ -108,6 +109,15 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 "%s will be used as default holdings type",
                 self.fallback_holdings_type["name"],
             )
+            if any(self.task_config.previously_generated_holdings_files):
+                for file_name in self.task_config.previously_generated_holdings_files:
+                    self.holdings.update(
+                        HoldingsHelper.load_previously_generated_holdings(
+                            self.folder_structure.results_folder / file_name,
+                            self.task_config.holdings_merge_criteria,
+                            self.mapper.migration_report,
+                        )
+                    )
         except TransformationProcessError as process_error:
             logging.critical(process_error)
             logging.critical("Halting.")
