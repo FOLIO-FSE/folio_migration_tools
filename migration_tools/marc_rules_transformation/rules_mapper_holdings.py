@@ -99,13 +99,6 @@ class RulesMapperHoldings(RulesMapperBase):
                 "No Instance id mapped. ",
                 folio_holding["formerIds"],
             )
-        folio_holding["id"] = str(
-            FolioUUID(
-                self.folio_client.okapi_url,
-                FOLIONamespaces.holdings,
-                str(folio_holding["formerIds"][0]).strip(),
-            )
-        )
         self.perform_additional_mapping(
             marc_record, folio_holding, folio_holding["formerIds"]
         )
