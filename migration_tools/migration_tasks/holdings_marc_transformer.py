@@ -154,6 +154,9 @@ def read_records(reader, processor: HoldingsProcessor, file_def: FileDefinition)
     for idx, record in enumerate(reader):
         try:
             if record is None:
+                processor.mapper.migration_report.add_general_statistics(
+                    "Records with encoding errors. See data issues log for details"
+                )
                 raise TransformationRecordFailedError(
                     f"Index in file:{idx}",
                     f"MARC parsing error: {reader.current_exception}",

@@ -201,12 +201,14 @@ class RulesMapperBase(MapperBase):
             fme.log_it()
             return []
         except TransformationRecordFailedError as trfe:
-            trfe.log_it()
             trfe.data_value = (
                 f"{trfe.data_value} MARCField: {marc_field} "
                 f"Mapping: {json.dumps(mapping)}"
             )
-            raise trfe
+            trfe.log_it()
+            self.migration_report.add_general_statistics(
+                "Records failed due to an error. See data issues log for details"
+            )
         except Exception as exception:
             self.handle_generic_exception(self.parsed_records, exception)
 
