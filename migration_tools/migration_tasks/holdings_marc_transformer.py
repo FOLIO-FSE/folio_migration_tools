@@ -120,7 +120,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         if not any(files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'holdings'}"
             )
 
         return files
