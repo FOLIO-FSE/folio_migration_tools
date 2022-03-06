@@ -94,8 +94,8 @@ class RulesMapperHoldings(RulesMapperBase):
             )
 
         if not folio_holding.get("instanceId", ""):
-            raise TransformationProcessError(
-                self.parsed_records,
+            raise TransformationRecordFailedError(
+                index_or_legacy_ids,
                 "No Instance id mapped. ",
                 folio_holding["formerIds"],
             )
