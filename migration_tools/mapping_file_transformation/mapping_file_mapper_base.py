@@ -61,8 +61,10 @@ class MappingFileMapperBase(MapperBase):
                 "code",
                 Blurbs.StatisticalCodeMapping,
             )
+            logging.info("Statistical codes mapping set up")
         else:
             self.statistical_codes_mapping = None
+            logging.info("Statistical codes map is not set up")
         self.mapped_from_legacy_data = {}
         for k in self.record_map["data"]:
             if (
