@@ -115,7 +115,10 @@ class Conditions:
         logging.info(f"{len(self.folio.class_types)}\tclass_types")
         self.statistical_codes = list(
             self.folio.folio_get_all(
-                "/statistical-codes", "statisticalCodes", "query=cql.allRecords=1", 1000
+                "/statistical-codes",
+                "statisticalCodes",
+                "?query=cql.allRecords=1",
+                1000,
             )
         )
         logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")

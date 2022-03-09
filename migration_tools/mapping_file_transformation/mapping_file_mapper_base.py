@@ -166,6 +166,7 @@ class MappingFileMapperBase(MapperBase):
                 legacy_item,
                 index_or_id,
                 folio_prop_name,
+                True,
             )
         self.migration_report.add(
             Blurbs.StatisticalCodeMapping,
