@@ -160,7 +160,7 @@ class RefDataMapping(object):
             )
         if any(map_values_not_in_folio):
             raise TransformationProcessError(
-                f"Values from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
+                f"Values ({self.key_type}) from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
             )
 
     def post_validate_map(self):
