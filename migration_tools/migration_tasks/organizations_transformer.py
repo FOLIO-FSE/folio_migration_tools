@@ -1,4 +1,14 @@
-# This is a work in progress
+'''
+This is a work in progress
+The transformer...
+Sets up files, validates data.
+Starts the mapper, which creates FOLIO objects from legacy data.
+Compares, merges created ojects.
+Wraps up.
+
+The mapper should only take a dict of legacy date and transform that to a FOLIO object.
+
+'''
 import csv
 import ctypes
 import json
@@ -24,7 +34,8 @@ from migration_tools.library_configuration import (
     LibraryConfiguration,
 )
 
-# TODO Create OrganizationMapper 
+# TODO Create OrganizationMapper Titta inte för mycket på processors.
+
 from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
