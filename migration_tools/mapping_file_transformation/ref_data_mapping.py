@@ -100,16 +100,21 @@ class RefDataMapping(object):
             return self.cache[obj_key]
         highest_match = None
         highest_match_number = 0
+
         prepped_props = {k: legacy_object[k].strip() for k in self.mapped_legacy_keys}
         for mapping in self.hybrid_mappings:
+            mismatch = 0
             match_numbers = []
             for k in self.mapped_legacy_keys:
                 if mapping[k] == prepped_props[k]:
                     match_numbers.append(10)
                 elif mapping[k] == "*":
                     match_numbers.append(1)
+                else:
+                    mismatch += 1
             summa = sum(match_numbers)
-            if summa > highest_match_number and min(match_numbers) > 0:
+
+            if mismatch < 1 and summa > highest_match_number and min(match_numbers) > 0:
                 highest_match_number = summa
                 highest_match = mapping
         self.cache[obj_key] = highest_match
