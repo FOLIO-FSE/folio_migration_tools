@@ -178,7 +178,7 @@ class BatchPoster(MigrationTaskBase):
         traceback.logging.info_exc()
         logging.info("=======================", flush=True)
 
-    def post_batch(self, batch, failed_recs_file, num_records):
+    def post_batch(self, batch, failed_recs_file, num_records, recursion_depth=0):
         response = self.do_post(batch)
         if response.status_code == 201:
             logging.info(
@@ -238,9 +238,24 @@ class BatchPoster(MigrationTaskBase):
             print(response.text)
             raise TransformationProcessError("HTTP 400. Somehting is wrong. Quitting")
         elif self.task_config.object_type == "SRS" and response.status_code == 500:
-            logging.info("Post failed. Waiting 30 seconds until reposting")
+            logging.info(
+                "Post failed. Waiting 30 seconds until reposting. Number of tries: %s",
+                recursion_depth,
+            )
+            logging.info(response.text)
             time.sleep(30)
-            self.post_batch(batch, failed_recs_file, num_records)
+            if recursion_depth > 4:
+                raise TransformationRecordFailedError(
+                    "",
+                    f"HTTP {response.status_code}\t"
+                    f"Request size: {get_req_size(response)}"
+                    f"{datetime.utcnow().isoformat()} UTC\n",
+                    json.dumps(resp, indent=4),
+                )
+            else:
+                self.post_batch(
+                    batch, failed_recs_file, num_records, recursion_depth + 1
+                )
         else:
             try:
                 print(response.text)
