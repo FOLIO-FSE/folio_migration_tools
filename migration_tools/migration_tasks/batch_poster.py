@@ -65,49 +65,64 @@ class BatchPoster(MigrationTaskBase):
         self.num_posted = 0
 
     def do_work(self):
-        batch = []
-        path = self.folder_structure.results_folder / self.task_config.file.file_name
-        if self.task_config.object_type == "SRS":
-            self.create_snapshot()
-        with open(path) as rows, open(self.failed_recs_path, "w") as failed_recs_file:
-            last_row = ""
-            for num_records, row in enumerate(rows, start=1):
-                last_row = row
-                if row.strip():
+        try:
+            batch = []
+            path = (
+                self.folder_structure.results_folder / self.task_config.file.file_name
+            )
+            if self.task_config.object_type == "SRS":
+                self.create_snapshot()
+            with open(path) as rows, open(
+                self.failed_recs_path, "w"
+            ) as failed_recs_file:
+                last_row = ""
+                for num_records, row in enumerate(rows, start=1):
+                    last_row = row
+                    if row.strip():
+                        try:
+                            if self.task_config.object_type == "Extradata":
+                                self.post_extra_data(row, num_records, failed_recs_file)
+                            else:
+                                json_rec = json.loads(row.split("\t")[-1])
+                                if self.task_config.object_type == "SRS":
+                                    json_rec["snapshotId"] = self.snapshot_id
+                                if num_records == 1:
+                                    logging.info(json.dumps(json_rec, indent=True))
+                                batch.append(json_rec)
+                                if len(batch) == int(self.batch_size):
+                                    self.post_batch(
+                                        batch, failed_recs_file, num_records
+                                    )
+                                    batch = []
+                        except UnicodeDecodeError as unicode_error:
+                            self.handle_unicode_error(unicode_error, last_row)
+                        except TransformationProcessError as tpe:
+                            self.handle_generic_exception(
+                                tpe, last_row, batch, num_records, failed_recs_file
+                            )
+                            logging.critical("Halting %s", tpe)
+                        except TransformationRecordFailedError as exception:
+                            self.handle_generic_exception(
+                                exception,
+                                last_row,
+                                batch,
+                                num_records,
+                                failed_recs_file,
+                            )
+                            batch = []
+
+                if self.task_config.object_type != "Extradata" and any(batch):
                     try:
-                        if self.task_config.object_type == "Extradata":
-                            self.post_extra_data(row, num_records, failed_recs_file)
-                        else:
-                            json_rec = json.loads(row.split("\t")[-1])
-                            if self.task_config.object_type == "SRS":
-                                json_rec["snapshotId"] = self.snapshot_id
-                            if num_records == 1:
-                                logging.info(json.dumps(json_rec, indent=True))
-                            batch.append(json_rec)
-                            if len(batch) == int(self.batch_size):
-                                self.post_batch(batch, failed_recs_file, num_records)
-                                batch = []
-                    except UnicodeDecodeError as unicode_error:
-                        self.handle_unicode_error(unicode_error, last_row)
-                    except TransformationProcessError as tpe:
-                        self.handle_generic_exception(
-                            tpe, last_row, batch, num_records, failed_recs_file
-                        )
-                        logging.critical("Halting %s", tpe)
-                    except TransformationRecordFailedError as exception:
+                        self.post_batch(batch, failed_recs_file, num_records)
+                    except Exception as exception:
                         self.handle_generic_exception(
                             exception, last_row, batch, num_records, failed_recs_file
                         )
-                        batch = []
-
-            if self.task_config.object_type != "Extradata" and any(batch):
-                try:
-                    self.post_batch(batch, failed_recs_file, num_records)
-                except Exception as exception:
-                    self.handle_generic_exception(
-                        exception, last_row, batch, num_records, failed_recs_file
-                    )
-            logging.info("Done posting %s records. ", (num_records))
+                logging.info("Done posting %s records. ", (num_records))
+        except Exception as ee:
+            if self.task_config.object_type == "SRS":
+                self.commit_snapshot()
+            raise ee
 
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
         (object_name, data) = row.split("\t")
