@@ -2,6 +2,7 @@ import json
 import logging
 
 from migration_tools import custom_exceptions
+from migration_tools import helper
 from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 
@@ -56,12 +57,27 @@ class HoldingsHelper:
                 )
                 if stored_key in prev_holdings:
                     message = (
-                        f"Previously stored holdings key {stored_key} already exists in the "
+                        f"Previously stored holdings key already exists in the "
                         f"list of previously stored Holdings. You have likely not used the same "
                         f"matching criterias ({fields_criteria}) as you did in the previous process"
                     )
-                    raise custom_exceptions.TransformationRecordFailedError(message)
-                prev_holdings[stored_key] = stored_holding
+                    helper.Helper.log_data_issue(
+                        stored_holding["formerIds"], message, stored_key
+                    )
+                    logging.warn(message)
+                    prev_holdings[stored_key] = HoldingsHelper.merge_holding(
+                        prev_holdings[stored_key], stored_holding
+                    )
+                    migration_report.add(
+                        Blurbs.HoldingsMerging,
+                        "Duplicate key based on current merge criteria. Records merged",
+                    )
+                else:
+                    migration_report.add(
+                        Blurbs.HoldingsMerging,
+                        "Previously transformed holdings record loaded",
+                    )
+                    prev_holdings[stored_key] = stored_holding
             return prev_holdings
 
     @staticmethod
