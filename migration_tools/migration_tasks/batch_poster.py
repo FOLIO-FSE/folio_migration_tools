@@ -214,7 +214,11 @@ class BatchPoster(MigrationTaskBase):
             self.users_updated += json_report.get("updatedRecords", 0)
             self.failed_records += json_report.get("failedRecords", 0)
             if json_report.get("failedRecords", 0) > 0:
-                failed_recs_file.write(response.text)
+                logging.error(
+                    "%s users in batch failed to load",
+                    json_report.get("failedRecords", 0),
+                )
+                write_failed_batch_to_file(batch, failed_recs_file)
             if json_report.get("failedUsers", []):
                 logging.error("Errormessage: %s", json_report.get("error", []))
                 for failed_user in json_report.get("failedUsers"):
@@ -345,9 +349,8 @@ class BatchPoster(MigrationTaskBase):
                     getted = True
                 else:
                     logging.info(res.status_code)
-        except Exception as ee:
-            logging.exception(ee)
-            print("Could not post snapshot")
+        except Exception:
+            logging.exception("Could not post the snapshot")
             sys.exit()
 
     def commit_snapshot(self):
@@ -362,8 +365,12 @@ class BatchPoster(MigrationTaskBase):
                 "Posted Committed snapshot to FOLIO: %s", json.dumps(snapshot, indent=4)
             )
         except Exception:
-            logging.exception("Could not commit snapshot")
-            print("Could not commit snapshot")
+            logging.exception(
+                "Could not commit snapshot with id %s. Post the following to /source-storage/snapshots/%s:",
+                self.snapshot_id,
+                self.snapshot_id,
+            )
+            logging.info("%s", json.dumps(snapshot, indent=4))
             sys.exit()
 
 
