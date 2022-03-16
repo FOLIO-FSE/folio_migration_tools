@@ -234,11 +234,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 for holding in self.holdings.values():
                     for legacy_id in holding["formerIds"]:
                         # Prevent the first item in a boundwith to be overwritten
-                        if legacy_id not in self.holdings_id_map:
-                            self.holdings_id_map[
-                                legacy_id
-                            ] = self.mapper.get_id_map_dict(legacy_id, holding)
-
+                        # TODO: Find out why not
+                        # if legacy_id not in self.holdings_id_map:
+                        self.holdings_id_map[legacy_id] = self.mapper.get_id_map_dict(
+                            legacy_id, holding
+                        )
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
                         "Holdings Records Written to disk"
