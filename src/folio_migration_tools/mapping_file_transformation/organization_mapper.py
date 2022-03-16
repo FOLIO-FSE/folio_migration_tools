@@ -1,9 +1,20 @@
+import json
 import logging
-from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
-from folioclient import FolioClient
-from migration_tools.library_configuration import LibraryConfiguration
-from migration_tools.mapping_file_transformation.mapping_file_mapper_base import MappingFileMapperBase
+import sys
+from datetime import datetime
+from typing import Dict, List
+from uuid import uuid4
 
+from folioclient import FolioClient
+from folio_uuid.folio_uuid import FOLIONamespaces
+from migration_tools.custom_exceptions import TransformationRecordFailedError
+from migration_tools.library_configuration import LibraryConfiguration
+from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
+from migration_tools.helper import Helper
+from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
+from migration_tools.report_blurbs import Blurbs
 
 class OrganizationMapper(MappingFileMapperBase):
     def __init__(
@@ -16,7 +27,9 @@ class OrganizationMapper(MappingFileMapperBase):
         library_configuration: LibraryConfiguration,
     ):
         # TODO: Get latest schema from get latest from github method in folioclient
-        organization_schema = folio_client.get_latest_from_github()
+        self.organization_schema = folio_client.get_latest_from_github(
+            "folio-org", "mod-organizations", "ramls/organizations.raml"
+        )
 
         super().__init__(
             folio_client,
