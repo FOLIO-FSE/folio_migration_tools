@@ -18,6 +18,7 @@ class RefDataMapping(object):
         blurb: Blurbs,
     ):
         self.name = array_name
+        self.cache = {}
         self.blurb = blurb
         logging.info("%s reference data mapping. Initializing", self.name)
         logging.info("Fetching %s reference data from FOLIO", self.name)
@@ -36,8 +37,7 @@ class RefDataMapping(object):
         logging.info("%s reference data mapping. Done init", self.name)
 
     def get_ref_data_tuple(self, key_value):
-        ref_object = self.cached_dict.get(key_value.lower().strip(), ())
-        if ref_object:
+        if ref_object := self.cached_dict.get(key_value.lower().strip(), ()):
             return ref_object
         self.cached_dict = {
             r[self.key_type].lower(): (r["id"], r[self.key_type]) for r in self.ref_data
@@ -52,13 +52,13 @@ class RefDataMapping(object):
                 if idx == 0:
                     self.mapped_legacy_keys = get_mapped_legacy_keys(mapping)
                 if self.is_default_mapping(mapping):
-                    # Set up default mapping if available
-                    t = self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"])
-                    if t:
+                    if t := self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"]):
                         self.default_id = t[0]
                         self.default_name = t[1]
                         logging.info(
-                            f'Set {mapping[f"folio_{self.key_type}"]} as default {self.name} mapping'
+                            "Set %s as default %s mapping",
+                            mapping[f"folio_{self.key_type}"],
+                            self.name,
                         )
                     else:
                         x = mapping.get(f"folio_{self.key_type}", "")
@@ -78,13 +78,14 @@ class RefDataMapping(object):
                         )
                     mapping["folio_id"] = t[0]
             except TransformationProcessError as transformation_process_error:
-                raise transformation_process_error
+                raise transformation_process_error from transformation_process_error
             except Exception as ee:
                 logging.info(json.dumps(self.map, indent=4))
                 logging.error(ee)
                 raise TransformationProcessError(
                     f'"{mapping[f"folio_{self.key_type}"]}" could not be found in FOLIO'
-                )
+                ) from ee
+
         self.post_validate_map()
         logging.info(
             f"Loaded {len(self.regular_mappings)} mappings for {len(self.ref_data)} {self.name} in FOLIO"
@@ -92,6 +93,46 @@ class RefDataMapping(object):
         logging.info(
             f"loaded {len(self.hybrid_mappings)} hybrid mappings for {len(self.ref_data)} {self.name} in FOLIO"
         )
+
+    def get_hybrid_mapping(self, legacy_object):
+        obj_key = "_".join(legacy_object[k].strip() for k in self.mapped_legacy_keys)
+        if obj_key in self.cache:
+            return self.cache[obj_key]
+        highest_match = None
+        highest_match_number = 0
+
+        prepped_props = {k: legacy_object[k].strip() for k in self.mapped_legacy_keys}
+        for mapping in self.hybrid_mappings:
+            mismatch = 0
+            match_numbers = []
+            for k in self.mapped_legacy_keys:
+                if mapping[k] == prepped_props[k]:
+                    match_numbers.append(10)
+                elif mapping[k] == "*":
+                    match_numbers.append(1)
+                else:
+                    mismatch += 1
+            summa = sum(match_numbers)
+
+            if mismatch < 1 and summa > highest_match_number and min(match_numbers) > 0:
+                highest_match_number = summa
+                highest_match = mapping
+        self.cache[obj_key] = highest_match
+        return highest_match
+
+    def get_ref_data_mapping(self, legacy_object):
+        obj_key = "_".join(legacy_object[k].strip() for k in self.mapped_legacy_keys)
+        if obj_key in self.cache:
+            return self.cache[obj_key]
+        prepped_props = {k: legacy_object[k].strip() for k in self.mapped_legacy_keys}
+        for mapping in self.regular_mappings:
+            match_number = sum(
+                prepped_props[k] == mapping[k] for k in self.mapped_legacy_keys
+            )
+            if match_number == len(self.mapped_legacy_keys):
+                self.cache[obj_key] = mapping
+                return mapping
+        return None
 
     def is_hybrid_default_mapping(self, mapping):
         legacy_values = [
@@ -110,8 +151,8 @@ class RefDataMapping(object):
             raise TransformationProcessError(
                 f"Column folio_{self.key_type} missing from {self.name} map file"
             )
-        folio_values_from_map = (f[f"folio_{self.key_type}"] for f in self.map)
-        folio_values_from_folio = (r[self.key_type] for r in self.ref_data)
+        folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
+        folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
         folio_values_not_in_map = list(
             {f for f in folio_values_from_folio if f not in folio_values_from_map}
         )
@@ -124,7 +165,7 @@ class RefDataMapping(object):
             )
         if any(map_values_not_in_folio):
             raise TransformationProcessError(
-                f"Values from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
+                f"Values ({self.key_type}) from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
             )
 
     def post_validate_map(self):
@@ -161,7 +202,7 @@ class RefDataMapping(object):
 
 def get_mapped_legacy_keys(mapping):
     return [
-        k
+        k.strip()
         for k in mapping.keys()
         if k
         not in ["folio_group", "folio_code", "folio_id", "folio_name", "legacy_code"]

@@ -124,19 +124,21 @@ class BibsRulesMapper(RulesMapperBase):
         self.perform_additional_parsing(
             folio_instance, marc_record, legacy_ids, suppressed
         )
-        self.validate(folio_instance, legacy_ids)
-        self.dedupe_rec(folio_instance)
+        clean_folio_instance = self.validate_required_properties(
+            "-".join(legacy_ids), folio_instance, self.schema
+        )
+        self.dedupe_rec(clean_folio_instance)
         marc_record.remove_fields(*list(bad_tags))
-        self.report_folio_mapping(folio_instance, self.instance_json_schema)
+        self.report_folio_mapping(clean_folio_instance, self.instance_json_schema)
         if suppressed:
             self.migration_report.add_general_statistics("Suppressed from discovery")
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         id_map_strings = []
         self.handle_legacy_ids(
-            marc_record, legacy_ids, id_map_strings, folio_instance, suppressed
+            marc_record, legacy_ids, id_map_strings, clean_folio_instance, suppressed
         )
-        return folio_instance, id_map_strings
+        return clean_folio_instance, id_map_strings
 
     def handle_legacy_ids(
         self, marc_record, legacy_ids, id_map_strings, folio_instance, suppressed
@@ -612,12 +614,6 @@ class BibsRulesMapper(RulesMapperBase):
                 f"{marc_record.leader} {list(self.folio.modes_of_issuance)}"
             )
             raise ee
-
-    def validate(self, folio_rec, legacy_ids) -> None:
-        if not folio_rec.get("title", ""):
-            raise ValueError(f"No title for {legacy_ids}")
-        if not folio_rec.get("instanceTypeId", ""):
-            raise ValueError(f"No Instance Type Id for {legacy_ids}")
 
     def get_nature_of_content(self, marc_record: Record) -> List[str]:
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]

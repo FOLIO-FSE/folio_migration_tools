@@ -78,10 +78,11 @@ class HoldingsProcessor:
     def process_record(self, marc_record: Record, file_def: FileDefinition):
         """processes a marc holdings record and saves it"""
         success = True
+        folio_rec = {}
         try:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.mapper.parse_hold(marc_record, self.records_count)
+            folio_rec = self.mapper.parse_hold(marc_record, [str(self.records_count)])
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
                     "".join(folio_rec.get("formerIds", [])),
@@ -115,6 +116,7 @@ class HoldingsProcessor:
             logging.error(inst.args)
             logging.error(inst)
             logging.error(marc_record)
+            logging.error(folio_rec)
             raise inst
         finally:
             if not success:

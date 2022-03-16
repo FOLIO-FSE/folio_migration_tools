@@ -79,9 +79,8 @@ class RulesMapperBase(MapperBase):
             else:
                 self.handle_entity_mapping(
                     marc_field,
-                    mapping["entity"],
+                    mapping,
                     folio_record,
-                    mapping.get("entityPerRepeatedSubfield", False),
                     legacy_ids,
                 )
 
@@ -89,6 +88,8 @@ class RulesMapperBase(MapperBase):
         self, mapping, marc_field: pymarc.Field, folio_record, legacy_ids
     ):
         target = mapping["target"]
+        if mapping.get("ignoreSubsequentSubfields", False):
+            marc_field = self.remove_repeated_subfields(marc_field)
         if has_conditions(mapping):
             values = self.apply_rules(marc_field, mapping, legacy_ids)
             # TODO: add condition to customize this hardcoded thing
@@ -200,12 +201,14 @@ class RulesMapperBase(MapperBase):
             fme.log_it()
             return []
         except TransformationRecordFailedError as trfe:
-            trfe.log_it()
             trfe.data_value = (
                 f"{trfe.data_value} MARCField: {marc_field} "
                 f"Mapping: {json.dumps(mapping)}"
             )
-            raise trfe
+            trfe.log_it()
+            self.migration_report.add_general_statistics(
+                "Records failed due to an error. See data issues log for details"
+            )
         except Exception as exception:
             self.handle_generic_exception(self.parsed_records, exception)
 
@@ -324,13 +327,13 @@ class RulesMapperBase(MapperBase):
     def handle_entity_mapping(
         self,
         marc_field,
-        entity_mapping,
+        mapping,
         folio_record,
-        entity_per_repeated_subfield,
         legacy_ids,
     ):
+        entity_mapping = mapping["entity"]
         e_parent = entity_mapping[0]["target"].split(".")[0]
-        if entity_per_repeated_subfield:
+        if mapping.get("entityPerRepeatedSubfield", False):
             for temp_field in self.grouped(marc_field):
                 entity = self.create_entity(
                     entity_mapping, temp_field, e_parent, legacy_ids
@@ -342,6 +345,8 @@ class RulesMapperBase(MapperBase):
                         entity, e_parent, folio_record, self.schema
                     )
         else:
+            if mapping.get("ignoreSubsequentSubfields", False):
+                marc_field = self.remove_repeated_subfields(marc_field)
             entity = self.create_entity(
                 entity_mapping, marc_field, e_parent, legacy_ids
             )
@@ -480,6 +485,18 @@ class RulesMapperBase(MapperBase):
         return results
 
     @staticmethod
+    def remove_repeated_subfields(marc_field: Field):
+        "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
+        new_subfields = []
+        for sf, sf_vals in marc_field.subfields_as_dict().items():
+            new_subfields.extend([sf, sf_vals[0]])
+        return Field(
+            tag=marc_field.tag,
+            indicators=marc_field.indicators,
+            subfields=new_subfields,
+        )
+
+    @staticmethod
     def save_source_record(
         srs_records_file,
         record_type: FOLIONamespaces,
@@ -560,7 +577,6 @@ class RulesMapperBase(MapperBase):
         record = {
             "id": srs_id,
             "deleted": False,
-            "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
             "matchedId": srs_id,
             "generation": 0,
             "recordType": record_types.get(record_type),
