@@ -47,6 +47,8 @@ from migration_tools.migration_tasks.migration_task_base import MigrationTaskBas
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
+# Read files and do some work
+
 class OrganizationsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
@@ -82,11 +84,17 @@ class OrganizationsTransformer(MigrationTaskBase):
             logging.info("\t%s", filename.file_name)
         
         self.total_records = 0
-        self.items_map = self.setup_records_map(
+
+        self.organization_map = self.setup_records_map(
             self.folder_structure.mapping_files_folder
-            / self.task_config.items_mapping_file_name
+            / self.task_config.organizations_mapping_file_name
         )
     
+        self.folio_keys = []
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+            self.organization_map
+        )
+
     def wrap_up(self):
         logging.info("Wrapping up!")
 
@@ -95,7 +103,6 @@ class OrganizationsTransformer(MigrationTaskBase):
         for filename in self.files:
             try:
                 logging.info("\t%s", filename.file_name)
-                self.do_actual_work(filename)
             # Something goes really wrong and we want to stop the script
             except TransformationProcessError as tpe:
                 logging.critical(tpe)
@@ -103,47 +110,6 @@ class OrganizationsTransformer(MigrationTaskBase):
             except Exception as e:
                 print(f"Something unexpected happend! {e}")
                 raise e
-
-
-        # Create organization
-        # Create contacts
-        # Create credentials
-
-        # TODO Hemläxa: använd json-fil med fungerande mappning
-        # TODO Sapa ett megaorganisationsobjekt
-        # TODO Skapa schema av objektet med något verktyg!
-        # TODO Behöver schemat motsvaras av ett objekt? T.ex.
-        
-        '''
-        "organizationMigrationObject": {
-            "organization": {
-                "id": "uuid",
-                "name": "string",
-                "contacts": [uuid, uuid]
-            },
-            "contacts": [
-                {
-                "id": "uuid",
-                "name": "string",
-                "organizationId": "uuid"
-                }
-            ],
-            "credentials": [
-                {
-                "id": "uuid",
-                "username": "string"
-                "contactId": "uuid"
-                }
-            ],
-            "notes": [
-                {
-                "id": "uuid",
-                "text": "string"
-                "organizationId": "uuid"
-                }
-            ]
-        }
-        '''
 
     def process_single_file(self, file_name):
         with open(file_name, encoding="utf-8-sig") as records_file:
