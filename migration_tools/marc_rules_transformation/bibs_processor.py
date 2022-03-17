@@ -7,6 +7,7 @@ from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
+from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 from pymarc.record import Record
 
@@ -49,58 +50,41 @@ class BibsProcessor:
             (folio_rec, id_map_strings) = self.mapper.parse_bib(
                 legacy_ids, marc_record, suppressed
             )
-            prec_titles = folio_rec.get("precedingTitles", [])
-            if prec_titles:
+            if prec_titles := folio_rec.get("precedingTitles", []):
                 self.mapper.migration_report.add(
                     Blurbs.PrecedingSuccedingTitles, f"{len(prec_titles)}"
                 )
                 del folio_rec["precedingTitles"]
-            succ_titles = folio_rec.get("succeedingTitles", [])
-            if succ_titles:
+            if succ_titles := folio_rec.get("succeedingTitles", []):
                 del folio_rec["succeedingTitles"]
                 self.mapper.migration_report.add(
                     Blurbs.PrecedingSuccedingTitles, f"{len(succ_titles)}"
                 )
-            if self.validate_instance(folio_rec, marc_record, legacy_ids):
-                Helper.write_to_file(self.results_file, folio_rec)
-                self.mapper.save_source_record(
-                    self.srs_records_file,
-                    FOLIONamespaces.instances,
-                    self.folio_client,
-                    marc_record,
-                    folio_rec,
-                    legacy_ids,
-                    suppressed,
-                )
+            filtered_legacy_ids = self.validate_instance(
+                folio_rec,
+                legacy_ids,
+                self.instance_identifiers,
+                self.mapper.migration_report,
+            )
+            for legacy_id in filtered_legacy_ids:
+                self.instance_identifiers.add(legacy_id)
+                self.instance_id_map_file.write(f"{legacy_id}\n")
                 self.mapper.migration_report.add_general_statistics(
-                    "Records successfully transformed into FOLIO objects"
+                    "Lines written to identifier map"
                 )
-
-                anyone = False
-                for id_map_string in id_map_strings:
-                    if id_map_string not in self.instance_identifiers:
-                        self.instance_id_map_file.write(f"{id_map_string}\n")
-                        self.mapper.migration_report.add_general_statistics(
-                            "Lines written to identifier map"
-                        )
-                        self.instance_identifiers.add(id_map_string)
-                        anyone = True
-                    else:
-                        s = (
-                            "Duplicate Instance identifiers "
-                            f"for ILS setting {self.mapper.task_configuration.ils_flavour}"
-                        )
-                        self.mapper.migration_report.add_general_statistics(s)
-                        Helper.log_data_issue(
-                            id_map_string, s, "-".join(id_map_strings)
-                        )
-                        logging.error(s)
-                if not anyone:
-                    s = "Failed records. No unique bib identifiers in legacy record"
-                    self.mapper.migration_report.add_general_statistics(s)
-                    raise TransformationRecordFailedError(
-                        "Duplicate recod identifier. See logs. Record Failed"
-                    )
+            Helper.write_to_file(self.results_file, folio_rec)
+            self.mapper.save_source_record(
+                self.srs_records_file,
+                FOLIONamespaces.instances,
+                self.folio_client,
+                marc_record,
+                folio_rec,
+                legacy_ids,
+                suppressed,
+            )
+            self.mapper.migration_report.add_general_statistics(
+                "Records successfully transformed into FOLIO objects"
+            )
 
         except ValueError as value_error:
             self.mapper.migration_report.add(
@@ -119,7 +103,7 @@ class BibsProcessor:
 
         except Exception as inst:
             self.mapper.migration_report.add_general_statistics(
-                "Records that failed transformation. Check log for details",
+                "Records that failed Due to a unhandled exception",
             )
             self.mapper.migration_report.add_general_statistics(
                 f"Transformation exceptions: {inst.__class__.__name__}",
@@ -132,23 +116,44 @@ class BibsProcessor:
                 logging.error(folio_rec)
             raise inst
 
-    def validate_instance(self, folio_rec, marc_record, index_or_legacy_id: str):
+    @staticmethod
+    def validate_instance(
+        folio_rec, legacy_ids, instance_identifiers, migration_report: MigrationReport
+    ):
+        new_ids = set()
+        for legacy_id in legacy_ids:
+            if legacy_id not in instance_identifiers:
+                new_ids.add(legacy_id)
+            else:
+                s = "Duplicate Instance identifiers "
+                migration_report.add_general_statistics(s)
+                Helper.log_data_issue(legacy_id, s, "-".join(legacy_ids))
+                logging.error(s)
+        if not any(new_ids):
+            s = "Failed records. No unique bib identifiers in legacy record"
+            migration_report.add_general_statistics(s)
+            raise TransformationRecordFailedError(
+                "-".join(legacy_ids),
+                "Duplicate recod identifier(s). See logs. Record Failed",
+                "-".join(legacy_ids),
+            )
+
         if not folio_rec.get("title", ""):
-            s = f"No title in {index_or_legacy_id}"
-            self.mapper.migration_report.add(Blurbs.MissingTitles, s)
+            s = f"No title in {'-'.join(legacy_ids)}"
+            migration_report.add(Blurbs.MissingTitles, s)
             logging.error(s)
-            self.mapper.migration_report.add_general_statistics(
+            migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
             )
-            return False
+            raise TransformationRecordFailedError(s)
         if not folio_rec.get("instanceTypeId", ""):
-            s = f"No Instance Type Id in {index_or_legacy_id}"
-            self.mapper.migration_report.add(Blurbs.MissingInstanceTypeIds, s)
-            self.mapper.migration_report.add_general_statistics(
+            s = f"No Instance Type Id in {'-'.join(legacy_ids)}"
+            migration_report.add(Blurbs.MissingInstanceTypeIds, s)
+            migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
             )
-            return False
-        return True
+            raise TransformationRecordFailedError(s)
+        return list(new_ids)
 
     def wrap_up(self):  # sourcery skip: remove-redundant-fstring
         """Finalizes the mapping by writing things out."""

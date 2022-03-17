@@ -105,7 +105,6 @@ class BibsRulesMapper(RulesMapperBase):
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function"""
         self.print_progress()
-        id_map_strings = ""
         ignored_subsequent_fields = set()
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
         folio_instance = self.perform_initial_preparation(marc_record, legacy_ids)
