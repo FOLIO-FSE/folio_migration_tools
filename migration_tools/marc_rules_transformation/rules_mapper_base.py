@@ -5,6 +5,7 @@ import time
 from typing import List
 import uuid
 from textwrap import wrap
+from numpy import ediff1d
 
 import pymarc
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
@@ -507,12 +508,8 @@ class RulesMapperBase(MapperBase):
         suppress: bool,
     ):
         """Saves the source Marc_record to the Source record Storage module"""
-        srs_id = str(
-            FolioUUID(
-                folio_client.okapi_url,
-                FOLIONamespaces.srs_records,
-                str(legacy_ids[0]),
-            )
+        srs_id = RulesMapperBase.create_srs_id(
+            record_type, folio_client.okapi_url, legacy_ids
         )
 
         marc_record.add_ordered_field(
@@ -541,6 +538,23 @@ class RulesMapperBase(MapperBase):
             record_type,
         )
         srs_records_file.write(f"{srs_record_string}\n")
+
+    @staticmethod
+    def create_srs_id(record_type, okapi_url, legacy_ids):
+        srs_types = {
+            FOLIONamespaces.holdings: FOLIONamespaces.srs_records_holdingsrecord,
+            FOLIONamespaces.instances: FOLIONamespaces.srs_records_bib,
+            FOLIONamespaces.athorities: FOLIONamespaces.srs_records_auth,
+            FOLIONamespaces.edifact: FOLIONamespaces.srs_records_edifact,
+        }
+
+        return str(
+            FolioUUID(
+                okapi_url,
+                srs_types.get(record_type),
+                str(legacy_ids[0]),
+            )
+        )
 
     @staticmethod
     def get_srs_string(

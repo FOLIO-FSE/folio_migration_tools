@@ -164,6 +164,17 @@ def test_get_srs_string_bib():
             assert "snapshotId" not in record
 
 
+def test_create_srs_uuid():
+    created_id = RulesMapperBase.create_srs_id(
+        FOLIONamespaces.holdings, "some_url", ["id_1"]
+    )
+    assert str(created_id) == "6734f228-cba2-54c7-b129-c6437375a864"
+    created_id_2 = RulesMapperBase.create_srs_id(
+        FOLIONamespaces.instances, "some_url", ["id_1"]
+    )
+    assert str(created_id) != str(created_id_2)
+
+
 def test_get_instance_schema():
     path = "./tests/test_data/two020a.mrc"
     with open(path, "rb") as marc_file:
