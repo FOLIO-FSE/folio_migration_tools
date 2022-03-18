@@ -143,30 +143,7 @@ class BibsRulesMapper(RulesMapperBase):
         self, marc_record, legacy_ids, id_map_strings, folio_instance, suppressed
     ):
         for legacy_id in legacy_ids:
-            if legacy_id and self.task_configuration.ils_flavour in [
-                IlsFlavour.sierra,
-                IlsFlavour.millennium,
-                IlsFlavour.tag907y,
-            ]:
-                instance_level_call_number = (
-                    marc_record["099"].format_field() if "099" in marc_record else ""
-                )
-                if instance_level_call_number:
-                    self.migration_report.add(
-                        Blurbs.InstanceLevelCallnumber, bool(instance_level_call_number)
-                    )
-                id_map_strings.append(
-                    json.dumps(
-                        {
-                            "legacy_id": legacy_id,
-                            "folio_id": folio_instance["id"],
-                            "instanceLevelCallNumber": instance_level_call_number,
-                            "instance_hrid": folio_instance["hrid"],
-                            "suppressed": suppressed,
-                        }
-                    )
-                )
-            elif legacy_id:
+            if legacy_id:
                 id_map_strings.append(
                     json.dumps(
                         {

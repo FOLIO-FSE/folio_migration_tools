@@ -1,4 +1,5 @@
 """ Class that processes each MARC record """
+import json
 import logging
 
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -66,12 +67,7 @@ class BibsProcessor:
                 self.instance_identifiers,
                 self.mapper.migration_report,
             )
-            for legacy_id in filtered_legacy_ids:
-                self.instance_identifiers.add(legacy_id)
-                self.instance_id_map_file.write(f"{legacy_id}\n")
-                self.mapper.migration_report.add_general_statistics(
-                    "Lines written to identifier map"
-                )
+            self.save_instance_ids_to_file(suppressed, folio_rec, filtered_legacy_ids)
             Helper.write_to_file(self.results_file, folio_rec)
             self.mapper.save_source_record(
                 self.srs_records_file,
@@ -115,6 +111,22 @@ class BibsProcessor:
             if folio_rec:
                 logging.error(folio_rec)
             raise inst
+
+    def save_instance_ids_to_file(self, suppressed, folio_rec, filtered_legacy_ids):
+        for legacy_id in filtered_legacy_ids:
+            self.instance_identifiers.add(legacy_id)
+            s = json.dumps(
+                {
+                    "legacy_id": legacy_id,
+                    "folio_id": folio_rec["id"],
+                    "instance_hrid": folio_rec["hrid"],
+                    "suppressed": suppressed,
+                }
+            )
+            self.instance_id_map_file.write(f"{s}\n")
+            self.mapper.migration_report.add_general_statistics(
+                "Lines written to identifier map"
+            )
 
     @staticmethod
     def validate_instance(
