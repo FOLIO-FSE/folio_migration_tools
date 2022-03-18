@@ -48,9 +48,7 @@ class BibsProcessor:
         folio_rec = None
         try:
             # Transform the MARC21 to a FOLIO record
-            (folio_rec, id_map_strings) = self.mapper.parse_bib(
-                legacy_ids, marc_record, suppressed
-            )
+            folio_rec = self.mapper.parse_bib(legacy_ids, marc_record, suppressed)
             if prec_titles := folio_rec.get("precedingTitles", []):
                 self.mapper.migration_report.add(
                     Blurbs.PrecedingSuccedingTitles, f"{len(prec_titles)}"
@@ -61,7 +59,7 @@ class BibsProcessor:
                 self.mapper.migration_report.add(
                     Blurbs.PrecedingSuccedingTitles, f"{len(succ_titles)}"
                 )
-            filtered_legacy_ids = self.validate_instance(
+            filtered_legacy_ids = self.get_valid_instance_ids(
                 folio_rec,
                 legacy_ids,
                 self.instance_identifiers,
@@ -129,7 +127,7 @@ class BibsProcessor:
             )
 
     @staticmethod
-    def validate_instance(
+    def get_valid_instance_ids(
         folio_rec, legacy_ids, instance_identifiers, migration_report: MigrationReport
     ):
         new_ids = set()
@@ -149,22 +147,6 @@ class BibsProcessor:
                 "Duplicate recod identifier(s). See logs. Record Failed",
                 "-".join(legacy_ids),
             )
-
-        if not folio_rec.get("title", ""):
-            s = f"No title in {'-'.join(legacy_ids)}"
-            migration_report.add(Blurbs.MissingTitles, s)
-            logging.error(s)
-            migration_report.add_general_statistics(
-                "Records that failed transformation. Check log for details",
-            )
-            raise TransformationRecordFailedError(s)
-        if not folio_rec.get("instanceTypeId", ""):
-            s = f"No Instance Type Id in {'-'.join(legacy_ids)}"
-            migration_report.add(Blurbs.MissingInstanceTypeIds, s)
-            migration_report.add_general_statistics(
-                "Records that failed transformation. Check log for details",
-            )
-            raise TransformationRecordFailedError(s)
         return list(new_ids)
 
     def wrap_up(self):  # sourcery skip: remove-redundant-fstring

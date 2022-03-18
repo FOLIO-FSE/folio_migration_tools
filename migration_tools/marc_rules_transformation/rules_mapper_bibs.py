@@ -129,33 +129,11 @@ class BibsRulesMapper(RulesMapperBase):
         self.dedupe_rec(clean_folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(clean_folio_instance, self.instance_json_schema)
-        if suppressed:
+        if clean_folio_instance["discoverySuppress"]:
             self.migration_report.add_general_statistics("Suppressed from discovery")
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
-        id_map_strings = []
-        self.handle_legacy_ids(
-            marc_record, legacy_ids, id_map_strings, clean_folio_instance, suppressed
-        )
-        return clean_folio_instance, id_map_strings
-
-    def handle_legacy_ids(
-        self, marc_record, legacy_ids, id_map_strings, folio_instance, suppressed
-    ):
-        for legacy_id in legacy_ids:
-            if legacy_id:
-                id_map_strings.append(
-                    json.dumps(
-                        {
-                            "legacy_id": legacy_id,
-                            "folio_id": folio_instance["id"],
-                            "instance_hrid": folio_instance["hrid"],
-                            "suppressed": suppressed,
-                        }
-                    )
-                )
-            else:
-                logging.info("Legacy id is None %s", legacy_ids)
+        return clean_folio_instance
 
     def process_marc_field(
         self,

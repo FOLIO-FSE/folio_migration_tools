@@ -71,7 +71,7 @@ def test_simple_title(mapper):
     instance_identifiers = set(["a", "b"])
     assert "Modern Electrosynthetic Methods in Organic Chemistry" == record[0]["title"]
     with pytest.raises(TransformationRecordFailedError):
-        BibsProcessor.validate_instance(
+        BibsProcessor.get_valid_instance_ids(
             record[0], ["a", "b"], instance_identifiers, MigrationReport()
         )
 
@@ -79,8 +79,7 @@ def test_simple_title(mapper):
 def test_simple_title2(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
     instance_identifiers = set(["c", "d"])
-    assert "Modern Electrosynthetic Methods in Organic Chemistry" == record[0]["title"]
-    ids = BibsProcessor.validate_instance(
+    ids = BibsProcessor.get_valid_instance_ids(
         record[0], ["a", "b"], instance_identifiers, MigrationReport()
     )
     assert ids == ["a", "b"]
@@ -89,8 +88,7 @@ def test_simple_title2(mapper):
 def test_simple_title3(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
     instance_identifiers = set(["b", "c", "d"])
-    assert "Modern Electrosynthetic Methods in Organic Chemistry" == record[0]["title"]
-    ids = BibsProcessor.validate_instance(
+    ids = BibsProcessor.get_valid_instance_ids(
         record[0], ["a", "b"], instance_identifiers, MigrationReport()
     )
     assert ids == ["a"]
