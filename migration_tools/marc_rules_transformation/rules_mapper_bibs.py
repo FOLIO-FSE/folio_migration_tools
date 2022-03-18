@@ -567,7 +567,7 @@ class BibsRulesMapper(RulesMapperBase):
             logging.exception(
                 f"{marc_record.leader} {list(self.folio.modes_of_issuance)}"
             )
-            raise ee
+            raise ee from ee
 
     def get_nature_of_content(self, marc_record: Record) -> List[str]:
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
@@ -663,7 +663,7 @@ class BibsRulesMapper(RulesMapperBase):
         elif ils_flavour == IlsFlavour.tag907y:
             try:
                 return list(set(marc_record["907"].get_subfields("a", "y")))
-            except Exception:
+            except Exception as e:
                 raise TransformationRecordFailedError(
                     index_or_legacy_id,
                     (
@@ -671,7 +671,7 @@ class BibsRulesMapper(RulesMapperBase):
                         "required for this legacy ILS choice"
                     ),
                     marc_record.as_json(),
-                )
+                ) from e
         elif ils_flavour == IlsFlavour.tagf990a:
             res = {f["a"].strip() for f in marc_record.get_fields("990") if "a" in f}
             if marc_record["001"].format_field().strip():
@@ -684,21 +684,21 @@ class BibsRulesMapper(RulesMapperBase):
         elif ils_flavour in {IlsFlavour.voyager, "voyager", IlsFlavour.tag001}:
             try:
                 return [marc_record["001"].format_field().strip()]
-            except Exception:
+            except Exception as e:
                 raise TransformationRecordFailedError(
                     index_or_legacy_id,
                     "001 is missing, although it is required for Voyager migrations",
                     marc_record.as_json(),
-                )
+                ) from e
         elif ils_flavour == IlsFlavour.koha:
             try:
                 return [marc_record["999"]["c"]]
-            except Exception:
+            except Exception as e:
                 raise TransformationRecordFailedError(
                     index_or_legacy_id,
                     "999 $c is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
-                )
+                ) from e
         elif ils_flavour == IlsFlavour.none:
             return [str(uuid.uuid4())]
         else:
@@ -714,12 +714,12 @@ class BibsRulesMapper(RulesMapperBase):
                 ret = [marc_record["001"].format_field().strip()]
                 self.migration_report.add_general_statistics("legacy id from 001")
                 return ret
-            except Exception:
+            except Exception as e:
                 raise TransformationRecordFailedError(
                     "unknown identifier",
                     "001 is missing.although that or 998$b is required for Aleph migrations",
                     marc_record.as_json(),
-                )
+                ) from e
 
 
 def get_unspecified_mode_of_issuance(folio_client: FolioClient):
@@ -739,9 +739,9 @@ def get_unspecified_mode_of_issuance(folio_client: FolioClient):
 def get_iii_bib_id(marc_record: Record):
     try:
         return [marc_record["907"]["a"]]
-    except Exception:
+    except Exception as e:
         raise TransformationRecordFailedError(
             "unknown identifier",
             "907 $a is missing, although it is required for Sierra/iii migrations",
             marc_record.as_json(),
-        )
+        ) from e

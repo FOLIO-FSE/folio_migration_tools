@@ -108,7 +108,7 @@ class BibsProcessor:
             logging.error(marc_record)
             if folio_rec:
                 logging.error(folio_rec)
-            raise inst
+            raise inst from inst
 
     def save_instance_ids_to_file(self, suppressed, folio_rec, filtered_legacy_ids):
         for legacy_id in filtered_legacy_ids:
