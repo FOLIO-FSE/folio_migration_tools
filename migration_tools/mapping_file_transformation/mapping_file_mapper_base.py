@@ -197,7 +197,6 @@ class MappingFileMapperBase(MapperBase):
                 )
             except TransformationFieldMappingError as data_error:
                 self.handle_transformation_field_mapping_error(legacy_id, data_error)
-
         clean_folio_object = self.validate_required_properties(
             legacy_id, folio_object, self.schema
         )

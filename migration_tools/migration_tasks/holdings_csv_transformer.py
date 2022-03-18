@@ -21,6 +21,7 @@ from migration_tools.helper import Helper
 from migration_tools.holdings_helper import HoldingsHelper
 from migration_tools.library_configuration import (
     FileDefinition,
+    FolioRelease,
     HridHandling,
     LibraryConfiguration,
 )
@@ -84,7 +85,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.holdings_id_map = self.load_id_map(
                 self.folder_structure.holdings_id_map_path
             )
-
+            self.holdings_sources = self.get_holdings_sources()
             self.results_path = self.folder_structure.created_objects_path
             self.holdings_types = list(
                 self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
@@ -323,6 +324,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         if not folio_rec.get("holdingsTypeId", ""):
             folio_rec["holdingsTypeId"] = self.fallback_holdings_type["id"]
 
+        folio_rec["sourceId"] = self.holdings_sources.get("FOLIO")
+
         holdings_from_row = []
         all_instance_ids = folio_rec.get("instanceId", [])
         if len(all_instance_ids) == 1:  # Normal case.
@@ -456,6 +459,28 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self.holdings[holdings_key] = HoldingsHelper.merge_holding(
             self.holdings[holdings_key], new_holdings_record
         )
+
+    def get_holdings_sources(self):
+        res = {}
+        if self.library_configuration.folio_release != FolioRelease.juniper:
+            holdings_sources = list(
+                self.mapper.folio_client.folio_get_all(
+                    "/holdings-sources", "holdingsRecordsSources"
+                )
+            )
+            logging.info(
+                "Fetched %s holdingsRecordsSources from tenant", len(holdings_sources)
+            )
+            res = {n["name"].upper(): n["id"] for n in holdings_sources}
+            if "FOLIO" not in res:
+                raise TransformationProcessError(
+                    "No holdings source with name FOLIO in tenant"
+                )
+            if "MARC" not in res:
+                raise TransformationProcessError(
+                    "No holdings source with name MARC in tenant"
+                )
+        return res
 
 
 def dedupe(list_of_dicts):
