@@ -4,6 +4,7 @@ from migration_tools.mapper_base import MapperBase
 
 
 def test_validate_required_properties():
+
     schema = {"required": ["d", "h", "i"]}
     record = {
         "a": None,

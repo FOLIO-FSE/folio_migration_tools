@@ -96,8 +96,12 @@ class HoldingsHelper:
 
 
 def extend_list(prop_name: str, holdings_record: dict, incoming_holdings: dict):
-    holdings_record[prop_name] = holdings_record.get(prop_name, [])
-    holdings_record[prop_name].extend(incoming_holdings.get(prop_name, []))
+
+    temp = holdings_record.get(prop_name, [])
+    for f in incoming_holdings.get(prop_name, []):
+        if f not in temp:
+            temp.append(f)
+    holdings_record[prop_name] = temp
 
 
 def dedupe(list_of_dicts):

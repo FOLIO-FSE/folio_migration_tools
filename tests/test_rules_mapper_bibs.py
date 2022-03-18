@@ -55,7 +55,7 @@ def default_map(file_name, xpath, the_mapper):
     }
     file_path = f"./tests/test_data/default/{file_name}"
     record = pymarc.parse_xml_to_array(file_path)[0]
-    (result, other) = the_mapper.parse_bib(["legacy_id"], record, False)
+    result = the_mapper.parse_bib(["legacy_id"], record, False)
     root = etree.parse(file_path)
     data = str("")
     for element in root.xpath(xpath, namespaces=ns):

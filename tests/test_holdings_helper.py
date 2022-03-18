@@ -24,7 +24,8 @@ def test_merge_holding():
         formerIds=["a", "b"],
         electronicAccess=[{"uri": "2"}],
         holdingsStatementsForSupplements=[
-            {"statement": "stmt2", "note": "stmt2", "staffNote": True}
+            {"statement": "stmt2", "note": "stmt2", "staffNote": True},
+            {"uri": "1", "linkText": "1", "publicNote": "1", "relationshipId": "1"},
         ],
         holdingsStatements=[{"statement": "stmt3", "note": "stmt3", "staffNote": True}],
     )
@@ -43,7 +44,7 @@ def test_merge_holding():
     assert sorted(merged_holding["formerIds"]) == ["a", "b", "c", "d"]
     assert len(merged_holding["electronicAccess"]) == 2
     assert len(merged_holding["holdingsStatementsForIndexes"]) == 1
-    assert len(merged_holding["holdingsStatementsForSupplements"]) == 1
+    assert len(merged_holding["holdingsStatementsForSupplements"]) == 2
     assert len(merged_holding["holdingsStatements"]) == 2
 
 
