@@ -231,6 +231,7 @@ class MappingFileMapperBase(MapperBase):
                     property_level1["items"]["properties"],
                     folio_object,
                     index_or_id,
+                    property_level1["items"].get("required", []),
                 )
             elif property_level1["items"]["type"] == "string":
                 self.map_string_array_props(
@@ -317,6 +318,7 @@ class MappingFileMapperBase(MapperBase):
         sub_properties,
         folio_object: dict,
         index_or_id,
+        required: list[str],
     ):
         resulting_array = []
         keys_to_map = {
@@ -338,7 +340,11 @@ class MappingFileMapperBase(MapperBase):
                     temp_object[prop] = res
 
             if temp_object != {} and all(
-                (v or (isinstance(v, bool)) for k, v in temp_object.items())
+                (
+                    v or (isinstance(v, bool))
+                    for k, v in temp_object.items()
+                    if k in required
+                )
             ):
                 resulting_array.append(temp_object)
         if any(resulting_array):

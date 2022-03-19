@@ -82,7 +82,8 @@ def test_simple_title2(mapper):
     ids = BibsProcessor.get_valid_instance_ids(
         record[0], ["a", "b"], instance_identifiers, MigrationReport()
     )
-    assert ids == ["a", "b"]
+    assert "a" in ids
+    assert "b" in ids
 
 
 def test_simple_title3(mapper):

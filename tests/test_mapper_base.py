@@ -5,7 +5,13 @@ from migration_tools.mapper_base import MapperBase
 
 def test_validate_required_properties():
 
-    schema = {"required": ["d", "h", "i"]}
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "",
+        "type": "object",
+        "required": ["d", "h", "i"],
+        "properties": {},
+    }
     record = {
         "a": None,
         "b": [],
