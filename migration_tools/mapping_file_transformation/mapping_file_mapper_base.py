@@ -111,7 +111,7 @@ class MappingFileMapperBase(MapperBase):
             raise TransformationProcessError(
                 f"property legacyIdentifier not setup in map: "
                 f"{field_map.get('legacyIdentifier', '') ({exception})}"
-            )
+            ) from exception
         del field_map["legacyIdentifier"]
         return field_map
 
@@ -198,7 +198,7 @@ class MappingFileMapperBase(MapperBase):
             except TransformationFieldMappingError as data_error:
                 self.handle_transformation_field_mapping_error(legacy_id, data_error)
         clean_folio_object = self.validate_required_properties(
-            legacy_id, folio_object, self.schema
+            legacy_id, folio_object, self.schema, object_type
         )
         return (clean_folio_object, legacy_id)
 
@@ -268,7 +268,7 @@ class MappingFileMapperBase(MapperBase):
         for property_name_level2, property_level2 in property_level1[
             "properties"
         ].items():
-            sub_prop_key = prop_key + "." + property_name_level2
+            sub_prop_key = f"{prop_key}.{property_name_level2}"
             if "properties" in property_level2:
                 for property_name_level3, property_level3 in property_level2[
                     "properties"
@@ -276,8 +276,6 @@ class MappingFileMapperBase(MapperBase):
                     # not parsing stuff on level three.
                     pass
             elif property_level2["type"] == "array":
-                # not parsing arrays on level 2
-                pass
                 """
                 # Object with subprop array
                 temp_object[property_name_level2] = []
@@ -299,15 +297,13 @@ class MappingFileMapperBase(MapperBase):
                             continue
                         temp_object[property_name_level2].append(temp)
                     else:
-                        
+
                         mkey = sub_prop_key + "." + sub_prop_name2
                         a = self.get_prop(legacy_object, mkey, index_or_id, i)
                         if a:
                             temp_object[property_name_level2] = a"""
-            else:
-                p = self.get_prop(legacy_object, sub_prop_key, index_or_id)
-                if p:
-                    temp_object[property_name_level2] = p
+            elif p := self.get_prop(legacy_object, sub_prop_key, index_or_id):
+                temp_object[property_name_level2] = p
         if temp_object:
             folio_object[property_name_level1] = temp_object
 
@@ -384,7 +380,7 @@ class MappingFileMapperBase(MapperBase):
                 yield row
         except Exception as exception:
             logging.error("%s at row %s", exception, idx)
-            raise exception
+            raise exception from exception
 
     def has_property(self, legacy_object, folio_prop_name: str):
         if not self.use_map:

@@ -8,6 +8,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folioclient import FolioClient
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.migration_report import MigrationReport
@@ -300,7 +301,9 @@ class MapperBase:
             )
 
     @staticmethod
-    def validate_required_properties(legacy_id, folio_object: dict, schema: dict):
+    def validate_required_properties(
+        legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
+    ):
         cleaned_folio_object = MapperBase.clean_none_props(folio_object)
         required = schema["required"]
         missing = []

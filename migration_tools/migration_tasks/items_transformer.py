@@ -216,6 +216,7 @@ class ItemsTransformer(MigrationTaskBase):
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
                     self.handle_circiulation_notes(folio_rec)
+                    self.handle_notes(folio_rec)
                     # TODO: turn this into a asynchrounous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
@@ -250,6 +251,21 @@ class ItemsTransformer(MigrationTaskBase):
                 f"Total records processed: {records_in_file:,}"
             )
         self.total_records += records_in_file
+
+    @staticmethod
+    def handle_notes(folio_object):
+        if folio_object.get("notes", []):
+            filtered_notes = []
+            for note_obj in folio_object.get("notes", []):
+                if not note_obj.get("itemNoteTypeId", ""):
+                    raise TransformationProcessError(
+                        folio_object.get("legacyIds", ""),
+                        "Missing note type id mapping",
+                        json.dumps(note_obj),
+                    )
+                elif note_obj.get("note", "") and note_obj.get("itemNoteTypeId", ""):
+                    filtered_notes.append(note_obj)
+            folio_object["notes"] = filtered_notes
 
     def handle_circiulation_notes(self, folio_rec):
         for circ_note in folio_rec.get("circulationNotes", []):

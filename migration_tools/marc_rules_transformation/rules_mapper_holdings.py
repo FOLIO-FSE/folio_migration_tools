@@ -106,6 +106,7 @@ class RulesMapperHoldings(RulesMapperBase):
             "-".join(folio_holding.get("formerIds")),
             folio_holding,
             self.holdings_json_schema,
+            FOLIONamespaces.holdings,
         )
         self.dedupe_rec(cleaned_folio_holding)
         for identifier in cleaned_folio_holding["formerIds"]:
@@ -199,10 +200,9 @@ class RulesMapperHoldings(RulesMapperBase):
                 "y": "Serial",
             }
             holdings_type = holdings_type_map.get(ldr06, "")
-            t = self.conditions.get_ref_data_tuple_by_name(
+            if t := self.conditions.get_ref_data_tuple_by_name(
                 self.conditions.holdings_types, "hold_types", holdings_type
-            )
-            if t:
+            ):
                 folio_holding["holdingsTypeId"] = t[0]
                 self.migration_report.add(
                     Blurbs.HoldingsTypeMapping,

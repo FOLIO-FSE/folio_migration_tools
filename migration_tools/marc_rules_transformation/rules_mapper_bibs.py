@@ -124,7 +124,7 @@ class BibsRulesMapper(RulesMapperBase):
             folio_instance, marc_record, legacy_ids, suppressed
         )
         clean_folio_instance = self.validate_required_properties(
-            "-".join(legacy_ids), folio_instance, self.schema
+            "-".join(legacy_ids), folio_instance, self.schema, FOLIONamespaces.instances
         )
         self.dedupe_rec(clean_folio_instance)
         marc_record.remove_fields(*list(bad_tags))

@@ -1,6 +1,7 @@
 import pytest
 from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.mapper_base import MapperBase
+from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 def test_validate_required_properties():
@@ -22,7 +23,9 @@ def test_validate_required_properties():
         "type": "object",
     }
     with pytest.raises(TransformationRecordFailedError):
-        MapperBase.validate_required_properties("", record, schema)
+        MapperBase.validate_required_properties(
+            "", record, schema, FOLIONamespaces.other
+        )
 
 
 def test_validate_required_properties_remove_object():
@@ -36,7 +39,9 @@ def test_validate_required_properties_remove_object():
         "h": "actual value",
         "type": "object",
     }
-    clean_record = MapperBase.validate_required_properties("", record, schema)
+    clean_record = MapperBase.validate_required_properties(
+        "", record, schema, FOLIONamespaces.other
+    )
     assert "type" not in clean_record
 
 
