@@ -14,6 +14,7 @@ from migration_tools.custom_exceptions import (
 )
 from migration_tools.folder_structure import FolderStructure
 from migration_tools.helper import Helper
+from migration_tools.holdings_helper import HoldingsHelper
 from migration_tools.library_configuration import (
     FileDefinition,
     FolioRelease,
@@ -83,6 +84,7 @@ class HoldingsProcessor:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_hold(marc_record, [str(self.records_count)])
+            HoldingsHelper.handle_notes(folio_rec)
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
                     "".join(folio_rec.get("formerIds", [])),
@@ -108,7 +110,7 @@ class HoldingsProcessor:
                 "Records that failed transformation. Check log for details",
             )
         except TransformationProcessError as tpe:
-            raise tpe  # Raise, since it should be handled higher up
+            raise tpe from tpe
         except Exception as inst:
             success = False
             traceback.print_exc()
@@ -117,7 +119,7 @@ class HoldingsProcessor:
             logging.error(inst)
             logging.error(marc_record)
             logging.error(folio_rec)
-            raise inst
+            raise inst from inst
         finally:
             if not success:
                 self.failed_records_count += 1

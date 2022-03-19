@@ -129,3 +129,15 @@ def test_merge_holding2():
     assert len(merged_holding["holdingsStatements"]) == 1
     assert len(merged_holding["holdingsStatementsForIndexes"]) == 2
     assert len(merged_holding["formerIds"]) == 4
+
+
+def test_holdings_notes():
+    folio_rec = {"notes": [{"note": "apa", "holdingsNoteTypeId": ""}]}
+    with pytest.raises(TransformationProcessError):
+        HoldingsHelper.handle_notes(folio_rec)
+
+
+def test_holdings_notes2():
+    folio_rec = {"notes": [{"note": "", "holdingsNoteTypeId": "apa"}]}
+    HoldingsHelper.handle_notes(folio_rec)
+    assert "notes" not in folio_rec

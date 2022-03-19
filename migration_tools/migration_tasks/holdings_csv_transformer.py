@@ -321,7 +321,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
 
     def post_process_holding(self, folio_rec: dict, legacy_id: str):
-        self.handle_notes(folio_rec)
+        HoldingsHelper.handle_notes(folio_rec)
         if not folio_rec.get("holdingsTypeId", ""):
             folio_rec["holdingsTypeId"] = self.fallback_holdings_type["id"]
 
@@ -345,21 +345,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         for folio_holding in holdings_from_row:
             self.merge_holding_in(folio_holding, all_instance_ids, legacy_id)
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
-
-    @staticmethod
-    def handle_notes(folio_object):
-        if folio_object.get("notes", []):
-            filtered_notes = []
-            for note_obj in folio_object.get("notes", []):
-                if not note_obj.get("holdingsNoteTypeId", ""):
-                    raise TransformationProcessError(
-                        folio_object.get("legacyIds", ""),
-                        "Missing note type id mapping",
-                        json.dumps(note_obj),
-                    )
-                elif note_obj.get("note", ""):
-                    filtered_notes.append(note_obj)
-            folio_object["notes"] = filtered_notes
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
         # Add former ids

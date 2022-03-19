@@ -94,6 +94,24 @@ class HoldingsHelper:
         extend_list("electronicAccess", holdings_record, incoming_holdings)
         return holdings_record
 
+    @staticmethod
+    def handle_notes(folio_object):
+        if folio_object.get("notes", []):
+            filtered_notes = []
+            for note_obj in folio_object.get("notes", []):
+                if not note_obj.get("holdingsNoteTypeId", ""):
+                    raise custom_exceptions.TransformationProcessError(
+                        folio_object.get("legacyIds", ""),
+                        "Missing note type id mapping",
+                        json.dumps(note_obj),
+                    )
+                elif note_obj.get("note", ""):
+                    filtered_notes.append(note_obj)
+            if filtered_notes:
+                folio_object["notes"] = filtered_notes
+            else:
+                del folio_object["notes"]
+
 
 def extend_list(prop_name: str, holdings_record: dict, incoming_holdings: dict):
 

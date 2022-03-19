@@ -212,11 +212,12 @@ class ItemsTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.items
                     )
+
+                    self.handle_circiulation_notes(folio_rec)
+                    self.handle_notes(folio_rec)
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
-                    self.handle_circiulation_notes(folio_rec)
-                    self.handle_notes(folio_rec)
                     # TODO: turn this into a asynchrounous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
@@ -265,7 +266,10 @@ class ItemsTransformer(MigrationTaskBase):
                     )
                 elif note_obj.get("note", "") and note_obj.get("itemNoteTypeId", ""):
                     filtered_notes.append(note_obj)
-            folio_object["notes"] = filtered_notes
+            if filtered_notes:
+                folio_object["notes"] = filtered_notes
+            else:
+                del folio_object["notes"]
 
     def handle_circiulation_notes(self, folio_rec):
         for circ_note in folio_rec.get("circulationNotes", []):
