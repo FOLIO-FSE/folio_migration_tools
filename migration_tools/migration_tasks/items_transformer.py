@@ -213,7 +213,9 @@ class ItemsTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.items
                     )
 
-                    self.handle_circiulation_notes(folio_rec)
+                    self.handle_circiulation_notes(
+                        folio_rec, self.folio_client.current_user
+                    )
                     self.handle_notes(folio_rec)
                     if idx == 0:
                         logging.info("First FOLIO record:")
@@ -271,13 +273,27 @@ class ItemsTransformer(MigrationTaskBase):
             else:
                 del folio_object["notes"]
 
-    def handle_circiulation_notes(self, folio_rec):
+    @staticmethod
+    def handle_circiulation_notes(folio_rec, current_user_uuid):
+        if not folio_rec.get("circulationNotes", []):
+            return
+        filtered_notes = []
         for circ_note in folio_rec.get("circulationNotes", []):
-            circ_note["id"] = str(uuid.uuid4())
-            circ_note["source"] = {
-                "id": self.folio_client.current_user,
-                "personal": {"lastName": "Data", "firstName": "Migration"},
-            }
+            if circ_note.get("noteType", "") not in ["Check in", "Check out"]:
+                raise TransformationProcessError(
+                    "Circulation Note types are not mapped correclty"
+                )
+            if circ_note.get("note", ""):
+                circ_note["id"] = str(uuid.uuid4())
+                circ_note["source"] = {
+                    "id": current_user_uuid,
+                    "personal": {"lastName": "Data", "firstName": "Migration"},
+                }
+                filtered_notes.append(circ_note)
+        if filtered_notes:
+            folio_rec["circulationNotes"] = filtered_notes
+        else:
+            del folio_rec["circulationNotes"]
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
