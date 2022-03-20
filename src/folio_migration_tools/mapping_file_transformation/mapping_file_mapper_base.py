@@ -260,7 +260,11 @@ class MappingFileMapperBase(MapperBase):
                     logging.info("Edge case %s", property_name_level1)
 
             except KeyError as schema_anomaly:
-                logging.error("Cannot create property '%s'. Unsupported schema format: %s", property_name_level1, schema_anomaly)
+                logging.error(
+                    "Cannot create property '%s'. Unsupported schema format: %s",
+                    property_name_level1,
+                    schema_anomaly,
+                )
 
         else:  # Basic property
             self.map_basic_props(

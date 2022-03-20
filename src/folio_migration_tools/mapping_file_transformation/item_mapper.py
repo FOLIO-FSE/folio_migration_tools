@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 from uuid import uuid4
 
 from folioclient import FolioClient
