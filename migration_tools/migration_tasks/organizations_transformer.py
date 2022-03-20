@@ -69,7 +69,7 @@ class OrganizationsTransformer(MigrationTaskBase):
 
         super().__init__(library_config, task_config)
         self.task_config = task_config
-        self.object_type = self.get_object_type().name
+        self.object_type_name = self.get_object_type().name
         self.files = self.list_source_files()
         
         self.total_records = 0
@@ -99,14 +99,14 @@ class OrganizationsTransformer(MigrationTaskBase):
     def list_source_files(self):
         # Source data files
         files = [
-            self.folder_structure.data_folder / self.object_type / f.file_name
+            self.folder_structure.data_folder / self.object_type_name / f.file_name
             for f in self.task_config.files
-            if isfile(self.folder_structure.data_folder / self.object_type / f.file_name)
+            if isfile(self.folder_structure.data_folder / self.object_type_name / f.file_name)
         ]
         if not any(files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+                f"Files {ret_str} not found in {self.folder_structure.data_folder} / {self.object_type_name}"
             )
         logging.info("Files to process:")
         for filename in files:
@@ -129,6 +129,7 @@ class OrganizationsTransformer(MigrationTaskBase):
                 records_processed += 1
 
                 try:
+                    # Print first legacy record, then first transformed record
                     if idx == 0:
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
@@ -138,6 +139,8 @@ class OrganizationsTransformer(MigrationTaskBase):
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
+
+                    # Writes record to file
                     Helper.write_to_file(results_file, folio_rec)
 
                 except TransformationProcessError as process_error:
@@ -150,13 +153,17 @@ class OrganizationsTransformer(MigrationTaskBase):
                 self.mapper.migration_report.add_general_statistics(
                     "Number of Legacy items in file"
                 )
-                if idx > 1 and idx % 10000 == 0:
+
+                #TODO See if we can base % value on number of rows in file
+                if idx > 1 and idx % 50 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
                     logging.info(  # pylint: disable=logging-fstring-interpolation
                         f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
                     )
+
             self.total_records = records_processed
+
             logging.info(  # pylint: disable=logging-fstring-interpolation
                 f"Done processing {filename} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
@@ -199,4 +206,4 @@ class OrganizationsTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
-        
+
