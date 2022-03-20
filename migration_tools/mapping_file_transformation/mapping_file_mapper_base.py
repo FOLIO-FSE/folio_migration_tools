@@ -223,8 +223,8 @@ class MappingFileMapperBase(MapperBase):
                     folio_object,
                     index_or_id,
                 )
-        elif property_level1["type"] == "array":
 
+        elif property_level1["type"] == "array":
             try:
                 if property_level1["items"]["type"] == "object":
                     self.map_objects_array_props(
