@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 # This is a work in progress
 import csv
 import ctypes
@@ -27,11 +25,7 @@ from migration_tools.library_configuration import (
 )
 
 # TODO Create OrganizationMapper 
-<<<<<<< HEAD
-# TODO from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
-=======
 from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
->>>>>>> 71e25e7 (add organization_mapper #146)
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -77,27 +71,14 @@ class OrganizationsTransformer(MigrationTaskBase):
             logging.info("\t%s", filename.file_name)
         
         self.total_records = 0
-<<<<<<< HEAD
-        self.folio_keys = []
-        self.items_map = self.setup_records_map()
-        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
-            self.items_map
-        )
-        self.failed_files: List[str] = list()
-=======
         self.items_map = self.setup_records_map(
             self.folder_structure.mapping_files_folder
             / self.task_config.items_mapping_file_name
         )
->>>>>>> 71e25e7 (add organization_mapper #146)
     
     def wrap_up(self):
         logging.info("Wrapping up!")
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 71e25e7 (add organization_mapper #146)
     def do_work(self):
         logging.info("Getting started!")
         for filename in self.files:
@@ -239,7 +220,7 @@ class OrganizationsTransformer(MigrationTaskBase):
 
         super().__init__(library_config, task_config)
         self.task_config = task_config
-        self.object_type = self.get_object_type().name
+        self.object_type_name = self.get_object_type().name
         self.files = self.list_source_files()
         
         self.total_records = 0
@@ -269,14 +250,14 @@ class OrganizationsTransformer(MigrationTaskBase):
     def list_source_files(self):
         # Source data files
         files = [
-            self.folder_structure.data_folder / self.object_type / f.file_name
+            self.folder_structure.data_folder / self.object_type_name / f.file_name
             for f in self.task_config.files
-            if isfile(self.folder_structure.data_folder / self.object_type / f.file_name)
+            if isfile(self.folder_structure.data_folder / self.object_type_name / f.file_name)
         ]
         if not any(files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+                f"Files {ret_str} not found in {self.folder_structure.data_folder} / {self.object_type_name}"
             )
         logging.info("Files to process:")
         for filename in files:
@@ -299,6 +280,7 @@ class OrganizationsTransformer(MigrationTaskBase):
                 records_processed += 1
 
                 try:
+                    # Print first legacy record, then first transformed record
                     if idx == 0:
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
@@ -308,6 +290,8 @@ class OrganizationsTransformer(MigrationTaskBase):
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
+
+                    # Writes record to file
                     Helper.write_to_file(results_file, folio_rec)
 
                 except TransformationProcessError as process_error:
@@ -320,13 +304,17 @@ class OrganizationsTransformer(MigrationTaskBase):
                 self.mapper.migration_report.add_general_statistics(
                     "Number of Legacy items in file"
                 )
-                if idx > 1 and idx % 10000 == 0:
+
+                #TODO See if we can base % value on number of rows in file
+                if idx > 1 and idx % 50 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
                     logging.info(  # pylint: disable=logging-fstring-interpolation
                         f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
                     )
+
             self.total_records = records_processed
+
             logging.info(  # pylint: disable=logging-fstring-interpolation
                 f"Done processing {filename} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
@@ -373,7 +361,11 @@ class OrganizationsTransformer(MigrationTaskBase):
             )
         logging.info("All done!")
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 6d341e1 (process files and schema)
 =======
         
 >>>>>>> a867e86 (create organization records with at least some values #146)
+=======
+
+>>>>>>> ab69d76 (rename variable object_type > object_type_name)
