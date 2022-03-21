@@ -73,25 +73,14 @@ class RulesMapperHoldings(RulesMapperBase):
                 tfme.log_it()
         if num_852s > 1:
             Helper.log_data_issue(legacy_id, "More than 1 852 found", "")
-        if former_id := next(
-            (id for id in folio_holding.get("formerIds", []) if id), ""
-        ):
-            folio_holding["id"] = str(
-                FolioUUID(
-                    self.folio_client.okapi_url,
-                    FOLIONamespaces.holdings,
-                    str(former_id).strip(),
-                )
+
+        folio_holding["id"] = str(
+            FolioUUID(
+                self.folio_client.okapi_url,
+                FOLIONamespaces.holdings,
+                legacy_id,
             )
-        else:
-            raise TransformationProcessError(
-                self.parsed_records,
-                (
-                    "No former ids mapped. Update mapping file so "
-                    "that a field is mapped to the formerIds"
-                ),
-                json.dumps(folio_holding),
-            )
+        )
 
         if not folio_holding.get("instanceId", ""):
             raise TransformationRecordFailedError(
@@ -107,10 +96,10 @@ class RulesMapperHoldings(RulesMapperBase):
             FOLIONamespaces.holdings,
         )
         self.dedupe_rec(cleaned_folio_holding)
-        for identifier in cleaned_folio_holding["formerIds"]:
-            self.holdings_id_map[identifier] = self.get_id_map_dict(
-                identifier, cleaned_folio_holding
-            )
+        self.holdings_id_map[legacy_id] = self.get_id_map_dict(
+            legacy_id, cleaned_folio_holding
+        )
+
         self.report_folio_mapping(cleaned_folio_holding, self.schema)
         return cleaned_folio_holding
 
