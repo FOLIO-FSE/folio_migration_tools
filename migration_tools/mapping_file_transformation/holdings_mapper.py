@@ -35,7 +35,12 @@ class HoldingsMapper(MappingFileMapperBase):
         self.holdings_map = holdings_map
 
         self.location_mapping = RefDataMapping(
-            self.folio_client, "/locations", "locations", location_map, "code"
+            self.folio_client,
+            "/locations",
+            "locations",
+            location_map,
+            "code",
+            Blurbs.LocationMapping,
         )
         if call_number_type_map:
             self.call_number_mapping = RefDataMapping(
@@ -44,6 +49,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 "callNumberTypes",
                 call_number_type_map,
                 "name",
+                Blurbs.CallNumberTypeMapping,
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
@@ -132,7 +138,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 and legacy_instance_id not in self.instance_id_map
             ):
                 self.migration_report.add_general_statistics(
-                    "Records successfully matched to Instances"
+                    "Records not matched to Instances"
                 )
                 s = "Bib id not in instance id map."
                 raise TransformationRecordFailedError(index_or_id, s, new_legacy_value)
@@ -151,7 +157,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 index_or_id, "No instance id mapped from", legacy_value
             )
 
-    def get_legacy_bib_ids(self, legacy_value: str, index_or_id: str):
+    def get_legacy_bib_ids(self, legacy_value: str, index_or_id: str) -> list[str]:
         if not legacy_value.startswith("["):
             return [legacy_value]
         try:

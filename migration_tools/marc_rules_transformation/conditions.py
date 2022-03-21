@@ -1,7 +1,5 @@
-import json
 import logging
 import re
-import sys
 
 import pymarc
 from folioclient import FolioClient
@@ -116,7 +114,12 @@ class Conditions:
         )
         logging.info(f"{len(self.folio.class_types)}\tclass_types")
         self.statistical_codes = list(
-            self.folio.folio_get_all("/statistical-codes", "statisticalCodes", "", 1000)
+            self.folio.folio_get_all(
+                "/statistical-codes",
+                "statisticalCodes",
+                "?query=cql.allRecords=1",
+                1000,
+            )
         )
         logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")
 

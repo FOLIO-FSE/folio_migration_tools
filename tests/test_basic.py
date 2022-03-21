@@ -7,8 +7,6 @@ from unittest.mock import Mock, patch
 from folio_uuid import FolioUUID, FOLIONamespaces
 import pymarc
 from migration_tools import mapper_base
-from migration_tools.mapping_file_transformation import mapping_file_mapper_base
-from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
@@ -45,90 +43,6 @@ def test_dedupe():
     }
     RulesMapperBase.dedupe_rec(rec)
     assert len(rec["identifiers"]) == 3
-
-
-def test_is_hybrid_default_mapping():
-    mappings = [{"location": "*", "loan_type": "*", "material_type": "*"}]
-    mock = Mock(spec=RefDataMapping)
-    mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-    res = RefDataMapping.is_hybrid_default_mapping(mock, mappings[0])
-    assert res is False
-
-
-def test_get_hybrid_mapping():
-    mappings = [
-        {"location": "l_2", "loan_type": "*", "material_type": "*"},
-        {"location": "l_1", "loan_type": "*", "material_type": "mt_1"},
-        {"location": "l_1", "loan_type": "*", "material_type": "*"},
-    ]
-    legacy_object = {"location": "l_1", "loan_type": "lt_1", "material_type": "mt_1"}
-    with patch(
-        "migration_tools.mapping_file_transformation.ref_data_mapping.RefDataMapping"
-    ) as mock_rdm:
-        instance = mock_rdm.return_value
-        instance.hybrid_mappings = mappings
-        instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        res = mapping_file_mapper_base.MappingFileMapperBase.get_hybrid_mapping(
-            legacy_object, instance
-        )
-        assert res == mappings[1]
-
-
-def test_get_hybrid_mapping2():
-    mappings = [
-        {"location": "l_2", "loan_type": "*", "material_type": "*"},
-        {"location": "l_1", "loan_type": "*", "material_type": "mt_1"},
-        {"location": "l_1", "loan_type": "*", "material_type": "*"},
-    ]
-    legacy_object = {"location": "l_2", "loan_type": "apa", "material_type": "papa"}
-    with patch(
-        "migration_tools.mapping_file_transformation.ref_data_mapping.RefDataMapping"
-    ) as mock_rdm:
-        instance = mock_rdm.return_value
-        instance.hybrid_mappings = mappings
-        instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        res = mapping_file_mapper_base.MappingFileMapperBase.get_hybrid_mapping(
-            legacy_object, instance
-        )
-        assert res == mappings[0]
-
-
-def test_get_hybrid_mapping3():
-    mappings = [
-        {"location": "sprad", "loan_type": "*", "material_type": "*"},
-        {"location": "L_1", "loan_type": "Lt1", "material_type": "Mt_1"},
-        {"location": "l_1", "loan_type": "lt1 ", "material_type": "mt2"},
-    ]
-    legacy_object = {"location": "sprad", "loan_type": "0", "material_type": "0"}
-    with patch(
-        "migration_tools.mapping_file_transformation.ref_data_mapping.RefDataMapping"
-    ) as mock_rdm:
-        instance = mock_rdm.return_value
-        instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        instance.hybrid_mappings = mappings
-        res = mapping_file_mapper_base.MappingFileMapperBase.get_hybrid_mapping(
-            legacy_object, instance
-        )
-        assert res == mappings[0]
-
-
-def test_normal_refdata_mapping_strip():
-    mappings = [
-        {"location": "l_2", "loan_type": "lt2", "material_type": "mt_1"},
-        {"location": "L_1", "loan_type": "Lt1", "material_type": "Mt_1"},
-        {"location": "l_1", "loan_type": "lt1 ", "material_type": "mt2"},
-    ]
-    legacy_object = {"location": "l_1 ", "loan_type": "lt1", "material_type": "mt2"}
-    with patch(
-        "migration_tools.mapping_file_transformation.ref_data_mapping.RefDataMapping"
-    ) as mock_rdm:
-        instance = mock_rdm.return_value
-        instance.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        instance.regular_mappings = mappings
-        res = mapping_file_mapper_base.MappingFileMapperBase.get_ref_data_mapping(
-            legacy_object, instance
-        )
-        assert res == mappings[2]
 
 
 def test_blurbs():

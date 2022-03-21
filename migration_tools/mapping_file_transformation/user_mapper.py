@@ -3,12 +3,11 @@ import json
 import logging
 from datetime import datetime
 import sys
-from textwrap import indent
-from tokenize import group
 from typing import Dict
 
 from dateutil.parser import parse
 from folioclient import FolioClient
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -48,6 +47,7 @@ class UserMapper(UserMapperBase):
                     "departments",
                     departments_mapping,
                     "name",
+                    Blurbs.DepartmentsMapping,
                 )
             else:
                 self.departments_mapping = None
@@ -58,6 +58,7 @@ class UserMapper(UserMapperBase):
                     "usergroups",
                     groups_map,
                     "group",
+                    Blurbs.UserGroupMapping,
                 )
             else:
                 self.departments_mapping = None
@@ -91,33 +92,13 @@ class UserMapper(UserMapperBase):
             "delivery": False,
             "metadata": self.folio_client.get_metadata_construct(),
         }
-        required = self.user_schema["required"]
-        missing = set()
-        empty = set()
-        for required_prop in required:
-            if required_prop not in folio_user:
-                missing.add(required_prop)
-                self.migration_report.add(
-                    Blurbs.MissingRequiredProperties,
-                    f"{required_prop} missing. Record failed",
-                )
-            elif not folio_user[required_prop]:
-                self.migration_report.add(
-                    Blurbs.MissingRequiredProperties,
-                    f"{required_prop} empty. Record failed",
-                )
-                empty.add(required_prop)
-        missing.update(empty)
-        if any(list(missing)):
-            raise TransformationRecordFailedError(
-                f"\"{folio_user.get('barcode', '')}\" (barcode) {legacy_id} (index in file)",
-                "Required properties missing or empty",
-                f"{', '.join(list(missing))}",
-            )
+        clean_folio_object = self.validate_required_properties(
+            legacy_id, folio_user, self.user_schema, FOLIONamespaces.users
+        )
 
-        self.report_folio_mapping(folio_user)
+        self.report_folio_mapping(clean_folio_object)
         self.report_legacy_mapping(legacy_user)
-        return folio_user
+        return clean_folio_object
 
     def add_prop(self, legacy_object, user_map, folio_user, prop_name, prop):
         if prop["type"] == "object":
@@ -131,12 +112,12 @@ class UserMapper(UserMapperBase):
                 prop_key = prop_name
                 if "properties" in prop:
                     for sub_prop_name, sub_prop in prop["properties"].items():
-                        sub_prop_key = prop_key + "." + sub_prop_name
+                        sub_prop_key = f"{prop_key}.{sub_prop_name}"
                         if "properties" in sub_prop:
                             for sub_prop_name2, sub_prop2 in sub_prop[
                                 "properties"
                             ].items():
-                                sub_prop_key2 = sub_prop_key + "." + sub_prop_name2
+                                sub_prop_key2 = f"{sub_prop_key}.{sub_prop_name2}"
                                 if sub_prop2["type"] == "array":
                                     logging.warning(f"Array: {sub_prop_key2} ")
                         elif sub_prop["type"] == "array":
@@ -147,13 +128,14 @@ class UserMapper(UserMapperBase):
                                         sub_prop_name2: self.get_prop(
                                             legacy_object,
                                             user_map,
-                                            sub_prop_key + "." + sub_prop_name2,
+                                            f"{sub_prop_key}.{sub_prop_name2}",
                                             i,
                                         )
                                         for sub_prop_name2, sub_prop2 in sub_prop[
                                             "items"
                                         ]["properties"].items()
                                     }
+
                                     if all(
                                         value == ""
                                         for key, value in temp.items()
@@ -163,7 +145,7 @@ class UserMapper(UserMapperBase):
                                         continue
                                     folio_user[prop_name][sub_prop_name].append(temp)
                                 else:
-                                    mkey = sub_prop_key + "." + sub_prop_name2
+                                    mkey = f"{sub_prop_key}.{sub_prop_name2}"
                                     folio_user[prop_name][
                                         sub_prop_name
                                     ] = self.get_prop(legacy_object, mkey, i)
@@ -277,11 +259,8 @@ class UserMapper(UserMapperBase):
             return value
         elif folio_prop_name == "personal.addresses.addressTypeId":
             try:
-                address_type_id = user_map["addressTypes"][i]
-                return address_type_id
-            except KeyError:
-                return ""
-            except IndexError:
+                return user_map["addressTypes"][i]
+            except (KeyError, IndexError):
                 return ""
         elif legacy_user_key:
             return legacy_user.get(legacy_user_key, "")
@@ -302,15 +281,14 @@ class UserMapper(UserMapperBase):
         )
 
     def legacy_property(self, user_map, folio_prop_name):
-        value = next(
+        if value := next(
             (
                 k.get("value", "")
                 for k in user_map["data"]
                 if k["folio_field"] == folio_prop_name
             ),
             "",
-        )
-        if value:
+        ):
             self.migration_report.add(
                 Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
             )

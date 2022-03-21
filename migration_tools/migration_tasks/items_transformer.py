@@ -88,8 +88,7 @@ class ItemsTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
-        self.failed_files: List[str] = []
-        if "statisticalCodes" in self.folio_keys:
+        if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
                 self.folder_structure.mapping_files_folder
@@ -173,33 +172,6 @@ class ItemsTransformer(MigrationTaskBase):
         )
         logging.info("Init done")
 
-    @staticmethod
-    def add_arguments(sub_parser):
-        MigrationTaskBase.add_common_arguments(sub_parser)
-        sub_parser.add_argument(
-            "timestamp",
-            help=(
-                "timestamp or migration identifier. "
-                "Used to chain multiple runs together"
-            ),
-            secure=False,
-        )
-        sub_parser.add_argument(
-            "--default_call_number_type_name",
-            help=(
-                "Name of the default callnumber type. Needs to exist "
-                " in the tenant verbatim"
-            ),
-            default="Other scheme",
-        )
-        sub_parser.add_argument(
-            "--suppress",
-            "-ds",
-            help="This batch of records are to be suppressed in FOLIO.",
-            default=False,
-            type=bool,
-        )
-
     def do_work(self):
         logging.info("Starting....")
         with open(self.folder_structure.created_objects_path, "w+") as results_file:
@@ -240,10 +212,14 @@ class ItemsTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.items
                     )
+
+                    self.handle_circiulation_notes(
+                        folio_rec, self.folio_client.current_user
+                    )
+                    self.handle_notes(folio_rec)
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
-                    self.handle_circiulation_notes(folio_rec)
                     # TODO: turn this into a asynchrounous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
@@ -279,13 +255,45 @@ class ItemsTransformer(MigrationTaskBase):
             )
         self.total_records += records_in_file
 
-    def handle_circiulation_notes(self, folio_rec):
+    @staticmethod
+    def handle_notes(folio_object):
+        if folio_object.get("notes", []):
+            filtered_notes = []
+            for note_obj in folio_object.get("notes", []):
+                if not note_obj.get("itemNoteTypeId", ""):
+                    raise TransformationProcessError(
+                        folio_object.get("legacyIds", ""),
+                        "Missing note type id mapping",
+                        json.dumps(note_obj),
+                    )
+                elif note_obj.get("note", "") and note_obj.get("itemNoteTypeId", ""):
+                    filtered_notes.append(note_obj)
+            if filtered_notes:
+                folio_object["notes"] = filtered_notes
+            else:
+                del folio_object["notes"]
+
+    @staticmethod
+    def handle_circiulation_notes(folio_rec, current_user_uuid):
+        if not folio_rec.get("circulationNotes", []):
+            return
+        filtered_notes = []
         for circ_note in folio_rec.get("circulationNotes", []):
-            circ_note["id"] = str(uuid.uuid4())
-            circ_note["source"] = {
-                "id": self.folio_client.current_user,
-                "personal": {"lastName": "Data", "firstName": "Migration"},
-            }
+            if circ_note.get("noteType", "") not in ["Check in", "Check out"]:
+                raise TransformationProcessError(
+                    "Circulation Note types are not mapped correclty"
+                )
+            if circ_note.get("note", ""):
+                circ_note["id"] = str(uuid.uuid4())
+                circ_note["source"] = {
+                    "id": current_user_uuid,
+                    "personal": {"lastName": "Data", "firstName": "Migration"},
+                }
+                filtered_notes.append(circ_note)
+        if filtered_notes:
+            folio_rec["circulationNotes"] = filtered_notes
+        else:
+            del folio_rec["circulationNotes"]
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")

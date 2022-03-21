@@ -8,6 +8,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folioclient import FolioClient
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.migration_report import MigrationReport
@@ -68,11 +69,11 @@ class MapperBase:
                     self.mapped_folio_fields[prop] = [0]
         except Exception as ee:
             logging.error(ee, stack_info=True)
-            raise ee
+            raise ee from ee
 
     def get_mapped_name(
         self,
-        ref_dat_mapping: RefDataMapping,
+        ref_data_mapping: RefDataMapping,
         legacy_object,
         index_or_id,
         folio_property_name="",
@@ -81,21 +82,21 @@ class MapperBase:
         try:
             # Get the values in the fields that will be used for mapping
             fieldvalues = [
-                legacy_object.get(k) for k in ref_dat_mapping.mapped_legacy_keys
+                legacy_object.get(k) for k in ref_data_mapping.mapped_legacy_keys
             ]
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
             # TODO: add option for Wild card matching in individual columns
-            right_mapping = self.get_ref_data_mapping(legacy_object, ref_dat_mapping)
+            right_mapping = ref_data_mapping.get_ref_data_mapping(legacy_object)
 
             if not right_mapping:
                 raise StopIteration()
             self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
+                ref_data_mapping.blurb,
                 (
-                    f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} '
-                    f'-> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}'
+                    f'{ref_data_mapping.name} mapping - {" - ".join(fieldvalues)} '
+                    f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
                 ),
             )
             return next(v for k, v in right_mapping.items() if k.startswith("folio_"))
@@ -103,42 +104,42 @@ class MapperBase:
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
-                    Blurbs.ReferenceDataMapping,
+                    ref_data_mapping.blurb,
                     (
-                        f"{ref_dat_mapping.name} mapping - Not to be mapped. "
+                        f"{ref_data_mapping.name} mapping - Not to be mapped. "
                         f'(No default) -- {" - ".join(fieldvalues)} -> ""'
                     ),
                 )
                 return ""
             self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
+                ref_data_mapping.blurb,
                 (
-                    f"{ref_dat_mapping.name} mapping - Unmapped (Default value was set) -- "
-                    f'{" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}'
+                    f"{ref_data_mapping.name} mapping - Unmapped (Default value was set) -- "
+                    f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
                 ),
             )
-            return ref_dat_mapping.default_name
+            return ref_data_mapping.default_name
         except IndexError as exception:
             raise TransformationRecordFailedError(
                 index_or_id,
                 (
-                    f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                    f"({ref_dat_mapping.mapped_legacy_keys}) {exception} is not "
+                    f"{ref_data_mapping.name} - folio_{ref_data_mapping.key_type} "
+                    f"({ref_data_mapping.mapped_legacy_keys}) {exception} is not "
                     "a recognized field in the legacy data."
                 ),
-            )
+            ) from exception
         except Exception as exception:
             raise TransformationRecordFailedError(
                 index_or_id,
                 (
-                    f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                    f"({ref_dat_mapping.mapped_legacy_keys}) {exception}"
+                    f"{ref_data_mapping.name} - folio_{ref_data_mapping.key_type} "
+                    f"({ref_data_mapping.mapped_legacy_keys}) {exception}"
                 ),
-            )
+            ) from exception
 
     def get_mapped_value(
         self,
-        ref_dat_mapping: RefDataMapping,
+        ref_data_mapping: RefDataMapping,
         legacy_object,
         index_or_id,
         folio_property_name="",
@@ -149,90 +150,62 @@ class MapperBase:
         try:
             # Get the values in the fields that will be used for mapping
             fieldvalues = [
-                legacy_object.get(k) for k in ref_dat_mapping.mapped_legacy_keys
+                legacy_object.get(k) for k in ref_data_mapping.mapped_legacy_keys
             ]
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
             # TODO: add option for Wild card matching in individual columns
-            right_mapping = self.get_ref_data_mapping(legacy_object, ref_dat_mapping)
+            right_mapping = ref_data_mapping.get_ref_data_mapping(legacy_object)
             if not right_mapping:
                 # Not all fields matched. Could it be a hybrid wildcard map?
-                right_mapping = self.get_hybrid_mapping(legacy_object, ref_dat_mapping)
+                right_mapping = ref_data_mapping.get_hybrid_mapping(legacy_object)
 
             if not right_mapping:
                 raise StopIteration()
             self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
+                ref_data_mapping.blurb,
                 (
-                    f'{ref_dat_mapping.name} mapping - {" - ".join(fieldvalues)} '
-                    f'-> {right_mapping[f"folio_{ref_dat_mapping.key_type}"]}'
+                    f'{ref_data_mapping.name} mapping - {" - ".join(fieldvalues)} '
+                    f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
                 ),
             )
             return right_mapping["folio_id"]
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
-                    Blurbs.ReferenceDataMapping,
+                    ref_data_mapping.blurb,
                     (
-                        f"{ref_dat_mapping.name} mapping - Not to be mapped. "
+                        f"{ref_data_mapping.name} mapping - Not to be mapped. "
                         f'(No default) -- {" - ".join(fieldvalues)} -> ""'
                     ),
                 )
                 return ""
             self.migration_report.add(
-                Blurbs.ReferenceDataMapping,
+                ref_data_mapping.blurb,
                 (
-                    f"{ref_dat_mapping.name} mapping - Unmapped (Default value was set) -- "
-                    f'{" - ".join(fieldvalues)} -> {ref_dat_mapping.default_name}'
+                    f"{ref_data_mapping.name} mapping - Unmapped (Default value was set) -- "
+                    f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
                 ),
             )
-            return ref_dat_mapping.default_id
+            return ref_data_mapping.default_id
         except IndexError as exception:
             raise TransformationRecordFailedError(
                 index_or_id,
                 (
-                    f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                    f"({ref_dat_mapping.mapped_legacy_keys}) {exception} is not "
+                    f"{ref_data_mapping.name} - folio_{ref_data_mapping.key_type} "
+                    f"({ref_data_mapping.mapped_legacy_keys}) {exception} is not "
                     "a recognized field in the legacy data."
                 ),
-            )
+            ) from exception
         except Exception as exception:
             raise TransformationRecordFailedError(
                 index_or_id,
                 (
-                    f"{ref_dat_mapping.name} - folio_{ref_dat_mapping.key_type} "
-                    f"({ref_dat_mapping.mapped_legacy_keys}) {exception}"
+                    f"{ref_data_mapping.name} - folio_{ref_data_mapping.key_type} "
+                    f"({ref_data_mapping.mapped_legacy_keys}) {exception}"
                 ),
-            )
-
-    @staticmethod
-    def get_hybrid_mapping(legacy_object, rdm: RefDataMapping):
-        highest_match = None
-        highest_match_number = 0
-        for mapping in rdm.hybrid_mappings:
-            match_numbers = []
-            for k in rdm.mapped_legacy_keys:
-                if mapping[k].strip() == legacy_object[k].strip():
-                    match_numbers.append(10)
-                elif mapping[k].strip() == "*":
-                    match_numbers.append(1)
-            summa = sum(match_numbers)
-            if summa > highest_match_number and min(match_numbers) > 0:
-                highest_match_number = summa
-                highest_match = mapping
-        return highest_match
-
-    @staticmethod
-    def get_ref_data_mapping(legacy_object, rdm: RefDataMapping):
-        for mapping in rdm.regular_mappings:
-            match_number = sum(
-                legacy_object[k].strip() == mapping[k].strip()
-                for k in rdm.mapped_legacy_keys
-            )
-            if match_number == len(rdm.mapped_legacy_keys):
-                return mapping
-        return None
+            ) from exception
 
     def handle_transformation_field_mapping_error(self, index_or_id, error):
         self.migration_report.add(Blurbs.FieldMappingErrors, error)
@@ -288,7 +261,7 @@ class MapperBase:
             f"of type {type(excepion).__name__}"
         )
         logging.error(excepion, exc_info=True)
-        if self.num_exeptions > 500:
+        if self.num_exeptions > 50:
             logging.fatal(
                 "Stopping. More than %s unhandled exceptions. Code needs fixing",
                 self.num_exeptions,
@@ -326,6 +299,41 @@ class MapperBase:
                 f"Something went wrong when setting the HRID settings. "
                 f"Update them manually. {json.dumps(self.hrid_settings)}"
             )
+
+    @staticmethod
+    def validate_required_properties(
+        legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
+    ):
+        cleaned_folio_object = MapperBase.clean_none_props(folio_object)
+        required = schema["required"]
+        missing = []
+        for required_prop in required:
+            if required_prop not in cleaned_folio_object:
+                missing.append(f"Missing: {required_prop}")
+            elif not cleaned_folio_object[required_prop]:
+                missing.append(f"Empty: {required_prop}")
+        if any(missing):
+            raise TransformationRecordFailedError(
+                legacy_id,
+                "One or many required properties empty",
+                f"{json.dumps(missing)}",
+            )
+        cleaned_folio_object.pop("type", None)
+        return cleaned_folio_object
+
+    @staticmethod
+    def clean_none_props(d: dict):
+        clean = {}
+        for k, v in d.items():
+            if isinstance(v, dict):
+                nested = MapperBase.clean_none_props(v)
+                if len(nested.keys()) > 0:
+                    clean[k] = nested
+            elif isinstance(v, list):
+                clean[k] = list(filter(None, v))
+            elif v is not None:
+                clean[k] = v
+        return clean
 
 
 def flatten(my_dict: dict, path=""):

@@ -56,6 +56,7 @@ class ItemMapper(MappingFileMapperBase):
                 "loantypes",
                 temporary_loan_type_mapping,
                 "name",
+                Blurbs.TemporaryLoanTypeMapping,
             )
         if temporary_location_mapping:
             self.temp_location_mapping = RefDataMapping(
@@ -64,6 +65,7 @@ class ItemMapper(MappingFileMapperBase):
                 "locations",
                 temporary_location_mapping,
                 "code",
+                Blurbs.TemporaryLocationMapping,
             )
 
         if item_statuses_map:
@@ -75,17 +77,33 @@ class ItemMapper(MappingFileMapperBase):
                 "callNumberTypes",
                 call_number_type_map,
                 "name",
+                Blurbs.CallNumberTypeMapping,
             )
         self.loan_type_mapping = RefDataMapping(
-            self.folio_client, "/loan-types", "loantypes", loan_type_map, "name"
+            self.folio_client,
+            "/loan-types",
+            "loantypes",
+            loan_type_map,
+            "name",
+            Blurbs.PermanentLoanTypeMapping,
         )
 
         self.material_type_mapping = RefDataMapping(
-            self.folio_client, "/material-types", "mtypes", material_type_map, "name"
+            self.folio_client,
+            "/material-types",
+            "mtypes",
+            material_type_map,
+            "name",
+            Blurbs.MaterialTypeMapping,
         )
 
         self.location_mapping = RefDataMapping(
-            self.folio_client, "/locations", "locations", location_map, "code"
+            self.folio_client,
+            "/locations",
+            "locations",
+            location_map,
+            "code",
+            Blurbs.LocationMapping,
         )
 
     def perform_additional_mappings(self):

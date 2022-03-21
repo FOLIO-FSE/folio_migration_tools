@@ -153,66 +153,6 @@ class BibsTransformer(MigrationTaskBase):
             logging.info("Done reading %s records from file", idx + 1)
 
     @staticmethod
-    def add_arguments(sub_parser):
-        MigrationTaskBase.add_common_arguments(sub_parser)
-        flavourhelp = (
-            "The kind of ILS the records are coming from and how legacy bibliographic "
-            "IDs are to be handled\nOptions:\n"
-            "\taleph   \t- bib id in either 998$b or 001\n"
-            "\tvoyager \t- bib id in 001\n"
-            "\tsierra  \t- bib id in 907 $a\n"
-            "\tmillennium \t- bib id in 907 $a\n"
-            "\tkoha \t- bib id in 999 $c "
-            "\t907y    \t- bib id in 907 $y\n"
-            "\t001      \t- bib id in 001\n"
-            "\t990a \t- bib id in 990 $a and 001\n "
-            "\tnone      \t- Use for ebooks and related records that will not need any legacy id:s\n"
-        )
-        sub_parser.add_argument("--ils_flavour", default="001", help=flavourhelp)
-        version_help = "The FOLIO release you are targeting. Valid values include:\n\t->iris\n\t->juniper\n"
-        sub_parser.add_argument("--folio_version", default="juniper", help=version_help)
-
-        hrid_handling = (
-            "HRID Handling\n"
-            "This overrides any HRID/001 setting from the mapping rules\n"
-            "\tdefault\tFOLIO Default. Current 001 will be placed in a 035, and The "
-            "FOLIO-generated HRID will be put in 001. FOLIO HRID prefix will be honored\n"
-            "\t001\tHonor current 001:s. 001 will be used in the HRID field on the "
-            "Instance, and the current 001 will be maintained\n"
-            "\t\t In the absence of a 001 to derive the HRID from, the script will fall "
-            "back on the default HRID handling."
-        )
-        sub_parser.add_argument(
-            "--force_utf_8",
-            "-utf8",
-            help=(
-                "forcing UTF8 when parsing marc records. If you get a lot of encoding issues, test "
-                "changing this setting to False \n"
-                f"\n⚠ {Bcolors.WARNING}WARNING!{Bcolors.ENDC} ⚠ \nEven though setting this to False might make your migrations run smoother, it might lead to data loss in individual fields"
-            ),
-            default="True",
-        )
-        sub_parser.add_argument(
-            "--hrid_handling", "-hh", help=hrid_handling, default="default"
-        )
-        sub_parser.add_argument(
-            "--suppress",
-            "-ds",
-            help="This batch of records are to be suppressed in FOLIO.",
-            default=False,
-            type=bool,
-        )
-        sub_parser.add_argument(
-            "--timestamp",
-            help=(
-                "timestamp or migration identifier. "
-                "Used to chain multiple runs together"
-            ),
-            default=time.strftime("%Y%m%d-%H%M%S"),
-            secure=False,
-        )
-
-    @staticmethod
     def set_leader(marc_record: Record):
         new_leader = marc_record.leader
-        marc_record.leader = new_leader[:9] + "a" + new_leader[10:]
+        marc_record.leader = f"{new_leader[:9]}a{new_leader[10:]}"

@@ -26,7 +26,7 @@ class UserTransformer(MigrationTaskBase):
         name: str
         migration_task_type: str
         group_map_path: str
-        departments_map_path: str
+        departments_map_path: Optional[str] = ""
         use_group_map: Optional[bool] = True
         user_mapping_file_name: str
         user_file: FileDefinition
@@ -69,7 +69,7 @@ class UserTransformer(MigrationTaskBase):
             logging.info(
                 "%s not found. No patronGroup mapping will be performed",
                 self.folder_structure.mapping_files_folder
-                / self.task_config.departments_map_path,
+                / self.task_config.group_map_path,
             )
             group_mapping = []
 
@@ -237,16 +237,6 @@ class UserTransformer(MigrationTaskBase):
 
             if not primary_address_exists:
                 addresses[0]["primaryAddress"] = True
-
-    @staticmethod
-    @abstractmethod
-    def add_arguments(parser):
-        MigrationTaskBase.add_common_arguments(parser)
-        MigrationTaskBase.add_argument(
-            parser,
-            "client_folder",
-            "Client folder for current migration. Assumes a certain folder structure.",
-        )
 
 
 def print_email_warning():

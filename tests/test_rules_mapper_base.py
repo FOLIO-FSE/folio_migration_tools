@@ -46,6 +46,25 @@ def test_date_from_008():
     # assert instance["metadata"]["createdDate"] == "2017-03-09T00:00:00"
 
 
+def test_remove_subfields():
+    marc_field = Field(
+        tag="338",
+        indicators=["0", "1"],
+        subfields=[
+            "b",
+            "ac",
+            "b",
+            "ab",
+            "i",
+            "ba",
+        ],
+    )
+    new_field = RulesMapperBase.remove_repeated_subfields(marc_field)
+    assert len(new_field.subfields_as_dict()) == len(marc_field.subfields_as_dict())
+    assert len(marc_field.subfields) == 6
+    assert len(new_field.subfields) == 4
+
+
 def test_date_from_008_holding():
     f008 = "170309s2017\\\\quc\\\\\o\\\\\000\0\fre\d"
     record = Record()
@@ -142,6 +161,18 @@ def test_get_srs_string_bib():
             )
             assert '"recordType": "MARC_BIB"' in srs_record_string
             assert json.dumps(id_holder) in srs_record_string
+            assert "snapshotId" not in record
+
+
+def test_create_srs_uuid():
+    created_id = RulesMapperBase.create_srs_id(
+        FOLIONamespaces.holdings, "some_url", "id_1"
+    )
+    assert str(created_id) == "6734f228-cba2-54c7-b129-c6437375a864"
+    created_id_2 = RulesMapperBase.create_srs_id(
+        FOLIONamespaces.instances, "some_url", "id_1"
+    )
+    assert str(created_id) != str(created_id_2)
 
 
 def test_get_instance_schema():

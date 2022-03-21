@@ -89,7 +89,12 @@ def main():
                         f"one of {json.dumps([tc.__name__ for tc in task_classes], indent=4)}"
                     )
                     sys.exit()
-
+            except json.decoder.JSONDecodeError as json_error:
+                logging.critical(json_error)
+                print(
+                    f"\nError parsing configuration file {config_file_path.name}. Halting. "
+                )
+                sys.exit()
             except ValidationError as e:
                 print(e.json())
                 print("Validation errors in configuration file:")
