@@ -71,3 +71,4 @@ class OrganizationMapper(MappingFileMapperBase):
         else:
             # edge case
             return ""
+            
