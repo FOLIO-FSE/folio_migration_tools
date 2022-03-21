@@ -296,6 +296,8 @@ class OrganizationsTransformer(MigrationTaskBase):
             for idx, record in enumerate(
                 self.mapper.get_objects(records_file, filename)
             ):
+                records_processed += 1
+                
                 try:
                     if idx == 0:
                         logging.info("First legacy record:")
@@ -306,7 +308,6 @@ class OrganizationsTransformer(MigrationTaskBase):
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
-                    self.handle_circiulation_notes(folio_rec)
                     Helper.write_to_file(results_file, folio_rec)
 
                 except TransformationProcessError as process_error:
