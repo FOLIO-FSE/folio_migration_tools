@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 from typing import Dict, List
 from uuid import uuid4
+import requests
 
 from folioclient import FolioClient
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -26,10 +27,11 @@ class OrganizationMapper(MappingFileMapperBase):
         # instance_id_map,
         library_configuration: LibraryConfiguration,
     ):
-        # TODO: Get latest schema from get latest from github method in folioclient
-        self.organization_schema = folio_client.get_latest_from_github(
-            "folio-org", "mod-organizations", "ramls/organizations.raml"
-        )
+
+        #Get organization schema
+        req = requests.get("https://raw.githubusercontent.com/folio-org/acq-models/2626278b80d82a5e1995f85c37575561264b93e9/mod-orgs/schemas/organization.json")
+        organization_schema = json.loads(req.text)
+        # TODO: Modify getlatest from github method in helper to get organization_schema for latest mod-organization-storage release
 
         super().__init__(
             folio_client,
