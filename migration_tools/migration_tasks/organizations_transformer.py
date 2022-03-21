@@ -297,7 +297,7 @@ class OrganizationsTransformer(MigrationTaskBase):
                 self.mapper.get_objects(records_file, filename)
             ):
                 records_processed += 1
-                
+
                 try:
                     if idx == 0:
                         logging.info("First legacy record:")
@@ -372,4 +372,8 @@ class OrganizationsTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
+<<<<<<< HEAD
 >>>>>>> 6d341e1 (process files and schema)
+=======
+        
+>>>>>>> a867e86 (create organization records with at least some values #146)
