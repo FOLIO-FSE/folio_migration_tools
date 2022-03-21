@@ -239,19 +239,8 @@ class OrganizationsTransformer(MigrationTaskBase):
 
         super().__init__(library_config, task_config)
         self.task_config = task_config
-        self.files = [
-            f
-            for f in self.task_config.files
-            if isfile(self.folder_structure.legacy_records_folder / f.file_name)
-        ]
-        if not any(self.files):
-            ret_str = ",".join(f.file_name for f in self.task_config.files)
-            raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder}/{self.get_object_type().name}"
-            )
-        logging.info("Files to process:")
-        for filename in self.files:
-            logging.info("\t%s", filename.file_name)
+        self.object_type = self.get_object_type().name
+        self.files = self.list_source_files()
         
         self.total_records = 0
 
@@ -259,41 +248,66 @@ class OrganizationsTransformer(MigrationTaskBase):
             self.folder_structure.mapping_files_folder
             / self.task_config.organizations_mapping_file_name
         )
+        self.results_path = self.folder_structure.created_objects_path
+        self.failed_files: List[str] = list()
     
         self.folio_keys = []
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.organization_map
         )
 
-    def wrap_up(self):
-        logging.info("Wrapping up!")
+        self.mapper = OrganizationMapper(
+            self.folio_client,
+            self.organization_map,
+            # self.load_ref_data_mapping_file(
+            #     self.folder_structure.mapping_files_folder,
+            #     self.folio_keys,
+            #     ),
+            self.library_configuration
+            )
+        
+    def list_source_files(self):
+        # Source data files
+        files = [
+            self.folder_structure.data_folder / self.object_type / f.file_name
+            for f in self.task_config.files
+            if isfile(self.folder_structure.data_folder / self.object_type / f.file_name)
+        ]
+        if not any(files):
+            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            raise TransformationProcessError(
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+            )
+        logging.info("Files to process:")
+        for filename in files:
+            logging.info("\t%s", filename)
+        return files
 
-    def do_work(self):
-        logging.info("Getting started!")
-        for filename in self.files:
-            try:
-                logging.info("\t%s", filename.file_name)
-            # Something goes really wrong and we want to stop the script
-            except TransformationProcessError as tpe:
-                logging.critical(tpe)
-                sys.exit()
-            except Exception as e:
-                print(f"Something unexpected happend! {e}")
-                raise e
-
-    def process_single_file(self, file_name):
-        with open(file_name, encoding="utf-8-sig") as records_file:
+    def process_single_file(self, filename):
+        with open(
+            filename, encoding="utf-8-sig") as records_file, open(
+            self.folder_structure.created_objects_path, "w+"
+            ) as results_file:
             self.mapper.migration_report.add_general_statistics(
                 "Number of files processed"
             )
             start = time.time()
             records_processed = 0
             for idx, record in enumerate(
-                self.mapper.get_objects(records_file, file_name)
+                self.mapper.get_objects(records_file, filename)
             ):
-                records_processed = idx + 1
                 try:
-                    self.process_holding(idx, record)
+                    if idx == 0:
+                        logging.info("First legacy record:")
+                        logging.info(json.dumps(record, indent=4))
+                    folio_rec, legacy_id = self.mapper.do_map(
+                        record, f"row {idx}", FOLIONamespaces.items
+                    )
+                    if idx == 0:
+                        logging.info("First FOLIO record:")
+                        logging.info(json.dumps(folio_rec, indent=4))
+                    self.handle_circiulation_notes(folio_rec)
+                    Helper.write_to_file(results_file, folio_rec)
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -301,6 +315,7 @@ class OrganizationsTransformer(MigrationTaskBase):
                     self.mapper.handle_transformation_record_failed_error(idx, error)
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
+
                 self.mapper.migration_report.add_general_statistics(
                     "Number of Legacy items in file"
                 )
@@ -312,7 +327,48 @@ class OrganizationsTransformer(MigrationTaskBase):
                     )
             self.total_records = records_processed
             logging.info(  # pylint: disable=logging-fstring-interpolation
-                f"Done processing {file_name} containing {self.total_records:,} records. "
+                f"Done processing {filename} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
+<<<<<<< HEAD
 >>>>>>> 2e5fb95 (continue orgs work)
+=======
+    
+    
+    def do_work(self):
+        logging.info("Getting started!")
+        for file in self.files:
+            logging.info("Processing %s", file)
+            try:
+                print(file)
+                self.process_single_file(file)
+            except Exception as ee:
+                error_str = (
+                    f"Processing of {file} failed:\n{ee}."
+                    "Check source files for empty lines or missing reference data"
+                )
+                logging.exception(error_str)
+                self.mapper.migration_report.add(
+                    Blurbs.FailedFiles, f"{file} - {ee}"
+                )
+                sys.exit()
+    
+    
+    def wrap_up(self):
+        logging.info("Done. Wrapping up...")
+        with open(
+            self.folder_structure.migration_reports_file, "w"
+        ) as migration_report_file:
+            logging.info(
+                "Writing migration- and mapping report to %s",
+                self.folder_structure.migration_reports_file,
+            )
+            self.mapper.migration_report.write_migration_report(migration_report_file)
+            Helper.print_mapping_report(
+                migration_report_file,
+                self.total_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
+        logging.info("All done!")
+>>>>>>> 6d341e1 (process files and schema)
