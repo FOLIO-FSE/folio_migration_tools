@@ -32,6 +32,7 @@ from migration_tools.migration_tasks.migration_task_base import MigrationTaskBas
 class HoldingsMarcTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
+        legacy_id_marc_path: str
         migration_task_type: str
         use_tenant_mapping_rules: bool
         hrid_handling: HridHandling

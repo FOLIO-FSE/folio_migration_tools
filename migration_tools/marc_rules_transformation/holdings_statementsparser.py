@@ -19,7 +19,7 @@ class HoldingsStatementsParser:
 
     @staticmethod
     def get_holdings_statements(
-        marc_record: Record, pattern_tag, value_tag, field_textual, legacy_ids
+        marc_record: Record, pattern_tag, value_tag, field_textual, legacy_id: str
     ):
         # Textual holdings statements
         return_dict = {"statements": [], "migration_report": [], "hlm_stmts": []}
@@ -33,7 +33,7 @@ class HoldingsStatementsParser:
         for pattern_field in marc_record.get_fields(pattern_tag):
             if "8" not in pattern_field:
                 raise TransformationFieldMappingError(
-                    legacy_ids,
+                    legacy_id,
                     f"{pattern_tag} subfield 8 not in field",
                     pattern_field.format_field(),
                 )
@@ -62,7 +62,7 @@ class HoldingsStatementsParser:
                         return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
                     if parsed_dict["statement"]:
                         logging.info(
-                            f"HOLDINGS STATEMENT PATTERN\t{legacy_ids}\t{pattern_field}"
+                            f"HOLDINGS STATEMENT PATTERN\t{legacy_id}\t{pattern_field}"
                             f"\t{linked_value_field}"
                             f"\t{parsed_dict['statement']['statement']}"
                             f"\t{parsed_dict['statement']['note']}"

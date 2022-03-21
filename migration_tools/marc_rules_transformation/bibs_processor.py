@@ -73,7 +73,7 @@ class BibsProcessor:
                 self.folio_client,
                 marc_record,
                 folio_rec,
-                legacy_ids,
+                legacy_ids[0],
                 suppressed,
             )
             self.mapper.migration_report.add_general_statistics(

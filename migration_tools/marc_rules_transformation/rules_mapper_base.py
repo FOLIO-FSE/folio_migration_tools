@@ -504,12 +504,12 @@ class RulesMapperBase(MapperBase):
         folio_client: FolioClient,
         marc_record: Record,
         folio_record,
-        legacy_ids: List[str],
+        legacy_id: str,
         suppress: bool,
     ):
         """Saves the source Marc_record to the Source record Storage module"""
         srs_id = RulesMapperBase.create_srs_id(
-            record_type, folio_client.okapi_url, legacy_ids
+            record_type, folio_client.okapi_url, legacy_id
         )
 
         marc_record.add_ordered_field(
@@ -540,7 +540,7 @@ class RulesMapperBase(MapperBase):
         srs_records_file.write(f"{srs_record_string}\n")
 
     @staticmethod
-    def create_srs_id(record_type, okapi_url, legacy_ids):
+    def create_srs_id(record_type, okapi_url: str, legacy_id: str):
         srs_types = {
             FOLIONamespaces.holdings: FOLIONamespaces.srs_records_holdingsrecord,
             FOLIONamespaces.instances: FOLIONamespaces.srs_records_bib,
@@ -552,7 +552,7 @@ class RulesMapperBase(MapperBase):
             FolioUUID(
                 okapi_url,
                 srs_types.get(record_type),
-                str(legacy_ids[0]),
+                str(legacy_id),
             )
         )
 

@@ -83,7 +83,16 @@ class HoldingsProcessor:
         try:
             self.records_count += 1
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.mapper.parse_hold(marc_record, [str(self.records_count)])
+            legacy_id = self.get_legacy_id(
+                self.mapper.task_configuration.legacy_id_marc_path, marc_record
+            )
+            if not legacy_id:
+                raise TransformationRecordFailedError(
+                    self.records_count,
+                    "legacy_id was empty",
+                    self.mapper.task_configuration.legacy_id_marc_path,
+                )
+            folio_rec = self.mapper.parse_hold(marc_record, legacy_id)
             HoldingsHelper.handle_notes(folio_rec)
             if not folio_rec.get("instanceId", ""):
                 raise TransformationRecordFailedError(
@@ -96,7 +105,7 @@ class HoldingsProcessor:
                 self.mapper.task_configuration, folio_rec, self.holdingssources
             )
             self.set_hrid(marc_record, folio_rec)
-            self.save_srs_record(marc_record, file_def, folio_rec)
+            self.save_srs_record(marc_record, file_def, folio_rec, legacy_id)
             Helper.write_to_file(self.created_objects_file, folio_rec)
             self.mapper.migration_report.add_general_statistics(
                 "Holdings records written to disk"
@@ -131,7 +140,37 @@ class HoldingsProcessor:
                 ):
                     self.mapper.remove_from_id_map(folio_rec["formerIds"])
 
-    def save_srs_record(self, marc_record, file_def, folio_rec):
+    @staticmethod
+    def get_legacy_id(marc_path: str, marc_record: Record):
+        split = marc_path.split("$", maxsplit=1)
+        if not (split[0].isnumeric() and len(split[0]) == 3):
+            raise TransformationProcessError(
+                "",
+                (
+                    "the marc field used for determining the legacy id is not numeric "
+                    "or does not have the stipulated lenght of 3."
+                    "Make sure the task configuration setting for 'legacyIdMarcPath' "
+                    "is correct or make this piece of code more allowing"
+                ),
+                marc_path,
+            )
+        elif len(split) == 1:
+            return marc_record[split[0]].value()
+        elif len(split) == 2 and len(split[1]) == 1:
+            for field in marc_record.get_fields(split[0]):
+                if sf := field.get_subfields(split[1]):
+                    return sf[0]
+            raise TransformationRecordFailedError(
+                "", f"Subfield not found in record", split[1]
+            )
+        else:
+            raise TransformationProcessError(
+                "",
+                ("Something is wrong with 'legacyIdMarcPath' property in the settings"),
+                marc_path,
+            )
+
+    def save_srs_record(self, marc_record, file_def, folio_rec, legacy_id: str):
         if self.mapper.task_configuration.create_source_records:
             self.add_hrid_to_records(folio_rec, marc_record)
             for former_id in folio_rec["formerIds"]:
@@ -146,14 +185,13 @@ class HoldingsProcessor:
                         subfields=["a", former_id],
                     )
                     marc_record.add_ordered_field(new_035)
-
             self.mapper.save_source_record(
                 self.srs_records_file,
                 FOLIONamespaces.holdings,
                 self.mapper.folio_client,
                 marc_record,
                 folio_rec,
-                folio_rec["formerIds"][0],
+                legacy_id,
                 file_def.suppressed,
             )
             self.mapper.migration_report.add_general_statistics(
