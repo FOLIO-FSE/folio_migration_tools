@@ -43,4 +43,31 @@ class OrganizationMapper(MappingFileMapperBase):
         )
     
     def get_prop(self, legacy_organization, folio_prop_name, index_or_id):
-        logging.info(folio_prop_name)
+        if not self.use_map:
+            return legacy_organization[folio_prop_name]
+
+        legacy_organization_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+
+        # IF there is a value mapped, return that one
+        if len(legacy_organization_keys) == 1 and folio_prop_name in self.mapped_from_values:
+            value = self.mapped_from_values.get(folio_prop_name, "")
+            self.migration_report.add(
+                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
+            )
+            return value
+
+        legacy_values = MappingFileMapperBase.get_legacy_vals(
+            legacy_organization, legacy_organization_keys
+        )
+
+        legacy_value = " ".join(legacy_values).strip()
+
+        #TODO Add a bunch of special cases like the below for special organization things
+        # if folio_prop_name == "permanentLocationId":
+        #     return self.get_location_id(legacy_organization, index_or_id, folio_prop_name)
+
+        if any(legacy_organization_keys):
+            return legacy_value
+        else:
+            # edge case
+            return ""
