@@ -383,6 +383,198 @@ def test_validate_required_properties_item_notes():
     assert len(folio_rec["notes"]) == 1
 
 
+def test_validate_required_properties_item_notes_unmapped():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "notes": {
+                "type": "array",
+                "description": "Notes about action, copy, binding etc.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "itemNoteTypeId": {
+                            "type": "string",
+                            "description": "ID of the type of note",
+                        },
+                        "itemNoteType": {
+                            "description": "Type of item's note",
+                            "type": "object",
+                            "folio:$ref": "itemnotetype.json",
+                            "javaType": "org.folio.rest.jaxrs.model.itemNoteTypeVirtual",
+                            "readonly": True,
+                            "folio:isVirtual": True,
+                            "folio:linkBase": "item-note-types",
+                            "folio:linkFromField": "itemNoteTypeId",
+                            "folio:linkToField": "id",
+                            "folio:includedElement": "itemNoteTypes.0",
+                        },
+                        "note": {
+                            "type": "string",
+                            "description": "Text content of the note",
+                        },
+                        "staffOnly": {
+                            "type": "boolean",
+                            "description": "If true, determines that the note should not be visible for others than staff",
+                            "default": False,
+                        },
+                    },
+                },
+            },
+        },
+    }
+    fake_holdings_map = {
+        "data": [
+            {
+                "folio_field": "notes[0].note",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].staffOnly",
+                "legacy_field": "",
+                "value": True,
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].itemNoteTypeId",
+                "legacy_field": "",
+                "value": "A UUID",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[1].note",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[1].staffOnly",
+                "legacy_field": "",
+                "value": False,
+                "description": "",
+            },
+            {
+                "folio_field": "notes[1].itemNoteTypeId",
+                "legacy_field": "",
+                "value": "UUID",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"note_1": "my note", "id": "12"}
+    tfm = MyTestableFileMapper(schema, fake_holdings_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    ItemsTransformer.handle_notes(folio_rec)
+    assert len(folio_rec["notes"]) == 1
+
+
+def test_validate_required_properties_item_notes_unmapped_2():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "notes": {
+                "type": "array",
+                "description": "Notes about action, copy, binding etc.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "itemNoteTypeId": {
+                            "type": "string",
+                            "description": "ID of the type of note",
+                        },
+                        "itemNoteType": {
+                            "description": "Type of item's note",
+                            "type": "object",
+                            "folio:$ref": "itemnotetype.json",
+                            "javaType": "org.folio.rest.jaxrs.model.itemNoteTypeVirtual",
+                            "readonly": True,
+                            "folio:isVirtual": True,
+                            "folio:linkBase": "item-note-types",
+                            "folio:linkFromField": "itemNoteTypeId",
+                            "folio:linkToField": "id",
+                            "folio:includedElement": "itemNoteTypes.0",
+                        },
+                        "note": {
+                            "type": "string",
+                            "description": "Text content of the note",
+                        },
+                        "staffOnly": {
+                            "type": "boolean",
+                            "description": "If true, determines that the note should not be visible for others than staff",
+                            "default": False,
+                        },
+                    },
+                },
+            },
+        },
+    }
+    fake_holdings_map = {
+        "data": [
+            {
+                "folio_field": "notes[0].note",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].staffOnly",
+                "legacy_field": "",
+                "value": True,
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].itemNoteTypeId",
+                "legacy_field": "",
+                "value": "A UUID",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[1].note",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[1].staffOnly",
+                "legacy_field": "Not mapped",
+                "value": False,
+                "description": "",
+            },
+            {
+                "folio_field": "notes[1].itemNoteTypeId",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"note_1": "my note", "id": "12"}
+    tfm = MyTestableFileMapper(schema, fake_holdings_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    ItemsTransformer.handle_notes(folio_rec)
+    assert len(folio_rec["notes"]) == 1
+
+
 def test_validate_required_properties_obj():
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
