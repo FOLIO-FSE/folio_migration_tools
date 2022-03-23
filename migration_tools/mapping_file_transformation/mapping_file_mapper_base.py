@@ -4,6 +4,7 @@ import logging
 from abc import abstractmethod
 from pathlib import Path
 from uuid import UUID
+import uuid
 
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
@@ -29,9 +30,11 @@ class MappingFileMapperBase(MapperBase):
         statistical_codes_map,
         uuid_namespace: UUID,
         library_configuration: LibraryConfiguration,
+        ignore_legacy_identifier=False,
     ):
         super().__init__(library_configuration, folio_client)
         self.uuid_namespace = uuid_namespace
+        self.ignore_legacy_identifier = ignore_legacy_identifier
         self.schema = schema
         self.total_records = 0
         self.folio_client = folio_client
@@ -41,7 +44,7 @@ class MappingFileMapperBase(MapperBase):
         self.ref_data_dicts = {}
         self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
-        self.field_map = self.setup_field_map()
+        self.field_map = self.setup_field_map(ignore_legacy_identifier)
         self.validate_map()
         self.mapped_from_values = {}
         for k in self.record_map["data"]:
@@ -90,29 +93,31 @@ class MappingFileMapperBase(MapperBase):
         )
         csv.register_dialect("tsv", delimiter="\t")
 
-    def setup_field_map(self):
+    def setup_field_map(self, ignore_legacy_identifier):
         field_map = {}  # Map of folio_fields and source fields as an array
         for k in self.record_map["data"]:
             if not field_map.get(k["folio_field"]):
                 field_map[k["folio_field"]] = [k["legacy_field"]]
             else:
                 field_map[k["folio_field"]].append(k["legacy_field"])
-        if "legacyIdentifier" not in field_map:
+        if not ignore_legacy_identifier and "legacyIdentifier" not in field_map:
             raise TransformationProcessError(
                 "property legacyIdentifier is not in map. Add this property "
                 "to the mapping file as if it was a FOLIO property"
             )
-        try:
-            self.legacy_id_property_name = field_map["legacyIdentifier"][0]
-            logging.info(
-                "Legacy identifier will be mapped from %s", self.legacy_id_property_name
-            )
-        except Exception as exception:
-            raise TransformationProcessError(
-                f"property legacyIdentifier not setup in map: "
-                f"{field_map.get('legacyIdentifier', '') ({exception})}"
-            ) from exception
-        del field_map["legacyIdentifier"]
+        if not ignore_legacy_identifier:
+            try:
+                self.legacy_id_property_name = field_map["legacyIdentifier"][0]
+                logging.info(
+                    "Legacy identifier will be mapped from %s",
+                    self.legacy_id_property_name,
+                )
+            except Exception as exception:
+                raise TransformationProcessError(
+                    f"property legacyIdentifier not setup in map: "
+                    f"{field_map.get('legacyIdentifier', '') ({exception})}"
+                ) from exception
+            del field_map["legacyIdentifier"]
         return field_map
 
     def validate_map(self):
@@ -135,6 +140,10 @@ class MappingFileMapperBase(MapperBase):
     def instantiate_record(
         self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces
     ):
+
+        if self.ignore_legacy_identifier:
+            return ({}, str(uuid.uuid4()))
+
         legacy_id = legacy_object.get(self.legacy_id_property_name)
         if not legacy_id:
             raise TransformationRecordFailedError(

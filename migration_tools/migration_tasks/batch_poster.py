@@ -435,6 +435,7 @@ def get_extradata_endpoint(object_name):
         "precedingTitles": "preceding-succeeding-titles",
         "succeedingTitles": "preceding-succeeding-titles",
         "boundwithPart": "inventory-storage/bound-with-parts",
+        "notes": "notes",
     }
     return object_types[object_name]
 

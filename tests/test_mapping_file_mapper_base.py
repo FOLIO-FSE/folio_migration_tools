@@ -31,8 +31,7 @@ class MyTestableFileMapper(MappingFileMapperBase):
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
         if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            return value
+            return self.mapped_from_values.get(folio_prop_name, "")
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )
@@ -551,7 +550,7 @@ def test_validate_required_properties_item_notes_unmapped_2():
             {
                 "folio_field": "notes[1].staffOnly",
                 "legacy_field": "Not mapped",
-                "value": False,
+                "value": "",
                 "description": "",
             },
             {

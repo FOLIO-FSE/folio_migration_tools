@@ -439,7 +439,7 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def get_instance_schema():
         logging.info("Fetching Instance schema...")
-        instance_schema = Helper.get_latest_from_github(
+        instance_schema = FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "ramls/instance.json"
         )
         logging.info("done")
@@ -448,7 +448,7 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def fetch_holdings_schema():
         logging.info("Fetching HoldingsRecord schema...")
-        holdings_record_schema = Helper.get_latest_from_github(
+        holdings_record_schema = FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
         )
         logging.info("done")
