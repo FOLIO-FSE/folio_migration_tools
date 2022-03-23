@@ -1,4 +1,3 @@
-import imp
 from requests.exceptions import HTTPError
 import pytest
 from folioclient import FolioClient
@@ -6,8 +5,8 @@ from migration_tools.helper import Helper
 
 
 def test_get_latest_from_github_returns_none_when_failing():
-    schema = FolioClient.get_latest_from_github("branchedelac", "tati", "myfile.json")
-    assert schema is None
+    with pytest.raises(HTTPError):
+        FolioClient.get_latest_from_github("branchedelac", "tati", "myfile.json")
 
 
 def test_get_latest_from_github_returns_file_1():
@@ -20,11 +19,10 @@ def test_get_latest_from_github_returns_file_1():
     assert schema.get("001", None) is not None
 
 
-def test_get_latest_from_github_returns_file():
-    schema = FolioClient.get_latest_from_github(
-        "folio-org",
-        "acq-models",
-        "/mod-orgs/schemas/organization.json",
-    )
-    assert schema is not None
-    assert schema.get("description") == "The record of an organization"
+def test_get_latest_from_github_returns_file_orgs_has_no_releases():
+    with pytest.raises(HTTPError):
+        FolioClient.get_latest_from_github(
+            "folio-org",
+            "acq-models",
+            "/mod-orgs/schemas/organization.json",
+        )
