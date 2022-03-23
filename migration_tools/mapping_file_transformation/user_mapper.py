@@ -100,6 +100,9 @@ class UserMapper(UserMapperBase):
                     p for p in user_map["data"] if p["folio_field"].startswith("notes[")
                 ]
             }
+            logging.info(
+                "Set %s props used for note mapping", len(self.noteprops["data"])
+            )
         if any(self.noteprops["data"]):
             notes_schema = self.notes_schemas["noteCollection"]
             notes_schema["properties"]["notes"]["items"] = self.notes_schemas["note"]
@@ -113,11 +116,13 @@ class UserMapper(UserMapperBase):
                     FOLIONamespaces.other,
                     True,
                 )
+                logging.info("Initiated mapper for User notes")
             for note in self.notes_mapper.do_map(
                 legacy_user, legacy_id, FOLIONamespaces.other
             )[0].get("notes", []):
                 note["links"] = [{"id": user_uuid, "type": "user"}]
                 logging.log(25, "notes\t%s", json.dumps(note))
+                self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
 
     def do_map(self, legacy_user, user_map, legacy_id):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
