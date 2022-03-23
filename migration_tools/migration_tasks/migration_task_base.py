@@ -32,6 +32,7 @@ class MigrationTaskBase:
     ):
 
         print("MigrationTaskBase init")
+        self.task_configuration = task_configuration
         self.folio_client: FolioClient = FolioClient(
             library_configuration.okapi_url,
             library_configuration.tenant_id,
