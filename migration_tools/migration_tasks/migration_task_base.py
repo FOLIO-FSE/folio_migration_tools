@@ -141,7 +141,7 @@ class MigrationTaskBase:
 
         file_formatter = logging.Formatter("%(message)s")
         file_handler = logging.FileHandler(
-            filename=self.folder_structure.transformation_log_path,
+            filename=self.folder_structure.transformation_log_path, mode="w"
         )
         file_handler.addFilter(ExcludeLevelFilter(25))
         file_handler.addFilter(ExcludeLevelFilter(26))
@@ -153,7 +153,7 @@ class MigrationTaskBase:
         # Data file formatter
         data_file_formatter = logging.Formatter("%(message)s")
         data_file_handler = logging.FileHandler(
-            filename=str(self.folder_structure.transformation_extra_data_path),
+            filename=str(self.folder_structure.transformation_extra_data_path), mode="w"
         )
         data_file_handler.addFilter(LevelFilter(25))
         data_file_handler.setFormatter(data_file_formatter)
@@ -163,7 +163,7 @@ class MigrationTaskBase:
         # Data issue file formatter
         data_issue_file_formatter = logging.Formatter("%(message)s")
         data_issue_file_handler = logging.FileHandler(
-            filename=str(self.folder_structure.data_issue_file_path),
+            filename=str(self.folder_structure.data_issue_file_path), mode="w"
         )
         data_issue_file_handler.addFilter(LevelFilter(26))
         data_issue_file_handler.setFormatter(data_issue_file_formatter)

@@ -1,7 +1,6 @@
 from requests.exceptions import HTTPError
 import pytest
 from folioclient import FolioClient
-from migration_tools.helper import Helper
 
 
 def test_get_latest_from_github_returns_none_when_failing():

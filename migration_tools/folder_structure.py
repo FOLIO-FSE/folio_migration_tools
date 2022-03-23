@@ -89,7 +89,7 @@ class FolderStructure:
         )
 
         self.transformation_extra_data_path = (
-            self.results_folder / f"extradata_{self.iteration_identifier}.extradata"
+            self.results_folder / f"extradata_{file_template}.extradata"
         )
 
         self.data_issue_file_path = (
