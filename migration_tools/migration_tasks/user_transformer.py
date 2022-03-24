@@ -109,69 +109,76 @@ class UserTransformer(MigrationTaskBase):
             self.folder_structure.mapping_files_folder
             / self.task_config.user_mapping_file_name
         )
+        try:
+            with open(
+                self.folder_structure.created_objects_path,
+                "w+",
+                encoding="utf-8",
+            ) as results_file:
+                with open(source_path, encoding="utf8") as object_file, open(
+                    map_path, encoding="utf8"
+                ) as mapping_file:
+                    logging.info(f"processing {source_path}")
+                    user_map = json.load(mapping_file)
+                    legacy_property_name = self.get_legacy_id_prop(user_map)
 
-        with open(
-            self.folder_structure.created_objects_path,
-            "w+",
-            encoding="utf-8",
-        ) as results_file:
-            with open(source_path, encoding="utf8") as object_file, open(
-                map_path, encoding="utf8"
-            ) as mapping_file:
-                logging.info(f"processing {source_path}")
-                user_map = json.load(mapping_file)
-                legacy_property_name = self.get_legacy_id_prop(user_map)
-
-                file_format = "tsv" if str(source_path).endswith(".tsv") else "csv"
-                for num_users, legacy_user in enumerate(
-                    self.mapper.get_users(object_file, file_format), start=1
-                ):
-                    try:
-                        if num_users == 1:
-                            logging.info("First Legacy  user")
-                            logging.info(json.dumps(legacy_user, indent=4))
-                        folio_user = self.mapper.do_map(
-                            legacy_user, user_map, legacy_user.get(legacy_property_name)
-                        )
-                        self.clean_user(folio_user)
-                        results_file.write(f"{json.dumps(folio_user)}\n")
-                        if num_users == 1:
-                            logging.info("## First FOLIO  user")
-                            logging.info(
-                                json.dumps(folio_user, indent=4, sort_keys=True)
+                    file_format = "tsv" if str(source_path).endswith(".tsv") else "csv"
+                    for num_users, legacy_user in enumerate(
+                        self.mapper.get_users(object_file, file_format), start=1
+                    ):
+                        try:
+                            if num_users == 1:
+                                logging.info("First Legacy  user")
+                                logging.info(json.dumps(legacy_user, indent=4))
+                            folio_user = self.mapper.do_map(
+                                legacy_user,
+                                user_map,
+                                legacy_user.get(legacy_property_name),
                             )
-                        self.mapper.migration_report.add_general_statistics(
-                            "Successful user transformations"
-                        )
-                        if num_users % 1000 == 0:
-                            logging.info(f"{num_users} users processed.")
-                    except TransformationRecordFailedError as tre:
-                        self.mapper.migration_report.add_general_statistics(
-                            "Records failed"
-                        )
-                        Helper.log_data_issue(
-                            tre.index_or_id, tre.message, tre.data_value
-                        )
-                        logging.error(tre)
-                    except TransformationProcessError as tpe:
-                        logging.error(tpe)
-                        print("Halting")
-                        sys.exit()
-                    except ValueError as ve:
-                        logging.error(ve)
-                        raise ve
-                    except Exception as ee:
-                        logging.error(ee)
-                        logging.error(num_users)
-                        logging.error(json.dumps(legacy_user))
-                        self.mapper.migration_report.add_general_statistics(
-                            "Failed user transformations"
-                        )
-                        logging.error(ee, exc_info=True)
-                    finally:
-                        if num_users == 1:
-                            print_email_warning()
-                    self.total_records = num_users
+                            self.clean_user(folio_user)
+                            results_file.write(f"{json.dumps(folio_user)}\n")
+                            if num_users == 1:
+                                logging.info("## First FOLIO  user")
+                                logging.info(
+                                    json.dumps(folio_user, indent=4, sort_keys=True)
+                                )
+                            self.mapper.migration_report.add_general_statistics(
+                                "Successful user transformations"
+                            )
+                            if num_users % 1000 == 0:
+                                logging.info(f"{num_users} users processed.")
+                        except TransformationRecordFailedError as tre:
+                            self.mapper.migration_report.add_general_statistics(
+                                "Records failed"
+                            )
+                            Helper.log_data_issue(
+                                tre.index_or_id, tre.message, tre.data_value
+                            )
+                            logging.error(tre)
+                        except TransformationProcessError as tpe:
+                            logging.error(tpe)
+                            print(f"\n{tpe.message}")
+                            print("Halting")
+                            sys.exit()
+                        except ValueError as ve:
+                            logging.error(ve)
+                            raise ve
+                        except Exception as ee:
+                            logging.error(ee)
+                            logging.error(num_users)
+                            logging.error(json.dumps(legacy_user))
+                            self.mapper.migration_report.add_general_statistics(
+                                "Failed user transformations"
+                            )
+                            logging.error(ee, exc_info=True)
+                        finally:
+                            if num_users == 1:
+                                print_email_warning()
+                        self.total_records = num_users
+        except FileNotFoundError as fnfe:
+            logging.exception()
+            print(f"\n{fnfe}")
+            sys.exit()
 
     @staticmethod
     def get_legacy_id_prop(record_map):
