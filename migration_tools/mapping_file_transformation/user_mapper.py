@@ -305,9 +305,6 @@ class UserMapper(UserMapperBase):
                     "",
                     True,
                 )
-                self.migration_report.add(
-                    Blurbs.UserGroupMapping, f"{legacy_group} -> {gid}"
-                )
                 return gid
             else:
                 self.migration_report.add(
