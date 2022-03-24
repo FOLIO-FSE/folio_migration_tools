@@ -236,11 +236,9 @@ class UserMapper(UserMapperBase):
             self.map_basic_props(legacy_object, user_map, prop_name, folio_user)
 
     def map_basic_props(self, legacy_user, user_map, prop, folio_user):
-        if (
-            self.has_property(legacy_user, user_map, prop)
-            and self.get_prop(legacy_user, user_map, prop).strip()
-        ):
-            folio_user[prop] = self.get_prop(legacy_user, user_map, prop)
+        if self.has_property(legacy_user, user_map, prop):
+            if temp_prop := self.get_prop(legacy_user, user_map, prop).strip():
+                folio_user[prop] = temp_prop
 
     def add_notes(self):
         note = {

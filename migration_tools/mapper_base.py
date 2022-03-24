@@ -95,7 +95,7 @@ class MapperBase:
             self.migration_report.add(
                 ref_data_mapping.blurb,
                 (
-                    f'{ref_data_mapping.name} mapping - {" - ".join(fieldvalues)} '
+                    f'{" - ".join(fieldvalues)} '
                     f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
                 ),
             )
@@ -106,7 +106,7 @@ class MapperBase:
                 self.migration_report.add(
                     ref_data_mapping.blurb,
                     (
-                        f"{ref_data_mapping.name} mapping - Not to be mapped. "
+                        f"Not to be mapped. "
                         f'(No default) -- {" - ".join(fieldvalues)} -> ""'
                     ),
                 )
@@ -114,7 +114,7 @@ class MapperBase:
             self.migration_report.add(
                 ref_data_mapping.blurb,
                 (
-                    f"{ref_data_mapping.name} mapping - Unmapped (Default value was set) -- "
+                    f"Unmapped (Default value was set) -- "
                     f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
                 ),
             )
@@ -166,7 +166,7 @@ class MapperBase:
             self.migration_report.add(
                 ref_data_mapping.blurb,
                 (
-                    f'{ref_data_mapping.name} mapping - {" - ".join(fieldvalues)} '
+                    f'{" - ".join(fieldvalues)} '
                     f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
                 ),
             )
@@ -176,7 +176,7 @@ class MapperBase:
                 self.migration_report.add(
                     ref_data_mapping.blurb,
                     (
-                        f"{ref_data_mapping.name} mapping - Not to be mapped. "
+                        f"Not to be mapped. "
                         f'(No default) -- {" - ".join(fieldvalues)} -> ""'
                     ),
                 )
@@ -184,7 +184,7 @@ class MapperBase:
             self.migration_report.add(
                 ref_data_mapping.blurb,
                 (
-                    f"{ref_data_mapping.name} mapping - Unmapped (Default value was set) -- "
+                    f"Unmapped (Default value was set) -- "
                     f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
                 ),
             )
