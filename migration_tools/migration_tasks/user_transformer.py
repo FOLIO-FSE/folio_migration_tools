@@ -176,7 +176,7 @@ class UserTransformer(MigrationTaskBase):
                                 print_email_warning()
                         self.total_records = num_users
         except FileNotFoundError as fnfe:
-            logging.exception()
+            logging.exception("File not found")
             print(f"\n{fnfe}")
             sys.exit()
 
