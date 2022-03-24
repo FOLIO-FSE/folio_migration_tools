@@ -73,7 +73,8 @@ class ItemsTransformer(MigrationTaskBase):
         if not any(self.files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+                "",
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}",
             )
         logging.info("Files to process:")
         for filename in self.files:
@@ -281,7 +282,7 @@ class ItemsTransformer(MigrationTaskBase):
         for circ_note in folio_rec.get("circulationNotes", []):
             if circ_note.get("noteType", "") not in ["Check in", "Check out"]:
                 raise TransformationProcessError(
-                    "Circulation Note types are not mapped correclty"
+                    "", "Circulation Note types are not mapped correclty"
                 )
             if circ_note.get("note", ""):
                 circ_note["id"] = str(uuid.uuid4())

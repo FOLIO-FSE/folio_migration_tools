@@ -1,11 +1,7 @@
-import json
 import logging
-from typing import List
+
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
-
-from pymarc.field import Field
-from pymarc.record import Record
 from migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -19,6 +15,8 @@ from migration_tools.marc_rules_transformation.holdings_statementsparser import 
 )
 from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 from migration_tools.report_blurbs import Blurbs
+from pymarc.field import Field
+from pymarc.record import Record
 
 
 class RulesMapperHoldings(RulesMapperBase):
@@ -207,7 +205,8 @@ class RulesMapperHoldings(RulesMapperBase):
             else:
                 if not self.fallback_holdings_type_id:
                     raise TransformationProcessError(
-                        "No fallbackHoldingsTypeId set up. Add to task configuration"
+                        "",
+                        "No fallbackHoldingsTypeId set up. Add to task configuration",
                     )
                 folio_holding["holdingsTypeId"] = self.fallback_holdings_type_id
                 self.migration_report.add(

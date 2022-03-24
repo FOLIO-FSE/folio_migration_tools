@@ -162,15 +162,15 @@ class HoldingsMapper(MappingFileMapperBase):
             return [legacy_value]
         try:
             new_legacy_values = ast.literal_eval(legacy_value)
-            l = len(new_legacy_values)
-            if l > 1:
+            new_value_len = len(new_legacy_values)
+            if new_value_len > 1:
                 self.migration_report.add_general_statistics(
                     "Bound-with items identified by bib id"
                 )
                 self.migration_report.add(
                     Blurbs.GeneralStatistics,
                     "Bib ids referenced in bound-with items",
-                    l,
+                    new_value_len,
                 )
             return new_legacy_values
         except Exception as error:
