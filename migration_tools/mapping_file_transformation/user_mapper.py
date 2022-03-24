@@ -73,6 +73,7 @@ class UserMapper(UserMapperBase):
             logging.info("Init done.")
         except TransformationProcessError as tpe:
             logging.critical(tpe)
+            print(f"\n{tpe.message}")
             sys.exit()
 
     def setup_notes_mapping(self):
