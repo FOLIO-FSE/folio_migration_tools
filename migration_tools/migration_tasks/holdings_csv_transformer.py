@@ -100,11 +100,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             if not self.fallback_holdings_type:
                 raise TransformationProcessError(
+                    "",
                     (
                         "Holdings type with ID "
                         f"{self.task_config.fallback_holdings_type_id} "
                         "not found in FOLIO."
-                    )
+                    ),
                 )
             logging.info(
                 "%s will be used as default holdings type",
@@ -183,7 +184,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         if not any(files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+                "",
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}",
             )
         logging.info("Files to process:")
         for filename in files:
@@ -476,11 +478,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             res = {n["name"].upper(): n["id"] for n in holdings_sources}
             if "FOLIO" not in res:
                 raise TransformationProcessError(
-                    "No holdings source with name FOLIO in tenant"
+                    "", "No holdings source with name FOLIO in tenant"
                 )
             if "MARC" not in res:
                 raise TransformationProcessError(
-                    "No holdings source with name MARC in tenant"
+                    "", "No holdings source with name MARC in tenant"
                 )
         return res
 

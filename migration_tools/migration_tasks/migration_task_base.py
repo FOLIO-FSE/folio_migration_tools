@@ -244,10 +244,13 @@ class MigrationTaskBase:
                     return ref_data_map
             except Exception as exception:
                 raise TransformationProcessError(
-                    f"{folio_property_name} not mapped in legacy->folio mapping file "
-                    f"({map_file_path}) ({exception}). Did you map this field, "
-                    "but forgot to add a mapping file?"
-                )
+                    "",
+                    (
+                        f"{folio_property_name} not mapped in legacy->folio mapping file "
+                        f"({map_file_path}) ({exception}). Did you map this field, "
+                        "but forgot to add a mapping file?"
+                    ),
+                ) from exception
         else:
             logging.info("No mapping setup for %s", folio_property_name)
             logging.info("%s will have default mapping if any ", folio_property_name)

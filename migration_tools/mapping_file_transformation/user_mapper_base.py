@@ -1,16 +1,12 @@
 import collections.abc
-import json
-import uuid
 from abc import abstractmethod
 from typing import Dict
 
-import requests
+from folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from folio_uuid import FolioUUID, FOLIONamespaces
 from migration_tools.custom_exceptions import TransformationProcessError
 from migration_tools.library_configuration import LibraryConfiguration
 from migration_tools.mapper_base import MapperBase
-
 from migration_tools.migration_report import MigrationReport
 
 
@@ -70,7 +66,7 @@ class UserMapperBase(MapperBase):
 
     def instantiate_user(self, legacy_id):
         if not legacy_id:
-            raise TransformationProcessError("Legacy id not present")
+            raise TransformationProcessError("", "Legacy id not present")
         user_id = str(
             FolioUUID(self.folio_client.okapi_url, FOLIONamespaces.users, legacy_id)
         )

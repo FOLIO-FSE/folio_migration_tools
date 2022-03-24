@@ -102,8 +102,9 @@ class MappingFileMapperBase(MapperBase):
                 field_map[k["folio_field"]].append(k["legacy_field"])
         if not ignore_legacy_identifier and "legacyIdentifier" not in field_map:
             raise TransformationProcessError(
+                "",
                 "property legacyIdentifier is not in map. Add this property "
-                "to the mapping file as if it was a FOLIO property"
+                "to the mapping file as if it was a FOLIO property",
             )
         if not ignore_legacy_identifier:
             try:
@@ -114,8 +115,9 @@ class MappingFileMapperBase(MapperBase):
                 )
             except Exception as exception:
                 raise TransformationProcessError(
+                    "",
                     f"property legacyIdentifier not setup in map: "
-                    f"{field_map.get('legacyIdentifier', '') ({exception})}"
+                    f"{field_map.get('legacyIdentifier', '') ({exception})}",
                 ) from exception
             del field_map["legacyIdentifier"]
         return field_map

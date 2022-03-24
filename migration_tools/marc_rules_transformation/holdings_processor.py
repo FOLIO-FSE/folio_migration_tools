@@ -57,11 +57,11 @@ class HoldingsProcessor:
             }
             if "FOLIO" not in self.holdingssources:
                 raise TransformationProcessError(
-                    "No holdings source with name FOLIO in tenant"
+                    "", "No holdings source with name FOLIO in tenant"
                 )
             if "MARC" not in self.holdingssources:
                 raise TransformationProcessError(
-                    "No holdings source with name MARC in tenant"
+                    "", "No holdings source with name MARC in tenant"
                 )
         else:
             self.holdingssources = {}
@@ -161,8 +161,9 @@ class HoldingsProcessor:
                 if sf := field.get_subfields(split[1]):
                     return sf[0]
             raise TransformationRecordFailedError(
-                "", f"Subfield not found in record", split[1]
+                "", "Subfield not found in record", split[1]
             )
+
         else:
             raise TransformationProcessError(
                 "",

@@ -183,8 +183,11 @@ class UserTransformer(MigrationTaskBase):
                 field_map[k["folio_field"]].append(k["legacy_field"])
         if "legacyIdentifier" not in field_map:
             raise TransformationProcessError(
-                "property legacyIdentifier is not in map. Add this property "
-                "to the mapping file as if it was a FOLIO property"
+                "",
+                (
+                    "property legacyIdentifier is not in map. Add this property "
+                    "to the mapping file as if it was a FOLIO property"
+                ),
             )
         try:
             legacy_id_property_name = field_map["legacyIdentifier"][0]
@@ -194,17 +197,19 @@ class UserTransformer(MigrationTaskBase):
             return legacy_id_property_name
         except Exception as exception:
             raise TransformationProcessError(
-                f"property legacyIdentifier not setup in map: "
-                f"{field_map.get('legacyIdentifier', '') ({exception})}"
-            )
+                "",
+                (
+                    f"property legacyIdentifier not setup in map: "
+                    f"{field_map.get('legacyIdentifier', '') ({exception})}"
+                ),
+            ) from exception
 
     def wrap_up(self):
         path = self.folder_structure.results_folder / "user_id_map.json"
         logging.info(
-            "Saving map of {} old and new IDs to {}".format(
-                len(self.mapper.legacy_id_map), path
-            )
+            f"Saving map of {len(self.mapper.legacy_id_map)} old and new IDs to {path}"
         )
+
         with open(path, "w+") as id_map_file:
             json.dump(self.mapper.legacy_id_map, id_map_file, indent=4)
         with open(
