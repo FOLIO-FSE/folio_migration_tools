@@ -9,6 +9,7 @@ autopep8 = "*"
 flake8 = "*"
 pep8 = "*"
 black = "*"
+mypy = "*"
 
 [packages]
 jsonschema = "==4.0.0a2"
