@@ -985,6 +985,357 @@ class LoansMigrator(MigrationTaskBase):
             logging.info(exception)
             return False, None, None
 
+    def make_loan_utc(self, legacy_loan: LegacyLoan):
+        if self.task_configuration.utc_difference != 0:
+            legacy_loan.due_date = legacy_loan.due_date + timedelta(
+                hours=self.task_configuration.utc_difference
+            )
+            legacy_loan.out_date = legacy_loan.out_date + timedelta(
+                hours=self.task_configuration.utc_difference
+            )
+            self.migration_report.add_general_statistics(
+                "Adjusted out and due dates to UTC"
+            )
+
+    def handle_checkout_failure(
+        self, legacy_loan, folio_checkout: TransactionResult
+    ) -> TransactionResult:
+        """Determines what can be done about a previously failed transaction
+
+        Args:
+            legacy_loan (_type_): The legacy loan
+            folio_checkout (TransactionResult): The results from the prevous transaction
+
+        Returns:
+            TransactionResult: A modified TransactionResult based on the result from the
+             handling
+        """
+        if folio_checkout.error_message == "5XX":
+            return folio_checkout
+        if folio_checkout.error_message.startswith(
+            "No patron with barcode"
+        ) or folio_checkout.error_message.startswith("Patron barcode already detected"):
+            return folio_checkout
+        elif folio_checkout.error_message.startswith("No item with barcode"):
+            return folio_checkout
+        elif folio_checkout.error_message.startswith(
+            "Cannot check out item that already has an open loan"
+        ):
+            return TransactionResult(True, "", "", "")  # TODO:Why true?
+        elif folio_checkout.error_message.startswith("Aged to lost for item"):
+            return self.handle_aged_to_lost_item(legacy_loan)
+        elif folio_checkout.error_message == "Declared lost":
+            return folio_checkout
+        elif folio_checkout.error_message.startswith(
+            "Cannot check out to inactive user"
+        ):
+            return self.checkout_to_inactice_user(legacy_loan)
+        else:
+            self.migration_report.add(
+                Blurbs.Details,
+                f"Other checkout failure: {folio_checkout.error_message}",
+            )
+            # First failure. Add to list of failed loans
+            if legacy_loan.item_barcode not in self.failed:
+                self.failed[legacy_loan.item_barcode] = legacy_loan
+            else:
+                logging.debug(
+                    f"Loan already in failed. item barcode {legacy_loan.item_barcode} "
+                    f"Patron barcode: {legacy_loan.patron_barcode}"
+                )
+                self.failed_and_not_dupe[legacy_loan.item_barcode] = [
+                    legacy_loan,
+                    self.failed[legacy_loan.item_barcode],
+                ]
+                logging.info(
+                    f"Duplicate loans (or failed twice) item barcode"
+                    f"{legacy_loan.item_barcode} patron barcode: {legacy_loan.patron_barcode}"
+                )
+                self.migration_report.add(
+                    Blurbs.Details, "Duplicate loans (or failed twice)"
+                )
+                del self.failed[legacy_loan.item_barcode]
+            return TransactionResult(False, "", "", "")
+
+    def checkout_to_inactice_user(self, legacy_loan) -> TransactionResult:
+        logging.info("Cannot check out to inactive user. Activating and trying again")
+        user = self.get_user_by_barcode(legacy_loan.patron_barcode)
+        expiration_date = user.get("expirationDate", datetime.isoformat(datetime.now()))
+        user["expirationDate"] = datetime.isoformat(datetime.now() + timedelta(days=1))
+        self.activate_user(user)
+        logging.debug("Successfully Activated user")
+        res = self.circulation_helper.check_out_by_barcode(
+            legacy_loan
+        )  # checkout_and_update
+        self.migration_report.add(Blurbs.Details, res.migration_report_message)
+        self.deactivate_user(user, expiration_date)
+        logging.debug("Successfully Deactivated user again")
+        self.migration_report.add(Blurbs.Details, "Handled inactive users")
+        return res
+
+    def handle_aged_to_lost_item(self, legacy_loan) -> TransactionResult:
+        logging.debug("Setting Available")
+        legacy_loan.next_item_status = "Available"
+        self.set_item_status(legacy_loan)
+        res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
+        legacy_loan.next_item_status = "Aged to lost"
+        self.set_item_status(legacy_loan)
+        s = "Successfully Checked out Aged to lost item and put the status back"
+        logging.info(s)
+        self.migration_report.add(Blurbs.Details, s)
+        return res_checkout
+
+    def update_open_loan(self, folio_loan: dict, legacy_loan: LegacyLoan):
+        due_date = du_parser.isoparse(str(legacy_loan.due_date))
+        out_date = du_parser.isoparse(str(legacy_loan.out_date))
+        renewal_count = legacy_loan.renewal_count
+        # TODO: add logging instead of print out
+        try:
+            loan_to_put = copy.deepcopy(folio_loan)
+            del loan_to_put["metadata"]
+            loan_to_put["dueDate"] = due_date.isoformat()
+            loan_to_put["loanDate"] = out_date.isoformat()
+            loan_to_put["renewalCount"] = renewal_count
+            url = f"{self.folio_client.okapi_url}/circulation/loans/{loan_to_put['id']}"
+            req = requests.put(
+                url,
+                headers=self.folio_client.okapi_headers,
+                data=json.dumps(loan_to_put),
+            )
+            if req.status_code == 422:
+                error_message = json.loads(req.text)["errors"][0]["message"]
+                s = f"Update open loan error: {error_message} {req.status_code}"
+                self.migration_report.add(Blurbs.Details, s)
+                logging.error(s)
+                return False
+            elif req.status_code in [201, 204]:
+                self.migration_report.add(
+                    Blurbs.Details,
+                    f"Successfully updated open loan ({req.status_code})",
+                )
+                return True
+            else:
+                self.migration_report.add(
+                    Blurbs.Details,
+                    f"Update open loan error http status: {req.status_code}",
+                )
+                req.raise_for_status()
+            logging.debug("Updating open loan was successful")
+            return True
+        except HTTPError as exception:
+            logging.error(
+                f"{req.status_code} PUT FAILED Extend loan to {loan_to_put['dueDate']}"
+                f"\t {url}\t{json.dumps(loan_to_put)}"
+            )
+            traceback.print_exc()
+            logging.error(exception)
+            return False
+
+    def handle_previously_failed_loans(self, loan):
+        if loan["item_id"] in self.failed:
+            s = "Loan succeeded but failed previously. Removing from failed    "
+            logging.info(s)
+            del self.failed[loan["item_id"]]
+
+    def declare_lost(self, folio_loan):
+        declare_lost_url = f"/circulation/loans/{folio_loan['id']}/declare-item-lost"
+        logging.debug(f"Declare lost url:{declare_lost_url}")
+        due_date = du_parser.isoparse(folio_loan["dueDate"])
+        data = {
+            "declaredLostDateTime": datetime.isoformat(due_date + timedelta(days=1)),
+            "comment": "Created at migration. Date is due date + 1 day",
+            "servicePointId": str(self.service_point_id),
+        }
+        logging.debug(f"Declare lost data: {json.dumps(data, indent=4)}")
+        if self.folio_put_post(declare_lost_url, data, "POST", "Declare item as lost"):
+            self.migration_report.add(
+                Blurbs.Details, "Successfully declared loan as lost"
+            )
+        else:
+            logging.error(f"Unsuccessfully declared loan {folio_loan} as lost")
+            self.migration_report.add(
+                Blurbs.Details, "Unsuccessfully declared loan as lost"
+            )
+        # TODO: Exception handling
+
+    def claim_returned(self, folio_loan):
+        claim_returned_url = (
+            f"/circulation/loans/{folio_loan['id']}/claim-item-returned"
+        )
+        logging.debug(f"Claim returned url:{claim_returned_url}")
+        due_date = du_parser.isoparse(folio_loan["dueDate"])
+        data = {
+            "itemClaimedReturnedDateTime": datetime.isoformat(
+                due_date + timedelta(days=1)
+            ),
+            "comment": "Created at migration. Date is due date + 1 day",
+        }
+        logging.debug(f"Claim returned data:\t{json.dumps(data)}")
+        if self.folio_put_post(
+            claim_returned_url, data, "POST", "Declare item as lost"
+        ):
+            self.migration_report.add(
+                Blurbs.Details, "Successfully declared loan as Claimed returned"
+            )
+        else:
+            logging.error(
+                f"Unsuccessfully declared loan {folio_loan} as Claimed returned"
+            )
+            self.migration_report.add(
+                Blurbs.Details,
+                f"Unsuccessfully declared loan {folio_loan} as Claimed returned",
+            )
+        # TODO: Exception handling
+
+    def set_item_status(self, legacy_loan: LegacyLoan):
+        try:
+            # Get Item by barcode, update status.
+            item_url = f'{self.folio_client.okapi_url}/item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
+            resp = requests.get(item_url, headers=self.folio_client.okapi_headers)
+            resp.raise_for_status()
+            data = resp.json()
+            folio_item = data["items"][0]
+            folio_item["status"]["name"] = legacy_loan.next_item_status
+            if self.update_item(folio_item):
+                self.migration_report.add(
+                    Blurbs.Details,
+                    f"Successfully set item status to {legacy_loan.next_item_status}",
+                )
+                logging.debug(
+                    f"Successfully set item with barcode "
+                    f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
+                )
+            else:
+                if legacy_loan.item_barcode not in self.failed:
+                    self.failed[legacy_loan.item_barcode] = legacy_loan
+                logging.error(
+                    f"Error when setting item with barcode "
+                    f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
+                )
+                self.migration_report.add(
+                    Blurbs.Details,
+                    f"Error setting item status to {legacy_loan.next_item_status}",
+                )
+        except Exception as ee:
+            logging.error(
+                f"{resp.status_code} when trying to set item with barcode "
+                f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status} {ee}"
+            )
+            raise ee
+
+    def activate_user(self, user):
+        user["active"] = True
+        self.update_user(user)
+        self.migration_report.add(Blurbs.Details, "Successfully activated user")
+
+    def deactivate_user(self, user, expiration_date):
+        user["expirationDate"] = expiration_date
+        user["active"] = False
+        self.update_user(user)
+        self.migration_report.add(Blurbs.Details, "Successfully deactivated user")
+
+    def update_item(self, item):
+        url = f'/item-storage/items/{item["id"]}'
+        return self.folio_put_post(url, item, "PUT", "Update item")
+
+    def update_user(self, user):
+        url = f'/users/{user["id"]}'
+        self.folio_put_post(url, user, "PUT", "Update user")
+
+    def get_user_by_barcode(self, barcode):
+        url = f'{self.folio_client.okapi_url}/users?query=(barcode=="{barcode}")'
+        resp = requests.get(url, headers=self.folio_client.okapi_headers)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["users"][0]
+
+    def folio_put_post(self, url, data_dict, verb, action_description=""):
+        full_url = f"{self.folio_client.okapi_url}{url}"
+        try:
+            if verb == "PUT":
+                resp = requests.put(
+                    full_url,
+                    headers=self.folio_client.okapi_headers,
+                    data=json.dumps(data_dict),
+                )
+            elif verb == "POST":
+                resp = requests.post(
+                    full_url,
+                    headers=self.folio_client.okapi_headers,
+                    data=json.dumps(data_dict),
+                )
+            else:
+                raise Exception("Bad verb")
+            if resp.status_code == 422:
+                error_message = json.loads(resp.text)["errors"][0]["message"]
+                logging.error(error_message)
+                self.migration_report.add(
+                    Blurbs.Details, f"{action_description} error: {error_message}"
+                )
+                resp.raise_for_status()
+            elif resp.status_code in [201, 204]:
+                self.migration_report.add(
+                    Blurbs.Details,
+                    f"Successfully {action_description} ({resp.status_code})",
+                )
+            else:
+                self.migration_report.add(
+                    Blurbs.Details,
+                    f"{action_description} error. http status: {resp.status_code}",
+                )
+
+                resp.raise_for_status()
+            return True
+        except HTTPError as exception:
+            logging.error(f"{resp.status_code}. {verb} FAILED for {url}")
+            traceback.print_exc()
+            logging.info(exception)
+            return False
+
+    def change_due_date(self, folio_loan, legacy_loan):
+        try:
+            t0_function = time.time()
+            api_url = f"{self.folio_client.okapi_url}/circulation/loans/{folio_loan['id']}/change-due-date"
+            body = {
+                "dueDate": du_parser.isoparse(str(legacy_loan.due_date)).isoformat()
+            }
+            req = requests.post(
+                api_url, headers=self.folio_client.okapi_headers, data=json.dumps(body)
+            )
+            if req.status_code == 422:
+                error_message = json.loads(req.text)["errors"][0]["message"]
+                self.migration_report.add(
+                    Blurbs.Details, f"Change due date error: {error_message}"
+                )
+                logging.info(
+                    f"{error_message}\t",
+                )
+                self.migration_report.add(Blurbs.Details, error_message)
+                return False
+            elif req.status_code == 201:
+                self.migration_report.add(
+                    Blurbs.Details, f"Successfully changed due date ({req.status_code})"
+                )
+                return True, json.loads(req.text), None
+            elif req.status_code == 204:
+                self.migration_report.add(
+                    Blurbs.Details, f"Successfully changed due date ({req.status_code})"
+                )
+                return True, None, None
+            else:
+                self.migration_report.add(
+                    Blurbs.Details,
+                    f"Update open loan error http status: {req.status_code}",
+                )
+                req.raise_for_status()
+        except HTTPError as exception:
+            logging.info(
+                f"{req.status_code} POST FAILED Change Due Date to {api_url}\t{json.dumps(body)})"
+            )
+            traceback.print_exc()
+            logging.info(exception)
+            return False, None, None
+
 
 def timings(t0, t0func, num_objects):
     avg = num_objects / (time.time() - t0)
