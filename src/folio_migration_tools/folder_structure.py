@@ -38,7 +38,6 @@ class FolderStructure:
 
         self.results_folder = self.base_folder / "results"
         verify_folder(self.results_folder)
-
         self.reports_folder = self.base_folder / "reports"
         verify_folder(self.reports_folder)
 
@@ -66,11 +65,8 @@ class FolderStructure:
         )
 
     def setup_migration_file_structure(self, source_file_type: str = ""):
-        time_str = (
-            f'_{time.strftime("%Y%m%d-%H%M%S")}'
-            if self.add_time_stamp_to_file_names
-            else ""
-        )
+        time_stamp = f'_{time.strftime("%Y%m%d-%H%M%S")}'
+        time_str = time_stamp if self.add_time_stamp_to_file_names else ""
         file_template = (
             f"{self.iteration_identifier}{time_str}_{self.migration_task_name}"
         )
@@ -86,6 +82,10 @@ class FolderStructure:
 
         self.transformation_log_path = self.reports_folder / (
             f"log_{object_type_string}_{file_template}.log"
+        )
+
+        self.failed_recs_path = (
+            self.results_folder / f"failed_records_{file_template}_{time_stamp}.txt"
         )
 
         self.transformation_extra_data_path = (
