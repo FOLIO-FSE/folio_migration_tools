@@ -48,7 +48,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         default_call_number_type_name: str
         previously_generated_holdings_files: Optional[list[str]] = []
         fallback_holdings_type_id: str
-        holdings_type_uuid_for_boundwiths: Optional[str]
+        holdings_type_uuid_for_boundwiths: Optional[str] = ""
         call_number_type_map_file_name: Optional[str]
         holdings_merge_criteria: Optional[list[str]] = [
             "instanceId",
@@ -349,6 +349,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
+        if not self.task_config.holdings_type_uuid_for_boundwiths:
+            raise TransformationProcessError(
+                "Missing task setting holdingsTypeUuidForBoundwiths. Add a "
+                "holdingstype specifically for boundwith holdings and reference "
+                "the UUID in this parameter."
+            )
+
         # Add former ids
         temp_ids = []
         for former_id in folio_holding.get("formerIds", []):
@@ -447,6 +454,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 new_folio_holding,
                 self.task_config.holdings_merge_criteria,
                 self.mapper.migration_report,
+                self.task_config.holdings_type_uuid_for_boundwiths,
             )
             if self.holdings.get(new_holding_key, None):
                 self.mapper.migration_report.add_general_statistics(

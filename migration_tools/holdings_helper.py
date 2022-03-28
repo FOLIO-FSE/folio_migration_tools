@@ -1,5 +1,6 @@
 import json
 import logging
+from uuid import uuid4
 
 from migration_tools import custom_exceptions
 from migration_tools import helper
@@ -13,16 +14,22 @@ class HoldingsHelper:
         holdings_record: dict,
         fields_criterias: list[str],
         migration_report: MigrationReport,
+        holdings_type_id_to_exclude_from_merging: str = "",
     ) -> str:
         """Creates a key from values determined by the fields_crieteria in a holding
         record to determine uniquenes
 
+        fields_criterias are limited to the strings and UUID properties on the first level of the object.
+        If the property is not found, or empty, it will be ignored
+
+        IF the holdings type id is matched to holdings_type_id_to_exclude_from_merging,
+        the key will be added with a uuid to prevent merging of this holding
+
         Args:
             holdings_record (dict): The Holdingsrecord
             fields_criteria (list[str]): names of the properties of the holdingsrecord.
-            Limited to the strings and UUID properties on the first level of the object.
-            If the property is not found, or empty, it will be ignored
             migration_report (MigrationReport): Report to help reporting merge
+            holdings_type_id_to_exclude_from_merging: (str): the holdings type UUID to exclude
 
         Raises:
             exception: _description_
@@ -39,6 +46,16 @@ class HoldingsHelper:
                         Blurbs.HoldingsMerging, f"{fields_criteria} empty or not set"
                     )
                 values.append(v)
+            if (
+                holdings_type_id_to_exclude_from_merging
+                and holdings_record.get("holdingsTypeId", "-")
+                == holdings_type_id_to_exclude_from_merging
+            ):
+                values.append(str(uuid4()))
+                migration_report.add(
+                    Blurbs.HoldingsMerging,
+                    "Holding prevented from merging by holdingsTypeId",
+                )
             return "-".join(values)
         except Exception as exception:
             logging.error(json.dumps(holdings_record, indent=4))
@@ -46,14 +63,20 @@ class HoldingsHelper:
 
     @staticmethod
     def load_previously_generated_holdings(
-        holdings_file_path, fields_criteria, migration_report: MigrationReport
+        holdings_file_path,
+        fields_criteria,
+        migration_report: MigrationReport,
+        holdings_type_id_to_exclude_from_merging: str = "",
     ):
         with open(holdings_file_path) as holdings_file:
             prev_holdings = {}
             for row in holdings_file:
                 stored_holding = json.loads(row.split("\t")[-1])
                 stored_key = HoldingsHelper.to_key(
-                    stored_holding, fields_criteria, migration_report
+                    stored_holding,
+                    fields_criteria,
+                    migration_report,
+                    holdings_type_id_to_exclude_from_merging,
                 )
                 if stored_key in prev_holdings:
                     message = (

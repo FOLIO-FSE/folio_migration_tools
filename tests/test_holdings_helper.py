@@ -19,6 +19,26 @@ def test_to_key():
     assert res == "instance-location-callnumber"
 
 
+def test_to_key_uuid():
+    holdings_record = {
+        "instanceId": "instance",
+        "holdingsTypeId": "something",
+        "permanentLocation": "location",
+        "callNumber": "callnumber",
+    }
+    holdings_record2 = {
+        "instanceId": "instance",
+        "holdingsTypeId": "something else",
+        "permanentLocation": "location",
+        "callNumber": "callnumber",
+    }
+    merge_criterias = ["instanceId", "permanentLocation", "callNumber"]
+    m = MigrationReport()
+    res = HoldingsHelper.to_key(holdings_record, merge_criterias, m, "something")
+    res2 = HoldingsHelper.to_key(holdings_record2, merge_criterias, m, "something")
+    assert res != res2
+
+
 def test_merge_holding():
     holding_1 = dict(
         formerIds=["a", "b"],
