@@ -118,7 +118,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                             self.folder_structure.results_folder / file_name,
                             self.task_config.holdings_merge_criteria,
                             self.mapper.migration_report,
-                            self.holdings_type_uuid_for_boundwiths
                             self.task_config.holdings_type_uuid_for_boundwiths,
                         )
                     )
