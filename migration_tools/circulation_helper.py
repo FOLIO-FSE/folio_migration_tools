@@ -4,6 +4,8 @@ import logging
 import re
 import time
 from datetime import datetime
+from migration_tools.migration_report import MigrationReport
+from migration_tools.report_blurbs import Blurbs
 from migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from migration_tools.transaction_migration.transaction_result import TransactionResult
 from migration_tools.transaction_migration.legacy_request import LegacyRequest
@@ -16,20 +18,17 @@ date_time_format = "%Y-%m-%dT%H:%M:%S.%f+0000"
 
 
 class CirculationHelper:
-    def __init__(self, folio_client: FolioClient, service_point_id):
+    def __init__(
+        self,
+        folio_client: FolioClient,
+        service_point_id,
+        migration_report: MigrationReport,
+    ):
         self.folio_client = folio_client
         self.service_point_id = service_point_id
         self.missing_patron_barcodes = set()
         self.missing_item_barcodes = set()
-
-    def wrap_up(self):
-        print()
-        logging.error(
-            f"# Missing patron barcodes:\n{json.dumps(list(self.missing_patron_barcodes), indent=4)}"
-        )
-        logging.error(
-            f"# Missing item barcodes:\n{json.dumps(list(self.missing_item_barcodes), indent=4)}"
-        )
+        self.migration_report: MigrationReport = migration_report
 
     def get_user_by_barcode(self, user_barcode):
         if user_barcode in self.missing_patron_barcodes:
@@ -61,7 +60,15 @@ class CirculationHelper:
             logging.error(f"{ee} {item_path}")
             return {}
 
-    def check_out_by_barcode_override_iris(self, legacy_loan: LegacyLoan):
+    def check_out_by_barcode(self, legacy_loan: LegacyLoan) -> TransactionResult:
+        """Checks out a legacy loan using the Endpoint /circulation/check-out-by-barcode
+        Adds all possible overrides in order to make the transaction go through
+        Args:
+            legacy_loan (LegacyLoan): Legacy loan to be posted
+
+        Returns:
+            TransactionResult: the result of the transaction
+        """
         t0_function = time.time()
         data = {
             "itemBarcode": legacy_loan.item_barcode,
@@ -97,7 +104,10 @@ class CirculationHelper:
                         r"(?<=has the item status\s).*(?=\sand cannot be checked out)",
                         error_message_from_folio,
                     )[0]
-                    error_message = f"{stat_message} for item with barcode {legacy_loan.item_barcode}"
+                    error_message = (
+                        f"{stat_message} for item with "
+                        f"barcode {legacy_loan.item_barcode}"
+                    )
                 elif "No item with barcode" in error_message_from_folio:
                     error_message = (
                         f"No item with barcode {legacy_loan.item_barcode} in FOLIO"
@@ -116,22 +126,30 @@ class CirculationHelper:
                 ):
                     return TransactionResult(True, None, "", "")
                 logging.error(
-                    f"{error_message} Patron barcode: {legacy_loan.patron_barcode} Item Barcode:{legacy_loan.item_barcode}"
+                    f"{error_message} "
+                    f"Patron barcode: {legacy_loan.patron_barcode} "
+                    f"Item Barcode:{legacy_loan.item_barcode}"
                 )
+                self.migration_report.add(Blurbs.Details, stat_message)
                 return TransactionResult(
                     False, None, error_message, f"Check out error: {stat_message}"
                 )
             elif req.status_code == 201:
                 stats = "Successfully checked out by barcode"
                 logging.debug(
-                    f"{stats} (item barcode {legacy_loan.item_barcode}) in {(time.time() - t0_function):.2f}s"
+                    "%s (item barcode %s}) in %ss",
+                    stats,
+                    legacy_loan.item_barcode,
+                    f"{(time.time() - t0_function):.2f}",
                 )
-
                 return TransactionResult(True, json.loads(req.text), None, stats)
             elif req.status_code == 204:
                 stats = "Successfully checked out by barcode"
                 logging.debug(
-                    f"{stats} (item barcode {legacy_loan.item_barcode}) {req.status_code}"
+                    "%s (item barcode %s) %s",
+                    stats,
+                    legacy_loan.item_barcode,
+                    req.status_code,
                 )
                 return TransactionResult(True, None, None, stats)
             else:
@@ -148,52 +166,6 @@ class CirculationHelper:
                 "5XX",
                 f"Failed checkout http status {req.status_code}",
             )
-
-    @staticmethod
-    def check_out_by_barcode(
-        folio_client, item_barcode: str, patron_barcode: str, service_point_id: str
-    ):
-        # TODO: add logging instead of print out
-        t0_function = time.time()
-        data = {
-            "itemBarcode": item_barcode,
-            "userBarcode": patron_barcode,
-            "loanDate": datetime.now().isoformat(),
-            "servicePointId": service_point_id,
-        }
-        path = "/circulation/check-out-by-barcode"
-        url = f"{folio_client.okapi_url}{path}"
-        try:
-            req = requests.post(
-                url, headers=folio_client.okapi_headers, data=json.dumps(data)
-            )
-            if req.status_code == 422:
-                error_message = json.loads(req.text)["errors"][0]["message"]
-                if "has the item status" in error_message:
-                    error_message = re.findall(
-                        r"(?<=has the item status\s).*(?=\sand cannot be checked out)",
-                        error_message,
-                    )[0]
-                elif "No item with barcode" in error_message:
-                    error_message = "Missing barcode"
-                logging.error(error_message)
-                return False, None, error_message, f"Check out error: {error_message}"
-            elif req.status_code == 201:
-                stats = f"Successfully checked out by barcode ({req.status_code})"
-                logging.debug(stats)
-                return True, json.loads(req.text), None, stats
-            elif req.status_code == 204:
-                stats = f"Successfully checked out by barcode ({req.status_code})"
-                logging.debug(stats)
-                return True, None, None, stats
-            else:
-                req.raise_for_status()
-        except HTTPError as exception:
-            logging.error(
-                f"{req.status_code}\tPOST FAILED {url}\n\t{json.dumps(data)}\n\t{req.text}",
-                exc_info=True,
-            )
-            return False, None, "5XX", f"Failed checkout http status {req.status_code}"
 
     @staticmethod
     def create_request(
