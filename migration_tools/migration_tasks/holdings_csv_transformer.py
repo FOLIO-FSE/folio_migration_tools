@@ -113,6 +113,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             if any(self.task_config.previously_generated_holdings_files):
                 for file_name in self.task_config.previously_generated_holdings_files:
+                    logging.info("Processing %s", file_name)
                     self.holdings.update(
                         HoldingsHelper.load_previously_generated_holdings(
                             self.folder_structure.results_folder / file_name,
@@ -121,6 +122,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                             self.task_config.holdings_type_uuid_for_boundwiths,
                         )
                     )
+            else:
+                logging.info("No file of legacy holdings setup.")
         except TransformationProcessError as process_error:
             logging.critical(process_error)
             logging.critical("Halting.")
