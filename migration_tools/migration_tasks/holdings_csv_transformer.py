@@ -118,6 +118,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                             self.folder_structure.results_folder / file_name,
                             self.task_config.holdings_merge_criteria,
                             self.mapper.migration_report,
+                            self.task_config.call_number_type_map_file_name,
                         )
                     )
         except TransformationProcessError as process_error:
