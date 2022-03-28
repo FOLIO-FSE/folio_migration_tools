@@ -48,7 +48,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         default_call_number_type_name: str
         previously_generated_holdings_files: Optional[list[str]] = []
         fallback_holdings_type_id: str
-        holdings_type_uuid_for_boundwiths: Optional[str] = ""
+        holdings_type_uuid_for_boundwiths: str
         call_number_type_map_file_name: Optional[str]
         holdings_merge_criteria: Optional[list[str]] = [
             "instanceId",
@@ -118,7 +118,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                             self.folder_structure.results_folder / file_name,
                             self.task_config.holdings_merge_criteria,
                             self.mapper.migration_report,
-                            self.task_config.call_number_type_map_file_name,
+                            self.holdings_type_uuid_for_boundwiths
                         )
                     )
         except TransformationProcessError as process_error:
