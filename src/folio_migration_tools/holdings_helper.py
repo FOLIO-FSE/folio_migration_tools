@@ -48,8 +48,7 @@ class HoldingsHelper:
                     )
                 values.append(v)
             if (
-                holdings_type_id_to_exclude_from_merging
-                and holdings_record.get("holdingsTypeId", "-")
+                holdings_record.get("holdingsTypeId")
                 == holdings_type_id_to_exclude_from_merging
             ):
                 values.append(str(uuid4()))
