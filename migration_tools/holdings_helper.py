@@ -14,7 +14,7 @@ class HoldingsHelper:
         holdings_record: dict,
         fields_criterias: list[str],
         migration_report: MigrationReport,
-        holdings_type_id_to_exclude_from_merging: str = "",
+        holdings_type_id_to_exclude_from_merging: str = "Not set",
     ) -> str:
         """Creates a key from values determined by the fields_crieteria in a holding
         record to determine uniquenes
@@ -47,8 +47,7 @@ class HoldingsHelper:
                     )
                 values.append(v)
             if (
-                holdings_type_id_to_exclude_from_merging
-                and holdings_record.get("holdingsTypeId", "-")
+                holdings_record.get("holdingsTypeId")
                 == holdings_type_id_to_exclude_from_merging
             ):
                 values.append(str(uuid4()))
@@ -66,8 +65,12 @@ class HoldingsHelper:
         holdings_file_path,
         fields_criteria,
         migration_report: MigrationReport,
-        holdings_type_id_to_exclude_from_merging: str = "",
+        holdings_type_id_to_exclude_from_merging: str = "Not set",
     ):
+        logging.info(
+            "Holdings type id to exclude is set to %s",
+            holdings_type_id_to_exclude_from_merging,
+        )
         with open(holdings_file_path) as holdings_file:
             prev_holdings = {}
             for row in holdings_file:
