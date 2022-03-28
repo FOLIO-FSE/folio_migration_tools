@@ -50,12 +50,6 @@ class BatchPoster(MigrationTaskBase):
         self.api_path = list_objects(self.task_config.object_type)
         self.snapshot_id = str(uuid4())
         self.failed_objects = []
-        object_name_formatted = self.task_config.object_type.replace(" ", "").lower()
-        time_stamp = time.strftime("%Y%m%d-%H%M%S")
-        self.failed_recs_path = (
-            self.folder_structure.results_folder
-            / f"failed_{object_name_formatted}_records_{time_stamp}.json"
-        )
         self.batch_size = self.task_config.batch_size
         logging.info("Batch size is %s", self.batch_size)
         self.processed = 0
@@ -77,7 +71,7 @@ class BatchPoster(MigrationTaskBase):
             if self.task_config.object_type == "SRS":
                 self.create_snapshot()
             with open(path) as rows, open(
-                self.failed_recs_path, "w"
+                self.folder_structure.failed_recs_path, "w"
             ) as failed_recs_file:
                 last_row = ""
                 for num_records, row in enumerate(rows, start=1):
@@ -321,7 +315,7 @@ class BatchPoster(MigrationTaskBase):
                 ),
                 self.failed_records,
                 self.failed_batches,
-                self.failed_recs_path,
+                self.folder_structure.failed_recs_path,
             )
         else:
             logging.info(
