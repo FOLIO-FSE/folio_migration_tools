@@ -89,9 +89,9 @@ class LoansMigrator(MigrationTaskBase):
     def do_work(self):
         logging.info("Starting")
         if self.task_configuration.starting_row > 1:
-            logging.info(f"Skipping {(self.starting_row-1)} records")
+            logging.info(f"Skipping {(self.task_configuration.starting_row-1)} records")
         for num_loans, legacy_loan in enumerate(
-            self.valid_legacy_loans[self.starting_row :], start=1
+            self.valid_legacy_loans[self.task_configuration.starting_row :], start=1
         ):
             t0_migration = time.time()
             self.migration_report.add_general_statistics("Processed loans")
