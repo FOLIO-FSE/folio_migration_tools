@@ -2,6 +2,7 @@ import copy
 import csv
 from datetime import datetime, timedelta
 import json
+import sys
 from dateutil import parser as du_parser
 import requests
 import logging
@@ -267,6 +268,12 @@ class LoansMigrator(MigrationTaskBase):
             f"Done validating {legacy_loan_count} "
             f"legacy loans with {num_bad} rotten apples"
         )
+        if num_bad / legacy_loan_count > 0.5:
+            q = num_bad / legacy_loan_count
+            logging.error("%s percent of loans failed to validate.", (q * 100))
+            self.migration_report.log_me()
+            logging.critical("Halting...")
+            sys.exit()
 
     def make_loan_utc(self, legacy_loan: LegacyLoan):
         if self.task_configuration.utc_difference != 0:
@@ -427,7 +434,7 @@ class LoansMigrator(MigrationTaskBase):
         data = {
             "declaredLostDateTime": datetime.isoformat(due_date + timedelta(days=1)),
             "comment": "Created at migration. Date is due date + 1 day",
-            "servicePointId": str(self.service_point_id),
+            "servicePointId": str(self.task_configuration.fallback_service_point_id),
         }
         logging.debug(f"Declare lost data: {json.dumps(data, indent=4)}")
         if self.folio_put_post(declare_lost_url, data, "POST", "Declare item as lost"):
