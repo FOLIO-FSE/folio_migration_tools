@@ -55,18 +55,14 @@ class MigrationReport:
     def log_me(self):
         for a in self.report:
             blurb = self.report[a].get("blurb_tuple") or ("", "")
-            logging.info("   \n")
-            logging.info(f"## {blurb[0]}    \n")
-            logging.info(f"{blurb[1]}    \n")
-            logging.info("   \n")
-            logging.info("Measure | Count   \n")
-            logging.info("--- | ---:   \n")
+            logging.info(f"{blurb[0]}    ")
+            logging.info("_______________")
             b = self.report[a]
             sortedlist = [
                 (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
             ]
             for b in sortedlist:
-                logging.info(f"{b[0] or 'EMPTY'} | {b[1]:,}   \n")
+                logging.info(f"{b[0] or 'EMPTY'} \t\t{b[1]:,}   ")
 
 
 def as_str(s):
