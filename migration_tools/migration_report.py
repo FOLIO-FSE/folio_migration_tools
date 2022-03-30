@@ -52,7 +52,7 @@ class MigrationReport:
                 report_file.write(f"{b[0] or 'EMPTY'} | {b[1]:,}   \n")
             report_file.write("</details>   \n")
 
-    def log_migration_report(self):
+    def log_me(self):
         for a in self.report:
             blurb = self.report[a].get("blurb_tuple") or ("", "")
             logging.info("   \n")
