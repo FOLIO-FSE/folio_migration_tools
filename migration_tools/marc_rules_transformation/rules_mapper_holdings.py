@@ -8,7 +8,7 @@ from migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from migration_tools.helper import Helper
-from migration_tools.library_configuration import LibraryConfiguration
+from migration_tools.library_configuration import HridHandling, LibraryConfiguration
 from migration_tools.marc_rules_transformation.conditions import Conditions
 from migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -165,7 +165,10 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
-        self.store_hrid_settings()
+        if self.task_configuration.hrid_handling == HridHandling.preserve001:
+            self.store_hrid_settings()
+        else:
+            logging.info("NOT storing HRID settings since that is managed by FOLIO")
 
     def set_holdings_type(self, marc_record: Record, folio_holding, legacy_id: str):
         # Holdings type mapping
