@@ -174,6 +174,16 @@ class HoldingsProcessor:
     def save_srs_record(self, marc_record, file_def, folio_rec, legacy_id: str):
         if self.mapper.task_configuration.create_source_records:
             self.add_hrid_to_records(folio_rec, marc_record)
+            if "008" in marc_record and len(marc_record["008"].data) > 32:
+                remain, rest = (
+                    marc_record["008"].data[:32],
+                    marc_record["008"].data[32:],
+                )
+                marc_record["008"].data = remain
+                self.mapper.migration_report.add(
+                    Blurbs.MarcValidation,
+                    f"008 lenght invalid. '{rest}' was stripped out",
+                )
             for former_id in folio_rec["formerIds"]:
                 if map_entity := self.mapper.instance_id_map.get(former_id, ""):
                     new_004 = Field(tag="004", data=map_entity["instance_hrid"])
