@@ -1,6 +1,6 @@
 import pytest
-from migration_tools.custom_exceptions import TransformationRecordFailedError
-from migration_tools.mapper_base import MapperBase
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.mapper_base import MapperBase
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 

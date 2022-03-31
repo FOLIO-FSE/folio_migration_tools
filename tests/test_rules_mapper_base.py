@@ -4,7 +4,9 @@ from unittest.mock import Mock, patch
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from uuid import uuid4
 
-from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
+)
 from pymarc.reader import MARCReader
 from pymarc.record import Field, Record
 

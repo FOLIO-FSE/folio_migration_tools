@@ -8,15 +8,15 @@ from textwrap import wrap
 import pymarc
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.helper import Helper
-from migration_tools.library_configuration import LibraryConfiguration
-from migration_tools.mapper_base import MapperBase
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapper_base import MapperBase
+from folio_migration_tools.report_blurbs import Blurbs
 from pymarc import Field, Record, Leader
 
 

@@ -13,23 +13,25 @@ from typing import List, Optional
 
 from folio_uuid import FolioUUID
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.helper import Helper
-from migration_tools.holdings_helper import HoldingsHelper
-from migration_tools.library_configuration import (
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.holdings_helper import HoldingsHelper
+from folio_migration_tools.library_configuration import (
     FileDefinition,
     FolioRelease,
     HridHandling,
     LibraryConfiguration,
 )
-from migration_tools.mapping_file_transformation.holdings_mapper import HoldingsMapper
-from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
+    HoldingsMapper,
+)
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic.main import BaseModel
 
 

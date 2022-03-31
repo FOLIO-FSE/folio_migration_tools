@@ -2,7 +2,7 @@ import calendar
 import logging
 import re
 
-from migration_tools.custom_exceptions import TransformationFieldMappingError
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from pymarc import Field, Record
 
 

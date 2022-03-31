@@ -1,7 +1,11 @@
 from unittest.mock import Mock, patch
 
-from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
-from migration_tools.mapping_file_transformation import mapping_file_mapper_base
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
+from folio_migration_tools.mapping_file_transformation import (
+    mapping_file_mapper_base,
+)
 
 
 def test_is_hybrid_default_mapping():

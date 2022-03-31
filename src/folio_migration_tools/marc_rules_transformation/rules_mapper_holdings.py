@@ -2,19 +2,24 @@ import logging
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.helper import Helper
-from migration_tools.library_configuration import HridHandling, LibraryConfiguration
-from migration_tools.marc_rules_transformation.conditions import Conditions
-from migration_tools.marc_rules_transformation.holdings_statementsparser import (
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import (
+    HridHandling,
+    LibraryConfiguration,
+)
+from folio_migration_tools.marc_rules_transformation.conditions import Conditions
+from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
-from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
+)
+from folio_migration_tools.report_blurbs import Blurbs
 from pymarc.field import Field
 from pymarc.record import Record
 

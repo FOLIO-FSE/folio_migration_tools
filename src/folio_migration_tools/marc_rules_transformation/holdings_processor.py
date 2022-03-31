@@ -6,24 +6,24 @@ import traceback
 from datetime import datetime as dt
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Record
-from migration_tools import library_configuration
+from folio_migration_tools import library_configuration
 from pymarc import Field
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.folder_structure import FolderStructure
-from migration_tools.helper import Helper
-from migration_tools.holdings_helper import HoldingsHelper
-from migration_tools.library_configuration import (
+from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.holdings_helper import HoldingsHelper
+from folio_migration_tools.library_configuration import (
     FileDefinition,
     FolioRelease,
     HridHandling,
 )
-from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
+from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class HoldingsProcessor:

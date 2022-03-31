@@ -3,16 +3,18 @@ import re
 
 import pymarc
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
+)
 from pymarc import field
-from migration_tools.helper import Helper
+from folio_migration_tools.helper import Helper
 
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class Conditions:

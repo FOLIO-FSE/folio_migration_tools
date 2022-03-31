@@ -6,12 +6,14 @@ from unittest.mock import Mock, patch
 
 from folio_uuid import FolioUUID, FOLIONamespaces
 import pymarc
-from migration_tools import mapper_base
-from migration_tools.marc_rules_transformation.holdings_statementsparser import (
+from folio_migration_tools import mapper_base
+from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
-from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
+)
+from folio_migration_tools.report_blurbs import Blurbs
 from pymarc.reader import MARCReader
 
 

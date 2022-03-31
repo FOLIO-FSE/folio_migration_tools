@@ -6,18 +6,21 @@ import sys
 from typing import Dict, List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools import migration_report
-from migration_tools.custom_exceptions import (
+from folio_migration_tools import migration_report
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.helper import Helper
-from migration_tools.library_configuration import FileDefinition, LibraryConfiguration
-from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from migration_tools.mapping_file_transformation.user_mapper import UserMapper
-from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
+from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic import BaseModel
 
 

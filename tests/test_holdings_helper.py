@@ -1,9 +1,9 @@
 from unittest.mock import Mock
 
 import pytest
-from migration_tools.custom_exceptions import TransformationProcessError
-from migration_tools.holdings_helper import HoldingsHelper
-from migration_tools.migration_report import MigrationReport
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.holdings_helper import HoldingsHelper
+from folio_migration_tools.migration_report import MigrationReport
 from folioclient import FolioClient
 
 

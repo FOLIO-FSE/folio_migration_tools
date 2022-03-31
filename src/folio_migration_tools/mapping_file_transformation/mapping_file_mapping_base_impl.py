@@ -1,7 +1,7 @@
-from migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folioclient import FolioClient
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
 

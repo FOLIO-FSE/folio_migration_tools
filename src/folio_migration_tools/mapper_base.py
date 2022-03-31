@@ -3,16 +3,18 @@ import sys
 import json
 import requests
 
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from folioclient import FolioClient
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
-from migration_tools.library_configuration import LibraryConfiguration
-from migration_tools.migration_report import MigrationReport
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
+from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MapperBase:
