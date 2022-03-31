@@ -1,18 +1,20 @@
 import csv
 import json
 import logging
-from datetime import datetime
 import sys
+import uuid
+from datetime import datetime
 from typing import Dict
 
 from dateutil.parser import parse
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from migration_tools.custom_exceptions import TransformationProcessError
 from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
+)
+from migration_tools.mapping_file_transformation.mapping_file_mapping_base_impl import (
+    MappingFileMappingBaseImpl,
 )
 from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from migration_tools.mapping_file_transformation.user_mapper_base import UserMapperBase
@@ -30,10 +32,13 @@ class UserMapper(UserMapperBase):
     ):
         try:
             super().__init__(folio_client, library_config)
+            self.noteprops = None
+            self.notes_schemas = None
+            self.notes_mapper = None
             self.task_config = task_config
             self.folio_keys = []
             self.library_config = library_config
-            self.user_schema = UserMapperBase.get_latest_from_github(
+            self.user_schema = FolioClient.get_latest_from_github(
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
             )
             self.ids_dict: Dict[str, set] = {}
@@ -60,11 +65,69 @@ class UserMapper(UserMapperBase):
                     Blurbs.UserGroupMapping,
                 )
             else:
-                self.departments_mapping = None
+                self.groups_mapping = None
+            self.setup_notes_mapping()
             logging.info("Init done.")
         except TransformationProcessError as tpe:
             logging.critical(tpe)
+            print(f"\n{tpe.message}")
             sys.exit()
+
+    def setup_notes_mapping(self):
+        self.notes_schemas = FolioClient.get_latest_from_github(
+            "folio-org",
+            "mod-notes",
+            "src/main/resources/swagger.api/schemas/note.yaml",
+        )
+        notes_common = FolioClient.get_latest_from_github(
+            "folio-org",
+            "mod-notes",
+            "src/main/resources/swagger.api/schemas/common.yaml",
+        )
+        for prop in self.notes_schemas["note"]["properties"].items():
+            if prop[1].get("$ref", "") == "common.yaml#/uuid":
+                prop[1]["type"] = notes_common["uuid"]["type"]
+
+        for p in ["links", "metadata", "id"]:
+            del self.notes_schemas["note"]["properties"][p]
+
+    def map_notes(self, user_map, legacy_user, legacy_id, user_uuid: str):
+        if self.noteprops is None:
+            self.noteprops = {
+                "data": [
+                    p for p in user_map["data"] if p["folio_field"].startswith("notes[")
+                ]
+            }
+            logging.info(
+                "Set %s props used for note mapping", len(self.noteprops["data"])
+            )
+        if any(self.noteprops["data"]):
+            notes_schema = self.notes_schemas["noteCollection"]
+            notes_schema["properties"]["notes"]["items"] = self.notes_schemas["note"]
+            notes_schema["required"] = []
+            if self.notes_mapper is None:
+                self.notes_mapper = MappingFileMappingBaseImpl(
+                    self.library_config,
+                    self.folio_client,
+                    notes_schema,
+                    self.noteprops,
+                    FOLIONamespaces.other,
+                    True,
+                )
+                logging.info("Initiated mapper for User notes")
+            for note in self.notes_mapper.do_map(
+                legacy_user, legacy_id, FOLIONamespaces.other
+            )[0].get("notes", []):
+                if note.get("content", "").strip():
+                    note["links"] = [{"id": user_uuid, "type": "user"}]
+
+                    logging.log(25, "notes\t%s", json.dumps(note))
+                    self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
+                else:
+                    self.migration_report.add_general_statistics(
+                        "Notes without content that were discarded. Set some default "
+                        "value if you only intend to set the note title"
+                    )
 
     def do_map(self, legacy_user, user_map, legacy_id):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
@@ -91,8 +154,9 @@ class UserMapper(UserMapperBase):
             "delivery": False,
             "metadata": self.folio_client.get_metadata_construct(),
         }
+        self.map_notes(user_map, legacy_user, legacy_id, folio_user["id"])
         clean_folio_object = self.validate_required_properties(
-            legacy_id, folio_user, self.user_schema
+            legacy_id, folio_user, self.user_schema, FOLIONamespaces.users
         )
 
         self.report_folio_mapping(clean_folio_object)
@@ -105,18 +169,17 @@ class UserMapper(UserMapperBase):
                 for k, v in self.custom_props.items():
                     if legacy_value := legacy_object.get(v, ""):
                         folio_user["customFields"][k] = legacy_value
-
             else:
                 folio_user[prop_name] = {}
                 prop_key = prop_name
                 if "properties" in prop:
                     for sub_prop_name, sub_prop in prop["properties"].items():
-                        sub_prop_key = prop_key + "." + sub_prop_name
+                        sub_prop_key = f"{prop_key}.{sub_prop_name}"
                         if "properties" in sub_prop:
                             for sub_prop_name2, sub_prop2 in sub_prop[
                                 "properties"
                             ].items():
-                                sub_prop_key2 = sub_prop_key + "." + sub_prop_name2
+                                sub_prop_key2 = f"{sub_prop_key}.{sub_prop_name2}"
                                 if sub_prop2["type"] == "array":
                                     logging.warning(f"Array: {sub_prop_key2} ")
                         elif sub_prop["type"] == "array":
@@ -127,13 +190,14 @@ class UserMapper(UserMapperBase):
                                         sub_prop_name2: self.get_prop(
                                             legacy_object,
                                             user_map,
-                                            sub_prop_key + "." + sub_prop_name2,
+                                            f"{sub_prop_key}.{sub_prop_name2}",
                                             i,
                                         )
                                         for sub_prop_name2, sub_prop2 in sub_prop[
                                             "items"
                                         ]["properties"].items()
                                     }
+
                                     if all(
                                         value == ""
                                         for key, value in temp.items()
@@ -143,7 +207,7 @@ class UserMapper(UserMapperBase):
                                         continue
                                     folio_user[prop_name][sub_prop_name].append(temp)
                                 else:
-                                    mkey = sub_prop_key + "." + sub_prop_name2
+                                    mkey = f"{sub_prop_key}.{sub_prop_name2}"
                                     folio_user[prop_name][
                                         sub_prop_name
                                     ] = self.get_prop(legacy_object, mkey, i)
@@ -179,11 +243,23 @@ class UserMapper(UserMapperBase):
             self.map_basic_props(legacy_object, user_map, prop_name, folio_user)
 
     def map_basic_props(self, legacy_user, user_map, prop, folio_user):
-        if (
-            self.has_property(legacy_user, user_map, prop)
-            and self.get_prop(legacy_user, user_map, prop).strip()
-        ):
-            folio_user[prop] = self.get_prop(legacy_user, user_map, prop)
+        if self.has_property(legacy_user, user_map, prop):
+            if temp_prop := self.get_prop(legacy_user, user_map, prop).strip():
+                folio_user[prop] = temp_prop
+
+    def add_notes(self):
+        note = {
+            "id": str(uuid.uuid4()),
+            "typeId": "e00f14d9-001e-4084-be04-961c0ed4b2a6",
+            "type": "Check in",
+            "title": "Note title",
+            "domain": "users",
+            "content": "<p>Wow! WYSIWYG! <strong>Bold</strong> move!</p>",
+            "popUpOnCheckOut": True,
+            "popUpOnUser": True,
+            "links": [{"id": "c0901dc0-b668-4bd3-8e73-35eb45a07665", "type": "user"}],
+            "metadata": self.folio_client.get_metadata_construct(),
+        }
 
     def get_users(self, source_file, file_format: str):
         csv.register_dialect("tsv", delimiter="\t")
@@ -234,9 +310,6 @@ class UserMapper(UserMapperBase):
                     "",
                     True,
                 )
-                self.migration_report.add(
-                    Blurbs.UserGroupMapping, f"{legacy_group} -> {gid}"
-                )
                 return gid
             else:
                 self.migration_report.add(
@@ -257,11 +330,8 @@ class UserMapper(UserMapperBase):
             return value
         elif folio_prop_name == "personal.addresses.addressTypeId":
             try:
-                address_type_id = user_map["addressTypes"][i]
-                return address_type_id
-            except KeyError:
-                return ""
-            except IndexError:
+                return user_map["addressTypes"][i]
+            except (KeyError, IndexError):
                 return ""
         elif legacy_user_key:
             return legacy_user.get(legacy_user_key, "")
@@ -282,15 +352,14 @@ class UserMapper(UserMapperBase):
         )
 
     def legacy_property(self, user_map, folio_prop_name):
-        value = next(
+        if value := next(
             (
                 k.get("value", "")
                 for k in user_map["data"]
                 if k["folio_field"] == folio_prop_name
             ),
             "",
-        )
-        if value:
+        ):
             self.migration_report.add(
                 Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
             )

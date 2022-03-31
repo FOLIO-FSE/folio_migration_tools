@@ -59,7 +59,8 @@ class BibsTransformer(MigrationTaskBase):
         if not any(self.files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+                "",
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}",
             )
         logging.info(self.files)
         logging.info("# of files to process: %s", len(self.files))

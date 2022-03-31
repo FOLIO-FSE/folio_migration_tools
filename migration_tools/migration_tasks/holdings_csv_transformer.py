@@ -21,6 +21,7 @@ from migration_tools.helper import Helper
 from migration_tools.holdings_helper import HoldingsHelper
 from migration_tools.library_configuration import (
     FileDefinition,
+    FolioRelease,
     HridHandling,
     LibraryConfiguration,
 )
@@ -47,7 +48,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         default_call_number_type_name: str
         previously_generated_holdings_files: Optional[list[str]] = []
         fallback_holdings_type_id: str
-        holdings_type_uuid_for_boundwiths: Optional[str]
+        holdings_type_uuid_for_boundwiths: str
         call_number_type_map_file_name: Optional[str]
         holdings_merge_criteria: Optional[list[str]] = [
             "instanceId",
@@ -84,7 +85,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.holdings_id_map = self.load_id_map(
                 self.folder_structure.holdings_id_map_path
             )
-
+            self.holdings_sources = self.get_holdings_sources()
             self.results_path = self.folder_structure.created_objects_path
             self.holdings_types = list(
                 self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
@@ -99,11 +100,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             if not self.fallback_holdings_type:
                 raise TransformationProcessError(
+                    "",
                     (
                         "Holdings type with ID "
                         f"{self.task_config.fallback_holdings_type_id} "
                         "not found in FOLIO."
-                    )
+                    ),
                 )
             logging.info(
                 "%s will be used as default holdings type",
@@ -111,13 +113,17 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             if any(self.task_config.previously_generated_holdings_files):
                 for file_name in self.task_config.previously_generated_holdings_files:
+                    logging.info("Processing %s", file_name)
                     self.holdings.update(
                         HoldingsHelper.load_previously_generated_holdings(
                             self.folder_structure.results_folder / file_name,
                             self.task_config.holdings_merge_criteria,
                             self.mapper.migration_report,
+                            self.task_config.holdings_type_uuid_for_boundwiths,
                         )
                     )
+            else:
+                logging.info("No file of legacy holdings setup.")
         except TransformationProcessError as process_error:
             logging.critical(process_error)
             logging.critical("Halting.")
@@ -182,7 +188,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         if not any(files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+                "",
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}",
             )
         logging.info("Files to process:")
         for filename in files:
@@ -234,11 +241,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 for holding in self.holdings.values():
                     for legacy_id in holding["formerIds"]:
                         # Prevent the first item in a boundwith to be overwritten
-                        if legacy_id not in self.holdings_id_map:
-                            self.holdings_id_map[
-                                legacy_id
-                            ] = self.mapper.get_id_map_dict(legacy_id, holding)
-
+                        # TODO: Find out why not
+                        # if legacy_id not in self.holdings_id_map:
+                        self.holdings_id_map[legacy_id] = self.mapper.get_id_map_dict(
+                            legacy_id, holding
+                        )
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
                         "Holdings Records Written to disk"
@@ -320,8 +327,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
 
     def post_process_holding(self, folio_rec: dict, legacy_id: str):
+        HoldingsHelper.handle_notes(folio_rec)
         if not folio_rec.get("holdingsTypeId", ""):
             folio_rec["holdingsTypeId"] = self.fallback_holdings_type["id"]
+
+        folio_rec["sourceId"] = self.holdings_sources.get("FOLIO")
 
         holdings_from_row = []
         all_instance_ids = folio_rec.get("instanceId", [])
@@ -337,11 +347,19 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             raise TransformationRecordFailedError(
                 legacy_id, "No instance id in parsed record", ""
             )
+
         for folio_holding in holdings_from_row:
             self.merge_holding_in(folio_holding, all_instance_ids, legacy_id)
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
+        if not self.task_config.holdings_type_uuid_for_boundwiths:
+            raise TransformationProcessError(
+                "Missing task setting holdingsTypeUuidForBoundwiths. Add a "
+                "holdingstype specifically for boundwith holdings and reference "
+                "the UUID in this parameter."
+            )
+
         # Add former ids
         temp_ids = []
         for former_id in folio_holding.get("formerIds", []):
@@ -440,6 +458,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 new_folio_holding,
                 self.task_config.holdings_merge_criteria,
                 self.mapper.migration_report,
+                self.task_config.holdings_type_uuid_for_boundwiths,
             )
             if self.holdings.get(new_holding_key, None):
                 self.mapper.migration_report.add_general_statistics(
@@ -456,6 +475,28 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self.holdings[holdings_key] = HoldingsHelper.merge_holding(
             self.holdings[holdings_key], new_holdings_record
         )
+
+    def get_holdings_sources(self):
+        res = {}
+        if self.library_configuration.folio_release != FolioRelease.juniper:
+            holdings_sources = list(
+                self.mapper.folio_client.folio_get_all(
+                    "/holdings-sources", "holdingsRecordsSources"
+                )
+            )
+            logging.info(
+                "Fetched %s holdingsRecordsSources from tenant", len(holdings_sources)
+            )
+            res = {n["name"].upper(): n["id"] for n in holdings_sources}
+            if "FOLIO" not in res:
+                raise TransformationProcessError(
+                    "", "No holdings source with name FOLIO in tenant"
+                )
+            if "MARC" not in res:
+                raise TransformationProcessError(
+                    "", "No holdings source with name MARC in tenant"
+                )
+        return res
 
 
 def dedupe(list_of_dicts):

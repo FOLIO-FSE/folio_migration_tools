@@ -16,8 +16,8 @@ charset-normalizer==2.0.3
 click==8.0.1
 coverage[toml]==6.3; python_version >= '3.7'
 deprecated==1.2.12
-folio-uuid==0.2.2
-folioclient==0.36
+folio-uuid==0.2.3
+folioclient==0.39
 idna==3.2
 inflection==0.5.1
 iniconfig==1.1.1

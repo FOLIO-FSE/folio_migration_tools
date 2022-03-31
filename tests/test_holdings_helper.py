@@ -19,12 +19,33 @@ def test_to_key():
     assert res == "instance-location-callnumber"
 
 
+def test_to_key_uuid():
+    holdings_record = {
+        "instanceId": "instance",
+        "holdingsTypeId": "something",
+        "permanentLocation": "location",
+        "callNumber": "callnumber",
+    }
+    holdings_record2 = {
+        "instanceId": "instance",
+        "holdingsTypeId": "something else",
+        "permanentLocation": "location",
+        "callNumber": "callnumber",
+    }
+    merge_criterias = ["instanceId", "permanentLocation", "callNumber"]
+    m = MigrationReport()
+    res = HoldingsHelper.to_key(holdings_record, merge_criterias, m, "something")
+    res2 = HoldingsHelper.to_key(holdings_record2, merge_criterias, m, "something")
+    assert res != res2
+
+
 def test_merge_holding():
     holding_1 = dict(
         formerIds=["a", "b"],
         electronicAccess=[{"uri": "2"}],
         holdingsStatementsForSupplements=[
-            {"statement": "stmt2", "note": "stmt2", "staffNote": True}
+            {"statement": "stmt2", "note": "stmt2", "staffNote": True},
+            {"uri": "1", "linkText": "1", "publicNote": "1", "relationshipId": "1"},
         ],
         holdingsStatements=[{"statement": "stmt3", "note": "stmt3", "staffNote": True}],
     )
@@ -43,7 +64,7 @@ def test_merge_holding():
     assert sorted(merged_holding["formerIds"]) == ["a", "b", "c", "d"]
     assert len(merged_holding["electronicAccess"]) == 2
     assert len(merged_holding["holdingsStatementsForIndexes"]) == 1
-    assert len(merged_holding["holdingsStatementsForSupplements"]) == 1
+    assert len(merged_holding["holdingsStatementsForSupplements"]) == 2
     assert len(merged_holding["holdingsStatements"]) == 2
 
 
@@ -128,3 +149,15 @@ def test_merge_holding2():
     assert len(merged_holding["holdingsStatements"]) == 1
     assert len(merged_holding["holdingsStatementsForIndexes"]) == 2
     assert len(merged_holding["formerIds"]) == 4
+
+
+def test_holdings_notes():
+    folio_rec = {"notes": [{"note": "apa", "holdingsNoteTypeId": ""}]}
+    with pytest.raises(TransformationProcessError):
+        HoldingsHelper.handle_notes(folio_rec)
+
+
+def test_holdings_notes2():
+    folio_rec = {"notes": [{"note": "", "holdingsNoteTypeId": "apa"}]}
+    HoldingsHelper.handle_notes(folio_rec)
+    assert "notes" not in folio_rec

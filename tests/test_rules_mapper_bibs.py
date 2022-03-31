@@ -1,20 +1,25 @@
 import pytest
+from migration_tools.custom_exceptions import TransformationRecordFailedError
 from migration_tools.library_configuration import (
     FolioRelease,
     HridHandling,
     LibraryConfiguration,
 )
+from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
 from lxml import etree
 import pymarc
 import json
 import re
 from folioclient.FolioClient import FolioClient
+from migration_tools.migration_report import MigrationReport
 from migration_tools.migration_tasks.bibs_transformer import BibsTransformer
+
+xpath_245 = "//marc:datafield[@tag='245']"
 
 
 @pytest.fixture(scope="module")
-def mapper(pytestconfig):
+def mapper(pytestconfig) -> BibsRulesMapper:
     print("init")
     folio = FolioClient(
         pytestconfig.getoption("okapi_url"),
@@ -50,7 +55,7 @@ def default_map(file_name, xpath, the_mapper):
     }
     file_path = f"./tests/test_data/default/{file_name}"
     record = pymarc.parse_xml_to_array(file_path)[0]
-    (result, other) = the_mapper.parse_bib(["legacy_id"], record, False)
+    result = the_mapper.parse_bib(["legacy_id"], record, False)
     root = etree.parse(file_path)
     data = str("")
     for element in root.xpath(xpath, namespaces=ns):
@@ -62,9 +67,32 @@ def default_map(file_name, xpath, the_mapper):
 
 
 def test_simple_title(mapper):
-    xpath = "//marc:datafield[@tag='245']"
-    record = default_map("test1.xml", xpath, mapper)
+    record = default_map("test1.xml", xpath_245, mapper)
+    instance_identifiers = set(["a", "b"])
     assert "Modern Electrosynthetic Methods in Organic Chemistry" == record[0]["title"]
+    with pytest.raises(TransformationRecordFailedError):
+        BibsProcessor.get_valid_instance_ids(
+            record[0], ["a", "b"], instance_identifiers, MigrationReport()
+        )
+
+
+def test_simple_title2(mapper):
+    record = default_map("test1.xml", xpath_245, mapper)
+    instance_identifiers = set(["c", "d"])
+    ids = BibsProcessor.get_valid_instance_ids(
+        record[0], ["a", "b"], instance_identifiers, MigrationReport()
+    )
+    assert "a" in ids
+    assert "b" in ids
+
+
+def test_simple_title3(mapper):
+    record = default_map("test1.xml", xpath_245, mapper)
+    instance_identifiers = set(["b", "c", "d"])
+    ids = BibsProcessor.get_valid_instance_ids(
+        record[0], ["a", "b"], instance_identifiers, MigrationReport()
+    )
+    assert ids == ["a"]
 
 
 def test_multiple336s(mapper):
@@ -85,8 +113,7 @@ def test_strange_isbn(mapper):
 
 def test_composed_title(mapper):
     message = "Should create a composed title (245) with the [a, b, k, n, p] subfields"
-    xpath = "//marc:datafield[@tag='245']"
-    record = default_map("test_composed_title.xml", xpath, mapper)
+    record = default_map("test_composed_title.xml", xpath_245, mapper)
     # self.assertFalse('/' in record['title'])
     assert (
         "The wedding collection. Volume 4, Love will be our home: 15 songs of love and commitment. / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."
@@ -178,9 +205,7 @@ def test_physical_descriptions(mapper):
 
 
 def test_index_title(mapper):
-    message = "Should trim title (245) by n-chars, as specified by indicator 2"
-    xpath = "//marc:datafield[@tag='245']"
-    record = default_map("test_index_title.xml", xpath, mapper)
+    record = default_map("test_index_title.xml", xpath_245, mapper)
     assert "Cahiers d'urbanisme" == record[0]["indexTitle"]
 
 

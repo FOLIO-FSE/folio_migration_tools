@@ -105,7 +105,6 @@ class BibsRulesMapper(RulesMapperBase):
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function"""
         self.print_progress()
-        id_map_strings = ""
         ignored_subsequent_fields = set()
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
         folio_instance = self.perform_initial_preparation(marc_record, legacy_ids)
@@ -125,61 +124,16 @@ class BibsRulesMapper(RulesMapperBase):
             folio_instance, marc_record, legacy_ids, suppressed
         )
         clean_folio_instance = self.validate_required_properties(
-            "-".join(legacy_ids), folio_instance, self.schema
+            "-".join(legacy_ids), folio_instance, self.schema, FOLIONamespaces.instances
         )
         self.dedupe_rec(clean_folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(clean_folio_instance, self.instance_json_schema)
-        if suppressed:
+        if clean_folio_instance["discoverySuppress"]:
             self.migration_report.add_general_statistics("Suppressed from discovery")
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
-        id_map_strings = []
-        self.handle_legacy_ids(
-            marc_record, legacy_ids, id_map_strings, clean_folio_instance, suppressed
-        )
-        return clean_folio_instance, id_map_strings
-
-    def handle_legacy_ids(
-        self, marc_record, legacy_ids, id_map_strings, folio_instance, suppressed
-    ):
-        for legacy_id in legacy_ids:
-            if legacy_id and self.task_configuration.ils_flavour in [
-                IlsFlavour.sierra,
-                IlsFlavour.millennium,
-                IlsFlavour.tag907y,
-            ]:
-                instance_level_call_number = (
-                    marc_record["099"].format_field() if "099" in marc_record else ""
-                )
-                if instance_level_call_number:
-                    self.migration_report.add(
-                        Blurbs.InstanceLevelCallnumber, bool(instance_level_call_number)
-                    )
-                id_map_strings.append(
-                    json.dumps(
-                        {
-                            "legacy_id": legacy_id,
-                            "folio_id": folio_instance["id"],
-                            "instanceLevelCallNumber": instance_level_call_number,
-                            "instance_hrid": folio_instance["hrid"],
-                            "suppressed": suppressed,
-                        }
-                    )
-                )
-            elif legacy_id:
-                id_map_strings.append(
-                    json.dumps(
-                        {
-                            "legacy_id": legacy_id,
-                            "folio_id": folio_instance["id"],
-                            "instance_hrid": folio_instance["hrid"],
-                            "suppressed": suppressed,
-                        }
-                    )
-                )
-            else:
-                logging.info("Legacy id is None %s", legacy_ids)
+        return clean_folio_instance
 
     def process_marc_field(
         self,
@@ -239,7 +193,7 @@ class BibsRulesMapper(RulesMapperBase):
             )
         else:
             raise TransformationProcessError(
-                "Mapping rules for 880 is missing. Halting"
+                "", "Mapping rules for 880 is missing. Halting"
             )
         return mappings
 
@@ -350,7 +304,7 @@ class BibsRulesMapper(RulesMapperBase):
             return match
 
         if not self.folio.instance_types:
-            raise TransformationProcessError("No instance_types setup in tenant")
+            raise TransformationProcessError("", "No instance_types setup in tenant")
 
         if "336" in marc_record and "b" not in marc_record["336"]:
             self.migration_report.add(
@@ -573,7 +527,7 @@ class BibsRulesMapper(RulesMapperBase):
                 self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
         else:
             raise TransformationProcessError(
-                f"Unknown HRID handling: {self.hrid_handling}"
+                "", f"Unknown HRID handling: {self.hrid_handling}"
             )
 
     def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: str) -> str:
@@ -613,7 +567,7 @@ class BibsRulesMapper(RulesMapperBase):
             logging.exception(
                 f"{marc_record.leader} {list(self.folio.modes_of_issuance)}"
             )
-            raise ee
+            raise ee from ee
 
     def get_nature_of_content(self, marc_record: Record) -> List[str]:
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
@@ -709,7 +663,7 @@ class BibsRulesMapper(RulesMapperBase):
         elif ils_flavour == IlsFlavour.tag907y:
             try:
                 return list(set(marc_record["907"].get_subfields("a", "y")))
-            except Exception:
+            except Exception as e:
                 raise TransformationRecordFailedError(
                     index_or_legacy_id,
                     (
@@ -717,7 +671,7 @@ class BibsRulesMapper(RulesMapperBase):
                         "required for this legacy ILS choice"
                     ),
                     marc_record.as_json(),
-                )
+                ) from e
         elif ils_flavour == IlsFlavour.tagf990a:
             res = {f["a"].strip() for f in marc_record.get_fields("990") if "a" in f}
             if marc_record["001"].format_field().strip():
@@ -730,25 +684,25 @@ class BibsRulesMapper(RulesMapperBase):
         elif ils_flavour in {IlsFlavour.voyager, "voyager", IlsFlavour.tag001}:
             try:
                 return [marc_record["001"].format_field().strip()]
-            except Exception:
+            except Exception as e:
                 raise TransformationRecordFailedError(
                     index_or_legacy_id,
                     "001 is missing, although it is required for Voyager migrations",
                     marc_record.as_json(),
-                )
+                ) from e
         elif ils_flavour == IlsFlavour.koha:
             try:
                 return [marc_record["999"]["c"]]
-            except Exception:
+            except Exception as e:
                 raise TransformationRecordFailedError(
                     index_or_legacy_id,
                     "999 $c is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
-                )
+                ) from e
         elif ils_flavour == IlsFlavour.none:
             return [str(uuid.uuid4())]
         else:
-            raise TransformationProcessError(f"ILS {ils_flavour} not configured")
+            raise TransformationProcessError("", f"ILS {ils_flavour} not configured")
 
     def get_aleph_bib_id(self, marc_record: Record):
         res = {f["b"].strip() for f in marc_record.get_fields("998") if "b" in f}
@@ -760,12 +714,12 @@ class BibsRulesMapper(RulesMapperBase):
                 ret = [marc_record["001"].format_field().strip()]
                 self.migration_report.add_general_statistics("legacy id from 001")
                 return ret
-            except Exception:
+            except Exception as e:
                 raise TransformationRecordFailedError(
                     "unknown identifier",
                     "001 is missing.although that or 998$b is required for Aleph migrations",
                     marc_record.as_json(),
-                )
+                ) from e
 
 
 def get_unspecified_mode_of_issuance(folio_client: FolioClient):
@@ -785,9 +739,9 @@ def get_unspecified_mode_of_issuance(folio_client: FolioClient):
 def get_iii_bib_id(marc_record: Record):
     try:
         return [marc_record["907"]["a"]]
-    except Exception:
+    except Exception as e:
         raise TransformationRecordFailedError(
             "unknown identifier",
             "907 $a is missing, although it is required for Sierra/iii migrations",
             marc_record.as_json(),
-        )
+        ) from e

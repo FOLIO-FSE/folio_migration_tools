@@ -32,6 +32,7 @@ from migration_tools.migration_tasks.migration_task_base import MigrationTaskBas
 class HoldingsMarcTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
+        legacy_id_marc_path: str
         migration_task_type: str
         use_tenant_mapping_rules: bool
         hrid_handling: HridHandling
@@ -68,10 +69,11 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         )
         if not self.default_holdings_type:
             raise TransformationProcessError(
+                "",
                 (
                     f"Holdings type with ID {self.task_config.fallback_holdings_type_id}"
                     " not found in FOLIO."
-                )
+                ),
             )
         logging.info(
             "%s will be used as default holdings type",
@@ -120,7 +122,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         if not any(files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'holdings'}"
+                "",
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'holdings'}",
             )
 
         return files

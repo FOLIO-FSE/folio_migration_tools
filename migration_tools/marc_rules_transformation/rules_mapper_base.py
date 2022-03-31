@@ -2,7 +2,6 @@ import datetime
 import json
 import logging
 import time
-from typing import List
 import uuid
 from textwrap import wrap
 
@@ -246,16 +245,17 @@ class RulesMapperBase(MapperBase):
                         s = "This should be unreachable code. Check schema for changes"
                         logging.error(s)
                         logging.error(parent)
-                        raise TransformationProcessError(s)
+                        raise TransformationProcessError("", s)
                         # break
                     else:
                         if schema_parent["type"] == "array":
                             parent.append({})
                         else:
                             raise TransformationProcessError(
+                                "",
                                 f"Edge! Something in the schemas has changed. "
                                 "The mapping of this needs to be investigated "
-                                f"{target_string} {schema_properties[target_string]}"
+                                f"{target_string} {schema_properties[target_string]}",
                             )
                 elif is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
                     sc_prop["items"]["properties"]
@@ -287,8 +287,9 @@ class RulesMapperBase(MapperBase):
 
         if not target_string or target_string not in sch:
             raise TransformationProcessError(
+                "",
                 f"Target string {target_string} not in Schema! Check mapping file against the schema."
-                f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+                f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}",
             )
 
         target_field = sch.get(target_string, {})
@@ -307,7 +308,8 @@ class RulesMapperBase(MapperBase):
                 rec[target_string] = value[0]
         else:
             raise TransformationProcessError(
-                f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+                "",
+                f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}",
             )
 
     def create_entity(
@@ -316,8 +318,9 @@ class RulesMapperBase(MapperBase):
         entity = {}
         for entity_mapping in entity_mappings:
             k = entity_mapping["target"].split(".")[-1]
-            values = self.apply_rules(marc_field, entity_mapping, index_or_legacy_id)
-            if values:
+            if values := self.apply_rules(
+                marc_field, entity_mapping, index_or_legacy_id
+            ):
                 if entity_parent_key == k:
                     entity = values[0]
                 else:
@@ -438,7 +441,7 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def get_instance_schema():
         logging.info("Fetching Instance schema...")
-        instance_schema = Helper.get_latest_from_github(
+        instance_schema = FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "ramls/instance.json"
         )
         logging.info("done")
@@ -447,7 +450,7 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def fetch_holdings_schema():
         logging.info("Fetching HoldingsRecord schema...")
-        holdings_record_schema = Helper.get_latest_from_github(
+        holdings_record_schema = FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
         )
         logging.info("done")
@@ -503,16 +506,12 @@ class RulesMapperBase(MapperBase):
         folio_client: FolioClient,
         marc_record: Record,
         folio_record,
-        legacy_ids: List[str],
+        legacy_id: str,
         suppress: bool,
     ):
         """Saves the source Marc_record to the Source record Storage module"""
-        srs_id = str(
-            FolioUUID(
-                folio_client.okapi_url,
-                FOLIONamespaces.srs_records,
-                str(legacy_ids[0]),
-            )
+        srs_id = RulesMapperBase.create_srs_id(
+            record_type, folio_client.okapi_url, legacy_id
         )
 
         marc_record.add_ordered_field(
@@ -541,6 +540,23 @@ class RulesMapperBase(MapperBase):
             record_type,
         )
         srs_records_file.write(f"{srs_record_string}\n")
+
+    @staticmethod
+    def create_srs_id(record_type, okapi_url: str, legacy_id: str):
+        srs_types = {
+            FOLIONamespaces.holdings: FOLIONamespaces.srs_records_holdingsrecord,
+            FOLIONamespaces.instances: FOLIONamespaces.srs_records_bib,
+            FOLIONamespaces.athorities: FOLIONamespaces.srs_records_auth,
+            FOLIONamespaces.edifact: FOLIONamespaces.srs_records_edifact,
+        }
+
+        return str(
+            FolioUUID(
+                okapi_url,
+                srs_types.get(record_type),
+                str(legacy_id),
+            )
+        )
 
     @staticmethod
     def get_srs_string(

@@ -4,6 +4,7 @@ import logging
 from abc import abstractmethod
 from pathlib import Path
 from uuid import UUID
+import uuid
 
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
@@ -29,9 +30,11 @@ class MappingFileMapperBase(MapperBase):
         statistical_codes_map,
         uuid_namespace: UUID,
         library_configuration: LibraryConfiguration,
+        ignore_legacy_identifier=False,
     ):
         super().__init__(library_configuration, folio_client)
         self.uuid_namespace = uuid_namespace
+        self.ignore_legacy_identifier = ignore_legacy_identifier
         self.schema = schema
         self.total_records = 0
         self.folio_client = folio_client
@@ -41,7 +44,7 @@ class MappingFileMapperBase(MapperBase):
         self.ref_data_dicts = {}
         self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
-        self.field_map = self.setup_field_map()
+        self.field_map = self.setup_field_map(ignore_legacy_identifier)
         self.validate_map()
         self.mapped_from_values = {}
         for k in self.record_map["data"]:
@@ -90,29 +93,33 @@ class MappingFileMapperBase(MapperBase):
         )
         csv.register_dialect("tsv", delimiter="\t")
 
-    def setup_field_map(self):
+    def setup_field_map(self, ignore_legacy_identifier):
         field_map = {}  # Map of folio_fields and source fields as an array
         for k in self.record_map["data"]:
             if not field_map.get(k["folio_field"]):
                 field_map[k["folio_field"]] = [k["legacy_field"]]
             else:
                 field_map[k["folio_field"]].append(k["legacy_field"])
-        if "legacyIdentifier" not in field_map:
+        if not ignore_legacy_identifier and "legacyIdentifier" not in field_map:
             raise TransformationProcessError(
+                "",
                 "property legacyIdentifier is not in map. Add this property "
-                "to the mapping file as if it was a FOLIO property"
+                "to the mapping file as if it was a FOLIO property",
             )
-        try:
-            self.legacy_id_property_name = field_map["legacyIdentifier"][0]
-            logging.info(
-                "Legacy identifier will be mapped from %s", self.legacy_id_property_name
-            )
-        except Exception as exception:
-            raise TransformationProcessError(
-                f"property legacyIdentifier not setup in map: "
-                f"{field_map.get('legacyIdentifier', '') ({exception})}"
-            )
-        del field_map["legacyIdentifier"]
+        if not ignore_legacy_identifier:
+            try:
+                self.legacy_id_property_name = field_map["legacyIdentifier"][0]
+                logging.info(
+                    "Legacy identifier will be mapped from %s",
+                    self.legacy_id_property_name,
+                )
+            except Exception as exception:
+                raise TransformationProcessError(
+                    "",
+                    f"property legacyIdentifier not setup in map: "
+                    f"{field_map.get('legacyIdentifier', '') ({exception})}",
+                ) from exception
+            del field_map["legacyIdentifier"]
         return field_map
 
     def validate_map(self):
@@ -135,6 +142,10 @@ class MappingFileMapperBase(MapperBase):
     def instantiate_record(
         self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces
     ):
+
+        if self.ignore_legacy_identifier:
+            return ({}, str(uuid.uuid4()))
+
         legacy_id = legacy_object.get(self.legacy_id_property_name)
         if not legacy_id:
             raise TransformationRecordFailedError(
@@ -197,9 +208,8 @@ class MappingFileMapperBase(MapperBase):
                 )
             except TransformationFieldMappingError as data_error:
                 self.handle_transformation_field_mapping_error(legacy_id, data_error)
-
         clean_folio_object = self.validate_required_properties(
-            legacy_id, folio_object, self.schema
+            legacy_id, folio_object, self.schema, object_type
         )
         return (clean_folio_object, legacy_id)
 
@@ -232,6 +242,7 @@ class MappingFileMapperBase(MapperBase):
                     property_level1["items"]["properties"],
                     folio_object,
                     index_or_id,
+                    property_level1["items"].get("required", []),
                 )
             elif property_level1["items"]["type"] == "string":
                 self.map_string_array_props(
@@ -268,7 +279,7 @@ class MappingFileMapperBase(MapperBase):
         for property_name_level2, property_level2 in property_level1[
             "properties"
         ].items():
-            sub_prop_key = prop_key + "." + property_name_level2
+            sub_prop_key = f"{prop_key}.{property_name_level2}"
             if "properties" in property_level2:
                 for property_name_level3, property_level3 in property_level2[
                     "properties"
@@ -276,8 +287,6 @@ class MappingFileMapperBase(MapperBase):
                     # not parsing stuff on level three.
                     pass
             elif property_level2["type"] == "array":
-                # not parsing arrays on level 2
-                pass
                 """
                 # Object with subprop array
                 temp_object[property_name_level2] = []
@@ -299,15 +308,13 @@ class MappingFileMapperBase(MapperBase):
                             continue
                         temp_object[property_name_level2].append(temp)
                     else:
-                        
+
                         mkey = sub_prop_key + "." + sub_prop_name2
                         a = self.get_prop(legacy_object, mkey, index_or_id, i)
                         if a:
                             temp_object[property_name_level2] = a"""
-            else:
-                p = self.get_prop(legacy_object, sub_prop_key, index_or_id)
-                if p:
-                    temp_object[property_name_level2] = p
+            elif p := self.get_prop(legacy_object, sub_prop_key, index_or_id):
+                temp_object[property_name_level2] = p
         if temp_object:
             folio_object[property_name_level1] = temp_object
 
@@ -318,6 +325,7 @@ class MappingFileMapperBase(MapperBase):
         sub_properties,
         folio_object: dict,
         index_or_id,
+        required: list[str],
     ):
         resulting_array = []
         keys_to_map = {
@@ -339,7 +347,11 @@ class MappingFileMapperBase(MapperBase):
                     temp_object[prop] = res
 
             if temp_object != {} and all(
-                (v or (isinstance(v, bool)) for k, v in temp_object.items())
+                (
+                    v or (isinstance(v, bool))
+                    for k, v in temp_object.items()
+                    if k in required
+                )
             ):
                 resulting_array.append(temp_object)
         if any(resulting_array):
@@ -379,7 +391,7 @@ class MappingFileMapperBase(MapperBase):
                 yield row
         except Exception as exception:
             logging.error("%s at row %s", exception, idx)
-            raise exception
+            raise exception from exception
 
     def has_property(self, legacy_object, folio_prop_name: str):
         if not self.use_map:
