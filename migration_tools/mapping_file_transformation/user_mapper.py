@@ -118,9 +118,16 @@ class UserMapper(UserMapperBase):
             for note in self.notes_mapper.do_map(
                 legacy_user, legacy_id, FOLIONamespaces.other
             )[0].get("notes", []):
-                note["links"] = [{"id": user_uuid, "type": "user"}]
-                logging.log(25, "notes\t%s", json.dumps(note))
-                self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
+                if note.get("content", "").strip():
+                    note["links"] = [{"id": user_uuid, "type": "user"}]
+
+                    logging.log(25, "notes\t%s", json.dumps(note))
+                    self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
+                else:
+                    self.migration_report.add_general_statistics(
+                        "Notes without content that were discarded. Set some default "
+                        "value if you only intend to set the note title"
+                    )
 
     def do_map(self, legacy_user, user_map, legacy_id):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
