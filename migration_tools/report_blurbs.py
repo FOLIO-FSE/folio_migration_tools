@@ -10,7 +10,6 @@ class ReportSection(Enum):
 
 
 class Blurbs(NamedTuple):
-    Details = ("Details", "")
     MarcValidation = ("MARC21 validation issues found in records", "")
     Details = ("Details", "")
     Introduction = (
