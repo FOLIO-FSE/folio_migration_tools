@@ -61,4 +61,8 @@ There is a test suite for Bibs-to-Instance mapping. You need to add arguments in
 
 # Running the scripts
 For information on syntax, what files are needed and produced by the toolkit, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template).
-
+¨
+# Building / Packaging
+* Update setup.cfg with the latest version
+* Build the new version: `python3 -m build`
+* Upload to pypi: `twine upload dist/*`
