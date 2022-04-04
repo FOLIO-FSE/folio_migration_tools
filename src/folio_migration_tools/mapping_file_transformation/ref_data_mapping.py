@@ -3,8 +3,8 @@ import logging
 import sys
 
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import TransformationProcessError
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class RefDataMapping(object):

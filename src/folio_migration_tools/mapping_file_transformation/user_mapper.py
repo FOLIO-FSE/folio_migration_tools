@@ -9,16 +9,20 @@ from typing import Dict
 from dateutil.parser import parse
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import TransformationProcessError
-from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from migration_tools.mapping_file_transformation.mapping_file_mapping_base_impl import (
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapping_base_impl import (
     MappingFileMappingBaseImpl,
 )
-from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
-from migration_tools.mapping_file_transformation.user_mapper_base import UserMapperBase
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
+from folio_migration_tools.mapping_file_transformation.user_mapper_base import (
+    UserMapperBase,
+)
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class UserMapper(UserMapperBase):

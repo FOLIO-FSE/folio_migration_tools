@@ -9,24 +9,24 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.library_configuration import (
+from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
     LibraryConfiguration,
 )
-from migration_tools.marc_rules_transformation.holdings_processor import (
+from folio_migration_tools.marc_rules_transformation.holdings_processor import (
     HoldingsProcessor,
 )
-from migration_tools.marc_rules_transformation.rules_mapper_holdings import (
+from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
 from pymarc import MARCReader
 
-from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):

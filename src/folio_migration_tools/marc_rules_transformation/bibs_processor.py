@@ -4,12 +4,14 @@ import logging
 
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import TransformationRecordFailedError
-from migration_tools.folder_structure import FolderStructure
-from migration_tools.helper import Helper
-from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
-from migration_tools.migration_report import MigrationReport
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
+    BibsRulesMapper,
+)
+from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.report_blurbs import Blurbs
 from pymarc.record import Record
 
 

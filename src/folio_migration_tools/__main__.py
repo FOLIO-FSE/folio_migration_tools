@@ -7,9 +7,9 @@ import requests.exceptions
 from argparse_prompt import PromptParser
 from pydantic import ValidationError
 
-from migration_tools.library_configuration import LibraryConfiguration
-from migration_tools.migration_tasks import *  # pylint: disable=wildcard-import, unused-wildcard-import
-from migration_tools.migration_tasks import migration_task_base
+from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.migration_tasks import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from folio_migration_tools.migration_tasks import migration_task_base
 
 
 def parse_args():

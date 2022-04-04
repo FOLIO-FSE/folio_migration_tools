@@ -3,10 +3,10 @@ from unittest.mock import MagicMock, Mock
 import uuid
 from folioclient import FolioClient
 import pytest
-from migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import LibraryConfiguration
 
-from migration_tools.mapping_file_transformation.user_mapper import UserMapper
-from migration_tools.migration_tasks.user_transformer import UserTransformer
+from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
+from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True

@@ -1,6 +1,6 @@
 from pymarc import Field, Record
 
-from migration_tools.marc_rules_transformation.holdings_processor import (
+from folio_migration_tools.marc_rules_transformation.holdings_processor import (
     HoldingsProcessor,
 )
 

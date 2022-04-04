@@ -1,7 +1,7 @@
 import uuid
 import pytest
-from migration_tools.custom_exceptions import TransformationProcessError
-from migration_tools.migration_tasks.items_transformer import ItemsTransformer
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 
 
 def test_handle_circiulation_notes_wrong_type():

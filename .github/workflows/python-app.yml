@@ -42,7 +42,7 @@ jobs:
     
     - name: Make sure the code can run
       run: |
-        pipenv run python main.py -h
+        cd src; pipenv run python -m folio_migration_tools -h
 
     - name: clone repo_template
       uses: actions/checkout@master

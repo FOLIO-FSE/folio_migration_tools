@@ -3,10 +3,10 @@ import sys
 import logging
 from uuid import uuid4
 
-from migration_tools import custom_exceptions
-from migration_tools import helper
-from migration_tools.migration_report import MigrationReport
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools import custom_exceptions
+from folio_migration_tools import helper
+from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class HoldingsHelper:

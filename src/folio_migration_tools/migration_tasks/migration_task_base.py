@@ -10,12 +10,12 @@ import json
 from argparse_prompt import PromptParser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
-from migration_tools import library_configuration
-from migration_tools.custom_exceptions import (
+from folio_migration_tools import library_configuration
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.folder_structure import FolderStructure
 
 
 class MigrationTaskBase:

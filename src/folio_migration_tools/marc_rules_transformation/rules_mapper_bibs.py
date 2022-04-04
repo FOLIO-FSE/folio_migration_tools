@@ -14,21 +14,23 @@ from folio_uuid.folio_uuid import FolioUUID
 import pymarc
 import requests
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.helper import Helper
-from migration_tools.library_configuration import (
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import (
     FolioRelease,
     HridHandling,
     IlsFlavour,
     LibraryConfiguration,
 )
-from migration_tools.marc_rules_transformation.conditions import Conditions
-from migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
+from folio_migration_tools.marc_rules_transformation.conditions import Conditions
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
+)
 
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.report_blurbs import Blurbs
 from pymarc import Field
 from pymarc.record import Record
 

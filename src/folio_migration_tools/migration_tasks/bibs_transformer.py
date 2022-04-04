@@ -6,21 +6,23 @@ from os.path import isfile
 from typing import List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.colors import Bcolors
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.colors import Bcolors
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.helper import Helper
-from migration_tools.library_configuration import (
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
     IlsFlavour,
     LibraryConfiguration,
 )
-from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
-from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
-from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
+from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
+    BibsRulesMapper,
+)
+from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic import BaseModel
 from pymarc import MARCReader
 from pymarc.record import Record

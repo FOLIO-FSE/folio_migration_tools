@@ -1,4 +1,4 @@
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MigrationReport:

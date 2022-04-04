@@ -1,7 +1,7 @@
 from unittest.mock import Mock
 from pymarc import Field
 
-from migration_tools.marc_rules_transformation.conditions import Conditions
+from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 
 
 def test_condition():

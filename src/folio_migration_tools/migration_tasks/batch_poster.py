@@ -8,12 +8,15 @@ from uuid import uuid4
 
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from migration_tools.library_configuration import FileDefinition, LibraryConfiguration
-from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
+from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from pydantic import BaseModel
 
 

@@ -1,19 +1,21 @@
 import pytest
-from migration_tools.custom_exceptions import TransformationRecordFailedError
-from migration_tools.library_configuration import (
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import (
     FolioRelease,
     HridHandling,
     LibraryConfiguration,
 )
-from migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
-from migration_tools.marc_rules_transformation.rules_mapper_bibs import BibsRulesMapper
+from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
+from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
+    BibsRulesMapper,
+)
 from lxml import etree
 import pymarc
 import json
 import re
 from folioclient.FolioClient import FolioClient
-from migration_tools.migration_report import MigrationReport
-from migration_tools.migration_tasks.bibs_transformer import BibsTransformer
+from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
 
 xpath_245 = "//marc:datafield[@tag='245']"
 

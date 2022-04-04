@@ -7,14 +7,16 @@ from uuid import uuid4
 
 from folioclient import FolioClient
 from folio_uuid.folio_uuid import FOLIONamespaces
-from migration_tools.custom_exceptions import TransformationRecordFailedError
-from migration_tools.library_configuration import LibraryConfiguration
-from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from migration_tools.helper import Helper
-from migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class ItemMapper(MappingFileMapperBase):

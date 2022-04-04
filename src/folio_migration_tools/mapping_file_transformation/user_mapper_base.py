@@ -4,10 +4,10 @@ from typing import Dict
 
 from folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from migration_tools.custom_exceptions import TransformationProcessError
-from migration_tools.library_configuration import LibraryConfiguration
-from migration_tools.mapper_base import MapperBase
-from migration_tools.migration_report import MigrationReport
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapper_base import MapperBase
+from folio_migration_tools.migration_report import MigrationReport
 
 
 class UserMapperBase(MapperBase):
