@@ -1,5 +1,5 @@
 import os
-from migration_tools.rules_mapper_holdings import RulesMapperHoldings
+from folio_migration_tools.rules_mapper_holdings import RulesMapperHoldings
 import unittest
 from lxml import etree
 import pymarc
