@@ -7,7 +7,7 @@ The scripts requires a FOLIO tenant with reference data properly set up. The scr
 # Installing
 ## 1. Using pip and venv
 1. Create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment)
-2. Install using pip: `pip install folio-migration-tools`
+2. Install using pip: `python3 -m pip install folio_migration_tools`
 3. Test the installation by running `python3 -m folio-migration-tools -h`
 ## 2. Using pipenv
 1. Run `pipenv install folio-migration-tools`
