@@ -70,11 +70,20 @@ class LoansMigrator(MigrationTaskBase):
                 "Loaded and validated %s loans in file",
                 len(self.semi_valid_legacy_loans),
             )
-        self.valid_legacy_loans = list(self.check_barcodes())
-        logging.info(
-            "Loaded and validated %s loans against barcodes",
-            len(self.valid_legacy_loans),
-        )
+        if any(self.task_configuration.item_files) or any(
+            self.task_configuration.patron_files
+        ):
+            self.valid_legacy_loans = list(self.check_barcodes())
+            logging.info(
+                "Loaded and validated %s loans against barcodes",
+                len(self.valid_legacy_loans),
+            )
+        else:
+            logging.info(
+                "No item or user files supplied. Not validating against"
+                "previously migrated objects"
+            )
+            self.valid_legacy_loans = self.semi_valid_legacy_loans
         self.patron_item_combos = set()
         self.t0 = time.time()
         self.num_duplicate_loans = 0
