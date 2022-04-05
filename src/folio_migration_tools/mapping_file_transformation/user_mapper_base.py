@@ -66,7 +66,13 @@ class UserMapperBase(MapperBase):
 
     def instantiate_user(self, legacy_id):
         if not legacy_id:
-            raise TransformationProcessError("", "Legacy id not present")
+            raise TransformationProcessError(
+                "",
+                (
+                    "Legacy id not present. Have you set "
+                    "the legacyIdentifier in the mapping file?"
+                ),
+            )
         user_id = str(
             FolioUUID(self.folio_client.okapi_url, FOLIONamespaces.users, legacy_id)
         )

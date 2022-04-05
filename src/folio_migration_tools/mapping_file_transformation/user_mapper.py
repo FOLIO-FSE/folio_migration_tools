@@ -142,7 +142,6 @@ class UserMapper(UserMapperBase):
                 if "customFields" in m["folio_field"]:
                     sub_property = m["folio_field"].split(".")[-1]
                     self.custom_props[sub_property] = m["legacy_field"]
-            logging.info(f"Found {len(self.custom_props)} Custom fields to be mapped.")
         # TODO: Create ID-Legacy ID Mapping file!
         # TODO: Check for ID duplicates (barcodes, externalsystemID:s, usernames, emails?)
 
