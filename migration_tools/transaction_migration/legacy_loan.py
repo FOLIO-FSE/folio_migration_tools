@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 from dateutil.parser import parse
 
 
 class LegacyLoan(object):
-    def __init__(self, legacy_loan_dict, row=0):
+    def __init__(self, legacy_loan_dict, utc_difference=0, row=0):
         # validate
         correct_headers = [
             "item_barcode",
@@ -22,6 +22,7 @@ class LegacyLoan(object):
             "Declared lost",
             "Lost and paid",
         ]
+        self.utc_difference = utc_difference
         self.errors = []
         for prop in correct_headers:
             if prop not in legacy_loan_dict:
@@ -45,6 +46,13 @@ class LegacyLoan(object):
         self.patron_barcode = legacy_loan_dict["patron_barcode"].strip()
         self.due_date: datetime = temp_date_due
         self.out_date: datetime = temp_date_out
+        try:
+            self.make_loan_utc()
+            if self.due_date <= self.out_date:
+                self.due_date = self.due_date.replace(hour=23, minute=59)
+                self.out_date = self.out_date.replace(hour=0, minute=1)
+        except Exception as ee:
+            self.errors.append(("Time alignment issues", "both dates"))
         self.renewal_count = int(legacy_loan_dict["renewal_count"])
         self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
@@ -59,3 +67,8 @@ class LegacyLoan(object):
             "renewal_count": self.renewal_count,
             "next_item_status": self.next_item_status,
         }
+
+    def make_loan_utc(self):
+        if self.utc_difference != 0:
+            self.due_date = self.due_date + timedelta(hours=self.utc_difference)
+            self.out_date = self.out_date + timedelta(hours=self.utc_difference)

@@ -123,23 +123,30 @@ class LoansMigrator(MigrationTaskBase):
 
         if res_checkout.was_successful:
             self.migration_report.add(Blurbs.Details, "Checked out on first try")
-        else:
-            res_checkout = self.handle_checkout_failure(legacy_loan, res_checkout)
-
-            if res_checkout.was_successful:
-                self.migration_report.add(Blurbs.Details, "Checked out on second try")
-                logging.info("Checked out on second try")
-            else:
-                self.migration_report.add(Blurbs.Details, "Loan failed a second time")
-                logging.error(
-                    f"Loan failed a second time. Item barcode {legacy_loan.item_barcode}"
-                )
-                if legacy_loan.item_barcode not in self.failed:
-                    self.failed[legacy_loan.item_barcode] = legacy_loan
-
-        if res_checkout.was_successful and res_checkout.folio_loan:
             self.set_renewal_count(legacy_loan, res_checkout)
             self.set_new_status(legacy_loan, res_checkout)
+        elif res_checkout.should_be_retried:
+            res_checkout2 = self.handle_checkout_failure(legacy_loan, res_checkout)
+            if res_checkout2.was_successful and res_checkout2.folio_loan:
+                self.migration_report.add(Blurbs.Details, "Checked out on second try")
+                logging.info("Checked out on second try")
+                self.set_renewal_count(legacy_loan, res_checkout2)
+                self.set_new_status(legacy_loan, res_checkout2)
+            elif legacy_loan.item_barcode not in self.failed:
+                self.failed[legacy_loan.item_barcode] = legacy_loan
+                logging.error("Failed on second try: %s", res_checkout2.error_message)
+                self.migration_report.add(
+                    Blurbs.Details,
+                    f"Second failure: {res_checkout2.migration_report_message}",
+                )
+        elif not res_checkout.should_be_retried:
+            logging.error(
+                "Failed first time. No retries: %s", res_checkout.error_message
+            )
+            self.migration_report.add(
+                Blurbs.Details,
+                f"Failed 1st time. No retries: {res_checkout.migration_report_message}",
+            )
 
     def set_new_status(self, legacy_loan: LegacyLoan, res_checkout: TransactionResult):
         """Updates checkout loans with their destination statuses
@@ -258,7 +265,11 @@ class LoansMigrator(MigrationTaskBase):
         logging.info("Validating legacy loans in file...")
         for legacy_loan_count, legacy_loan_dict in enumerate(loans_reader):
             try:
-                legacy_loan = LegacyLoan(legacy_loan_dict, legacy_loan_count)
+                legacy_loan = LegacyLoan(
+                    legacy_loan_dict,
+                    self.task_configuration.utc_difference,
+                    legacy_loan_count,
+                )
                 self.make_loan_utc(legacy_loan)
                 if any(legacy_loan.errors):
                     num_bad += 1
@@ -284,18 +295,6 @@ class LoansMigrator(MigrationTaskBase):
             logging.critical("Halting...")
             sys.exit()
 
-    def make_loan_utc(self, legacy_loan: LegacyLoan):
-        if self.task_configuration.utc_difference != 0:
-            legacy_loan.due_date = legacy_loan.due_date + timedelta(
-                hours=self.task_configuration.utc_difference
-            )
-            legacy_loan.out_date = legacy_loan.out_date + timedelta(
-                hours=self.task_configuration.utc_difference
-            )
-            self.migration_report.add_general_statistics(
-                "Adjusted out and due dates to UTC"
-            )
-
     def handle_checkout_failure(
         self, legacy_loan, folio_checkout: TransactionResult
     ) -> TransactionResult:
@@ -309,6 +308,7 @@ class LoansMigrator(MigrationTaskBase):
             TransactionResult: A modified TransactionResult based on the result from the
              handling
         """
+        folio_checkout.should_be_retried = False
         if folio_checkout.error_message == "5XX":
             return folio_checkout
         if folio_checkout.error_message.startswith(
@@ -320,7 +320,7 @@ class LoansMigrator(MigrationTaskBase):
         elif folio_checkout.error_message.startswith(
             "Cannot check out item that already has an open loan"
         ):
-            return TransactionResult(True, "", "", "")  # TODO:Why true?
+            return folio_checkout
         elif folio_checkout.error_message.startswith("Aged to lost for item"):
             return self.handle_aged_to_lost_item(legacy_loan)
         elif folio_checkout.error_message == "Declared lost":
@@ -347,14 +347,14 @@ class LoansMigrator(MigrationTaskBase):
                     self.failed[legacy_loan.item_barcode],
                 ]
                 logging.info(
-                    f"Duplicate loans (or failed twice) item barcode"
-                    f"{legacy_loan.item_barcode} patron barcode: {legacy_loan.patron_barcode}"
+                    f"Duplicate loans (or failed twice) Item barcode: "
+                    f"{legacy_loan.item_barcode} Patron barcode: {legacy_loan.patron_barcode}"
                 )
                 self.migration_report.add(
                     Blurbs.Details, "Duplicate loans (or failed twice)"
                 )
                 del self.failed[legacy_loan.item_barcode]
-            return TransactionResult(False, "", "", "")
+            return TransactionResult(False, False, "", "", "")
 
     def checkout_to_inactice_user(self, legacy_loan) -> TransactionResult:
         logging.info("Cannot check out to inactive user. Activating and trying again")
