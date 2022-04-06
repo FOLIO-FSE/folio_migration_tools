@@ -91,7 +91,9 @@ class CirculationHelper:
                     f"{error_message} Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
                 )
-                return TransactionResult(False, None, error_message, error_message)
+                return TransactionResult(
+                    False, False, None, error_message, error_message
+                )
             req = requests.post(
                 url, headers=self.folio_client.okapi_headers, data=json.dumps(data)
             )
@@ -108,23 +110,50 @@ class CirculationHelper:
                         f"{stat_message} for item with "
                         f"barcode {legacy_loan.item_barcode}"
                     )
+                    return TransactionResult(
+                        False,
+                        True,
+                        None,
+                        error_message_from_folio,
+                        stat_message,
+                    )
                 elif "No item with barcode" in error_message_from_folio:
                     error_message = (
                         f"No item with barcode {legacy_loan.item_barcode} in FOLIO"
                     )
                     stat_message = "Item barcode not in FOLIO"
                     self.missing_item_barcodes.add(legacy_loan.item_barcode)
+                    return TransactionResult(
+                        False,
+                        False,
+                        None,
+                        error_message_from_folio,
+                        stat_message,
+                    )
                 elif "find user with matching barcode" in error_message_from_folio:
                     self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
                     error_message = (
                         f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
                     )
                     stat_message = "Patron barcode not in FOLIO"
+                    return TransactionResult(
+                        False,
+                        False,
+                        None,
+                        error_message_from_folio,
+                        stat_message,
+                    )
                 elif (
                     "Cannot check out item that already has an open"
                     in error_message_from_folio
                 ):
-                    return TransactionResult(True, None, "", "")
+                    return TransactionResult(
+                        False,
+                        False,
+                        None,
+                        error_message_from_folio,
+                        error_message_from_folio,
+                    )
                 logging.error(
                     f"{error_message} "
                     f"Patron barcode: {legacy_loan.patron_barcode} "
@@ -132,7 +161,7 @@ class CirculationHelper:
                 )
                 self.migration_report.add(Blurbs.Details, stat_message)
                 return TransactionResult(
-                    False, None, error_message, f"Check out error: {stat_message}"
+                    False, True, None, error_message, f"Check out error: {stat_message}"
                 )
             elif req.status_code == 201:
                 stats = "Successfully checked out by barcode"
@@ -142,7 +171,7 @@ class CirculationHelper:
                     legacy_loan.item_barcode,
                     f"{(time.time() - t0_function):.2f}",
                 )
-                return TransactionResult(True, json.loads(req.text), None, stats)
+                return TransactionResult(True, False, json.loads(req.text), None, stats)
             elif req.status_code == 204:
                 stats = "Successfully checked out by barcode"
                 logging.debug(
@@ -151,7 +180,7 @@ class CirculationHelper:
                     legacy_loan.item_barcode,
                     req.status_code,
                 )
-                return TransactionResult(True, None, None, stats)
+                return TransactionResult(True, False, None, None, stats)
             else:
                 req.raise_for_status()
         except HTTPError:
@@ -159,8 +188,8 @@ class CirculationHelper:
                 f"{req.status_code}\tPOST FAILED "
                 f"{url}\n\t{json.dumps(data)}\n\t{req.text}"
             )
-
             return TransactionResult(
+                False,
                 False,
                 None,
                 "5XX",
