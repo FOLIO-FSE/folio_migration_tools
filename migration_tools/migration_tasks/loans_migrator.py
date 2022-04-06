@@ -270,7 +270,6 @@ class LoansMigrator(MigrationTaskBase):
                     self.task_configuration.utc_difference,
                     legacy_loan_count,
                 )
-                self.make_loan_utc(legacy_loan)
                 if any(legacy_loan.errors):
                     num_bad += 1
                     self.migration_report.add_general_statistics(
