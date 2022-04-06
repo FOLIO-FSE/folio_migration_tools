@@ -49,8 +49,10 @@ class LegacyLoan(object):
         try:
             self.make_loan_utc()
             if self.due_date <= self.out_date:
-                self.due_date = self.due_date.replace(hour=23, minute=59)
-                self.out_date = self.out_date.replace(hour=0, minute=1)
+                if self.due_date.hour == 0:
+                    self.due_date = self.due_date.replace(hour=23, minute=59)
+                if self.out_date.hour == 0:
+                    self.out_date = self.out_date.replace(hour=0, minute=1)
         except Exception as ee:
             self.errors.append(("Time alignment issues", "both dates"))
         self.renewal_count = int(legacy_loan_dict["renewal_count"])
