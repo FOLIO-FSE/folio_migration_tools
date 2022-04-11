@@ -235,24 +235,30 @@ class MappingFileMapperBase(MapperBase):
                     index_or_id,
                 )
         elif property_level1["type"] == "array":
-            if property_level1["items"]["type"] == "object":
-                self.map_objects_array_props(
-                    legacy_object,
-                    property_name_level1,
-                    property_level1["items"]["properties"],
-                    folio_object,
-                    index_or_id,
-                    property_level1["items"].get("required", []),
-                )
-            elif property_level1["items"]["type"] == "string":
-                self.map_string_array_props(
-                    legacy_object,
-                    property_name_level1,
-                    folio_object,
-                    index_or_id,
-                )
-            else:
-                logging.info("Edge case %s", property_name_level1)
+            try:
+                if property_level1["items"]["type"] == "object":
+                    self.map_objects_array_props(
+                        legacy_object,
+                        property_name_level1,
+                        property_level1["items"]["properties"],
+                        folio_object,
+                        index_or_id,
+                        property_level1["items"].get("required", []),
+                    )
+                elif property_level1["items"]["type"] == "string":
+                    self.map_string_array_props(
+                        legacy_object,
+                        property_name_level1,
+                        folio_object,
+                        index_or_id,
+                    )
+                else:
+                    logging.info("Edge case %s", property_name_level1)
+
+            except KeyError as schema_anomaly:
+                logging.error("Cannot create property '%s'. Unsupported schema format: %s", property_name_level1, schema_anomaly)
+                self.migration_report.add(Blurbs.Exceptions, f"Cannot create property '{property_name_level1}'. Unsupported schema format: {schema_anomaly}")
+        
         else:  # Basic property
             self.map_basic_props(
                 legacy_object, property_name_level1, folio_object, index_or_id
