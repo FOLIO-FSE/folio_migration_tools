@@ -10,7 +10,6 @@ class ReportSection(Enum):
 
 
 class Blurbs(NamedTuple):
-    MarcValidation = ("MARC21 validation issues found in records", "")
     Details = ("Details", "")
     MarcValidation = ("MARC21 validation issues found in records", "")
     Details = ("Details", "")
@@ -19,6 +18,10 @@ class Blurbs(NamedTuple):
         "<br/>Data errors preventing records from being migrated are marked **FIX BEFORE MIGRATION**. The library is advised to clean up these errors in the source data.<br/><br/> The sections related to field counts and mapping results are marked **REVIEW**. These do not indicate errors preventing records from being migrated, but may point to data anomalies or in the mappings. The library should review these to make sure that the numbers are what one would expect, knowing the source data. Is this the expected number of serials? Is this the expected number of cartographic materials?",
     )
     DiscardedLoans = ("Discarded loans", "List of loans discarded for various resons")
+    DiscardedRequests = (
+        "Discarded Requests",
+        "List of requests discarded for various resons",
+    )
     HoldingsMerging = ("Holdings Merging", "")
     DepartmentsMapping = ("Departments mappings", "")
     MissingRequiredProperties = ("Missing or empty required properties", "")

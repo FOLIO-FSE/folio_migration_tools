@@ -42,8 +42,8 @@ class LegacyLoan(object):
             self.errors.append(("Parse date failure. Setting UTC NOW", "out_date"))
 
         # good to go, set properties
-        self.item_barcode = legacy_loan_dict["item_barcode"].strip()
-        self.patron_barcode = legacy_loan_dict["patron_barcode"].strip()
+        self.item_barcode: str = legacy_loan_dict["item_barcode"].strip()
+        self.patron_barcode: str = legacy_loan_dict["patron_barcode"].strip()
         self.due_date: datetime = temp_date_due
         self.out_date: datetime = temp_date_out
         try:

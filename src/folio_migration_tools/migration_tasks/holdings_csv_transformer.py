@@ -226,7 +226,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 logging.critical(error_str)
                 print(f"\n{error_str}\nHalting")
                 sys.exit()
-        logging.info(  # pylint: disable=logging-fstring-interpolation
+        logging.info(
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
 
@@ -319,11 +319,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
-                    logging.info(  # pylint: disable=logging-fstring-interpolation
+                    logging.info(
                         f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
                     )
             self.total_records = records_processed
-            logging.info(  # pylint: disable=logging-fstring-interpolation
+            logging.info(
                 f"Done processing {file_name} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
@@ -337,7 +337,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
         holdings_from_row = []
         all_instance_ids = folio_rec.get("instanceId", [])
-        if len(all_instance_ids) == 1:  # Normal case.
+        if len(all_instance_ids) == 1:
+            # Normal case.
             folio_rec["instanceId"] = folio_rec["instanceId"][0]
             holdings_from_row.append(folio_rec)
 
@@ -434,7 +435,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def merge_holding_in(
         self, new_folio_holding: dict, instance_ids: list, legacy_id: str
     ):
-        if len(instance_ids) > 1:  # Is boundwith
+        if len(instance_ids) > 1:
+            # Is boundwith
             bw_key = (
                 f"bw_{new_folio_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
             )

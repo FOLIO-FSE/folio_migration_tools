@@ -1,9 +1,12 @@
 import copy
 import json
 import logging
+from helper import Helper
 import re
 import time
 from datetime import datetime
+from tokenize import String
+from typing import Set
 from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 from migration_tools.transaction_migration.legacy_loan import LegacyLoan
@@ -130,6 +133,7 @@ class CirculationHelper:
                         error_message_from_folio,
                         stat_message,
                     )
+
                 elif "find user with matching barcode" in error_message_from_folio:
                     self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
                     error_message = (
@@ -185,8 +189,11 @@ class CirculationHelper:
                 req.raise_for_status()
         except HTTPError:
             logging.exception(
-                f"{req.status_code}\tPOST FAILED "
-                f"{url}\n\t{json.dumps(data)}\n\t{req.text}"
+                "%s\tPOST FAILED %s\n\t%s\n\t%s",
+                req.status_code,
+                url,
+                json.dumps(data),
+                req.text,
             )
             return TransactionResult(
                 False,
@@ -200,12 +207,12 @@ class CirculationHelper:
     def create_request(
         folio_client: FolioClient,
         legacy_request: LegacyRequest,
+        migration_report: MigrationReport,
     ):
         try:
             path = "/circulation/requests"
             url = f"{folio_client.okapi_url}{path}"
             data = legacy_request.to_dict()
-
             data["requestProcessingParameters"] = {
                 "overrideBlocks": {
                     "itemNotLoanableBlock": {
@@ -221,18 +228,24 @@ class CirculationHelper:
             )
             logging.debug(f"POST {req.status_code}\t{url}\t{json.dumps(data)}")
             if str(req.status_code) == "422":
-                logging.error(
-                    f"{json.loads(req.text)['errors'][0]['message']}\t{json.dumps(data)}"
-                )
+                message = json.loads(req.text)["errors"][0]["message"]
+                logging.error(f"{message}\t{json.dumps(data)}")
+                migration_report.add_general_statistics(message)
                 return False
             else:
                 req.raise_for_status()
+                migration_report.add_general_statistics(
+                    f"Created {legacy_request.request_type}"
+                )
                 logging.info(
-                    f"{req.status_code} Successfully created {legacy_request.request_type}"
+                    "%s Successfully created %s",
+                    req.status_code,
+                    legacy_request.request_type,
                 )
                 return True
         except Exception as exception:
             logging.error(exception, exc_info=True)
+            migration_report.add(Blurbs.Details, exception)
             return False
 
     @staticmethod
@@ -251,59 +264,28 @@ class CirculationHelper:
                 url, headers=folio_client.okapi_headers, data=json.dumps(loan_to_put)
             )
             logging.info(
-                f"{req.status_code}\tPUT Extend loan {loan_to_put['id']} to {loan_to_put['dueDate']}\t {url}"
+                "%s\tPUT Extend loan %s to %s\t %s",
+                req.status_code,
+                loan_to_put["id"],
+                loan_to_put["dueDate"],
+                url,
             )
             if str(req.status_code) == "422":
                 logging.error(
-                    f"{json.loads(req.text)['errors'][0]['message']}\t{json.dumps(loan_to_put)}"
+                    "%s\t%s",
+                    json.loads(req.text)["errors"][0]["message"],
+                    json.dumps(loan_to_put),
                 )
                 return False
             else:
                 req.raise_for_status()
-                logging.info(f"{req.status_code} Successfully Extended loan")
+                logging.info("%s Successfully Extended loan", req.status_code)
             return True
-        except Exception as exception:
-            logging.error(
-                f"PUT FAILED Extend loan to {loan_to_put['dueDate']}\t {url}\t{json.dumps(loan_to_put)}",
-                exc_info=True,
+        except Exception:
+            logging.exception(
+                "PUT FAILED Extend loan to %s\t %s\t%s",
+                loan_to_put["dueDate"],
+                url,
+                json.dumps(loan_to_put),
             )
             return False
-
-    @staticmethod
-    def create_request_variant(
-        folio_client: FolioClient,
-        request_type,
-        patron,
-        item,
-        service_point_id,
-        request_date=datetime.now(),
-    ):
-        try:
-
-            data = {
-                "requestType": request_type,
-                "fulfilmentPreference": "Hold Shelf",
-                "requester": {"barcode": patron["barcode"]},
-                "requesterId": patron["id"],
-                "item": {"barcode": item["barcode"]},
-                "itemId": item["id"],
-                "pickupServicePointId": service_point_id,
-                "requestDate": request_date.strftime(date_time_format),
-            }
-            path = "/circulation/requests"
-            url = f"{folio_client.okapi_url}{path}"
-            req = requests.post(
-                url, headers=folio_client.okapi_headers, data=json.dumps(data)
-            )
-            logging.debug(f"POST {req.status_code}\t{url}\t{json.dumps(data)}")
-            if str(req.status_code) == "422":
-                logging.error(
-                    f"{json.loads(req.text)['errors'][0]['message']}\t{json.dumps(data)}"
-                )
-            else:
-                req.raise_for_status()
-                logging.info(
-                    f"POST {req.status_code} Successfully created request {request_type}"
-                )
-        except Exception as exception:
-            logging.error(exception, exc_info=True)
