@@ -237,7 +237,6 @@ class MappingFileMapperBase(MapperBase):
                     index_or_id,
                 )
         elif property_level1["type"] == "array":
-
             try:
                 if property_level1["items"]["type"] == "object":
                     self.map_objects_array_props(
@@ -248,7 +247,6 @@ class MappingFileMapperBase(MapperBase):
                         index_or_id,
                         property_level1["items"].get("required", []),
                     )
-
                 elif property_level1["items"]["type"] == "string":
                     self.map_string_array_props(
                         legacy_object,
