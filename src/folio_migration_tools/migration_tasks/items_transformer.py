@@ -183,14 +183,14 @@ class ItemsTransformer(MigrationTaskBase):
                     error_str = f"\n\nProcessing of {file_name} failed:\n{exception}."
                     logging.exception(error_str, stack_info=True)
                     logging.fatal(
-                        "Check source files for empty lines or missing reference data. Halting"
+                        "Check source files for empty lines or missing reference data."
                     )
                     self.mapper.migration_report.add(
                         Blurbs.FailedFiles, f"{file_name} - {exception}"
                     )
                     logging.fatal(error_str)
                     sys.exit()
-        logging.info(  # pylint: disable=logging-fstring-interpolation
+        logging.info(
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
 
@@ -250,7 +250,7 @@ class ItemsTransformer(MigrationTaskBase):
                 self.print_progress(idx, start)
                 records_in_file = idx + 1
 
-            logging.info(  # pylint: disable=logging-fstring-interpolation
+            logging.info(
                 f"Done processing {file_name} containing {records_in_file:,} records. "
                 f"Total records processed: {records_in_file:,}"
             )
