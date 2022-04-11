@@ -48,7 +48,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         default_call_number_type_name: str
         previously_generated_holdings_files: Optional[list[str]] = []
         fallback_holdings_type_id: str
-        holdings_type_uuid_for_boundwiths: Optional[str]
+        holdings_type_uuid_for_boundwiths: str
         call_number_type_map_file_name: Optional[str]
         holdings_merge_criteria: Optional[list[str]] = [
             "instanceId",
@@ -100,11 +100,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             if not self.fallback_holdings_type:
                 raise TransformationProcessError(
+                    "",
                     (
                         "Holdings type with ID "
                         f"{self.task_config.fallback_holdings_type_id} "
                         "not found in FOLIO."
-                    )
+                    ),
                 )
             logging.info(
                 "%s will be used as default holdings type",
@@ -112,13 +113,17 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             if any(self.task_config.previously_generated_holdings_files):
                 for file_name in self.task_config.previously_generated_holdings_files:
+                    logging.info("Processing %s", file_name)
                     self.holdings.update(
                         HoldingsHelper.load_previously_generated_holdings(
                             self.folder_structure.results_folder / file_name,
                             self.task_config.holdings_merge_criteria,
                             self.mapper.migration_report,
+                            self.task_config.holdings_type_uuid_for_boundwiths,
                         )
                     )
+            else:
+                logging.info("No file of legacy holdings setup.")
         except TransformationProcessError as process_error:
             logging.critical(process_error)
             logging.critical("Halting.")
@@ -183,7 +188,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         if not any(files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}"
+                "",
+                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}",
             )
         logging.info("Files to process:")
         for filename in files:
@@ -347,6 +353,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
+        if not self.task_config.holdings_type_uuid_for_boundwiths:
+            raise TransformationProcessError(
+                "Missing task setting holdingsTypeUuidForBoundwiths. Add a "
+                "holdingstype specifically for boundwith holdings and reference "
+                "the UUID in this parameter."
+            )
+
         # Add former ids
         temp_ids = []
         for former_id in folio_holding.get("formerIds", []):
@@ -445,6 +458,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 new_folio_holding,
                 self.task_config.holdings_merge_criteria,
                 self.mapper.migration_report,
+                self.task_config.holdings_type_uuid_for_boundwiths,
             )
             if self.holdings.get(new_holding_key, None):
                 self.mapper.migration_report.add_general_statistics(
@@ -476,11 +490,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             res = {n["name"].upper(): n["id"] for n in holdings_sources}
             if "FOLIO" not in res:
                 raise TransformationProcessError(
-                    "No holdings source with name FOLIO in tenant"
+                    "", "No holdings source with name FOLIO in tenant"
                 )
             if "MARC" not in res:
                 raise TransformationProcessError(
-                    "No holdings source with name MARC in tenant"
+                    "", "No holdings source with name MARC in tenant"
                 )
         return res
 

@@ -63,8 +63,9 @@ class RefDataMapping(object):
                     else:
                         x = mapping.get(f"folio_{self.key_type}", "")
                         raise TransformationProcessError(
+                            "",
                             f"No {self.name} - {x} - set up in map or tenant. Check for inconstencies in {self.name} naming."
-                            f"Add a row to mapping file with *:s and a valid {self.name}"
+                            f"Add a row to mapping file with *:s and a valid {self.name}",
                         )
                 else:
                     if self.is_hybrid_default_mapping(mapping):
@@ -74,7 +75,7 @@ class RefDataMapping(object):
                     t = self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"])
                     if not t:
                         raise TransformationProcessError(
-                            f"Mapping not found for {mapping}"
+                            "", f"Mapping not found for {mapping}"
                         )
                     mapping["folio_id"] = t[0]
             except TransformationProcessError as transformation_process_error:
@@ -83,7 +84,8 @@ class RefDataMapping(object):
                 logging.info(json.dumps(self.map, indent=4))
                 logging.error(ee)
                 raise TransformationProcessError(
-                    f'"{mapping[f"folio_{self.key_type}"]}" could not be found in FOLIO'
+                    "",
+                    f'"{mapping[f"folio_{self.key_type}"]}" could not be found in FOLIO',
                 ) from ee
 
         self.post_validate_map()
@@ -149,7 +151,7 @@ class RefDataMapping(object):
     def pre_validate_map(self):
         if not any(f for f in self.map if f.get(f"folio_{self.key_type}", "")):
             raise TransformationProcessError(
-                f"Column folio_{self.key_type} missing from {self.name} map file"
+                "", f"Column folio_{self.key_type} missing from {self.name} map file"
             )
         folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
         folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
@@ -165,14 +167,16 @@ class RefDataMapping(object):
             )
         if any(map_values_not_in_folio):
             raise TransformationProcessError(
-                f"Values ({self.key_type}) from {self.name} map are not in FOLIO: {map_values_not_in_folio}"
+                "",
+                f"Values ({self.key_type}) from {self.name} map are not in FOLIO: {map_values_not_in_folio}",
             )
 
     def post_validate_map(self):
         if not self.default_id:
             raise TransformationProcessError(
+                "",
                 f"No fallback {self.name} set up in map."
-                f"Add a row to mapping file with *:s in all legacy columns and a valid {self.name} value"
+                f"Add a row to mapping file with *:s in all legacy columns and a valid {self.name} value",
             )
         for mapping in self.map:
             if f"folio_{self.key_type}" not in mapping:

@@ -255,7 +255,9 @@ class BatchPoster(MigrationTaskBase):
         elif response.status_code == 400:
             # Likely a json parsing error
             print(response.text)
-            raise TransformationProcessError("HTTP 400. Somehting is wrong. Quitting")
+            raise TransformationProcessError(
+                "", "HTTP 400. Somehting is wrong. Quitting"
+            )
         elif self.task_config.object_type == "SRS" and response.status_code == 500:
             logging.info(
                 "Post failed. Size: %s Waiting 30 seconds until reposting. Number of tries: %s of 5 before failing batch",
@@ -435,6 +437,7 @@ def get_extradata_endpoint(object_name):
         "precedingTitles": "preceding-succeeding-titles",
         "succeedingTitles": "preceding-succeeding-titles",
         "boundwithPart": "inventory-storage/bound-with-parts",
+        "notes": "notes",
     }
     return object_types[object_name]
 
@@ -451,8 +454,6 @@ def get_human_readable(size, precision=2):
 def get_req_size(response):
     size = response.request.method
     size += response.request.url
-    size += "\r\n".join(
-        "{}{}".format(k, v) for k, v in response.request.headers.items()
-    )
+    size += "\r\n".join(f"{k}{v}" for k, v in response.request.headers.items())
     size += response.request.body or []
     return get_human_readable(len(size.encode("utf-8")))

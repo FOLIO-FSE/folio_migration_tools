@@ -2,10 +2,8 @@ import datetime
 import json
 import logging
 import time
-from typing import List
 import uuid
 from textwrap import wrap
-from numpy import ediff1d
 
 import pymarc
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
@@ -247,16 +245,17 @@ class RulesMapperBase(MapperBase):
                         s = "This should be unreachable code. Check schema for changes"
                         logging.error(s)
                         logging.error(parent)
-                        raise TransformationProcessError(s)
+                        raise TransformationProcessError("", s)
                         # break
                     else:
                         if schema_parent["type"] == "array":
                             parent.append({})
                         else:
                             raise TransformationProcessError(
+                                "",
                                 f"Edge! Something in the schemas has changed. "
                                 "The mapping of this needs to be investigated "
-                                f"{target_string} {schema_properties[target_string]}"
+                                f"{target_string} {schema_properties[target_string]}",
                             )
                 elif is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
                     sc_prop["items"]["properties"]
@@ -288,8 +287,9 @@ class RulesMapperBase(MapperBase):
 
         if not target_string or target_string not in sch:
             raise TransformationProcessError(
+                "",
                 f"Target string {target_string} not in Schema! Check mapping file against the schema."
-                f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+                f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}",
             )
 
         target_field = sch.get(target_string, {})
@@ -308,7 +308,8 @@ class RulesMapperBase(MapperBase):
                 rec[target_string] = value[0]
         else:
             raise TransformationProcessError(
-                f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+                "",
+                f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}",
             )
 
     def create_entity(
@@ -317,8 +318,9 @@ class RulesMapperBase(MapperBase):
         entity = {}
         for entity_mapping in entity_mappings:
             k = entity_mapping["target"].split(".")[-1]
-            values = self.apply_rules(marc_field, entity_mapping, index_or_legacy_id)
-            if values:
+            if values := self.apply_rules(
+                marc_field, entity_mapping, index_or_legacy_id
+            ):
                 if entity_parent_key == k:
                     entity = values[0]
                 else:
@@ -439,7 +441,7 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def get_instance_schema():
         logging.info("Fetching Instance schema...")
-        instance_schema = Helper.get_latest_from_github(
+        instance_schema = FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "ramls/instance.json"
         )
         logging.info("done")
@@ -448,7 +450,7 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def fetch_holdings_schema():
         logging.info("Fetching HoldingsRecord schema...")
-        holdings_record_schema = Helper.get_latest_from_github(
+        holdings_record_schema = FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
         )
         logging.info("done")

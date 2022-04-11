@@ -193,7 +193,7 @@ class BibsRulesMapper(RulesMapperBase):
             )
         else:
             raise TransformationProcessError(
-                "Mapping rules for 880 is missing. Halting"
+                "", "Mapping rules for 880 is missing. Halting"
             )
         return mappings
 
@@ -304,7 +304,7 @@ class BibsRulesMapper(RulesMapperBase):
             return match
 
         if not self.folio.instance_types:
-            raise TransformationProcessError("No instance_types setup in tenant")
+            raise TransformationProcessError("", "No instance_types setup in tenant")
 
         if "336" in marc_record and "b" not in marc_record["336"]:
             self.migration_report.add(
@@ -527,7 +527,7 @@ class BibsRulesMapper(RulesMapperBase):
                 self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
         else:
             raise TransformationProcessError(
-                f"Unknown HRID handling: {self.hrid_handling}"
+                "", f"Unknown HRID handling: {self.hrid_handling}"
             )
 
     def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: str) -> str:
@@ -702,7 +702,7 @@ class BibsRulesMapper(RulesMapperBase):
         elif ils_flavour == IlsFlavour.none:
             return [str(uuid.uuid4())]
         else:
-            raise TransformationProcessError(f"ILS {ils_flavour} not configured")
+            raise TransformationProcessError("", f"ILS {ils_flavour} not configured")
 
     def get_aleph_bib_id(self, marc_record: Record):
         res = {f["b"].strip() for f in marc_record.get_fields("998") if "b" in f}
