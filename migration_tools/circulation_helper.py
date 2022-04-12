@@ -250,6 +250,28 @@ class CirculationHelper:
             )
             return False
 
+    def load_migrated_user_barcodes(
+        self, user_barcodes, patron_files, folder_structure
+    ):
+        if any(patron_files):
+            for filedef in patron_files:
+                my_path = folder_structure.results_folder / filedef.file_name
+                with open(my_path) as patron_file:
+                    for row in patron_file:
+                        rec = json.loads(row)
+                        user_barcodes.add(rec.get("barcode", "None"))
+            logging.info("Loaded %s barcodes from users", len(user_barcodes))
+
+    def load_migrated_item_barcodes(self, item_barcodes, item_files, folder_structure):
+        if any(item_files):
+            for filedef in item_files:
+                my_path = folder_structure.results_folder / filedef.file_name
+                with open(my_path) as item_file:
+                    for row in item_file:
+                        rec = json.loads(row)
+                        item_barcodes.add(rec.get("barcode", "None"))
+            logging.info("Loaded %s barcodes from items", len(item_barcodes))
+
     @staticmethod
     def extend_open_loan(
         folio_client: FolioClient, loan, extension_due_date, extend_out_date
