@@ -196,8 +196,12 @@ class RequestsMigrator(MigrationTaskBase):
     def check_barcodes(self):
         user_barcodes = set()
         item_barcodes = set()
-        self.load_migrated_item_barcodes(item_barcodes)
-        self.load_migrated_user_barcodes(user_barcodes)
+        self.circulation_helper.load_migrated_item_barcodes(
+            item_barcodes, self.task_configuration.item_files, self.folder_structure
+        )
+        self.circulation_helper.load_migrated_user_barcodes(
+            user_barcodes, self.task_configuration.patron_files, self.folder_structure
+        )
 
         request: LegacyRequest
         for request in self.semi_valid_legacy_requests:
@@ -226,26 +230,6 @@ class RequestsMigrator(MigrationTaskBase):
                     "Request without matched patron barcode",
                     json.dumps(request.to_source_dict()),
                 )
-
-    def load_migrated_user_barcodes(self, user_barcodes):
-        if any(self.task_configuration.patron_files):
-            for filedef in self.task_configuration.patron_files:
-                my_path = self.folder_structure.results_folder / filedef.file_name
-                with open(my_path) as patron_file:
-                    for row in patron_file:
-                        rec = json.loads(row)
-                        user_barcodes.add(rec.get("barcode", "None"))
-            logging.info("Loaded %s barcodes from users", len(user_barcodes))
-
-    def load_migrated_item_barcodes(self, item_barcodes):
-        if any(self.task_configuration.item_files):
-            for filedef in self.task_configuration.item_files:
-                my_path = self.folder_structure.results_folder / filedef.file_name
-                with open(my_path) as item_file:
-                    for row in item_file:
-                        rec = json.loads(row)
-                        item_barcodes.add(rec.get("barcode", "None"))
-            logging.info("Loaded %s barcodes from items", len(item_barcodes))
 
     def load_and_validate_legacy_requests(self, requests_reader):
         num_bad = 0
