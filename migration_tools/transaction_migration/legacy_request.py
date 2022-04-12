@@ -40,22 +40,24 @@ class LegacyRequest(object):
             self.errors.append((f"{self.request_type} not allowd", "request_type"))
 
         try:
-            temp_request_date: datetime = parse(legacy_request_dict["request_date"])
+            temp_request_date: datetime.datetime = parse(
+                legacy_request_dict["request_date"]
+            )
         except Exception:
             self.errors.append(("Parse date failure. Setting UTC NOW", "request_date"))
-            temp_request_date = datetime.utcnow()
+            temp_request_date = datetime.now(datetime.timezone.utc)
         try:
-            temp_expiration_date: datetime = parse(
+            temp_expiration_date: datetime.datetime = parse(
                 legacy_request_dict["request_expiration_date"]
             )
         except Exception:
-            temp_expiration_date = datetime.utcnow()
+            temp_expiration_date = datetime.now(datetime.timezone.utc)
             self.errors.append(
                 ("Parse date failure. Setting UTC NOW", "request_expiration_date")
             )
 
-        self.request_date = temp_request_date
-        self.request_expiration_date = temp_expiration_date
+        self.request_date: datetime.datetime = temp_request_date
+        self.request_expiration_date: datetime.datetime = temp_expiration_date
         try:
             self.make_request_utc()
             if self.request_expiration_date <= self.request_date:
@@ -82,6 +84,17 @@ class LegacyRequest(object):
             "pickupServicePointId": self.pickup_servicepoint_id,
             "requestDate": self.request_date.isoformat(),
             "id": str(uuid.uuid4()),
+        }
+
+    def to_source_dict(self):
+        return {
+            "item_barcode": self.item_barcode,
+            "patron_barcode": self.patron_barcode,
+            "request_date": self.request_date.isoformat(),
+            "request_expiration_date": self.request_expiration_date.isoformat(),
+            "comment": self.comment,
+            "request_type": self.request_type,
+            "pickup_servicepoint_id": self.pickup_servicepoint_id,
         }
 
     def make_request_utc(self):
