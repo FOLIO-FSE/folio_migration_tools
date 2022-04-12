@@ -1,12 +1,9 @@
 import copy
 import json
 import logging
-from helper import Helper
 import re
 import time
-from datetime import datetime
-from tokenize import String
-from typing import Set
+from migration_tools.helper import Helper
 from migration_tools.migration_report import MigrationReport
 from migration_tools.report_blurbs import Blurbs
 from migration_tools.transaction_migration.legacy_loan import LegacyLoan
@@ -246,6 +243,11 @@ class CirculationHelper:
         except Exception as exception:
             logging.error(exception, exc_info=True)
             migration_report.add(Blurbs.Details, exception)
+            Helper.log_data_issue(
+                legacy_request.item_barcode,
+                exception,
+                json.dumps(legacy_request.to_source_dict()),
+            )
             return False
 
     @staticmethod
