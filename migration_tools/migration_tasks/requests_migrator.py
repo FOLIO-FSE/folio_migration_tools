@@ -129,7 +129,8 @@ class RequestsMigrator(MigrationTaskBase):
         if self.task_configuration.starting_row > 1:
             logging.info(f"Skipping {(self.task_configuration.starting_row-1)} records")
         for num_requests, legacy_request in enumerate(
-            self.valid_legacy_requests[self.task_configuration.starting_row :], start=1
+            self.valid_legacy_requests[self.task_configuration.starting_row - 1 :],
+            start=1,
         ):
 
             t0_migration = time.time()
@@ -190,7 +191,7 @@ class RequestsMigrator(MigrationTaskBase):
             writer.writeheader()
             failed: LegacyRequest
             for failed in self.failed_requests:
-                writer.writerow(failed.to_dict())
+                writer.writerow(failed.to_source_dict())
 
     def check_barcodes(self):
         user_barcodes = set()
@@ -217,13 +218,13 @@ class RequestsMigrator(MigrationTaskBase):
                 Helper.log_data_issue(
                     "",
                     "Request without matched item barcode",
-                    json.dumps(request.to_dict()),
+                    json.dumps(request.to_source_dict()),
                 )
             if not has_patron_barcode:
                 Helper.log_data_issue(
                     "",
                     "Request without matched patron barcode",
-                    json.dumps(request.to_dict()),
+                    json.dumps(request.to_source_dict()),
                 )
 
     def load_migrated_user_barcodes(self, user_barcodes):
@@ -249,7 +250,9 @@ class RequestsMigrator(MigrationTaskBase):
     def load_and_validate_legacy_requests(self, requests_reader):
         num_bad = 0
         logging.info("Validating legacy requests in file...")
-        for legacy_reques_count, legacy_request_dict in enumerate(requests_reader):
+        for legacy_reques_count, legacy_request_dict in enumerate(
+            requests_reader, start=1
+        ):
             try:
                 legacy_request = LegacyRequest(
                     legacy_request_dict,
@@ -265,6 +268,11 @@ class RequestsMigrator(MigrationTaskBase):
                         self.migration_report.add(
                             Blurbs.DiscardedRequests, f"{error[0]} - {error[1]}"
                         )
+                        Helper.log_data_issue(
+                            legacy_request.item_barcode,
+                            f"{error[0]} - {error[1]}",
+                            json.dumps(legacy_request.to_source_dict()),
+                        )
                 else:
                     yield legacy_request
             except ValueError as ve:
@@ -273,7 +281,7 @@ class RequestsMigrator(MigrationTaskBase):
             f"Done validating {legacy_reques_count} "
             f"legacy requests with {num_bad} rotten apples"
         )
-        if num_bad / legacy_reques_count > 0.5:
+        if num_bad > 0 and (num_bad / legacy_reques_count) > 0.5:
             q = num_bad / legacy_reques_count
             logging.error("%s percent of requests failed to validate.", (q * 100))
             self.migration_report.log_me()
