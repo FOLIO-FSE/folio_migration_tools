@@ -40,7 +40,7 @@ jobs:
       run: |
         pip install pytest
         pip install pytest-cov
-        pipenv run pytest --cov=./ --cov-report=xml--password "$PASSWORD" --tenant_id "$TENANT_ID" --okapi_url "$OKAPI_URL" --username "$USERNAME" -s
+        pipenv run pytest --cov=./ --cov-report=xml --password "$PASSWORD" --tenant_id "$TENANT_ID" --okapi_url "$OKAPI_URL" --username "$USERNAME" -s
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
