@@ -39,16 +39,8 @@ jobs:
         USERNAME: ${{ secrets.USERNAME }}
       run: |
         pip install pytest
-        pipenv run pytest --password "$PASSWORD" --tenant_id "$TENANT_ID" --okapi_url "$OKAPI_URL" --username "$USERNAME" -s
-    
-    - name: Make sure the code can run
-      run: |
-        cd src; pipenv run python -m folio_migration_tools -h
-
-    - name: Generate coverage report
-      run: |        
         pip install pytest-cov
-        pytest --cov=./ --cov-report=xml
+        pipenv run pytest --cov=./ --cov-report=xml--password "$PASSWORD" --tenant_id "$TENANT_ID" --okapi_url "$OKAPI_URL" --username "$USERNAME" -s
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
@@ -61,6 +53,10 @@ jobs:
         name: codecov-umbrella
         path_to_write_report: ./coverage/codecov_report.txt
         verbose: true
+    - name: Make sure the code can run
+      run: |
+        cd src; pipenv run python -m folio_migration_tools -h
+
     - name: clone repo_template
       uses: actions/checkout@master
       with:
