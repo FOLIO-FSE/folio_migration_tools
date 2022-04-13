@@ -1,4 +1,4 @@
-from migration_tools.transaction_migration.legacy_loan import LegacyLoan
+from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 
 
 def test_init():
