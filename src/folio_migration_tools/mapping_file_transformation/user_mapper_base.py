@@ -112,7 +112,7 @@ class UserMapperBase(MapperBase):
                 f"Record {folio_user['username']} failed validation {failures}"
             )
 
-    def write_migration_report(self, other_report=None):
+    def write_migration_report(self):
         for a in self.migration_report:
             print("")
             print(f"## {a} - {len(self.migration_report[a])} things")

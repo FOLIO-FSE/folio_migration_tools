@@ -250,20 +250,6 @@ class UserMapper(UserMapperBase):
             if temp_prop := self.get_prop(legacy_user, user_map, prop).strip():
                 folio_user[prop] = temp_prop
 
-    def add_notes(self):
-        note = {
-            "id": str(uuid.uuid4()),
-            "typeId": "e00f14d9-001e-4084-be04-961c0ed4b2a6",
-            "type": "Check in",
-            "title": "Note title",
-            "domain": "users",
-            "content": "<p>Wow! WYSIWYG! <strong>Bold</strong> move!</p>",
-            "popUpOnCheckOut": True,
-            "popUpOnUser": True,
-            "links": [{"id": "c0901dc0-b668-4bd3-8e73-35eb45a07665", "type": "user"}],
-            "metadata": self.folio_client.get_metadata_construct(),
-        }
-
     def get_users(self, source_file, file_format: str):
         csv.register_dialect("tsv", delimiter="\t")
         if file_format == "tsv":

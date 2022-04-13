@@ -1,3 +1,4 @@
+import logging
 from folio_migration_tools.report_blurbs import Blurbs
 
 

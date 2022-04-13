@@ -3,12 +3,14 @@ import json
 import logging
 import re
 import time
-from migration_tools.helper import Helper
-from migration_tools.migration_report import MigrationReport
-from migration_tools.report_blurbs import Blurbs
-from migration_tools.transaction_migration.legacy_loan import LegacyLoan
-from migration_tools.transaction_migration.transaction_result import TransactionResult
-from migration_tools.transaction_migration.legacy_request import LegacyRequest
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
+from folio_migration_tools.transaction_migration.transaction_result import (
+    TransactionResult,
+)
+from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
 
 import requests
 from folioclient import FolioClient
