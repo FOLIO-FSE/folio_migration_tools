@@ -2,7 +2,6 @@ import logging
 from unittest.mock import MagicMock, Mock
 import uuid
 from folioclient import FolioClient
-import pytest
 from folio_migration_tools.library_configuration import LibraryConfiguration
 
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper

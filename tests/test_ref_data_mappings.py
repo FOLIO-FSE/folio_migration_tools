@@ -1,10 +1,7 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
-)
-from folio_migration_tools.mapping_file_transformation import (
-    mapping_file_mapper_base,
 )
 
 

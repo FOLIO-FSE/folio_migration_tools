@@ -2,7 +2,6 @@
 import ast
 import json
 import os
-from unittest.mock import Mock, patch
 
 from folio_uuid import FolioUUID, FOLIONamespaces
 import pymarc
