@@ -274,8 +274,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def validate_merge_criterias(self):
         holdings_schema = self.folio_client.get_holdings_schema()
         properties = holdings_schema["properties"].keys()
-        print(properties)
-        print(self.task_config.holdings_merge_criteria)
+        logging.info(properties)
+        logging.info(self.task_config.holdings_merge_criteria)
         res = [
             mc
             for mc in self.task_config.holdings_merge_criteria

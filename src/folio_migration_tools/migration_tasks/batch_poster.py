@@ -252,7 +252,7 @@ class BatchPoster(MigrationTaskBase):
             )
         elif response.status_code == 400:
             # Likely a json parsing error
-            print(response.text)
+            logging.error(response.text)
             raise TransformationProcessError(
                 "", "HTTP 400. Somehting is wrong. Quitting"
             )
@@ -278,10 +278,10 @@ class BatchPoster(MigrationTaskBase):
                 )
         else:
             try:
-                print(response.text)
+                logging.info(response.text)
                 resp = json.dumps(response, indent=4)
-            except:
-                print()
+            except Exception:
+                logging.exception("something unexpected happened")
                 resp = response
             raise TransformationRecordFailedError(
                 "",
@@ -418,8 +418,8 @@ def list_objects(object_type: str):
         return choices[object_type]
     except KeyError:
         key_string = ",".join(choices.keys())
-        print("", f"Wrong type. Only one of {key_string} are allowed")
-        print("Halting")
+        logging.error(f"Wrong type. Only one of {key_string} are allowed")
+        logging.error("Halting")
         sys.exit()
 
 

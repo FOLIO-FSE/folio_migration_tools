@@ -100,7 +100,7 @@ class UserTransformer(MigrationTaskBase):
             departments_mapping,
             group_mapping,
         )
-        print("UserTransformer init done")
+        logging.info("UserTransformer init done")
 
     def do_work(self):
         logging.info("Starting....")

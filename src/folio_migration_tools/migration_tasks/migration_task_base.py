@@ -31,7 +31,7 @@ class MigrationTaskBase:
         use_logging: bool = True,
     ):
 
-        print("MigrationTaskBase init")
+        logging.info("MigrationTaskBase init")
         self.task_configuration = task_configuration
         self.folio_client: FolioClient = FolioClient(
             library_configuration.okapi_url,
@@ -62,7 +62,7 @@ class MigrationTaskBase:
         if use_logging:
             self.setup_logging()
         self.folder_structure.log_folder_structure()
-        print("MigrationTaskBase init done")
+        logging.info("MigrationTaskBase init done")
 
     @abstractmethod
     def wrap_up(self):

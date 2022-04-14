@@ -261,9 +261,7 @@ class LoansMigrator(MigrationTaskBase):
                 )
                 if any(legacy_loan.errors):
                     num_bad += 1
-                    self.migration_report.add_general_statistics(
-                        "Loans with valueErrors"
-                    )
+                    self.migration_report.add_general_statistics("Discarded Loans")
                     for error in legacy_loan.errors:
                         self.migration_report.add(
                             Blurbs.DiscardedLoans, f"{error[0]} - {error[1]}"
