@@ -5,7 +5,6 @@ from lxml import etree
 import pymarc
 import json
 from collections import namedtuple
-from jsonschema import validate
 from folioclient.FolioClient import FolioClient
 from types import SimpleNamespace
 
