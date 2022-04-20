@@ -66,6 +66,15 @@ class LegacyRequest(object):
             self.errors.append(("Time alignment issues", "both dates"))
 
     def to_dict(self):
+        raise NotImplementedError("Add requestLevel:Item")
+            """ "required": [
+        "instanceId",
+        "requesterId",
+        "requestType",
+        "requestLevel",
+        "requestDate",
+        "fulfilmentPreference"
+    ] """
         return {
             "requestType": self.request_type,
             "fulfilmentPreference": self.fulfillment_preference,
