@@ -277,6 +277,12 @@ class UserMapper(UserMapperBase):
         if folio_prop_name == "personal.addresses.id":
             return "not needed"
         elif folio_prop_name.split("[")[0] == "departments":
+            if not self.departments_mapping:
+                raise TransformationProcessError(
+                    "",
+                    "No Departments mapping set up. Set up a departments mapping file "
+                    " or remove the mapping of the Departments field",
+                )
             legacy_dept = legacy_user.get(legacy_user_key, "")
             gid = self.get_mapped_name(
                 self.departments_mapping,

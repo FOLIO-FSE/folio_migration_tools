@@ -133,6 +133,7 @@ class UserTransformer(MigrationTaskBase):
                             if num_users == 1:
                                 logging.info("First Legacy  user")
                                 logging.info(json.dumps(legacy_user, indent=4))
+                                print_email_warning()
                             folio_user = self.mapper.do_map(
                                 legacy_user,
                                 user_map,
@@ -161,7 +162,7 @@ class UserTransformer(MigrationTaskBase):
                         except TransformationProcessError as tpe:
                             logging.error(tpe)
                             print(f"\n{tpe.message}")
-                            print("Halting")
+                            print("\nHalting")
                             sys.exit(1)
                         except ValueError as ve:
                             logging.error(ve)
@@ -174,9 +175,7 @@ class UserTransformer(MigrationTaskBase):
                                 "Failed user transformations"
                             )
                             logging.error(ee, exc_info=True)
-                        finally:
-                            if num_users == 1:
-                                print_email_warning()
+
                         self.total_records = num_users
         except FileNotFoundError as fnfe:
             logging.exception("File not found")
