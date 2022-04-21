@@ -161,7 +161,7 @@ class UserTransformer(MigrationTaskBase):
                             logging.error(tre)
                         except TransformationProcessError as tpe:
                             logging.error(tpe)
-                            print(f"\n{tpe.message}")
+                            print(f"\n{tpe.message}: {tpe.data_value}")
                             print("\nHalting")
                             sys.exit(1)
                         except ValueError as ve:

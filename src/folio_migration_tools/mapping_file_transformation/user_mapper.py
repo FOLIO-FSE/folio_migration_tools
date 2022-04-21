@@ -36,11 +36,13 @@ class UserMapper(UserMapperBase):
     ):
         try:
             super().__init__(folio_client, library_config)
+
             self.noteprops = None
             self.notes_schemas = None
             self.notes_mapper = None
             self.task_config = task_config
             self.folio_keys = []
+            self.mapped_legacy_keys = []
             self.library_config = library_config
             self.user_schema = FolioClient.get_latest_from_github(
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
@@ -134,9 +136,26 @@ class UserMapper(UserMapperBase):
                     )
 
     def do_map(self, legacy_user, user_map, legacy_id):
-        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
-            user_map
-        )
+        if not self.folio_keys and not self.mapped_legacy_keys:
+            self.folio_keys = (
+                MappingFileMapperBase.get_mapped_folio_properties_from_map(user_map)
+            )
+            self.mapped_legacy_keys = (
+                MappingFileMapperBase.get_mapped_legacy_properties_from_map(user_map)
+            )
+            missing_keys_in_user = [
+                f for f in self.mapped_legacy_keys if f not in legacy_user
+            ]
+            if any(missing_keys_in_user):
+                raise TransformationProcessError(
+                    "",
+                    (
+                        "There are mapped legacy fields that are not in the legacy "
+                        "user record"
+                    ),
+                    missing_keys_in_user,
+                )
+
         if not self.custom_props:
             for m in user_map["data"]:
                 if "customFields" in m["folio_field"]:
