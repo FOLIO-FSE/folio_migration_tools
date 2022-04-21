@@ -210,6 +210,7 @@ class ItemsTransformer(MigrationTaskBase):
                     if idx == 0:
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
+                        self.mapper.verify_legacy_record(record, idx)
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.items
                     )

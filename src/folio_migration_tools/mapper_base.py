@@ -220,6 +220,7 @@ class MapperBase:
     ):
         self.migration_report.add_general_statistics("Transformation process error")
         logging.critical("%s\t%s", idx, error)
+        print(f"\n{error.message}: {error.data_value}")
         sys.exit(1)
 
     def handle_transformation_record_failed_error(
