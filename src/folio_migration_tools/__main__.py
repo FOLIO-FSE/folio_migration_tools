@@ -71,7 +71,7 @@ def main():
                         f'configuration file. Use one of {", ".join(task_names)}'
                         "\nHalting..."
                     )
-                    sys.exit()
+                    sys.exit(2)
                 try:
                     task_class = next(
                         tc
@@ -88,13 +88,13 @@ def main():
                         "is not a valid option. Update your task to incorporate "
                         f"one of {json.dumps([tc.__name__ for tc in task_classes], indent=4)}"
                     )
-                    sys.exit()
+                    sys.exit(2)
             except json.decoder.JSONDecodeError as json_error:
                 logging.critical(json_error)
                 print(
                     f"\nError parsing configuration file {config_file_path.name}. Halting. "
                 )
-                sys.exit()
+                sys.exit(2)
             except ValidationError as e:
                 print(e.json())
                 print("Validation errors in configuration file:")
@@ -109,6 +109,7 @@ def main():
 
             # task_obj.do_work()
             logging.info("Work done, wrapping up")
+            sys.exit(0)
         # task_obj.wrap_up()
     except requests.exceptions.SSLError:
         print("\nSSL error. Are you connected to the Internet and the VPN?")

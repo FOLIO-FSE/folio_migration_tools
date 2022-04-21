@@ -74,7 +74,7 @@ class HoldingsProcessor:
             > self.mapper.library_configuration.failed_records_threshold
         ):
             logging.critical("More than 20 percent of the records have failed. Halting")
-            sys.exit()
+            sys.exit(1)
 
     def process_record(self, marc_record: Record, file_def: FileDefinition):
         """processes a marc holdings record and saves it"""

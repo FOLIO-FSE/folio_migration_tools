@@ -27,6 +27,7 @@ def main():
         ) as outfile:
             outfile.write(t.TaskConfiguration.schema_json(indent=4))
     print("done generating schemas.")
+    sys.exit(0)
 
 
 def inheritors(base_class):

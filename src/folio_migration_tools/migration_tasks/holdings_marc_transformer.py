@@ -143,7 +143,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 read_records(reader, processor, file_def)
         except TransformationProcessError as tpe:
             logging.critical(tpe)
-            sys.exit()
+            sys.exit(1)
         except Exception:
             logging.exception(
                 "Failure in Main: %s", file_def.file_name, stack_info=True

@@ -162,7 +162,7 @@ class UserTransformer(MigrationTaskBase):
                             logging.error(tpe)
                             print(f"\n{tpe.message}")
                             print("Halting")
-                            sys.exit()
+                            sys.exit(1)
                         except ValueError as ve:
                             logging.error(ve)
                             raise ve
@@ -181,7 +181,7 @@ class UserTransformer(MigrationTaskBase):
         except FileNotFoundError as fnfe:
             logging.exception("File not found")
             print(f"\n{fnfe}")
-            sys.exit()
+            sys.exit(1)
 
     @staticmethod
     def get_legacy_id_prop(record_map):

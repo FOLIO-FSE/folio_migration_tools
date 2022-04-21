@@ -36,19 +36,16 @@ class BibsProcessor:
 
     def process_record(self, idx, marc_record: Record, suppressed: bool):
         """processes a marc record and saves it"""
+        folio_rec = None
+        legacy_ids = []
         try:
             legacy_ids = self.mapper.get_legacy_ids(
                 marc_record, self.mapper.task_configuration.ils_flavour, idx
             )
-        except TransformationRecordFailedError as trf:
-            trf.log_it()
-        except Exception as ee:
-            index_or_legacy_id = [
-                f"Index in file: {idx}"
-            ]  # Only used for reporting purposes
-            Helper.log_data_issue(index_or_legacy_id, "001 nor legacy id found", ee)
-        folio_rec = None
-        try:
+            if not legacy_ids:
+                raise TransformationRecordFailedError(
+                    f"Index in file: {idx}", "No legacy id found", idx
+                )
             # Transform the MARC21 to a FOLIO record
             folio_rec = self.mapper.parse_bib(legacy_ids, marc_record, suppressed)
             if prec_titles := folio_rec.get("precedingTitles", []):
@@ -81,7 +78,6 @@ class BibsProcessor:
             self.mapper.migration_report.add_general_statistics(
                 "Records successfully transformed into FOLIO objects"
             )
-
         except ValueError as value_error:
             self.mapper.migration_report.add(
                 Blurbs.FieldMappingErrors,

@@ -220,7 +220,7 @@ class MapperBase:
     ):
         self.migration_report.add_general_statistics("Transformation process error")
         logging.critical("%s\t%s", idx, error)
-        sys.exit()
+        sys.exit(1)
 
     def handle_transformation_record_failed_error(
         self, records_processed: int, error: TransformationRecordFailedError
@@ -249,7 +249,7 @@ class MapperBase:
                 self.num_criticalerrors,
                 (self.num_criticalerrors / (records_processed + 1)),
             )
-            sys.exit()
+            sys.exit(1)
 
     @staticmethod
     def get_id_map_dict(legacy_id, folio_record):
@@ -268,7 +268,7 @@ class MapperBase:
                 "Stopping. More than %s unhandled exceptions. Code needs fixing",
                 self.num_exeptions,
             )
-            sys.exit()
+            sys.exit(1)
 
     @staticmethod
     def save_id_map_file(path, legacy_map: dict):

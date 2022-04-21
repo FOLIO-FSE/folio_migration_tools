@@ -98,13 +98,13 @@ class BibsTransformer(MigrationTaskBase):
                         self.read_records(reader, file_obj)
                 except TransformationProcessError as tpe:
                     logging.critical(tpe)
-                    sys.exit()
+                    sys.exit(1)
                 except Exception:
                     logging.exception(file_obj, stack_info=True)
                     logging.critical(
                         "File %s failed for unknown reason. Halting", file_obj.file_name
                     )
-                    sys.exit()
+                    sys.exit(1)
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")

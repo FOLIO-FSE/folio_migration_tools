@@ -75,7 +75,7 @@ class UserMapper(UserMapperBase):
         except TransformationProcessError as tpe:
             logging.critical(tpe)
             print(f"\n{tpe.message}")
-            sys.exit()
+            sys.exit(1)
 
     def setup_notes_mapping(self):
         self.notes_schemas = FolioClient.get_latest_from_github(
