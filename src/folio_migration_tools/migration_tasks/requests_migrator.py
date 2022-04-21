@@ -161,7 +161,7 @@ class RequestsMigrator(MigrationTaskBase):
                     legacy_request.item_barcode,
                     legacy_request.patron_barcode,
                 )
-                sys.exit()
+                sys.exit(1)
             if num_requests % 10 == 0:
                 logging.info(
                     f"{timings(self.t0, t0_migration, num_requests)} {num_requests}"
@@ -273,7 +273,7 @@ class RequestsMigrator(MigrationTaskBase):
             logging.error("%s percent of requests failed to validate.", (q * 100))
             self.migration_report.log_me()
             logging.critical("Halting...")
-            sys.exit()
+            sys.exit(1)
 
 
 def timings(t0, t0func, num_objects):

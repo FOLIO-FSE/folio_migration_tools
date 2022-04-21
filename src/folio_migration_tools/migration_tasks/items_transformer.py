@@ -189,7 +189,7 @@ class ItemsTransformer(MigrationTaskBase):
                         Blurbs.FailedFiles, f"{file_name} - {exception}"
                     )
                     logging.fatal(error_str)
-                    sys.exit()
+                    sys.exit(1)
         logging.info(
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
@@ -237,7 +237,7 @@ class ItemsTransformer(MigrationTaskBase):
                     traceback.print_exc()
                     logging.fatal(attribute_error)
                     logging.info("Quitting...")
-                    sys.exit()
+                    sys.exit(1)
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(

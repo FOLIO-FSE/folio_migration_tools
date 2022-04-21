@@ -57,7 +57,7 @@ class MigrationTaskBase:
         except TransformationProcessError as process_error:
             logging.critical(process_error)
             logging.critical("Halting...")
-            sys.exit()
+            sys.exit(1)
         self.num_exeptions: int = 0
         if use_logging:
             self.setup_logging()
@@ -206,7 +206,7 @@ class MigrationTaskBase:
                 f"{self.num_exeptions}. and failure rate is "
                 f"{self.num_exeptions / (1 + idx)} Stopping."
             )
-            sys.exit()
+            sys.exit(1)
 
     @staticmethod
     def print_progress(num_processed, start_time):

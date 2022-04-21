@@ -728,13 +728,13 @@ def get_unspecified_mode_of_issuance(folio_client: FolioClient):
     m_o_is = list(folio_client.modes_of_issuance)
     if not any(m_o_is):
         logging.critical("No Modes of issuance set up in tenant. Quitting...")
-        sys.exit()
+        sys.exit(1)
     if not any(i for i in m_o_is if i["name"].lower() == "unspecified"):
         logging.critical(
             "Mode of issuance 'unspecified' missing in tenant "
             "configuration. Please add this to continue. Quitting..."
         )
-        sys.exit()
+        sys.exit(1)
     return next(i["id"] for i in m_o_is if i["name"].lower() == "unspecified")
 
 

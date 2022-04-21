@@ -279,7 +279,7 @@ class LoansMigrator(MigrationTaskBase):
             logging.error("%s percent of loans failed to validate.", (q * 100))
             self.migration_report.log_me()
             logging.critical("Halting...")
-            sys.exit()
+            sys.exit(1)
 
     def handle_checkout_failure(
         self, legacy_loan, folio_checkout: TransactionResult

@@ -174,7 +174,7 @@ class BatchPoster(MigrationTaskBase):
         if self.failed_batches > 50000:
             logging.error("Exceeded number of failed batches at row %s", num_records)
             logging.critical("Halting")
-            sys.exit()
+            sys.exit(1)
 
     def handle_unicode_error(self, unicode_error, last_row):
         logging.info("=========ERROR==============")
@@ -351,7 +351,7 @@ class BatchPoster(MigrationTaskBase):
                     logging.info(res.status_code)
         except Exception:
             logging.exception("Could not post the snapshot")
-            sys.exit()
+            sys.exit(1)
 
     def commit_snapshot(self):
         snapshot = {"jobExecutionId": self.snapshot_id, "status": "COMMITTED"}
@@ -371,7 +371,7 @@ class BatchPoster(MigrationTaskBase):
                 self.snapshot_id,
             )
             logging.info("%s", json.dumps(snapshot, indent=4))
-            sys.exit()
+            sys.exit(1)
 
 
 def list_objects(object_type: str):
@@ -420,7 +420,7 @@ def list_objects(object_type: str):
         key_string = ",".join(choices.keys())
         logging.error(f"Wrong type. Only one of {key_string} are allowed")
         logging.error("Halting")
-        sys.exit()
+        sys.exit(1)
 
 
 def chunks(records, number_of_chunks):

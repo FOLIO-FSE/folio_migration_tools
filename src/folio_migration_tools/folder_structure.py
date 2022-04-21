@@ -24,7 +24,7 @@ class FolderStructure:
         self.base_folder = Path(base_path)
         if not self.base_folder.is_dir():
             logging.critical("Base Folder Path is not a folder. Exiting.")
-            sys.exit()
+            sys.exit(1)
 
         self.data_folder = self.base_folder / "data"
         verify_folder(self.data_folder)
@@ -153,6 +153,6 @@ def verify_folder(folder_path: Path):
     if not folder_path.is_dir():
         logging.critical("There is no folder located at %s. Exiting.", folder_path)
         logging.critical("Create a folder by calling\n\tmkdir %s", folder_path)
-        sys.exit()
+        sys.exit(1)
     else:
         logging.info("Located %s", folder_path)

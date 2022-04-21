@@ -129,7 +129,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         except TransformationProcessError as process_error:
             logging.critical(process_error)
             logging.critical("Halting.")
-            sys.exit()
+            sys.exit(1)
         except Exception as exception:
             logging.info("\n=======ERROR===========")
             logging.info(exception)
@@ -225,7 +225,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 )
                 logging.critical(error_str)
                 print(f"\n{error_str}\nHalting")
-                sys.exit()
+                sys.exit(1)
         logging.info(
             f"processed {self.total_records:,} records in {len(self.files)} files"
         )
@@ -289,7 +289,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 ),
                 ", ".join(res),
             )
-            sys.exit()
+            sys.exit(1)
 
     def process_single_file(self, file_name):
         with open(file_name, encoding="utf-8-sig") as records_file:

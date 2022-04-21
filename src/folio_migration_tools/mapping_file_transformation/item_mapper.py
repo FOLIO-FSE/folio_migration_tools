@@ -120,29 +120,29 @@ class ItemMapper(MappingFileMapperBase):
                 logging.critical(
                     "folio_name is not a column in the status mapping file"
                 )
-                sys.exit()
+                sys.exit(1)
             elif "legacy_code" not in mapping:
                 logging.critical(
                     "legacy_code is not a column in the status mapping file"
                 )
-                sys.exit()
+                sys.exit(1)
             elif mapping["folio_name"] not in statuses:
                 logging.critical(
                     "%s in the mapping file is not a FOLIO item status",
                     mapping["folio_name"],
                 )
-                sys.exit()
+                sys.exit(1)
             elif mapping["legacy_code"] == "*":
                 logging.critical(
                     "* in status mapping not allowed. Available will be the default mapping. "
                     "Please remove the row with the *"
                 )
-                sys.exit()
+                sys.exit(1)
             elif not all(mapping.values()):
                 logging.critical(
                     "empty value in mapping %s. Check mapping file", mapping.values()
                 )
-                sys.exit()
+                sys.exit(1)
             else:
                 self.status_mapping = {
                     v["legacy_code"]: v["folio_name"] for v in item_statuses_map
