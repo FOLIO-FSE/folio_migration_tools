@@ -332,13 +332,28 @@ class UserMapper(UserMapperBase):
                 )
                 self.migration_report.add(Blurbs.UsersPerPatronType, legacy_group)
                 return legacy_group
-        elif folio_prop_name in ["expirationDate", "enrollmentDate"]:
+        elif folio_prop_name in [
+            "expirationDate",
+            "enrollmentDate",
+            "personal.dateOfBirth",
+        ]:
             try:
+                if not legacy_user.get(legacy_user_key):
+                    return ""
                 format_date = parse(legacy_user.get(legacy_user_key), fuzzy=True)
+                fmt_string = (
+                    f"{folio_prop_name}: {legacy_user.get(legacy_user_key)}"
+                    f" -> {format_date.isoformat()}"
+                )
+                self.migration_report.add(Blurbs.DateTimeConversions, fmt_string)
                 return format_date.isoformat()
             except Exception as ee:
                 v = legacy_user.get(legacy_user_key)
-                logging.error(f"expiration date {v} could not be parsed: {ee}")
+                logging.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
+                fmt_string = (
+                    f"Parsing error! {folio_prop_name}: {v}. NOW() was returned"
+                )
+                self.migration_report.add(Blurbs.DateTimeConversions, fmt_string)
                 return datetime.utcnow().isoformat()
         elif folio_prop_name.strip() == "personal.addresses.primaryAddress":
             return value
