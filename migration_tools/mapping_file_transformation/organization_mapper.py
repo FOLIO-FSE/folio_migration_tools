@@ -29,35 +29,9 @@ class OrganizationMapper(MappingFileMapperBase):
     ):
 
         #Get organization schema
-        # TODO: Modify getlatest from github method in helper to get organization_schema for latest mod-organization-storage release
-        commit = "2626278b80d82a5e1995f85c37575561264b93e9"
-        req = requests.get(f"https://raw.githubusercontent.com/folio-org/acq-models/{commit}/mod-orgs/schemas/organization.json")
-        organization_schema = json.loads(req.text)
-        # Fetch referenced schemas
-        try:
-            for property_name_level1, property_level1 in organization_schema["properties"].items():
-                if property_level1.get("type") == "object" and property_level1.get("$ref"):
-                    logging.info("Fecthing referenced schema for %s", property_name_level1)
-                    ref_object = property_level1["$ref"]
-                    schema_url = f"https://raw.githubusercontent.com/folio-org/acq-models/{commit}/mod-orgs/schemas/{ref_object}" 
-                    ref_schema = requests.get(schema_url)
-                    property_level1["properties"] = json.loads(ref_schema.text).get("properties")
-                    property_level1["required"] = json.loads(ref_schema.text).get("required", [])
+        organization_schema = self.get_latest_acq_schema_from_github("mod-orgs", "organization")
 
-                elif property_level1.get("type") == "array" and property_level1.get("items").get("$ref"):
-                    logging.info("Fecthing referenced schema for %s", property_name_level1)
-                    ref_object = property_level1["items"]["$ref"]
-                    schema_url = f"https://raw.githubusercontent.com/folio-org/acq-models/{commit}/mod-orgs/schemas/{ref_object}" 
-                    ref_schema = requests.get(schema_url)cd 
-                    property_level1["items"]["properties"] = json.loads(ref_schema.text).get("properties")
-                    property_level1["items"]["required"] = json.loads(ref_schema.text).get("required", [])
-        except json.decoder.JSONDecodeError as json_error:
-            logging.critical(json_error)
-            print(
-                f"\nError parsing {schema_url}. Halting. "
-            )
-            
-            print(organization_schema)
+
 
         super().__init__(
             folio_client,
@@ -98,3 +72,50 @@ class OrganizationMapper(MappingFileMapperBase):
             # edge case
             return ""
             
+    def get_latest_acq_schema_from_github(self, module, object):
+        '''
+        Fetches the schema for the main object, for example an organization.
+        Loops through the properties in the fetched schema. 
+        For every property of type object or array that contains a $ref subproperty,
+        fetches the referenced schema and adds the properties from the referenced schema to the main object property.
+        '''
+        # TODO: Modify getlatest from github method in helper to get organization_schema for latest mod-organization-storage release
+        commit = "2626278b80d82a5e1995f85c37575561264b93e9"
+        acq_schemas_url = f"https://raw.githubusercontent.com/folio-org/acq-models/{commit}/{module}/schemas/"
+        req = requests.get(f"{acq_schemas_url}/{object}.json")
+        object_schema = json.loads(req.text)
+        
+        # Fetch referenced schemas
+        try:
+            for property_name_level1, property_level1 in object_schema["properties"].items():
+                if property_level1.get("type") == "object" and property_level1.get("$ref"):
+                    if "raml-util/schemas/" in property_level1["$ref"]:
+                        logging.error("Special property not yet implemented: %s", property_name_level1)
+                    else:
+                        logging.info("Fecthing referenced schema for object %s", property_name_level1)
+                        ref_object = property_level1["$ref"]
+                        schema_url = f"{acq_schemas_url}/{ref_object}" 
+                        ref_schema = requests.get(schema_url)
+                        property_level1 = dict(property_level1, **json.loads(ref_schema.text))
+
+                elif property_level1.get("type") == "array" and property_level1.get("items").get("$ref"):
+                    # TODO Consider implementing as extra data.
+                    if "common/schemas/uuid.json" in property_level1["items"]["$ref"]:
+                        logging.error("Linked object not yet implemented: %s", property_name_level1)
+                    else:
+                        logging.info("Fecthing referenced schema for array object %s", property_name_level1)
+                        ref_object = property_level1["items"]["$ref"]
+                        schema_url = f"{acq_schemas_url}/{ref_object}" 
+                        ref_schema = requests.get(schema_url)
+                        property_level1["items"] = dict(property_level1["items"], **json.loads(ref_schema.text))
+
+        except json.decoder.JSONDecodeError as json_error:
+            logging.critical(json_error)
+            print(
+                f"\nError parsing {schema_url}. Halting."
+            )
+
+        except Exception as type_error:
+            logging.error("Unable to build schema property for %s: %s", property_name_level1, type_error)
+
+        return object_schema
