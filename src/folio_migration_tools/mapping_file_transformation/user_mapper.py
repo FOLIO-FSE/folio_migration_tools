@@ -283,18 +283,23 @@ class UserMapper(UserMapperBase):
             yield row
 
     def get_prop(self, legacy_user, user_map, folio_prop_name, i=0):
-        legacy_user_key = get_legacy_user_key(folio_prop_name, user_map["data"], i)
-        value = get_legacy__user_value(folio_prop_name, user_map["data"], i)
-
         # The value is set on the mapping. Return this instead of the default field
-        if value:
+        if value := get_legacy__user_value(folio_prop_name, user_map["data"], i):
             self.migration_report.add(
                 Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
             )
             return value
+        # All other cases are mapped from legacy fields.
+        legacy_user_keys = list(
+            get_legacy_user_keys(folio_prop_name, user_map["data"], i)
+        )
+        if not any(legacy_user_keys):
+            return ""
+
+        legacy_user_key = legacy_user_keys[0]
 
         if folio_prop_name == "personal.addresses.id":
-            return "not needed"
+            return ""
         elif folio_prop_name.split("[")[0] == "departments":
             if not self.departments_mapping:
                 raise TransformationProcessError(
@@ -362,8 +367,12 @@ class UserMapper(UserMapperBase):
                 return user_map["addressTypes"][i]
             except (KeyError, IndexError):
                 return ""
-        elif legacy_user_key:
-            return legacy_user.get(legacy_user_key, "")
+        elif legacy_user_keys:
+            if len(legacy_user_keys) > 1:
+                self.migration_report.add(
+                    Blurbs.Details, f"{legacy_user_keys} concatenated into one string"
+                )
+            return " ".join(legacy_user.get(key, "") for key in legacy_user_keys)
         else:
             return ""
 
@@ -412,12 +421,10 @@ def get_legacy__user_value(folio_prop_name, data, i):
     )
 
 
-def get_legacy_user_key(folio_prop_name, data, i):
-    return next(
-        (
-            k["legacy_field"]
-            for k in data
-            if k["folio_field"].replace(f"[{i}]", "") == folio_prop_name
-        ),
-        "",
+def get_legacy_user_keys(folio_prop_name, data, i):
+    return (
+        k["legacy_field"]
+        for k in data
+        if k["folio_field"].replace(f"[{i}]", "") == folio_prop_name
+        and k["legacy_field"].strip()
     )

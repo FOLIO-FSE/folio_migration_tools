@@ -55,9 +55,13 @@ class HoldingsMapper(MappingFileMapperBase):
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
+
+        # Legacy contstruct
         if not self.use_map:
             return legacy_item[folio_prop_name]
+
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+
         # IF there is a value mapped, return that one
         if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
@@ -65,10 +69,12 @@ class HoldingsMapper(MappingFileMapperBase):
                 Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
             )
             return value
+
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )
         legacy_value = " ".join(legacy_values).strip()
+
         if folio_prop_name == "permanentLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
         elif folio_prop_name == "temporaryLocationId":
@@ -97,6 +103,10 @@ class HoldingsMapper(MappingFileMapperBase):
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(legacy_value, index_or_id)
         elif any(legacy_item_keys):
+            if len(legacy_item_keys) > 1:
+                self.migration_report.add(
+                    Blurbs.Details, f"{legacy_item_keys} were concatenated"
+                )
             return legacy_value
         else:
             # edge case
