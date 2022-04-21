@@ -1,3 +1,4 @@
+from fileinput import filename
 import json
 import logging
 import sys
@@ -5,7 +6,8 @@ import time
 import traceback
 from datetime import datetime
 from uuid import uuid4
-
+from typing import Optional
+from matplotlib import use
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_migration_tools.custom_exceptions import (
@@ -32,6 +34,7 @@ class BatchPoster(MigrationTaskBase):
         object_type: str
         file: FileDefinition
         batch_size: int
+        rerun_failed_records: Optional[bool] = True
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -307,6 +310,8 @@ class BatchPoster(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Done. Wrapping up")
+        if self.task_config.object_type == "SRS":
+            self.commit_snapshot()
         if self.task_config.object_type != "Extradata":
             logging.info(
                 (
@@ -317,12 +322,34 @@ class BatchPoster(MigrationTaskBase):
                 self.failed_batches,
                 self.folder_structure.failed_recs_path,
             )
+
         else:
             logging.info(
                 "Done posting % records. % failed", self.num_posted, self.num_failures
             )
-        if self.task_config.object_type == "SRS":
-            self.commit_snapshot()
+
+        self.rerun_run()
+
+    def rerun_run(self):
+        if self.task_config.rerun_failed_records and (
+            self.failed_records > 0 or self.num_failures > 0
+        ):
+            logging.info(
+                "Rerunning the failed records from the load with a batchsize of 1"
+            )
+            try:
+                self.task_config.batch_size = 1
+                self.task_config.file = FileDefinition(
+                    file_name=str(self.folder_structure.failed_recs_path)
+                )
+                self.task_config.rerun_failed_records = False
+                self.__init__(self.task_config, self.library_configuration)
+                self.do_work()
+                self.wrap_up()
+                logging.info("Done rerunning the posting")
+            except Exception as ee:
+                logging.exception("Happed during rerun")
+                raise TransformationProcessError("Error during rerun") from ee
 
     def create_snapshot(self):
         snapshot = {
