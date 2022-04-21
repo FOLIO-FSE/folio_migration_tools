@@ -141,6 +141,14 @@ class MappingFileMapperBase(MapperBase):
             )
         ]
 
+    @staticmethod
+    def get_mapped_legacy_properties_from_map(the_map):
+        return [
+            k["legacy_field"].strip()
+            for k in the_map["data"]
+            if (k["legacy_field"].strip() not in empty_vals)
+        ]
+
     def instantiate_record(
         self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces
     ):
