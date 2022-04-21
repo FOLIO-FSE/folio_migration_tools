@@ -10,6 +10,10 @@ class ReportSection(Enum):
 
 
 class Blurbs(NamedTuple):
+    DateTimeConversions = (
+        "DateTime conversions",
+        "Some date and date time strings are converted to UTC DateTime objects and then printed accoding to ISO standard.",
+    )
     Details = ("Details", "")
     MarcValidation = ("MARC21 validation issues found in records", "")
     Details = ("Details", "")
