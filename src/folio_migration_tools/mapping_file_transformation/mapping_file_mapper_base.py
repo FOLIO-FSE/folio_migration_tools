@@ -42,7 +42,6 @@ class MappingFileMapperBase(MapperBase):
         self.folio_client = folio_client
         self.use_map = True  # Legacy
         self.record_map = record_map
-        self.record_map = record_map
         self.ref_data_dicts = {}
         self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
@@ -204,6 +203,7 @@ class MappingFileMapperBase(MapperBase):
     def do_map(
         self, legacy_object, index_or_id: str, object_type: FOLIONamespaces
     ) -> tuple[dict, str]:
+
         folio_object, legacy_id = self.instantiate_record(
             legacy_object, index_or_id, object_type
         )
@@ -449,6 +449,24 @@ class MappingFileMapperBase(MapperBase):
             ),
             "",
         )
+
+    def verify_legacy_record(self, legacy_object, idx):
+        if idx == 0:
+            missing_keys_in_record = [
+                f
+                for f in self.get_mapped_legacy_properties_from_map(self.record_map)
+                if f not in legacy_object
+            ]
+            if any(missing_keys_in_record):
+                raise TransformationProcessError(
+                    "",
+                    (
+                        "There are mapped legacy fields that are not in the legacy record"
+                    ),
+                    missing_keys_in_record,
+                )
+            else:
+                logging.info("All maped legacy fields are in the legacy object")
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")

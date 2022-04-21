@@ -303,6 +303,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             ):
                 records_processed = idx + 1
                 try:
+                    self.mapper.verify_legacy_record(legacy_record, idx)
                     folio_rec, legacy_id = self.mapper.do_map(
                         legacy_record, f"row # {idx}", FOLIONamespaces.holdings
                     )
