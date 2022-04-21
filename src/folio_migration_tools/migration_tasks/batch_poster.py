@@ -7,7 +7,6 @@ import traceback
 from datetime import datetime
 from uuid import uuid4
 from typing import Optional
-from matplotlib import use
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_migration_tools.custom_exceptions import (
