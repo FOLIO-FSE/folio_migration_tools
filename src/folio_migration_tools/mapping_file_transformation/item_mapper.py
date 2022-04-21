@@ -151,9 +151,13 @@ class ItemMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         value_tuple = (legacy_item, folio_prop_name, index_or_id)
+
+        # Legacy contstruct
         if not self.use_map:
             return legacy_item[folio_prop_name]
+
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+
         # IF there is a value mapped, return that one
         if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
@@ -161,10 +165,12 @@ class ItemMapper(MappingFileMapperBase):
                 Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
             )
             return value
+
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_item, legacy_item_keys
         )
         legacy_value = " ".join(legacy_values).strip()
+
         if folio_prop_name == "permanentLocationId":
             return self.get_mapped_value(
                 self.location_mapping,
@@ -238,6 +244,10 @@ class ItemMapper(MappingFileMapperBase):
             )
             raise TransformationRecordFailedError(index_or_id, s, legacy_value)
         elif any(legacy_item_keys):
+            if len(legacy_item_keys) > 1:
+                self.migration_report.add(
+                    Blurbs.Details, f"{legacy_item_keys} were concatenated"
+                )
             return legacy_value
         else:
             self.migration_report.add(
