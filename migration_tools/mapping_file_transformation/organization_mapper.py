@@ -112,7 +112,7 @@ class OrganizationMapper(MappingFileMapperBase):
         except json.decoder.JSONDecodeError as json_error:
             logging.critical(json_error)
             print(
-                f"\nError parsing {schema_url}. Halting."
+                f"\nError parsing {schema_url}."
             )
 
         except Exception as type_error:
