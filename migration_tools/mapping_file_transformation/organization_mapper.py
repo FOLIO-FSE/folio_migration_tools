@@ -29,9 +29,35 @@ class OrganizationMapper(MappingFileMapperBase):
     ):
 
         #Get organization schema
-        req = requests.get("https://raw.githubusercontent.com/folio-org/acq-models/2626278b80d82a5e1995f85c37575561264b93e9/mod-orgs/schemas/organization.json")
-        organization_schema = json.loads(req.text)
         # TODO: Modify getlatest from github method in helper to get organization_schema for latest mod-organization-storage release
+        commit = "2626278b80d82a5e1995f85c37575561264b93e9"
+        req = requests.get(f"https://raw.githubusercontent.com/folio-org/acq-models/{commit}/mod-orgs/schemas/organization.json")
+        organization_schema = json.loads(req.text)
+        # Fetch referenced schemas
+        try:
+            for property_name_level1, property_level1 in organization_schema["properties"].items():
+                if property_level1.get("type") == "object" and property_level1.get("$ref"):
+                    logging.info("Fecthing referenced schema for %s", property_name_level1)
+                    ref_object = property_level1["$ref"]
+                    schema_url = f"https://raw.githubusercontent.com/folio-org/acq-models/{commit}/mod-orgs/schemas/{ref_object}" 
+                    ref_schema = requests.get(schema_url)
+                    property_level1["properties"] = json.loads(ref_schema.text).get("properties")
+                    property_level1["required"] = json.loads(ref_schema.text).get("required", [])
+
+                elif property_level1.get("type") == "array" and property_level1.get("items").get("$ref"):
+                    logging.info("Fecthing referenced schema for %s", property_name_level1)
+                    ref_object = property_level1["items"]["$ref"]
+                    schema_url = f"https://raw.githubusercontent.com/folio-org/acq-models/{commit}/mod-orgs/schemas/{ref_object}" 
+                    ref_schema = requests.get(schema_url)cd 
+                    property_level1["items"]["properties"] = json.loads(ref_schema.text).get("properties")
+                    property_level1["items"]["required"] = json.loads(ref_schema.text).get("required", [])
+        except json.decoder.JSONDecodeError as json_error:
+            logging.critical(json_error)
+            print(
+                f"\nError parsing {schema_url}. Halting. "
+            )
+            
+            print(organization_schema)
 
         super().__init__(
             folio_client,
