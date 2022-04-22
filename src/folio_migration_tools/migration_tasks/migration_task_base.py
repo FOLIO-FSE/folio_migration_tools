@@ -86,11 +86,12 @@ class MigrationTaskBase:
                 loaded_rows = index
                 # {"legacy_id", "folio_id","suppressed"}
                 map_object = json.loads(json_string)
-                if index % 50000 == 0:
+                if loaded_rows % 50000 == 0:
                     print(
-                        f"{(index+1)} ids loaded to map {map_object['legacy_id']}",
+                        f"{loaded_rows + 1} ids loaded to map {map_object['legacy_id']}",
                         end="\r",
                     )
+
                 id_map[map_object["legacy_id"]] = map_object
         logging.info("Loaded %s migrated IDs", loaded_rows)
         if not any(id_map) and raise_if_empty:
