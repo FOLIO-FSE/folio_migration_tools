@@ -298,7 +298,7 @@ class ItemsTransformer(MigrationTaskBase):
             del folio_rec["circulationNotes"]
 
     def wrap_up(self):
-        logging.info("Done. Wrapping up...")
+        logging.info("Work done. Wrapping up...")
         with open(
             self.folder_structure.migration_reports_file, "w"
         ) as migration_report_file:

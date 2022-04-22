@@ -231,7 +231,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         )
 
     def wrap_up(self):
-        logging.info("Done. Wrapping up...")
+        logging.info("Work done. Wrapping up...")
         if any(self.holdings):
             logging.info(
                 "Saving holdings created to %s",
