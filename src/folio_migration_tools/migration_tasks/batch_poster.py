@@ -6,7 +6,7 @@ import time
 import traceback
 from datetime import datetime
 from uuid import uuid4
-from typing import Optional
+from typing import List, Optional
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_migration_tools.custom_exceptions import (
@@ -31,7 +31,7 @@ class BatchPoster(MigrationTaskBase):
         name: str
         migration_task_type: str
         object_type: str
-        file: FileDefinition
+        files: List[FileDefinition]
         batch_size: int
         rerun_failed_records: Optional[bool] = True
 
@@ -67,49 +67,56 @@ class BatchPoster(MigrationTaskBase):
     def do_work(self):
         try:
             batch = []
-            path = (
-                self.folder_structure.results_folder / self.task_config.file.file_name
-            )
             if self.task_config.object_type == "SRS":
                 self.create_snapshot()
-            with open(path) as rows, open(
-                self.folder_structure.failed_recs_path, "w"
-            ) as failed_recs_file:
-                last_row = ""
-                for num_records, row in enumerate(rows, start=1):
-                    last_row = row
-                    if row.strip():
-                        try:
-                            if self.task_config.object_type == "Extradata":
-                                self.post_extra_data(row, num_records, failed_recs_file)
-                            else:
-                                json_rec = json.loads(row.split("\t")[-1])
-                                if self.task_config.object_type == "SRS":
-                                    json_rec["snapshotId"] = self.snapshot_id
-                                if num_records == 1:
-                                    logging.info(json.dumps(json_rec, indent=True))
-                                batch.append(json_rec)
-                                if len(batch) == int(self.batch_size):
-                                    self.post_batch(
-                                        batch, failed_recs_file, num_records
+            with open(self.folder_structure.failed_recs_path, "w") as failed_recs_file:
+                for file_def in self.task_config.files:
+                    path = self.folder_structure.results_folder / file_def.file_name
+                    with open(path) as rows:
+                        logging.info("Running %s", path)
+                        last_row = ""
+                        for num_records, row in enumerate(rows, start=1):
+                            last_row = row
+                            if row.strip():
+                                try:
+                                    if self.task_config.object_type == "Extradata":
+                                        self.post_extra_data(
+                                            row, num_records, failed_recs_file
+                                        )
+                                    else:
+                                        json_rec = json.loads(row.split("\t")[-1])
+                                        if self.task_config.object_type == "SRS":
+                                            json_rec["snapshotId"] = self.snapshot_id
+                                        if num_records == 1:
+                                            logging.info(
+                                                json.dumps(json_rec, indent=True)
+                                            )
+                                        batch.append(json_rec)
+                                        if len(batch) == int(self.batch_size):
+                                            self.post_batch(
+                                                batch, failed_recs_file, num_records
+                                            )
+                                            batch = []
+                                except UnicodeDecodeError as unicode_error:
+                                    self.handle_unicode_error(unicode_error, last_row)
+                                except TransformationProcessError as tpe:
+                                    self.handle_generic_exception(
+                                        tpe,
+                                        last_row,
+                                        batch,
+                                        num_records,
+                                        failed_recs_file,
+                                    )
+                                    logging.critical("Halting %s", tpe)
+                                except TransformationRecordFailedError as exception:
+                                    self.handle_generic_exception(
+                                        exception,
+                                        last_row,
+                                        batch,
+                                        num_records,
+                                        failed_recs_file,
                                     )
                                     batch = []
-                        except UnicodeDecodeError as unicode_error:
-                            self.handle_unicode_error(unicode_error, last_row)
-                        except TransformationProcessError as tpe:
-                            self.handle_generic_exception(
-                                tpe, last_row, batch, num_records, failed_recs_file
-                            )
-                            logging.critical("Halting %s", tpe)
-                        except TransformationRecordFailedError as exception:
-                            self.handle_generic_exception(
-                                exception,
-                                last_row,
-                                batch,
-                                num_records,
-                                failed_recs_file,
-                            )
-                            batch = []
 
                 if self.task_config.object_type != "Extradata" and any(batch):
                     try:
@@ -338,9 +345,11 @@ class BatchPoster(MigrationTaskBase):
             )
             try:
                 self.task_config.batch_size = 1
-                self.task_config.file = FileDefinition(
-                    file_name=str(self.folder_structure.failed_recs_path)
-                )
+                self.task_config.files = [
+                    FileDefinition(
+                        file_name=str(self.folder_structure.failed_recs_path)
+                    )
+                ]
                 self.task_config.rerun_failed_records = False
                 self.__init__(self.task_config, self.library_configuration)
                 self.do_work()
