@@ -1,20 +1,17 @@
 # Changelog
 
-## 1_2_0 (22/04/2022)
-- [**closed**] Halt when instance id maps are empty [#214](https://github.com/FOLIO-FSE/folio_migration_tools/issues/214)
-- [**closed**] Add reporting on legacy fields that get concatenated from being mapped to the same folio field [#212](https://github.com/FOLIO-FSE/folio_migration_tools/issues/212)
-- [**closed**] Report on date parsing results for User expiration and enrollment dates [#209](https://github.com/FOLIO-FSE/folio_migration_tools/issues/209)
-- [**closed**] Add numeric values to sys.exit() calls [#208](https://github.com/FOLIO-FSE/folio_migration_tools/issues/208)
-- [**closed**] test monday status updates [#204](https://github.com/FOLIO-FSE/folio_migration_tools/issues/204)
-- [**enhancement/new feature**] Use the mechanism for logging data issues for open loans and open requests [#194](https://github.com/FOLIO-FSE/folio_migration_tools/issues/194)
-- [**enhancement/new feature**] Include open requests migration to migration tools [#162](https://github.com/FOLIO-FSE/folio_migration_tools/issues/162)
-- [**enhancement/new feature**] Include Open Loans migrations to migration tools [#161](https://github.com/FOLIO-FSE/folio_migration_tools/issues/161)
-- [**simplify_migration_process**] Make the Batchposter handle the failed  batches, running the failed batches one-by-one and only store the "true failures" to disk. [#129](https://github.com/FOLIO-FSE/folio_migration_tools/issues/129)
-- [**simplify_migration_process**] Speed up loans migration [#126](https://github.com/FOLIO-FSE/folio_migration_tools/issues/126)
-- [**simplify_migration_process**] Make it possible to add multiple files to one batchposter run. [#109](https://github.com/FOLIO-FSE/folio_migration_tools/issues/109)
-- [**enhancement/new feature**][**simplify_migration_process**] Validate that all mapped legacy fields correspond to a header in the data [#107](https://github.com/FOLIO-FSE/folio_migration_tools/issues/107)
-- [**wontfix**][**new_folio_functionality**] Add support for migrating MARC Authority records [#90](https://github.com/FOLIO-FSE/folio_migration_tools/issues/90)
+## 1.2.0 (22/04/2022)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
 
+
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/1_1_0...1_2_0
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/1_1_0...1_2_0
 ---
 
 ## 1_1_0 (13/04/2022)
