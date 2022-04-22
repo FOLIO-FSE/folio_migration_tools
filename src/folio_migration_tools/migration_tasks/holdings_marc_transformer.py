@@ -80,7 +80,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.default_holdings_type["name"],
         )
         self.instance_id_map = self.load_id_map(
-            self.folder_structure.instance_id_map_path
+            self.folder_structure.instance_id_map_path, True
         )
         logging.info("%s Instance ids in map", len(self.instance_id_map))
         logging.info("Init done")

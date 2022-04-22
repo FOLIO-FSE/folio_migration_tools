@@ -73,15 +73,17 @@ class MigrationTaskBase:
         raise NotImplementedError
 
     @staticmethod
-    def load_id_map(map_path):
+    def load_id_map(map_path, raise_if_empty=False):
         if not isfile(map_path):
             logging.warn(
                 "No legacy id map found at %s. Will build one from scratch", map_path
             )
             return {}
         id_map = {}
+        loaded_rows = 0
         with open(map_path) as id_map_file:
-            for index, json_string in enumerate(id_map_file):
+            for index, json_string in enumerate(id_map_file, start=1):
+                loaded_rows = index
                 # {"legacy_id", "folio_id","suppressed"}
                 map_object = json.loads(json_string)
                 if index % 50000 == 0:
@@ -90,7 +92,9 @@ class MigrationTaskBase:
                         end="\r",
                     )
                 id_map[map_object["legacy_id"]] = map_object
-        logging.info("Loaded %s migrated IDs", (index + 1))
+        logging.info("Loaded %s migrated IDs", loaded_rows)
+        if not any(id_map) and raise_if_empty:
+            raise TransformationProcessError("", "Legacy id map is empty", map_path)
         return id_map
 
     @staticmethod

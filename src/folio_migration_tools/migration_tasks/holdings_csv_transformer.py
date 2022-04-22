@@ -79,7 +79,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.load_mapped_fields(),
                 self.load_location_map(),
                 self.load_call_number_type_map(),
-                self.load_id_map(self.folder_structure.instance_id_map_path),
+                self.load_id_map(self.folder_structure.instance_id_map_path, True),
                 library_config,
             )
             self.holdings = {}
