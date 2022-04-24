@@ -1,4 +1,5 @@
 import logging
+from unittest import mock
 from unittest.mock import Mock
 
 from folioclient import FolioClient
@@ -26,7 +27,7 @@ def test_generate_boundwith_part(caplog):
     assert '"holdingsRecordId": "holding_uuid"' in caplog.text
 
 
-def test_merge_holding_in_first_boundwith():
+def test_merge_holding_in_first_boundwith(caplog):
 
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
@@ -49,7 +50,7 @@ def test_merge_holding_in_first_boundwith():
     assert "bw_Instance_1_Instance_1_Instance_2" in mock_transformer.bound_with_keys
 
 
-def test_merge_holding_in_second_boundwith_to_merge():
+def test_merge_holding_in_second_boundwith_to_merge(caplog):
 
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
@@ -82,7 +83,7 @@ def test_merge_holding_in_second_boundwith_to_merge():
     assert "bw_Instance_1_Instance_1_Instance_2" in mock_transformer.bound_with_keys
 
 
-def test_merge_holding_in_second_boundwith_to_not_merge():
+def test_merge_holding_in_second_boundwith_to_not_merge(caplog):
 
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
