@@ -69,6 +69,10 @@ class HoldingsHelper:
         migration_report: MigrationReport,
         holdings_type_id_to_exclude_from_merging: str = "Not set",
     ):
+        if not holdings_file_path.is_file():
+            raise custom_exceptions.TransformationProcessError(
+                "", "File not found", holdings_file_path
+            )
         logging.info(
             "Holdings type id to exclude is set to %s",
             holdings_type_id_to_exclude_from_merging,
