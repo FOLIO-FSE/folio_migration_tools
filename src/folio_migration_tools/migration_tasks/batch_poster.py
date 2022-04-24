@@ -347,7 +347,7 @@ class BatchPoster(MigrationTaskBase):
                 self.task_config.batch_size = 1
                 self.task_config.files = [
                     FileDefinition(
-                        file_name=str(self.folder_structure.failed_recs_path)
+                        file_name=str(self.folder_structure.failed_recs_path.name)
                     )
                 ]
                 self.task_config.rerun_failed_records = False

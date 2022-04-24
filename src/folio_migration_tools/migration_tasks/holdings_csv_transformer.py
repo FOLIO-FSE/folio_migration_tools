@@ -10,6 +10,7 @@ import traceback
 import uuid
 from os.path import isfile
 from typing import List, Optional
+from folioclient import FolioClient
 
 from folio_uuid import FolioUUID
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -124,6 +125,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                             self.task_config.holdings_type_uuid_for_boundwiths,
                         )
                     )
+
             else:
                 logging.info("No file of legacy holdings setup.")
         except TransformationProcessError as process_error:
@@ -419,48 +421,65 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             yield bound_with_holding
 
-    def generate_boundwith_part(self, legacy_id: str, bound_with_holding: dict):
+    @staticmethod
+    def generate_boundwith_part(
+        folio_client: FolioClient, legacy_item_id: str, bound_with_holding: dict
+    ):
         part = {
             "id": str(uuid.uuid4()),
             "holdingsRecordId": bound_with_holding["id"],
             "itemId": str(
                 FolioUUID(
-                    self.folio_client.okapi_url,
+                    folio_client.okapi_url,
                     FOLIONamespaces.items,
-                    legacy_id,
+                    legacy_item_id,
                 )
             ),
         }
         logging.log(25, f"boundwithPart\t{json.dumps(part)}")
 
     def merge_holding_in(
-        self, new_folio_holding: dict, instance_ids: list, legacy_id: str
+        self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str
     ):
+        """Determines what newly generated holdingsrecords are to be merged with
+        previously created ones. When that is done, it generates the correct boundwith
+        parts needed.
+
+        Args:
+            new_folio_holding (dict): The newly created FOLIO Holding
+            instance_ids (list): the instance IDs tied to the current item
+            legacy_item_id (str): Id of the Item the holding was generated from
+        """
+
         if len(instance_ids) > 1:
             # Is boundwith
             bw_key = (
-                f"bw_{new_folio_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
+                f"bw_{incoming_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
             )
             if bw_key not in self.bound_with_keys:
                 self.bound_with_keys.add(bw_key)
-                self.holdings[bw_key] = new_folio_holding
-                self.generate_boundwith_part(legacy_id, new_folio_holding)
+                self.holdings[bw_key] = incoming_holding
+                self.generate_boundwith_part(
+                    self.folio_client, legacy_item_id, incoming_holding
+                )
                 self.mapper.migration_report.add_general_statistics(
                     "Unique BW Holdings created from Items"
                 )
-
             else:
+                self.merge_holding(bw_key, incoming_holding)
+                self.generate_boundwith_part(
+                    self.folio_client, legacy_item_id, self.holdings[bw_key]
+                )
+                self.holdings_id_map[legacy_item_id] = self.mapper.get_id_map_dict(
+                    legacy_item_id, self.holdings[bw_key]
+                )
                 self.mapper.migration_report.add_general_statistics(
                     "BW Items found tied to previously created BW Holdings"
                 )
-                self.merge_holding(bw_key, new_folio_holding)
-                self.generate_boundwith_part(legacy_id, self.holdings[bw_key])
-                self.holdings_id_map[legacy_id] = self.mapper.get_id_map_dict(
-                    legacy_id, self.holdings[bw_key]
-                )
-        else:  # Regular
+        else:
+            # Regular holding. Merge according to criteria
             new_holding_key = HoldingsHelper.to_key(
-                new_folio_holding,
+                incoming_holding,
                 self.task_config.holdings_merge_criteria,
                 self.mapper.migration_report,
                 self.task_config.holdings_type_uuid_for_boundwiths,
@@ -469,12 +488,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.mapper.migration_report.add_general_statistics(
                     "Holdings already created from Item"
                 )
-                self.merge_holding(new_holding_key, new_folio_holding)
+                self.merge_holding(new_holding_key, incoming_holding)
             else:
                 self.mapper.migration_report.add_general_statistics(
                     "Unique Holdings created from Items"
                 )
-                self.holdings[new_holding_key] = new_folio_holding
+                self.holdings[new_holding_key] = incoming_holding
 
     def merge_holding(self, holdings_key: str, new_holdings_record: dict):
         self.holdings[holdings_key] = HoldingsHelper.merge_holding(
