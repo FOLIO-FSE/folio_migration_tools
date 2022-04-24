@@ -1,6 +1,8 @@
 import logging
 from unittest.mock import Mock
 
+from folioclient import FolioClient
+
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
 )
@@ -8,7 +10,6 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.holdings_csv_transformer import (
     HoldingsCsvTransformer,
 )
-from folioclient import FolioClient
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
