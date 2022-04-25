@@ -22,12 +22,13 @@ We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-fl
 * Code review.
 
 # Python Coding standards
-## Formatting.
-Use black. Make sure Black runs every time you save your code.
-TODO: Add instructions on how to automatically run black in VS code.
+## Formatting and sorting Imports
+Use black in conjunction with Isort. 
+Set black line-length to 99
+Make sure Black runs every time you save your code.
 
-### Sorting imports
-TBD
+https://cereblanco.medium.com/setup-black-and-isort-in-vscode-514804590bf9
+
 
 # Testing
 ## Running tests
