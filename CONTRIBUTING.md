@@ -1,6 +1,14 @@
 # TOC
 
+# About this document
+This document is intended to take effect on August 1st 2022, and before that, it is WIP. 
+
 # Writing Issues.
+Writing good issues is key. 
+Both for sharing to the larger group of users what is needed or not working, but also for helping the developer working on the issue to reach the DoD and beyond.
+
+For the developer writing the issue, it is good practice to share a screenshot or some data examples or a drawing on what changed. Since Issues are linked into the [CHANGELOG.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CHANGELOG.md), this habit will propagate well-written issues over to Pypi and more.
+
 
 # Git(hub) workflow
 We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-flow) 
@@ -9,7 +17,6 @@ We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-fl
 * Format your code. Sort your imports (TBD)
 * Run the tests
 * Make sure the code can run
-* 
 * More things tbd
 * Create a pull request
 * 
@@ -20,6 +27,7 @@ Use black. Make sure Black runs every time you save your code.
 TODO: Add instructions on how to automatically run black in VS code.
 
 ### Sorting imports
+TBD
 
 # Testing
 ## Running tests
