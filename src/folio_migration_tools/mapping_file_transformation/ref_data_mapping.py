@@ -2,9 +2,9 @@ import json
 import logging
 import sys
 
-from folioclient import FolioClient
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.report_blurbs import Blurbs
+from folioclient import FolioClient
 
 
 class RefDataMapping(object):
@@ -64,7 +64,8 @@ class RefDataMapping(object):
                         x = mapping.get(f"folio_{self.key_type}", "")
                         raise TransformationProcessError(
                             "",
-                            f"No {self.name} - {x} - set up in map or tenant. Check for inconstencies in {self.name} naming."
+                            f"No {self.name} - {x} - set up in map or tenant. Check for "
+                            f"inconstencies in {self.name} naming. "
                             f"Add a row to mapping file with *:s and a valid {self.name}",
                         )
                 else:
@@ -90,10 +91,12 @@ class RefDataMapping(object):
 
         self.post_validate_map()
         logging.info(
-            f"Loaded {len(self.regular_mappings)} mappings for {len(self.ref_data)} {self.name} in FOLIO"
+            f"Loaded {len(self.regular_mappings)} mappings for {len(self.ref_data)} {self.name} "
+            "in FOLIO"
         )
         logging.info(
-            f"loaded {len(self.hybrid_mappings)} hybrid mappings for {len(self.ref_data)} {self.name} in FOLIO"
+            f"loaded {len(self.hybrid_mappings)} hybrid mappings for {len(self.ref_data)} "
+            f"{self.name} in FOLIO"
         )
 
     def get_hybrid_mapping(self, legacy_object):
@@ -163,12 +166,17 @@ class RefDataMapping(object):
         )
         if any(folio_values_not_in_map):
             logging.info(
-                f"Values from {self.name} ref data in FOLIO that are not in the map: {folio_values_not_in_map}"
+                "Values from %s ref data in FOLIO that are not in the map: %s",
+                self.name,
+                folio_values_not_in_map,
             )
         if any(map_values_not_in_folio):
             raise TransformationProcessError(
                 "",
-                f"Values ({self.key_type}) from {self.name} map are not in FOLIO: {map_values_not_in_folio}",
+                (
+                    f"Values ({self.key_type}) from {self.name} map are not in "
+                    f"FOLIO: {map_values_not_in_folio}"
+                ),
             )
 
     def post_validate_map(self):
@@ -176,7 +184,8 @@ class RefDataMapping(object):
             raise TransformationProcessError(
                 "",
                 f"No fallback {self.name} set up in map."
-                f"Add a row to mapping file with *:s in all legacy columns and a valid {self.name} value",
+                f"Add a row to mapping file with *:s in all legacy "
+                f"columns and a valid {self.name} value",
             )
         for mapping in self.map:
             if f"folio_{self.key_type}" not in mapping:

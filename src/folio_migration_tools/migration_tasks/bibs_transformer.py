@@ -1,28 +1,23 @@
 import logging
 import sys
-import time
 from datetime import datetime as dt
 from os.path import isfile
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_migration_tools.colors import Bcolors
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    HridHandling,
-    IlsFlavour,
-    LibraryConfiguration,
-)
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import IlsFlavour
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
 from pymarc import MARCReader
 from pymarc.record import Record

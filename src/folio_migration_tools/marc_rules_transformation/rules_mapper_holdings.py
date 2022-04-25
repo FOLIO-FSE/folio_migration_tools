@@ -1,17 +1,11 @@
 import logging
 
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
-from folio_migration_tools.custom_exceptions import (
-    TransformationFieldMappingError,
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import (
-    HridHandling,
-    LibraryConfiguration,
-)
+from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -20,6 +14,8 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 from pymarc.field import Field
 from pymarc.record import Record
 
@@ -205,8 +201,8 @@ class RulesMapperHoldings(RulesMapperBase):
                     Helper.log_data_issue(
                         legacy_id,
                         (
-                            f"{Blurbs.HoldingsTypeMapping[0]} is 'unknown'. (leader 06 is set to 'u') "
-                            "Check if this is correct"
+                            f"{Blurbs.HoldingsTypeMapping[0]} is 'unknown'. "
+                            "(leader 06 is set to 'u') Check if this is correct"
                         ),
                         ldr06,
                     )

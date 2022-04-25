@@ -1,14 +1,17 @@
 import datetime
 import json
-from unittest.mock import Mock, patch
-from folio_uuid.folio_namespaces import FOLIONamespaces
+from unittest.mock import Mock
 from uuid import uuid4
 
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc.reader import MARCReader
-from pymarc.record import Field, Record
+from pymarc.record import Field
+from pymarc.record import Record
+
+# flake8: noqa: E501
 
 
 def test_dedupe_recs():
@@ -186,7 +189,6 @@ def test_get_instance_schema():
         record1 = None
         for record in reader:
             record1 = record
-        assert record1["020"]["a"] == "0870990004 (v. 1)"
         entity_mapping = json.loads(
             '[ { "rules": [ { "conditions": [ { "type": "set_identifier_type_id_by_name", "parameter": { "name": "ISBN" } } ] } ], "target": "identifiers.identifierTypeId", "subfield": [ "a" ], "requiredSubfield": [ "a" ], "description": "Type for Valid ISBN" }, { "rules": [ { "conditions": [ { "type": "remove_ending_punc, trim" } ] } ], "target": "identifiers.value", "subfield": [ "a", "c", "q" ], "description": "Valid ISBN", "requiredSubfield": [ "a" ], "applyRulesOnConcatenatedData": true } ]'
         )
@@ -194,6 +196,7 @@ def test_get_instance_schema():
         folio_record = {}
         mock = Mock(spec=RulesMapperBase)
         schema = RulesMapperBase.get_instance_schema()
+        assert record1["020"]["a"] == "0870990004 (v. 1)"
         assert schema["required"]
         # mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
         # RulesMapperBase.handle_entity_mapping(

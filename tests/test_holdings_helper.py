@@ -3,6 +3,8 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.holdings_helper import HoldingsHelper
 from folio_migration_tools.migration_report import MigrationReport
 
+# flake8: noqa: E501
+
 
 def test_to_key():
     holdings_record = {

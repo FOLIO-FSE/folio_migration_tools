@@ -1,24 +1,23 @@
 import csv
 import json
 import logging
+import uuid
 from abc import abstractmethod
 from pathlib import Path
 from uuid import UUID
-import uuid
 
-from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
-from folioclient import FolioClient
-from folio_migration_tools.custom_exceptions import (
-    TransformationFieldMappingError,
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
+from folioclient import FolioClient
 
 empty_vals = ["Not mapped", None, ""]
 
@@ -300,7 +299,7 @@ class MappingFileMapperBase(MapperBase):
         ].items():
             sub_prop_key = f"{prop_key}.{property_name_level2}"
             if "properties" in property_level2:
-                for property_name_level3, property_level3 in property_level2[
+                for _property_name_level3, _property_level3 in property_level2[
                     "properties"
                 ].items():
                     # not parsing stuff on level three.
@@ -406,7 +405,7 @@ class MappingFileMapperBase(MapperBase):
             reader = csv.DictReader(source_file)
         idx = 0
         try:
-            for idx, row in enumerate(reader):
+            for row in reader:
                 yield row
         except Exception as exception:
             logging.error("%s at row %s", exception, idx)

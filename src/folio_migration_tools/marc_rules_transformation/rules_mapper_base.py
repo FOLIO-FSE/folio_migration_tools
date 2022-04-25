@@ -6,18 +6,19 @@ import uuid
 from textwrap import wrap
 
 import pymarc
-from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
-from folioclient import FolioClient
-from folio_migration_tools.custom_exceptions import (
-    TransformationFieldMappingError,
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.report_blurbs import Blurbs
-from pymarc import Field, Record, Leader
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
+from folioclient import FolioClient
+from pymarc import Field
+from pymarc import Leader
+from pymarc import Record
 
 
 class RulesMapperBase(MapperBase):
@@ -72,9 +73,7 @@ class RulesMapperBase(MapperBase):
     ):
         for mapping in mappings:
             if "entity" not in mapping:
-                self.handle_normal_mapping(
-                    mapping, marc_field, folio_record, legacy_ids
-                )
+                self.handle_normal_mapping(mapping, marc_field, folio_record, legacy_ids)
             else:
                 self.handle_entity_mapping(
                     marc_field,
@@ -83,9 +82,7 @@ class RulesMapperBase(MapperBase):
                     legacy_ids,
                 )
 
-    def handle_normal_mapping(
-        self, mapping, marc_field: pymarc.Field, folio_record, legacy_ids
-    ):
+    def handle_normal_mapping(self, mapping, marc_field: pymarc.Field, folio_record, legacy_ids):
         target = mapping["target"]
         if mapping.get("ignoreSubsequentSubfields", False):
             marc_field = self.remove_repeated_subfields(marc_field)
@@ -154,9 +151,7 @@ class RulesMapperBase(MapperBase):
         parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
         if mapping.get("applyRulesOnConcatenatedData", ""):
             value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-            return self.apply_rule(
-                legacy_id, value, condition_types, marc_field, parameter
-            )
+            return self.apply_rule(legacy_id, value, condition_types, marc_field, parameter)
         elif mapping.get("subfield", []):
             subfields = marc_field.get_subfields(*mapping["subfield"])
             x = [
@@ -166,18 +161,14 @@ class RulesMapperBase(MapperBase):
             return " ".join(set(x))
         else:
             value1 = marc_field.format_field() if marc_field else ""
-            return self.apply_rule(
-                legacy_id, value1, condition_types, marc_field, parameter
-            )
+            return self.apply_rule(legacy_id, value1, condition_types, marc_field, parameter)
 
     def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
         try:
             values = []
             value = ""
             if has_conditions(mapping):
-                value = self.get_value_from_condition(
-                    ",".join(legacy_ids), mapping, marc_field
-                )
+                value = self.get_value_from_condition(",".join(legacy_ids), mapping, marc_field)
             elif has_value_to_add(mapping):
                 value = mapping["rules"][0]["value"]
                 if value == "false":
@@ -186,9 +177,7 @@ class RulesMapperBase(MapperBase):
                     return [True]
                 else:
                     return [value]
-            elif not mapping.get("rules", []) or not mapping["rules"][0].get(
-                "conditions", []
-            ):
+            elif not mapping.get("rules", []) or not mapping["rules"][0].get("conditions", []):
                 value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
             values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
             return values
@@ -196,13 +185,14 @@ class RulesMapperBase(MapperBase):
             self.handle_transformation_process_error(self.parsed_records, trpe)
         except TransformationFieldMappingError as fme:
             self.migration_report.add(Blurbs.FieldMappingErrors, fme.message)
-            fme.data_value = f"{fme.data_value} MARCField: {marc_field} Mapping: {json.dumps(mapping)}"
+            fme.data_value = (
+                f"{fme.data_value} MARCField: {marc_field} Mapping: {json.dumps(mapping)}"
+            )
             fme.log_it()
             return []
         except TransformationRecordFailedError as trfe:
             trfe.data_value = (
-                f"{trfe.data_value} MARCField: {marc_field} "
-                f"Mapping: {json.dumps(mapping)}"
+                f"{trfe.data_value} MARCField: {marc_field} Mapping: {json.dumps(mapping)}"
             )
             trfe.log_it()
             self.migration_report.add_general_statistics(
@@ -227,9 +217,7 @@ class RulesMapperBase(MapperBase):
                     sc_prop = sc_prop[target]  # set current property
                 else:  # next level. take the properties from the items
                     sc_prop = schema_parent["items"]["properties"][target]
-                if (
-                    target not in rec and not schema_parent
-                ):  # have we added this already?
+                if target not in rec and not schema_parent:  # have we added this already?
                     if is_array_of_strings(sc_prop):
                         rec[target] = []
                         # break
@@ -288,8 +276,12 @@ class RulesMapperBase(MapperBase):
         if not target_string or target_string not in sch:
             raise TransformationProcessError(
                 "",
-                f"Target string {target_string} not in Schema! Check mapping file against the schema."
-                f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}",
+                (
+                    f"Target string {target_string} not in Schema! "
+                    "Check mapping file against the schema. "
+                    f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+                ),
+                "",
             )
 
         target_field = sch.get(target_string, {})
@@ -309,18 +301,17 @@ class RulesMapperBase(MapperBase):
         else:
             raise TransformationProcessError(
                 "",
-                f"Edge! Target string: {target_string} Target type: {sch.get(target_string,{}).get('type','')} Value: {value}",
+                (
+                    f"Edge! Target string: {target_string} "
+                    f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+                ),
             )
 
-    def create_entity(
-        self, entity_mappings, marc_field, entity_parent_key, index_or_legacy_id
-    ):
+    def create_entity(self, entity_mappings, marc_field, entity_parent_key, index_or_legacy_id):
         entity = {}
         for entity_mapping in entity_mappings:
             k = entity_mapping["target"].split(".")[-1]
-            if values := self.apply_rules(
-                marc_field, entity_mapping, index_or_legacy_id
-            ):
+            if values := self.apply_rules(marc_field, entity_mapping, index_or_legacy_id):
                 if entity_parent_key == k:
                     entity = values[0]
                 else:
@@ -338,25 +329,17 @@ class RulesMapperBase(MapperBase):
         e_parent = entity_mapping[0]["target"].split(".")[0]
         if mapping.get("entityPerRepeatedSubfield", False):
             for temp_field in self.grouped(marc_field):
-                entity = self.create_entity(
-                    entity_mapping, temp_field, e_parent, legacy_ids
-                )
+                entity = self.create_entity(entity_mapping, temp_field, e_parent, legacy_ids)
                 if (type(entity) is dict and all(entity.values())) or (
                     type(entity) is list and all(entity)
                 ):
-                    self.add_entity_to_record(
-                        entity, e_parent, folio_record, self.schema
-                    )
+                    self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
         else:
             if mapping.get("ignoreSubsequentSubfields", False):
                 marc_field = self.remove_repeated_subfields(marc_field)
-            entity = self.create_entity(
-                entity_mapping, marc_field, e_parent, legacy_ids
-            )
+            entity = self.create_entity(entity_mapping, marc_field, e_parent, legacy_ids)
             if e_parent in ["precedingTitles", "succeedingTitles"]:
-                self.create_preceding_succeeding_titles(
-                    entity, e_parent, folio_record["id"]
-                )
+                self.create_preceding_succeeding_titles(entity, e_parent, folio_record["id"])
             elif (
                 all(
                     v
@@ -371,15 +354,13 @@ class RulesMapperBase(MapperBase):
                 )
                 or e_parent in ["electronicAccess", "publication"]
                 or (
-                    e_parent.startswith("holdingsStatements")
-                    and any(v for k, v in entity.items())
+                    e_parent.startswith("holdingsStatements") and any(v for k, v in entity.items())
                 )
             ):
                 self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
             else:
                 sfs = " - ".join(
-                    f"{f[0]}:{('has_value' if f[1].strip() else 'empty')}"
-                    for f in marc_field
+                    f"{f[0]}:{('has_value' if f[1].strip() else 'empty')}" for f in marc_field
                 )
                 pattern = " - ".join(f"{k}:'{bool(v)}'" for k, v in entity.items())
                 self.migration_report.add(
@@ -390,9 +371,7 @@ class RulesMapperBase(MapperBase):
                 # self.add_entity_to_record(entity, e_parent, rec, self.schema)
 
     def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
-        self.migration_report.add(
-            Blurbs.PrecedingSuccedingTitles, f"{e_parent} created"
-        )
+        self.migration_report.add(Blurbs.PrecedingSuccedingTitles, f"{e_parent} created")
         # TODO: Make these uuids deterministic
         new_entity = {
             "id": str(uuid.uuid4()),
@@ -422,9 +401,7 @@ class RulesMapperBase(MapperBase):
     def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):
         v = value
         for condition_type in iter(condition_types):
-            v = self.conditions.get_condition(
-                condition_type, legacy_id, v, parameter, marc_field
-            )
+            v = self.conditions.get_condition(condition_type, legacy_id, v, parameter, marc_field)
         return v
 
     @staticmethod
@@ -510,9 +487,7 @@ class RulesMapperBase(MapperBase):
         suppress: bool,
     ):
         """Saves the source Marc_record to the Source record Storage module"""
-        srs_id = RulesMapperBase.create_srs_id(
-            record_type, folio_client.okapi_url, legacy_id
-        )
+        srs_id = RulesMapperBase.create_srs_id(record_type, folio_client.okapi_url, legacy_id)
 
         marc_record.add_ordered_field(
             Field(

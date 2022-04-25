@@ -1,23 +1,20 @@
-from fileinput import filename
 import json
 import logging
 import sys
 import time
 import traceback
 from datetime import datetime
+from typing import List
+from typing import Optional
 from uuid import uuid4
-from typing import List, Optional
+
 import requests
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    LibraryConfiguration,
-)
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
 
 
@@ -267,7 +264,7 @@ class BatchPoster(MigrationTaskBase):
             )
         elif self.task_config.object_type == "SRS" and response.status_code == 500:
             logging.info(
-                "Post failed. Size: %s Waiting 30 seconds until reposting. Number of tries: %s of 5 before failing batch",
+                "Post failed. Size: %s Waiting 30s until reposting. Number of tries: %s of 5",
                 get_req_size(response),
                 recursion_depth,
             )
@@ -401,7 +398,7 @@ class BatchPoster(MigrationTaskBase):
             )
         except Exception:
             logging.exception(
-                "Could not commit snapshot with id %s. Post the following to /source-storage/snapshots/%s:",
+                "Could not commit snapshot with id %s. Post this to /source-storage/snapshots/%s:",
                 self.snapshot_id,
                 self.snapshot_id,
             )

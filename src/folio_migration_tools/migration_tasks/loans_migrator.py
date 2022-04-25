@@ -1,34 +1,32 @@
 import copy
 import csv
-from datetime import datetime, timedelta
 import json
-import sys
-from dateutil import parser as du_parser
-import requests
 import logging
+import sys
 import time
 import traceback
-from urllib.error import HTTPError
+from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
-from pydantic import BaseModel
-from folio_migration_tools.helper import Helper
-from folio_uuid.folio_namespaces import FOLIONamespaces
+from typing import Optional
+from urllib.error import HTTPError
+
+import requests
+from dateutil import parser as du_parser
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_dict import InsensitiveDictReader
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    LibraryConfiguration,
-)
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-
-from typing import Optional
 from folio_migration_tools.report_blurbs import Blurbs
-
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.transaction_migration.transaction_result import (
     TransactionResult,
 )
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import BaseModel
 
 
 class LoansMigrator(MigrationTaskBase):
@@ -113,7 +111,8 @@ class LoansMigrator(MigrationTaskBase):
                 self.checkout_single_loan(legacy_loan)
             except Exception as ee:
                 logging.exception(
-                    f"Error in row {num_loans}  Item barcode: {legacy_loan.item_barcode} Patron barcode: {legacy_loan.patron_barcode} {ee}"
+                    f"Error in row {num_loans}  Item barcode: {legacy_loan.item_barcode} "
+                    f"Patron barcode: {legacy_loan.patron_barcode} {ee}"
                 )
             if num_loans % 25 == 0:
                 logging.info(f"{timings(self.t0, t0_migration, num_loans)} {num_loans}")
@@ -212,7 +211,7 @@ class LoansMigrator(MigrationTaskBase):
                 failed_loans_file, fieldnames=csv_columns, dialect="tsv"
             )
             writer.writeheader()
-            for k, failed_loan in self.failed_and_not_dupe.items():
+            for _k, failed_loan in self.failed_and_not_dupe.items():
                 writer.writerow(failed_loan[0])
 
     def check_barcodes(self):
@@ -271,8 +270,7 @@ class LoansMigrator(MigrationTaskBase):
             except ValueError as ve:
                 logging.exception(ve)
         logging.info(
-            f"Done validating {legacy_loan_count} "
-            f"legacy loans with {num_bad} rotten apples"
+            f"Done validating {legacy_loan_count} legacy loans with {num_bad} rotten apples"
         )
         if num_bad / legacy_loan_count > 0.5:
             q = num_bad / legacy_loan_count
@@ -475,7 +473,10 @@ class LoansMigrator(MigrationTaskBase):
     def set_item_status(self, legacy_loan: LegacyLoan):
         try:
             # Get Item by barcode, update status.
-            item_url = f'{self.folio_client.okapi_url}/item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
+            item_path = (
+                f'item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
+            )
+            item_url = f"{self.folio_client.okapi_url}/{item_path}"
             resp = requests.get(item_url, headers=self.folio_client.okapi_headers)
             resp.raise_for_status()
             data = resp.json()
@@ -579,8 +580,8 @@ class LoansMigrator(MigrationTaskBase):
 
     def change_due_date(self, folio_loan, legacy_loan):
         try:
-            t0_function = time.time()
-            api_url = f"{self.folio_client.okapi_url}/circulation/loans/{folio_loan['id']}/change-due-date"
+            api_path = f"{folio_loan['id']}/change-due-date"
+            api_url = f"{self.folio_client.okapi_url}/circulation/loans/{api_path}"
             body = {
                 "dueDate": du_parser.isoparse(str(legacy_loan.due_date)).isoformat()
             }

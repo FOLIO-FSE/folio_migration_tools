@@ -1,5 +1,4 @@
 import json
-import sys
 import logging
 from uuid import uuid4
 
@@ -20,8 +19,8 @@ class HoldingsHelper:
         """Creates a key from values determined by the fields_crieteria in a holding
         record to determine uniquenes
 
-        fields_criterias are limited to the strings and UUID properties on the first level of the object.
-        If the property is not found, or empty, it will be ignored
+        fields_criterias are limited to the strings and UUID properties on the first level of
+        the object. If the property is not found, or empty, it will be ignored
 
         IF the holdings type id is matched to holdings_type_id_to_exclude_from_merging,
         the key will be added with a uuid to prevent merging of this holding
@@ -89,9 +88,9 @@ class HoldingsHelper:
                 )
                 if stored_key in prev_holdings:
                     message = (
-                        f"Previously stored holdings key already exists in the "
-                        f"list of previously stored Holdings. You have likely not used the same "
-                        f"matching criterias ({fields_criteria}) as you did in the previous process"
+                        f"Previously stored holdings key already exists in the list of previously"
+                        f" stored Holdings. You have likely not used the same matching criterias"
+                        f" ({fields_criteria}) as you did in the previous process"
                     )
                     helper.Helper.log_data_issue(
                         stored_holding["formerIds"], message, stored_key

@@ -3,7 +3,6 @@ import ast
 import json
 import os
 
-from folio_uuid import FolioUUID, FOLIONamespaces
 import pymarc
 from folio_migration_tools import mapper_base
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
@@ -13,9 +12,12 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_uuid import FOLIONamespaces
+from folio_uuid import FolioUUID
 from pymarc.reader import MARCReader
 
 
+# flake8: noqa: E501
 def func(x):
     return x + 1
 

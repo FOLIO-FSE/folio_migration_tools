@@ -1,9 +1,11 @@
 import calendar
+import contextlib
 import logging
 import re
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
-from pymarc import Field, Record
+from pymarc import Field
+from pymarc import Record
 
 
 class HoldingsStatementsParser:
@@ -147,15 +149,11 @@ def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
                 year = True
             val, *val_rest = linked_value_field[chron_level].split("-")
             if desc == "(month)":
-                try:
+                with contextlib.suppress(Exception):
                     val = f"{calendar.month_abbr[int(val)]}."
-                except Exception:
-                    pass
                 if "".join(val_rest):
-                    try:
+                    with contextlib.suppress(Exception):
                         val_rest = calendar.month_abbr[int("".join(val_rest))]
-                    except Exception:
-                        pass
                 if year:
                     cron_from = f"{cron_from.strip()}:{val} "
                     cron_to = f"{cron_to}:{''.join(val_rest)} "

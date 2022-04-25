@@ -46,7 +46,8 @@ class Helper:
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
             report_file.write(
-                f"{k} | {max(present, 0):,} ({present_per}) | {max(mapped, 0):,} ({mapped_per}) | {unmapped:,}  \n"
+                f"{k} | {max(present, 0):,} ({present_per}) | {max(mapped, 0):,} "
+                f"({mapped_per}) | {unmapped:,}  \n"
             )
         report_file.write(details_end)
 

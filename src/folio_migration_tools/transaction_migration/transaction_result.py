@@ -1,4 +1,12 @@
 class TransactionResult(object):
+    __slots__ = [
+        "was_successful",
+        "folio_loan",
+        "should_be_retried",
+        "error_message",
+        "migration_report_message",
+    ]
+
     def __init__(
         self,
         was_successful: bool,

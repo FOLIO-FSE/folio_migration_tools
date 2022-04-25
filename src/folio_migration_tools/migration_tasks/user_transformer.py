@@ -1,26 +1,20 @@
-import csv
 import json
 import logging
-from abc import abstractmethod
 import sys
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import Optional
 
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_migration_tools import migration_report
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    LibraryConfiguration,
-)
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
 
 
@@ -255,13 +249,12 @@ class UserTransformer(MigrationTaskBase):
 
 def print_email_warning():
     s = (
-        "  ______   __  __              _____   _         _____     ___  \n"  # pylint: disable=anomalous-backslash-in-string
-        " |  ____| |  \/  |     /\     |_   _| | |       / ____|   |__ \ \n"  # pylint: disable=anomalous-backslash-in-string
-        " | |__    | \  / |    /  \      | |   | |      | (___        ) |\n"  # pylint: disable=anomalous-backslash-in-string
-        " |  __|   | |\/| |   / /\ \     | |   | |       \___ \      / / \n"  # pylint: disable=anomalous-backslash-in-string
-        " | |____  | |  | |  / ____ \   _| |_  | |____   ____) |    |_|  \n"  # pylint: disable=anomalous-backslash-in-string
-        " |______| |_|  |_| /_/    \_\ |_____| |______| |_____/     (_)  \n"  # pylint: disable=anomalous-backslash-in-string
-        "                                                                \n"  # pylint: disable=anomalous-backslash-in-string
+        "  ______   __  __              _____   _         _____     ___  \n"  # noqa: E501, W605
+        " |  ____| |  \/  |     /\     |_   _| | |       / ____|   |__ \ \n"  # noqa: E501, W605
+        " | |__    | \  / |    /  \      | |   | |      | (___        ) |\n"  # noqa: E501, W605
+        " |  __|   | |\/| |   / /\ \     | |   | |       \___ \      / / \n"  # noqa: E501, W605
+        " |______| |_|  |_| /_/    \_\ |_____| |______| |_____/     (_)  \n"  # noqa: E501, W605
+        "                                                                \n"  # noqa: E501, W605
         "                                                       \n"
     )
     print(s)

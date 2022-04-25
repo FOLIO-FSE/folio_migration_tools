@@ -1,13 +1,16 @@
-from unittest.mock import MagicMock, Mock
-from folioclient import FolioClient
-from folio_uuid.folio_namespaces import FOLIONamespaces
+from unittest.mock import MagicMock
+from unittest.mock import Mock
+
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioClient
 
 
+# flake8: noqa
 class MyTestableFileMapper(MappingFileMapperBase):
     def __init__(self, schema: dict, record_map: dict):
         mock_conf = Mock(spec=LibraryConfiguration)

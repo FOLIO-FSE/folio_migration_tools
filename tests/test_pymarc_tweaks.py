@@ -1,4 +1,3 @@
-import logging
 from pymarc import MARCReader
 
 

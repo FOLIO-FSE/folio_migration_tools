@@ -2,19 +2,18 @@ import logging
 import re
 
 import pymarc
-from folioclient import FolioClient
-from folio_migration_tools.custom_exceptions import (
-    TransformationFieldMappingError,
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
-from pymarc import field
-from folio_migration_tools.helper import Helper
-
 from folio_migration_tools.report_blurbs import Blurbs
+from folioclient import FolioClient
+from pymarc import field
+
+# flake8: noqa: s
 
 
 class Conditions:
@@ -297,7 +296,7 @@ class Conditions:
                 f'Holdings note type mapping error.\tParameter: {parameter.get("name", "")}\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
-            )
+            ) from ee
 
     def condition_set_classification_type_id(
         self, legacy_id, value, parameter, marc_field: field.Field

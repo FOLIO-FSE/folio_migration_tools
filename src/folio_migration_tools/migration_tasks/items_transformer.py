@@ -8,29 +8,23 @@ import time
 import traceback
 import uuid
 from os.path import isfile
-from pathlib import Path
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
-from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    HridHandling,
-    LibraryConfiguration,
-)
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from folio_migration_tools.report_blurbs import Blurbs
-from pydantic.main import BaseModel
-
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.report_blurbs import Blurbs
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic.main import BaseModel
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 

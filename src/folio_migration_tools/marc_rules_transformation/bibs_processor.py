@@ -2,8 +2,6 @@
 import json
 import logging
 
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folioclient import FolioClient
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.helper import Helper
@@ -12,6 +10,8 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
 from pymarc.record import Record
 
 
@@ -157,7 +157,7 @@ class BibsProcessor:
             logging.info("Saving holdings created from bibs")
             holdings_path = self.folders.data_folder / "folio_holdings_from_bibs.json"
             with open(holdings_path, "w+") as holdings_file:
-                for key, holding in self.mapper.holdings_map.items():
+                for _key, holding in self.mapper.holdings_map.items():
                     Helper.write_to_file(holdings_file, holding)
         self.srs_records_file.close()
         self.instance_id_map_file.close()

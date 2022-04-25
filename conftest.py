@@ -1,6 +1,3 @@
-import pytest
-
-
 def pytest_addoption(parser):
     parser.addoption("--password", action="store")
     parser.addoption("--tenant_id", action="store")

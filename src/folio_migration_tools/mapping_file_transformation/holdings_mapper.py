@@ -1,7 +1,5 @@
 import ast
 
-from folioclient import FolioClient
-from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -11,6 +9,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
 
 
 class HoldingsMapper(MappingFileMapperBase):
@@ -190,4 +190,4 @@ class HoldingsMapper(MappingFileMapperBase):
                 index_or_id,
                 f"Instance ID could not get parsed to array of strings {error}",
                 legacy_value,
-            )
+            ) from error

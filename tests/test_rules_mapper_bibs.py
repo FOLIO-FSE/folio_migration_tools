@@ -1,23 +1,23 @@
+import json
+import re
+
+import pymarc
 import pytest
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.library_configuration import (
-    FolioRelease,
-    HridHandling,
-    LibraryConfiguration,
-)
+from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
-from lxml import etree
-import pymarc
-import json
-import re
-from folioclient.FolioClient import FolioClient
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
+from folioclient.FolioClient import FolioClient
+from lxml import etree
 
 xpath_245 = "//marc:datafield[@tag='245']"
+# flake8: noqa
 
 
 @pytest.fixture(scope="module")

@@ -8,7 +8,7 @@ from argparse_prompt import PromptParser
 from pydantic import ValidationError
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
-from folio_migration_tools.migration_tasks import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from folio_migration_tools.migration_tasks import *  # noqa: F403, F401
 from folio_migration_tools.migration_tasks import migration_task_base
 
 

@@ -1,5 +1,8 @@
-from datetime import datetime, timedelta, timezone
 import logging
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
+
 from dateutil.parser import parse
 
 
@@ -37,7 +40,7 @@ class LegacyLoan(object):
             temp_date_due = datetime.now(timezone.utc)
         try:
             temp_date_out: datetime = parse(legacy_loan_dict["out_date"])
-        except Exception as ee:
+        except Exception:
             temp_date_out = datetime.now(timezone.utc)
             self.errors.append(("Parse date failure. Setting UTC NOW", "out_date"))
 
@@ -53,7 +56,7 @@ class LegacyLoan(object):
                     self.due_date = self.due_date.replace(hour=23, minute=59)
                 if self.out_date.hour == 0:
                     self.out_date = self.out_date.replace(hour=0, minute=1)
-        except Exception as ee:
+        except Exception:
             self.errors.append(("Time alignment issues", "both dates"))
         self.renewal_count = int(legacy_loan_dict["renewal_count"])
         self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()

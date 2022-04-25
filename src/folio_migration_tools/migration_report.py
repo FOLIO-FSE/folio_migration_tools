@@ -1,4 +1,5 @@
 import logging
+
 from folio_migration_tools.report_blurbs import Blurbs
 
 
@@ -39,7 +40,8 @@ class MigrationReport:
             report_file.write(f"## {blurb[0]}    \n")
             report_file.write(f"{blurb[1]}    \n")
             report_file.write(
-                f"<details><summary>Click to expand all {len(self.report[a])} things</summary>     \n"
+                f"<details><summary>Click to expand all {len(self.report[a])} "
+                "things</summary>     \n"
             )
             report_file.write("   \n")
             report_file.write("Measure | Count   \n")
