@@ -48,7 +48,7 @@
 * #165 Bug: Item transformation: Don't add a "notes" object when there is no a "note" property
 * #167 Bug: mapping_file_mapper_base.py: object is excluded from array if non-required sub-property is ""
 * #174 Make scripts create separate extradata files per task
-* #175 Reset extradata file when running a task 
+* #175 Reset extradata file when running a task
 * #178 Bug: Fix issue with srs mfhd ids
 * #180 Bug: Bound-with-holdings does not come over from previously run holdings
 * #181 Handle MFHD with illegal lengths in 008:s
@@ -69,10 +69,10 @@
 ## Juniper 1.2 (09/12/2021)
 ## What's Changed
 #69 ##Handle duplicate barcodes
-#85 Remove suppression CLI argument from main_holdings_csv since this is not used. 
-#82 ## Add options for getting Cataloged date from 008 
+#85 Remove suppression CLI argument from main_holdings_csv since this is not used.
+#82 ## Add options for getting Cataloged date from 008
 #51 ## 001s as HRIDs: Log Instances that had 001 collisions and where assigned FOLIO-style HRIDs
-## Handling of duplicate Instance ids at main_holdings_marc.py. 
+## Handling of duplicate Instance ids at main_holdings_marc.py.
 ## Log failing location mapping to Data issues log
 ## Report on duplicate instance ids from multible main_bibs.py runs when running any of the main_holdings scripts
 
@@ -97,12 +97,12 @@ main_items.py and main_holdings_csv.py will halt if the property is missing:
 ## What is new?
 ### Introducing the Data Issues Log file
 ![image](https://user-images.githubusercontent.com/1894384/136540471-a471fb6f-d195-4eeb-996e-37be5797212b.png)
-As part of every transformation, there is now a logfile named according to 
+As part of every transformation, there is now a logfile named according to
 
 > folio_OBJECTTYPE_data_issues_TIMESTAMP.tsv
 
-There are four columns: 	
-* Severity of issue	
+There are four columns:
+* Severity of issue
 * Legacy Identifier or filename+index in file
 * Description of the issue
 * The data causing the issue
@@ -139,7 +139,7 @@ HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.1$a
 ![image](https://user-images.githubusercontent.com/1894384/136540274-c89b827d-1079-47f4-b38b-2242f6f53fba.png)
 
 ### Enable mapping of temporary loan types and temporary locations from separate mapping files.
-In the migration_repo_template there are now two mapping files with the file ending .optional. Remove that file ending if you want these mappings enabled for FOLIO. Syntax and mapping are the same as their siblings (permanent location and loan type). 
+In the migration_repo_template there are now two mapping files with the file ending .optional. Remove that file ending if you want these mappings enabled for FOLIO. Syntax and mapping are the same as their siblings (permanent location and loan type).
 
 ### Ability to specify FOLIO Release
 There is a small breaking change between Juniper and Iris. In order for the script to handle both cases, there is a new parameter in main_bibs.py allowing you to specify FOLIO release name
@@ -183,7 +183,7 @@ Stepping stone release before Juniper support
 ---
 
 ## Iris 1.0 (27/07/2021)
-Release compliant with FOLIO Iris release. 
+Release compliant with FOLIO Iris release.
 
 It has not been tested with Hotfix #3 and #4 in Iris, but it should be compliant.
 ---
