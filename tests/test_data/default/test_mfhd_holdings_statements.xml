@@ -14,7 +14,7 @@
                     <leader>00571ny   22001453n 4500</leader>
                     <datafield ind1=" " ind2=" " tag="852">
                         <subfield code="z">Current issues in MSU SPEC COLL RARE BOOKS</subfield>
-                    </datafield>                    
+                    </datafield>
                     <datafield ind1=" " ind2=" " tag="866">
                         <subfield code="8">0</subfield>
                         <subfield code="a">v.1:no. 1(1943:July 3)-v.1:no.52(1944:June 24)</subfield>
@@ -49,7 +49,7 @@
                     <datafield ind1=" " ind2=" " tag="853">
                         <subfield code="8">5</subfield>
                         <subfield code="a">Some pattern</subfield>
-                    </datafield>                    
+                    </datafield>
                     <datafield ind1=" " ind2="0" tag="853">
                         <subfield code="8">6</subfield>
                         <subfield code="a">v.</subfield>
