@@ -19,7 +19,7 @@ We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-fl
 * Make sure the code can run
 * More things tbd
 * Create a pull request
-* 
+* Code review.
 
 # Python Coding standards
 ## Formatting.
