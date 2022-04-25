@@ -15,6 +15,7 @@ We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-fl
 * Create a branch off of main and name it accoring to the feature you are working on
 * Do you thing
 * Format your code. Sort your imports (TBD)
+* pipenv run safety check
 * Run the tests
 * Make sure the code can run
 * More things tbd
@@ -23,6 +24,7 @@ We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-fl
 
 # Python Coding standards
 ## Formatting and sorting Imports
+import flake8, black, flake8-bugbear, flake8-bandit, safety,
 Use black in conjunction with Isort. 
 Set black line-length to 99
 Make sure Black runs every time you save your code.
