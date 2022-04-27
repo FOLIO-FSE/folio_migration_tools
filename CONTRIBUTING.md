@@ -11,11 +11,11 @@ When you make edits to this document, make sure you update the Table of contents
   - [2. :sparkles: Do you thing :sparkles:](#2-sparkles-do-you-thing-sparkles)
   - [3. Prepare for merging](#3-prepare-for-merging)
     - [3.1. :adhesive_bandage: Check for vulnerabilities](#31-adhesive_bandage-check-for-vulnerabilities)
-    - [3.2. Check and format your code](#32-check-and-format-your-code)
+    - [3.2. :monocle_face: Check and format your code](#32-check-and-format-your-code)
     - [3.3. :test_tube: Run the entire tests suite.](#33-test_tube-run-the-entire-tests-suite)
   - [3.4. Make sure the code can run](#34-make-sure-the-code-can-run)
   - [3.5. Create a pull request in GitHub](#35-create-a-pull-request-in-github)
-  - [3.6. Code review.](#36-code-review)
+  - [3.6. :people_holding_hands: Code review.](#36-code-review)
 - [Create release](#create-release)
   - [Create the release on Github](#create-the-release-on-github)
   - [Create release notes and change log using gren](#create-release-notes-and-change-log-using-gren)
@@ -65,7 +65,7 @@ Run
 pipenv run safety check
 ```
 and update any packages with a vulnerability.
-### 3.2. Check and format your code
+### 3.2. :monocle_face: Check and format your code
 The following command runs Flake8 with plugins on your code. It:
 * Uses black to format the code. The Line-lenght is to be 99 characters
 * Uses isort to sort your imports. This makes merging much easier.
@@ -102,7 +102,7 @@ optional arguments:
 ```
 
 ## 3.5. Create a pull request in GitHub
-## 3.6. Code review.
+## 3.6. :people_holding_hands: Code review.
 
 # Create release
 ## Create the release on Github
