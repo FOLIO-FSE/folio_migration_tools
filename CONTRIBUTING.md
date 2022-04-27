@@ -1,9 +1,39 @@
-# TOC
-TBD
-
 # About this document
 This document is intended to take effect on August 1st 2022, and before that, it is WIP.
 
+When you make edits to this document, make sure you update the Table of contents. There is a nice VS Code plugin for it called [markdown-all-in-one](https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one#table-of-contents).
+# Table of contents
+- [About this document](#about-this-document)
+- [Table of contents](#table-of-contents)
+- [Writing Issues.](#writing-issues)
+- [Git(hub) workflow](#github-workflow)
+  - [1. Create a branch off of main and name it according to the feature you are working on](#1-create-a-branch-off-of-main-and-name-it-according-to-the-feature-you-are-working-on)
+  - [2. :sparkles: Do you thing :sparkles:](#2-sparkles-do-you-thing-sparkles)
+  - [3. Prepare for merging](#3-prepare-for-merging)
+    - [3.1. :adhesive_bandage: Check for vulnerabilities](#31-adhesive_bandage-check-for-vulnerabilities)
+    - [3.2. Check and format your code](#32-check-and-format-your-code)
+    - [3.3. :test_tube: Run the entire tests suite.](#33-test_tube-run-the-entire-tests-suite)
+  - [3.4. Make sure the code can run](#34-make-sure-the-code-can-run)
+  - [3.5. Create a pull request in GitHub](#35-create-a-pull-request-in-github)
+  - [3.6. Code review.](#36-code-review)
+- [Create release](#create-release)
+  - [Create the release on Github](#create-the-release-on-github)
+  - [Create release notes and change log using gren](#create-release-notes-and-change-log-using-gren)
+  - [Publish package to pypi](#publish-package-to-pypi)
+    - [1. Up the release in setup.cfg](#1-up-the-release-in-setupcfg)
+    - [2. Build the package](#2-build-the-package)
+    - [3. Push the file to pypi test and make a test installation](#3-push-the-file-to-pypi-test-and-make-a-test-installation)
+    - [4. Push the release to pypi](#4-push-the-release-to-pypi)
+    - [5. Finalize the release](#5-finalize-the-release)
+- [Python Coding standards and practices](#python-coding-standards-and-practices)
+  - [What to install](#what-to-install)
+  - [Important settings](#important-settings)
+  - [Setting up Visual studio](#setting-up-visual-studio)
+- [Testing](#testing)
+  - [Running tests](#running-tests)
+  - [Writing tests](#writing-tests)
+  - [Code coverage](#code-coverage)
+  - [Running an end-to-end transformation](#running-an-end-to-end-transformation)
 # Writing Issues.
 Writing good issues is key.
 Both for sharing to the larger group of users what is needed or not working, but also for helping the developer working on the issue to reach the DoD and beyond.
@@ -100,7 +130,14 @@ python3 -m build
 Make sure one of the builds aligns with the version number you choosed above
 
 ### 3. Push the file to pypi test and make a test installation
-TBD
+Upload:
+```
+twine upload --repository testpypi dist/*
+```
+Test install 
+```
+python3 -m pip install --index-url https://test.pypi.org/simple/ your-package
+```
 ### 4. Push the release to pypi
 Run
 ```
