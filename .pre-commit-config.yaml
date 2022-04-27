@@ -4,9 +4,17 @@ repos:
     hooks:
     -   id: check-yaml
     -   id: end-of-file-fixer
-    -   id: trailing-whitespace
+    -   id: check-ast
+    -   id: check-added-large-files
+    -   id: check-docstring-first
+    -   id: requirements-txt-fixer
 -   repo: local
     hooks:
+    -   id: black
+        name: black
+        language: system
+        entry: black
+        types: [python]
     -   id: flake8
         name: flake8
         language: system
