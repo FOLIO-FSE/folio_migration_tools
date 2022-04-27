@@ -3,18 +3,19 @@ import json
 import logging
 import re
 import time
-from folio_migration_tools.helper import Helper
-from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
-from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
-from folio_migration_tools.transaction_migration.transaction_result import (
-    TransactionResult,
-)
-from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
 
 import requests
 from folioclient import FolioClient
 from requests import HTTPError
+
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
+from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
+from folio_migration_tools.transaction_migration.transaction_result import (
+    TransactionResult,
+)
 
 date_time_format = "%Y-%m-%dT%H:%M:%S.%f+0000"
 
@@ -93,9 +94,7 @@ class CirculationHelper:
                     f"{error_message} Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
                 )
-                return TransactionResult(
-                    False, False, None, error_message, error_message
-                )
+                return TransactionResult(False, False, "", error_message, error_message)
             req = requests.post(
                 url, headers=self.folio_client.okapi_headers, data=json.dumps(data)
             )
@@ -109,8 +108,7 @@ class CirculationHelper:
                         error_message_from_folio,
                     )[0]
                     error_message = (
-                        f"{stat_message} for item with "
-                        f"barcode {legacy_loan.item_barcode}"
+                        f"{stat_message} for item with " f"barcode {legacy_loan.item_barcode}"
                     )
                     return TransactionResult(
                         False,
@@ -120,9 +118,7 @@ class CirculationHelper:
                         stat_message,
                     )
                 elif "No item with barcode" in error_message_from_folio:
-                    error_message = (
-                        f"No item with barcode {legacy_loan.item_barcode} in FOLIO"
-                    )
+                    error_message = f"No item with barcode {legacy_loan.item_barcode} in FOLIO"
                     stat_message = "Item barcode not in FOLIO"
                     self.missing_item_barcodes.add(legacy_loan.item_barcode)
                     return TransactionResult(
@@ -135,9 +131,7 @@ class CirculationHelper:
 
                 elif "find user with matching barcode" in error_message_from_folio:
                     self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
-                    error_message = (
-                        f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
-                    )
+                    error_message = f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
                     stat_message = "Patron barcode not in FOLIO"
                     return TransactionResult(
                         False,
@@ -146,10 +140,7 @@ class CirculationHelper:
                         error_message_from_folio,
                         stat_message,
                     )
-                elif (
-                    "Cannot check out item that already has an open"
-                    in error_message_from_folio
-                ):
+                elif "Cannot check out item that already has an open" in error_message_from_folio:
                     return TransactionResult(
                         False,
                         False,
@@ -174,7 +165,7 @@ class CirculationHelper:
                     legacy_loan.item_barcode,
                     f"{(time.time() - t0_function):.2f}",
                 )
-                return TransactionResult(True, False, json.loads(req.text), None, stats)
+                return TransactionResult(True, False, json.loads(req.text), "", stats)
             elif req.status_code == 204:
                 stats = "Successfully checked out by barcode"
                 logging.debug(
@@ -183,7 +174,7 @@ class CirculationHelper:
                     legacy_loan.item_barcode,
                     req.status_code,
                 )
-                return TransactionResult(True, False, None, None, stats)
+                return TransactionResult(True, False, None, "", stats)
             else:
                 req.raise_for_status()
         except HTTPError:
@@ -222,9 +213,7 @@ class CirculationHelper:
                     "comment": "Migrated from legacy system",
                 }
             }
-            req = requests.post(
-                url, headers=folio_client.okapi_headers, data=json.dumps(data)
-            )
+            req = requests.post(url, headers=folio_client.okapi_headers, data=json.dumps(data))
             logging.debug(f"POST {req.status_code}\t{url}\t{json.dumps(data)}")
             if str(req.status_code) == "422":
                 message = json.loads(req.text)["errors"][0]["message"]
@@ -233,9 +222,7 @@ class CirculationHelper:
                 return False
             else:
                 req.raise_for_status()
-                migration_report.add_general_statistics(
-                    f"Created {legacy_request.request_type}"
-                )
+                migration_report.add_general_statistics(f"Created {legacy_request.request_type}")
                 logging.info(
                     "%s Successfully created %s",
                     req.status_code,
@@ -252,9 +239,7 @@ class CirculationHelper:
             )
             return False
 
-    def load_migrated_user_barcodes(
-        self, user_barcodes, patron_files, folder_structure
-    ):
+    def load_migrated_user_barcodes(self, user_barcodes, patron_files, folder_structure):
         if any(patron_files):
             for filedef in patron_files:
                 my_path = folder_structure.results_folder / filedef.file_name
@@ -275,9 +260,7 @@ class CirculationHelper:
             logging.info("Loaded %s barcodes from items", len(item_barcodes))
 
     @staticmethod
-    def extend_open_loan(
-        folio_client: FolioClient, loan, extension_due_date, extend_out_date
-    ):
+    def extend_open_loan(folio_client: FolioClient, loan, extension_due_date, extend_out_date):
         # TODO: add logging instead of print out
         try:
             loan_to_put = copy.deepcopy(loan)

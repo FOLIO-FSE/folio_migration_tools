@@ -6,18 +6,14 @@ from folio_migration_tools.migration_tasks.items_transformer import ItemsTransfo
 
 def test_handle_circiulation_notes_wrong_type():
     folio_rec = {
-        "circulationNotes": [
-            {"id": "someId", "noteType": "Check inn", "note": "some note"}
-        ]
+        "circulationNotes": [{"id": "someId", "noteType": "Check inn", "note": "some note"}]
     }
     with pytest.raises(TransformationProcessError):
         ItemsTransformer.handle_circiulation_notes(folio_rec, str(uuid.uuid4()))
 
 
 def test_handle_circiulation_notes_no_note():
-    folio_rec = {
-        "circulationNotes": [{"id": "someId", "noteType": "Check in", "note": ""}]
-    }
+    folio_rec = {"circulationNotes": [{"id": "someId", "noteType": "Check in", "note": ""}]}
     ItemsTransformer.handle_circiulation_notes(folio_rec, str(uuid.uuid4()))
     assert "circulationNotes" not in folio_rec
 

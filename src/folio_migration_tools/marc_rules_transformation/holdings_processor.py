@@ -4,22 +4,20 @@ import sys
 import time
 import traceback
 from datetime import datetime as dt
+
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pymarc import Record
-from folio_migration_tools import library_configuration
 from pymarc import Field
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from pymarc import Record
+
+from folio_migration_tools import library_configuration
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    FolioRelease,
-    HridHandling,
-)
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
@@ -36,9 +34,7 @@ class HoldingsProcessor:
         self.failed_records_count = 0
         self.mapper: RulesMapperHoldings = mapper
         self.start = time.time()
-        self.created_objects_file = open(
-            self.folder_structure.created_objects_path, "w+"
-        )
+        self.created_objects_file = open(self.folder_structure.created_objects_path, "w+")
         self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
         self.setup_holdings_sources()
 
@@ -49,20 +45,14 @@ class HoldingsProcessor:
                     "/holdings-sources", "holdingsRecordsSources"
                 )
             )
-            logging.info(
-                "Fetched %s holdingsRecordsSources from tenant", len(holdings_sources)
-            )
-            self.holdingssources = {
-                n["name"].upper(): n["id"] for n in holdings_sources
-            }
+            logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
+            self.holdingssources = {n["name"].upper(): n["id"] for n in holdings_sources}
             if "FOLIO" not in self.holdingssources:
                 raise TransformationProcessError(
                     "", "No holdings source with name FOLIO in tenant"
                 )
             if "MARC" not in self.holdingssources:
-                raise TransformationProcessError(
-                    "", "No holdings source with name MARC in tenant"
-                )
+                raise TransformationProcessError("", "No holdings source with name MARC in tenant")
         else:
             self.holdingssources = {}
 
@@ -101,15 +91,11 @@ class HoldingsProcessor:
                     "",
                 )
             folio_rec["discoverySuppress"] = file_def.suppressed
-            self.set_source_id(
-                self.mapper.task_configuration, folio_rec, self.holdingssources
-            )
+            self.set_source_id(self.mapper.task_configuration, folio_rec, self.holdingssources)
             self.set_hrid(marc_record, folio_rec)
             self.save_srs_record(marc_record, file_def, folio_rec, legacy_id)
             Helper.write_to_file(self.created_objects_file, folio_rec)
-            self.mapper.migration_report.add_general_statistics(
-                "Holdings records written to disk"
-            )
+            self.mapper.migration_report.add_general_statistics("Holdings records written to disk")
 
             self.exit_on_too_many_exceptions()
         except TransformationRecordFailedError as error:
@@ -160,9 +146,7 @@ class HoldingsProcessor:
             for field in marc_record.get_fields(split[0]):
                 if sf := field.get_subfields(split[1]):
                     return sf[0]
-            raise TransformationRecordFailedError(
-                "", "Subfield not found in record", split[1]
-            )
+            raise TransformationRecordFailedError("", "Subfield not found in record", split[1])
 
         else:
             raise TransformationProcessError(
@@ -205,9 +189,7 @@ class HoldingsProcessor:
                 legacy_id,
                 file_def.suppressed,
             )
-            self.mapper.migration_report.add_general_statistics(
-                "SRS records written to disk"
-            )
+            self.mapper.migration_report.add_general_statistics("SRS records written to disk")
 
     def set_hrid(self, marc_record, folio_rec):
         if self.mapper.task_configuration.hrid_handling == HridHandling.preserve001:
@@ -229,9 +211,7 @@ class HoldingsProcessor:
             else:
                 self.unique_001s.add(value)
                 folio_rec["hrid"] = value
-                self.mapper.migration_report.add(
-                    Blurbs.HridHandling, "Took HRID from 001"
-                )
+                self.mapper.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
 
     def add_hrid_to_records(self, folio_record: dict, marc_record: Record):
         if (

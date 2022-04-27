@@ -112,19 +112,13 @@ class ItemMapper(MappingFileMapperBase):
         raise NotImplementedError()
 
     def setup_status_mapping(self, item_statuses_map):
-        statuses = self.item_schema["properties"]["status"]["properties"]["name"][
-            "enum"
-        ]
+        statuses = self.item_schema["properties"]["status"]["properties"]["name"]["enum"]
         for mapping in item_statuses_map:
             if "folio_name" not in mapping:
-                logging.critical(
-                    "folio_name is not a column in the status mapping file"
-                )
+                logging.critical("folio_name is not a column in the status mapping file")
                 sys.exit(1)
             elif "legacy_code" not in mapping:
-                logging.critical(
-                    "legacy_code is not a column in the status mapping file"
-                )
+                logging.critical("legacy_code is not a column in the status mapping file")
                 sys.exit(1)
             elif mapping["folio_name"] not in statuses:
                 logging.critical(
@@ -139,9 +133,7 @@ class ItemMapper(MappingFileMapperBase):
                 )
                 sys.exit(1)
             elif not all(mapping.values()):
-                logging.critical(
-                    "empty value in mapping %s. Check mapping file", mapping.values()
-                )
+                logging.critical("empty value in mapping %s. Check mapping file", mapping.values())
                 sys.exit(1)
             else:
                 self.status_mapping = {
@@ -166,9 +158,7 @@ class ItemMapper(MappingFileMapperBase):
             )
             return value
 
-        legacy_values = MappingFileMapperBase.get_legacy_vals(
-            legacy_item, legacy_item_keys
-        )
+        legacy_values = MappingFileMapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
         legacy_value = " ".join(legacy_values).strip()
 
         if folio_prop_name == "permanentLocationId":
@@ -199,9 +189,7 @@ class ItemMapper(MappingFileMapperBase):
         elif folio_prop_name == "barcode":
             barcode = next((v for v in legacy_values if v), "")
             if barcode.strip() and barcode in self.unique_barcodes:
-                Helper.log_data_issue(
-                    index_or_id, "Duplicate barcode", "-".join(legacy_values)
-                )
+                Helper.log_data_issue(index_or_id, "Duplicate barcode", "-".join(legacy_values))
                 self.migration_report.add_general_statistics("Duplicate barcodes")
                 return f"{barcode}-{uuid4()}"
             else:
@@ -245,9 +233,7 @@ class ItemMapper(MappingFileMapperBase):
             raise TransformationRecordFailedError(index_or_id, s, legacy_value)
         elif any(legacy_item_keys):
             if len(legacy_item_keys) > 1:
-                self.migration_report.add(
-                    Blurbs.Details, f"{legacy_item_keys} were concatenated"
-                )
+                self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
             return legacy_value
         else:
             self.migration_report.add(
@@ -255,9 +241,7 @@ class ItemMapper(MappingFileMapperBase):
             )
             return ""
 
-    def get_item_level_call_number_type_id(
-        self, legacy_item, folio_prop_name: str, index_or_id
-    ):
+    def get_item_level_call_number_type_id(self, legacy_item, folio_prop_name: str, index_or_id):
         if self.call_number_mapping:
             return self.get_mapped_value(
                 self.call_number_mapping, legacy_item, index_or_id, folio_prop_name

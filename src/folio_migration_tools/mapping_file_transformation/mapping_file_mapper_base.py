@@ -79,9 +79,7 @@ class MappingFileMapperBase(MapperBase):
                 if not self.mapped_from_legacy_data.get(k["folio_field"]):
                     self.mapped_from_legacy_data[k["folio_field"]] = {k["legacy_field"]}
                 else:
-                    self.mapped_from_legacy_data[k["folio_field"]].add(
-                        k["legacy_field"]
-                    )
+                    self.mapped_from_legacy_data[k["folio_field"]].add(k["legacy_field"])
 
         logging.info(
             "Mapped legacy fields:\n%s",
@@ -147,9 +145,7 @@ class MappingFileMapperBase(MapperBase):
             if (k["legacy_field"].strip() not in empty_vals)
         ]
 
-    def instantiate_record(
-        self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces
-    ):
+    def instantiate_record(self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces):
 
         if self.ignore_legacy_identifier:
             return ({}, str(uuid.uuid4()))
@@ -176,9 +172,7 @@ class MappingFileMapperBase(MapperBase):
             legacy_id,
         )
 
-    def get_statistical_codes(
-        self, legacy_item: dict, folio_prop_name: str, index_or_id
-    ):
+    def get_statistical_codes(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:
             return self.get_mapped_value(
                 self.statistical_codes_mapping,
@@ -195,17 +189,13 @@ class MappingFileMapperBase(MapperBase):
 
     @abstractmethod
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        raise NotImplementedError(
-            "This method needs to be implemented in a implementing class"
-        )
+        raise NotImplementedError("This method needs to be implemented in a implementing class")
 
     def do_map(
         self, legacy_object, index_or_id: str, object_type: FOLIONamespaces
     ) -> tuple[dict, str]:
 
-        folio_object, legacy_id = self.instantiate_record(
-            legacy_object, index_or_id, object_type
-        )
+        folio_object, legacy_id = self.instantiate_record(legacy_object, index_or_id, object_type)
         for property_name_level1, property_level1 in self.schema["properties"].items():
             try:
                 self.map_level1_property(
@@ -272,16 +262,12 @@ class MappingFileMapperBase(MapperBase):
                 )
 
         else:  # Basic property
-            self.map_basic_props(
-                legacy_object, property_name_level1, folio_object, index_or_id
-            )
+            self.map_basic_props(legacy_object, property_name_level1, folio_object, index_or_id)
 
     @staticmethod
     def get_legacy_vals(legacy_item, legacy_item_keys):
         return {
-            legacy_item[k]
-            for k in legacy_item_keys
-            if legacy_item.get(k, "") not in ["", None]
+            legacy_item[k] for k in legacy_item_keys if legacy_item.get(k, "") not in ["", None]
         }
 
     def map_object_props(
@@ -294,9 +280,7 @@ class MappingFileMapperBase(MapperBase):
     ):
         temp_object = {}
         prop_key = property_name_level1
-        for property_name_level2, property_level2 in property_level1[
-            "properties"
-        ].items():
+        for property_name_level2, property_level2 in property_level1["properties"].items():
             sub_prop_key = f"{prop_key}.{property_name_level2}"
             if "properties" in property_level2:
                 for _property_name_level3, _property_level3 in property_level2[
@@ -346,30 +330,20 @@ class MappingFileMapperBase(MapperBase):
         required: list[str],
     ):
         resulting_array = []
-        keys_to_map = {
-            k.split(".")[0] for k in self.folio_keys if k.startswith(prop_name)
-        }
+        keys_to_map = {k.split(".")[0] for k in self.folio_keys if k.startswith(prop_name)}
         for object_key in keys_to_map:
             temp_object = {}
             for prop in (
-                k
-                for k, p in sub_properties.items()
-                if not p.get("folio:isVirtual", False)
+                k for k, p in sub_properties.items() if not p.get("folio:isVirtual", False)
             ):
                 prop_path = f"{object_key}.{prop}"
                 if prop_path in self.folio_keys:
                     res = self.get_prop(legacy_object, prop_path, index_or_id)
-                    self.report_legacy_mapping(
-                        self.legacy_basic_property(prop), True, True
-                    )
+                    self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
                     temp_object[prop] = res
 
             if temp_object != {} and all(
-                (
-                    v or (isinstance(v, bool))
-                    for k, v in temp_object.items()
-                    if k in required
-                )
+                (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
             ):
                 resulting_array.append(temp_object)
         if any(resulting_array):
@@ -378,19 +352,13 @@ class MappingFileMapperBase(MapperBase):
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
         keys_to_map = [k for k in self.folio_keys if k.startswith(prop)]
         for prop_name in keys_to_map:
-            if prop_name in self.folio_keys and self.has_property(
-                legacy_object, prop_name
-            ):
+            if prop_name in self.folio_keys and self.has_property(legacy_object, prop_name):
                 if mapped_prop := self.get_prop(legacy_object, prop_name, index_or_id):
-                    if prop in folio_object and mapped_prop not in folio_object.get(
-                        prop, []
-                    ):
+                    if prop in folio_object and mapped_prop not in folio_object.get(prop, []):
                         folio_object.get(prop, []).append(mapped_prop)
                     else:
                         folio_object[prop] = [mapped_prop]
-                self.report_legacy_mapping(
-                    self.legacy_basic_property(prop_name), True, True
-                )
+                self.report_legacy_mapping(self.legacy_basic_property(prop_name), True, True)
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
@@ -441,11 +409,7 @@ class MappingFileMapperBase(MapperBase):
         if folio_prop not in self.folio_keys:
             return ""
         return next(
-            (
-                k["legacy_field"]
-                for k in self.record_map["data"]
-                if k["folio_field"] == folio_prop
-            ),
+            (k["legacy_field"] for k in self.record_map["data"] if k["folio_field"] == folio_prop),
             "",
         )
 
@@ -459,9 +423,7 @@ class MappingFileMapperBase(MapperBase):
             if any(missing_keys_in_record):
                 raise TransformationProcessError(
                     "",
-                    (
-                        "There are mapped legacy fields that are not in the legacy record"
-                    ),
+                    ("There are mapped legacy fields that are not in the legacy record"),
                     missing_keys_in_record,
                 )
             else:
@@ -475,9 +437,7 @@ class MappingFileMapperBase(MapperBase):
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"
-        if ref_object := self.ref_data_dicts.get(dict_key, {}).get(
-            key_value.lower().strip(), ()
-        ):
+        if ref_object := self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ()):
             return ref_object
         d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
         self.ref_data_dicts[dict_key] = d

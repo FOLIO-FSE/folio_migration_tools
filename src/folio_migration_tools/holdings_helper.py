@@ -47,10 +47,7 @@ class HoldingsHelper:
                     )
                 values.append(v)
 
-            if (
-                holdings_record.get("holdingsTypeId")
-                == holdings_type_id_to_exclude_from_merging
-            ):
+            if holdings_record.get("holdingsTypeId") == holdings_type_id_to_exclude_from_merging:
                 values.append(str(uuid4()))
                 migration_report.add(
                     Blurbs.HoldingsMerging,
@@ -92,9 +89,7 @@ class HoldingsHelper:
                         f" stored Holdings. You have likely not used the same matching criterias"
                         f" ({fields_criteria}) as you did in the previous process"
                     )
-                    helper.Helper.log_data_issue(
-                        stored_holding["formerIds"], message, stored_key
-                    )
+                    helper.Helper.log_data_issue(stored_holding["formerIds"], message, stored_key)
                     logging.warn(message)
                     prev_holdings[stored_key] = HoldingsHelper.merge_holding(
                         prev_holdings[stored_key], stored_holding
@@ -115,9 +110,7 @@ class HoldingsHelper:
     def merge_holding(holdings_record: dict, incoming_holdings: dict) -> dict:
         extend_list("holdingsStatementsForIndexes", holdings_record, incoming_holdings)
         extend_list("holdingsStatements", holdings_record, incoming_holdings)
-        extend_list(
-            "holdingsStatementsForSupplements", holdings_record, incoming_holdings
-        )
+        extend_list("holdingsStatementsForSupplements", holdings_record, incoming_holdings)
         extend_list("notes", holdings_record, incoming_holdings)
         holdings_record["notes"] = dedupe(holdings_record.get("notes", []))
         extend_list("formerIds", holdings_record, incoming_holdings)

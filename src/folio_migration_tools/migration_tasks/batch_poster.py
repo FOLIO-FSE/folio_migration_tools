@@ -77,22 +77,16 @@ class BatchPoster(MigrationTaskBase):
                             if row.strip():
                                 try:
                                     if self.task_config.object_type == "Extradata":
-                                        self.post_extra_data(
-                                            row, num_records, failed_recs_file
-                                        )
+                                        self.post_extra_data(row, num_records, failed_recs_file)
                                     else:
                                         json_rec = json.loads(row.split("\t")[-1])
                                         if self.task_config.object_type == "SRS":
                                             json_rec["snapshotId"] = self.snapshot_id
                                         if num_records == 1:
-                                            logging.info(
-                                                json.dumps(json_rec, indent=True)
-                                            )
+                                            logging.info(json.dumps(json_rec, indent=True))
                                         batch.append(json_rec)
                                         if len(batch) == int(self.batch_size):
-                                            self.post_batch(
-                                                batch, failed_recs_file, num_records
-                                            )
+                                            self.post_batch(batch, failed_recs_file, num_records)
                                             batch = []
                                 except UnicodeDecodeError as unicode_error:
                                     self.handle_unicode_error(unicode_error, last_row)
@@ -139,19 +133,12 @@ class BatchPoster(MigrationTaskBase):
         elif response.status_code == 422:
             self.num_failures += 1
             error_msg = json.loads(response.text)["errors"][0]["message"]
-            logging.error(
-                "Row %s\tHTTP %s\t %s", num_records, response.status_code, error_msg
-            )
-            if (
-                "id value already exists"
-                not in json.loads(response.text)["errors"][0]["message"]
-            ):
+            logging.error("Row %s\tHTTP %s\t %s", num_records, response.status_code, error_msg)
+            if "id value already exists" not in json.loads(response.text)["errors"][0]["message"]:
                 failed_recs_file.write(row)
         else:
             self.num_failures += 1
-            logging.error(
-                "Row %s\tHTTP %s\t%s", num_records, response.status_code, response.text
-            )
+            logging.error("Row %s\tHTTP %s\t%s", num_records, response.status_code, response.text)
             failed_recs_file.write(row)
         if num_records % 50 == 0:
             logging.info(
@@ -165,17 +152,13 @@ class BatchPoster(MigrationTaskBase):
             url, headers=self.folio_client.okapi_headers, data=body.encode("utf-8")
         )
 
-    def handle_generic_exception(
-        self, exception, last_row, batch, num_records, failed_recs_file
-    ):
+    def handle_generic_exception(self, exception, last_row, batch, num_records, failed_recs_file):
         logging.error("%s", exception)
         # logging.error("Failed row: %s", last_row)
         self.failed_batches += 1
         self.failed_records += len(batch)
         write_failed_batch_to_file(batch, failed_recs_file)
-        logging.info(
-            "Resetting batch...Number of failed batches: %s", self.failed_batches
-        )
+        logging.info("Resetting batch...Number of failed batches: %s", self.failed_batches)
         batch = []
         if self.failed_batches > 50000:
             logging.error("Exceeded number of failed batches at row %s", num_records)
@@ -259,9 +242,7 @@ class BatchPoster(MigrationTaskBase):
         elif response.status_code == 400:
             # Likely a json parsing error
             logging.error(response.text)
-            raise TransformationProcessError(
-                "", "HTTP 400. Somehting is wrong. Quitting"
-            )
+            raise TransformationProcessError("", "HTTP 400. Somehting is wrong. Quitting")
         elif self.task_config.object_type == "SRS" and response.status_code == 500:
             logging.info(
                 "Post failed. Size: %s Waiting 30s until reposting. Number of tries: %s of 5",
@@ -279,9 +260,7 @@ class BatchPoster(MigrationTaskBase):
                     response.text,
                 )
             else:
-                self.post_batch(
-                    batch, failed_recs_file, num_records, recursion_depth + 1
-                )
+                self.post_batch(batch, failed_recs_file, num_records, recursion_depth + 1)
         else:
             try:
                 logging.info(response.text)
@@ -327,9 +306,7 @@ class BatchPoster(MigrationTaskBase):
             )
 
         else:
-            logging.info(
-                "Done posting % records. % failed", self.num_posted, self.num_failures
-            )
+            logging.info("Done posting % records. % failed", self.num_posted, self.num_failures)
 
         self.rerun_run()
 
@@ -337,15 +314,11 @@ class BatchPoster(MigrationTaskBase):
         if self.task_config.rerun_failed_records and (
             self.failed_records > 0 or self.num_failures > 0
         ):
-            logging.info(
-                "Rerunning the failed records from the load with a batchsize of 1"
-            )
+            logging.info("Rerunning the failed records from the load with a batchsize of 1")
             try:
                 self.task_config.batch_size = 1
                 self.task_config.files = [
-                    FileDefinition(
-                        file_name=str(self.folder_structure.failed_recs_path.name)
-                    )
+                    FileDefinition(file_name=str(self.folder_structure.failed_recs_path.name))
                 ]
                 self.task_config.rerun_failed_records = False
                 self.__init__(self.task_config, self.library_configuration)
@@ -360,9 +333,7 @@ class BatchPoster(MigrationTaskBase):
         snapshot = {
             "jobExecutionId": self.snapshot_id,
             "status": "PARSING_IN_PROGRESS",
-            "processingStartedDate": datetime.utcnow().isoformat(
-                timespec="milliseconds"
-            ),
+            "processingStartedDate": datetime.utcnow().isoformat(timespec="milliseconds"),
         }
         try:
             url = f"{self.folio_client.okapi_url}/source-storage/snapshots"
@@ -393,9 +364,7 @@ class BatchPoster(MigrationTaskBase):
                 url, data=json.dumps(snapshot), headers=self.folio_client.okapi_headers
             )
             res.raise_for_status()
-            logging.info(
-                "Posted Committed snapshot to FOLIO: %s", json.dumps(snapshot, indent=4)
-            )
+            logging.info("Posted Committed snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
         except Exception:
             logging.exception(
                 "Could not commit snapshot with id %s. Post this to /source-storage/snapshots/%s:",

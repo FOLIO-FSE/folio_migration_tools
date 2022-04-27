@@ -31,18 +31,14 @@ class LegacyRequest(object):
         self.patron_barcode = legacy_request_dict["patron_barcode"].strip()
         self.comment = legacy_request_dict["comment"].strip()
         self.request_type = legacy_request_dict["request_type"].strip()
-        self.pickup_servicepoint_id = legacy_request_dict[
-            "pickup_servicepoint_id"
-        ].strip()
+        self.pickup_servicepoint_id = legacy_request_dict["pickup_servicepoint_id"].strip()
         self.fulfillment_preference = "Hold Shelf"
 
         if self.request_type not in ["Hold", "Recall", "Page"]:
             self.errors.append((f"{self.request_type} not allowd", "request_type"))
 
         try:
-            temp_request_date: datetime.datetime = parse(
-                legacy_request_dict["request_date"]
-            )
+            temp_request_date: datetime.datetime = parse(legacy_request_dict["request_date"])
         except Exception:
             self.errors.append(("Parse date failure. Setting UTC NOW", "request_date"))
             temp_request_date = datetime.now(datetime.timezone.utc)
@@ -52,9 +48,7 @@ class LegacyRequest(object):
             )
         except Exception:
             temp_expiration_date = datetime.now(datetime.timezone.utc)
-            self.errors.append(
-                ("Parse date failure. Setting UTC NOW", "request_expiration_date")
-            )
+            self.errors.append(("Parse date failure. Setting UTC NOW", "request_expiration_date"))
 
         self.request_date: datetime.datetime = temp_request_date
         self.request_expiration_date: datetime.datetime = temp_expiration_date
@@ -99,10 +93,7 @@ class LegacyRequest(object):
 
     def make_request_utc(self):
         if self.utc_difference != 0:
-            self.request_date = self.request_date + datetime.timedelta(
+            self.request_date = self.request_date + datetime.timedelta(hours=self.utc_difference)
+            self.request_expiration_date = self.request_expiration_date + datetime.timedelta(
                 hours=self.utc_difference
-            )
-            self.request_expiration_date = (
-                self.request_expiration_date
-                + datetime.timedelta(hours=self.utc_difference)
             )

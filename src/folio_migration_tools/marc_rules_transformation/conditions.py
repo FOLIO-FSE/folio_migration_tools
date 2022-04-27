@@ -35,9 +35,7 @@ class Conditions:
         if object_type == "bibs":
             self.setup_reference_data_for_bibs()
         else:
-            self.setup_reference_data_for_items_and_holdings(
-                default_call_number_type_name
-            )
+            self.setup_reference_data_for_items_and_holdings(default_call_number_type_name)
         self.condition_cache = {}
 
     def setup_reference_data_for_bibs(self):
@@ -65,9 +63,7 @@ class Conditions:
         )
         logging.info("Contributor type:\t%s", self.default_contributor_type["id"])
 
-    def setup_reference_data_for_items_and_holdings(
-        self, default_call_number_type_name
-    ):
+    def setup_reference_data_for_items_and_holdings(self, default_call_number_type_name):
         logging.info(f"{len(self.folio.locations)}\tlocations")
         self.default_call_number_type = {}
         logging.info("%s\tholding_note_types", len(self.folio.holding_note_types))
@@ -105,9 +101,7 @@ class Conditions:
                     "Please specify another UUID as the default Callnumber Type"
                 ),
             )
-        logging.info(
-            "Default Callnumber type Name:\t%s", self.default_call_number_type["name"]
-        )
+        logging.info("Default Callnumber type Name:\t%s", self.default_call_number_type["name"])
 
     def setup_reference_data_for_all(self):
         logging.info(
@@ -132,9 +126,7 @@ class Conditions:
         self, name, legacy_id, value, parameter=None, marc_field: field.Field = None
     ):
         try:
-            return self.condition_cache.get(name)(
-                legacy_id, value, parameter, marc_field
-            )
+            return self.condition_cache.get(name)(legacy_id, value, parameter, marc_field)
         # Exception should only handle the missing condition from the cache.
         # All other exceptions should propagate up
         except Exception:
@@ -142,9 +134,7 @@ class Conditions:
             self.condition_cache[name] = attr
             return attr(legacy_id, value, parameter, marc_field)
 
-    def condition_trim_period(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_trim_period(self, legacy_id, value, parameter, marc_field: field.Field):
         return value.strip().rstrip(".").rstrip(",")
 
     def condition_trim(self, legacy_id, value, parameter, marc_field: field.Field):
@@ -168,9 +158,7 @@ class Conditions:
         )
         return parameter["value"]
 
-    def condition_remove_ending_punc(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_remove_ending_punc(self, legacy_id, value, parameter, marc_field: field.Field):
         v = value
         chars = ".;:,/+=- "
         while any(v) > 0 and v[-1] in chars:
@@ -211,25 +199,17 @@ class Conditions:
         num_take = int(ind2)
         return re.sub(reg_str, "", value[num_take:])
 
-    def condition_capitalize(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_capitalize(self, legacy_id, value, parameter, marc_field: field.Field):
         return value.capitalize()
 
-    def condition_clean_isbn(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_clean_isbn(self, legacy_id, value, parameter, marc_field: field.Field):
         return value
 
-    def condition_set_issuance_mode_id(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_set_issuance_mode_id(self, legacy_id, value, parameter, marc_field: field.Field):
         # mode of issuance is handled elsewhere in the mapping.
         return ""
 
-    def condition_set_publisher_role(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_set_publisher_role(self, legacy_id, value, parameter, marc_field: field.Field):
         roles = {
             "0": "Production",
             "1": "Publication",
@@ -268,9 +248,7 @@ class Conditions:
             (f for f in self.folio.identifier_types if f["name"] in parameter["names"]),
             None,
         )
-        self.mapper.migration_report.add(
-            Blurbs.MappedIdentifierTypes, identifier_type["name"]
-        )
+        self.mapper.migration_report.add(Blurbs.MappedIdentifierTypes, identifier_type["name"])
         my_id = identifier_type["id"]
         if not my_id:
             raise TransformationFieldMappingError(
@@ -315,14 +293,10 @@ class Conditions:
                 parameter.get("name", ""),
             )
 
-    def condition_char_select(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_char_select(self, legacy_id, value, parameter, marc_field: field.Field):
         return value[parameter["from"] : parameter["to"]]
 
-    def condition_set_receipt_status(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_set_receipt_status(self, legacy_id, value, parameter, marc_field: field.Field):
         if len(value) < 7:
             self.mapper.migration_report.add(
                 Blurbs.ReceiptStatusMapping, f"008 is too short: {value}"
@@ -386,9 +360,7 @@ class Conditions:
             )
             return self.default_contributor_name_type
 
-    def condition_set_note_type_id(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_set_note_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
@@ -399,9 +371,7 @@ class Conditions:
             )
             return t[0]
         except Exception:
-            raise ValueError(
-                f"Instance note type not found for {marc_field} {parameter}"
-            )
+            raise ValueError(f"Instance note type not found for {marc_field} {parameter}")
 
     def condition_set_contributor_type_id(
         self, legacy_id, value, parameter, marc_field: field.Field
@@ -460,9 +430,7 @@ class Conditions:
                 if value.strip() not in self.mapper.instance_id_map:
                     raise ValueError()
                 return self.mapper.instance_id_map[value.strip()]["folio_id"]
-            Helper.log_data_issue(
-                "", "No instance id provided", marc_field.format_field()
-            )
+            Helper.log_data_issue("", "No instance id provided", marc_field.format_field())
             return ""
         except Exception:
             raise TransformationRecordFailedError(
@@ -471,12 +439,8 @@ class Conditions:
                 f"{marc_field.format_field()}",
             )
 
-    def condition_set_url_relationship(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
-        return self._extracted_from_condition_set_electronic_access_relations_id_2(
-            "8", marc_field
-        )
+    def condition_set_url_relationship(self, legacy_id, value, parameter, marc_field: field.Field):
+        return self._extracted_from_condition_set_electronic_access_relations_id_2("8", marc_field)
 
     def condition_set_call_number_type_by_indicator(
         self, legacy_id, value, parameter, marc_field: pymarc.Field
@@ -542,9 +506,7 @@ class Conditions:
                     return cont_type["name"]
         return self.default_contributor_type["name"]
 
-    def condition_set_alternative_title_type_id(
-        self, legacy_id, value, parameter, marc_field
-    ):
+    def condition_set_alternative_title_type_id(self, legacy_id, value, parameter, marc_field):
         try:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.alt_title_types, "alt_title_types", parameter["name"]
@@ -570,10 +532,7 @@ class Conditions:
                 )
             elif len(other_columns) == 1:
                 logging.info(f"{other_columns[0]} will be used for location mapping")
-                return {
-                    lm[other_columns[0]]: lm["folio_code"]
-                    for lm in self.mapper.location_map
-                }
+                return {lm[other_columns[0]]: lm["folio_code"] for lm in self.mapper.location_map}
         except Exception as ee:
             raise TransformationProcessError("", f"{ee}", self.mapper.location_map)
 
@@ -587,9 +546,7 @@ class Conditions:
                 "Deprecated condition. Switch to set_permanent_location_id"
             ),
         )
-        return self.condition_set_permanent_location_id(
-            legacy_id, value, parameter, marc_field
-        )
+        return self.condition_set_permanent_location_id(legacy_id, value, parameter, marc_field)
 
     def condition_set_permanent_location_id(
         self, legacy_id, value, parameter, marc_field: field.Field
@@ -597,10 +554,7 @@ class Conditions:
         # Setup mapping if not already set up
         if "legacy_locations" not in self.ref_data_dicts:
             try:
-                d = {
-                    lm["legacy_code"]: lm["folio_code"]
-                    for lm in self.mapper.location_map
-                }
+                d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}
                 self.ref_data_dicts["legacy_locations"] = d
             except KeyError as ke:
                 if "folio_code" in str(ke):
@@ -617,19 +571,13 @@ class Conditions:
                     ] = self.setup_location_code_from_second_column()
         # Get the right code from the location map
         if self.mapper.location_map and any(self.mapper.location_map):
-            mapped_code = (
-                self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
-            )
+            mapped_code = self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
         else:  # IF there is no map, assume legacy code is the same as FOLIO code
             mapped_code = value.strip()
         # Get the FOLIO UUID for the code and return it
-        t = self.get_ref_data_tuple_by_code(
-            self.folio.locations, "locations", mapped_code
-        )
+        t = self.get_ref_data_tuple_by_code(self.folio.locations, "locations", mapped_code)
         if not t:
-            self.mapper.migration_report.add(
-                Blurbs.LocationMapping, f"Unmapped code: '{value}'"
-            )
+            self.mapper.migration_report.add(Blurbs.LocationMapping, f"Unmapped code: '{value}'")
             raise TransformationRecordFailedError(
                 legacy_id, "Could not map location from legacy code", value
             )
@@ -656,14 +604,10 @@ class Conditions:
         self.ref_data_dicts[dict_key] = d
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower(), ())
 
-    def condition_remove_substring(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_remove_substring(self, legacy_id, value, parameter, marc_field: field.Field):
         return value.replace(parameter["substring"], "")
 
-    def condition_set_instance_type_id(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_set_instance_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
         if marc_field.tag not in ["008", "336"]:
             self.mapper.migration_report.add(
                 Blurbs.InstanceTypeMapping,
@@ -677,14 +621,10 @@ class Conditions:
     def condition_set_electronic_access_relations_id(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
-        return self._extracted_from_condition_set_electronic_access_relations_id_2(
-            "3", marc_field
-        )
+        return self._extracted_from_condition_set_electronic_access_relations_id_2("3", marc_field)
 
     # TODO Rename this here and in `condition_set_url_relationship` and `condition_set_electronic_access_relations_id`
-    def _extracted_from_condition_set_electronic_access_relations_id_2(
-        self, arg0, marc_field
-    ):
+    def _extracted_from_condition_set_electronic_access_relations_id_2(self, arg0, marc_field):
         enum = {
             "0": "resource",
             "1": "version of resource",

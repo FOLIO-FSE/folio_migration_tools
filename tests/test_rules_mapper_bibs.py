@@ -61,9 +61,7 @@ def default_map(file_name, xpath, the_mapper):
     root = etree.parse(file_path)
     data = str("")
     for element in root.xpath(xpath, namespaces=ns):
-        data = " ".join(
-            [data, str(etree.tostring(element, pretty_print=True), "utf-8")]
-        )
+        data = " ".join([data, str(etree.tostring(element, pretty_print=True), "utf-8")])
     # print(json.dumps(rec, indent=4, sort_keys=True))
     return [result, data]
 
@@ -178,9 +176,7 @@ def test_editions(mapper):
 
 
 def test_languages_041(mapper):
-    message = (
-        "Should add languages (041$a) to the languages list; ignores non-ISO languages"
-    )
+    message = "Should add languages (041$a) to the languages list; ignores non-ISO languages"
     xpath = "//marc:datafield[@tag='041']"
     record = default_map("test_multiple_languages.xml", xpath, mapper)
     lang_codes = ["eng", "ger", "fre", "ita"]
@@ -277,9 +273,7 @@ def test_identifiers(mapper):
 
 
 def test_series(mapper):
-    message = (
-        "Should add series statements (800, 810, 811, 830, 440, 490) to series list"
-    )
+    message = "Should add series statements (800, 810, 811, 830, 440, 490) to series list"
     xpath = "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']"
     record = default_map("test_series.xml", xpath, mapper)
     m = message + "\n" + record[1]
@@ -313,17 +307,12 @@ def test_contributors(mapper):
     assert "Lous, Christian Carl, 1724-1804" in contributors
     assert "Weaver, James L" in contributors
     assert "Wolfcon Durham 2018" in contributors
-    assert (
-        "Kyōto Daigaku. Genshiro Jikkenjo. Senmon Kenkyūkai (2013 January 25)"
-        in contributors
-    )
+    assert "Kyōto Daigaku. Genshiro Jikkenjo. Senmon Kenkyūkai (2013 January 25)" in contributors
     assert "Tupera Tupera (Firm)" in contributors
 
 
 def test_classifications(mapper):
-    message = (
-        "Should add classifications (050, 082, 090, 086) to the classifications list"
-    )
+    message = "Should add classifications (050, 082, 090, 086) to the classifications list"
     xpath = "//marc:datafield[@tag='050' or @tag='082' or @tag='090' or @tag='086']"
     record = default_map("test_classifications.xml", xpath, mapper)
     classes = list(c["classificationNumber"] for c in record[0]["classifications"])
@@ -358,10 +347,7 @@ def test_subjects(mapper):
     )
     assert "Twentieth century Social life and customs" in record[0]["subjects"]
     assert "Engineering Philosophy", record[0]["subjects"]
-    assert (
-        "Aix-en-Provence (France) Philosophy. Early works to 1800"
-        in record[0]["subjects"]
-    )
+    assert "Aix-en-Provence (France) Philosophy. Early works to 1800" in record[0]["subjects"]
 
 
 def test_publication(mapper):
@@ -501,9 +487,7 @@ def test_notes_53x(mapper):
         "Electronic reproduction. Cambridge, Mass. Harvard College Library Digital Imaging Group, 2003 (Latin American pamphlet digital project at Harvard University ; 0005). Electronic reproduction from microfilm master negative produced by Harvard College Library Imaging Services. MH"
         in notes
     )  # "534$patn"):
-    assert (
-        "Originally issued: Frederick, John. Luck. Published in: Argosy, 1919" in notes
-    )
+    assert "Originally issued: Frederick, John. Luck. Published in: Argosy, 1919" in notes
 
 
 def test_notes_54x(mapper):
@@ -597,10 +581,7 @@ def test_notes_56x(mapper):
         in notes
     )
     # "563"):
-    assert (
-        "Gold-tooled morocco binding by Benjamin West, approximately 1840. [URI] Uk"
-        in notes
-    )
+    assert "Gold-tooled morocco binding by Benjamin West, approximately 1840. [URI] Uk" in notes
     # "565"):
     # TODO: can't be right, spreadsheet shoduld include subfield 3 i think
     assert (

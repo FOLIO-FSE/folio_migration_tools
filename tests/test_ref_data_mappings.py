@@ -86,9 +86,7 @@ def test_get_hybrid_mapping3():
     legacy_object = {"location": "sprad", "loan_type": "0", "material_type": "0 "}
     mock = Mock(spec=RefDataMapping)
     mock.regular_mappings = mappings
-    mock.hybrid_mappings = [
-        {"location": "sprad", "loan_type": "* ", "material_type": "*"}
-    ]
+    mock.hybrid_mappings = [{"location": "sprad", "loan_type": "* ", "material_type": "*"}]
     mock.cache = {}
     mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
     res = RefDataMapping.get_hybrid_mapping(mock, legacy_object)

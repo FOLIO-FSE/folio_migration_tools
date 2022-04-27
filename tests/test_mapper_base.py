@@ -23,9 +23,7 @@ def test_validate_required_properties():
         "type": "object",
     }
     with pytest.raises(TransformationRecordFailedError):
-        MapperBase.validate_required_properties(
-            "", record, schema, FOLIONamespaces.other
-        )
+        MapperBase.validate_required_properties("", record, schema, FOLIONamespaces.other)
 
 
 def test_validate_required_properties_remove_object():

@@ -51,12 +51,8 @@ def test_merge_holding():
 
     holding_2 = dict(
         formerIds=["c", "d"],
-        electronicAccess=[
-            {"uri": "1", "linkText": "1", "publicNote": "1", "relationshipId": "1"}
-        ],
-        holdingsStatementsForIndexes=[
-            {"statement": "stmt1", "note": "stmt1", "staffNote": True}
-        ],
+        electronicAccess=[{"uri": "1", "linkText": "1", "publicNote": "1", "relationshipId": "1"}],
+        holdingsStatementsForIndexes=[{"statement": "stmt1", "note": "stmt1", "staffNote": True}],
         holdingsStatements=[{"statement": "stmt4", "note": "stmt4", "staffNote": True}],
     )
     merged_holding = HoldingsHelper.merge_holding(holding_1, holding_2)

@@ -55,21 +55,15 @@ class FolderStructure:
         logging.info("Data folder is %s", self.data_folder)
         logging.info("Source records files folder is %s", self.legacy_records_folder)
         logging.info("Log file will be located at %s", self.transformation_log_path)
-        logging.info(
-            "Extra data will be stored at%s", self.transformation_extra_data_path
-        )
+        logging.info("Extra data will be stored at%s", self.transformation_extra_data_path)
         logging.info("Data issue reports %s", self.data_issue_file_path)
         logging.info("Created objects will be stored at  %s", self.created_objects_path)
-        logging.info(
-            "Migration report file will be saved at %s", self.migration_reports_file
-        )
+        logging.info("Migration report file will be saved at %s", self.migration_reports_file)
 
     def setup_migration_file_structure(self, source_file_type: str = ""):
         time_stamp = f'_{time.strftime("%Y%m%d-%H%M%S")}'
         time_str = time_stamp if self.add_time_stamp_to_file_names else ""
-        file_template = (
-            f"{self.iteration_identifier}{time_str}_{self.migration_task_name}"
-        )
+        file_template = f"{self.iteration_identifier}{time_str}_{self.migration_task_name}"
         object_type_string = str(self.object_type.name).lower()
         if source_file_type:
             self.legacy_records_folder = self.data_folder / source_file_type
@@ -93,25 +87,21 @@ class FolderStructure:
         )
 
         self.data_issue_file_path = (
-            self.reports_folder
-            / f"data_issues_log_{object_type_string}_{file_template}.tsv"
+            self.reports_folder / f"data_issues_log_{object_type_string}_{file_template}.tsv"
         )
         self.created_objects_path = (
             self.results_folder / f"folio_{object_type_string}_{file_template}.json"
         )
 
         self.failed_bibs_file = (
-            self.results_folder
-            / f"failed_bib_records_{self.iteration_identifier}{time_str}.mrc"
+            self.results_folder / f"failed_bib_records_{self.iteration_identifier}{time_str}.mrc"
         )
         self.failed_mfhds_file = (
-            self.results_folder
-            / f"failed_mfhd_records_{self.iteration_identifier}{time_str}.mrc"
+            self.results_folder / f"failed_mfhd_records_{self.iteration_identifier}{time_str}.mrc"
         )
 
         self.migration_reports_file = (
-            self.reports_folder
-            / f"transformation_report_{object_type_string}_{file_template}.md"
+            self.reports_folder / f"transformation_report_{object_type_string}_{file_template}.md"
         )
 
         self.srs_records_path = (

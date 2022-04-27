@@ -73,9 +73,7 @@ class LoansMigrator(MigrationTaskBase):
                 "Loaded and validated %s loans in file",
                 len(self.semi_valid_legacy_loans),
             )
-        if any(self.task_configuration.item_files) or any(
-            self.task_configuration.patron_files
-        ):
+        if any(self.task_configuration.item_files) or any(self.task_configuration.patron_files):
             self.valid_legacy_loans = list(self.check_barcodes())
             logging.info(
                 "Loaded and validated %s loans against barcodes",
@@ -144,9 +142,7 @@ class LoansMigrator(MigrationTaskBase):
                     f"Second failure: {res_checkout2.migration_report_message}",
                 )
         elif not res_checkout.should_be_retried:
-            logging.error(
-                "Failed first time. No retries: %s", res_checkout.error_message
-            )
+            logging.error("Failed first time. No retries: %s", res_checkout.error_message)
             self.migration_report.add(
                 Blurbs.Details,
                 f"Failed 1st time. No retries: {res_checkout.migration_report_message}",
@@ -167,14 +163,10 @@ class LoansMigrator(MigrationTaskBase):
         elif legacy_loan.next_item_status not in ["Available", "", "Checked out"]:
             self.set_item_status(legacy_loan)
 
-    def set_renewal_count(
-        self, legacy_loan: LegacyLoan, res_checkout: TransactionResult
-    ):
+    def set_renewal_count(self, legacy_loan: LegacyLoan, res_checkout: TransactionResult):
         if legacy_loan.renewal_count > 0:
             self.update_open_loan(res_checkout.folio_loan, legacy_loan)
-            self.migration_report.add_general_statistics(
-                "Updated renewal count for loan"
-            )
+            self.migration_report.add_general_statistics("Updated renewal count for loan")
 
     def wrap_up(self):
         for k, v in self.failed.items():
@@ -192,9 +184,7 @@ class LoansMigrator(MigrationTaskBase):
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# Loans migration results   \n")
-            report_file.write(
-                f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n"
-            )
+            report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
             self.migration_report.write_migration_report(report_file)
 
     def write_failed_loans_to_file(self):
@@ -207,9 +197,7 @@ class LoansMigrator(MigrationTaskBase):
             "renewal_count",
         ]
         with open(self.folder_structure.failed_recs_path, "w+") as failed_loans_file:
-            writer = csv.DictWriter(
-                failed_loans_file, fieldnames=csv_columns, dialect="tsv"
-            )
+            writer = csv.DictWriter(failed_loans_file, fieldnames=csv_columns, dialect="tsv")
             writer.writeheader()
             for _k, failed_loan in self.failed_and_not_dupe.items():
                 writer.writerow(failed_loan[0])
@@ -309,9 +297,7 @@ class LoansMigrator(MigrationTaskBase):
             return self.handle_aged_to_lost_item(legacy_loan)
         elif folio_checkout.error_message == "Declared lost":
             return folio_checkout
-        elif folio_checkout.error_message.startswith(
-            "Cannot check out to inactive user"
-        ):
+        elif folio_checkout.error_message.startswith("Cannot check out to inactive user"):
             return self.checkout_to_inactice_user(legacy_loan)
         else:
             self.migration_report.add(
@@ -334,9 +320,7 @@ class LoansMigrator(MigrationTaskBase):
                     f"Duplicate loans (or failed twice) Item barcode: "
                     f"{legacy_loan.item_barcode} Patron barcode: {legacy_loan.patron_barcode}"
                 )
-                self.migration_report.add(
-                    Blurbs.Details, "Duplicate loans (or failed twice)"
-                )
+                self.migration_report.add(Blurbs.Details, "Duplicate loans (or failed twice)")
                 del self.failed[legacy_loan.item_barcode]
             return TransactionResult(False, False, "", "", "")
 
@@ -347,9 +331,7 @@ class LoansMigrator(MigrationTaskBase):
         user["expirationDate"] = datetime.isoformat(datetime.now() + timedelta(days=1))
         self.activate_user(user)
         logging.debug("Successfully Activated user")
-        res = self.circulation_helper.check_out_by_barcode(
-            legacy_loan
-        )  # checkout_and_update
+        res = self.circulation_helper.check_out_by_barcode(legacy_loan)  # checkout_and_update
         self.migration_report.add(Blurbs.Details, res.migration_report_message)
         self.deactivate_user(user, expiration_date)
         logging.debug("Successfully Deactivated user again")
@@ -431,39 +413,27 @@ class LoansMigrator(MigrationTaskBase):
         }
         logging.debug(f"Declare lost data: {json.dumps(data, indent=4)}")
         if self.folio_put_post(declare_lost_url, data, "POST", "Declare item as lost"):
-            self.migration_report.add(
-                Blurbs.Details, "Successfully declared loan as lost"
-            )
+            self.migration_report.add(Blurbs.Details, "Successfully declared loan as lost")
         else:
             logging.error(f"Unsuccessfully declared loan {folio_loan} as lost")
-            self.migration_report.add(
-                Blurbs.Details, "Unsuccessfully declared loan as lost"
-            )
+            self.migration_report.add(Blurbs.Details, "Unsuccessfully declared loan as lost")
         # TODO: Exception handling
 
     def claim_returned(self, folio_loan):
-        claim_returned_url = (
-            f"/circulation/loans/{folio_loan['id']}/claim-item-returned"
-        )
+        claim_returned_url = f"/circulation/loans/{folio_loan['id']}/claim-item-returned"
         logging.debug(f"Claim returned url:{claim_returned_url}")
         due_date = du_parser.isoparse(folio_loan["dueDate"])
         data = {
-            "itemClaimedReturnedDateTime": datetime.isoformat(
-                due_date + timedelta(days=1)
-            ),
+            "itemClaimedReturnedDateTime": datetime.isoformat(due_date + timedelta(days=1)),
             "comment": "Created at migration. Date is due date + 1 day",
         }
         logging.debug(f"Claim returned data:\t{json.dumps(data)}")
-        if self.folio_put_post(
-            claim_returned_url, data, "POST", "Declare item as lost"
-        ):
+        if self.folio_put_post(claim_returned_url, data, "POST", "Declare item as lost"):
             self.migration_report.add(
                 Blurbs.Details, "Successfully declared loan as Claimed returned"
             )
         else:
-            logging.error(
-                f"Unsuccessfully declared loan {folio_loan} as Claimed returned"
-            )
+            logging.error(f"Unsuccessfully declared loan {folio_loan} as Claimed returned")
             self.migration_report.add(
                 Blurbs.Details,
                 f"Unsuccessfully declared loan {folio_loan} as Claimed returned",
@@ -473,9 +443,7 @@ class LoansMigrator(MigrationTaskBase):
     def set_item_status(self, legacy_loan: LegacyLoan):
         try:
             # Get Item by barcode, update status.
-            item_path = (
-                f'item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
-            )
+            item_path = f'item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
             item_url = f"{self.folio_client.okapi_url}/{item_path}"
             resp = requests.get(item_url, headers=self.folio_client.okapi_headers)
             resp.raise_for_status()
@@ -582,9 +550,7 @@ class LoansMigrator(MigrationTaskBase):
         try:
             api_path = f"{folio_loan['id']}/change-due-date"
             api_url = f"{self.folio_client.okapi_url}/circulation/loans/{api_path}"
-            body = {
-                "dueDate": du_parser.isoparse(str(legacy_loan.due_date)).isoformat()
-            }
+            body = {"dueDate": du_parser.isoparse(str(legacy_loan.due_date)).isoformat()}
             req = requests.post(
                 api_url, headers=self.folio_client.okapi_headers, data=json.dumps(body)
             )
@@ -630,9 +596,7 @@ class LoansMigrator(MigrationTaskBase):
             legacy_loan.out_date = legacy_loan.out_date + timedelta(
                 hours=self.task_configuration.utc_difference
             )
-            self.migration_report.add_general_statistics(
-                "Adjusted out and due dates to UTC"
-            )
+            self.migration_report.add_general_statistics("Adjusted out and due dates to UTC")
 
 
 def timings(t0, t0func, num_objects):

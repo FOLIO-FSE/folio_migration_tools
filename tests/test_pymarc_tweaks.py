@@ -19,21 +19,21 @@ def test_amharic():
             assert record["880"]["b"] == "የልዑል ራስ መኮንን ታሪክ /"
 
 
-""" def test_raw_from_sierra():
-    with open(
-        get_path("diac-4-theo-directly-from-sierra.mrc"),
-        "rb",
-    ) as marc_file:
-        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
-        reader.hide_utf8_warnings = True
-        reader.force_utf8 = False
-        for idx, record in enumerate(reader):
-            assert record.title
-            f_880 = record["880"].format_field()
-            f_a = record["880"]["a"]
-            s = str(f_a).decode("cesu-8").encode("utf-8")
-            print(s)
-            logging.info(s) """
+#  def test_raw_from_sierra():
+#     with open(
+#         get_path("diac-4-theo-directly-from-sierra.mrc"),
+#         "rb",
+#     ) as marc_file:
+#         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+#         reader.hide_utf8_warnings = True
+#         reader.force_utf8 = False
+#         for idx, record in enumerate(reader):
+#             assert record.title
+#             f_880 = record["880"].format_field()
+#             f_a = record["880"]["a"]
+#             s = str(f_a).decode("cesu-8").encode("utf-8")
+#             print(s)
+#             logging.info(s)
 
 
 # def test_processed_from_sierra():

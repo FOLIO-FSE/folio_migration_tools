@@ -85,9 +85,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             self.holdings = {}
             self.total_records = 0
-            self.holdings_id_map = self.load_id_map(
-                self.folder_structure.holdings_id_map_path
-            )
+            self.holdings_id_map = self.load_id_map(self.folder_structure.holdings_id_map_path)
             self.holdings_sources = self.get_holdings_sources()
             self.results_path = self.folder_structure.created_objects_path
             self.holdings_types = list(
@@ -151,8 +149,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def load_location_map(self):
         with open(
-            self.folder_structure.mapping_files_folder
-            / self.task_config.location_map_file_name
+            self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name
         ) as location_map_f:
             return self.load_ref_data_map_from_file(
                 location_map_f, "Found %s rows in location map"
@@ -166,13 +163,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def load_mapped_fields(self):
         with open(
-            self.folder_structure.mapping_files_folder
-            / self.task_config.holdings_map_file_name
+            self.folder_structure.mapping_files_folder / self.task_config.holdings_map_file_name
         ) as holdings_mapper_f:
             holdings_map = json.load(holdings_mapper_f)
-            logging.info(
-                "%s fields in holdings mapping file map", len(holdings_map["data"])
-            )
+            logging.info("%s fields in holdings mapping file map", len(holdings_map["data"]))
             mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
                 holdings_map
             )
@@ -202,9 +196,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def load_instance_id_map(self):
         res = {}
-        with open(
-            self.folder_structure.instance_id_map_path, "r"
-        ) as instance_id_map_file:
+        with open(self.folder_structure.instance_id_map_path, "r") as instance_id_map_file:
             for index, json_string in enumerate(instance_id_map_file):
                 # Format:{"legacy_id", "folio_id","instanceLevelCallNumber"}
                 if index % 100000 == 0:
@@ -228,9 +220,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 logging.critical(error_str)
                 print(f"\n{error_str}\nHalting")
                 sys.exit(1)
-        logging.info(
-            f"processed {self.total_records:,} records in {len(self.files)} files"
-        )
+        logging.info(f"processed {self.total_records:,} records in {len(self.files)} files")
 
     def wrap_up(self):
         logging.info("Work done. Wrapping up...")
@@ -239,9 +229,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 "Saving holdings created to %s",
                 self.folder_structure.created_objects_path,
             )
-            with open(
-                self.folder_structure.created_objects_path, "w+"
-            ) as holdings_file:
+            with open(self.folder_structure.created_objects_path, "w+") as holdings_file:
                 for holding in self.holdings.values():
                     for legacy_id in holding["formerIds"]:
                         # Prevent the first item in a boundwith to be overwritten
@@ -257,9 +245,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.mapper.save_id_map_file(
                 self.folder_structure.holdings_id_map_path, self.holdings_id_map
             )
-        with open(
-            self.folder_structure.migration_reports_file, "w"
-        ) as migration_report_file:
+        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             logging.info(
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
@@ -278,11 +264,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         properties = holdings_schema["properties"].keys()
         logging.info(properties)
         logging.info(self.task_config.holdings_merge_criteria)
-        res = [
-            mc
-            for mc in self.task_config.holdings_merge_criteria
-            if mc not in properties
-        ]
+        res = [mc for mc in self.task_config.holdings_merge_criteria if mc not in properties]
         if any(res):
             logging.critical(
                 (
@@ -295,14 +277,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def process_single_file(self, file_name):
         with open(file_name, encoding="utf-8-sig") as records_file:
-            self.mapper.migration_report.add_general_statistics(
-                "Number of files processed"
-            )
+            self.mapper.migration_report.add_general_statistics("Number of files processed")
             start = time.time()
             records_processed = 0
-            for idx, legacy_record in enumerate(
-                self.mapper.get_objects(records_file, file_name)
-            ):
+            for idx, legacy_record in enumerate(self.mapper.get_objects(records_file, file_name)):
                 records_processed = idx + 1
                 try:
                     self.mapper.verify_legacy_record(legacy_record, idx)
@@ -322,9 +300,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
-                    logging.info(
-                        f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
-                    )
+                    logging.info(f"{idx:,} records processed. Recs/sec: {elapsed_formatted} ")
             self.total_records = records_processed
             logging.info(
                 f"Done processing {file_name} containing {self.total_records:,} records. "
@@ -346,13 +322,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             holdings_from_row.append(folio_rec)
 
         elif len(folio_rec.get("instanceId", [])) > 1:  # Bound-with.
-            holdings_from_row.extend(
-                self.create_bound_with_holdings(folio_rec, legacy_id)
-            )
+            holdings_from_row.extend(self.create_bound_with_holdings(folio_rec, legacy_id))
         else:
-            raise TransformationRecordFailedError(
-                legacy_id, "No instance id in parsed record", ""
-            )
+            raise TransformationRecordFailedError(legacy_id, "No instance id in parsed record", "")
 
         for folio_holding in holdings_from_row:
             self.merge_holding_in(folio_holding, all_instance_ids, legacy_id)
@@ -369,17 +341,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         # Add former ids
         temp_ids = []
         for former_id in folio_holding.get("formerIds", []):
-            if (
-                former_id.startswith("[")
-                and former_id.endswith("]")
-                and "," in former_id
-            ):
+            if former_id.startswith("[") and former_id.endswith("]") and "," in former_id:
                 ids = list(
-                    former_id[1:-1]
-                    .replace('"', "")
-                    .replace(" ", "")
-                    .replace("'", "")
-                    .split(",")
+                    former_id[1:-1].replace('"', "").replace(" ", "").replace("'", "").split(",")
                 )
                 temp_ids.extend(ids)
             else:
@@ -416,9 +380,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     f'{folio_holding["id"]}-{instance_id}',
                 )
             )
-            self.mapper.migration_report.add_general_statistics(
-                "Bound-with holdings created"
-            )
+            self.mapper.migration_report.add_general_statistics("Bound-with holdings created")
             yield bound_with_holding
 
     @staticmethod
@@ -453,15 +415,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
         if len(instance_ids) > 1:
             # Is boundwith
-            bw_key = (
-                f"bw_{incoming_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
-            )
+            bw_key = f"bw_{incoming_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
             if bw_key not in self.bound_with_keys:
                 self.bound_with_keys.add(bw_key)
                 self.holdings[bw_key] = incoming_holding
-                self.generate_boundwith_part(
-                    self.folio_client, legacy_item_id, incoming_holding
-                )
+                self.generate_boundwith_part(self.folio_client, legacy_item_id, incoming_holding)
                 self.mapper.migration_report.add_general_statistics(
                     "Unique BW Holdings created from Items"
                 )
@@ -508,18 +466,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     "/holdings-sources", "holdingsRecordsSources"
                 )
             )
-            logging.info(
-                "Fetched %s holdingsRecordsSources from tenant", len(holdings_sources)
-            )
+            logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
             res = {n["name"].upper(): n["id"] for n in holdings_sources}
             if "FOLIO" not in res:
                 raise TransformationProcessError(
                     "", "No holdings source with name FOLIO in tenant"
                 )
             if "MARC" not in res:
-                raise TransformationProcessError(
-                    "", "No holdings source with name MARC in tenant"
-                )
+                raise TransformationProcessError("", "No holdings source with name MARC in tenant")
         return res
 
 

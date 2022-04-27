@@ -42,8 +42,7 @@ class HoldingsStatementsParser:
             linked_value_fields = [
                 value_field
                 for value_field in value_fields
-                if "8" in value_field
-                and value_field["8"].split(".")[0] == pattern_field["8"]
+                if "8" in value_field and value_field["8"].split(".")[0] == pattern_field["8"]
             ]
 
             if not any(linked_value_fields):
@@ -92,9 +91,7 @@ class HoldingsStatementsParser:
             },
         }
         _from, _to = get_from_to(pattern_field, linked_value_field)
-        cron_from, cron_to, hlm_stmt = get_cron_from_to(
-            pattern_field, linked_value_field
-        )
+        cron_from, cron_to, hlm_stmt = get_cron_from_to(pattern_field, linked_value_field)
         return_dict["hlm_stmt"] = hlm_stmt
         if cron_from:
             _from = f"{_from} ({cron_from})"

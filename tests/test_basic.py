@@ -68,9 +68,7 @@ def test_eval():
 def test_get_marc_textual_stmt():
     file_path = "./tests/test_data/default/test_mfhd_holdings_statements.xml"
     record = pymarc.parse_xml_to_array(file_path)[0]
-    res = HoldingsStatementsParser.get_holdings_statements(
-        record, "853", "863", "866", ["apa"]
-    )
+    res = HoldingsStatementsParser.get_holdings_statements(record, "853", "863", "866", ["apa"])
     stmt = "v.1:no. 1(1943:July 3)-v.1:no.52(1944:June 24)"
     stmt2 = "Some statement without note"
     stmt3 = "v.29 (2011)"

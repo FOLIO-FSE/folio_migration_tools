@@ -43,9 +43,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
         self.ref_data_dicts = {}
-        self.fallback_holdings_type_id = (
-            self.task_configuration.fallback_holdings_type_id
-        )
+        self.fallback_holdings_type_id = self.task_configuration.fallback_holdings_type_id
 
     def parse_hold(self, marc_record, legacy_id):
         """Parses a mfhd recod into a FOLIO Inventory instance object
@@ -95,9 +93,7 @@ class RulesMapperHoldings(RulesMapperBase):
             FOLIONamespaces.holdings,
         )
         self.dedupe_rec(cleaned_folio_holding)
-        self.holdings_id_map[legacy_id] = self.get_id_map_dict(
-            legacy_id, cleaned_folio_holding
-        )
+        self.holdings_id_map[legacy_id] = self.get_id_map_dict(legacy_id, cleaned_folio_holding)
 
         self.report_folio_mapping(cleaned_folio_holding, self.schema)
         return cleaned_folio_holding
@@ -121,9 +117,7 @@ class RulesMapperHoldings(RulesMapperBase):
             if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                 ignored_subsequent_fields.add(marc_field.tag)
 
-    def perform_additional_mapping(
-        self, marc_record: Record, folio_holding, legacy_id: str
-    ):
+    def perform_additional_mapping(self, marc_record: Record, folio_holding, legacy_id: str):
         """Perform additional tasks not easily handled in the mapping rules"""
         self.set_holdings_type(marc_record, folio_holding, legacy_id)
         self.set_default_call_number_type_if_empty(folio_holding)
@@ -137,13 +131,11 @@ class RulesMapperHoldings(RulesMapperBase):
                 "Space in permanentLocationId. Was this MFHD attached to multiple holdings?",
                 folio_holding["permanentLocationId"],
             )
-            folio_holding["permanentLocationId"] = folio_holding[
-                "permanentLocationId"
-            ].split(" ")[0]
+            folio_holding["permanentLocationId"] = folio_holding["permanentLocationId"].split(" ")[
+                0
+            ]
 
-    def parse_coded_holdings_statements(
-        self, marc_record: Record, folio_holding, legacy_id
-    ):
+    def parse_coded_holdings_statements(self, marc_record: Record, folio_holding, legacy_id):
         # TODO: Should one be able to switch these things off?
         a = {
             "holdingsStatements": ("853", "863", "866"),
@@ -225,9 +217,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def set_default_call_number_type_if_empty(self, folio_holding):
         if not folio_holding.get("callNumberTypeId", ""):
-            folio_holding[
-                "callNumberTypeId"
-            ] = self.conditions.default_call_number_type["id"]
+            folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type["id"]
 
     def remove_from_id_map(self, former_ids):
         """removes the ID from the map in case parsing failed"""

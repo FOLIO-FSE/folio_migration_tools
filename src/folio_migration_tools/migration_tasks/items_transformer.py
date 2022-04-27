@@ -77,8 +77,7 @@ class ItemsTransformer(MigrationTaskBase):
         self.total_records = 0
         self.folio_keys = []
         self.items_map = self.setup_records_map(
-            self.folder_structure.mapping_files_folder
-            / self.task_config.items_mapping_file_name
+            self.folder_structure.mapping_files_folder / self.task_config.items_mapping_file_name
         )
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
@@ -176,30 +175,22 @@ class ItemsTransformer(MigrationTaskBase):
                 except Exception as exception:
                     error_str = f"\n\nProcessing of {file_name} failed:\n{exception}."
                     logging.exception(error_str, stack_info=True)
-                    logging.fatal(
-                        "Check source files for empty lines or missing reference data."
-                    )
+                    logging.fatal("Check source files for empty lines or missing reference data.")
                     self.mapper.migration_report.add(
                         Blurbs.FailedFiles, f"{file_name} - {exception}"
                     )
                     logging.fatal(error_str)
                     sys.exit(1)
-        logging.info(
-            f"processed {self.total_records:,} records in {len(self.files)} files"
-        )
+        logging.info(f"processed {self.total_records:,} records in {len(self.files)} files")
 
     def process_single_file(self, file_name: FileDefinition, results_file):
         full_path = self.folder_structure.legacy_records_folder / file_name.file_name
         logging.info("Processing %s", full_path)
         records_in_file = 0
         with open(full_path, encoding="utf-8-sig") as records_file:
-            self.mapper.migration_report.add_general_statistics(
-                "Number of files processed"
-            )
+            self.mapper.migration_report.add_general_statistics("Number of files processed")
             start = time.time()
-            for idx, record in enumerate(
-                self.mapper.get_objects(records_file, full_path)
-            ):
+            for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
                 try:
                     if idx == 0:
                         logging.info("First legacy record:")
@@ -209,9 +200,7 @@ class ItemsTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.items
                     )
 
-                    self.handle_circiulation_notes(
-                        folio_rec, self.folio_client.current_user
-                    )
+                    self.handle_circiulation_notes(folio_rec, self.folio_client.current_user)
                     self.handle_notes(folio_rec)
                     if idx == 0:
                         logging.info("First FOLIO record:")
@@ -225,9 +214,7 @@ class ItemsTransformer(MigrationTaskBase):
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as data_error:
-                    self.mapper.handle_transformation_record_failed_error(
-                        idx, data_error
-                    )
+                    self.mapper.handle_transformation_record_failed_error(idx, data_error)
                 except AttributeError as attribute_error:
                     traceback.print_exc()
                     logging.fatal(attribute_error)
@@ -293,9 +280,7 @@ class ItemsTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Work done. Wrapping up...")
-        with open(
-            self.folder_structure.migration_reports_file, "w"
-        ) as migration_report_file:
+        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             logging.info(
                 "Writing migration and mapping report to %s",
                 self.folder_structure.migration_reports_file,

@@ -8,6 +8,7 @@ import typing
 import uuid
 from typing import Generator
 from typing import List
+from typing import Set
 
 import pymarc
 import requests
@@ -49,7 +50,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.folio = folio_client
         self.task_configuration = task_configuration
         self.record_status = {}
-        self.unique_001s = set()
+        self.unique_001s = Set[str]
         self.holdings_map = {}
         self.id_map = {}
         self.srs_recs = []

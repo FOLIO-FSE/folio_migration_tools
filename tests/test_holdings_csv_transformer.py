@@ -18,9 +18,7 @@ def test_generate_boundwith_part(caplog):
     caplog.set_level(25)
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
-    HoldingsCsvTransformer.generate_boundwith_part(
-        mock_folio, "legacy_id", {"id": "holding_uuid"}
-    )
+    HoldingsCsvTransformer.generate_boundwith_part(mock_folio, "legacy_id", {"id": "holding_uuid"})
     assert "Level 25" in caplog.text
     assert "boundwithPart\t" in caplog.text
     assert '"itemId": "02b904dc-b824-55ac-8e56-e50e395f18f8"}\n' in caplog.text
@@ -45,9 +43,7 @@ def test_merge_holding_in_first_boundwith():
     instance_ids: list[str] = ["Instance_1", "Instance_2"]
     item_id: str = "item_1"
 
-    HoldingsCsvTransformer.merge_holding_in(
-        mock_transformer, new_holding, instance_ids, item_id
-    )
+    HoldingsCsvTransformer.merge_holding_in(mock_transformer, new_holding, instance_ids, item_id)
     assert len(mock_transformer.holdings) == 1
     assert "bw_Instance_1_Instance_1_Instance_2" in mock_transformer.bound_with_keys
 
@@ -71,9 +67,7 @@ def test_merge_holding_in_second_boundwith_to_merge():
     instance_ids: list[str] = ["Instance_1", "Instance_2"]
     item_id: str = "item_1"
 
-    HoldingsCsvTransformer.merge_holding_in(
-        mock_transformer, new_holding, instance_ids, item_id
-    )
+    HoldingsCsvTransformer.merge_holding_in(mock_transformer, new_holding, instance_ids, item_id)
 
     new_holding_2 = {"instanceId": "Instance_1"}
     instance_ids_2: list[str] = ["Instance_1", "Instance_2"]
@@ -106,9 +100,7 @@ def test_merge_holding_in_second_boundwith_to_not_merge():
     instance_ids: list[str] = ["Instance_1", "Instance_2"]
     item_id: str = "item_1"
 
-    HoldingsCsvTransformer.merge_holding_in(
-        mock_transformer, new_holding, instance_ids, item_id
-    )
+    HoldingsCsvTransformer.merge_holding_in(mock_transformer, new_holding, instance_ids, item_id)
 
     new_holding_2 = {"instanceId": "Instance_2"}
     instance_ids_2: list[str] = ["Instance_3", "Instance_2"]

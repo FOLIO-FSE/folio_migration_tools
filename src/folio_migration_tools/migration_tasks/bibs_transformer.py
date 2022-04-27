@@ -70,9 +70,7 @@ class BibsTransformer(MigrationTaskBase):
 
     def do_work(self):
         logging.info("Starting....")
-        with open(
-            self.folder_structure.created_objects_path, "w+"
-        ) as created_records_file:
+        with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
             self.processor = BibsProcessor(
                 self.mapper,
                 self.folio_client,
@@ -82,8 +80,7 @@ class BibsTransformer(MigrationTaskBase):
             for file_obj in self.files:
                 try:
                     with open(
-                        self.folder_structure.legacy_records_folder
-                        / file_obj.file_name,
+                        self.folder_structure.legacy_records_folder / file_obj.file_name,
                         "rb",
                     ) as marc_file:
                         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
@@ -143,9 +140,7 @@ class BibsTransformer(MigrationTaskBase):
                         self.mapper.migration_report.add_general_statistics(
                             "Records successfully parsed from MARC21",
                         )
-                        self.processor.process_record(
-                            idx, record, source_file.suppressed
-                        )
+                        self.processor.process_record(idx, record, source_file.suppressed)
                 except TransformationRecordFailedError as error:
                     error.log_it()
             logging.info("Done reading %s records from file", idx + 1)

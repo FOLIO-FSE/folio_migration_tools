@@ -77,21 +77,17 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             "%s will be used as default holdings type",
             self.default_holdings_type["name"],
         )
-        self.instance_id_map = self.load_id_map(
-            self.folder_structure.instance_id_map_path, True
-        )
+        self.instance_id_map = self.load_id_map(self.folder_structure.instance_id_map_path, True)
         logging.info("%s Instance ids in map", len(self.instance_id_map))
         logging.info("Init done")
 
     def do_work(self):
         files = self.list_source_files()
         loc_map_path = (
-            self.folder_structure.mapping_files_folder
-            / self.task_config.location_map_file_name
+            self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name
         )
         map_path = (
-            self.folder_structure.mapping_files_folder
-            / self.task_config.mfhd_mapping_file_name
+            self.folder_structure.mapping_files_folder / self.task_config.mfhd_mapping_file_name
         )
         with open(loc_map_path) as loc_map_f, open(map_path) as map_f:
             location_map = list(csv.DictReader(loc_map_f, dialect="tsv"))
@@ -126,9 +122,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
 
         return files
 
-    def process_single_file(
-        self, file_def: FileDefinition, processor: HoldingsProcessor
-    ):
+    def process_single_file(self, file_def: FileDefinition, processor: HoldingsProcessor):
         try:
             with open(
                 self.folder_structure.legacy_records_folder / file_def.file_name,
@@ -143,9 +137,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             logging.critical(tpe)
             sys.exit(1)
         except Exception:
-            logging.exception(
-                "Failure in Main: %s", file_def.file_name, stack_info=True
-            )
+            logging.exception("Failure in Main: %s", file_def.file_name, stack_info=True)
 
     def wrap_up(self):
         logging.info("wapping up")

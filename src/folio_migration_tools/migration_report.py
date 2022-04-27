@@ -47,9 +47,7 @@ class MigrationReport:
             report_file.write("Measure | Count   \n")
             report_file.write("--- | ---:   \n")
             b = self.report[a]
-            sortedlist = [
-                (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
-            ]
+            sortedlist = [(k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"]
             for b in sortedlist:
                 report_file.write(f"{b[0] or 'EMPTY'} | {b[1]:,}   \n")
             report_file.write("</details>   \n")
@@ -60,9 +58,7 @@ class MigrationReport:
             logging.info(f"{blurb[0]}    ")
             logging.info("_______________")
             b = self.report[a]
-            sortedlist = [
-                (k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"
-            ]
+            sortedlist = [(k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"]
             for b in sortedlist:
                 logging.info(f"{b[0] or 'EMPTY'} \t\t{b[1]:,}   ")
 

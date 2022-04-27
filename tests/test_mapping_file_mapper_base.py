@@ -35,9 +35,7 @@ class MyTestableFileMapper(MappingFileMapperBase):
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
         if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
             return self.mapped_from_values.get(folio_prop_name, "")
-        legacy_values = MappingFileMapperBase.get_legacy_vals(
-            legacy_item, legacy_item_keys
-        )
+        legacy_values = MappingFileMapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
         return " ".join(legacy_values).strip()
 
 

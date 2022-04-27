@@ -75,9 +75,7 @@ class MigrationTaskBase:
     @staticmethod
     def load_id_map(map_path, raise_if_empty=False):
         if not isfile(map_path):
-            logging.warn(
-                "No legacy id map found at %s. Will build one from scratch", map_path
-            )
+            logging.warn("No legacy id map found at %s. Will build one from scratch", map_path)
             return {}
         id_map = {}
         loaded_rows = 0
@@ -139,9 +137,7 @@ class MigrationTaskBase:
         else:
             logger.setLevel(logging.INFO)
             stream_handler.setLevel(logging.INFO)
-            stream_handler.addFilter(
-                ExcludeLevelFilter(30)
-            )  # Loose warnings from pymarc
+            stream_handler.addFilter(ExcludeLevelFilter(30))  # Loose warnings from pymarc
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
@@ -186,9 +182,7 @@ class MigrationTaskBase:
                 for f in field_map["data"]
                 if f["legacy_field"] and f["legacy_field"] != "Not mapped"
             )
-            logging.info(
-                "%s Mapped fields in mapping file map", len(list(mapped_fields))
-            )
+            logging.info("%s Mapped fields in mapping file map", len(list(mapped_fields)))
             return field_map
 
     @staticmethod
@@ -200,9 +194,7 @@ class MigrationTaskBase:
         parser.add_argument("base_folder", help="path base folder", type=str)
         parser.add_argument("--password", help="the api users password", secure=True)"""
 
-    def log_and_exit_if_too_many_errors(
-        self, error: TransformationRecordFailedError, idx
-    ):
+    def log_and_exit_if_too_many_errors(self, error: TransformationRecordFailedError, idx):
         self.num_exeptions += 1
         error.log_it()
         if self.num_exeptions / (1 + idx) > 0.2 and self.num_exeptions > 5000:
@@ -218,9 +210,7 @@ class MigrationTaskBase:
         if num_processed > 1 and num_processed % 10000 == 0:
             elapsed = num_processed / (time.time() - start_time)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            logging.info(
-                f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} "
-            )
+            logging.info(f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} ")
 
     def load_ref_data_mapping_file(
         self,
@@ -261,8 +251,7 @@ class MigrationTaskBase:
             logging.info("No mapping setup for %s", folio_property_name)
             logging.info("%s will have default mapping if any ", folio_property_name)
             logging.info(
-                "Add a file named %s and add the field to "
-                "the item.mapping.json file.",
+                "Add a file named %s and add the field to " "the item.mapping.json file.",
                 map_file_path,
             )
             return None

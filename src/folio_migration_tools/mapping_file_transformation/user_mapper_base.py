@@ -11,9 +11,7 @@ from folio_migration_tools.migration_report import MigrationReport
 
 
 class UserMapperBase(MapperBase):
-    def __init__(
-        self, folio_client: FolioClient, library_configuration: LibraryConfiguration
-    ):
+    def __init__(self, folio_client: FolioClient, library_configuration: LibraryConfiguration):
         super().__init__(library_configuration, folio_client)
         self.legacy_id_map: Dict[str, str] = {}
 
@@ -25,9 +23,7 @@ class UserMapperBase(MapperBase):
 
     def print_mapping_report(self, total_records):
         print("\n## Mapped FOLIO fields")
-        d_sorted = {
-            k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
-        }
+        d_sorted = {k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)}
         print("FOLIO Field | % | Has value")
         print("--- | --- | --- :")
         for k, v in d_sorted.items():
@@ -35,9 +31,7 @@ class UserMapperBase(MapperBase):
             mapped_per = "{:.0%}".format(max(mp, 0))
             print(f"{k} | {mapped_per} | {v} ")
         print("\n## Mapped Legacy fields")
-        d_sorted = {
-            k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)
-        }
+        d_sorted = {k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)}
         print("Legacy Field | % | Has Value")
         print("--- | --- | --- :")
         for k, v in d_sorted.items():
@@ -73,9 +67,7 @@ class UserMapperBase(MapperBase):
                     "the legacyIdentifier in the mapping file?"
                 ),
             )
-        user_id = str(
-            FolioUUID(self.folio_client.okapi_url, FOLIONamespaces.users, legacy_id)
-        )
+        user_id = str(FolioUUID(self.folio_client.okapi_url, FOLIONamespaces.users, legacy_id))
         return {
             "metadata": self.folio_client.get_metadata_construct(),
             "id": user_id,
@@ -108,9 +100,7 @@ class UserMapperBase(MapperBase):
             self.migration_report.add("User validation", "Total failed users")
             for failure in failures:
                 self.migration_report.add("User validation", f"{failure}")
-            raise ValueError(
-                f"Record {folio_user['username']} failed validation {failures}"
-            )
+            raise ValueError(f"Record {folio_user['username']} failed validation {failures}")
 
     def write_migration_report(self):
         for a in self.migration_report:
@@ -135,9 +125,7 @@ class UserMapperBase(MapperBase):
                 for b in sortedlist:
                     report_file.write(f"{b[0]} | {b[1]}\n")
             report_file.write("\n## Mapped FOLIO fields\n")
-            d_sorted = {
-                k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)
-            }
+            d_sorted = {k: self.mapped_folio_fields[k] for k in sorted(self.mapped_folio_fields)}
             report_file.write("FOLIO Field | % | Has Value\n")
             report_file.write("--- | --- | --- | ---:\n")
             for k, v in d_sorted.items():
@@ -145,10 +133,7 @@ class UserMapperBase(MapperBase):
                 mapped_per = "{:.0%}".format(max(mp, 0))
                 report_file.write(f"{k} | {mapped_per} | {v} \n")
             report_file.write("\n## Mapped Legacy fields\n")
-            d_sorted = {
-                k: self.mapped_legacy_fields[k]
-                for k in sorted(self.mapped_legacy_fields)
-            }
+            d_sorted = {k: self.mapped_legacy_fields[k] for k in sorted(self.mapped_legacy_fields)}
             report_file.write("Legacy Field | % | Has Value\n")
             report_file.write("--- | --- | --- | ---:\n")
             for k, v in d_sorted.items():
@@ -172,9 +157,7 @@ class UserMapperBase(MapperBase):
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"
-        ref_object = self.ref_data_dicts.get(dict_key, {}).get(
-            key_value.lower().strip(), ()
-        )
+        ref_object = self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ())
         # logging.info(f"{key_value} - {ref_object} - {dict_key}")
         if ref_object:
             return ref_object

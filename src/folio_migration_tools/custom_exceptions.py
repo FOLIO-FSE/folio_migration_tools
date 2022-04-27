@@ -48,9 +48,7 @@ class TransformationRecordFailedError(TransfomationError):
         )
 
     def log_it(self):
-        logging.error(
-            "Record failed: %s. See the data issues log for details", self.message
-        )
+        logging.error("Record failed: %s. See the data issues log for details", self.message)
         logging.log(
             26,
             "RECORD FAILED\t%s\t%s\t%s",

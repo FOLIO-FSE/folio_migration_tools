@@ -24,9 +24,7 @@ class TestMFHDRulesMapper(unittest.TestCase):
                 cls.config.password,
             )
             args = SimpleNamespace(**{"instance_id_map": {}})
-            instance_id_map = {
-                "017372388": {"id": "1bcca4f8-6502-4659-9ad3-3eb952f663db"}
-            }
+            instance_id_map = {"017372388": {"id": "1bcca4f8-6502-4659-9ad3-3eb952f663db"}}
             location_map = [{"folio_code": "UCOLB", "legacy_code": "SXSTK"}]
             with open("./maps/mfhd_to_holdings_five_colleges.json", "r") as f:
                 d = json.load(f)
@@ -50,9 +48,7 @@ class TestMFHDRulesMapper(unittest.TestCase):
         root = etree.parse(file_path)
         data = str("")
         for element in root.xpath(xpath, namespaces=ns):
-            data = " ".join(
-                [data, str(etree.tostring(element, pretty_print=True), "utf-8")]
-            )
+            data = " ".join([data, str(etree.tostring(element, pretty_print=True), "utf-8")])
         # print(json.dumps(rec, indent=4, sort_keys=True))
         return [result, data]
 
@@ -70,9 +66,7 @@ class TestMFHDRulesMapper(unittest.TestCase):
         self.assertEqual("1bcca4f8-6502-4659-9ad3-3eb952f663db", rec[0]["instanceId"])
         self.assertEqual("hsn", rec[0]["holdingsStatements"][0]["statement"])
         self.assertEqual("hsi", rec[0]["holdingsStatementsForIndexes"][0]["statement"])
-        self.assertEqual(
-            "hss note", rec[0]["holdingsStatementsForSupplements"][0]["note"]
-        )
+        self.assertEqual("hss note", rec[0]["holdingsStatementsForSupplements"][0]["note"])
 
         print(json.dumps(rec[0], indent=4))
 
@@ -80,17 +74,13 @@ class TestMFHDRulesMapper(unittest.TestCase):
         xpath = xpath = "//marc:controlfield[@tag='001']"
         rec = self.default_map("mfhd_test2.xml", xpath)
         self.assertIsNotNone(rec[0]["metadata"])
-        self.assertEqual(
-            "e8c70705-0964-4911-9ddd-c3017367bed7", rec[0]["permanentLocationId"]
-        )
+        self.assertEqual("e8c70705-0964-4911-9ddd-c3017367bed7", rec[0]["permanentLocationId"])
 
     def test_no_location(self):
         xpath = xpath = "//marc:controlfield[@tag='001']"
         rec = self.default_map("mfhd_test_no_location.xml", xpath)
         self.assertIsNotNone(rec[0]["metadata"])
-        self.assertEqual(
-            "e8c70705-0964-4911-9ddd-c3017367bed7", rec[0]["permanentLocationId"]
-        )
+        self.assertEqual("e8c70705-0964-4911-9ddd-c3017367bed7", rec[0]["permanentLocationId"])
 
 
 if __name__ == "__main__":

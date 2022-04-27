@@ -43,13 +43,10 @@ class UserTransformer(MigrationTaskBase):
         self.total_records = 0
 
         self.user_map = self.setup_records_map(
-            self.folder_structure.mapping_files_folder
-            / self.task_config.user_mapping_file_name
+            self.folder_structure.mapping_files_folder / self.task_config.user_mapping_file_name
         )
         self.folio_keys = []
-        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
-            self.user_map
-        )
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(self.user_map)
         # Properties
         self.failed_ids = []
         self.failed_objects = []
@@ -58,33 +55,28 @@ class UserTransformer(MigrationTaskBase):
         ).is_file():
             group_mapping = self.load_ref_data_mapping_file(
                 "patronGroup",
-                self.folder_structure.mapping_files_folder
-                / self.task_config.group_map_path,
+                self.folder_structure.mapping_files_folder / self.task_config.group_map_path,
                 self.folio_keys,
             )
         else:
             logging.info(
                 "%s not found. No patronGroup mapping will be performed",
-                self.folder_structure.mapping_files_folder
-                / self.task_config.group_map_path,
+                self.folder_structure.mapping_files_folder / self.task_config.group_map_path,
             )
             group_mapping = []
 
         if (
-            self.folder_structure.mapping_files_folder
-            / self.task_config.departments_map_path
+            self.folder_structure.mapping_files_folder / self.task_config.departments_map_path
         ).is_file():
             departments_mapping = self.load_ref_data_mapping_file(
                 "departments",
-                self.folder_structure.mapping_files_folder
-                / self.task_config.departments_map_path,
+                self.folder_structure.mapping_files_folder / self.task_config.departments_map_path,
                 self.folio_keys,
             )
         else:
             logging.info(
                 "%s not found. No departments mapping will be performed",
-                self.folder_structure.mapping_files_folder
-                / self.task_config.departments_map_path,
+                self.folder_structure.mapping_files_folder / self.task_config.departments_map_path,
             )
             departments_mapping = []
         self.mapper = UserMapper(
@@ -99,12 +91,10 @@ class UserTransformer(MigrationTaskBase):
     def do_work(self):
         logging.info("Starting....")
         source_path = (
-            self.folder_structure.legacy_records_folder
-            / self.task_config.user_file.file_name
+            self.folder_structure.legacy_records_folder / self.task_config.user_file.file_name
         )
         map_path = (
-            self.folder_structure.mapping_files_folder
-            / self.task_config.user_mapping_file_name
+            self.folder_structure.mapping_files_folder / self.task_config.user_mapping_file_name
         )
         try:
             with open(
@@ -137,21 +127,15 @@ class UserTransformer(MigrationTaskBase):
                             results_file.write(f"{json.dumps(folio_user)}\n")
                             if num_users == 1:
                                 logging.info("## First FOLIO  user")
-                                logging.info(
-                                    json.dumps(folio_user, indent=4, sort_keys=True)
-                                )
+                                logging.info(json.dumps(folio_user, indent=4, sort_keys=True))
                             self.mapper.migration_report.add_general_statistics(
                                 "Successful user transformations"
                             )
                             if num_users % 1000 == 0:
                                 logging.info(f"{num_users} users processed.")
                         except TransformationRecordFailedError as tre:
-                            self.mapper.migration_report.add_general_statistics(
-                                "Records failed"
-                            )
-                            Helper.log_data_issue(
-                                tre.index_or_id, tre.message, tre.data_value
-                            )
+                            self.mapper.migration_report.add_general_statistics("Records failed")
+                            Helper.log_data_issue(tre.index_or_id, tre.message, tre.data_value)
                             logging.error(tre)
                         except TransformationProcessError as tpe:
                             logging.error(tpe)
@@ -194,9 +178,7 @@ class UserTransformer(MigrationTaskBase):
             )
         try:
             legacy_id_property_name = field_map["legacyIdentifier"][0]
-            logging.info(
-                "Legacy identifier will be mapped from %s", legacy_id_property_name
-            )
+            logging.info("Legacy identifier will be mapped from %s", legacy_id_property_name)
             return legacy_id_property_name
         except Exception as exception:
             raise TransformationProcessError(
@@ -209,15 +191,11 @@ class UserTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         path = self.folder_structure.results_folder / "user_id_map.json"
-        logging.info(
-            f"Saving map of {len(self.mapper.legacy_id_map)} old and new IDs to {path}"
-        )
+        logging.info(f"Saving map of {len(self.mapper.legacy_id_map)} old and new IDs to {path}")
 
         with open(path, "w+") as id_map_file:
             json.dump(self.mapper.legacy_id_map, id_map_file, indent=4)
-        with open(
-            self.folder_structure.migration_reports_file, "w"
-        ) as migration_report_file:
+        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             logging.info(
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,

@@ -120,9 +120,7 @@ class BibsProcessor:
                 }
             )
             self.instance_id_map_file.write(f"{s}\n")
-            self.mapper.migration_report.add_general_statistics(
-                "Lines written to identifier map"
-            )
+            self.mapper.migration_report.add_general_statistics("Lines written to identifier map")
 
     @staticmethod
     def get_valid_instance_ids(

@@ -22,9 +22,7 @@ class RefDataMapping(object):
         self.blurb = blurb
         logging.info("%s reference data mapping. Initializing", self.name)
         logging.info("Fetching %s reference data from FOLIO", self.name)
-        self.ref_data = list(
-            folio_client.folio_get_all(ref_data_path, array_name, "", 1000)
-        )
+        self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name, "", 1000))
         self.map = the_map
         self.regular_mappings = []
         self.key_type = key_type
@@ -75,9 +73,7 @@ class RefDataMapping(object):
                         self.regular_mappings.append(mapping)
                     t = self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"])
                     if not t:
-                        raise TransformationProcessError(
-                            "", f"Mapping not found for {mapping}"
-                        )
+                        raise TransformationProcessError("", f"Mapping not found for {mapping}")
                     mapping["folio_id"] = t[0]
             except TransformationProcessError as transformation_process_error:
                 raise transformation_process_error from transformation_process_error
@@ -131,24 +127,18 @@ class RefDataMapping(object):
             return self.cache[obj_key]
         prepped_props = {k: legacy_object[k].strip() for k in self.mapped_legacy_keys}
         for mapping in self.regular_mappings:
-            match_number = sum(
-                prepped_props[k] == mapping[k] for k in self.mapped_legacy_keys
-            )
+            match_number = sum(prepped_props[k] == mapping[k] for k in self.mapped_legacy_keys)
             if match_number == len(self.mapped_legacy_keys):
                 self.cache[obj_key] = mapping
                 return mapping
         return None
 
     def is_hybrid_default_mapping(self, mapping):
-        legacy_values = [
-            value for key, value in mapping.items() if key in self.mapped_legacy_keys
-        ]
+        legacy_values = [value for key, value in mapping.items() if key in self.mapped_legacy_keys]
         return "*" in legacy_values and not self.is_default_mapping(mapping)
 
     def is_default_mapping(self, mapping):
-        legacy_values = [
-            value for key, value in mapping.items() if key in self.mapped_legacy_keys
-        ]
+        legacy_values = [value for key, value in mapping.items() if key in self.mapped_legacy_keys]
         return all(f == "*" for f in legacy_values)
 
     def pre_validate_map(self):
@@ -217,6 +207,5 @@ def get_mapped_legacy_keys(mapping):
     return [
         k.strip()
         for k in mapping.keys()
-        if k
-        not in ["folio_group", "folio_code", "folio_id", "folio_name", "legacy_code"]
+        if k not in ["folio_group", "folio_code", "folio_id", "folio_name", "legacy_code"]
     ]

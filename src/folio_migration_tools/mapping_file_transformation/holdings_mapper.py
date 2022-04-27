@@ -70,9 +70,7 @@ class HoldingsMapper(MappingFileMapperBase):
             )
             return value
 
-        legacy_values = MappingFileMapperBase.get_legacy_vals(
-            legacy_item, legacy_item_keys
-        )
+        legacy_values = MappingFileMapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
         legacy_value = " ".join(legacy_values).strip()
 
         if folio_prop_name == "permanentLocationId":
@@ -93,20 +91,14 @@ class HoldingsMapper(MappingFileMapperBase):
                 )
             return legacy_value.removeprefix("[").removesuffix("]")
         elif folio_prop_name == "callNumberTypeId":
-            return self.get_call_number_type_id(
-                legacy_item, folio_prop_name, index_or_id
-            )
+            return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
         elif folio_prop_name == "statisticalCodeIds":
-            return self.get_statistical_codes(
-                legacy_values, folio_prop_name, index_or_id
-            )
+            return self.get_statistical_codes(legacy_values, folio_prop_name, index_or_id)
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(legacy_value, index_or_id)
         elif any(legacy_item_keys):
             if len(legacy_item_keys) > 1:
-                self.migration_report.add(
-                    Blurbs.Details, f"{legacy_item_keys} were concatenated"
-                )
+                self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
             return legacy_value
         else:
             # edge case
@@ -149,18 +141,14 @@ class HoldingsMapper(MappingFileMapperBase):
                 new_legacy_value not in self.instance_id_map
                 and legacy_instance_id not in self.instance_id_map
             ):
-                self.migration_report.add_general_statistics(
-                    "Records not matched to Instances"
-                )
+                self.migration_report.add_general_statistics("Records not matched to Instances")
                 s = "Bib id not in instance id map."
                 raise TransformationRecordFailedError(index_or_id, s, new_legacy_value)
             else:
-                self.migration_report.add_general_statistics(
-                    "Records matched to Instances"
+                self.migration_report.add_general_statistics("Records matched to Instances")
+                entry = self.instance_id_map.get(new_legacy_value, "") or self.instance_id_map.get(
+                    legacy_instance_id
                 )
-                entry = self.instance_id_map.get(
-                    new_legacy_value, ""
-                ) or self.instance_id_map.get(legacy_instance_id)
                 return_ids.append(entry["folio_id"])
         if any(return_ids):
             return return_ids

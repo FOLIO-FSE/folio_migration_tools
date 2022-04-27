@@ -7,9 +7,7 @@ class Helper:
     def print_mapping_report(
         report_file, total_records: int, mapped_folio_fields, mapped_legacy_fields
     ):
-        details_start = (
-            "<details><summary>Click to expand field report</summary>     \n\n"
-        )
+        details_start = "<details><summary>Click to expand field report</summary>     \n\n"
         details_end = "</details>   \n"
         report_file.write("\n## Mapped FOLIO fields\n")
         # report_file.write(f"{blurbs[header]}\n")
@@ -24,9 +22,7 @@ class Helper:
             mapped = v[0]
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
-            report_file.write(
-                f"{k} | {max(mapped, 0):,} ({mapped_per}) | {unmapped:,}  \n"
-            )
+            report_file.write(f"{k} | {max(mapped, 0):,} ({mapped_per}) | {unmapped:,}  \n")
         report_file.write(details_end)
 
         report_file.write("\n## Mapped Legacy fields\n")
@@ -38,9 +34,7 @@ class Helper:
         report_file.write("--- | --- | --- | ---:  \n")
         for k, v in d_sorted.items():
             present = v[0]
-            present_per = "{:.1%}".format(
-                present / total_records if total_records else 0
-            )
+            present_per = "{:.1%}".format(present / total_records if total_records else 0)
             unmapped = present - v[1]
             mapped = v[1]
             mp = mapped / total_records if total_records else 0

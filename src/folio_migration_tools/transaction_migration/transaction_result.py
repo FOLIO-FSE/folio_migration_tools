@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class TransactionResult(object):
     __slots__ = [
         "was_successful",
@@ -11,7 +14,7 @@ class TransactionResult(object):
         self,
         was_successful: bool,
         should_be_retried: bool,
-        folio_loan: str,
+        folio_loan: Any,
         error_message: str,
         migration_report_message: str,
     ):

@@ -83,9 +83,7 @@ class MapperBase:
     ):
         try:
             # Get the values in the fields that will be used for mapping
-            fieldvalues = [
-                legacy_object.get(k) for k in ref_data_mapping.mapped_legacy_keys
-            ]
+            fieldvalues = [legacy_object.get(k) for k in ref_data_mapping.mapped_legacy_keys]
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
@@ -107,10 +105,7 @@ class MapperBase:
             if prevent_default:
                 self.migration_report.add(
                     ref_data_mapping.blurb,
-                    (
-                        f"Not to be mapped. "
-                        f'(No default) -- {" - ".join(fieldvalues)} -> ""'
-                    ),
+                    (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
                 )
                 return ""
             self.migration_report.add(
@@ -151,9 +146,7 @@ class MapperBase:
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
             # Get the values in the fields that will be used for mapping
-            fieldvalues = [
-                legacy_object.get(k) for k in ref_data_mapping.mapped_legacy_keys
-            ]
+            fieldvalues = [legacy_object.get(k) for k in ref_data_mapping.mapped_legacy_keys]
 
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
@@ -177,10 +170,7 @@ class MapperBase:
             if prevent_default:
                 self.migration_report.add(
                     ref_data_mapping.blurb,
-                    (
-                        f"Not to be mapped. "
-                        f'(No default) -- {" - ".join(fieldvalues)} -> ""'
-                    ),
+                    (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
                 )
                 return ""
             self.migration_report.add(
@@ -215,9 +205,7 @@ class MapperBase:
         error.log_it()
         self.migration_report.add_general_statistics("Field Mapping Errors found")
 
-    def handle_transformation_process_error(
-        self, idx, error: TransformationProcessError
-    ):
+    def handle_transformation_process_error(self, idx, error: TransformationProcessError):
         self.migration_report.add_general_statistics("Transformation process error")
         logging.critical("%s\t%s", idx, error)
         print(f"\n{error.message}: {error.data_value}")
@@ -226,17 +214,14 @@ class MapperBase:
     def handle_transformation_record_failed_error(
         self, records_processed: int, error: TransformationRecordFailedError
     ):
-        self.migration_report.add(
-            Blurbs.GeneralStatistics, "Records failed due to an error"
-        )
+        self.migration_report.add(Blurbs.GeneralStatistics, "Records failed due to an error")
         error.id = error.index_or_id or records_processed
         error.log_it()
         self.num_criticalerrors += 1
         if (
             self.num_criticalerrors / (records_processed + 1)
             > (self.library_configuration.failed_percentage_threshold / 100)
-            and self.num_criticalerrors
-            > self.library_configuration.failed_records_threshold
+            and self.num_criticalerrors > self.library_configuration.failed_records_threshold
         ):
             logging.fatal(
                 (
@@ -281,12 +266,8 @@ class MapperBase:
     def store_hrid_settings(self):
         logging.info("Setting HRID counter to current +1")
         try:
-            self.hrid_settings["instances"]["startNumber"] = (
-                self.instance_hrid_counter + 1
-            )
-            self.hrid_settings["holdings"]["startNumber"] = (
-                self.holdings_hrid_counter + 1
-            )
+            self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter + 1
+            self.hrid_settings["holdings"]["startNumber"] = self.holdings_hrid_counter + 1
             url = self.folio_client.okapi_url + self.hrid_path
             resp = requests.put(
                 url,
