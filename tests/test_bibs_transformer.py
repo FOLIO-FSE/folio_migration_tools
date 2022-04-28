@@ -14,12 +14,12 @@ def test_set_leader():
         reader.hide_utf8_warnings = True
         reader.force_utf8 = True
         record: Record = None
-        for record in reader:
-            BibsTransformer.set_leader(record, migration_report)
-            assert record.leader.endswith("4500")
-            assert record.leader[9] == "a"
-            assert record.leader[10] == "2"
-            assert record.leader[11] == "2"
-            vals = migration_report.report[Blurbs.LeaderManipulation[0]].items()
-            # Should be 4?
-            assert len(vals) == 5
+        record = next(reader)
+        BibsTransformer.set_leader(record, migration_report)
+        assert record.leader.endswith("4500")
+        assert record.leader[9] == "a"
+        assert record.leader[10] == "2"
+        assert record.leader[11] == "2"
+        vals = migration_report.report[Blurbs.LeaderManipulation[0]].items()
+        # Should be 4?
+        assert len(vals) == 5
