@@ -2,6 +2,10 @@
 import json
 import logging
 
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
+from pymarc.record import Record
+
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.helper import Helper
@@ -10,9 +14,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folioclient import FolioClient
-from pymarc.record import Record
 
 
 class BibsProcessor:
