@@ -6,6 +6,10 @@ from abc import abstractmethod
 from pathlib import Path
 from uuid import UUID
 
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
+from folioclient import FolioClient
+
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -15,9 +19,6 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
-from folioclient import FolioClient
 
 empty_vals = ["Not mapped", None, ""]
 
@@ -94,6 +95,15 @@ class MappingFileMapperBase(MapperBase):
     def setup_field_map(self, ignore_legacy_identifier):
         field_map = {}  # Map of folio_fields and source fields as an array
         for k in self.record_map["data"]:
+            if "folio_field" not in k:
+                raise TransformationProcessError(
+                    "", "Missing folio_field key in mapping", json.dumps(k)
+                )
+            if "legacy_field" not in k:
+                raise TransformationProcessError(
+                    "", "Missing legacy_field key in mapping", json.dumps(k)
+                )
+
             if not field_map.get(k["folio_field"]):
                 field_map[k["folio_field"]] = [k["legacy_field"]]
             else:

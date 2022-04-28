@@ -9,23 +9,22 @@ import time
 import traceback
 import uuid
 from os.path import isfile
-from typing import List, Optional
-from folioclient import FolioClient
+from typing import List
+from typing import Optional
 
 from folio_uuid import FolioUUID
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from folioclient import FolioClient
+from pydantic.main import BaseModel
+
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    FolioRelease,
-    HridHandling,
-    LibraryConfiguration,
-)
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
 )
@@ -33,8 +32,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from pydantic.main import BaseModel
-
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
@@ -127,7 +124,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             else:
                 logging.info("No file of legacy holdings setup.")
         except TransformationProcessError as process_error:
-            logging.critical(process_error)
+            logging.critical("%s\t%s", process_error.message, process_error.data_value)
             logging.critical("Halting.")
             sys.exit(1)
         except Exception as exception:

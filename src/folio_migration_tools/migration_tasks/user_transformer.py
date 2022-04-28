@@ -4,6 +4,9 @@ import sys
 from typing import Dict
 from typing import Optional
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import BaseModel
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
@@ -14,8 +17,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 )
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
 
 
 class UserTransformer(MigrationTaskBase):
@@ -138,7 +139,7 @@ class UserTransformer(MigrationTaskBase):
                             Helper.log_data_issue(tre.index_or_id, tre.message, tre.data_value)
                             logging.error(tre)
                         except TransformationProcessError as tpe:
-                            logging.error(tpe)
+                            logging.critical(tpe)
                             print(f"\n{tpe.message}: {tpe.data_value}")
                             print("\nHalting")
                             sys.exit(1)

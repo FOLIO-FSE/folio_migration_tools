@@ -6,6 +6,9 @@ from datetime import datetime
 from typing import Dict
 
 from dateutil.parser import parse
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioClient
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -20,8 +23,6 @@ from folio_migration_tools.mapping_file_transformation.user_mapper_base import (
     UserMapperBase,
 )
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient import FolioClient
 
 
 class UserMapper(UserMapperBase):
@@ -75,7 +76,7 @@ class UserMapper(UserMapperBase):
             logging.info("Init done.")
         except TransformationProcessError as tpe:
             logging.critical(tpe)
-            print(f"\n{tpe.message}")
+            print(f"\n{tpe.message}\t{tpe.message}")
             sys.exit(1)
 
     def setup_notes_mapping(self):

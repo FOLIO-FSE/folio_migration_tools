@@ -7,6 +7,7 @@ import requests.exceptions
 from argparse_prompt import PromptParser
 from pydantic import ValidationError
 
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_tasks import *  # noqa: F403, F401
 from folio_migration_tools.migration_tasks import migration_task_base
@@ -74,6 +75,10 @@ def main():
                         f"one of {json.dumps([tc.__name__ for tc in task_classes], indent=4)}"
                     )
                     sys.exit(2)
+                except TransformationProcessError as tpe:
+                    logging.critical(tpe.message)
+                    print(f"\n{tpe.message}: {tpe.data_value}")
+                    sys.exit(1)
             except json.decoder.JSONDecodeError as json_error:
                 logging.critical(json_error)
                 print(f"\nError parsing configuration file {config_file_path.name}. Halting. ")
