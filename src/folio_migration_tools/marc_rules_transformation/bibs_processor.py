@@ -2,17 +2,19 @@
 import json
 import logging
 
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
+from pymarc.record import Record
+
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folioclient import FolioClient
-from pymarc.record import Record
 
 
 class BibsProcessor:
@@ -34,7 +36,7 @@ class BibsProcessor:
         self.instance_id_map_file = open(self.folders.instance_id_map_path, "w+")
         self.instance_identifiers = set()
 
-    def process_record(self, idx, marc_record: Record, suppressed: bool):
+    def process_record(self, idx, marc_record: Record, file_definition: FileDefinition):
         """processes a marc record and saves it"""
         folio_rec = None
         legacy_ids = []
@@ -47,7 +49,7 @@ class BibsProcessor:
                     f"Index in file: {idx}", "No legacy id found", idx
                 )
             # Transform the MARC21 to a FOLIO record
-            folio_rec = self.mapper.parse_bib(legacy_ids, marc_record, suppressed)
+            folio_rec = self.mapper.parse_bib(legacy_ids, marc_record, file_definition)
             if prec_titles := folio_rec.get("precedingTitles", []):
                 self.mapper.migration_report.add(
                     Blurbs.PrecedingSuccedingTitles, f"{len(prec_titles)}"
@@ -64,7 +66,7 @@ class BibsProcessor:
                 self.instance_identifiers,
                 self.mapper.migration_report,
             )
-            self.save_instance_ids_to_file(suppressed, folio_rec, filtered_legacy_ids)
+            self.save_instance_ids_to_file(file_definition, folio_rec, filtered_legacy_ids)
             Helper.write_to_file(self.results_file, folio_rec)
             self.mapper.save_source_record(
                 self.srs_records_file,
@@ -73,7 +75,7 @@ class BibsProcessor:
                 marc_record,
                 folio_rec,
                 legacy_ids[0],
-                suppressed,
+                file_definition,
             )
             self.mapper.migration_report.add_general_statistics(
                 "Records successfully transformed into FOLIO objects"
@@ -108,7 +110,7 @@ class BibsProcessor:
                 logging.error(folio_rec)
             raise inst from inst
 
-    def save_instance_ids_to_file(self, suppressed, folio_rec, filtered_legacy_ids):
+    def save_instance_ids_to_file(self, file_def: FileDefinition, folio_rec, filtered_legacy_ids):
         for legacy_id in filtered_legacy_ids:
             self.instance_identifiers.add(legacy_id)
             s = json.dumps(
@@ -116,7 +118,7 @@ class BibsProcessor:
                     "legacy_id": legacy_id,
                     "folio_id": folio_rec["id"],
                     "instance_hrid": folio_rec["hrid"],
-                    "suppressed": suppressed,
+                    "suppressed": file_def.suppressed,
                 }
             )
             self.instance_id_map_file.write(f"{s}\n")

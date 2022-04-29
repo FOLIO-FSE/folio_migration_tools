@@ -13,9 +13,16 @@ from typing import Set
 import pymarc
 import requests
 from defusedxml.ElementTree import fromstring
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
+from folioclient import FolioClient
+from pymarc import Field
+from pymarc.record import Record
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import IlsFlavour
@@ -25,11 +32,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
-from folioclient import FolioClient
-from pymarc import Field
-from pymarc.record import Record
 
 
 class BibsRulesMapper(RulesMapperBase):
@@ -95,7 +97,7 @@ class BibsRulesMapper(RulesMapperBase):
             Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
         return folio_instance
 
-    def parse_bib(self, legacy_ids, marc_record: pymarc.Record, suppressed: bool):
+    def parse_bib(self, legacy_ids, marc_record: pymarc.Record, file_def: FileDefinition):
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function"""
@@ -113,7 +115,7 @@ class BibsRulesMapper(RulesMapperBase):
                     legacy_ids,
                 )
 
-        self.perform_additional_parsing(folio_instance, marc_record, legacy_ids, suppressed)
+        self.perform_additional_parsing(folio_instance, marc_record, legacy_ids, file_def)
         clean_folio_instance = self.validate_required_properties(
             "-".join(legacy_ids), folio_instance, self.schema, FOLIONamespaces.instances
         )
@@ -192,7 +194,7 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance: dict,
         marc_record: Record,
         legacy_ids: List[str],
-        suppressed: bool,
+        file_def: FileDefinition,
     ):
         """Do stuff not easily captured by the mapping rules"""
         folio_instance["source"] = "MARC"
@@ -203,6 +205,11 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["instanceTypeId"] = self.get_instance_type_id(marc_record, legacy_ids)
 
         folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record, legacy_ids)
+        self.handle_languages(folio_instance, marc_record, legacy_ids)
+        self.handle_suppression(folio_instance, file_def)
+        self.handle_holdings(marc_record)
+
+    def handle_languages(self, folio_instance, marc_record, legacy_ids):
         if "languages" in folio_instance:
             folio_instance["languages"].extend(self.get_languages(marc_record, legacy_ids))
         else:
@@ -210,9 +217,12 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["languages"] = list(
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
-        folio_instance["discoverySuppress"] = suppressed
-        folio_instance["staffSuppress"] = False
-        self.handle_holdings(marc_record)
+
+    def handle_suppression(self, folio_instance, file_def):
+        folio_instance["discoverySuppress"] = file_def.suppressed
+        self.migration_report.add_general_statistics("Suppressed from discovery")
+        folio_instance["staffSuppress"] = file_def.staff_suppressed
+        self.migration_report.add_general_statistics("Staff suppressed")
 
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:
@@ -489,7 +499,7 @@ class BibsRulesMapper(RulesMapperBase):
         else:
             raise TransformationProcessError("", f"Unknown HRID handling: {self.hrid_handling}")
 
-    def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: str) -> str:
+    def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: List[str]) -> str:
         level = marc_record.leader[7]
         try:
             name = "unspecified"

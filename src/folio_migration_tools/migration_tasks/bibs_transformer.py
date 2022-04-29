@@ -5,6 +5,11 @@ from os.path import isfile
 from typing import List
 from typing import Optional
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import BaseModel
+from pymarc import MARCReader
+from pymarc.record import Record
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
@@ -17,10 +22,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
-from pymarc import MARCReader
-from pymarc.record import Record
 
 
 class BibsTransformer(MigrationTaskBase):
@@ -140,7 +141,7 @@ class BibsTransformer(MigrationTaskBase):
                         self.mapper.migration_report.add_general_statistics(
                             "Records successfully parsed from MARC21",
                         )
-                        self.processor.process_record(idx, record, source_file.suppressed)
+                        self.processor.process_record(idx, record, source_file)
                 except TransformationRecordFailedError as error:
                     error.log_it()
             logging.info("Done reading %s records from file", idx + 1)
