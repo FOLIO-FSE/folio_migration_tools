@@ -540,7 +540,7 @@ class RulesMapperBase(MapperBase):
         folio_object: dict,
         srs_id,
         metadata_obj,
-        suppress,
+        discovery_suppress: bool,
         record_type: FOLIONamespaces,
     ):
         record_types = {
@@ -574,7 +574,7 @@ class RulesMapperBase(MapperBase):
             "recordType": record_types.get(record_type),
             "rawRecord": raw_record,
             "parsedRecord": parsed_record,
-            "additionalInfo": {"suppressDiscovery": suppress},
+            "additionalInfo": {"suppressDiscovery": discovery_suppress},
             "externalIdsHolder": id_holders.get(record_type),
             "metadata": metadata_obj,
             "state": "ACTUAL",

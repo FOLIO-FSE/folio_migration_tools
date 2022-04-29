@@ -75,7 +75,7 @@ class BibsProcessor:
                 marc_record,
                 folio_rec,
                 legacy_ids[0],
-                file_definition,
+                file_definition.suppressed,
             )
             self.mapper.migration_report.add_general_statistics(
                 "Records successfully transformed into FOLIO objects"
