@@ -29,7 +29,7 @@ class OrganizationMapper(MappingFileMapperBase):
     ):
 
         #Get organization schema
-        organization_schema = self.get_latest_acq_schema_from_github("mod-orgs", "organization")
+        organization_schema = OrganizationMapper.get_latest_acq_schema_from_github("mod-orgs", "organization")
 
 
 
@@ -71,8 +71,9 @@ class OrganizationMapper(MappingFileMapperBase):
         else:
             # edge case
             return ""
-            
-    def get_latest_acq_schema_from_github(self, module, object):
+
+    @staticmethod        
+    def get_latest_acq_schema_from_github(module, object):
         '''
         Fetches the schema for the main object, for example an organization.
         Loops through the properties in the fetched schema. 
