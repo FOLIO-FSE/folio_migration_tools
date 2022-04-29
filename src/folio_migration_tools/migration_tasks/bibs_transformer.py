@@ -157,12 +157,25 @@ class BibsTransformer(MigrationTaskBase):
     def set_leader(marc_record: Record, migration_report: MigrationReport):
         if marc_record.leader[9] != "a":
             migration_report.add(
-                Blurbs.LeaderManipulation, f"Set leader09 from {marc_record.leader[9]} to a"
+                Blurbs.LeaderManipulation,
+                f"Set leader 09 (Character coding scheme) from {marc_record.leader[9]} to a",
             )
             marc_record.leader = f"{marc_record.leader[:9]}a{marc_record.leader[10:]}"
         if not marc_record.leader.endswith("4500"):
             migration_report.add(
                 Blurbs.LeaderManipulation,
-                f"Set leader 20-23 from {marc_record.leader[:4]} to 4500",
+                f"Set leader 20-23 from {marc_record.leader[-4:]} to 4500",
             )
             marc_record.leader = f"{marc_record.leader[:-4]}4500"
+        if marc_record.leader[10] != "2":
+            migration_report.add(
+                Blurbs.LeaderManipulation,
+                f"Set leader 10 (Indicator count) from {marc_record.leader[10]} to 2",
+            )
+            marc_record.leader = f"{marc_record.leader[:10]}2{marc_record.leader[11:]}"
+        if marc_record.leader[11] != "2":
+            migration_report.add(
+                Blurbs.LeaderManipulation,
+                f"Set leader 10 (Subfield code count) from {marc_record.leader[11]} to 2",
+            )
+            marc_record.leader = f"{marc_record.leader[:11]}2{marc_record.leader[12:]}"
