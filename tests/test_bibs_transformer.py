@@ -18,6 +18,8 @@ def test_set_leader():
             BibsTransformer.set_leader(record, migration_report)
             assert record.leader.endswith("4500")
             assert record.leader[9] == "a"
+            assert record.leader[10] == "2"
+            assert record.leader[11] == "2"
             vals = migration_report.report[Blurbs.LeaderManipulation[0]].items()
-            # Should be 2?
-            assert len(vals) == 3
+            # Should be 4?
+            assert len(vals) == 5
