@@ -1,5 +1,23 @@
 # Changelog
 
+## y1_2_3 (02/05/2022)
+
+#### bug
+
+- [**bug**] UTC correction increases utc difference [#223](https://github.com/FOLIO-FSE/folio_migration_tools/issues/223)
+- [**bug**] HoldingsCSVTransformer does not halt if previously_generated_holdings_files is not found [#216](https://github.com/FOLIO-FSE/folio_migration_tools/issues/216)
+
+#### closed
+
+- [**closed**] Handle issues with positions in leader20-23 [#219](https://github.com/FOLIO-FSE/folio_migration_tools/issues/219)
+- [**closed**] Implement staffSuppress for bib migrations [#206](https://github.com/FOLIO-FSE/folio_migration_tools/issues/206)
+
+#### reporting
+
+- [**reporting**] Create proper report on suppression for all objects [#145](https://github.com/FOLIO-FSE/folio_migration_tools/issues/145)
+
+---
+
 ## 1_2_2 (27/04/2022)
 ### breaking changes
 Batchposter now allows running multiple files of the same object type in one run, so configuration has changed to facilitate that.
