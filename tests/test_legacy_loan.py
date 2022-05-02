@@ -22,16 +22,16 @@ def test_init_tz():
     loan_dict = {
         "item_barcode": "the barcode with trailing space ",
         "patron_barcode": " the barcode with leading space",
-        "due_date": "20220113 22:00",
-        "out_date": "20220113 20:00",
+        "due_date": "20220113 16:00",
+        "out_date": "20220113 14:00",
         "renewal_count": "1",
         "next_item_status": "Checked out",
     }
     legacy_loan = LegacyLoan(loan_dict, -6)
     assert legacy_loan.patron_barcode == "the barcode with leading space"
     assert legacy_loan.item_barcode == "the barcode with trailing space"
-    assert legacy_loan.due_date.isoformat() == "2022-01-13T16:00:00"
-    assert legacy_loan.out_date.isoformat() == "2022-01-13T14:00:00"
+    assert legacy_loan.due_date.isoformat() == "2022-01-13T22:00:00"
+    assert legacy_loan.out_date.isoformat() == "2022-01-13T20:00:00"
     assert legacy_loan.renewal_count > 0
 
 
@@ -47,4 +47,21 @@ def test_init_tz_2():
     legacy_loan = LegacyLoan(loan_dict, 0)
     assert legacy_loan.due_date.isoformat() == "2019-02-22T23:59:00"
     assert legacy_loan.out_date.isoformat() == "2019-02-22T10:53:00"
+    assert legacy_loan.renewal_count > 0
+
+
+def test_init_tz_3():
+    loan_dict = {
+        "item_barcode": "the barcode with trailing space ",
+        "patron_barcode": " the barcode with leading space",
+        "due_date": "20220113 16:00",
+        "out_date": "20220113 14:00",
+        "renewal_count": "1",
+        "next_item_status": "Checked out",
+    }
+    legacy_loan = LegacyLoan(loan_dict, 6)
+    assert legacy_loan.patron_barcode == "the barcode with leading space"
+    assert legacy_loan.item_barcode == "the barcode with trailing space"
+    assert legacy_loan.due_date.isoformat() == "2022-01-13T10:00:00"
+    assert legacy_loan.out_date.isoformat() == "2022-01-13T08:00:00"
     assert legacy_loan.renewal_count > 0

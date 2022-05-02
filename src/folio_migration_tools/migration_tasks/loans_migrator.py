@@ -13,6 +13,9 @@ from urllib.error import HTTPError
 
 import requests
 from dateutil import parser as du_parser
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import BaseModel
+
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.helper import Helper
@@ -25,8 +28,6 @@ from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.transaction_migration.transaction_result import (
     TransactionResult,
 )
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
 
 
 class LoansMigrator(MigrationTaskBase):
@@ -587,16 +588,6 @@ class LoansMigrator(MigrationTaskBase):
             traceback.print_exc()
             logging.info(exception)
             return False, None, None
-
-    def make_loan_utc(self, legacy_loan: LegacyLoan):
-        if self.task_configuration.utc_difference != 0:
-            legacy_loan.due_date = legacy_loan.due_date + timedelta(
-                hours=self.task_configuration.utc_difference
-            )
-            legacy_loan.out_date = legacy_loan.out_date + timedelta(
-                hours=self.task_configuration.utc_difference
-            )
-            self.migration_report.add_general_statistics("Adjusted out and due dates to UTC")
 
 
 def timings(t0, t0func, num_objects):
