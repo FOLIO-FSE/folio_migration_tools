@@ -1,7 +1,9 @@
-from typing import Optional
-from pydantic import BaseModel, Field
-from pydantic.types import DirectoryPath
 from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic.types import DirectoryPath
 
 
 class HridHandling(str, Enum):
@@ -12,6 +14,7 @@ class HridHandling(str, Enum):
 class FileDefinition(BaseModel):
     file_name: str
     suppressed: Optional[bool] = False
+    staff_suppressed: Optional[bool] = False
 
 
 class IlsFlavour(str, Enum):

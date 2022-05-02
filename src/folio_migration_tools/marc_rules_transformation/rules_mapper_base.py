@@ -6,6 +6,13 @@ import uuid
 from textwrap import wrap
 
 import pymarc
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
+from folioclient import FolioClient
+from pymarc import Field
+from pymarc import Leader
+from pymarc import Record
+
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -13,12 +20,6 @@ from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
-from folioclient import FolioClient
-from pymarc import Field
-from pymarc import Leader
-from pymarc import Record
 
 
 class RulesMapperBase(MapperBase):
@@ -539,7 +540,7 @@ class RulesMapperBase(MapperBase):
         folio_object: dict,
         srs_id,
         metadata_obj,
-        suppress,
+        discovery_suppress: bool,
         record_type: FOLIONamespaces,
     ):
         record_types = {
@@ -573,7 +574,7 @@ class RulesMapperBase(MapperBase):
             "recordType": record_types.get(record_type),
             "rawRecord": raw_record,
             "parsedRecord": parsed_record,
-            "additionalInfo": {"suppressDiscovery": suppress},
+            "additionalInfo": {"suppressDiscovery": discovery_suppress},
             "externalIdsHolder": id_holders.get(record_type),
             "metadata": metadata_obj,
             "state": "ACTUAL",

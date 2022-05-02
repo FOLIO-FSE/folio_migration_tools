@@ -137,7 +137,7 @@ class BibsTransformer(MigrationTaskBase):
                         self.mapper.migration_report.add_general_statistics(
                             "Records successfully parsed from MARC21",
                         )
-                        self.processor.process_record(idx, record, source_file.suppressed)
+                        self.processor.process_record(idx, record, source_file)
                 except TransformationRecordFailedError as error:
                     error.log_it()
             logging.info("Done reading %s records from file", idx + 1)

@@ -3,7 +3,11 @@ import re
 
 import pymarc
 import pytest
+from folioclient.FolioClient import FolioClient
+from lxml import etree
+
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -13,8 +17,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
-from folioclient.FolioClient import FolioClient
-from lxml import etree
 
 xpath_245 = "//marc:datafield[@tag='245']"
 # flake8: noqa
@@ -57,13 +59,48 @@ def default_map(file_name, xpath, the_mapper):
     }
     file_path = f"./tests/test_data/default/{file_name}"
     record = pymarc.parse_xml_to_array(file_path)[0]
-    result = the_mapper.parse_bib(["legacy_id"], record, False)
+    file_def = FileDefinition(file_name="", suppressed=False, staff_suppressed=False)
+    result = the_mapper.parse_bib(["legacy_id"], record, file_def)
     root = etree.parse(file_path)
-    data = str("")
+    data = ""
     for element in root.xpath(xpath, namespaces=ns):
         data = " ".join([data, str(etree.tostring(element, pretty_print=True), "utf-8")])
     # print(json.dumps(rec, indent=4, sort_keys=True))
     return [result, data]
+
+
+def default_map_suppression(file_name, xpath, the_mapper):
+    ns = {
+        "marc": "https://www.loc.gov/MARC21/slim",
+        "oai": "https://www.openarchives.org/OAI/2.0/",
+    }
+    file_path = f"./tests/test_data/default/{file_name}"
+    record = pymarc.parse_xml_to_array(file_path)[0]
+    file_def = FileDefinition(file_name="", suppressed=True, staff_suppressed=True)
+    result = the_mapper.parse_bib(["legacy_id"], record, file_def)
+    root = etree.parse(file_path)
+    data = ""
+    for element in root.xpath(xpath, namespaces=ns):
+        data = " ".join([data, str(etree.tostring(element, pretty_print=True), "utf-8")])
+    # print(json.dumps(rec, indent=4, sort_keys=True))
+    return [result, data]
+
+
+def test_init_file_def():
+    file_def = FileDefinition(file_name="", suppressed=False, staff_suppressed=False)
+    assert file_def.file_name == ""
+
+
+def test_non_suppression(mapper):
+    record = default_map("test1.xml", xpath_245, mapper)
+    assert record[0]["staffSuppress"] == False
+    assert record[0]["discoverySuppress"] == False
+
+
+def test_suppression(mapper):
+    record = default_map_suppression("test1.xml", xpath_245, mapper)
+    assert record[0]["staffSuppress"] == True
+    assert record[0]["discoverySuppress"] == True
 
 
 def test_simple_title(mapper):
