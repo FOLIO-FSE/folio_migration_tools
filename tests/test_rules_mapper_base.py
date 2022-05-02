@@ -3,13 +3,15 @@ import json
 from unittest.mock import Mock
 from uuid import uuid4
 
-from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
-    RulesMapperBase,
-)
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc.reader import MARCReader
 from pymarc.record import Field
+from pymarc.record import Leader
 from pymarc.record import Record
+
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
+)
 
 # flake8: noqa: E501
 
@@ -167,6 +169,22 @@ def test_get_srs_string_bib():
             assert '"recordType": "MARC_BIB"' in srs_record_string
             assert json.dumps(id_holder) in srs_record_string
             assert "snapshotId" not in record
+
+
+def test_get_srs_string_bad_leaders():
+    path = "./tests/test_data/corrupt_leader.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record1 = None
+        record: Record = None
+        for record in reader:
+            l1 = record.leader
+            record.leader = f"{record.leader[:-4]}4500"
+            assert l1 != record.leader
+            assert record.leader.endswith("4500")
+            assert len(record.leader) == 24
 
 
 def test_create_srs_uuid():

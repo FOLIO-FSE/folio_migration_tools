@@ -21,7 +21,9 @@ from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsP
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
+from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class BibsTransformer(MigrationTaskBase):
@@ -48,6 +50,7 @@ class BibsTransformer(MigrationTaskBase):
 
         super().__init__(library_config, task_config, use_logging)
         self.task_config = task_config
+        self.processor: BibsProcessor = None
         logging.info(task_config.json(indent=4))
         self.files = [
             f
@@ -125,19 +128,12 @@ class BibsTransformer(MigrationTaskBase):
                     "Records in file before parsing"
                 )
                 try:
+                    # None = Something bad happened
                     if record is None:
-                        self.mapper.migration_report.add_general_statistics(
-                            "Records with encoding errors - parsing failed",
-                        )
-                        failed_bibs_file.write(reader.current_chunk)
-                        raise TransformationRecordFailedError(
-                            f"Index in {source_file.file_name}:{idx}",
-                            f"MARC parsing error: {reader.current_exception}",
-                            "Failed records stored in results/failed_bib_records.mrc",
-                        )
-
+                        self.report_failed_parsing(reader, source_file, failed_bibs_file, idx)
+                    # The normal case
                     else:
-                        self.set_leader(record)
+                        self.set_leader(record, self.mapper.migration_report)
                         self.mapper.migration_report.add_general_statistics(
                             "Records successfully parsed from MARC21",
                         )
@@ -146,7 +142,40 @@ class BibsTransformer(MigrationTaskBase):
                     error.log_it()
             logging.info("Done reading %s records from file", idx + 1)
 
+    def report_failed_parsing(self, reader, source_file, failed_bibs_file, idx):
+        self.mapper.migration_report.add_general_statistics(
+            "Records with encoding errors - parsing failed",
+        )
+        failed_bibs_file.write(reader.current_chunk)
+        raise TransformationRecordFailedError(
+            f"Index in {source_file.file_name}:{idx}",
+            f"MARC parsing error: {reader.current_exception}",
+            "Failed records stored in results/failed_bib_records.mrc",
+        )
+
     @staticmethod
-    def set_leader(marc_record: Record):
-        new_leader = marc_record.leader
-        marc_record.leader = f"{new_leader[:9]}a{new_leader[10:]}"
+    def set_leader(marc_record: Record, migration_report: MigrationReport):
+        if marc_record.leader[9] != "a":
+            migration_report.add(
+                Blurbs.LeaderManipulation,
+                f"Set leader 09 (Character coding scheme) from {marc_record.leader[9]} to a",
+            )
+            marc_record.leader = f"{marc_record.leader[:9]}a{marc_record.leader[10:]}"
+        if not marc_record.leader.endswith("4500"):
+            migration_report.add(
+                Blurbs.LeaderManipulation,
+                f"Set leader 20-23 from {marc_record.leader[-4:]} to 4500",
+            )
+            marc_record.leader = f"{marc_record.leader[:-4]}4500"
+        if marc_record.leader[10] != "2":
+            migration_report.add(
+                Blurbs.LeaderManipulation,
+                f"Set leader 10 (Indicator count) from {marc_record.leader[10]} to 2",
+            )
+            marc_record.leader = f"{marc_record.leader[:10]}2{marc_record.leader[11:]}"
+        if marc_record.leader[11] != "2":
+            migration_report.add(
+                Blurbs.LeaderManipulation,
+                f"Set leader 10 (Subfield code count) from {marc_record.leader[11]} to 2",
+            )
+            marc_record.leader = f"{marc_record.leader[:11]}2{marc_record.leader[12:]}"

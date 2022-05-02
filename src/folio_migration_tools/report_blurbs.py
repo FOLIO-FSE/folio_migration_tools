@@ -9,6 +9,7 @@ class ReportSection(Enum):
 
 
 class Blurbs:
+    LeaderManipulation = ("Leader manipulation", "")
     DateTimeConversions = (
         "DateTime conversions",
         "Some date and date time strings are converted to UTC DateTime objects and then printed accoding to ISO standard.",

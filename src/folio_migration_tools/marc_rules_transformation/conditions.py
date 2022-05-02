@@ -2,6 +2,9 @@ import logging
 import re
 
 import pymarc
+from folioclient import FolioClient
+from pymarc import field
+
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -10,8 +13,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.report_blurbs import Blurbs
-from folioclient import FolioClient
-from pymarc import field
 
 # flake8: noqa: s
 
@@ -335,13 +336,14 @@ class Conditions:
                 Blurbs.MappedIdentifierTypes, f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
-        except Exception:
-            raise TransformationRecordFailedError(
+        except Exception as ee:
+            logging.exception("Identifier type")
+            raise TransformationProcessError(
                 legacy_id,
-                f'Unmapped identifier name type: "{parameter["name"]}"\tMARC Field: {marc_field}'
-                f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
+                f'Unmapped identifier type : "{parameter["name"]}"\tMARC Field: {marc_field}'
+                f"MARC Field: {marc_field}. Is mapping rules and ref data aligned? ",
                 {parameter["name"]},
-            )
+            ) from ee
 
     def condition_set_contributor_name_type_id(
         self, legacy_id, value, parameter, marc_field: field.Field
