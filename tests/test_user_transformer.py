@@ -1,9 +1,11 @@
 import logging
-from unittest.mock import MagicMock, Mock
 import uuid
-from folioclient import FolioClient
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from unittest.mock import MagicMock
+from unittest.mock import Mock
 
+from folioclient import FolioClient
+
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
 
@@ -34,6 +36,7 @@ def test_basic():
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.multi_field_delimiter = "<delimiter>"
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
     mock_folio.folio_get_single_object = MagicMock(
@@ -111,6 +114,7 @@ def test_notes(caplog):
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.multi_field_delimiter = "<delimiter>"
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
     mock_folio.folio_get_single_object = MagicMock(
@@ -191,6 +195,8 @@ def test_notes_empty_field(caplog):
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.multi_field_delimiter = "<delimiter>"
+
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
     mock_folio.folio_get_single_object = MagicMock(
