@@ -52,7 +52,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.folio = folio_client
         self.task_configuration = task_configuration
         self.record_status = {}
-        self.unique_001s = Set[str]
+        self.unique_001s: Set[str] = set()
         self.holdings_map = {}
         self.id_map = {}
         self.srs_recs = []
