@@ -1,18 +1,17 @@
+import json
 import logging
 import sys
-import json
-import requests
 
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
-from folioclient import FolioClient
+import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioClient
+
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
 
@@ -125,8 +124,17 @@ class MapperBase:
                     "a recognized field in the legacy data."
                 ),
             ) from exception
+        except KeyError as exception:
+            raise TransformationProcessError(
+                index_or_id,
+                (
+                    f"{ref_data_mapping.name} mapping - folio_{ref_data_mapping.key_type} "
+                    f"({ref_data_mapping.mapped_legacy_keys})  is not "
+                    f"a recognized field in the legacy data. KeyError: {exception}"
+                ),
+            ) from exception
         except Exception as exception:
-            raise TransformationRecordFailedError(
+            raise TransformationProcessError(
                 index_or_id,
                 (
                     f"{ref_data_mapping.name} - folio_{ref_data_mapping.key_type} "
