@@ -114,7 +114,7 @@ def test_notes(caplog):
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
-    mock_task_config.multi_field_delimiter = "<delimiter>"
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
     mock_folio.folio_get_single_object = MagicMock(
@@ -195,7 +195,7 @@ def test_notes_empty_field(caplog):
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
-    mock_task_config.multi_field_delimiter = "<delimiter>"
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
 
     mock_folio = Mock(spec=FolioClient)
     mock_folio.okapi_url = "okapi_url"
