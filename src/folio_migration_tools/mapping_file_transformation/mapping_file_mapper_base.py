@@ -1,9 +1,11 @@
 import csv
+import itertools
 import json
 import logging
 import uuid
 from abc import abstractmethod
 from pathlib import Path
+from typing import List
 from uuid import UUID
 
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -343,6 +345,7 @@ class MappingFileMapperBase(MapperBase):
         keys_to_map = {k.split(".")[0] for k in self.folio_keys if k.startswith(prop_name)}
         for object_key in keys_to_map:
             temp_object = {}
+            multi_field_props: List[str] = []
             for prop in (
                 k for k, p in sub_properties.items() if not p.get("folio:isVirtual", False)
             ):
@@ -350,25 +353,71 @@ class MappingFileMapperBase(MapperBase):
                 if prop_path in self.folio_keys:
                     res = self.get_prop(legacy_object, prop_path, index_or_id)
                     self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
-                    temp_object[prop] = res
 
+                    if (
+                        isinstance(res, str)
+                        and self.library_configuration.multi_field_delimiter in res
+                    ):
+                        multi_field_props.append(prop)
+
+                    temp_object[prop] = res
             if temp_object != {} and all(
                 (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
             ):
-                resulting_array.append(temp_object)
+                if any(multi_field_props):
+                    resulting_array.extend(
+                        self.split_obj_by_delim(
+                            self.library_configuration.multi_field_delimiter,
+                            temp_object,
+                            multi_field_props,
+                        )
+                    )
+                else:
+                    resulting_array.append(temp_object)
         if any(resulting_array):
             folio_object[prop_name] = resulting_array
+
+    @staticmethod
+    def split_obj_by_delim(delimiter: str, folio_obj: dict, delimited_props: List[str]):
+        non_split_props = [(k, v) for k, v in folio_obj.items() if k not in delimited_props]
+        delimited_props = map(lambda x: [x, *folio_obj[x].split(delimiter)], delimited_props)
+        zipped = list(zip(*delimited_props))
+        res = []
+        for (prop_name_idx, prop_name), (value_idx, ra) in itertools.product(
+            enumerate(zipped[0]), enumerate(zipped[1:])
+        ):
+            if prop_name_idx == 0:
+                res.append({prop_name: ra[prop_name_idx]})
+            else:
+                res[value_idx][prop_name] = ra[prop_name_idx]
+        for r in res:
+            r.update(non_split_props)
+        return res
 
     def map_string_array_props(self, legacy_object, prop, folio_object, index_or_id):
         keys_to_map = [k for k in self.folio_keys if k.startswith(prop)]
         for prop_name in keys_to_map:
             if prop_name in self.folio_keys and self.has_property(legacy_object, prop_name):
                 if mapped_prop := self.get_prop(legacy_object, prop_name, index_or_id):
-                    if prop in folio_object and mapped_prop not in folio_object.get(prop, []):
-                        folio_object.get(prop, []).append(mapped_prop)
-                    else:
-                        folio_object[prop] = [mapped_prop]
+                    self.add_values_to_string_array(
+                        prop,
+                        folio_object,
+                        mapped_prop,
+                        self.library_configuration.multi_field_delimiter,
+                    )
                 self.report_legacy_mapping(self.legacy_basic_property(prop_name), True, True)
+
+    @staticmethod
+    def add_values_to_string_array(prop, folio_object, mapped_prop_value, delimiter: str):
+        if prop in folio_object and mapped_prop_value not in folio_object.get(prop, []):
+            if isinstance(mapped_prop_value, str) and delimiter in mapped_prop_value:
+                folio_object.get(prop, []).extend(mapped_prop_value.split(delimiter))
+            else:
+                folio_object.get(prop, []).append(mapped_prop_value)
+        elif isinstance(mapped_prop_value, str) and delimiter in mapped_prop_value:
+            folio_object[prop] = mapped_prop_value.split(delimiter)
+        else:
+            folio_object[prop] = [mapped_prop_value]
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?

@@ -47,6 +47,7 @@ class LibraryConfiguration(BaseModel):
             "Should ideally be a github clone of the migration_repo_template"
         )
     )
+    multi_field_delimiter: Optional[str] = "<delimiter>"
     failed_records_threshold: Optional[int] = 5000
     failed_percentage_threshold: Optional[int] = 20
     library_name: str
