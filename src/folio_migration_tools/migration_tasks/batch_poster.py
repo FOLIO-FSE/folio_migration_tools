@@ -9,13 +9,14 @@ from typing import Optional
 from uuid import uuid4
 
 import requests
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import BaseModel
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
 
 
 def write_failed_batch_to_file(batch, file):
@@ -326,7 +327,7 @@ class BatchPoster(MigrationTaskBase):
                 self.wrap_up()
                 logging.info("Done rerunning the posting")
             except Exception as ee:
-                logging.exception("Happed during rerun")
+                logging.exception("Occurred during rerun")
                 raise TransformationProcessError("Error during rerun") from ee
 
     def create_snapshot(self):
