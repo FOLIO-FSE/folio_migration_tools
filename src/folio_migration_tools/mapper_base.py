@@ -297,7 +297,7 @@ class MapperBase:
         legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
     ):
         cleaned_folio_object = MapperBase.clean_none_props(folio_object)
-        required = schema["required"]
+        required = schema.get("required", [])
         missing = []
         for required_prop in required:
             if required_prop not in cleaned_folio_object:
