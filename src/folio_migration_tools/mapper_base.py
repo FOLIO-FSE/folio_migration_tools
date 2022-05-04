@@ -1,18 +1,17 @@
+import json
 import logging
 import sys
-import json
-import requests
 
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
-from folioclient import FolioClient
+import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioClient
+
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
 
@@ -289,7 +288,7 @@ class MapperBase:
         legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
     ):
         cleaned_folio_object = MapperBase.clean_none_props(folio_object)
-        required = schema["required"]
+        required = schema.get("required", [])
         missing = []
         for required_prop in required:
             if required_prop not in cleaned_folio_object:

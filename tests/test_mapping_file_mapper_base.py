@@ -687,7 +687,7 @@ def test_validate_required_properties_obj():
     assert folio_rec["electronicAccessObj"]["uri"] == "some_link"
 
 
-def test_validate_required_properties_item_notes_split_on_delimiter():
+def test_validate_required_properties_item_notes_split_on_delimiter_notes():
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -772,7 +772,7 @@ def test_validate_required_properties_item_notes_split_on_delimiter():
     assert folio_rec["notes"][1]["itemNoteTypeId"] == "A UUID"
 
 
-def test_multiple_repeated_split_on_delimiter():
+def test_multiple_repeated_split_on_delimiter_electronic_access():
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -859,6 +859,59 @@ def test_multiple_repeated_split_on_delimiter():
     )
 
 
+def test_validate_required_properties_item_notes_split_on_delimiter_plain_object():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "uber_prop": {
+                "type": "object",
+                "properties": {
+                    "prop1": {
+                        "description": "",
+                        "type": "string",
+                    },
+                    "prop2": {
+                        "description": "",
+                        "type": "string",
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "uber_prop.prop1",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "uber_prop.prop2",
+                "legacy_field": "",
+                "value": "Some value",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"note_1": "my note<delimiter>my second note", "id": "12"}
+    tfm = MyTestableFileMapper(schema, fake_item_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    ItemsTransformer.handle_notes(folio_rec)
+    assert folio_rec["uber_prop"]["prop1"] == "my note<delimiter>my second note"
+    assert folio_rec["uber_prop"]["prop2"] == "Some value"
+
+
 def test_zip3():
     o = {"p1": "a<delimiter>b", "p2": "c<delimiter>d<delimiter>e", "p3": "same for both"}
     d = "<delimiter>"
@@ -867,6 +920,43 @@ def test_zip3():
     assert s[0] == {"p1": "a", "p2": "c", "p3": "same for both"}
     assert s[1] == {"p1": "b", "p2": "d", "p3": "same for both"}
     assert len(s) == 2
+
+
+def test_do_not_split_string_prop():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "properties": {
+            "formerId": {
+                "type": "string",
+                "description": "",
+            },
+        },
+    }
+    fake_holdings_map = {
+        "data": [
+            {
+                "folio_field": "formerId",
+                "legacy_field": "formerIds_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {
+        "formerIds_1": "id2<delimiter>id3",
+        "id": "11",
+    }
+    tfm = MyTestableFileMapper(schema, fake_holdings_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["formerId"] == "id2<delimiter>id3"
 
 
 def test_split_former_ids():
