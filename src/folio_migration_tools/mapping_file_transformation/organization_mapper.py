@@ -73,50 +73,107 @@ class OrganizationMapper(MappingFileMapperBase):
             return ""
 
     @staticmethod        
-    def get_latest_acq_schema_from_github(module, object):
+    def get_latest_acq_schemas_from_github(owner, repo, module, object):
         '''
-        Fetches the schema for the main object, for example an organization.
-        Loops through the properties in the fetched schema. 
-        For every property of type object or array that contains a $ref subproperty,
-        fetches the referenced schema and adds the properties from the referenced schema to the main object property.
+        Returns an extended acquisition object based on the schemas in the
+        shared submodule "acq-models". The schemas used to build the extended
+        object schema are associated with the latest release of the module.
         '''
-        # TODO: Modify getlatest from github method in helper to get organization_schema for latest mod-organization-storage release
-        commit = "2626278b80d82a5e1995f85c37575561264b93e9"
-        acq_schemas_url = f"https://raw.githubusercontent.com/folio-org/acq-models/{commit}/{module}/schemas/"
-        req = requests.get(f"{acq_schemas_url}/{object}.json")
-        object_schema = json.loads(req.text)
         
+        github_path = "https://raw.githubusercontent.com"
+
+        submodules = OrganizationMapper.get_submodules_of_latest_release(owner, repo)
+
+        # Get the sha's of sunmodules acq-models and raml_utils
+        acq_models_sha = next((item for item in submodules 
+        if item["mode"] == "160000" and item["path"] == "acq-modules"))
+
+        # # TODO Maybe - fetch raml_utils schemas if deemed necessary
+        # raml_utils_sha = next((item for item in submodules 
+        # if item["mode"] == "160000" and item["path"] == "raml-utils"))
+
+        acq_models_path = f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas"
+
+        req = requests.get(f"{acq_models_path}/{object}.json")
+        object_schema = json.loads(req.text)
+
         # Fetch referenced schemas
-        try:
-            for property_name_level1, property_level1 in object_schema["properties"].items():
+        extended_object_schema = OrganizationMapper.build_extended_object(object_schema)
+
+        return extended_object_schema
+
+
+    @staticmethod
+    def get_submodules_of_latest_release(owner, repo):
+        github_path = "https://api.github.com/repos/"
+
+        # Get metadata for the latest release
+        latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
+        req = requests.get(f"{latest_release_path}")
+        req.raise_for_status()
+        latest_release = json.loads(req.text)
+
+        # Get the tag assigned to the latest release
+        release_tag = latest_release["tag_name"]
+        logging.info(f"Using schemas from latest {repo} release: {release_tag}")
+
+        # Get the tree for the latest release
+        tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
+        req = requests.get(tree_path)
+        req.raise_for_status()
+        release_tree = json.loads(req.text)
+
+        # Loop through the tree to get the sha of the folder with path "ramls"
+        ramls_sha = next((item for item in release_tree if item["path"] == "ramls"))
+
+        # Get the tree for the ramls folder
+        ramls_path = f"{github_path}/{owner}/{repo}/git/trees/{ramls_sha}"
+        req = requests.get(ramls_path)
+        req.raise_for_status()
+        ramls_tree = json.loads(req.text)
+
+        # Loop through the tree to get the sha of submodules
+        submodules = next((item for item in ramls_tree if item["mode"] == "160000"))
+
+        return submodules
+
+
+    @staticmethod
+    def build_extended_object(object_schema, acq_models_path):
+        for property_name_level1, property_level1 in object_schema["properties"].items():
+            try:
                 if property_level1.get("type") == "object" and property_level1.get("$ref"):
-                    if "raml-util/schemas/" in property_level1["$ref"]:
-                        logging.error("Special property not yet implemented: %s", property_name_level1)
-                    else:
+                    if "raml-util/schemas/" not in property_level1["$ref"]:
                         logging.info("Fecthing referenced schema for object %s", property_name_level1)
                         ref_object = property_level1["$ref"]
-                        schema_url = f"{acq_schemas_url}/{ref_object}" 
+                        schema_url = f"{acq_models_path}/{ref_object}"
                         ref_schema = requests.get(schema_url)
-                        property_level1 = dict(property_level1, **json.loads(ref_schema.text))
+                        property_level1 = dict(
+                            property_level1, 
+                            **json.loads(ref_schema.text))
+                    else:
+                        logging.error("Special property not yet implemented: %s", property_name_level1)
 
                 elif property_level1.get("type") == "array" and property_level1.get("items").get("$ref"):
                     # TODO Consider implementing as extra data.
-                    if "common/schemas/uuid.json" in property_level1["items"]["$ref"]:
-                        logging.error("Linked object not yet implemented: %s", property_name_level1)
-                    else:
-                        logging.info("Fecthing referenced schema for array object %s", property_name_level1)
+                    if "common/schemas/uuid.json" not in property_level1["items"]["$ref"]:
+                        logging.info("Fecthing referenced schema for array object %s",
+                        property_name_level1)
                         ref_object = property_level1["items"]["$ref"]
-                        schema_url = f"{acq_schemas_url}/{ref_object}" 
+                        schema_url = f"{acq_models_path}/{ref_object}" 
                         ref_schema = requests.get(schema_url)
-                        property_level1["items"] = dict(property_level1["items"], **json.loads(ref_schema.text))
+                        property_level1["items"] = dict(
+                            property_level1["items"], 
+                            **json.loads(ref_schema.text))
+                    else:
+                        logging.error("Linked object not yet implemented: %s", property_name_level1)
 
-        except json.decoder.JSONDecodeError as json_error:
-            logging.critical(json_error)
-            print(
-                f"\nError parsing {schema_url}."
-            )
 
-        except Exception as type_error:
-            logging.error("Unable to build schema property for %s: %s", property_name_level1, type_error)
+            except json.decoder.JSONDecodeError as json_error:
+                logging.critical(json_error)
+                print(
+                    f"\nError parsing {schema_url}."
+                )
 
-        return object_schema
+            except Exception as type_error:
+                logging.error("Unable to build schema property for %s: %s", property_name_level1, type_error)
