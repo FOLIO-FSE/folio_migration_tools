@@ -1,7 +1,7 @@
 import uuid
 import pytest
 from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.migration_tasks.organization_transformer import OrganizationsTransformer
+from folio_migration_tools.migration_tasks.organization_transformer import OrganizationTransformer
 
 
 # def test_fetch_schema_from_github():
