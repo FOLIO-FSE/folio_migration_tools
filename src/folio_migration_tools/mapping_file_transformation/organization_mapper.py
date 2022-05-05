@@ -141,32 +141,30 @@ class OrganizationMapper(MappingFileMapperBase):
     @staticmethod
     def build_extended_object(object_schema, acq_models_path):
         for property_name_level1, property_level1 in object_schema["properties"].items():
-            try:
-                if property_level1.get("type") == "object" and property_level1.get("$ref"):
-                    if "raml-util/schemas/" not in property_level1["$ref"]:
-                        logging.info("Fecthing referenced schema for object %s", property_name_level1)
-                        ref_object = property_level1["$ref"]
-                        schema_url = f"{acq_models_path}/{ref_object}"
-                        ref_schema = requests.get(schema_url)
-                        property_level1 = dict(
-                            property_level1, 
-                            **json.loads(ref_schema.text))
-                    else:
-                        logging.error("Special property not yet implemented: %s", property_name_level1)
-
-                elif property_level1.get("type") == "array" and property_level1.get("items").get("$ref"):
-                    # TODO Consider implementing as extra data.
-                    if "common/schemas/uuid.json" not in property_level1["items"]["$ref"]:
-                        logging.info("Fecthing referenced schema for array object %s",
+            logging.info("Fecthing referenced schema for array object %s",
                         property_name_level1)
-                        ref_object = property_level1["items"]["$ref"]
-                        schema_url = f"{acq_models_path}/{ref_object}" 
-                        ref_schema = requests.get(schema_url)
-                        property_level1["items"] = dict(
-                            property_level1["items"], 
-                            **json.loads(ref_schema.text))
-                    else:
-                        logging.error("Linked object not yet implemented: %s", property_name_level1)
+
+            if property_level1.get("type") == "object" and property_level1.get("$ref"):
+                ref_object = property_level1["$ref"]
+                schema_url = f"{acq_models_path}/{ref_object}"
+                ref_schema = requests.get(schema_url)
+                try:
+                    property_level1 = dict(
+                        property_level1, 
+                        **json.loads(ref_schema.text))
+                except:
+                    logging.error("Special property not yet implemented: %s", property_name_level1)
+
+            elif property_level1.get("type") == "array" and property_level1.get("items").get("$ref"):
+                ref_object = property_level1["items"]["$ref"]
+                schema_url = f"{acq_models_path}/{ref_object}" 
+                ref_schema = requests.get(schema_url)
+                try:
+                    property_level1["items"] = dict(
+                        property_level1["items"], 
+                        **json.loads(ref_schema.text))
+                except:
+                    logging.error("Linked object not yet implemented: %s", property_name_level1)
 
 
             except json.decoder.JSONDecodeError as json_error:
