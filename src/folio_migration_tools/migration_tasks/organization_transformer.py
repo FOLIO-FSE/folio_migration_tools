@@ -22,34 +22,31 @@ from pathlib import Path
 from typing import List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from migration_tools.custom_exceptions import (
+from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 
-from migration_tools.folder_structure import FolderStructure
-from migration_tools.helper import Helper
-from migration_tools.library_configuration import (
+from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import (
     FileDefinition,
-    LibraryConfiguration,
+    LibraryConfiguration
 )
 
-# TODO Create OrganizationMapper Titta inte för mycket på processors.
-
-from migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
-from migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+from folio_migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.report_blurbs import Blurbs
 from pydantic.main import BaseModel
 
-from migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 # Read files and do some work
-
-class OrganizationsTransformer(MigrationTaskBase):
+class OrganizationTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
         migration_task_type: str
@@ -64,14 +61,15 @@ class OrganizationsTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
 
-        super().__init__(library_config, task_config)
-        self.task_config = task_config
+        super().__init__(library_config, task_config, use_logging)
+
         self.object_type_name = self.get_object_type().name
+        self.task_config = task_config
         self.files = self.list_source_files()
-        
         self.total_records = 0
 
         self.organization_map = self.setup_records_map(
