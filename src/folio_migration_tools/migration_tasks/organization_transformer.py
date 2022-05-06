@@ -1,14 +1,3 @@
-'''
-This is a work in progress
-The transformer...
-Sets up files, validates data.
-Starts the mapper, which creates FOLIO objects from legacy data.
-Compares, merges created ojects.
-Wraps up.
-
-The mapper should only take a dict of legacy date and transform that to a FOLIO object.
-
-'''
 import csv
 import ctypes
 import json
@@ -64,7 +53,6 @@ class OrganizationTransformer(MigrationTaskBase):
         use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-
         super().__init__(library_config, task_config, use_logging)
 
         self.object_type_name = self.get_object_type().name
@@ -152,7 +140,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     "Number of Legacy items in file"
                 )
 
-                #TODO See if we can base % value on number of rows in file
+                #TODO Rewrite to base % value on number of rows in file
                 if idx > 1 and idx % 50 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
@@ -166,7 +154,6 @@ class OrganizationTransformer(MigrationTaskBase):
                 f"Done processing {filename} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
-    
     
     def do_work(self):
         logging.info("Getting started!")
