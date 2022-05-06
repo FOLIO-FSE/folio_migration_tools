@@ -45,7 +45,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         legacy_organization_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
 
-        # IF there is a value mapped, return that one
+        # If there is a value mapped, return that one
         if len(legacy_organization_keys) == 1 and folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
             self.migration_report.add(
@@ -58,10 +58,6 @@ class OrganizationMapper(MappingFileMapperBase):
         )
 
         legacy_value = " ".join(legacy_values).strip()
-
-        #TODO Add a bunch of special cases like the below for special organization things
-        # if folio_prop_name == "permanentLocationId":
-        #     return self.get_location_id(legacy_organization, index_or_id, folio_prop_name)
 
         if any(legacy_organization_keys):
             return legacy_value
@@ -76,28 +72,39 @@ class OrganizationMapper(MappingFileMapperBase):
         of a FOLIO acquisition object, returns a schema for that object that
         also includes the schemas of any other referenced acq objects.
         '''
+        try:
+            github_path = "https://raw.githubusercontent.com"
+            submodules = OrganizationMapper.get_submodules_of_latest_release(owner, repo)
+
+            # Get the sha's of sunmodules acq-models and raml_utils
+            acq_models_sha = next((item["sha"] for item in submodules 
+            if item["path"] == "acq-models"))
+
+            # # TODO Maybe - fetch raml_utils schemas if deemed necessary
+            # raml_utils_sha = next((item["sha"] for item in submodules 
+            # if item["path"] == "raml-utils"))
+
+
+            acq_models_path = f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas"
         
-        github_path = "https://raw.githubusercontent.com"
+            req = requests.get(f"{acq_models_path}/{object}.json")
+            req.raise_for_status()
 
-        submodules = OrganizationMapper.get_submodules_of_latest_release(owner, repo)
-        # Get the sha's of sunmodules acq-models and raml_utils
-        acq_models_sha = next((item["sha"] for item in submodules 
-        if item["path"] == "acq-models"))
+            object_schema = json.loads(req.text)
 
-        # # TODO Maybe - fetch raml_utils schemas if deemed necessary
-        # raml_utils_sha = next((item["sha"] for item in submodules 
-        # if item["path"] == "raml-utils"))
+            # Fetch referenced schemas
+            extended_object_schema = OrganizationMapper.build_extended_object(object_schema, acq_models_path)
+
+            return extended_object_schema
+        
+        except requests.exceptions.HTTPError as http_error:
+            logging.critical(f"Halting! \t{http_error}")
+            sys.exit(2)
 
 
-        acq_models_path = f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas"
-
-        req = requests.get(f"{acq_models_path}/{object}.json")
-        object_schema = json.loads(req.text)
-
-        # Fetch referenced schemas
-        extended_object_schema = OrganizationMapper.build_extended_object(object_schema, acq_models_path)
-
-        return extended_object_schema
+        except json.decoder.JSONDecodeError as json_error:
+            logging.critical(json_error)
+            sys.exit(2)
 
 
     @staticmethod
@@ -147,16 +154,31 @@ class OrganizationMapper(MappingFileMapperBase):
         submodule repository and returns the same schema with the full schemas
          of subordinate objects (for example aliases).
         '''
-        for property_name_level1, property_level1 in object_schema["properties"].items():
 
-            if property_level1.get("type") == "object" and property_level1.get("$ref"):
-                logging.info("Fecthing referenced schema for object %s",
-                        property_name_level1)
+        supported_types = ["string","boolean","number","integer","text","object","array"]
 
-                ref_object = property_level1["$ref"]
-                schema_url = f"{submodule_path}/{ref_object}"
+        try:
 
-                try:
+            for property_name_level1, property_level1 in object_schema["properties"].items():
+                
+                # Report and discard unhandled properties
+                if (    property_level1.get("type") not in supported_types or
+                        "../" in property_level1.get("$ref", "") or
+                        "../" in property_level1.get("items", {}).get("$ref", "")):
+                    
+                    logging.info(f"Property not yet supported: {property_name_level1}")
+                    property_level1["type"] = "Deprecated"
+
+                # Handle object properties
+                elif (    property_level1.get("type") == "object" and 
+                        property_level1.get("$ref")):
+
+                    logging.info("Fecthing referenced schema for object %s",
+                            property_name_level1)
+
+                    ref_object = property_level1["$ref"]
+                    schema_url = f"{submodule_path}/{ref_object}"
+
                     req = requests.get(schema_url)
                     req.raise_for_status()
 
@@ -164,28 +186,24 @@ class OrganizationMapper(MappingFileMapperBase):
                     property_level1, 
                     **json.loads(req.text))
 
-                except HTTPError as he:
-                    logging.error("Linked object not yet implemented: %s\t%s", property_name_level1, he)
+                # Handle arrays of items properties
+                elif (  property_level1.get("type") == "array" and
+                        property_level1.get("items").get("$ref")):
 
-            elif property_level1.get("type") == "array" and property_level1.get("items").get("$ref") and property_level1.get("items").get("type"):
-                logging.info("Fetching referenced schema for array object %s",
-                        property_name_level1)
+                    logging.info("Fetching referenced schema for array object %s",
+                            property_name_level1)
 
-                ref_object = property_level1["items"]["$ref"]
-                schema_url = f"{submodule_path}/{ref_object}"
-                
-                try:
+                    ref_object = property_level1["items"]["$ref"]
+                    schema_url = f"{submodule_path}/{ref_object}"
+                    
                     req = requests.get(schema_url)
                     req.raise_for_status()
 
                     property_level1["items"] = dict(
                     property_level1["items"], 
                     **json.loads(req.text))
-                    
-                except HTTPError as he:
-                    logging.error("Linked object not yet implemented: %s\t%s", property_name_level1, he)
-
-            elif property_level1.get("type") != "string" and property_level1.get("type") != bool:
-                logging.info(f"No support at this point for property: {property_name_level1}")
+            
+            return object_schema
         
-        return object_schema
+        except HTTPError as he:
+            logging.error(he)
