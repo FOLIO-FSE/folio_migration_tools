@@ -8,7 +8,6 @@ import sys
 import time
 import traceback
 import uuid
-from os.path import isfile
 from typing import List
 from typing import Optional
 
@@ -16,6 +15,7 @@ from folio_uuid import FolioUUID
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 from pydantic.main import BaseModel
+from requests import HTTPError
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -71,7 +71,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         try:
             self.task_config = task_config
             self.bound_with_keys = set()
-            self.files = self.list_source_files()
             self.mapper = HoldingsMapper(
                 self.folio_client,
                 self.load_mapped_fields(),
@@ -90,7 +89,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             logging.info("%s\tholdings types in tenant", len(self.holdings_types))
             self.validate_merge_criterias()
-
+            self.check_source_files(
+                self.folder_structure.data_folder / "items", self.task_config.files
+            )
             self.fallback_holdings_type = next(
                 h
                 for h in self.holdings_types
@@ -123,6 +124,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
             else:
                 logging.info("No file of legacy holdings setup.")
+        except HTTPError as http_error:
+            logging.critical(http_error)
+            sys.exit(1)
         except TransformationProcessError as process_error:
             logging.critical("%s\t%s", process_error.message, process_error.data_value)
             logging.critical("Halting.")
@@ -132,6 +136,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             logging.info(exception)
             logging.info("\n=======Stack Trace===========")
             traceback.print_exc()
+            sys.exit(1)
         logging.info("Init done")
 
     def load_call_number_type_map(self):
@@ -173,24 +178,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             return holdings_map
 
-    def list_source_files(self):
-        # Source data files
-        files = [
-            self.folder_structure.data_folder / "items" / f.file_name
-            for f in self.task_config.files
-            if isfile(self.folder_structure.data_folder / "items" / f.file_name)
-        ]
-        if not any(files):
-            ret_str = ",".join(f.file_name for f in self.task_config.files)
-            raise TransformationProcessError(
-                "",
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}",
-            )
-        logging.info("Files to process:")
-        for filename in files:
-            logging.info("\t%s", filename)
-        return files
-
     def load_instance_id_map(self):
         res = {}
         with open(self.folder_structure.instance_id_map_path, "r") as instance_id_map_file:
@@ -205,19 +192,21 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def do_work(self):
         logging.info("Starting....")
-        for file_name in self.files:
-            logging.info("Processing %s", file_name)
+        for file_def in self.task_config.files:
+            logging.info("Processing %s", file_def.file_name)
             try:
-                self.process_single_file(file_name)
+                self.process_single_file(file_def)
             except Exception as ee:
                 error_str = (
-                    f"Processing of {file_name} failed:\n{ee}."
+                    f"Processing of {file_def.file_name} failed:\n{ee}."
                     "\nCheck source files for empty lines or missing reference data"
                 )
                 logging.critical(error_str)
                 print(f"\n{error_str}\nHalting")
                 sys.exit(1)
-        logging.info(f"processed {self.total_records:,} records in {len(self.files)} files")
+        logging.info(
+            f"processed {self.total_records:,} records in {len(self.task_config.files)} files"
+        )
 
     def wrap_up(self):
         logging.info("Work done. Wrapping up...")
@@ -272,12 +261,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             sys.exit(1)
 
-    def process_single_file(self, file_name):
-        with open(file_name, encoding="utf-8-sig") as records_file:
+    def process_single_file(self, file_def: FileDefinition):
+        full_path = self.folder_structure.data_folder / "items" / file_def.file_name
+        with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics("Number of files processed")
             start = time.time()
             records_processed = 0
-            for idx, legacy_record in enumerate(self.mapper.get_objects(records_file, file_name)):
+            for idx, legacy_record in enumerate(self.mapper.get_objects(records_file, full_path)):
                 records_processed = idx + 1
                 try:
                     self.mapper.verify_legacy_record(legacy_record, idx)
@@ -300,7 +290,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     logging.info(f"{idx:,} records processed. Recs/sec: {elapsed_formatted} ")
             self.total_records = records_processed
             logging.info(
-                f"Done processing {file_name} containing {self.total_records:,} records. "
+                f"Done processing {file_def.file_name} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
 

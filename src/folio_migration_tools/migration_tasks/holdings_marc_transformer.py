@@ -3,18 +3,18 @@ import csv
 import json
 import logging
 import sys
-from os.path import isfile
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    HridHandling,
-    LibraryConfiguration,
-)
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import BaseModel
+from pymarc import MARCReader
+
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.holdings_processor import (
     HoldingsProcessor,
 )
@@ -22,9 +22,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings impor
     RulesMapperHoldings,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
-from pymarc import MARCReader
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):
@@ -63,7 +60,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 for h in self.holdings_types
                 if h["id"] == self.task_config.fallback_holdings_type_id
             ),
-            "",
+            {"name": ""},
         )
         if not self.default_holdings_type:
             raise TransformationProcessError(
@@ -75,14 +72,16 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             )
         logging.info(
             "%s will be used as default holdings type",
-            self.default_holdings_type["name"],
+            self.default_holdings_type.get("name", ""),
+        )
+        self.check_source_files(
+            self.folder_structure.legacy_records_folder, self.task_config.files
         )
         self.instance_id_map = self.load_id_map(self.folder_structure.instance_id_map_path, True)
         logging.info("%s Instance ids in map", len(self.instance_id_map))
         logging.info("Init done")
 
     def do_work(self):
-        files = self.list_source_files()
         loc_map_path = (
             self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name
         )
@@ -103,24 +102,9 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             )
             mapper.mappings = rules_file["rules"]
             processor = HoldingsProcessor(mapper, self.folder_structure)
-            for file_def in files:
+            for file_def in self.task_config.files:
                 self.process_single_file(file_def, processor)
             processor.wrap_up()
-
-    def list_source_files(self):
-        files = [
-            f
-            for f in self.task_config.files
-            if isfile(self.folder_structure.legacy_records_folder / f.file_name)
-        ]
-        if not any(files):
-            ret_str = ",".join(f.file_name for f in self.task_config.files)
-            raise TransformationProcessError(
-                "",
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'holdings'}",
-            )
-
-        return files
 
     def process_single_file(self, file_def: FileDefinition, processor: HoldingsProcessor):
         try:

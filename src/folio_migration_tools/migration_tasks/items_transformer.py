@@ -7,9 +7,11 @@ import sys
 import time
 import traceback
 import uuid
-from os.path import isfile
 from typing import List
 from typing import Optional
+
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic.main import BaseModel
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -23,8 +25,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic.main import BaseModel
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -59,21 +59,9 @@ class ItemsTransformer(MigrationTaskBase):
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, use_logging)
         self.task_config = task_config
-        self.files = [
-            f
-            for f in self.task_config.files
-            if isfile(self.folder_structure.legacy_records_folder / f.file_name)
-        ]
-        if not any(self.files):
-            ret_str = ",".join(f.file_name for f in self.task_config.files)
-            raise TransformationProcessError(
-                "",
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}",
-            )
-        logging.info("Files to process:")
-        for filename in self.files:
-            logging.info("\t%s", filename.file_name)
-
+        self.check_source_files(
+            self.folder_structure.legacy_records_folder, self.task_config.files
+        )
         self.total_records = 0
         self.folio_keys = []
         self.items_map = self.setup_records_map(
@@ -169,22 +157,24 @@ class ItemsTransformer(MigrationTaskBase):
     def do_work(self):
         logging.info("Starting....")
         with open(self.folder_structure.created_objects_path, "w+") as results_file:
-            for file_name in self.files:
+            for file_def in self.task_config.files:
                 try:
-                    self.process_single_file(file_name, results_file)
+                    self.process_single_file(file_def, results_file)
                 except Exception as exception:
-                    error_str = f"\n\nProcessing of {file_name} failed:\n{exception}."
+                    error_str = f"\n\nProcessing of {file_def.file_name} failed:\n{exception}."
                     logging.exception(error_str, stack_info=True)
                     logging.fatal("Check source files for empty lines or missing reference data.")
                     self.mapper.migration_report.add(
-                        Blurbs.FailedFiles, f"{file_name} - {exception}"
+                        Blurbs.FailedFiles, f"{file_def.file_name} - {exception}"
                     )
                     logging.fatal(error_str)
                     sys.exit(1)
-        logging.info(f"processed {self.total_records:,} records in {len(self.files)} files")
+        logging.info(
+            f"processed {self.total_records:,} records in {len(self.task_config.files)} files"
+        )
 
-    def process_single_file(self, file_name: FileDefinition, results_file):
-        full_path = self.folder_structure.legacy_records_folder / file_name.file_name
+    def process_single_file(self, file_def: FileDefinition, results_file):
+        full_path = self.folder_structure.legacy_records_folder / file_def.file_name
         logging.info("Processing %s", full_path)
         records_in_file = 0
         with open(full_path, encoding="utf-8-sig") as records_file:
@@ -224,7 +214,7 @@ class ItemsTransformer(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
                     Blurbs.GeneralStatistics,
-                    f"Number of Legacy items in {file_name}",
+                    f"Number of Legacy items in {file_def}",
                 )
                 self.mapper.migration_report.add_general_statistics(
                     "Number of legacy items in total"
@@ -233,7 +223,7 @@ class ItemsTransformer(MigrationTaskBase):
                 records_in_file = idx + 1
 
             logging.info(
-                f"Done processing {file_name} containing {records_in_file:,} records. "
+                f"Done processing {file_def} containing {records_in_file:,} records. "
                 f"Total records processed: {records_in_file:,}"
             )
         self.total_records += records_in_file

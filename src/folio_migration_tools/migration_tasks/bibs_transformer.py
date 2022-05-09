@@ -1,7 +1,6 @@
 import logging
 import sys
 from datetime import datetime as dt
-from os.path import isfile
 from typing import List
 from typing import Optional
 
@@ -51,24 +50,11 @@ class BibsTransformer(MigrationTaskBase):
         super().__init__(library_config, task_config, use_logging)
         self.task_config = task_config
         self.processor: BibsProcessor = None
+        self.check_source_files(
+            self.folder_structure.legacy_records_folder, self.task_config.files
+        )
         logging.info(task_config.json(indent=4))
-        self.files = [
-            f
-            for f in self.task_config.files
-            if isfile(self.folder_structure.legacy_records_folder / f.file_name)
-        ]
-        if not any(self.files):
-            ret_str = ",".join(f.file_name for f in self.task_config.files)
-            raise TransformationProcessError(
-                "",
-                f"Files {ret_str} not found in {self.folder_structure.data_folder / 'items'}",
-            )
-        logging.info(self.files)
-        logging.info("# of files to process: %s", len(self.files))
-        for file_path in self.files:
-            logging.info("\t%s", file_path)
         self.mapper = BibsRulesMapper(self.folio_client, library_config, task_config)
-        self.processor = None
         self.bib_ids = set()
         logging.info("Init done")
 
@@ -81,7 +67,7 @@ class BibsTransformer(MigrationTaskBase):
                 created_records_file,
                 self.folder_structure,
             )
-            for file_obj in self.files:
+            for file_obj in self.task_config.files:
                 try:
                     with open(
                         self.folder_structure.legacy_records_folder / file_obj.file_name,

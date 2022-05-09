@@ -1,20 +1,19 @@
 import csv
-from genericpath import isfile
+import json
 import logging
-from pathlib import Path
 import sys
 import time
 from abc import abstractmethod
-import json
+from pathlib import Path
 
 from argparse_prompt import PromptParser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
+from genericpath import isfile
+
 from folio_migration_tools import library_configuration
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.folder_structure import FolderStructure
 
 
@@ -71,6 +70,34 @@ class MigrationTaskBase:
     @abstractmethod
     def do_work(self):
         raise NotImplementedError
+
+    @staticmethod
+    def check_source_files(
+        source_path: Path, file_defs: list[library_configuration.FileDefinition]
+    ) -> None:
+        """Lists the source data files. Special case since we use the Items folder for holdings
+
+        Raises:
+            TransformationProcessError: _description_
+
+        Returns:
+            None
+        """
+        files = [source_path / f.file_name for f in file_defs if isfile(source_path / f.file_name)]
+        if len(files) < len(file_defs):
+            raise TransformationProcessError(
+                "",
+                "Not all files listed in configuration found on disk",
+            )
+        if not any(files):
+            ret_str = ",".join(f.file_name for f in file_defs)
+            raise TransformationProcessError(
+                "",
+                f"Files {ret_str} not found in {source_path / 'items'}",
+            )
+        logging.info("Files to process:")
+        for filename in files:
+            logging.info("\t%s", filename)
 
     @staticmethod
     def load_id_map(map_path, raise_if_empty=False):
