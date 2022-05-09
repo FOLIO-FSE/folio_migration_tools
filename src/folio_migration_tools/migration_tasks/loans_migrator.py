@@ -92,18 +92,20 @@ class LoansMigrator(MigrationTaskBase):
         self.skipped_since_already_added = 0
         self.processed_items = set()
         self.failed = {}
-        self.num_legacy_loans_processed = 0
         self.failed_and_not_dupe = {}
-        logging.info("Starting row is %s", task_configuration.starting_row)
+        logging.info("Starting row number is %s", task_configuration.starting_row)
         logging.info("Init completed")
 
     def do_work(self):
         logging.info("Starting")
+        starting_index = (
+            self.task_configuration.starting_row - 1
+            if self.task_configuration.starting_row > 0
+            else 0
+        )
         if self.task_configuration.starting_row > 1:
-            logging.info(f"Skipping {(self.task_configuration.starting_row-1)} records")
-        for num_loans, legacy_loan in enumerate(
-            self.valid_legacy_loans[self.task_configuration.starting_row :], start=1
-        ):
+            logging.info(f"Skipping {(starting_index)} records")
+        for num_loans, legacy_loan in enumerate(self.valid_legacy_loans[starting_index:], start=1):
             t0_migration = time.time()
             self.migration_report.add_general_statistics("Processed loans")
             try:
@@ -174,11 +176,6 @@ class LoansMigrator(MigrationTaskBase):
             self.failed_and_not_dupe[k] = [v.to_dict()]
         self.migration_report.set(
             Blurbs.GeneralStatistics, "Failed loans", len(self.failed_and_not_dupe)
-        )
-        self.migration_report.set(
-            Blurbs.GeneralStatistics,
-            "Total Rows in file",
-            self.num_legacy_loans_processed,
         )
 
         self.write_failed_loans_to_file()
