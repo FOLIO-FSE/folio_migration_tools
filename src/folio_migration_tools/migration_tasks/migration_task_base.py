@@ -82,6 +82,9 @@ class MigrationTaskBase:
 
         Raises:
             TransformationProcessError: _description_
+
+        Returns:
+            None
         """
         files = [source_path / f.file_name for f in file_defs if isfile(source_path / f.file_name)]
         if len(files) < len(file_defs):
@@ -269,7 +272,7 @@ class MigrationTaskBase:
             logging.info("No mapping setup for %s", folio_property_name)
             logging.info("%s will have default mapping if any ", folio_property_name)
             logging.info(
-                "Add a file named %s and add the field to " "the item.mapping.json file.",
+                "Add a file named %s and add the field to the item.mapping.json file.",
                 map_file_path,
             )
             return None
