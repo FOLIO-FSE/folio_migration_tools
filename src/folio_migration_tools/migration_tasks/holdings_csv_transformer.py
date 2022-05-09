@@ -128,7 +128,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             sys.exit(1)
         except (FileNotFoundError, TransformationProcessError) as process_error:
             logging.critical(process_error)
-            logging.critical("Halting.")
+            sys.exit(1)
+        except HTTPError as http_error:
+            logging.critical(http_error)
             sys.exit(1)
         except Exception as exception:
             logging.info("\n=======ERROR===========")
