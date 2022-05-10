@@ -3,32 +3,43 @@ import contextlib
 import logging
 import re
 
-from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from pymarc import Field
 from pymarc import Record
+
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 
 
 class HoldingsStatementsParser:
     @staticmethod
-    def get_textual_statements(marc_record, field_textual, return_dict):
-        for f in marc_record.get_fields(field_textual):
-            return_dict["statements"].append(
-                {"statement": (f["a"] or ""), "note": (f["z"] or ""), "staffNote": ""}
-            )
-            return_dict["migration_report"].append(
-                ("Holdings statements", f"From {field_textual}")
-            )
-
-    @staticmethod
     def get_holdings_statements(
-        marc_record: Record, pattern_tag, value_tag, field_textual, legacy_id: str
-    ):
+        marc_record: Record,
+        pattern_tag: str,
+        value_tag: str,
+        field_textual: str,
+        legacy_id: str,
+        dedupe_results: bool = True,
+    ) -> dict:
+        """The main method
+
+        Args:
+            marc_record (Record): _description_
+            pattern_tag (str): _description_
+            value_tag (str): _description_
+            field_textual (str): _description_
+            legacy_id (str): _description_
+            dedupe_results (bool, optional): _description_. Defaults to True.
+
+        Raises:
+            TransformationFieldMappingError: _description_
+
+        Returns:
+            dict: _description_
+        """
+
         # Textual holdings statements
-        return_dict = {"statements": [], "migration_report": [], "hlm_stmts": []}
+        return_dict: dict = {"statements": [], "migration_report": [], "hlm_stmts": []}
         HoldingsStatementsParser.get_textual_statements(
-            marc_record,
-            field_textual,
-            return_dict,
+            marc_record, field_textual, return_dict, legacy_id
         )
 
         value_fields = marc_record.get_fields(value_tag)
@@ -55,33 +66,33 @@ class HoldingsStatementsParser:
 
             else:
 
-                for linked_value_field in linked_value_fields:
-                    parsed_dict = HoldingsStatementsParser.parse_linked_field(
-                        pattern_field, linked_value_field
+                parsed_dict = HoldingsStatementsParser.parse_linked_field(
+                    pattern_field, linked_value_fields
+                )
+                if parsed_dict["hlm_stmt"]:
+                    return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
+                if parsed_dict["statement"]:
+                    logging.info(
+                        f"HOLDINGS STATEMENT PATTERN\t{legacy_id}\t{pattern_field}"
+                        f"\t{linked_value_fields}"
+                        f"\t{parsed_dict['statement']['statement']}"
+                        f"\t{parsed_dict['statement']['note']}"
+                        f"\t{parsed_dict['statement']['staffNote']}"
                     )
-                    if parsed_dict["hlm_stmt"]:
-                        return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
-                    if parsed_dict["statement"]:
-                        logging.info(
-                            f"HOLDINGS STATEMENT PATTERN\t{legacy_id}\t{pattern_field}"
-                            f"\t{linked_value_field}"
-                            f"\t{parsed_dict['statement']['statement']}"
-                            f"\t{parsed_dict['statement']['note']}"
-                            f"\t{parsed_dict['statement']['staffNote']}"
+                    return_dict["migration_report"].append(
+                        (
+                            "Holdings statements",
+                            f"From {pattern_tag}",
                         )
-                        return_dict["migration_report"].append(
-                            (
-                                "Holdings statements",
-                                f"From {pattern_tag}",
-                            )
-                        )
-                        return_dict["statements"].append(parsed_dict["statement"])
+                    )
+                    return_dict["statements"].append(parsed_dict["statement"])
 
-        return_dict["statements"] = dedupe_list_of_dict(return_dict["statements"])
+        if dedupe_results:
+            return_dict["statements"] = dedupe_list_of_dict(return_dict["statements"])
         return return_dict
 
     @staticmethod
-    def parse_linked_field(pattern_field: Field, linked_value_field: Field):
+    def parse_linked_field(pattern_field: Field, linked_value_fields: list[Field]):
         return_dict = {
             "hlm_stmt": "",
             "statement": {
@@ -90,24 +101,59 @@ class HoldingsStatementsParser:
                 "staffNote": "",
             },
         }
-        _from, _to = get_from_to(pattern_field, linked_value_field)
-        cron_from, cron_to, hlm_stmt = get_cron_from_to(pattern_field, linked_value_field)
+        _from, _to = get_from_to(pattern_field, linked_value_fields[0])
+        cron_from, cron_to, hlm_stmt = get_cron_from_to(pattern_field, linked_value_fields[0])
         return_dict["hlm_stmt"] = hlm_stmt
-        if cron_from:
+        if _from and cron_from:
             _from = f"{_from} ({cron_from})"
+        if not _from and cron_from:
+            _from = cron_from
         if _to and cron_to:
             _to = f"{_to} ({cron_to})"
         if _to and cron_from and not cron_to:
             _to = f"{_to} ({cron_from})"
+        if not _to and cron_to:
+            _to = cron_to
         stmt = f"{_from}-{_to}" if _from else ""
         stmt = stmt.strip("-")
-        if "z" in linked_value_field:
-            return_dict["statement"]["note"] = linked_value_field["z"]
-        if "x" in linked_value_field:
-            return_dict["statement"]["staffNote"] = linked_value_field["x"]
+        if "z" in linked_value_fields:
+            return_dict["statement"]["note"] = linked_value_fields[0]["z"]
+        if "x" in linked_value_fields:
+            return_dict["statement"]["staffNote"] = linked_value_fields[0]["x"]
         stmt = re.sub(" +", " ", stmt)
         return_dict["statement"]["statement"] = stmt
         return return_dict
+
+    @staticmethod
+    def get_textual_statements(
+        marc_record: Record, field_textual: str, return_dict: dict, legacy_id: str
+    ):
+        """Returns the textual statements from the relevant marc fields
+
+        Args:
+            marc_record (Record): _description_
+            field_textual (str): _description_
+            return_dict (dict): _description_
+        """
+        for f in marc_record.get_fields(field_textual):
+            if "a" not in f and "z" not in f:
+                raise TransformationFieldMappingError(
+                    legacy_id,
+                    f"{field_textual} subfield a or z not in field",
+                    f.format_field(),
+                )
+            if not (f["a"] or f["z"]):
+                raise TransformationFieldMappingError(
+                    legacy_id,
+                    f"{field_textual} Both a or z are empty",
+                    f.format_field(),
+                )
+            return_dict["statements"].append(
+                {"statement": (f["a"] or ""), "note": (f["z"] or ""), "staffNote": ""}
+            )
+            return_dict["migration_report"].append(
+                ("Holdings statements", f"From {field_textual}")
+            )
 
 
 def get_season(val):
@@ -147,18 +193,35 @@ def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
             val, *val_rest = linked_value_field[chron_level].split("-")
             if desc == "(month)":
                 with contextlib.suppress(Exception):
+                    v_s = [f"{calendar.month_abbr[int(m)]}." for m in val.split("/")]
+                    if any(v_s):
+                        val = "/".join(v_s)
+                with contextlib.suppress(Exception):
+                    v_sr = [f"{calendar.month_abbr[int(m)]}." for m in val_rest[0].split("/")]
+                    if any(v_sr):
+                        val_rest = "/".join(v_sr)
+                with contextlib.suppress(Exception):
                     val = f"{calendar.month_abbr[int(val)]}."
                 if "".join(val_rest):
                     with contextlib.suppress(Exception):
                         val_rest = calendar.month_abbr[int("".join(val_rest))]
+                elif cron_to.strip() and val:
+                    val_rest = val
                 if year:
+                    spill_year = f"{hlm_stmt}:" if "-" not in hlm_stmt else ""
                     cron_from = f"{cron_from.strip()}:{val} "
-                    cron_to = f"{cron_to}:{''.join(val_rest)} "
+                    if cron_to and "".join(val_rest):
+                        cron_to = f"{cron_to}:{''.join(val_rest)} "
+                    elif not cron_to and "".join(val_rest):
+                        cron_to = f"{spill_year}{''.join(val_rest)}"
+
             else:
                 if "season" in desc:
                     val = get_season(val)
-                cron_from = f"{cron_from} {val} "
-                cron_to = f"{cron_to} {''.join(val_rest)}"
+                    if "".join(val_rest):
+                        val_rest = get_season("".join(val_rest))
+                cron_from = f"{cron_from} {val}".strip()
+                cron_to = f"{cron_to} {''.join(val_rest)}".strip()
     return (cron_from.strip(), cron_to.strip(), hlm_stmt)
 
 

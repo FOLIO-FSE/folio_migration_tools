@@ -4,6 +4,11 @@ import json
 import os
 
 import pymarc
+from folio_uuid import FOLIONamespaces
+from folio_uuid import FolioUUID
+from pymarc import Field
+from pymarc.reader import MARCReader
+
 from folio_migration_tools import mapper_base
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -12,9 +17,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid import FOLIONamespaces
-from folio_uuid import FolioUUID
-from pymarc.reader import MARCReader
 
 
 # flake8: noqa: E501
@@ -63,30 +65,6 @@ def test_eval():
     cnr = "['973 B967a', '']"
     a = ast.literal_eval(cnr)
     assert isinstance(a, list)
-
-
-def test_get_marc_textual_stmt():
-    file_path = "./tests/test_data/default/test_mfhd_holdings_statements.xml"
-    record = pymarc.parse_xml_to_array(file_path)[0]
-    res = HoldingsStatementsParser.get_holdings_statements(record, "853", "863", "866", ["apa"])
-    stmt = "v.1:no. 1(1943:July 3)-v.1:no.52(1944:June 24)"
-    stmt2 = "Some statement without note"
-    stmt3 = "v.29 (2011)"
-    stmt4 = "v.1 (1948)-v.27 (2007)"
-    stmt5 = "v.253:no.2 (2006:Jan. 09)"
-    stmt6 = "v.34:no.48(2005:Nov.)-v.35:no.2(2006:Jan.)"
-
-    print(res["statements"])
-    assert any(res["statements"])
-    assert any(stmt in f["statement"] for f in res["statements"])
-    assert any(stmt3 in f["statement"] for f in res["statements"])
-    assert any(stmt4 in f["statement"] for f in res["statements"])
-    assert any("Some note" in f["note"] for f in res["statements"])
-    assert any(stmt2 in f["statement"] for f in res["statements"])
-    assert any(stmt5 in f["statement"] for f in res["statements"])
-    # assert any(stmt6 in f["statement"] for f in res["statements"])
-
-    assert any("Missing linked fields for 853" in f[1] for f in res["migration_report"])
 
 
 def test_flatten():
