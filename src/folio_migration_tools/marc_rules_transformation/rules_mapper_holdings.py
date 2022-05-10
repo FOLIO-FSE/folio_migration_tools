@@ -1,5 +1,10 @@
 import logging
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
+from pymarc.field import Field
+from pymarc.record import Record
+
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -14,10 +19,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
-from pymarc.field import Field
-from pymarc.record import Record
 
 
 class RulesMapperHoldings(RulesMapperBase):
@@ -145,7 +146,12 @@ class RulesMapperHoldings(RulesMapperBase):
         for key, v in a.items():
             try:
                 res = HoldingsStatementsParser.get_holdings_statements(
-                    marc_record, v[0], v[1], v[2], legacy_id
+                    marc_record,
+                    v[0],
+                    v[1],
+                    v[2],
+                    legacy_id,
+                    self.task_configuration.deduplicate_holdings_statements,
                 )
                 folio_holding[key] = res["statements"]
                 for mr in res["migration_report"]:

@@ -28,6 +28,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
         legacy_id_marc_path: str
+        deduplicate_holdings_statements: Optional[bool] = True
         migration_task_type: str
         use_tenant_mapping_rules: bool
         hrid_handling: HridHandling

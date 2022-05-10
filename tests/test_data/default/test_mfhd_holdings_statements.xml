@@ -35,17 +35,6 @@
                         <subfield code="i">1948-2007</subfield>
                          <subfield code="w">g</subfield>
                     </datafield>
-                    <datafield ind1="4" ind2="0" tag="863">
-                        <subfield code="8">1.1</subfield>
-                        <subfield code="a">1-27</subfield>
-                        <subfield code="i">1948-2007</subfield>
-                         <subfield code="w">g</subfield>
-                    </datafield>
-                    <datafield ind1="4" ind2="0" tag="863">
-                        <subfield code="8">1.2</subfield>
-                        <subfield code="a">29-</subfield>
-                        <subfield code="i">2011-</subfield>
-                    </datafield>
                     <datafield ind1=" " ind2=" " tag="853">
                         <subfield code="8">5</subfield>
                         <subfield code="a">Some pattern</subfield>
@@ -74,7 +63,7 @@
                         <subfield code="j">(month)</subfield>
                     </datafield>
                     <datafield ind1=" " ind2="0" tag="863">
-                        <subfield code="8">6.1</subfield>
+                        <subfield code="8">7.1</subfield>
                         <subfield code="a">34</subfield>
                         <subfield code="b">48</subfield>
                         <subfield code="i">2005</subfield>
@@ -86,6 +75,25 @@
                         <subfield code="b">2</subfield>
                         <subfield code="i">2006</subfield>
                         <subfield code="j">01</subfield>
+                    </datafield>
+                    <datafield ind1="2" ind2="0" tag="853">
+                        <subfield code="8">8</subfield>
+                        <subfield code="a">(year)</subfield>
+                        <subfield code="w">a</subfield>
+                    </datafield>
+                    <datafield ind1="4" ind2="1" tag="863">
+                        <subfield code="8">8.1</subfield>
+                        <subfield code="a">2009-</subfield>
+                    </datafield>
+                    <datafield ind1="2" ind2="0" tag="853">
+                        <subfield code="8">9</subfield>
+                        <subfield code="a">v.</subfield>
+                        <subfield code="i">(year))</subfield>
+                    </datafield>
+                    <datafield ind1="4" ind2="0" tag="863">
+                        <subfield code="8">9.1</subfield>
+                        <subfield code="a">29-</subfield>
+                        <subfield code="i">2011-</subfield>
                     </datafield>
                 </record>
             </metadata>
