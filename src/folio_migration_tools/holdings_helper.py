@@ -108,13 +108,12 @@ class HoldingsHelper:
 
     @staticmethod
     def merge_holding(holdings_record: dict, incoming_holdings: dict) -> dict:
-        extend_list("holdingsStatementsForIndexes", holdings_record, incoming_holdings)
-        extend_list("holdingsStatements", holdings_record, incoming_holdings)
-        extend_list("holdingsStatementsForSupplements", holdings_record, incoming_holdings)
+        extend_list("holdingsStatementsForIndexes", holdings_record, incoming_holdings, True)
+        extend_list("holdingsStatements", holdings_record, incoming_holdings, True)
+        extend_list("holdingsStatementsForSupplements", holdings_record, incoming_holdings, True)
         extend_list("notes", holdings_record, incoming_holdings)
         holdings_record["notes"] = dedupe(holdings_record.get("notes", []))
         extend_list("formerIds", holdings_record, incoming_holdings)
-        holdings_record["formerIds"] = list(set(holdings_record["formerIds"]))
         extend_list("electronicAccess", holdings_record, incoming_holdings)
         return holdings_record
 
@@ -137,11 +136,13 @@ class HoldingsHelper:
                 del folio_object["notes"]
 
 
-def extend_list(prop_name: str, holdings_record: dict, incoming_holdings: dict):
+def extend_list(
+    prop_name: str, holdings_record: dict, incoming_holdings: dict, accept_dupes: bool = False
+):
 
     temp = holdings_record.get(prop_name, [])
     for f in incoming_holdings.get(prop_name, []):
-        if f not in temp:
+        if accept_dupes or f not in temp:
             temp.append(f)
     holdings_record[prop_name] = temp
 
