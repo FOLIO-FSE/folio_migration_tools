@@ -65,35 +65,35 @@ class HoldingsStatementsParser:
                 )
 
             else:
-
-                parsed_dict = HoldingsStatementsParser.parse_linked_field(
-                    pattern_field, linked_value_fields
-                )
-                if parsed_dict["hlm_stmt"]:
-                    return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
-                if parsed_dict["statement"]:
-                    logging.info(
-                        f"HOLDINGS STATEMENT PATTERN\t{legacy_id}\t{pattern_field}"
-                        f"\t{linked_value_fields}"
-                        f"\t{parsed_dict['statement']['statement']}"
-                        f"\t{parsed_dict['statement']['note']}"
-                        f"\t{parsed_dict['statement']['staffNote']}"
+                for linked_value_field in linked_value_fields:
+                    parsed_dict = HoldingsStatementsParser.parse_linked_field(
+                        pattern_field, linked_value_field
                     )
-                    return_dict["migration_report"].append(
-                        (
-                            "Holdings statements",
-                            f"From {pattern_tag}",
+                    if parsed_dict["hlm_stmt"]:
+                        return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
+                    if parsed_dict["statement"]:
+                        logging.info(
+                            f"HOLDINGS STATEMENT PATTERN\t{legacy_id}\t{pattern_field}"
+                            f"\t{linked_value_fields}"
+                            f"\t{parsed_dict['statement']['statement']}"
+                            f"\t{parsed_dict['statement']['note']}"
+                            f"\t{parsed_dict['statement']['staffNote']}"
                         )
-                    )
-                    return_dict["statements"].append(parsed_dict["statement"])
+                        return_dict["migration_report"].append(
+                            (
+                                "Holdings statements",
+                                f"From {pattern_tag}",
+                            )
+                        )
+                        return_dict["statements"].append(parsed_dict["statement"])
 
         if dedupe_results:
             return_dict["statements"] = dedupe_list_of_dict(return_dict["statements"])
         return return_dict
 
     @staticmethod
-    def parse_linked_field(pattern_field: Field, linked_value_fields: list[Field]):
-        break_ind = get_break_indicator(linked_value_fields[0])
+    def parse_linked_field(pattern_field: Field, linked_value_fields: Field):
+        break_ind = get_break_indicator(linked_value_fields)
         return_dict = {
             "hlm_stmt": "",
             "statement": {
@@ -102,9 +102,9 @@ class HoldingsStatementsParser:
                 "staffNote": "",
             },
         }
-        _from, _to, is_span = get_from_to(pattern_field, linked_value_fields[0])
+        _from, _to, is_span = get_from_to(pattern_field, linked_value_fields)
         cron_from, cron_to, hlm_stmt, is_cron_span = get_cron_from_to(
-            pattern_field, linked_value_fields[0]
+            pattern_field, linked_value_fields
         )
         return_dict["hlm_stmt"] = hlm_stmt
         if _from and cron_from:
@@ -125,9 +125,9 @@ class HoldingsStatementsParser:
         stmt = f"{_from}{span}{_to}{break_ind}" if _from else ""
         stmt = stmt.strip()
         if "z" in linked_value_fields:
-            return_dict["statement"]["note"] = linked_value_fields[0]["z"]
+            return_dict["statement"]["note"] = linked_value_fields["z"]
         if "x" in linked_value_fields:
-            return_dict["statement"]["staffNote"] = linked_value_fields[0]["x"]
+            return_dict["statement"]["staffNote"] = linked_value_fields["x"]
         stmt = re.sub(" +", " ", stmt)
         return_dict["statement"]["statement"] = stmt
         return return_dict
