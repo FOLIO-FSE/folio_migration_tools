@@ -1,25 +1,23 @@
 import csv
-from datetime import datetime
 import json
-import sys
 import logging
+import sys
 import time
+from datetime import datetime
 from datetime import timezone
-from pydantic import BaseModel
-from folio_migration_tools.helper import Helper
+from typing import Optional
+
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import BaseModel
+
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_dict import InsensitiveDictReader
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    LibraryConfiguration,
-)
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-
-from typing import Dict, List, Optional
 from folio_migration_tools.report_blurbs import Blurbs
-
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
 
 
@@ -64,9 +62,7 @@ class CoursesMigrator(MigrationTaskBase):
                 "Loaded and validated %s requests in file",
                 len(self.semi_valid_legacy_requests),
             )
-        if any(self.task_configuration.item_files) or any(
-            self.task_configuration.patron_files
-        ):
+        if any(self.task_configuration.item_files) or any(self.task_configuration.patron_files):
             self.valid_legacy_requests = list(self.check_barcodes())
             logging.info(
                 "Loaded and validated %s requests against barcodes",
@@ -87,13 +83,9 @@ class CoursesMigrator(MigrationTaskBase):
         logging.info("Init completed")
 
     def prepare_legacy_request(self, legacy_request: LegacyRequest):
-        patron = self.circulation_helper.get_user_by_barcode(
-            legacy_request.patron_barcode
-        )
+        patron = self.circulation_helper.get_user_by_barcode(legacy_request.patron_barcode)
         if not patron:
-            logging.error(
-                f"No user with barcode {legacy_request.patron_barcode} found in FOLIO"
-            )
+            logging.error(f"No user with barcode {legacy_request.patron_barcode} found in FOLIO")
             Helper.log_data_issue(
                 f"{legacy_request.patron_barcode}",
                 "No user with barcode",
@@ -106,9 +98,7 @@ class CoursesMigrator(MigrationTaskBase):
 
         item = self.circulation_helper.get_item_by_barcode(legacy_request.item_barcode)
         if not item:
-            logging.error(
-                f"No item with barcode {legacy_request.item_barcode} found in FOLIO"
-            )
+            logging.error(f"No item with barcode {legacy_request.item_barcode} found in FOLIO")
             self.migration_report.add_general_statistics("No item with barcode")
             Helper.log_data_issue(
                 f"{legacy_request.item_barcode}",
@@ -120,9 +110,7 @@ class CoursesMigrator(MigrationTaskBase):
         legacy_request.item_id = item.get("id")
         if item["status"]["name"] in ["Available", "Aged to lost", "Missing"]:
             legacy_request.request_type = "Page"
-            logging.info(
-                f'Setting request to Page, since the status is {item["status"]["name"]}'
-            )
+            logging.info(f'Setting request to Page, since the status is {item["status"]["name"]}')
         return True, legacy_request
 
     def do_work(self):
@@ -161,18 +149,14 @@ class CoursesMigrator(MigrationTaskBase):
                 )
                 sys.exit()
             if num_requests % 10 == 0:
-                logging.info(
-                    f"{timings(self.t0, t0_migration, num_requests)} {num_requests}"
-                )
+                logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
 
     def wrap_up(self):
         self.write_failed_request_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# Requests migration results   \n")
-            report_file.write(
-                f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n"
-            )
+            report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
             self.migration_report.write_migration_report(report_file)
 
     def write_failed_request_to_file(self):
@@ -186,9 +170,7 @@ class CoursesMigrator(MigrationTaskBase):
             "pickup_servicepoint_id",
         ]
         with open(self.folder_structure.failed_recs_path, "w+") as failed_requests_file:
-            writer = csv.DictWriter(
-                failed_requests_file, fieldnames=csv_columns, dialect="tsv"
-            )
+            writer = csv.DictWriter(failed_requests_file, fieldnames=csv_columns, dialect="tsv")
             writer.writeheader()
             failed: LegacyRequest
             for failed in self.failed_requests:
@@ -235,9 +217,7 @@ class CoursesMigrator(MigrationTaskBase):
     def load_and_validate_legacy_requests(self, requests_reader):
         num_bad = 0
         logging.info("Validating legacy requests in file...")
-        for legacy_reques_count, legacy_request_dict in enumerate(
-            requests_reader, start=1
-        ):
+        for legacy_reques_count, legacy_request_dict in enumerate(requests_reader, start=1):
             try:
                 legacy_request = LegacyRequest(
                     legacy_request_dict,
@@ -246,9 +226,7 @@ class CoursesMigrator(MigrationTaskBase):
                 )
                 if any(legacy_request.errors):
                     num_bad += 1
-                    self.migration_report.add_general_statistics(
-                        "Requests with valueErrors"
-                    )
+                    self.migration_report.add_general_statistics("Requests with valueErrors")
                     for error in legacy_request.errors:
                         self.migration_report.add(
                             Blurbs.DiscardedRequests, f"{error[0]} - {error[1]}"

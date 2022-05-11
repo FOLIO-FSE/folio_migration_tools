@@ -3,22 +3,22 @@ import json
 import logging
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
+from datetime import timezone
 from typing import Optional
+
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import BaseModel
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    LibraryConfiguration,
-)
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
 
 
 class RequestsMigrator(MigrationTaskBase):
@@ -109,7 +109,10 @@ class RequestsMigrator(MigrationTaskBase):
             )
             self.failed_requests.add(legacy_request)
             return False, legacy_request
+        holding = self.circulation_helper.get_holding_by_uuid(item.get("holdingsRecordId"))
         legacy_request.item_id = item.get("id")
+        legacy_request.holdings_record_id = item.get("holdingsRecordId")
+        legacy_request.instance_id = holding.get("instanceId")
         if item["status"]["name"] in ["Available", "Aged to lost", "Missing"]:
             legacy_request.request_type = "Page"
             logging.info(f'Setting request to Page, since the status is {item["status"]["name"]}')
@@ -130,7 +133,10 @@ class RequestsMigrator(MigrationTaskBase):
                 res, legacy_request = self.prepare_legacy_request(legacy_request)
                 if res:
                     if self.circulation_helper.create_request(
-                        self.folio_client, legacy_request, self.migration_report
+                        self.folio_client,
+                        legacy_request,
+                        self.migration_report,
+                        self.library_configuration.folio_release,
                     ):
                         self.migration_report.add_general_statistics(
                             "Successfully processed requests"

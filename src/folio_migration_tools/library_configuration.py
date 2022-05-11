@@ -33,7 +33,7 @@ class IlsFlavour(str, Enum):
 
 class FolioRelease(str, Enum):
     kiwi = "kiwi"
-    juniper = "juniper"
+    lotus = "lotus"
 
 
 class LibraryConfiguration(BaseModel):
