@@ -1,4 +1,5 @@
 import pytest
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.holdings_helper import HoldingsHelper
 from folio_migration_tools.migration_report import MigrationReport
@@ -61,6 +62,67 @@ def test_merge_holding():
     assert len(merged_holding["holdingsStatementsForIndexes"]) == 1
     assert len(merged_holding["holdingsStatementsForSupplements"]) == 2
     assert len(merged_holding["holdingsStatements"]) == 2
+
+
+def test_merge_holdings_do_not_remove_dupe_stmts():
+    holding_1 = dict(
+        formerIds=["a", "b"],
+        electronicAccess=[{"uri": "2"}],
+        holdingsStatementsForSupplements=[
+            {"statement": "stmt2", "note": "stmt2", "staffNote": True},
+            {"uri": "1", "linkText": "1", "publicNote": "1", "relationshipId": "1"},
+        ],
+        holdingsStatements=[
+            {"statement": "stmt3", "note": "stmt3", "staffNote": True},
+            {"statement": "stmtDUPE", "note": "noteDDUPE", "staffNote": True},
+        ],
+    )
+
+    holding_2 = dict(
+        formerIds=["c", "d"],
+        electronicAccess=[{"uri": "1", "linkText": "1", "publicNote": "1", "relationshipId": "1"}],
+        holdingsStatementsForIndexes=[{"statement": "stmt1", "note": "stmt1", "staffNote": True}],
+        holdingsStatements=[
+            {"statement": "stmt4", "note": "stmt4", "staffNote": True},
+            {"statement": "stmtDUPE", "note": "noteDDUPE", "staffNote": True},
+        ],
+    )
+    merged_holding = HoldingsHelper.merge_holding(holding_1, holding_2)
+    assert sorted(merged_holding["formerIds"]) == ["a", "b", "c", "d"]
+    assert len(merged_holding["electronicAccess"]) == 2
+    assert len(merged_holding["holdingsStatementsForIndexes"]) == 1
+    assert len(merged_holding["holdingsStatementsForSupplements"]) == 2
+    assert len(merged_holding["holdingsStatements"]) == 4
+
+
+def test_merge_holdings_preserve_order():
+    dupe_stmt = {"statement": "stmtDUPE", "note": "noteDDUPE", "staffNote": True}
+    holding_1 = dict(
+        formerIds=["a", "b"],
+        electronicAccess=[{"uri": "2"}],
+        holdingsStatements=[
+            {"statement": "stmt3", "note": "stmt3", "staffNote": True},
+            dupe_stmt,
+        ],
+    )
+
+    holding_2 = dict(
+        formerIds=["c", "d"],
+        electronicAccess=[{"uri": "1", "linkText": "1", "publicNote": "1", "relationshipId": "1"}],
+        holdingsStatements=[
+            {"statement": "stmt4", "note": "stmt4", "staffNote": True},
+            dupe_stmt,
+        ],
+    )
+    merged_holding = HoldingsHelper.merge_holding(holding_1, holding_2)
+    assert (merged_holding["formerIds"]) == ["a", "b", "c", "d"]
+    assert merged_holding["holdingsStatements"][0] == {
+        "statement": "stmt3",
+        "note": "stmt3",
+        "staffNote": True,
+    }
+    assert merged_holding["holdingsStatements"][1] == dupe_stmt
+    assert merged_holding["holdingsStatements"][3] == dupe_stmt
 
 
 def test_merge_holding2():
