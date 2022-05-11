@@ -1,7 +1,11 @@
 import datetime
 import logging
 import uuid
+
 from dateutil.parser import parse
+
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import FolioRelease
 
 
 class LegacyRequest(object):
@@ -28,6 +32,8 @@ class LegacyRequest(object):
         self.patron_id = ""
         self.utc_difference = utc_difference
         self.item_id = ""
+        self.instance_id = ""
+        self.holdings_record_id = ""
         self.patron_barcode = legacy_request_dict["patron_barcode"].strip()
         self.comment = legacy_request_dict["comment"].strip()
         self.request_type = legacy_request_dict["request_type"].strip()
@@ -66,28 +72,48 @@ class LegacyRequest(object):
             self.errors.append(("Time alignment issues", "both dates"))
 
     def to_dict(self):
-        raise NotImplementedError("Add requestLevel:Item")
-            """ "required": [
-        "instanceId",
-        "requesterId",
-        "requestType",
-        "requestLevel",
-        "requestDate",
-        "fulfilmentPreference"
-    ] """
         return {
+            "requestLevel": "Item",
             "requestType": self.request_type,
             "fulfilmentPreference": self.fulfillment_preference,
             "requester": {"barcode": self.patron_barcode},
             "requesterId": self.patron_id,
             "item": {"barcode": self.item_barcode},
             "itemId": self.item_id,
+            "instanceId": self.instance_id,
+            "holdingsRecordId": self.holdings_record_id,
             "requestExpirationDate": self.request_expiration_date.isoformat(),
             "patronComments": self.comment,
             "pickupServicePointId": self.pickup_servicepoint_id,
             "requestDate": self.request_date.isoformat(),
             "id": str(uuid.uuid4()),
         }
+
+    def serialize(self, release: FolioRelease):
+        req = self.to_dict()
+        required = [
+            "instanceId",
+            "requesterId",
+            "requestType",
+            "requestLevel",
+            "requestDate",
+            "holdingsRecordId",
+            "itemId",
+            "fulfilmentPreference",
+        ]
+        if release == FolioRelease.kiwi:
+            del req["requestType"]
+            del req["holdingsRecordId"]
+            del req["instanceId"]
+            required = [
+                r for r in required if r not in ["requestType", "holdingsRecordId", "instanceId"]
+            ]
+        missing = [r for r in required if not req.get(r, "")]
+        if any(missing):
+            raise TransformationRecordFailedError(
+                "", "Required properties missing:" ", ".join(missing)
+            )
+        return req
 
     def to_source_dict(self):
         return {

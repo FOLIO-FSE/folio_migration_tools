@@ -3,12 +3,14 @@ import json
 import logging
 import re
 import time
+from typing import Set
 
 import requests
 from folioclient import FolioClient
 from requests import HTTPError
 
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
@@ -29,8 +31,8 @@ class CirculationHelper:
     ):
         self.folio_client = folio_client
         self.service_point_id = service_point_id
-        self.missing_patron_barcodes = set()
-        self.missing_item_barcodes = set()
+        self.missing_patron_barcodes: Set[str] = set()
+        self.missing_item_barcodes: Set[str] = set()
         self.migration_report: MigrationReport = migration_report
 
     def get_user_by_barcode(self, user_barcode):
@@ -61,6 +63,14 @@ class CirculationHelper:
             return {}
         except Exception as ee:
             logging.error(f"{ee} {item_path}")
+            return {}
+
+    def get_holding_by_uuid(self, holdings_uuid):
+        holdings_path = f"/holdings-storage/holdings{holdings_uuid}"
+        try:
+            return self.folio_client.folio_get_single_object(holdings_path)
+        except Exception as ee:
+            logging.error(f"{ee} {holdings_path}")
             return {}
 
     def check_out_by_barcode(self, legacy_loan: LegacyLoan) -> TransactionResult:
@@ -108,7 +118,7 @@ class CirculationHelper:
                         error_message_from_folio,
                     )[0]
                     error_message = (
-                        f"{stat_message} for item with " f"barcode {legacy_loan.item_barcode}"
+                        f"{stat_message} for item with barcode {legacy_loan.item_barcode}"
                     )
                     return TransactionResult(
                         False,
@@ -198,11 +208,12 @@ class CirculationHelper:
         folio_client: FolioClient,
         legacy_request: LegacyRequest,
         migration_report: MigrationReport,
+        release: FolioRelease,
     ):
         try:
             path = "/circulation/requests"
             url = f"{folio_client.okapi_url}{path}"
-            data = legacy_request.to_dict()
+            data = legacy_request.serialize(release)
             data["requestProcessingParameters"] = {
                 "overrideBlocks": {
                     "itemNotLoanableBlock": {
