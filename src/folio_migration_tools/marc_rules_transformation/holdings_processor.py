@@ -9,14 +9,12 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Field
 from pymarc import Record
 
-from folio_migration_tools import library_configuration
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
 from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
@@ -39,22 +37,15 @@ class HoldingsProcessor:
         self.setup_holdings_sources()
 
     def setup_holdings_sources(self):
-        if library_configuration.FolioRelease != FolioRelease.juniper:
-            holdings_sources = list(
-                self.mapper.folio_client.folio_get_all(
-                    "/holdings-sources", "holdingsRecordsSources"
-                )
-            )
-            logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
-            self.holdingssources = {n["name"].upper(): n["id"] for n in holdings_sources}
-            if "FOLIO" not in self.holdingssources:
-                raise TransformationProcessError(
-                    "", "No holdings source with name FOLIO in tenant"
-                )
-            if "MARC" not in self.holdingssources:
-                raise TransformationProcessError("", "No holdings source with name MARC in tenant")
-        else:
-            self.holdingssources = {}
+        holdings_sources = list(
+            self.mapper.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
+        )
+        logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
+        self.holdingssources = {n["name"].upper(): n["id"] for n in holdings_sources}
+        if "FOLIO" not in self.holdingssources:
+            raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
+        if "MARC" not in self.holdingssources:
+            raise TransformationProcessError("", "No holdings source with name MARC in tenant")
 
     def exit_on_too_many_exceptions(self):
         if (
@@ -229,11 +220,10 @@ class HoldingsProcessor:
 
     @staticmethod
     def set_source_id(task_configuration, folio_rec, holdingssources):
-        if library_configuration.FolioRelease != FolioRelease.juniper:
-            if task_configuration.create_source_records:
-                folio_rec["sourceId"] = holdingssources.get("MARC")
-            else:
-                folio_rec["sourceId"] = holdingssources.get("FOLIO")
+        if task_configuration.create_source_records:
+            folio_rec["sourceId"] = holdingssources.get("MARC")
+        else:
+            folio_rec["sourceId"] = holdingssources.get("FOLIO")
 
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
