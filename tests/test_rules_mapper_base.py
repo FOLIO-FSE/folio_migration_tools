@@ -179,12 +179,12 @@ def test_get_srs_string_bad_leaders():
         reader.force_utf8 = True
         record1 = None
         record: Record = None
-        for record in reader:
-            l1 = record.leader
-            record.leader = f"{record.leader[:-4]}4500"
-            assert l1 != record.leader
-            assert record.leader.endswith("4500")
-            assert len(record.leader) == 24
+        record = next(reader)
+        l1 = record.leader
+        record.leader = f"{record.leader[:-4]}4500"
+        assert l1 != record.leader
+        assert record.leader.endswith("4500")
+        assert len(record.leader) == 24
 
 
 def test_create_srs_uuid():
