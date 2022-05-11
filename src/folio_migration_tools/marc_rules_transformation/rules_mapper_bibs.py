@@ -23,7 +23,6 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -64,11 +63,7 @@ class BibsRulesMapper(RulesMapperBase):
         logging.info(f"HRID handling is set to: '{self.task_configuration.hrid_handling}'")
         self.hrid_handling: HridHandling = self.task_configuration.hrid_handling
         logging.info("Fetching mapping rules from the tenant")
-        rules_endpoint = (
-            "/mapping-rules"
-            if self.library_configuration.folio_release == FolioRelease.juniper
-            else "/mapping-rules/marc-bib"
-        )
+        rules_endpoint = "/mapping-rules/marc-bib"
         self.mappings = self.folio.folio_get_single_object(rules_endpoint)
         logging.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())

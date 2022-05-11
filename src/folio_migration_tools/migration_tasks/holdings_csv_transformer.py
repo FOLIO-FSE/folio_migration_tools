@@ -22,7 +22,6 @@ from folio_migration_tools.custom_exceptions import TransformationRecordFailedEr
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
 from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
@@ -447,21 +446,15 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def get_holdings_sources(self):
         res = {}
-        if self.library_configuration.folio_release != FolioRelease.juniper:
-            holdings_sources = list(
-                self.mapper.folio_client.folio_get_all(
-                    "/holdings-sources", "holdingsRecordsSources"
-                )
-            )
-            logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
-            res = {n["name"].upper(): n["id"] for n in holdings_sources}
-            if "FOLIO" not in res:
-                raise TransformationProcessError(
-                    "", "No holdings source with name FOLIO in tenant"
-                )
-            if "MARC" not in res:
-                raise TransformationProcessError("", "No holdings source with name MARC in tenant")
-        return res
+        holdings_sources = list(
+            self.mapper.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
+        )
+        logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
+        res = {n["name"].upper(): n["id"] for n in holdings_sources}
+        if "FOLIO" not in res:
+            raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
+        if "MARC" not in res:
+            raise TransformationProcessError("", "No holdings source with name MARC in tenant")
 
 
 def dedupe(list_of_dicts):
