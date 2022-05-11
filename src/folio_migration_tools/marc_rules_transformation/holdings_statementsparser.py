@@ -93,6 +93,7 @@ class HoldingsStatementsParser:
 
     @staticmethod
     def parse_linked_field(pattern_field: Field, linked_value_fields: list[Field]):
+        break_ind = get_break_indicator(linked_value_fields[0])
         return_dict = {
             "hlm_stmt": "",
             "statement": {
@@ -101,8 +102,10 @@ class HoldingsStatementsParser:
                 "staffNote": "",
             },
         }
-        _from, _to = get_from_to(pattern_field, linked_value_fields[0])
-        cron_from, cron_to, hlm_stmt = get_cron_from_to(pattern_field, linked_value_fields[0])
+        _from, _to, is_span = get_from_to(pattern_field, linked_value_fields[0])
+        cron_from, cron_to, hlm_stmt, is_cron_span = get_cron_from_to(
+            pattern_field, linked_value_fields[0]
+        )
         return_dict["hlm_stmt"] = hlm_stmt
         if _from and cron_from:
             _from = f"{_from} ({cron_from})"
@@ -114,8 +117,13 @@ class HoldingsStatementsParser:
             _to = f"{_to} ({cron_from})"
         if not _to and cron_to:
             _to = cron_to
-        stmt = f"{_from}-{_to}" if _from else ""
-        stmt = stmt.strip("-")
+        if _to == cron_to and _to:
+            _to = f"({cron_to})"
+        if _from and _from == cron_from:
+            _from = f"({cron_from})"
+        span = " - " if is_span or is_cron_span else ""
+        stmt = f"{_from}{span}{_to}{break_ind}" if _from else ""
+        stmt = stmt.strip()
         if "z" in linked_value_fields:
             return_dict["statement"]["note"] = linked_value_fields[0]["z"]
         if "x" in linked_value_fields:
@@ -156,6 +164,17 @@ class HoldingsStatementsParser:
             )
 
 
+def get_break_indicator(field: Field):
+    if "w" not in field or field["w"] not in ["g", "n"]:
+        return ""
+    elif field["w"] == "g":
+        return ","
+    elif field["w"] == "n":
+        return ";"
+    else:
+        return ""
+
+
 def get_season(val):
     try:
         val = int(val)
@@ -177,12 +196,31 @@ def dedupe_list_of_dict(list_of_dict):
     return [dict(t) for t in {tuple(d.items()) for d in list_of_dict}]
 
 
+def g_m(m: int):
+    if m == 5:
+        return "May"
+    elif m == 6:
+        return "June"
+    elif m == 7:
+        return "July"
+    else:
+        return f"{calendar.month_abbr[m]}."
+
+
+def get_month(month_str: str):
+    month_str = month_str.strip()
+    if "/" in month_str:
+        return "/".join([g_m(int(m)) for m in month_str.split("/")])
+    else:
+        return g_m(int(month_str))
+
+
 def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
     cron_from = ""
     cron_to = ""
     hlm_stmt = ""
     year = False
-
+    is_span = False
     for chron_level in [cl for cl in "ijkl" if cl in linked_value_field]:
         desc = pattern_field[chron_level] or ""
         if linked_value_field[chron_level]:
@@ -191,20 +229,15 @@ def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
             if desc == "(year)":
                 year = True
             val, *val_rest = linked_value_field[chron_level].split("-")
+            is_span = "-" in linked_value_field[chron_level] or is_span
             if desc == "(month)":
                 with contextlib.suppress(Exception):
-                    v_s = [f"{calendar.month_abbr[int(m)]}." for m in val.split("/")]
-                    if any(v_s):
-                        val = "/".join(v_s)
+                    val = get_month(val)
                 with contextlib.suppress(Exception):
-                    v_sr = [f"{calendar.month_abbr[int(m)]}." for m in val_rest[0].split("/")]
-                    if any(v_sr):
-                        val_rest = "/".join(v_sr)
-                with contextlib.suppress(Exception):
-                    val = f"{calendar.month_abbr[int(val)]}."
+                    val_rest = get_month(val_rest[0])
                 if "".join(val_rest):
                     with contextlib.suppress(Exception):
-                        val_rest = calendar.month_abbr[int("".join(val_rest))]
+                        val_rest = get_month("".join(val_rest))
                 elif cron_to.strip() and val:
                     val_rest = val
                 if year:
@@ -222,19 +255,21 @@ def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
                         val_rest = get_season("".join(val_rest))
                 cron_from = f"{cron_from} {val}".strip()
                 cron_to = f"{cron_to} {''.join(val_rest)}".strip()
-    return (cron_from.strip(), cron_to.strip(), hlm_stmt)
+    return (f"{cron_from.strip()}", cron_to.strip(), hlm_stmt, is_span)
 
 
 def get_from_to(pattern_field: Field, linked_value_field: Field):
     _from = ""
     _to = ""
+    is_span = False
     for enum_level in [el for el in "abcdef" if el in linked_value_field]:
         desc = pattern_field[enum_level] or ""
-        desc = desc if "(" not in desc else ""
+        desc = desc.strip() if "(" not in desc else ""
         if linked_value_field[enum_level]:
             val, *val_rest = linked_value_field[enum_level].split("-")
+            is_span = "-" in linked_value_field[enum_level] or is_span
             _from = f"{_from}{(':' if _from else '')}{desc}{val}"
             temp_to = "".join(val_rest)
             if temp_to.strip():
                 _to = f"{_to}{(':' if _to else '')}{desc}{temp_to}"
-    return (_from.strip(), _to.strip())
+    return (f"{_from.strip()}", _to.strip(), is_span)
