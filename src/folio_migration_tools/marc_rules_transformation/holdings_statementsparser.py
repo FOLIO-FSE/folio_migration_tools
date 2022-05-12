@@ -74,7 +74,7 @@ class HoldingsStatementsParser:
                     if parsed_dict["statement"]:
                         logging.info(
                             f"HOLDINGS STATEMENT PATTERN\t{legacy_id}\t{pattern_field}"
-                            f"\t{linked_value_fields}"
+                            f"\t{linked_value_field}"
                             f"\t{parsed_dict['statement']['statement']}"
                             f"\t{parsed_dict['statement']['note']}"
                             f"\t{parsed_dict['statement']['staffNote']}"
