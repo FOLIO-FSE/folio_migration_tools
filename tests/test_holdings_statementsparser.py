@@ -315,3 +315,29 @@ def test_linked_fields_15():
 
     ret6 = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field6)
     assert ret6["statement"]["statement"] == stmt6
+
+
+def test_linked_fields_16():
+    pattern_field = get_sfs(r"=853  \\$81$av.$bno.$i(year)$j(season)")
+    linked_value_field1 = get_sfs(
+        r"=863  \\$81.1$a22-41$b1-4$i1992-2011$j21-23$zPrint copy cancelled in 2011."
+    )
+    stmt = "v.22:no.1 (1992 Spring) - v.41:no.4 (2011 Fall)"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_17():
+    pattern_field = get_sfs(r"=853  \\$81$av.$bno.$i(year)$j(season)")
+    linked_value_field1 = get_sfs(r"=863  \\$81.1$a1-24$b1-3$i1985-2009$j24-24")
+    stmt = "v.1:no.1 (1985 Winter) - v.24:no.3 (2009 Winter)"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_18():
+    pattern_field = get_sfs(r"=853  \\$81$i(year)")
+    linked_value_field1 = get_sfs(r"=863  \\$81.1$i2000-")
+    stmt = "(2000) -"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
