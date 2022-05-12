@@ -175,16 +175,16 @@ def get_break_indicator(field: Field):
         return ""
 
 
-def get_season(val):
+def get_season(val: str):
     try:
-        val = int(val)
-        if val == 21:
+        val_int = int(val)
+        if val_int == 21:
             return "Spring"
-        elif val == 22:
+        elif val_int == 22:
             return "Summer"
-        elif val == 23:
+        elif val_int == 23:
             return "Fall"
-        elif val == 24:
+        elif val_int == 24:
             return "Winter"
         else:
             return val
