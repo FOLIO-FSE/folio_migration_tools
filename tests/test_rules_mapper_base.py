@@ -177,7 +177,6 @@ def test_get_srs_string_bad_leaders():
         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
         reader.hide_utf8_warnings = True
         reader.force_utf8 = True
-        record1 = None
         record: Record = None
         record = next(reader)
         l1 = record.leader

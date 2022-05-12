@@ -1,5 +1,26 @@
 # Changelog
 
+## 1_3_0 (11/05/2022)
+
+#### bug
+
+- [**bug**][**reporting**] Configuration error reporting reports wrong search location for MARC bibs in BibTransformer [#238](https://github.com/FOLIO-FSE/folio_migration_tools/issues/238)
+- [**bug**] Migrate open loans task skips first loan (row) when creating loams [#236](https://github.com/FOLIO-FSE/folio_migration_tools/issues/236)
+- [**bug**][**good first issue**] Improve 853/863 mapping according to feedback - Part 2 [#112](https://github.com/FOLIO-FSE/folio_migration_tools/issues/112)
+- [**bug**] Make sure that holdings callNumbers are correctly formatted for III non-boundwiths when there are boundwiths in the file [#98](https://github.com/FOLIO-FSE/folio_migration_tools/issues/98)
+
+#### closed
+
+- [**closed**] Exception TypeError being raised in rules_mapper_bibs [#232](https://github.com/FOLIO-FSE/folio_migration_tools/issues/232)
+- [**closed**] Report and halt when mapped legacy field in reference data mapping is not found in the data [#229](https://github.com/FOLIO-FSE/folio_migration_tools/issues/229)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**] Introduce Lotus support [#201](https://github.com/FOLIO-FSE/folio_migration_tools/issues/201)
+- [**enhancement/new feature**] Split string according to delimiter and create multiple fields for the elements [#183](https://github.com/FOLIO-FSE/folio_migration_tools/issues/183)
+
+---
+
 ## y1_2_3 (02/05/2022)
 
 #### bug
