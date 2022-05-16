@@ -115,7 +115,23 @@ class HoldingsHelper:
         holdings_record["notes"] = dedupe(holdings_record.get("notes", []))
         extend_list("formerIds", holdings_record, incoming_holdings)
         extend_list("electronicAccess", holdings_record, incoming_holdings)
+        HoldingsHelper.remove_empty_holdings_statements(holdings_record)
         return holdings_record
+
+    @staticmethod
+    def remove_empty_holdings_statements(holdings_record: dict):
+        if "holdingsStatementsForIndexes" in holdings_record and not holdings_record.get(
+            "holdingsStatementsForIndexes", []
+        ):
+            del holdings_record["holdingsStatementsForIndexes"]
+        if "holdingsStatements" in holdings_record and not holdings_record.get(
+            "holdingsStatements", []
+        ):
+            del holdings_record["holdingsStatements"]
+        if "holdingsStatementsForSupplements" in holdings_record and not holdings_record.get(
+            "holdingsStatementsForSupplements", []
+        ):
+            del holdings_record["holdingsStatementsForSupplements"]
 
     @staticmethod
     def handle_notes(folio_object):
@@ -144,7 +160,8 @@ def extend_list(
     for f in incoming_holdings.get(prop_name, []):
         if accept_dupes or f not in temp:
             temp.append(f)
-    holdings_record[prop_name] = temp
+    if temp:
+        holdings_record[prop_name] = temp
 
 
 def dedupe(list_of_dicts):

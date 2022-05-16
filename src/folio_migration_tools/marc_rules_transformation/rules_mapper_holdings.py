@@ -153,7 +153,8 @@ class RulesMapperHoldings(RulesMapperBase):
                     legacy_id,
                     self.task_configuration.deduplicate_holdings_statements,
                 )
-                folio_holding[key] = res["statements"]
+                if res["statements"]:
+                    folio_holding[key] = res["statements"]
                 for mr in res["migration_report"]:
                     self.migration_report.add(
                         Blurbs.HoldingsStatementsParsing, f"{mr[0]} -- {mr[1]}"

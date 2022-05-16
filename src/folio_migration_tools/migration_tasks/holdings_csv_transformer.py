@@ -295,6 +295,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def post_process_holding(self, folio_rec: dict, legacy_id: str):
         HoldingsHelper.handle_notes(folio_rec)
+        HoldingsHelper.remove_empty_holdings_statements(folio_rec)
+
         if not folio_rec.get("holdingsTypeId", ""):
             folio_rec["holdingsTypeId"] = self.fallback_holdings_type["id"]
 
@@ -398,7 +400,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             instance_ids (list): the instance IDs tied to the current item
             legacy_item_id (str): Id of the Item the holding was generated from
         """
-
         if len(instance_ids) > 1:
             # Is boundwith
             bw_key = f"bw_{incoming_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
@@ -455,6 +456,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
         if "MARC" not in res:
             raise TransformationProcessError("", "No holdings source with name MARC in tenant")
+        logging.info(json.dumps(res, indent=4))
+        return res
 
 
 def dedupe(list_of_dicts):
