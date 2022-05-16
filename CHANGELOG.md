@@ -1,5 +1,15 @@
 # Changelog
 
+## 1_3_9 (16/05/2022)
+
+#### bug
+
+- [**bug**] Loans migration fails if you only supply the script only one of items or patron files [#247](https://github.com/FOLIO-FSE/folio_migration_tools/issues/247)
+- [**bug**] MFHD Parsing: Nonexistant holdings statements on holdingsRecords are getting created as empty lists, making them render in the UI [#243](https://github.com/FOLIO-FSE/folio_migration_tools/issues/243)
+- [**bug**] UserMapper: Concatenated fields from multiple xSV fields are not stripped from spaces before getting joined [#242](https://github.com/FOLIO-FSE/folio_migration_tools/issues/242)
+
+---
+
 ## 1_3_0 (11/05/2022)
 
 #### bug
