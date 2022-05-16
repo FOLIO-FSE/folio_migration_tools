@@ -29,7 +29,6 @@ def main():
         with open(os.path.join(args.results_path, f"{t.__name__}Schema.json"), "w") as outfile:
             outfile.write(t.TaskConfiguration.schema_json(indent=4))
 
-    # Generates an organization schema with other objects baked in
     generate_extended_folio_object_schema(args)
 
     print("done generating schemas.")
