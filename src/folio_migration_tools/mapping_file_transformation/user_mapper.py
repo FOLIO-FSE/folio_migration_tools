@@ -351,7 +351,7 @@ class UserMapper(UserMapperBase):
                 self.migration_report.add(
                     Blurbs.Details, f"{legacy_user_keys} concatenated into one string"
                 )
-            return " ".join(legacy_user.get(key, "") for key in legacy_user_keys)
+            return " ".join(legacy_user.get(key, "").strip() for key in legacy_user_keys)
         else:
             return ""
 
