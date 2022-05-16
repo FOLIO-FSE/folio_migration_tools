@@ -210,8 +210,8 @@ class LoansMigrator(MigrationTaskBase):
             user_barcodes, self.task_configuration.patron_files, self.folder_structure
         )
         for loan in self.semi_valid_legacy_loans:
-            has_item_barcode = loan.item_barcode in item_barcodes
-            has_patron_barcode = loan.patron_barcode in user_barcodes
+            has_item_barcode = loan.item_barcode in item_barcodes or not any(item_barcodes)
+            has_patron_barcode = loan.patron_barcode in user_barcodes or not any(user_barcodes)
             if has_item_barcode and has_patron_barcode:
                 self.migration_report.add_general_statistics(
                     "Loans verified against migrated user and item"
