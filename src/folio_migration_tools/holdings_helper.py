@@ -120,18 +120,18 @@ class HoldingsHelper:
 
     @staticmethod
     def remove_empty_holdings_statements(holdings_record: dict):
-        if "holdingsStatementsForIndexes" in holdings_record and not holdings_record.get(
-            "holdingsStatementsForIndexes", []
-        ):
-            del holdings_record["holdingsStatementsForIndexes"]
-        if "holdingsStatements" in holdings_record and not holdings_record.get(
-            "holdingsStatements", []
-        ):
-            del holdings_record["holdingsStatements"]
-        if "holdingsStatementsForSupplements" in holdings_record and not holdings_record.get(
-            "holdingsStatementsForSupplements", []
-        ):
-            del holdings_record["holdingsStatementsForSupplements"]
+        keys = [
+            "holdingsStatements",
+            "holdingsStatementsForIndexes",
+            "holdingsStatementsForSupplements",
+        ]
+
+        for key in keys:
+            if key in holdings_record:
+                temp_l = [stmt for stmt in holdings_record[key] if any(stmt.values())]
+                holdings_record[key] = temp_l
+            if key in holdings_record and not holdings_record.get(key, []):
+                del holdings_record[key]
 
     @staticmethod
     def handle_notes(folio_object):
