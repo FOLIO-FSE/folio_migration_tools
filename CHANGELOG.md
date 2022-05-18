@@ -1,5 +1,13 @@
 # Changelog
 
+## 1_3_10 (18/05/2022)
+
+#### closed
+
+- [**closed**] Multiple empty holdings statements are being generated. [#249](https://github.com/FOLIO-FSE/folio_migration_tools/issues/249)
+
+---
+
 ## 1_3_9 (16/05/2022)
 
 #### bug
