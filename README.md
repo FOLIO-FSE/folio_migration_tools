@@ -2,9 +2,33 @@
 ![example workflow](https://github.com/FOLIO-FSE/MARC21-To-FOLIO/actions/workflows/python-app.yml/badge.svg)[![codecov](https://codecov.io/gh/FOLIO-FSE/folio_migration_tools/branch/main/graph/badge.svg?token=ZQL5ILWWGT)](https://codecov.io/gh/FOLIO-FSE/folio_migration_tools)
 A toolkit that enables you to migrate data over from a legacy ILS system into [FOLIO LSP](https://www.folio.org/)
 
+# What is it good for?
+FOLIO Migration tools enables you to migrate libraries with the most common ILS:s over to FOLIO without data losses or any major data transformation tasks. 
+The tools transforms and loads the data providing you and the library with good actionable logs and data cleaning task lists together with the migrated data.
+
+## What data does it cover?
+FOLIO Migration Tools currently covers the following data sets:
+* Catalog (Inventory and SRS in FOLIO terminology)
+* Circulation transactions (Open loans and requests)
+* Users/Patrons (In FOLIO, these share the same app/database)
+
+### What additional functionality is on the roadmap?
+This is the loose roadmap, in order of most likely implementations first
+* Organizations (Vendor records)
+* Courses (Course reserves)
+* Orders
+* ERM-related objects
+* Financial records
+
+# Contributing
+Want to contribute? Read the [CONTRIBUTING.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CONTRIBUTING.md)
+
+# Found an issue?
+Report it on the [Github Issue tracker](https://github.com/FOLIO-FSE/folio_migration_tools/issues)
 
 The scripts requires a FOLIO tenant with reference data properly set up. The script will throw messages telling what reference data is missing.
 # Installing
+Make sure you are running Python 3.9 or above. 
 ## 1. Using pip and venv
 1. Create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment)
 2. Install using pip: `python3 -m pip install folio_migration_tools`
@@ -17,10 +41,10 @@ The scripts requires a FOLIO tenant with reference data properly set up. The scr
 # FOLIO migration process
 This repo plays the main part in a process using a collection of tools. The process itself is documented in more detail, including example configuration files, at [this template repository](https://github.com/FOLIO-FSE/migration_repo_template)
 In order to perform migrations according to this process, you need the following:
-* An Installation of [FOLIO Migration Tools](https://pypi.org/project/folio-migration-tools/). Installation instructions below.
+* An Installation of [FOLIO Migration Tools](https://pypi.org/project/folio-migration-tools/). Installation instructions above.
 * A clone, or a separate repo created from [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
 * Access to the [Data mapping file creator](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) web tool
-* A FOLIO tenant...
+* A FOLIO tenant running the latest or the second latest version of FOLIO
 
 # Mapping files
 The tool is run against a folder with a set of mapping files and data files. There is a [template repository](https://github.com/FOLIO-FSE/migration_repo_template) with examples of the files needed and documentation around it in the [Readme](https://github.com/FOLIO-FSE/migration_repo_template/blob/main/README.md). The template has everything needed to run the tools agains a FOLIO test environment.
@@ -29,22 +53,21 @@ The tool is run against a folder with a set of mapping files and data files. The
 MARC mapping for Bib level records is based on the mapping-rules residing in a FOLIO tenant.
 Read more on this in the Readme in the [Source record manager Module repo](https://github.com/folio-org/mod-source-record-manager/blob/25283ebabf402b5870ae4b3846285230e785c17d/RuleProcessorApi.md).
 
-![image](https://user-images.githubusercontent.com/1894384/137994473-10fea92f-1966-41d5-bd41-d6be00594b58.png)
-In the picture above, you can se the files needed and the files created as part of the proces.
-
-### MFHD-to-Inventory
-#### Mapping rules
+## MFHD-to-Inventory Holdings
+### Mapping rules
 This process creates FOLIO Holdings records . A template/example is available in [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template). You have the option of either just create Holdings records, or creating a controlling SRS MFHD record together with the FOLIO Holdingsrecord.
 
 If you do not have MFHD records available, you can build a mapping file [this web tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) from the Item data. This will generate Holdings records to connect to the items.
 
-#### Location mapping
+### Location mapping
 For holdings mapping, you also need to map legacy locations to FOLIO locations. An example map file is available at [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
+
+
+## Items-to-Inventory-Holdings (HoldingsCSVTransformer)
+This process is similar to the Items creation process below, just with other mapping files.
 
 ## Items-to-Inventory
 Items-to-Inventory mapping is based on a json structure where the CSV headers are matched against the target fields in the FOLIO items. To create a mapping file, use the [web tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation).
-
-![image](https://user-images.githubusercontent.com/1894384/137995011-dd6a78a7-61d7-46d8-a35c-363f65c33ce0.png)
 
 
 ## Open loans
@@ -62,7 +85,3 @@ There is a test suite for Bibs-to-Instance mapping. You need to add arguments in
 # Running the scripts
 For information on syntax, what files are needed and produced by the toolkit, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template).
 ¨
-# Building / Packaging
-* Update setup.cfg with the latest version
-* Build the new version: `python3 -m build`
-* Upload to pypi: `twine upload dist/*`
