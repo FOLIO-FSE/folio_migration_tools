@@ -50,33 +50,6 @@ In order to perform migrations according to this process, you need the following
 * Access to the [Data mapping file creator](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) web tool
 * A FOLIO tenant running the latest or the second latest version of FOLIO
 
-# Mapping files
-The tool is run against a folder with a set of mapping files and data files. There is a [template repository](https://github.com/FOLIO-FSE/migration_repo_template) with examples of the files needed and documentation around it in the [Readme](https://github.com/FOLIO-FSE/migration_repo_template/blob/main/README.md). The template has everything needed to run the tools agains a FOLIO test environment.
-
-## Bib records to Inventory and SRS records
-MARC mapping for Bib level records is based on the mapping-rules residing in a FOLIO tenant.
-Read more on this in the Readme in the [Source record manager Module repo](https://github.com/folio-org/mod-source-record-manager/blob/25283ebabf402b5870ae4b3846285230e785c17d/RuleProcessorApi.md).
-
-## MFHD-to-Inventory Holdings
-### Mapping rules
-This process creates FOLIO Holdings records . A template/example is available in [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template). You have the option of either just create Holdings records, or creating a controlling SRS MFHD record together with the FOLIO Holdingsrecord.
-
-If you do not have MFHD records available, you can build a mapping file [this web tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) from the Item data. This will generate Holdings records to connect to the items.
-
-### Location mapping
-For holdings mapping, you also need to map legacy locations to FOLIO locations. An example map file is available at [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
-
-
-## Items-to-Inventory-Holdings (HoldingsCSVTransformer)
-This process is similar to the Items creation process below, just with other mapping files.
-
-## Items-to-Inventory
-Items-to-Inventory mapping is based on a json structure where the CSV headers are matched against the target fields in the FOLIO items. To create a mapping file, use the [web tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation).
-
-
-## Open loans
-The tools allows you to migrate open loand into FOLIO. This uses the Business logic APIs for this, which mean that the actual circulation rules are being excercised. The toolkit handles various exceptions as well, as expired users and other things that would normally block the user from checking things out. Be sure to turn off the SMTP settings before checking out anything or you will have a lot of patrons wondering...
-
 # Tests
 There is a test suite for Bibs-to-Instance mapping. You need to add arguments in order to run it against a FOLIO environment. The tests are run against the latest [FOLIO Bugfest environment](https://wiki.folio.org/dosearchsite.action?cql=siteSearch%20~%20%22bugfest%22%20AND%20type%20in%20(%22space%22%2C%22user%22%2C%22com.atlassian.confluence.extra.team-calendars%3Acalendar-content-type%22%2C%22attachment%22%2C%22page%22%2C%22com.atlassian.confluence.extra.team-calendars%3Aspace-calendars-view-content-type%22%2C%22blogpost%22)&includeArchivedSpaces=false) as part of the commit process in this repo.
 
