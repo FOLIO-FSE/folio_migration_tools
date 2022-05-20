@@ -6,7 +6,6 @@ import time
 from abc import abstractmethod
 from pathlib import Path
 
-from argparse_prompt import PromptParser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 from genericpath import isfile
@@ -77,11 +76,12 @@ class MigrationTaskBase:
     ) -> None:
         """Lists the source data files. Special case since we use the Items folder for holdings
 
+        Args:
+            source_path (Path): _description_
+            file_defs (list[library_configuration.FileDefinition]): _description_
+
         Raises:
             TransformationProcessError: _description_
-
-        Returns:
-            None
         """
         files = [source_path / f.file_name for f in file_defs if isfile(source_path / f.file_name)]
         if len(files) < len(file_defs):
@@ -211,15 +211,6 @@ class MigrationTaskBase:
             )
             logging.info("%s Mapped fields in mapping file map", len(list(mapped_fields)))
             return field_map
-
-    @staticmethod
-    def add_common_arguments(parser: PromptParser):
-
-        """parser.add_argument("okapi_url", help="OKAPI base url")
-        parser.add_argument("tenant_id", help="id of the FOLIO tenant.")
-        parser.add_argument("username", help="the api user")
-        parser.add_argument("base_folder", help="path base folder", type=str)
-        parser.add_argument("--password", help="the api users password", secure=True)"""
 
     def log_and_exit_if_too_many_errors(self, error: TransformationRecordFailedError, idx):
         self.num_exeptions += 1

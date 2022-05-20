@@ -11,7 +11,13 @@ class MigrationReport:
         self.stats = {}
 
     def add(self, blurb_tuple: tuple, measure_to_add, number=1):
-        """Add section header and values to migration report."""
+        """Add section header and values to migration report.
+
+        Args:
+            blurb_tuple (tuple): _description_
+            measure_to_add (_type_): _description_
+            number (int, optional): _description_. Defaults to 1.
+        """
         try:
             self.report[blurb_tuple[0]][measure_to_add] += number
         except KeyError:
@@ -22,17 +28,31 @@ class MigrationReport:
                 self.report[blurb_tuple[0]][measure_to_add] = number
 
     def set(self, blurb, measure_to_add: str, number: int):
-        """set a section value  to a specific number"""
+        """Set a section value  to a specific number
+
+        Args:
+            blurb (_type_): _description_
+            measure_to_add (str): _description_
+            number (int): _description_
+        """
         if blurb[0] not in self.report:
             self.report[blurb[0]] = {}
         self.report[blurb[0]][measure_to_add] = number
 
     def add_general_statistics(self, measure_to_add: str):
-        """Shortcut for adding to the first breakdown"""
+        """Shortcut for adding to the first breakdown
+
+        Args:
+            measure_to_add (str): _description_
+        """
         self.add(Blurbs.GeneralStatistics, measure_to_add)
 
     def write_migration_report(self, report_file):
-        """Writes the migration report, including section headers, section blurbs, and values."""
+        """Writes the migration report, including section headers, section blurbs, and values.
+
+        Args:
+            report_file (_type_): _description_
+        """
         report_file.write(f"{Blurbs.Introduction[1]}\n")
 
         for a in self.report:

@@ -58,7 +58,16 @@ class HoldingsProcessor:
             sys.exit(1)
 
     def process_record(self, marc_record: Record, file_def: FileDefinition):
-        """processes a marc holdings record and saves it"""
+        """processes a marc holdings record and saves it
+
+        Args:
+            marc_record (Record): _description_
+            file_def (FileDefinition): _description_
+
+        Raises:
+            TransformationProcessError: _description_
+            Exception: _description_
+        """
         success = True
         folio_rec = {}
         try:

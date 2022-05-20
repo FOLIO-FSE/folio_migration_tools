@@ -68,6 +68,7 @@ class BatchPoster(MigrationTaskBase):
             if self.task_config.object_type == "SRS":
                 self.create_snapshot()
             with open(self.folder_structure.failed_recs_path, "w") as failed_recs_file:
+                num_records = 0
                 for file_def in self.task_config.files:
                     path = self.folder_structure.results_folder / file_def.file_name
                     with open(path) as rows:
@@ -426,7 +427,15 @@ def list_objects(object_type: str):
 
 
 def chunks(records, number_of_chunks):
-    """Yield successive n-sized chunks from lst."""
+    """Yield successive n-sized chunks from lst.
+
+    Args:
+        records (_type_): _description_
+        number_of_chunks (_type_): _description_
+
+    Yields:
+        _type_: _description_
+    """
     for i in range(0, len(records), number_of_chunks):
         yield records[i : i + number_of_chunks]
 

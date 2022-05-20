@@ -436,7 +436,16 @@ class RulesMapperBase(MapperBase):
 
     @staticmethod
     def grouped(marc_field: Field):
-        "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
+        """Groups the subfields
+        s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ...
+
+
+        Args:
+            marc_field (Field): _description_
+
+        Returns:
+            _type_: _description_
+        """
         unique_subfields = []
         repeated_subfields = []
         results = list()
@@ -467,7 +476,15 @@ class RulesMapperBase(MapperBase):
 
     @staticmethod
     def remove_repeated_subfields(marc_field: Field):
-        "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
+        """Removes repeated subfields
+        s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ...
+
+        Args:
+            marc_field (Field): _description_
+
+        Returns:
+            _type_: _description_
+        """
         new_subfields = []
         for sf, sf_vals in marc_field.subfields_as_dict().items():
             new_subfields.extend([sf, sf_vals[0]])
@@ -487,7 +504,17 @@ class RulesMapperBase(MapperBase):
         legacy_id: str,
         suppress: bool,
     ):
-        """Saves the source Marc_record to the Source record Storage module"""
+        """Saves the source Marc_record to the Source record Storage module
+
+        Args:
+            srs_records_file (_type_): _description_
+            record_type (FOLIONamespaces): _description_
+            folio_client (FolioClient): _description_
+            marc_record (Record): _description_
+            folio_record (_type_): _description_
+            legacy_id (str): _description_
+            suppress (bool): _description_
+        """
         srs_id = RulesMapperBase.create_srs_id(record_type, folio_client.okapi_url, legacy_id)
 
         marc_record.add_ordered_field(

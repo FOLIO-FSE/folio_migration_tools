@@ -390,13 +390,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str
-    ):
+    ) -> None:
         """Determines what newly generated holdingsrecords are to be merged with
         previously created ones. When that is done, it generates the correct boundwith
         parts needed.
 
         Args:
-            new_folio_holding (dict): The newly created FOLIO Holding
+            incoming_holding (dict): The newly created FOLIO Holding
             instance_ids (list): the instance IDs tied to the current item
             legacy_item_id (str): Id of the Item the holding was generated from
         """

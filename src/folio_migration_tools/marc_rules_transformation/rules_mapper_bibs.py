@@ -95,7 +95,16 @@ class BibsRulesMapper(RulesMapperBase):
     def parse_bib(self, legacy_ids, marc_record: pymarc.Record, file_def: FileDefinition):
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
-         This is the main function"""
+         This is the main function
+
+        Args:
+            legacy_ids (_type_): _description_
+            marc_record (pymarc.Record): _description_
+            file_def (FileDefinition): _description_
+
+        Returns:
+            _type_: _description_
+        """
         self.print_progress()
         ignored_subsequent_fields = set()
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
@@ -190,8 +199,15 @@ class BibsRulesMapper(RulesMapperBase):
         marc_record: Record,
         legacy_ids: List[str],
         file_def: FileDefinition,
-    ):
-        """Do stuff not easily captured by the mapping rules"""
+    ) -> None:
+        """Do stuff not easily captured by the mapping rules
+
+        Args:
+            folio_instance (dict): _description_
+            marc_record (Record): _description_
+            legacy_ids (List[str]): _description_
+            file_def (FileDefinition): _description_
+        """
         folio_instance["source"] = "MARC"
         folio_instance["instanceFormatIds"] = list(
             set(self.get_instance_format_ids(marc_record, legacy_ids))
@@ -432,7 +448,16 @@ class BibsRulesMapper(RulesMapperBase):
                                     yield get_folio_id(combined_code)
 
     def handle_hrid(self, folio_instance, marc_record: Record, legacy_ids) -> None:
-        """Create HRID if not mapped. Add hrid as MARC record 001"""
+        """Create HRID if not mapped. Add hrid as MARC record 001
+
+        Args:
+            folio_instance (_type_): _description_
+            marc_record (Record): _description_
+            legacy_ids (_type_): _description_
+
+        Raises:
+            TransformationProcessError: _description_
+        """
         if self.hrid_handling == HridHandling.default or "001" not in marc_record:
             num_part = str(self.instance_hrid_counter).zfill(11)
             folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
@@ -565,7 +590,15 @@ class BibsRulesMapper(RulesMapperBase):
         return languages
 
     def get_languages(self, marc_record: Record, legacy_id: str) -> List[str]:
-        """Get languages and tranforms them to correct codes"""
+        """Get languages and tranforms them to correct codes
+
+        Args:
+            marc_record (Record): _description_
+            legacy_id (str): _description_
+
+        Returns:
+            List[str]: _description_
+        """
         languages = self.get_languages_041(marc_record, legacy_id)
         languages.add(self.get_languages_008(marc_record))
         for lang in languages:
@@ -573,7 +606,11 @@ class BibsRulesMapper(RulesMapperBase):
         return list(languages)
 
     def fetch_language_codes(self) -> Generator[str, None, None]:
-        """fetches the list of standardized language codes from LoC"""
+        """fetches the list of standardized language codes from LoC
+
+        Yields:
+            Generator[str, None, None]: _description_
+        """
         url = "https://www.loc.gov/standards/codelists/languages.xml"
         tree = fromstring(requests.get(url).content)
         name_space = "{info:lc/xmlns/codelist-v1}"

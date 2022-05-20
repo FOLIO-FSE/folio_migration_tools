@@ -52,7 +52,13 @@ class Helper:
     @staticmethod
     def write_to_file(file, folio_record, pg_dump=False):
         """Writes record to file. pg_dump=true for importing directly via the
-        psql copy command"""
+        psql copy command
+
+        Args:
+            file (_type_): _description_
+            folio_record (_type_): _description_
+            pg_dump (bool, optional): _description_. Defaults to False.
+        """
         if pg_dump:
             file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
         else:

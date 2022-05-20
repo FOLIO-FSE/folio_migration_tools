@@ -37,7 +37,17 @@ class BibsProcessor:
         self.instance_identifiers = set()
 
     def process_record(self, idx, marc_record: Record, file_definition: FileDefinition):
-        """processes a marc record and saves it"""
+        """processes a marc record and saves it
+
+
+        Args:
+            idx (_type_): _description_
+            marc_record (Record): _description_
+            file_definition (FileDefinition): _description_
+
+        Raises:
+            Exception: _description_
+        """
         folio_rec = None
         legacy_ids = []
         try:
@@ -94,7 +104,6 @@ class BibsProcessor:
             )
             error.id = legacy_ids
             error.log_it()
-
         except Exception as inst:
             self.mapper.migration_report.add_general_statistics(
                 "Records that failed Due to a unhandled exception",

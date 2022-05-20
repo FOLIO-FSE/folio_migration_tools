@@ -27,7 +27,7 @@ class HoldingsStatementsParser:
             value_tag (str): _description_
             field_textual (str): _description_
             legacy_id (str): _description_
-            dedupe_results (bool, optional): _description_. Defaults to True.
+            dedupe_results (bool): _description_. Defaults to True.
 
         Raises:
             TransformationFieldMappingError: _description_
@@ -142,6 +142,11 @@ class HoldingsStatementsParser:
             marc_record (Record): _description_
             field_textual (str): _description_
             return_dict (dict): _description_
+            legacy_id (str): _description_
+
+        Raises:
+            TransformationFieldMappingError: _description_
+            TransformationFieldMappingError: _description_
         """
         for f in marc_record.get_fields(field_textual):
             if "a" not in f and "z" not in f:

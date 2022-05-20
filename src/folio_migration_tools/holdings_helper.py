@@ -27,12 +27,12 @@ class HoldingsHelper:
 
         Args:
             holdings_record (dict): The Holdingsrecord
-            fields_criteria (list[str]): names of the properties of the holdingsrecord.
+            fields_criterias (list[str]): names of the properties of the holdingsrecord.
             migration_report (MigrationReport): Report to help reporting merge
             holdings_type_id_to_exclude_from_merging: (str): the holdings type UUID to exclude
 
         Raises:
-            exception: _description_
+            Exception: _description_
 
         Returns:
             str: _description_

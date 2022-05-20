@@ -14,7 +14,6 @@ from folio_migration_tools.migration_tasks import migration_task_base
 
 
 def parse_args():
-    """Parse CLI Arguments"""
     task_classes = iter(inheritors(migration_task_base.MigrationTaskBase))
     parser = PromptParser()
     parser.add_argument("configuration_path", help="Path to configuration file")

@@ -162,6 +162,7 @@ Save the file and commit (and push) the file back to main.
 > pipenv install black
 > pipenv install flake8-bugbear
 > pipenv install flake8-bandit
+> pipenv install darglint
 > pipenv install safety
 > npm install github-release-notes -g
 ```

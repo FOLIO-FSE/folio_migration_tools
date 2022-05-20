@@ -76,11 +76,12 @@ class CirculationHelper:
     def check_out_by_barcode(self, legacy_loan: LegacyLoan) -> TransactionResult:
         """Checks out a legacy loan using the Endpoint /circulation/check-out-by-barcode
         Adds all possible overrides in order to make the transaction go through
+
         Args:
-            legacy_loan (LegacyLoan): Legacy loan to be posted
+            legacy_loan (LegacyLoan): _description_
 
         Returns:
-            TransactionResult: the result of the transaction
+            TransactionResult: _description_
         """
         t0_function = time.time()
         data = {

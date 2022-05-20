@@ -49,7 +49,18 @@ class RulesMapperHoldings(RulesMapperBase):
     def parse_hold(self, marc_record, legacy_id):
         """Parses a mfhd recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://tinyurl.com/3rh52e2x
-         This is the main function"""
+         This is the main function
+
+        Args:
+            marc_record (_type_): _description_
+            legacy_id (_type_): _description_
+
+        Raises:
+            TransformationRecordFailedError: _description_
+
+        Returns:
+            _type_: _description_
+        """
         self.print_progress()
         folio_holding = {
             "metadata": self.folio_client.get_metadata_construct(),
@@ -119,7 +130,13 @@ class RulesMapperHoldings(RulesMapperBase):
                 ignored_subsequent_fields.add(marc_field.tag)
 
     def perform_additional_mapping(self, marc_record: Record, folio_holding, legacy_id: str):
-        """Perform additional tasks not easily handled in the mapping rules"""
+        """Perform additional tasks not easily handled in the mapping rules
+
+        Args:
+            marc_record (Record): _description_
+            folio_holding (_type_): _description_
+            legacy_id (str): _description_
+        """
         self.set_holdings_type(marc_record, folio_holding, legacy_id)
         self.set_default_call_number_type_if_empty(folio_holding)
         self.pick_first_location_if_many(folio_holding, legacy_id)
@@ -227,7 +244,11 @@ class RulesMapperHoldings(RulesMapperBase):
             folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type["id"]
 
     def remove_from_id_map(self, former_ids):
-        """removes the ID from the map in case parsing failed"""
+        """removes the ID from the map in case parsing failed
+
+        Args:
+            former_ids (_type_): _description_
+        """
         for former_id in [id for id in former_ids if id]:
             if former_id in self.holdings_id_map:
                 del self.holdings_id_map[former_id]
