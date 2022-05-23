@@ -9,6 +9,9 @@ from folioclient import FolioClient
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapping_base_impl import (
+    MappingFileMappingBaseImpl,
+)
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -23,6 +26,7 @@ class MapperBase:
         folio_client: FolioClient,
     ):
         logging.info("MapperBase initiating")
+        self.notes_mapper = None
         self.folio_client = folio_client
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.library_configuration: LibraryConfiguration = library_configuration
@@ -142,6 +146,42 @@ class MapperBase:
                 ),
             ) from exception
 
+    def map_notes(
+        self, object_map, legacy_object, legacy_id, object_uuid: str, object_type: FOLIONamespaces
+    ):
+        self.setup_note_props(object_map)
+        if any(self.noteprops["data"]):
+            notes_schema = self.notes_schemas["noteCollection"]
+            notes_schema["properties"]["notes"]["items"] = self.notes_schemas["note"]
+            notes_schema["required"] = []
+            if self.notes_mapper is None:
+                self.notes_mapper = MappingFileMappingBaseImpl(
+                    self.library_config,
+                    self.folio_client,
+                    notes_schema,
+                    self.noteprops,
+                    FOLIONamespaces.note,
+                    True,
+                )
+                logging.info("Initiated mapper for Notes")
+            for note in self.notes_mapper.do_map(legacy_object, legacy_id, FOLIONamespaces.note)[
+                0
+            ].get("notes", []):
+                if note.get("content", "").strip():
+                    type_string = {
+                        FOLIONamespaces.users: "user",
+                        FOLIONamespaces.course: "course",
+                    }.get(object_type)
+                    note["links"] = [{"id": object_uuid, "type": type_string}]
+
+                    logging.log(25, "notes\t%s", json.dumps(note))
+                    self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
+                else:
+                    self.migration_report.add_general_statistics(
+                        "Notes without content that were discarded. Set some default "
+                        "value if you only intend to set the note title"
+                    )
+
     def get_mapped_value(
         self,
         ref_data_mapping: RefDataMapping,
@@ -223,7 +263,7 @@ class MapperBase:
         self, records_processed: int, error: TransformationRecordFailedError
     ):
         self.migration_report.add(Blurbs.GeneralStatistics, "Records failed due to an error")
-        error.id = error.index_or_id or records_processed
+        error.index_or_id = error.index_or_id or records_processed
         error.log_it()
         self.num_criticalerrors += 1
         if (
@@ -326,6 +366,36 @@ class MapperBase:
             elif v is not None:
                 clean[k] = v
         return clean
+
+    @staticmethod
+    def get_notes_schema():
+        notes_schema = FolioClient.get_latest_from_github(
+            "folio-org",
+            "mod-notes",
+            "src/main/resources/swagger.api/schemas/note.yaml",
+        )
+        notes_common = FolioClient.get_latest_from_github(
+            "folio-org",
+            "mod-notes",
+            "src/main/resources/swagger.api/schemas/common.yaml",
+        )
+        for prop in notes_schema["note"]["properties"].items():
+            if prop[1].get("$ref", "") == "common.yaml#/uuid":
+                prop[1]["type"] = notes_common["uuid"]["type"]
+
+        for p in ["links", "metadata", "id"]:
+            del notes_schema["note"]["properties"][p]
+        return notes_schema
+
+    def setup_notes_mapping(self):
+        self.notes_schemas = self.get_notes_schema()
+
+    def setup_note_props(self, object_map):
+        if self.noteprops is None:
+            self.noteprops = {
+                "data": [p for p in object_map["data"] if p["folio_field"].startswith("notes[")]
+            }
+            logging.info("Set %s props used for note mapping", len(self.noteprops["data"]))
 
 
 def flatten(my_dict: dict, path=""):

@@ -39,7 +39,7 @@ class UserMapper(UserMapperBase):
 
             self.noteprops = None
             self.notes_schemas = None
-            self.notes_mapper = None
+            self.notes_mapper: MappingFileMappingBaseImpl = None
             self.task_config = task_config
             self.folio_keys = []
             self.mapped_legacy_keys = []
@@ -79,61 +79,6 @@ class UserMapper(UserMapperBase):
             print(f"\n{tpe.message}\t{tpe.message}")
             sys.exit(1)
 
-    def setup_notes_mapping(self):
-        self.notes_schemas = FolioClient.get_latest_from_github(
-            "folio-org",
-            "mod-notes",
-            "src/main/resources/swagger.api/schemas/note.yaml",
-        )
-        notes_common = FolioClient.get_latest_from_github(
-            "folio-org",
-            "mod-notes",
-            "src/main/resources/swagger.api/schemas/common.yaml",
-        )
-        for prop in self.notes_schemas["note"]["properties"].items():
-            if prop[1].get("$ref", "") == "common.yaml#/uuid":
-                prop[1]["type"] = notes_common["uuid"]["type"]
-
-        for p in ["links", "metadata", "id"]:
-            del self.notes_schemas["note"]["properties"][p]
-
-    def map_notes(self, user_map, legacy_user, legacy_id, user_uuid: str):
-        self.setup_note_props(user_map)
-        if any(self.noteprops["data"]):
-            notes_schema = self.notes_schemas["noteCollection"]
-            notes_schema["properties"]["notes"]["items"] = self.notes_schemas["note"]
-            notes_schema["required"] = []
-            if self.notes_mapper is None:
-                self.notes_mapper = MappingFileMappingBaseImpl(
-                    self.library_config,
-                    self.folio_client,
-                    notes_schema,
-                    self.noteprops,
-                    FOLIONamespaces.other,
-                    True,
-                )
-                logging.info("Initiated mapper for User notes")
-            for note in self.notes_mapper.do_map(legacy_user, legacy_id, FOLIONamespaces.other)[
-                0
-            ].get("notes", []):
-                if note.get("content", "").strip():
-                    note["links"] = [{"id": user_uuid, "type": "user"}]
-
-                    logging.log(25, "notes\t%s", json.dumps(note))
-                    self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
-                else:
-                    self.migration_report.add_general_statistics(
-                        "Notes without content that were discarded. Set some default "
-                        "value if you only intend to set the note title"
-                    )
-
-    def setup_note_props(self, user_map):
-        if self.noteprops is None:
-            self.noteprops = {
-                "data": [p for p in user_map["data"] if p["folio_field"].startswith("notes[")]
-            }
-            logging.info("Set %s props used for note mapping", len(self.noteprops["data"]))
-
     def do_map(self, legacy_user, user_map, legacy_id):
         if not self.folio_keys and not self.mapped_legacy_keys:
             self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(user_map)
@@ -168,7 +113,7 @@ class UserMapper(UserMapperBase):
             "delivery": False,
             "metadata": self.folio_client.get_metadata_construct(),
         }
-        self.map_notes(user_map, legacy_user, legacy_id, folio_user["id"])
+        self.map_notes(user_map, legacy_user, legacy_id, folio_user["id"], FOLIONamespaces.users)
         clean_folio_object = self.validate_required_properties(
             legacy_id, folio_user, self.user_schema, FOLIONamespaces.users
         )
