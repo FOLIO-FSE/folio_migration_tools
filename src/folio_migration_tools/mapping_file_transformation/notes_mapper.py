@@ -23,27 +23,32 @@ class NotesMapper(MappingFileMappingBaseImpl):
         object_type: FOLIONamespaces,
         ignore_legacy_identifier: bool = False,
     ) -> None:
-        self.notes_schemas = self.get_notes_schema()
+        self.folio_client = folio_client
+        self.new_method()
         super().__init__(
             library_configuration,
             folio_client,
-            self.notes_schemas,
+            self.notes_schema,
             record_map,
             object_type,
             ignore_legacy_identifier,
         )
-        self.notes_schemas = self.get_notes_schema()
+
         self.noteprops = {
             "data": [p for p in record_map["data"] if p["folio_field"].startswith("notes[")]
         }
         logging.info("Set %s props used for note mapping", len(self.noteprops["data"]))
         logging.info("Initiated mapper for Notes")
 
+    def new_method(self):
+        notes_schemas = self.get_notes_schema()
+        self.notes_schema = notes_schemas["noteCollection"]
+        self.notes_schema["properties"]["notes"]["items"] = notes_schemas["note"]
+        self.notes_schema["required"] = []
+
     def map_notes(self, legacy_object, legacy_id, object_uuid: str, record_type: FOLIONamespaces):
         if any(self.noteprops["data"]):
-            notes_schema = self.notes_schemas["noteCollection"]
-            notes_schema["properties"]["notes"]["items"] = self.notes_schemas["note"]
-            notes_schema["required"] = []
+
             for note in self.do_map(legacy_object, legacy_id, FOLIONamespaces.note)[0].get(
                 "notes", []
             ):
@@ -72,14 +77,13 @@ class NotesMapper(MappingFileMappingBaseImpl):
             self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
         return " ".join(legacy_values).strip()
 
-    @staticmethod
-    def get_notes_schema():
-        notes_schema = FolioClient.get_latest_from_github(
+    def get_notes_schema(self):
+        notes_schema = self.folio_client.get_latest_from_github(
             "folio-org",
             "mod-notes",
             "src/main/resources/swagger.api/schemas/note.yaml",
         )
-        notes_common = FolioClient.get_latest_from_github(
+        notes_common = self.folio_client.get_latest_from_github(
             "folio-org",
             "mod-notes",
             "src/main/resources/swagger.api/schemas/common.yaml",
