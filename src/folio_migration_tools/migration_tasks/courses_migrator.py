@@ -3,18 +3,24 @@ import json
 import logging
 import sys
 import time
+import traceback
 from datetime import datetime
 from datetime import timezone
-from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
 
-from folio_migration_tools.circulation_helper import CirculationHelper
-from folio_migration_tools.custom_dict import InsensitiveDictReader
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapping_file_transformation.courses_mapper import (
+    CoursesMapper,
+)
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
@@ -24,14 +30,14 @@ from folio_migration_tools.transaction_migration.legacy_request import LegacyReq
 class CoursesMigrator(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
-        utc_difference: int
+        composite_course_map_path: str
         migration_task_type: str
         courses_file: FileDefinition
-        starting_row: Optional[int] = 1
+        terms_map_path: str
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
-        return FOLIONamespaces.other
+        return FOLIONamespaces.course
 
     def __init__(
         self,
@@ -40,116 +46,79 @@ class CoursesMigrator(MigrationTaskBase):
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
-        self.valid_legacy_requests = []
+        self.task_configuration = task_configuration
         super().__init__(library_config, task_configuration)
-        self.circulation_helper = CirculationHelper(
-            self.folio_client,
-            "",
-            self.migration_report,
-        )
-        with open(
-            self.folder_structure.legacy_records_folder
-            / task_configuration.open_requests_file.file_name,
-            "r",
-            encoding="utf-8",
-        ) as requests_file:
-            self.semi_valid_legacy_requests = list(
-                self.load_and_validate_legacy_requests(
-                    InsensitiveDictReader(requests_file, dialect="tsv")
-                )
-            )
-            logging.info(
-                "Loaded and validated %s requests in file",
-                len(self.semi_valid_legacy_requests),
-            )
-        if any(self.task_configuration.item_files) or any(self.task_configuration.patron_files):
-            self.valid_legacy_requests = list(self.check_barcodes())
-            logging.info(
-                "Loaded and validated %s requests against barcodes",
-                len(self.valid_legacy_requests),
-            )
-        else:
-            logging.info(
-                "No item or user files supplied. Not validating against"
-                "previously migrated objects"
-            )
-            self.valid_legacy_requests = self.semi_valid_legacy_requests
-        self.valid_legacy_requests.sort(key=lambda x: x.request_date)
-        logging.info("Sorted the list of requests by request date")
         self.t0 = time.time()
-        self.skipped_since_already_added = 0
-        self.failed_requests = set()
-        logging.info("Starting row is %s", task_configuration.starting_row)
+        self.courses_map = self.setup_records_map(
+            self.folder_structure.mapping_files_folder
+            / self.task_configuration.composite_course_map_path
+        )
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+            self.courses_map
+        )
+        self.mapper: CoursesMapper = CoursesMapper(
+            self.folio_client,
+            self.courses_map,
+            self.load_ref_data_mapping_file(
+                "terms",
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.terms_map_path,
+                self.folio_keys,
+            ),
+            self.library_configuration,
+        )
         logging.info("Init completed")
-
-    def prepare_legacy_request(self, legacy_request: LegacyRequest):
-        patron = self.circulation_helper.get_user_by_barcode(legacy_request.patron_barcode)
-        if not patron:
-            logging.error(f"No user with barcode {legacy_request.patron_barcode} found in FOLIO")
-            Helper.log_data_issue(
-                f"{legacy_request.patron_barcode}",
-                "No user with barcode",
-                f"{legacy_request.patron_barcode}",
-            )
-            self.migration_report.add_general_statistics("No user with barcode")
-            self.failed_requests.add(legacy_request)
-            return False, legacy_request
-        legacy_request.patron_id = patron.get("id")
-
-        item = self.circulation_helper.get_item_by_barcode(legacy_request.item_barcode)
-        if not item:
-            logging.error(f"No item with barcode {legacy_request.item_barcode} found in FOLIO")
-            self.migration_report.add_general_statistics("No item with barcode")
-            Helper.log_data_issue(
-                f"{legacy_request.item_barcode}",
-                "No item with barcode",
-                f"{legacy_request.item_barcode}",
-            )
-            self.failed_requests.add(legacy_request)
-            return False, legacy_request
-        legacy_request.item_id = item.get("id")
-        if item["status"]["name"] in ["Available", "Aged to lost", "Missing"]:
-            legacy_request.request_type = "Page"
-            logging.info(f'Setting request to Page, since the status is {item["status"]["name"]}')
-        return True, legacy_request
 
     def do_work(self):
         logging.info("Starting")
-        if self.task_configuration.starting_row > 1:
-            logging.info(f"Skipping {(self.task_configuration.starting_row-1)} records")
-        for num_requests, legacy_request in enumerate(
-            self.valid_legacy_requests[self.task_configuration.starting_row - 1 :],
-            start=1,
-        ):
-
-            t0_migration = time.time()
-            self.migration_report.add_general_statistics("Processed requests")
-            try:
-                res, legacy_request = self.prepare_legacy_request(legacy_request)
-                if res:
-                    if self.circulation_helper.create_request(
-                        self.folio_client, legacy_request, self.migration_report
-                    ):
-                        self.migration_report.add_general_statistics(
-                            "Successfully processed requests"
-                        )
-                    else:
-                        self.migration_report.add_general_statistics(
-                            "Unsuccessfully processed requests"
-                        )
-                        self.failed_requests.add(legacy_request)
-                if num_requests == 1:
-                    logging.info(json.dumps(legacy_request.to_dict(), indent=4))
-            except Exception:
-                logging.exception(
-                    "Error in row %s  Item barcode: %s Patron barcode: %s",
-                    num_requests,
-                    legacy_request.item_barcode,
-                    legacy_request.patron_barcode,
+        full_path = (
+            self.folder_structure.legacy_records_folder
+            / self.task_configuration.courses_file.file_name
+        )
+        logging.info("Processing %s", full_path)
+        start = time.time()
+        with open(full_path, encoding="utf-8-sig") as records_file:
+            for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
+                try:
+                    if idx == 0:
+                        logging.info("First legacy record:")
+                        logging.info(json.dumps(record, indent=4))
+                        self.mapper.verify_legacy_record(record, idx)
+                    folio_rec, legacy_id = self.mapper.do_map(
+                        record, f"row {idx}", FOLIONamespaces.course
+                    )
+                    self.mapper.perform_additional_mappings((folio_rec, legacy_id))
+                    self.mapper.notes_mapper.map_notes(
+                        record, 1, folio_rec[0]["course"]["id"], FOLIONamespaces.course
+                    )
+                    self.mapper.store_objects((folio_rec, legacy_id))
+                except TransformationProcessError as process_error:
+                    self.mapper.handle_transformation_process_error(idx, process_error)
+                except TransformationRecordFailedError as data_error:
+                    self.mapper.handle_transformation_record_failed_error(idx, data_error)
+                except AttributeError as attribute_error:
+                    traceback.print_exc()
+                    logging.fatal(attribute_error)
+                    logging.info("Quitting...")
+                    sys.exit(1)
+                except Exception as excepion:
+                    self.mapper.handle_generic_exception(idx, excepion)
+                self.mapper.migration_report.add(
+                    Blurbs.GeneralStatistics,
+                    f"Number of Legacy items in {full_path}",
                 )
-                sys.exit()
-            if num_requests % 10 == 0:
-                logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
+                self.mapper.migration_report.add_general_statistics(
+                    "Number of legacy items in total"
+                )
+                self.print_progress(idx, start)
+
+        # POST /coursereserves/courselistings/40a085bd-b44b-42b3-b92f-61894a75e3ce/reserves
+        # Match on legacy course number ()
+        """ reserve = {
+            "courseListingId": "40a085bd-b44b-42b3-b92f-61894a75e3ce",
+            "copiedItem": {"barcode": "Actual thesis"},
+            "id": "1650db37-8790-4699-bea0-7190ad6384cc",
+        } """
 
     def wrap_up(self):
         self.write_failed_request_to_file()
