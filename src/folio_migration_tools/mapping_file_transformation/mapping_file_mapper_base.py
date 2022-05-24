@@ -5,6 +5,7 @@ import logging
 import uuid
 from abc import abstractmethod
 from pathlib import Path
+from typing import Dict
 from typing import List
 from uuid import UUID
 
@@ -44,15 +45,17 @@ class MappingFileMapperBase(MapperBase):
         self.folio_client = folio_client
         self.use_map = True  # Legacy
         self.record_map = record_map
-        self.ref_data_dicts = {}
+        self.ref_data_dicts: Dict = {}
         self.empty_vals = empty_vals
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
         self.field_map = self.setup_field_map(ignore_legacy_identifier)
         self.validate_map()
-        self.mapped_from_values = {}
-        for k in self.record_map["data"]:
-            if k["value"] not in [None, ""] and k["folio_field"] != "legacyIdentifier":
-                self.mapped_from_values[k["folio_field"]] = k["value"]
+        self.mapped_from_values = {
+            k["folio_field"]: k["value"]
+            for k in self.record_map["data"]
+            if k["value"] not in [None, ""] and k["folio_field"] != "legacyIdentifier"
+        }
+
         logging.info(
             "Mapped values:\n%s",
             json.dumps(self.mapped_from_values, indent=4, sort_keys=True),
@@ -432,8 +435,7 @@ class MappingFileMapperBase(MapperBase):
             reader = csv.DictReader(source_file)
         idx = 0
         try:
-            for row in reader:
-                yield row
+            yield from reader
         except Exception as exception:
             logging.error("%s at row %s", exception, idx)
             raise exception from exception
