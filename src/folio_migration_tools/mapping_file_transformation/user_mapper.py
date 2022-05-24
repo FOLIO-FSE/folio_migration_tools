@@ -81,7 +81,7 @@ class UserMapper(UserMapperBase):
             logging.info("Init done.")
         except TransformationProcessError as tpe:
             logging.critical(tpe)
-            print(f"\n{tpe.message}\t{tpe.message}")
+            print(f"\n{tpe.message}\t{tpe.data_value}")
             sys.exit(1)
 
     def do_map(self, legacy_user, legacy_id):
@@ -114,7 +114,7 @@ class UserMapper(UserMapperBase):
             "metadata": self.folio_client.get_metadata_construct(),
         }
         self.notes_mapper.map_notes(
-            self.user_map, legacy_user, legacy_id, folio_user["id"], FOLIONamespaces.users
+            legacy_user, legacy_id, folio_user["id"], FOLIONamespaces.users
         )
         clean_folio_object = self.validate_required_properties(
             legacy_id, folio_user, self.user_schema, FOLIONamespaces.users
