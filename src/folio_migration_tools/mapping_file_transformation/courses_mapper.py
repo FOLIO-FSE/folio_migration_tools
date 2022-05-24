@@ -1,13 +1,18 @@
+import json
+import logging
 from typing import Any
 from typing import Dict
 
 from folio_uuid.folio_uuid import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
 
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from folio_migration_tools.mapping_file_transformation.notes_mapper import NotesMapper
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -22,6 +27,14 @@ class CoursesMapper(MappingFileMapperBase):
         terms_map,
         library_configuration: LibraryConfiguration,
     ):
+        self.folio_client = folio_client
+        self.notes_mapper: NotesMapper = NotesMapper(
+            library_configuration,
+            self.folio_client,
+            course_map,
+            FOLIONamespaces.note,
+            True,
+        )
         self.composite_course_schema = self.get_composite_course_schema()
         super().__init__(
             folio_client,
@@ -46,16 +59,58 @@ class CoursesMapper(MappingFileMapperBase):
             )
         else:
             self.terms_map = None
-        self.setup_notes_mapping()
 
-    def do_map(self):
-        raise NotImplementedError()
+    def store_objects(self, composite_course):
+        try:
+            logging.log(25, "courselisting\t%s", json.dumps(composite_course[0]["courselisting"]))
+            self.migration_report.add_general_statistics("Stored courselistings")
+            logging.log(25, "course\t%s", json.dumps(composite_course[0]["course"]))
+            self.migration_report.add_general_statistics("Stored courses")
+            logging.log(25, "instructor\t%s", json.dumps(composite_course[0]["instructor"]))
+            self.migration_report.add_general_statistics("Stored instructors")
+        except Exception as ee:
+            raise TransformationRecordFailedError(
+                composite_course[1], "Failed when storing", ee
+            ) from ee
 
-    def perform_additional_mappings(self):
-        raise NotImplementedError()
+    def perform_additional_mappings(self, composite_course):
+        try:
+            # Assign deterministic ids to every object
+            composite_course[0]["course"]["id"] = self.get_uuid(
+                composite_course, FOLIONamespaces.course
+            )
+            composite_course[0]["courselisting"]["id"] = self.get_uuid(
+                composite_course, FOLIONamespaces.course_listing
+            )
+            composite_course[0]["instructor"]["id"] = self.get_uuid(
+                composite_course, FOLIONamespaces.instructor
+            )
+
+            # Link course to courselisting
+            composite_course[0]["course"]["courseListingId"] = composite_course[0][
+                "courselisting"
+            ]["id"]
+
+            # Link instructor to course listing
+            composite_course[0]["instructor"]["courseListingId"] = composite_course[0][
+                "courselisting"
+            ]["id"]
+        except Exception as ee:
+            raise TransformationRecordFailedError(
+                composite_course[1], "Failed when creating and linking ids", ee
+            ) from ee
+
+    def get_uuid(self, composite_course, object_type: FOLIONamespaces):
+        return str(
+            FolioUUID(
+                self.folio_client.okapi_url,
+                object_type,
+                composite_course[1],
+            )
+        )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        value_tuple = (legacy_item, folio_prop_name, index_or_id)
+        # value_tuple = (legacy_item, folio_prop_name, index_or_id)
 
         # Legacy contstruct
         if not self.use_map:
@@ -74,13 +129,14 @@ class CoursesMapper(MappingFileMapperBase):
         legacy_values = self.get_legacy_vals(legacy_item, legacy_item_keys)
         legacy_value = " ".join(legacy_values).strip()
 
-        if folio_prop_name == "courselisting.termId":
+        """ if folio_prop_name == "courselisting.termId":
             return self.get_mapped_value(
                 self.terms_map,
                 *value_tuple,
                 False,
             )
-        elif any(legacy_item_keys):
+        el """
+        if any(legacy_item_keys):
             if len(legacy_item_keys) > 1:
                 self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
             return legacy_value
@@ -90,19 +146,17 @@ class CoursesMapper(MappingFileMapperBase):
             )
             return ""
 
-    @staticmethod
-    def get_composite_course_schema() -> Dict[str, Any]:
-        composite_map = {
-            "course": FolioClient.get_latest_from_github(
-                "folio-org", "mod-courses", "/ramls/course.json"
-            ),
-            "courselisting": FolioClient.get_latest_from_github(
-                "folio-org", "mod-courses", "/ramls/courselisting.json"
-            ),
-            "instructor": FolioClient.get_latest_from_github(
-                "folio-org", "mod-courses", "/ramls/instructor.json"
-            ),
-            "notes": CoursesMapper.get_notes_schema()["noteCollection"],
+    def get_composite_course_schema(self) -> Dict[str, Any]:
+        return {
+            "properties": {
+                "course": self.folio_client.get_latest_from_github(
+                    "folio-org", "mod-courses", "/ramls/course.json"
+                ),
+                "courselisting": self.folio_client.get_latest_from_github(
+                    "folio-org", "mod-courses", "/ramls/courselisting.json"
+                ),
+                "instructor": self.folio_client.get_latest_from_github(
+                    "folio-org", "mod-courses", "/ramls/instructor.json"
+                ),
+            }
         }
-        composite_map["notes"]["items"] = CoursesMapper.get_notes_schema()["note"]
-        return composite_map
