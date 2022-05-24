@@ -13,9 +13,7 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from folio_migration_tools.mapping_file_transformation.mapping_file_mapping_base_impl import (
-    MappingFileMappingBaseImpl,
-)
+from folio_migration_tools.mapping_file_transformation.notes_mapper import NotesMapper
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -31,6 +29,7 @@ class UserMapper(UserMapperBase):
         folio_client: FolioClient,
         task_config,
         library_config,
+        user_map,
         departments_mapping,
         groups_map,
     ):
@@ -39,16 +38,23 @@ class UserMapper(UserMapperBase):
 
             self.noteprops = None
             self.notes_schemas = None
-            self.notes_mapper: MappingFileMappingBaseImpl = None
             self.task_config = task_config
             self.folio_keys = []
+            self.user_map = user_map
+            self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(user_map)
+            self.mapped_legacy_keys = MappingFileMapperBase.get_mapped_legacy_properties_from_map(
+                user_map
+            )
             self.mapped_legacy_keys = []
             self.library_config = library_config
             self.user_schema = FolioClient.get_latest_from_github(
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
             )
+            self.notes_mapper: NotesMapper = NotesMapper(
+                self.library_config, self.folio_client, self.user_map, FOLIONamespaces.users
+            )
             self.ids_dict: Dict[str, set] = {}
-            self.custom_props = {}
+            self.custom_props: Dict = {}
             # TODO: Use RefDataMapping
             if departments_mapping:
                 self.departments_mapping = RefDataMapping(
@@ -72,29 +78,23 @@ class UserMapper(UserMapperBase):
                 )
             else:
                 self.groups_mapping = None
-            self.setup_notes_mapping()
             logging.info("Init done.")
         except TransformationProcessError as tpe:
             logging.critical(tpe)
             print(f"\n{tpe.message}\t{tpe.message}")
             sys.exit(1)
 
-    def do_map(self, legacy_user, user_map, legacy_id):
-        if not self.folio_keys and not self.mapped_legacy_keys:
-            self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(user_map)
-            self.mapped_legacy_keys = MappingFileMapperBase.get_mapped_legacy_properties_from_map(
-                user_map
+    def do_map(self, legacy_user, legacy_id):
+        missing_keys_in_user = [f for f in self.mapped_legacy_keys if f not in legacy_user]
+        if any(missing_keys_in_user):
+            raise TransformationProcessError(
+                "",
+                ("There are mapped legacy fields that are not in the legacy " "user record"),
+                missing_keys_in_user,
             )
-            missing_keys_in_user = [f for f in self.mapped_legacy_keys if f not in legacy_user]
-            if any(missing_keys_in_user):
-                raise TransformationProcessError(
-                    "",
-                    ("There are mapped legacy fields that are not in the legacy " "user record"),
-                    missing_keys_in_user,
-                )
 
         if not self.custom_props:
-            for m in user_map["data"]:
+            for m in self.user_map["data"]:
                 if "customFields" in m["folio_field"]:
                     sub_property = m["folio_field"].split(".")[-1]
                     self.custom_props[sub_property] = m["legacy_field"]
@@ -103,7 +103,7 @@ class UserMapper(UserMapperBase):
 
         folio_user = self.instantiate_user(legacy_id)
         for prop_name, prop in self.user_schema["properties"].items():
-            self.add_prop(legacy_user, user_map, folio_user, prop_name, prop)
+            self.add_prop(legacy_user, self.user_map, folio_user, prop_name, prop)
 
         folio_user["personal"]["preferredContactTypeId"] = "Email"
         folio_user["active"] = True
@@ -113,7 +113,9 @@ class UserMapper(UserMapperBase):
             "delivery": False,
             "metadata": self.folio_client.get_metadata_construct(),
         }
-        self.map_notes(user_map, legacy_user, legacy_id, folio_user["id"], FOLIONamespaces.users)
+        self.map_notes(
+            self.user_map, legacy_user, legacy_id, folio_user["id"], FOLIONamespaces.users
+        )
         clean_folio_object = self.validate_required_properties(
             legacy_id, folio_user, self.user_schema, FOLIONamespaces.users
         )
