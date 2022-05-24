@@ -50,11 +50,18 @@ class MappingFileMapperBase(MapperBase):
         self.folio_keys = self.get_mapped_folio_properties_from_map(self.record_map)
         self.field_map = self.setup_field_map(ignore_legacy_identifier)
         self.validate_map()
-        self.mapped_from_values = {
-            k["folio_field"]: k["value"]
-            for k in self.record_map["data"]
-            if k["value"] not in [None, ""] and k["folio_field"] != "legacyIdentifier"
-        }
+        try:
+            self.mapped_from_values = {
+                k["folio_field"]: k["value"]
+                for k in self.record_map["data"]
+                if k["value"] not in [None, ""] and k["folio_field"] != "legacyIdentifier"
+            }
+        except KeyError as ke:
+            raise TransformationProcessError(
+                "",
+                "Property missing from one of the settings in the record mapping file",
+                f"Property name: {ke}",
+            ) from ke
 
         logging.info(
             "Mapped values:\n%s",
