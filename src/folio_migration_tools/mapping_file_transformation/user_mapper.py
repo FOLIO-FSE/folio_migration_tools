@@ -51,7 +51,7 @@ class UserMapper(UserMapperBase):
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
             )
             self.notes_mapper: NotesMapper = NotesMapper(
-                self.library_config, self.folio_client, self.user_map, FOLIONamespaces.users
+                self.library_config, self.folio_client, self.user_map, FOLIONamespaces.users, True
             )
             self.ids_dict: Dict[str, set] = {}
             self.custom_props: Dict = {}
@@ -89,7 +89,7 @@ class UserMapper(UserMapperBase):
         if any(missing_keys_in_user):
             raise TransformationProcessError(
                 "",
-                ("There are mapped legacy fields that are not in the legacy " "user record"),
+                ("There are mapped legacy fields that are not in the legacy user record"),
                 missing_keys_in_user,
             )
 
@@ -113,7 +113,7 @@ class UserMapper(UserMapperBase):
             "delivery": False,
             "metadata": self.folio_client.get_metadata_construct(),
         }
-        self.map_notes(
+        self.notes_mapper.map_notes(
             self.user_map, legacy_user, legacy_id, folio_user["id"], FOLIONamespaces.users
         )
         clean_folio_object = self.validate_required_properties(
