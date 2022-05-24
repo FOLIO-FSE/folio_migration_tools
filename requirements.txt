@@ -17,7 +17,7 @@ click==8.0.1
 coverage[toml]==6.3; python_version >= '3.7'
 deprecated==1.2.12
 folio-uuid==0.2.5
-folioclient==0.39
+folioclient==0.40.2
 idna==3.2
 inflection==0.5.1
 iniconfig==1.1.1
