@@ -126,7 +126,7 @@ class BatchPoster(MigrationTaskBase):
 
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
         (object_name, data) = row.split("\t")
-        endpoint = get_extradata_endpoint(object_name)
+        endpoint = get_extradata_endpoint(object_name, data)
         url = f"{self.folio_client.okapi_url}/{endpoint}"
         body = data
         response = self.post_objects(url, body)
@@ -440,14 +440,19 @@ def chunks(records, number_of_chunks):
         yield records[i : i + number_of_chunks]
 
 
-def get_extradata_endpoint(object_name):
+def get_extradata_endpoint(object_name: str, string_object: str):
     object_types = {
         "precedingSucceedingTitles": "preceding-succeeding-titles",
         "precedingTitles": "preceding-succeeding-titles",
         "succeedingTitles": "preceding-succeeding-titles",
         "boundwithPart": "inventory-storage/bound-with-parts",
         "notes": "notes",
+        "course": "coursereserves/courses",
+        "courselisting": "coursereserves/courselistings",
     }
+    if object_name == "instructor":
+        instructor = json.loads(string_object)
+        return f'coursereserves/courselistings/{instructor["courseListingId"]}/instructors'
     return object_types[object_name]
 
 
