@@ -110,7 +110,7 @@ class CoursesMapper(MappingFileMapperBase):
         )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        # value_tuple = (legacy_item, folio_prop_name, index_or_id)
+        value_tuple = (legacy_item, folio_prop_name, index_or_id)
 
         # Legacy contstruct
         if not self.use_map:
@@ -129,14 +129,13 @@ class CoursesMapper(MappingFileMapperBase):
         legacy_values = self.get_legacy_vals(legacy_item, legacy_item_keys)
         legacy_value = " ".join(legacy_values).strip()
 
-        """ if folio_prop_name == "courselisting.termId":
+        if folio_prop_name == "courselisting.termId":
             return self.get_mapped_value(
                 self.terms_map,
                 *value_tuple,
                 False,
             )
-        el """
-        if any(legacy_item_keys):
+        elif any(legacy_item_keys):
             if len(legacy_item_keys) > 1:
                 self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
             return legacy_value

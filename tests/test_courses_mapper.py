@@ -21,6 +21,13 @@ def get_latest_from_github(owner, repo, file_path):
     return FolioClient.get_latest_from_github(owner, repo, file_path, "")
 
 
+def folio_get_all(ref_data_path, array_name, query, limit):
+    return [
+        {"name": "Fall 2022", "id": "42093be3-d1e7-4bb6-b2b9-18e153d109b2"},
+        {"name": "Summer 2022", "id": "415b14a8-c94c-4aa1-a0a8-d397efae343e"},
+    ]
+
+
 @pytest.fixture(scope="module")
 def mapper(pytestconfig) -> CoursesMapper:
     okapi_url = "okapi_url"
@@ -35,6 +42,7 @@ def mapper(pytestconfig) -> CoursesMapper:
     mock_folio.username = "username"
     mock_folio.password = "password"  # noqa: S105
     mock_folio.get_latest_from_github = get_latest_from_github
+    mock_folio.folio_get_all = folio_get_all
     mock_folio.folio_get_single_object = MagicMock(
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
@@ -57,7 +65,11 @@ def mapper(pytestconfig) -> CoursesMapper:
         iteration_identifier="I have no clue",
         base_folder="/",
     )
-    return CoursesMapper(mock_folio, basic_course_map, None, lib)
+    terms_map = [
+        {"BEGIN DATE": "01-10-2022", "END DATE": "05-06-2022", "folio_name": "Fall 2022"},
+        {"BEGIN DATE": "*", "END DATE": "*", "folio_name": "Summer 2022"},
+    ]
+    return CoursesMapper(mock_folio, basic_course_map, terms_map, lib)
 
 
 def test_schema():
@@ -73,6 +85,8 @@ def test_basic_mapping2(mapper, caplog):
         "INSTRUCTOR": "Some instructor",
         "STAFF NOTE": "Some staff note",
         "COURSE": "Course 101",
+        "END DATE": "05-06-2022",
+        "BEGIN DATE": "01-10-2022",
     }
     res = mapper.do_map(data, 1, FOLIONamespaces.course)
     mapper.perform_additional_mappings(res)
@@ -100,6 +114,7 @@ def test_basic_mapping2(mapper, caplog):
     assert courselisting["locationId"] == "65ccd308-cd96-4590-9531-e29f7e896f80"
     assert courselisting["externalId"] == "11"
     assert courselisting["courseTypeId"] == "428ea311-c2c2-4805-a21e-1d198c7bcd58"
+    assert courselisting["termId"] == "42093be3-d1e7-4bb6-b2b9-18e153d109b2"
 
     course = generated_objects["course"]
     assert course["name"] == "Course 101"
