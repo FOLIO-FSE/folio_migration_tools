@@ -105,12 +105,12 @@ class CoursesMapper(MappingFileMapperBase):
                 composite_course[1], "Failed when creating and linking ids", ee
             ) from ee
 
-    def get_uuid(self, composite_course, object_type: FOLIONamespaces):
+    def get_uuid(self, composite_course, object_type: FOLIONamespaces, idx: int = 0):
         return str(
             FolioUUID(
                 self.folio_client.okapi_url,
                 object_type,
-                composite_course[1],
+                composite_course[1] if idx == 0 else f"{composite_course[1]}_{idx}",
             )
         )
 
