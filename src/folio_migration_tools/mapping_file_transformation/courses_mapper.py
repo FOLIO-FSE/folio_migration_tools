@@ -66,8 +66,11 @@ class CoursesMapper(MappingFileMapperBase):
             self.migration_report.add_general_statistics("Stored courselistings")
             logging.log(25, "course\t%s", json.dumps(composite_course[0]["course"]))
             self.migration_report.add_general_statistics("Stored courses")
-            logging.log(25, "instructor\t%s", json.dumps(composite_course[0]["instructor"]))
-            self.migration_report.add_general_statistics("Stored instructors")
+            if "instructors" in composite_course[0] and any(composite_course[0]["instructors"]):
+                for instructor in composite_course[0]["instructors"]:
+                    logging.log(25, "instructor\t%s", json.dumps(instructor))
+                    self.migration_report.add_general_statistics("Stored instructors")
+
         except Exception as ee:
             raise TransformationRecordFailedError(
                 composite_course[1], "Failed when storing", ee
@@ -82,19 +85,21 @@ class CoursesMapper(MappingFileMapperBase):
             composite_course[0]["courselisting"]["id"] = self.get_uuid(
                 composite_course, FOLIONamespaces.course_listing
             )
-            composite_course[0]["instructor"]["id"] = self.get_uuid(
-                composite_course, FOLIONamespaces.instructor
-            )
+            if "instructors" in composite_course[0] and any(composite_course[0]["instructors"]):
+                for idx, instructor in enumerate(composite_course[0]["instructors"]):
+                    instructor["id"] = self.get_uuid(
+                        composite_course, FOLIONamespaces.instructor, idx
+                    )
+                    # Link instructor to course listing
+                    instructor["courseListingId"] = composite_course[0]["courselisting"]["id"]
+            else:
+                self.migration_report.add_general_statistics("Missing Instructors")
 
             # Link course to courselisting
             composite_course[0]["course"]["courseListingId"] = composite_course[0][
                 "courselisting"
             ]["id"]
 
-            # Link instructor to course listing
-            composite_course[0]["instructor"]["courseListingId"] = composite_course[0][
-                "courselisting"
-            ]["id"]
         except Exception as ee:
             raise TransformationRecordFailedError(
                 composite_course[1], "Failed when creating and linking ids", ee
