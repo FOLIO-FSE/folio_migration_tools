@@ -159,8 +159,11 @@ class CoursesMapper(MappingFileMapperBase):
                 "courselisting": self.folio_client.get_latest_from_github(
                     "folio-org", "mod-courses", "/ramls/courselisting.json"
                 ),
-                "instructor": self.folio_client.get_latest_from_github(
-                    "folio-org", "mod-courses", "/ramls/instructor.json"
-                ),
+                "instructors": {
+                    "type": "array",
+                    "items": self.folio_client.get_latest_from_github(
+                        "folio-org", "mod-courses", "/ramls/instructor.json"
+                    ),
+                },
             }
         }
