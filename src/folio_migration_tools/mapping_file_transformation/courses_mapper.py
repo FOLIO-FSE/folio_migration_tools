@@ -150,18 +150,19 @@ class CoursesMapper(MappingFileMapperBase):
             )
             return ""
 
-    def get_composite_course_schema(self) -> Dict[str, Any]:
+    @staticmethod
+    def get_composite_course_schema() -> Dict[str, Any]:
         return {
             "properties": {
-                "course": self.folio_client.get_latest_from_github(
+                "course": FolioClient.get_latest_from_github(
                     "folio-org", "mod-courses", "/ramls/course.json"
                 ),
-                "courselisting": self.folio_client.get_latest_from_github(
+                "courselisting": FolioClient.get_latest_from_github(
                     "folio-org", "mod-courses", "/ramls/courselisting.json"
                 ),
                 "instructors": {
                     "type": "array",
-                    "items": self.folio_client.get_latest_from_github(
+                    "items": FolioClient.get_latest_from_github(
                         "folio-org", "mod-courses", "/ramls/instructor.json"
                     ),
                 },
