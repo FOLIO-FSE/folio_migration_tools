@@ -20,7 +20,6 @@ from folio_migration_tools.mapping_file_transformation.courses_mapper import (
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
 
@@ -43,7 +42,6 @@ class CoursesMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        self.migration_report = MigrationReport()
         self.task_configuration = task_configuration
         super().__init__(library_config, task_configuration)
         self.t0 = time.time()
@@ -85,6 +83,9 @@ class CoursesMigrator(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.course
                     )
+                    if idx == 0:
+                        logging.info("First FOLIO record:")
+                        logging.info(json.dumps(folio_rec, indent=4))
                     self.mapper.perform_additional_mappings((folio_rec, legacy_id))
                     self.mapper.store_objects((folio_rec, legacy_id))
                     self.mapper.notes_mapper.map_notes(
@@ -111,26 +112,18 @@ class CoursesMigrator(MigrationTaskBase):
                 )
                 self.print_progress(idx, start)
 
-        # POST /coursereserves/courselistings/40a085bd-b44b-42b3-b92f-61894a75e3ce/reserves
-        # Match on legacy course number ()
-        """ reserve = {
-            "courseListingId": "40a085bd-b44b-42b3-b92f-61894a75e3ce",
-            "copiedItem": {"barcode": "Actual thesis"},
-            "id": "1650db37-8790-4699-bea0-7190ad6384cc",
-        } """
-
     def wrap_up(self):
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# Courses migration results   \n")
             report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
-            self.migration_report.write_migration_report(report_file)
+            self.mapper.migration_report.write_migration_report(report_file)
 
 
 def timings(t0, t0func, num_objects):
-    avg = num_objects / (time.time() - t0)
+    avg = (time.time() - t0) / num_objects
     elapsed = time.time() - t0
     elapsed_func = time.time() - t0func
     return (
         f"Total objects: {num_objects}\tTotal elapsed: {elapsed:.2f}\t"
-        f"Average per object: {avg:.2f}\tElapsed this time: {elapsed_func:.2f}"
+        f"Average per object: {avg:.2f}s\tElapsed this time: {elapsed_func:.2f}"
     )
