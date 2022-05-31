@@ -172,7 +172,7 @@ basic_course_map = {
             "description": "",
         },
         {
-            "folio_field": "instructor.name",
+            "folio_field": "instructors[0].name",
             "legacy_field": "INSTRUCTOR",
             "value": "",
             "description": "",

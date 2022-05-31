@@ -47,8 +47,8 @@ def test_basic():
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
 
     assert folio_user["externalSystemId"] == "externalid_1"
     assert folio_user["username"] == "user_name_1"
@@ -539,8 +539,8 @@ def test_notes(caplog):
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
 
     assert "Level 25" in caplog.text
     assert "Some title" in caplog.text
@@ -621,8 +621,8 @@ def test_notes_empty_field(caplog):
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
 
     assert "Level 25" not in caplog.text
 

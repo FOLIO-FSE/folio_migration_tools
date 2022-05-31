@@ -77,13 +77,14 @@ class NotesMapper(MappingFileMappingBaseImpl):
             self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
         return " ".join(legacy_values).strip()
 
-    def get_notes_schema(self):
-        notes_schema = self.folio_client.get_latest_from_github(
+    @staticmethod
+    def get_notes_schema():
+        notes_schema = FolioClient.get_latest_from_github(
             "folio-org",
             "mod-notes",
             "src/main/resources/swagger.api/schemas/note.yaml",
         )
-        notes_common = self.folio_client.get_latest_from_github(
+        notes_common = FolioClient.get_latest_from_github(
             "folio-org",
             "mod-notes",
             "src/main/resources/swagger.api/schemas/common.yaml",
