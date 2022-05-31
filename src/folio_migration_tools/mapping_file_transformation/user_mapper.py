@@ -36,7 +36,6 @@ class UserMapper(UserMapperBase):
         try:
             super().__init__(folio_client, library_config)
 
-            self.noteprops = None
             self.notes_schemas = None
             self.task_config = task_config
             self.folio_keys = []

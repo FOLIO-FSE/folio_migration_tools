@@ -130,7 +130,7 @@ def test_notes(caplog):
     assert "Some title" in caplog.text
 
     assert folio_user["externalSystemId"] == "externalid_1"
-    assert user_mapper.noteprops is not None
+    assert user_mapper.notes_mapper.noteprops is not None
 
 
 def test_notes_empty_field(caplog):
@@ -211,4 +211,4 @@ def test_notes_empty_field(caplog):
     assert "Level 25" not in caplog.text
 
     assert folio_user["externalSystemId"] == "externalid_1"
-    assert user_mapper.noteprops is not None
+    assert user_mapper.notes_mapper.noteprops is not None
