@@ -133,8 +133,8 @@ def test_boolean_values_explicitly_true():
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
 
 
@@ -161,8 +161,8 @@ def test_boolean_values_explicitly_true_json_string():
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
 
 
@@ -189,8 +189,8 @@ def test_boolean_values_explicitly_false_json_string():
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
 
 
@@ -273,8 +273,8 @@ def test_boolean_values_explicitly_true_string():
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
 
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] == "true"
 
@@ -358,8 +358,8 @@ def test_boolean_values_explicitly_false_string():
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
 
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] == "false"
 
@@ -443,8 +443,8 @@ def test_boolean_values_explicitly_false():
             "holdings": {"prefix": "pref", "startNumber": "1"},
         }
     )
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, None, None)
-    folio_user = user_mapper.do_map(legacy_user_record, user_map, "001")
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
 
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
 
