@@ -1,6 +1,7 @@
 import logging
 import sys
 from datetime import datetime as dt
+from io import IOBase
 from typing import List
 from typing import Optional
 
@@ -67,26 +68,27 @@ class BibsTransformer(MigrationTaskBase):
                 created_records_file,
                 self.folder_structure,
             )
-            for file_obj in self.task_config.files:
-                try:
-                    with open(
-                        self.folder_structure.legacy_records_folder / file_obj.file_name,
-                        "rb",
-                    ) as marc_file:
-                        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
-                        reader.hide_utf8_warnings = True
-                        reader.force_utf8 = False
-                        logging.info("running %s", file_obj.file_name)
-                        self.read_records(reader, file_obj)
-                except TransformationProcessError as tpe:
-                    logging.critical(tpe)
-                    sys.exit(1)
-                except Exception:
-                    logging.exception(file_obj, stack_info=True)
-                    logging.critical(
-                        "File %s failed for unknown reason. Halting", file_obj.file_name
-                    )
-                    sys.exit(1)
+            with open(self.folder_structure.failed_bibs_file, "wb") as failed_bibs_file:
+                for file_obj in self.task_config.files:
+                    try:
+                        with open(
+                            self.folder_structure.legacy_records_folder / file_obj.file_name,
+                            "rb",
+                        ) as marc_file:
+                            reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+                            reader.hide_utf8_warnings = True
+                            reader.force_utf8 = False
+                            logging.info("running %s", file_obj.file_name)
+                            self.read_records(reader, file_obj, failed_bibs_file)
+                    except TransformationProcessError as tpe:
+                        logging.critical(tpe)
+                        sys.exit(1)
+                    except Exception:
+                        logging.exception(file_obj, stack_info=True)
+                        logging.critical(
+                            "File %s failed for unknown reason. Halting", file_obj.file_name
+                        )
+                        sys.exit(1)
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
@@ -107,26 +109,25 @@ class BibsTransformer(MigrationTaskBase):
             self.folder_structure.migration_reports_file.name,
         )
 
-    def read_records(self, reader, source_file: FileDefinition):
-        with open(self.folder_structure.failed_bibs_file, "wb") as failed_bibs_file:
-            for idx, record in enumerate(reader):
-                self.mapper.migration_report.add_general_statistics(
-                    "Records in file before parsing"
-                )
-                try:
-                    # None = Something bad happened
-                    if record is None:
-                        self.report_failed_parsing(reader, source_file, failed_bibs_file, idx)
-                    # The normal case
-                    else:
-                        self.set_leader(record, self.mapper.migration_report)
-                        self.mapper.migration_report.add_general_statistics(
-                            "Records successfully parsed from MARC21",
-                        )
-                        self.processor.process_record(idx, record, source_file)
-                except TransformationRecordFailedError as error:
-                    error.log_it()
-            logging.info("Done reading %s records from file", idx + 1)
+    def read_records(self, reader, source_file: FileDefinition, failed_bibs_file: IOBase):
+        for idx, record in enumerate(reader):
+            self.mapper.migration_report.add_general_statistics(
+                "Records in file before parsing"
+            )
+            try:
+                # None = Something bad happened
+                if record is None:
+                    self.report_failed_parsing(reader, source_file, failed_bibs_file, idx)
+                # The normal case
+                else:
+                    self.set_leader(record, self.mapper.migration_report)
+                    self.mapper.migration_report.add_general_statistics(
+                        "Records successfully parsed from MARC21",
+                    )
+                    self.processor.process_record(idx, record, source_file)
+            except TransformationRecordFailedError as error:
+                error.log_it()
+        logging.info("Done reading %s records from file", idx + 1)
 
     def report_failed_parsing(self, reader, source_file, failed_bibs_file, idx):
         self.mapper.migration_report.add_general_statistics(
