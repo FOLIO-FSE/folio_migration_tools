@@ -1,5 +1,4 @@
 import logging
-from unittest import mock
 from unittest.mock import Mock
 
 from folioclient import FolioClient

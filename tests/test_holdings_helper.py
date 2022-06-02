@@ -1,3 +1,6 @@
+from copy import copy
+from copy import deepcopy
+
 import pytest
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -125,6 +128,29 @@ def test_merge_holdings_preserve_order():
     }
     assert merged_holding["holdingsStatements"][1] == dupe_stmt
     assert merged_holding["holdingsStatements"][3] == dupe_stmt
+
+
+def test_merge_holdings_statements_merge_if_sets_of_hs():
+    dupe_stmt_1 = {"statement": "stmtDUPE", "note": "noteDDUPE", "staffNote": ""}
+    dupe_stmt_2 = {"statement": "stmt3", "note": "stmt3", "staffNote": ""}
+    dupe_stmt_3 = deepcopy(dupe_stmt_1)
+    dupe_stmt_4 = deepcopy(dupe_stmt_2)
+    holding_1 = dict(
+        formerIds=["a", "b"],
+        electronicAccess=[{"uri": "2"}],
+        holdingsStatements=[dupe_stmt_1, dupe_stmt_2],
+    )
+
+    holding_2 = dict(
+        formerIds=["c", "d"],
+        electronicAccess=[{"uri": "1", "linkText": "1", "publicNote": "1", "relationshipId": "1"}],
+        holdingsStatements=[dupe_stmt_3, dupe_stmt_4],
+    )
+    merged_holding = HoldingsHelper.merge_holding(holding_1, holding_2)
+    assert (merged_holding["formerIds"]) == ["a", "b", "c", "d"]
+    assert merged_holding["holdingsStatements"][0] == dupe_stmt_1
+    assert merged_holding["holdingsStatements"][1] == dupe_stmt_2
+    assert len(merged_holding["holdingsStatements"]) == 2
 
 
 def test_merge_holding2():
