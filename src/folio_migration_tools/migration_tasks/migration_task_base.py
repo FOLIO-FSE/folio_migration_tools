@@ -83,8 +83,6 @@ class MigrationTaskBase:
         Raises:
             TransformationProcessError: _description_
 
-        Returns:
-            None
         """
         files = [source_path / f.file_name for f in file_defs if isfile(source_path / f.file_name)]
         if len(files) < len(file_defs):
