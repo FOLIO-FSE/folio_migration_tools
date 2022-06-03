@@ -59,10 +59,12 @@ class RulesMapperBase(MapperBase):
             self.last_batch_time = time.time()
 
     @staticmethod
-    def dedupe_rec(rec):
+    def dedupe_rec(rec, props_to_not_dedupe=None):
+        if props_to_not_dedupe is None:
+            props_to_not_dedupe = []
         # remove duplicates
         for key, value in rec.items():
-            if isinstance(value, list):
+            if key not in props_to_not_dedupe and isinstance(value, list):
                 res = []
                 for v in value:
                     if v not in res:
