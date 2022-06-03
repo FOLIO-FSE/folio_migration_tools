@@ -70,6 +70,22 @@ def test_get_marc_textual_stmt_correct_order():
         assert all_stmts[22] == stmt
 
 
+def test_get_marc_textual_stmt_correct_order_and_not_deduped():
+    path = "./tests/test_data/mfhd/c_record_repeated_holdings_statements.mrc"
+    with open(path, "rb") as marc_file:
+        reader = pymarc.MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record = next(reader)
+        res = HoldingsStatementsParser.get_holdings_statements(
+            record, "853", "863", "866", ["apa"], False
+        )
+        stmt = "1994-1998."
+        all_stmts = [f["statement"] for f in res["statements"]]
+        all_94s = [f for f in all_stmts if stmt == f]
+        assert len(all_94s) == 2
+
+
 def test_linked_fields_1():
     pattern_field = Field(
         tag="853",

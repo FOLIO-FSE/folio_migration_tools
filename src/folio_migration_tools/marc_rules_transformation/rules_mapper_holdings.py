@@ -104,7 +104,16 @@ class RulesMapperHoldings(RulesMapperBase):
             self.holdings_json_schema,
             FOLIONamespaces.holdings,
         )
-        self.dedupe_rec(cleaned_folio_holding)
+        props_to_not_dedupe = (
+            []
+            if self.task_configuration.deduplicate_holdings_statements
+            else [
+                "holdingsStatements",
+                "holdingsStatementsForIndexes",
+                "holdingsStatementsForSupplements",
+            ]
+        )
+        self.dedupe_rec(cleaned_folio_holding, props_to_not_dedupe)
         self.holdings_id_map[legacy_id] = self.get_id_map_dict(legacy_id, cleaned_folio_holding)
 
         self.report_folio_mapping(cleaned_folio_holding, self.schema)
