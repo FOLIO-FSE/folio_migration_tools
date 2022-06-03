@@ -367,3 +367,59 @@ def test_linked_fields_19():
     stmt = "v.1:no.1 (1948 Fall) - v.64:no.1 (2014 08)"
     ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
     assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_20():
+    pattern_field = get_sfs(r"=853  20$82$av.$b(*)$u6$vr$g(*)$i(year)$wb")
+    linked_value_field1 = get_sfs(r"=863  41$81.1$a2$b1/2$i1982$wg")
+    stmt = "v.2:1/2 (1982),"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_21():
+    pattern_field = get_sfs(r"=853  20$82$av.$b(*)$u6$vr$g(*)$i(year)$wb")
+    linked_value_field1 = get_sfs(r"=863  41$81.2$a6$b4$i1986$wg")
+    stmt = "v.6:4 (1986),"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_22():
+    pattern_field = get_sfs(r"=853  20$82$av.$b(*)$u6$vr$g(*)$i(year)$wb")
+    linked_value_field1 = get_sfs(r"=863  41$81.3$a7$b4$i1987$wg")
+    stmt = "v.7:4 (1987),"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_23():
+    pattern_field = get_sfs(r"=853  20$82$av.$b(*)$u6$vr$g(*)$i(year)$wb")
+    linked_value_field1 = get_sfs(r"=863  40$81.4$a14-16$b1-4$i1991-1993$wg")
+    stmt = "v.14:1 (1991) - v.16:4 (1993),"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_24():
+    pattern_field = get_sfs(r"=853  20$82$av.$b(*)$u6$vr$g(*)$i(year)$wb")
+    linked_value_field1 = get_sfs(r"=863  40$81.5$a17-26$b3/4-4$i1993-1999$wg")
+    stmt = "v.17:3/4 (1993) - v.26:4 (1999),"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_25():
+    pattern_field = get_sfs(r"=853  20$82$av.$b(*)$u6$vr$g(*)$i(year)$wb")
+    linked_value_field1 = get_sfs(r"=863  40$81.6$a28-40$b1-2$i1999-2005$wg")
+    stmt = "v.28:1 (1999) - v.40:2 (2005),"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_26():
+    pattern_field = get_sfs(r"=853  20$82$av.$b(*)$u6$vr$g(*)$i(year)$wb")
+    linked_value_field1 = get_sfs(r"=863  40$81.7$a41-46$b1-4$i2005-2008")
+    stmt = "v.41:1 (2005) - v.46:4 (2008)"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
