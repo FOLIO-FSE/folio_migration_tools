@@ -115,7 +115,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             ) as marc_file:
                 reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                 reader.hide_utf8_warnings = True
-                reader.force_utf8 = True
+                reader.force_utf8 = False
                 logging.info("Running %s", file_def.file_name)
                 read_records(reader, processor, file_def)
         except TransformationProcessError as tpe:
