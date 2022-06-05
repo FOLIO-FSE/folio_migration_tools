@@ -111,9 +111,7 @@ class BibsTransformer(MigrationTaskBase):
 
     def read_records(self, reader, source_file: FileDefinition, failed_bibs_file: IOBase):
         for idx, record in enumerate(reader):
-            self.mapper.migration_report.add_general_statistics(
-                "Records in file before parsing"
-            )
+            self.mapper.migration_report.add_general_statistics("Records in file before parsing")
             try:
                 # None = Something bad happened
                 if record is None:
