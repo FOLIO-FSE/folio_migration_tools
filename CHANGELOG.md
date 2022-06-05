@@ -1,5 +1,14 @@
 # Changelog
 
+## 1_4_2 (05/06/2022)
+
+#### bug
+
+- [**bug**] Holdings statements for indexes and supplementes are leaking into the regular holdings statements [#276](https://github.com/FOLIO-FSE/folio_migration_tools/issues/276)
+
+- [**bug**] UTF Handling of MFHD records are not handled the same way as bibs, leading to more encoding errors [#278]
+---
+
 ## 1_4_0 (04/06/2022)
 
 #### bug
