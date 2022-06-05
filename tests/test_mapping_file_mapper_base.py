@@ -1097,7 +1097,12 @@ def test_validate_no_leakage_between_properties():
             },
         ]
     }
-    record = {"stmt_1": "stmty", "id": "12", "stmt_2": "suppl", "stmt_3": "idx"}
+    record = {"stmt_1": "stmt", "id": "12", "stmt_2": "suppl", "stmt_3": "idx"}
     tfm = MyTestableFileMapper(schema, fake_holdings_map)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert len(folio_rec["holdingsStatements"]) == 1
+    assert folio_rec["holdingsStatements"][0]["statement"] == "stmt"
+    assert len(folio_rec["holdingsStatementsForIndexes"]) == 1
+    assert folio_rec["holdingsStatementsForIndexes"][0]["statement"] == "idx"
+    assert len(folio_rec["holdingsStatementsForSupplements"]) == 1
+    assert folio_rec["holdingsStatementsForSupplements"][0]["statement"] == "suppl"

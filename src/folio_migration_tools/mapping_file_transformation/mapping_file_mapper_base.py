@@ -352,7 +352,7 @@ class MappingFileMapperBase(MapperBase):
         required: list[str],
     ):
         resulting_array = []
-        keys_to_map = {k.split(".")[0] for k in self.folio_keys if k.startswith(prop_name)}
+        keys_to_map = {k.split(".")[0] for k in self.folio_keys if k.startswith(f"{prop_name}[")}
         for object_key in keys_to_map:
             temp_object = {}
             multi_field_props: List[str] = []
