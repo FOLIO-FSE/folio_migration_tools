@@ -1007,3 +1007,97 @@ def test_split_former_ids():
     assert "id1" in folio_rec["formerIds"]
     assert "id2" in folio_rec["formerIds"]
     assert "id3" in folio_rec["formerIds"]
+
+
+def test_validate_no_leakage_between_properties():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "holdingsStatements": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "statement": {
+                            "type": "string",
+                        },
+                        "note": {
+                            "type": "string",
+                        },
+                        "staffNote": {
+                            "type": "string",
+                        },
+                    },
+                },
+            },
+            "holdingsStatementsForIndexes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "statement": {
+                            "type": "string",
+                        },
+                        "note": {
+                            "type": "string",
+                        },
+                        "staffNote": {
+                            "type": "string",
+                        },
+                    },
+                },
+            },
+            "holdingsStatementsForSupplements": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "statement": {
+                            "type": "string",
+                        },
+                        "note": {
+                            "type": "string",
+                        },
+                        "staffNote": {
+                            "type": "string",
+                        },
+                    },
+                },
+            },
+        },
+    }
+    fake_holdings_map = {
+        "data": [
+            {
+                "folio_field": "holdingsStatements[0].statement",
+                "legacy_field": "stmt_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatementsForSupplements[0].statement",
+                "legacy_field": "stmt_2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatementsForIndexes[0].statement",
+                "legacy_field": "stmt_3",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"stmt_1": "stmty", "id": "12", "stmt_2": "suppl", "stmt_3": "idx"}
+    tfm = MyTestableFileMapper(schema, fake_holdings_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert len(folio_rec["holdingsStatements"]) == 1
