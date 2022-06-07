@@ -51,6 +51,7 @@ class LoansMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
     ):
         csv.register_dialect("tsv", delimiter="\t")
+        self.start_datetime = datetime.now(timezone.utc)
         self.migration_report = MigrationReport()
         self.valid_legacy_loans = []
         super().__init__(library_config, task_configuration)
@@ -183,7 +184,7 @@ class LoansMigrator(MigrationTaskBase):
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# Loans migration results   \n")
             report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
-            self.migration_report.write_migration_report(report_file)
+            self.migration_report.write_migration_report(report_file, self.start_datetime)
 
     def write_failed_loans_to_file(self):
         csv_columns = [

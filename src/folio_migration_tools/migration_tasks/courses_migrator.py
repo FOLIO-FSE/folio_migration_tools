@@ -116,7 +116,9 @@ class CoursesMigrator(MigrationTaskBase):
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# Courses migration results   \n")
             report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
-            self.mapper.migration_report.write_migration_report(report_file)
+            self.mapper.migration_report.write_migration_report(
+                report_file, self.mapper.start_datetime
+            )
 
 
 def timings(t0, t0func, num_objects):
