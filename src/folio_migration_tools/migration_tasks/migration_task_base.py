@@ -149,16 +149,15 @@ class MigrationTaskBase:
                 self._log(DATA_ISSUE_LVL_NUM, message, args, **kws)
 
         logging.Logger.data_issues = data_issues
-
         logger = logging.getLogger()
         logger.handlers = []
         formatter = logging.Formatter(
-            "%(asctime)s\t%(levelname)s\t%(message)s\t%(filename)s:%(lineno)d"
+            "%(asctime)s\t%(levelname)s\t%(message)s\t%(task_configuration_name)s"
         )
         stream_handler = logging.StreamHandler()
         stream_handler.addFilter(ExcludeLevelFilter(25))
         stream_handler.addFilter(ExcludeLevelFilter(26))
-
+        stream_handler.addFilter(TaskNameFilter(self.task_configuration.name))
         if debug:
             logger.setLevel(logging.DEBUG)
             stream_handler.setLevel(logging.DEBUG)
@@ -169,12 +168,15 @@ class MigrationTaskBase:
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
-        file_formatter = logging.Formatter("%(message)s")
+        file_formatter = logging.Formatter(
+            "%(asctime)s\t%(message)s\t%(task_configuration_name)s\t%(filename)s:%(lineno)d"
+        )
         file_handler = logging.FileHandler(
             filename=self.folder_structure.transformation_log_path, mode="w"
         )
         file_handler.addFilter(ExcludeLevelFilter(25))
         file_handler.addFilter(ExcludeLevelFilter(26))
+        file_handler.addFilter(TaskNameFilter(self.task_configuration.name))
         # file_handler.addFilter(LevelFilter(0, 20))
         file_handler.setFormatter(file_formatter)
         file_handler.setLevel(logging.INFO)
@@ -283,6 +285,16 @@ class ExcludeLevelFilter(logging.Filter):
 
     def filter(self, record):
         return record.levelno != self.level
+
+
+class TaskNameFilter(logging.Filter):
+    def __init__(self, task_configuration_name):
+        super().__init__()
+        self.task_configuration_name = task_configuration_name
+
+    def filter(self, record):
+        record.task_configuration_name = self.task_configuration_name
+        return True
 
 
 class LevelFilter(logging.Filter):
