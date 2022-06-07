@@ -3,7 +3,6 @@ import logging
 import sys
 import time
 import traceback
-from datetime import datetime as dt
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Field
@@ -248,8 +247,9 @@ class HoldingsProcessor:
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             report_file.write("# MFHD records transformation results   \n")
-            report_file.write(f"Time Finished: {dt.isoformat(dt.utcnow())}   \n")
-            self.mapper.migration_report.write_migration_report(report_file)
+            self.mapper.migration_report.write_migration_report(
+                report_file, self.mapper.start_datetime
+            )
             Helper.print_mapping_report(
                 report_file,
                 self.mapper.parsed_records,
