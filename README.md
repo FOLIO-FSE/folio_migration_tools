@@ -11,11 +11,11 @@ FOLIO Migration Tools currently covers the following data sets:
 * Catalog (Inventory and SRS in FOLIO terminology)
 * Circulation transactions (Open loans and requests)
 * Users/Patrons (In FOLIO, these share the same app/database)
+* Courses and Reserves (Course reserves)
 
 ### What additional functionality is on the roadmap?
 This is the loose roadmap, in order of most likely implementations first
 * Organizations (Vendor records)
-* Courses (Course reserves)
 * Orders
 * ERM-related objects
 * Financial records
