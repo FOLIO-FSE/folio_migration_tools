@@ -17,7 +17,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.library_configuration import FileDefinition, LibraryConfiguration
-from src.folio_migration_tools.mapping_file_transformation.organization_mapper import (
+from folio_migration_tools.mapping_file_transformation.organization_mapper import (
     OrganizationMapper,
 )
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -111,7 +111,7 @@ class OrganizationTransformer(MigrationTaskBase):
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
                     folio_rec, legacy_id = self.mapper.do_map(
-                        record, f"row {idx}", FOLIONamespaces.items
+                        record, f"row {idx}", FOLIONamespaces.organizations
                     )
                     if idx == 0:
                         logging.info("First FOLIO record:")
@@ -128,7 +128,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, excepion)
 
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of Legacy items in file"
+                    "Number of objects in source data file"
                 )
 
                 # TODO Rewrite to base % value on number of rows in file
