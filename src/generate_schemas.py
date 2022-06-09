@@ -1,14 +1,15 @@
 import json
 import os
 import sys
-from textwrap import indent
 from argparse_prompt import PromptParser
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.courses_mapper import (
     CoursesMapper,
 )
-from folio_migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
+from folio_migration_tools.mapping_file_transformation.organization_mapper import (
+    OrganizationMapper,
+)
 from folio_migration_tools.migration_tasks import *  # noqa: 403
 from folio_migration_tools.migration_tasks import migration_task_base
 
@@ -50,8 +51,11 @@ def inheritors(base_class):
 def generate_extended_folio_object_schema(args):
     # Generate an organization schema with other objects baked in
     organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-organizations-storage", "mod-orgs", "organization")
-    with open(os.path.join(args.results_path, f"FOLIO_organization_extended_object_schema.json"), "w") as outfile:
+        "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
+    )
+    with open(
+        os.path.join(args.results_path, "FOLIO_organization_extended_object_schema.json"), "w"
+    ) as outfile:
         outfile.write(json.dumps(organization_schema, indent=4))
 
     courses_schema = CoursesMapper.get_composite_course_schema()

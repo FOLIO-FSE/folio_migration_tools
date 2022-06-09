@@ -54,6 +54,7 @@ flake8-bugbear = "*"
 flake8-bandit = "*"
 safety = "*"
 defusedxml = "*"
+flake8 = "*"
 
 [requires]
 python_version = "3.9"

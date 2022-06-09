@@ -4,35 +4,30 @@ import json
 import logging
 import sys
 import time
-import traceback
-import uuid
 from os.path import isfile
-from pathlib import Path
-from typing import List, Optional
-
+from typing import List
+from pydantic.main import BaseModel
 from folio_uuid.folio_namespaces import FOLIONamespaces
+
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-
-from folio_migration_tools.folder_structure import FolderStructure
-from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    LibraryConfiguration
+from folio_migration_tools.library_configuration import FileDefinition, LibraryConfiguration
+from src.folio_migration_tools.mapping_file_transformation.organization_mapper import (
+    OrganizationMapper,
 )
-
-from folio_migration_tools.mapping_file_transformation.organization_mapper import OrganizationMapper
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
-from pydantic.main import BaseModel
-
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
+
 
 # Read files and do some work
 class OrganizationTransformer(MigrationTaskBase):
@@ -53,8 +48,8 @@ class OrganizationTransformer(MigrationTaskBase):
         use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        super().__init__(library_config, task_config, use_logging)
 
+        super().__init__(library_config, task_config, use_logging)
         self.object_type_name = self.get_object_type().name
         self.task_config = task_config
         self.files = self.list_source_files()
@@ -66,7 +61,7 @@ class OrganizationTransformer(MigrationTaskBase):
         )
         self.results_path = self.folder_structure.created_objects_path
         self.failed_files: List[str] = list()
-    
+
         self.folio_keys = []
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.organization_map
@@ -79,9 +74,9 @@ class OrganizationTransformer(MigrationTaskBase):
             #     self.folder_structure.mapping_files_folder,
             #     self.folio_keys,
             #     ),
-            self.library_configuration
-            )
-        
+            self.library_configuration,
+        )
+
     def list_source_files(self):
         # Source data files
         files = [
@@ -92,7 +87,8 @@ class OrganizationTransformer(MigrationTaskBase):
         if not any(files):
             ret_str = ",".join(f.file_name for f in self.task_config.files)
             raise TransformationProcessError(
-                f"Files {ret_str} not found in {self.folder_structure.data_folder} / {self.object_type_name}"
+                f"Files {ret_str} not found in"
+                "{self.folder_structure.data_folder} / {self.object_type_name}"
             )
         logging.info("Files to process:")
         for filename in files:
@@ -100,18 +96,13 @@ class OrganizationTransformer(MigrationTaskBase):
         return files
 
     def process_single_file(self, filename):
-        with open(
-            filename, encoding="utf-8-sig") as records_file, open(
+        with open(filename, encoding="utf-8-sig") as records_file, open(
             self.folder_structure.created_objects_path, "w+"
-            ) as results_file:
-            self.mapper.migration_report.add_general_statistics(
-                "Number of files processed"
-            )
+        ) as results_file:
+            self.mapper.migration_report.add_general_statistics("Number of files processed")
             start = time.time()
             records_processed = 0
-            for idx, record in enumerate(
-                self.mapper.get_objects(records_file, filename)
-            ):
+            for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
                 records_processed += 1
 
                 try:
@@ -140,7 +131,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     "Number of Legacy items in file"
                 )
 
-                #TODO Rewrite to base % value on number of rows in file
+                # TODO Rewrite to base % value on number of rows in file
                 if idx > 1 and idx % 50 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
@@ -154,7 +145,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 f"Done processing {filename} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
-    
+
     def do_work(self):
         logging.info("Getting started!")
         for file in self.files:
@@ -168,17 +159,12 @@ class OrganizationTransformer(MigrationTaskBase):
                     "Check source files for empty lines or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.migration_report.add(
-                    Blurbs.FailedFiles, f"{file} - {ee}"
-                )
+                self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
                 sys.exit()
-    
-    
+
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
-        with open(
-            self.folder_structure.migration_reports_file, "w"
-        ) as migration_report_file:
+        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             logging.info(
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
@@ -191,4 +177,3 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
-
