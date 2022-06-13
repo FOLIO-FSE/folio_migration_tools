@@ -76,7 +76,6 @@ class OrganizationTransformer(MigrationTaskBase):
         )
 
     def list_source_files(self):
-        # Source data files
         files = [
             self.folder_structure.data_folder / self.object_type_name / f.file_name
             for f in self.task_config.files
