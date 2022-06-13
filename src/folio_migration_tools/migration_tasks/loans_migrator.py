@@ -57,7 +57,7 @@ class LoansMigrator(MigrationTaskBase):
                 "Attempting to retrieve tenant timezone configuration..."
             )
             self.tenant_timezone_str = json.loads(self.folio_client.folio_get_single_object(
-                "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings"
+                "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
                 )["configs"][0]["value"])["timezone"]
             logging.info(
                 "Tenant timezone is: %s", 
