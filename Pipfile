@@ -26,6 +26,7 @@ pre-commit = "*"
 darglint = "*"
 python-dateutil = "*"
 lxml = "*"
+build = "*"
 
 [requires]
 python_version = "3.9"
