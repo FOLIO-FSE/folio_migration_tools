@@ -110,12 +110,16 @@ class OrganizationTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.organizations
                     )
+
+                    clean_folio_rec = OrganizationTransformer.clean_org(folio_rec)
+
                     if idx == 0:
                         logging.info("First FOLIO record:")
-                        logging.info(json.dumps(folio_rec, indent=4))
+                        logging.info(json.dumps(clean_folio_rec, indent=4))
 
                     # Writes record to file
-                    Helper.write_to_file(results_file, folio_rec)
+                    Helper.write_to_file(results_file, clean_folio_rec)
+
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -177,3 +181,29 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
+
+
+    @staticmethod
+    def clean_org(folio_rec):
+        if addresses := folio_rec.get("addresses", []):
+            primary_address_exists = False
+            empty_addresses = []
+
+            for address in addresses:
+                # Check if the address has content
+                address_content = {k:v for k,v in address.items() if k != "isPrimary"}
+                if not any(address_content.values()):
+                    empty_addresses.append(address)
+
+                # Check if the address is primary
+                if address["isPrimary"] is True:
+                    primary_address_exists = True
+
+            # If none of the existing addresses is pimrary
+            # Make the first one primary
+            if not primary_address_exists:
+                addresses[0]["isPrimary"] = True
+
+            folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
+
+            return folio_rec
