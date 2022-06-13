@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import sys
 import requests
 from requests.exceptions import HTTPError
@@ -68,10 +69,33 @@ class OrganizationMapper(MappingFileMapperBase):
         Given a repository owner, a repository, a module name and the name
         of a FOLIO acquisition object, returns a schema for that object that
         also includes the schemas of any other referenced acq objects.
+
+        Args:
+            owner (_type_): _description_
+            repo (_type_): _description_
+            module (_type_): _description_
+            object (_type_): _description_
+
+        Returns:
+            _type_: _description_
         """
         try:
+
+            # Authenticate when calling GitHub, using an API key stored in .env
+            github_headers = {
+                "content-type": "application/json",
+                "User-Agent": "FOLIO Migration Tools (https://github.com/FOLIO-FSE/folio_migration_tools/)",  # noqa:E501,B950
+            }
+
+            if os.environ.get("GITHUB_TOKEN"):
+                logging.info("Using GITHB_TOKEN environment variable for Gihub API Access")
+                github_headers["authorization"] = f"token {os.environ.get('GITHUB_TOKEN')}"
+
+            # Start talkign to GitHub...
             github_path = "https://raw.githubusercontent.com"
-            submodules = OrganizationMapper.get_submodules_of_latest_release(owner, repo)
+            submodules = OrganizationMapper.get_submodules_of_latest_release(
+                owner, repo, github_headers
+            )
 
             # Get the sha's of sunmodules acq-models and raml_utils
             acq_models_sha = next(
@@ -84,14 +108,14 @@ class OrganizationMapper(MappingFileMapperBase):
 
             acq_models_path = f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas"
 
-            req = requests.get(f"{acq_models_path}/{object}.json")
+            req = requests.get(f"{acq_models_path}/{object}.json", headers=github_headers)
             req.raise_for_status()
 
             object_schema = json.loads(req.text)
 
             # Fetch referenced schemas
             extended_object_schema = OrganizationMapper.build_extended_object(
-                object_schema, acq_models_path
+                object_schema, acq_models_path, github_headers
             )
 
             return extended_object_schema
@@ -105,17 +129,26 @@ class OrganizationMapper(MappingFileMapperBase):
             sys.exit(2)
 
     @staticmethod
-    def get_submodules_of_latest_release(owner, repo):
+    def get_submodules_of_latest_release(owner, repo, github_headers):
         """
         Given a repository owner and a repository, identifies the latest
         release of the repository and returns the submodules associated with
         this release.
+
+        Args:
+            owner (_type_): _description_
+            repo (_type_): _description_
+            github_headers (_type_): _description_
+
+        Returns:
+            _type_: _description_
         """
+
         github_path = "https://api.github.com/repos"
 
         # Get metadata for the latest release
         latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
-        req = requests.get(f"{latest_release_path}")
+        req = requests.get(f"{latest_release_path}", headers=github_headers)
         req.raise_for_status()
         latest_release = json.loads(req.text)
 
@@ -125,7 +158,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         # Get the tree for the latest release
         tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
-        req = requests.get(tree_path)
+        req = requests.get(tree_path, headers=github_headers)
         req.raise_for_status()
         release_tree = json.loads(req.text)
 
@@ -134,7 +167,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         # Get the tree for the ramls folder
         ramls_path = f"{github_path}/{owner}/{repo}/git/trees/{ramls_sha}"
-        req = requests.get(ramls_path)
+        req = requests.get(ramls_path, headers=github_headers)
         req.raise_for_status()
         ramls_tree = json.loads(req.text)
 
@@ -144,11 +177,19 @@ class OrganizationMapper(MappingFileMapperBase):
         return submodules
 
     @staticmethod
-    def build_extended_object(object_schema, submodule_path):
+    def build_extended_object(object_schema, submodule_path, github_headers):
         """
         Takes an object schema (for example an organization) and the path to a
         submodule repository and returns the same schema with the full schemas
-         of subordinate objects (for example aliases).
+        of subordinate objects (for example aliases).
+
+        Args:
+            object_schema (_type_): _description_
+            submodule_path (_type_): _description_
+            github_headers (_type_): _description_
+
+        Returns:
+            _type_: _description_
         """
 
         supported_types = ["string", "boolean", "number", "integer", "text", "object", "array"]
@@ -175,7 +216,7 @@ class OrganizationMapper(MappingFileMapperBase):
                     ref_object = property_level1["$ref"]
                     schema_url = f"{submodule_path}/{ref_object}"
 
-                    req = requests.get(schema_url)
+                    req = requests.get(schema_url, headers=github_headers)
                     req.raise_for_status()
 
                     property_level1 = dict(property_level1, **json.loads(req.text))
@@ -192,7 +233,7 @@ class OrganizationMapper(MappingFileMapperBase):
                     ref_object = property_level1["items"]["$ref"]
                     schema_url = f"{submodule_path}/{ref_object}"
 
-                    req = requests.get(schema_url)
+                    req = requests.get(schema_url, headers=github_headers)
                     req.raise_for_status()
 
                     property_level1["items"] = dict(
