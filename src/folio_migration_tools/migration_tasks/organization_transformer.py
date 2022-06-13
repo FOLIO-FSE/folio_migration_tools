@@ -167,7 +167,9 @@ class OrganizationTransformer(MigrationTaskBase):
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )
-            self.mapper.migration_report.write_migration_report(migration_report_file, self.mapper.start_datetime)
+            self.mapper.migration_report.write_migration_report(
+                migration_report_file, self.mapper.start_datetime
+                )
             Helper.print_mapping_report(
                 migration_report_file,
                 self.total_records,
