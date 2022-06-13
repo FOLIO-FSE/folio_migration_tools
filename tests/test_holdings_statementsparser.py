@@ -364,7 +364,7 @@ def test_linked_fields_19():
     linked_value_field1 = get_sfs(
         r"=863  \\$81.1$a1-64$b1-1$i1948-2014$j23-08$zPrint copy canceled in 2014."
     )
-    stmt = "v.1:no.1 (1948 Fall) - v.64:no.1 (2014 08)"
+    stmt = "v.1:no.1 (1948 Fall) - v.64:no.1 (2014 Aug.)"
     ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
     assert ret["statement"]["statement"] == stmt
 
@@ -423,3 +423,35 @@ def test_linked_fields_26():
     stmt = "v.41:1 (2005) - v.46:4 (2008)"
     ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
     assert ret["statement"]["statement"] == stmt
+
+
+def test_linked_fields_27():
+    pattern_field = get_sfs(r"=853  \\$81$av.$bno.$i(year)$j(season)")
+    linked_value_field1 = get_sfs(
+        r"=863  \\$81.1$a1-64$b1-1$i1948-2014$j23-08$zPrint copy canceled in 2014."
+    )
+    stmt = "v.1:no.1 (1948 Fall) - v.64:no.1 (2014 Aug.)"
+    ret = HoldingsStatementsParser.parse_linked_field(pattern_field, linked_value_field1)
+    assert ret["statement"]["statement"] == stmt
+
+
+def test_g_s():
+    r = HoldingsStatementsParser.g_s("21")
+    assert r == "Spring"
+
+
+def test_g_m():
+    r = HoldingsStatementsParser.g_m(1)
+    assert r == "Jan."
+
+
+def test_get_season():
+    r = HoldingsStatementsParser.get_season("21")
+    assert r == "Spring"
+
+
+def test_get_month():
+    r = HoldingsStatementsParser.get_month("01")
+    assert r == "Jan."
+    r = HoldingsStatementsParser.get_month("05")
+    assert r == "May"

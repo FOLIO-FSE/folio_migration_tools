@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from datetime import timezone
 
 from folio_migration_tools.report_blurbs import Blurbs
 
@@ -47,14 +49,27 @@ class MigrationReport:
         """
         self.add(Blurbs.GeneralStatistics, measure_to_add)
 
-    def write_migration_report(self, report_file):
+    def write_migration_report(
+        self,
+        report_file,
+        time_started: datetime,
+    ):
         """Writes the migration report, including section headers, section blurbs, and values.
 
         Args:
-            report_file (_type_): _description_
+            report_file (_type_):path to file
+            time_started (datetime): The datetime stamp (in utc), of when the process started
         """
+        time_finished = datetime.now(timezone.utc)
         report_file.write(f"{Blurbs.Introduction[1]}\n")
-
+        report_file.write("## Timings   \n")
+        report_file.write("   \n")
+        report_file.write("Measure | Value   \n")
+        report_file.write("--- | ---:   \n")
+        report_file.write(f"Time Started: | {datetime.isoformat(time_started)}   \n")
+        report_file.write(f"Time Finished: | {datetime.isoformat(time_finished)}   \n")
+        report_file.write(f"Elapsed time: | {time_finished-time_started}   \n")
+        logging.info(f"Elapsed time: {time_finished-time_started}")
         for a in self.report:
             blurb = self.report[a].get("blurb_tuple") or ("", "")
             report_file.write("   \n")

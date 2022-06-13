@@ -1,9 +1,11 @@
+import copy
 import json
 import logging
 import sys
 import time
 import traceback
 from datetime import datetime
+from datetime import timezone
 from typing import List
 from typing import Optional
 from uuid import uuid4
@@ -16,7 +18,9 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 def write_failed_batch_to_file(batch, file):
@@ -45,6 +49,9 @@ class BatchPoster(MigrationTaskBase):
     ):
         super().__init__(library_config, task_config, use_logging)
         self.task_config = task_config
+        self.start_datetime = datetime.now(timezone.utc)
+        self.migration_report = MigrationReport()
+        self.performing_rerun = False
         self.failed_ids = []
         self.first_batch = True
         self.api_path = list_objects(self.task_config.object_type)
@@ -54,7 +61,6 @@ class BatchPoster(MigrationTaskBase):
         logging.info("Batch size is %s", self.batch_size)
         self.processed = 0
         self.failed_batches = 0
-        self.failed_records = 0
         self.users_created = 0
         self.users_updated = 0
         self.users_per_group = {}
@@ -68,27 +74,28 @@ class BatchPoster(MigrationTaskBase):
             if self.task_config.object_type == "SRS":
                 self.create_snapshot()
             with open(self.folder_structure.failed_recs_path, "w") as failed_recs_file:
-                num_records = 0
                 for file_def in self.task_config.files:
                     path = self.folder_structure.results_folder / file_def.file_name
                     with open(path) as rows:
                         logging.info("Running %s", path)
                         last_row = ""
-                        for num_records, row in enumerate(rows, start=1):
+                        for self.processed, row in enumerate(rows, start=1):
                             last_row = row
                             if row.strip():
                                 try:
                                     if self.task_config.object_type == "Extradata":
-                                        self.post_extra_data(row, num_records, failed_recs_file)
+                                        self.post_extra_data(row, self.processed, failed_recs_file)
                                     else:
                                         json_rec = json.loads(row.split("\t")[-1])
                                         if self.task_config.object_type == "SRS":
                                             json_rec["snapshotId"] = self.snapshot_id
-                                        if num_records == 1:
+                                        if self.processed == 1:
                                             logging.info(json.dumps(json_rec, indent=True))
                                         batch.append(json_rec)
                                         if len(batch) == int(self.batch_size):
-                                            self.post_batch(batch, failed_recs_file, num_records)
+                                            self.post_batch(
+                                                batch, failed_recs_file, self.processed
+                                            )
                                             batch = []
                                 except UnicodeDecodeError as unicode_error:
                                     self.handle_unicode_error(unicode_error, last_row)
@@ -97,7 +104,7 @@ class BatchPoster(MigrationTaskBase):
                                         tpe,
                                         last_row,
                                         batch,
-                                        num_records,
+                                        self.processed,
                                         failed_recs_file,
                                     )
                                     logging.critical("Halting %s", tpe)
@@ -106,19 +113,19 @@ class BatchPoster(MigrationTaskBase):
                                         exception,
                                         last_row,
                                         batch,
-                                        num_records,
+                                        self.processed,
                                         failed_recs_file,
                                     )
                                     batch = []
 
                 if self.task_config.object_type != "Extradata" and any(batch):
                     try:
-                        self.post_batch(batch, failed_recs_file, num_records)
+                        self.post_batch(batch, failed_recs_file, self.processed)
                     except Exception as exception:
                         self.handle_generic_exception(
-                            exception, last_row, batch, num_records, failed_recs_file
+                            exception, last_row, batch, self.processed, failed_recs_file
                         )
-                logging.info("Done posting %s records. ", (num_records))
+                logging.info("Done posting %s records. ", (self.processed))
         except Exception as ee:
             if self.task_config.object_type == "SRS":
                 self.commit_snapshot()
@@ -156,9 +163,10 @@ class BatchPoster(MigrationTaskBase):
 
     def handle_generic_exception(self, exception, last_row, batch, num_records, failed_recs_file):
         logging.error("%s", exception)
+        self.migration_report.add(Blurbs.Details, "Generic exceptions (see log for details)")
         # logging.error("Failed row: %s", last_row)
         self.failed_batches += 1
-        self.failed_records += len(batch)
+        self.num_failures += len(batch)
         write_failed_batch_to_file(batch, failed_recs_file)
         logging.info("Resetting batch...Number of failed batches: %s", self.failed_batches)
         batch = []
@@ -168,6 +176,7 @@ class BatchPoster(MigrationTaskBase):
             sys.exit(1)
 
     def handle_unicode_error(self, unicode_error, last_row):
+        self.migration_report.add(Blurbs.Details, "Encoding errors")
         logging.info("=========ERROR==============")
         logging.info(
             "%s Posting failed. Encoding error reading file",
@@ -192,7 +201,7 @@ class BatchPoster(MigrationTaskBase):
                     "Batch Size: %s Request size: %s "
                 ),
                 num_records,
-                self.failed_records,
+                self.num_failures,
                 response.elapsed.total_seconds(),
                 len(batch),
                 get_req_size(response),
@@ -201,7 +210,8 @@ class BatchPoster(MigrationTaskBase):
             json_report = json.loads(response.text)
             self.users_created += json_report.get("createdRecords", 0)
             self.users_updated += json_report.get("updatedRecords", 0)
-            self.failed_records += json_report.get("failedRecords", 0)
+            self.num_posted = self.users_updated + self.users_created
+            self.num_failures += json_report.get("failedRecords", 0)
             if json_report.get("failedRecords", 0) > 0:
                 logging.error(
                     "%s users in batch failed to load",
@@ -217,6 +227,7 @@ class BatchPoster(MigrationTaskBase):
                         failed_user.get("externalSystemId", ""),
                         failed_user.get("errorMessage", ""),
                     )
+                    self.migration_report.add(Blurbs.Details, failed_user.get("errorMessage", ""))
             logging.info(
                 (
                     "Posting successful! Total rows: %s Total failed: %s "
@@ -224,7 +235,7 @@ class BatchPoster(MigrationTaskBase):
                     "Message from server: %s"
                 ),
                 num_records,
-                self.failed_records,
+                self.num_failures,
                 self.users_created,
                 self.users_updated,
                 response.elapsed.total_seconds(),
@@ -302,28 +313,47 @@ class BatchPoster(MigrationTaskBase):
                     "Failed records: %s failed records in %s "
                     "failed batches. Failed records saved to %s"
                 ),
-                self.failed_records,
+                self.num_failures,
                 self.failed_batches,
                 self.folder_structure.failed_recs_path,
             )
-
         else:
             logging.info("Done posting % records. % failed", self.num_posted, self.num_failures)
 
+        run = "second time" if self.performing_rerun else "first time"
+        self.migration_report.set(
+            Blurbs.GeneralStatistics, f"Records processed {run}", self.processed
+        )
+        self.migration_report.set(
+            Blurbs.GeneralStatistics, f"Records posted {run}", self.num_posted
+        )
+        self.migration_report.set(
+            Blurbs.GeneralStatistics, f"Failed to post {run}", self.num_failures
+        )
         self.rerun_run()
+        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
+            report_file.write("# Reserves migration results   \n")
+            report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
+            self.migration_report.write_migration_report(report_file, self.start_datetime)
 
     def rerun_run(self):
-        if self.task_config.rerun_failed_records and (
-            self.failed_records > 0 or self.num_failures > 0
-        ):
-            logging.info("Rerunning the failed records from the load with a batchsize of 1")
+        if self.task_config.rerun_failed_records and (self.num_failures > 0):
+            logging.info(
+                "Rerunning the %s failed records from the load with a batchsize of 1",
+                self.num_failures,
+            )
             try:
                 self.task_config.batch_size = 1
                 self.task_config.files = [
                     FileDefinition(file_name=str(self.folder_structure.failed_recs_path.name))
                 ]
+                temp_report = copy.deepcopy(self.migration_report)
+                temp_start = self.start_datetime
                 self.task_config.rerun_failed_records = False
                 self.__init__(self.task_config, self.library_configuration)
+                self.performing_rerun = True
+                self.migration_report = temp_report
+                self.start_datetime = temp_start
                 self.do_work()
                 self.wrap_up()
                 logging.info("Done rerunning the posting")
