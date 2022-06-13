@@ -15,7 +15,7 @@
 
 - [**enhancement/new feature**] Allow month codes in season fields and vice versa when parsing 853/863 combos [#283](https://github.com/FOLIO-FSE/folio_migration_tools/issues/283)
 - [**enhancement/new feature**][**good first issue**] Include task name in INFO output [#245](https://github.com/FOLIO-FSE/folio_migration_tools/issues/245)
-- [**enhancement/new feature**] Create transformation task for simple organizations + then add related objects (contacts, interfaces, etc) [#146](https://github.com/FOLIO-FSE/folio_migration_tools/issues/146)
+- [**enhancement/new feature**] Create transformation task for simple organizations [#146](https://github.com/FOLIO-FSE/folio_migration_tools/issues/146)
 
 #### reporting
 
