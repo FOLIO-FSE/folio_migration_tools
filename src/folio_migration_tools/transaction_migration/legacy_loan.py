@@ -59,7 +59,7 @@ class LegacyLoan(object):
                     self.tenant_timezone
                 )         
         except Exception:
-            temp_date_out = datetime.now(timezone.utc)
+            temp_date_out = datetime.now(timezone.utc)#TODO: Consider moving this assignment block above the temp_date_due
             self.errors.append(("Parse date failure. Setting UTC NOW", "out_date"))
 
         # good to go, set properties
@@ -67,8 +67,8 @@ class LegacyLoan(object):
         self.patron_barcode: str = legacy_loan_dict["patron_barcode"].strip()
         self.due_date: datetime = temp_date_due
         self.out_date: datetime = temp_date_out
-        self.make_utc()
         self.correct_for_1_day_loans()
+        self.make_utc()
         self.renewal_count = int(legacy_loan_dict["renewal_count"])
         self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
@@ -76,7 +76,7 @@ class LegacyLoan(object):
 
     def correct_for_1_day_loans(self):
         try:
-            if self.due_date <= self.out_date:
+            if self.due_date.date() <= self.out_date.date():
                 if self.due_date.hour == 0:
                     self.due_date = self.due_date.replace(hour=23, minute=59)
                 if self.out_date.hour == 0:
