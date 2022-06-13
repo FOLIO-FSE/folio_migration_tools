@@ -169,7 +169,8 @@ class OrganizationTransformer(MigrationTaskBase):
             )
             self.mapper.migration_report.write_migration_report(
                 migration_report_file, self.mapper.start_datetime
-                )
+            )
+
             Helper.print_mapping_report(
                 migration_report_file,
                 self.total_records,
