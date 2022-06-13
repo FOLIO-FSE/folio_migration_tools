@@ -36,7 +36,7 @@ class LegacyLoan(object):
         try:
             temp_date_due: datetime = parse(legacy_loan_dict["due_date"])
             if temp_date_due.tzinfo != tz.UTC:
-                temp_date_due.replace(tzinfo=self.tenant_timezone)
+                temp_date_due = temp_date_due.replace(tzinfo=self.tenant_timezone)
                 logging.info(
                     "Provided due_date is not UTC, setting tzinfo to tenant timezone (%s)",
                     self.tenant_timezone
@@ -53,7 +53,7 @@ class LegacyLoan(object):
         try:
             temp_date_out: datetime = parse(legacy_loan_dict["out_date"])
             if temp_date_out.tzinfo != tz.UTC:
-                temp_date_out.replace(tzinfo=self.tenant_timezone)
+                temp_date_out = temp_date_out.replace(tzinfo=self.tenant_timezone)
                 logging.info(
                     "Provided out_date is not UTC, setting tzinfo to tenant timezone (%s)",
                     self.tenant_timezone
