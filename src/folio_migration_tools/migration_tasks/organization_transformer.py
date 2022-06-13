@@ -120,7 +120,6 @@ class OrganizationTransformer(MigrationTaskBase):
                     # Writes record to file
                     Helper.write_to_file(results_file, clean_folio_rec)
 
-
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as error:
@@ -182,7 +181,6 @@ class OrganizationTransformer(MigrationTaskBase):
             )
         logging.info("All done!")
 
-
     @staticmethod
     def clean_org(folio_rec):
         if addresses := folio_rec.get("addresses", []):
@@ -191,7 +189,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
             for address in addresses:
                 # Check if the address has content
-                address_content = {k:v for k,v in address.items() if k != "isPrimary"}
+                address_content = {k: v for k, v in address.items() if k != "isPrimary"}
                 if not any(address_content.values()):
                     empty_addresses.append(address)
 
