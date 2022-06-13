@@ -1,5 +1,5 @@
+from zoneinfo import ZoneInfo
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
-from dateutil import tz
 
 def test_init():
     loan_dict = {
@@ -10,7 +10,7 @@ def test_init():
         "renewal_count": "1",
         "next_item_status": "Checked out",
     }
-    tenant_timezone = tz.gettz("UTC")
+    tenant_timezone = ZoneInfo("UTC")
     legacy_loan = LegacyLoan(loan_dict, tenant_timezone)
     assert legacy_loan.patron_barcode == "the barcode with leading space"
     assert legacy_loan.item_barcode == "the barcode with trailing space"
@@ -28,7 +28,7 @@ def test_init_tz():
         "renewal_count": "1",
         "next_item_status": "Checked out",
     }
-    tenant_timezone = tz.gettz("America/Chicago")
+    tenant_timezone = ZoneInfo("America/Chicago")
     legacy_loan = LegacyLoan(loan_dict, tenant_timezone)
     assert legacy_loan.patron_barcode == "the barcode with leading space"
     assert legacy_loan.item_barcode == "the barcode with trailing space"
@@ -46,7 +46,7 @@ def test_init_tz_2():
         "renewal_count": "1",
         "next_item_status": "Checked out",
     }
-    tenant_timezone = tz.gettz("UTC")
+    tenant_timezone = ZoneInfo("UTC")
     legacy_loan = LegacyLoan(loan_dict, tenant_timezone)
     assert legacy_loan.due_date.isoformat() == "2019-02-22T23:59:00+00:00"
     assert legacy_loan.out_date.isoformat() == "2019-02-22T10:53:00+00:00"
@@ -62,7 +62,7 @@ def test_init_tz_3():
         "renewal_count": "1",
         "next_item_status": "Checked out",
     }
-    tenant_timezone = tz.gettz("Australia/Sydney")
+    tenant_timezone = ZoneInfo("Australia/Sydney")
     legacy_loan = LegacyLoan(loan_dict, tenant_timezone)
     assert legacy_loan.patron_barcode == "the barcode with leading space"
     assert legacy_loan.item_barcode == "the barcode with trailing space"
@@ -79,7 +79,7 @@ def test_init_tz_4():# Test dates with(out) DST
         "renewal_count": "1",
         "next_item_status": "Checked out",
     }
-    tenant_timezone = tz.gettz("Australia/Sydney")
+    tenant_timezone = ZoneInfo("Australia/Sydney")
     legacy_loan = LegacyLoan(loan_dict, tenant_timezone)
     assert legacy_loan.patron_barcode == "the barcode with leading space"
     assert legacy_loan.item_barcode == "the barcode with trailing space"
@@ -96,7 +96,7 @@ def test_init_tz_5():# Test dates with(out) DST
         "renewal_count": "1",
         "next_item_status": "Checked out",
     }
-    tenant_timezone = tz.gettz("America/Chicago")
+    tenant_timezone = ZoneInfo("America/Chicago")
     legacy_loan = LegacyLoan(loan_dict, tenant_timezone)
     assert legacy_loan.patron_barcode == "the barcode with leading space"
     assert legacy_loan.item_barcode == "the barcode with trailing space"

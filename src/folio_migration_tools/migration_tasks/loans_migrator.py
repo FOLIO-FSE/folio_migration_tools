@@ -10,13 +10,11 @@ from datetime import timedelta
 from datetime import timezone
 from typing import Optional
 from urllib.error import HTTPError
+from zoneinfo import ZoneInfo
 
 import requests
 from dateutil import (
     parser as du_parser,
-)
-from dateutil.tz import (
-    tz as du_tz
 )
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
@@ -70,7 +68,7 @@ class LoansMigrator(MigrationTaskBase):
                 'Tenant locale settings not available. Using "UTC".'
             )
             self.tenant_timezone_str = "UTC"
-        self.tenant_timezone = du_tz.gettz(self.tenant_timezone_str)
+        self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
         self.valid_legacy_loans = []

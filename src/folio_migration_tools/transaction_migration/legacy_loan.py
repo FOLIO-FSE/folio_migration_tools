@@ -1,14 +1,13 @@
 import logging
 from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from zoneinfo import ZoneInfo
 
 from dateutil.parser import parse
 from dateutil import tz
 
 
 class LegacyLoan(object):
-    def __init__(self, legacy_loan_dict, tenant_timezone=tz.UTC, row=0):
+    def __init__(self, legacy_loan_dict, tenant_timezone=ZoneInfo("UTC"), row=0):
         # validate
         correct_headers = [
             "item_barcode",
@@ -35,7 +34,7 @@ class LegacyLoan(object):
                 self.errors.append(("Empty properties in legacy data", prop))
         try:
             temp_date_due: datetime = parse(legacy_loan_dict["due_date"])
-            if temp_date_due.tzinfo != tz.UTC:
+            if temp_date_due.tzinfo != ZoneInfo("UTC"):
                 temp_date_due = temp_date_due.replace(tzinfo=self.tenant_timezone)
                 logging.info(
                     "Provided due_date is not UTC, setting tzinfo to tenant timezone (%s)",
@@ -49,17 +48,17 @@ class LegacyLoan(object):
         except Exception as ee:
             logging.error(ee)
             self.errors.append(("Parse date failure. Setting UTC NOW", "due_date"))
-            temp_date_due = datetime.now(timezone.utc)
+            temp_date_due = datetime.now(ZoneInfo("UTC"))
         try:
             temp_date_out: datetime = parse(legacy_loan_dict["out_date"])
-            if temp_date_out.tzinfo != tz.UTC:
+            if temp_date_out.tzinfo != ZoneInfo("UTC"):
                 temp_date_out = temp_date_out.replace(tzinfo=self.tenant_timezone)
                 logging.info(
                     "Provided out_date is not UTC, setting tzinfo to tenant timezone (%s)",
                     self.tenant_timezone
                 )         
         except Exception:
-            temp_date_out = datetime.now(timezone.utc)#TODO: Consider moving this assignment block above the temp_date_due
+            temp_date_out = datetime.now(ZoneInfo("UTC"))#TODO: Consider moving this assignment block above the temp_date_due
             self.errors.append(("Parse date failure. Setting UTC NOW", "out_date"))
 
         # good to go, set properties
@@ -98,9 +97,9 @@ class LegacyLoan(object):
 
     def make_utc(self):
         try:
-            if self.tenant_timezone != tz.UTC:
-                self.due_date = self.due_date.astimezone(tz.UTC)
-                self.out_date = self.out_date.astimezone(tz.UTC)
+            if self.tenant_timezone != ZoneInfo("UTC"):
+                self.due_date = self.due_date.astimezone(ZoneInfo("UTC"))
+                self.out_date = self.out_date.astimezone(ZoneInfo("UTC"))
         except Exception:
             self.errors.append(("UTC correction issues", "both dates"))
 
