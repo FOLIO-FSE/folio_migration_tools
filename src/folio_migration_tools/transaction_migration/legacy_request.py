@@ -65,6 +65,9 @@ class LegacyRequest(object):
 
         self.request_date: datetime.datetime = temp_request_date
         self.request_expiration_date: datetime.datetime = temp_expiration_date
+        self.correct_for_1_day_requests()
+    
+    def correct_for_1_day_requests(self):
         try:
             if self.request_expiration_date.date() <= self.request_date.date():
                 if self.request_expiration_date.hour == 0 and self.request_expiration_date.minute == 0:
@@ -77,7 +80,7 @@ class LegacyRequest(object):
         except Exception as ee:
             logging.error(ee)
             self.errors.append(("Time alignment issues", "both dates"))
-
+        
     def to_dict(self):
         return {
             "requestLevel": "Item",
