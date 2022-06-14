@@ -40,6 +40,16 @@ class RequestsMigrator(MigrationTaskBase):
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
     ):
+        csv.register_dialect("tsv", delimiter="\t")
+        self.migration_report = MigrationReport()
+        self.start_datetime = datetime.now(ZoneInfo("UTC"))
+        self.valid_legacy_requests = []
+        super().__init__(library_config, task_configuration)
+        self.circulation_helper = CirculationHelper(
+            self.folio_client,
+            "",
+            self.migration_report,
+        )
         try:
             logging.info(
                 "Attempting to retrieve tenant timezone configuration..."
@@ -57,16 +67,6 @@ class RequestsMigrator(MigrationTaskBase):
             )
             self.tenant_timezone_str = "UTC"
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
-        csv.register_dialect("tsv", delimiter="\t")
-        self.migration_report = MigrationReport()
-        self.start_datetime = datetime.now(timezone.utc)
-        self.valid_legacy_requests = []
-        super().__init__(library_config, task_configuration)
-        self.circulation_helper = CirculationHelper(
-            self.folio_client,
-            "",
-            self.migration_report,
-        )
         with open(
             self.folder_structure.legacy_records_folder
             / task_configuration.open_requests_file.file_name,
