@@ -118,7 +118,11 @@ class UserMapper(UserMapperBase):
         clean_folio_object = self.validate_required_properties(
             legacy_id, folio_user, self.user_schema, FOLIONamespaces.users
         )
-
+        if (
+            "preferredFirstName" in clean_folio_object["personal"]
+            and not clean_folio_object["personal"]["preferredFirstName"]
+        ):
+            del clean_folio_object["personal"]["preferredFirstName"]
         self.report_folio_mapping(clean_folio_object)
         self.report_legacy_mapping(legacy_user)
         return clean_folio_object

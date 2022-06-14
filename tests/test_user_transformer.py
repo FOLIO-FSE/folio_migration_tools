@@ -54,6 +54,46 @@ def test_basic():
     assert folio_user["username"] == "user_name_1"
 
 
+def test_remove_preferred_first_name_if_empty():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.multi_field_delimiter = "<delimiter>"
+    mock_folio = Mock(spec=FolioClient)
+    mock_folio.okapi_url = "okapi_url"
+    mock_folio.folio_get_single_object = MagicMock(
+        return_value={
+            "instances": {"prefix": "pref", "startNumber": "1"},
+            "holdings": {"prefix": "pref", "startNumber": "1"},
+        }
+    )
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user = user_mapper.do_map(legacy_user_record, "001")
+
+    assert folio_user["externalSystemId"] == "externalid_1"
+    assert folio_user["username"] == "user_name_1"
+    assert "preferredFirstName" not in folio_user["personal"]
+
+
 def test_boolean_values_explicitly_true():
     user_map = {
         "data": [
