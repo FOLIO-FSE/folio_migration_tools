@@ -52,10 +52,20 @@ class LoansMigrator(MigrationTaskBase):
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
     ):
+        csv.register_dialect("tsv", delimiter="\t")
+        self.start_datetime = datetime.now(ZoneInfo("UTC"))
+        self.migration_report = MigrationReport()
+        self.valid_legacy_loans = []
+        super().__init__(library_config, task_configuration)
+        self.circulation_helper = CirculationHelper(
+            self.folio_client,
+            task_configuration.fallback_service_point_id,
+            self.migration_report,
+        )
+        logging.info(
+            "Attempting to retrieve tenant timezone configuration..."
+        )
         try:
-            logging.info(
-                "Attempting to retrieve tenant timezone configuration..."
-            )
             self.tenant_timezone_str = json.loads(self.folio_client.folio_get_single_object(
                 "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
                 )["configs"][0]["value"])["timezone"]
@@ -69,16 +79,6 @@ class LoansMigrator(MigrationTaskBase):
             )
             self.tenant_timezone_str = "UTC"
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
-        csv.register_dialect("tsv", delimiter="\t")
-        self.start_datetime = datetime.now(timezone.utc)
-        self.migration_report = MigrationReport()
-        self.valid_legacy_loans = []
-        super().__init__(library_config, task_configuration)
-        self.circulation_helper = CirculationHelper(
-            self.folio_client,
-            task_configuration.fallback_service_point_id,
-            self.migration_report,
-        )
         with open(
             self.folder_structure.legacy_records_folder
             / task_configuration.open_loans_file.file_name,
