@@ -76,7 +76,6 @@ class OrganizationTransformer(MigrationTaskBase):
         )
 
     def list_source_files(self):
-        # Source data files
         files = [
             self.folder_structure.data_folder / self.object_type_name / f.file_name
             for f in self.task_config.files
@@ -167,7 +166,10 @@ class OrganizationTransformer(MigrationTaskBase):
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )
-            self.mapper.migration_report.write_migration_report(migration_report_file)
+            self.mapper.migration_report.write_migration_report(
+                migration_report_file, self.mapper.start_datetime
+            )
+
             Helper.print_mapping_report(
                 migration_report_file,
                 self.total_records,
