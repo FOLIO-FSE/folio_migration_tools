@@ -37,6 +37,7 @@ class CirculationHelper:
 
     def get_user_by_barcode(self, user_barcode):
         if user_barcode in self.missing_patron_barcodes:
+            self.migration_report.add_general_statistics("Users already detected as missing")
             logging.info("User is already detected as missing")
             return {}
         user_path = f"/users?query=barcode=={user_barcode}"
@@ -52,6 +53,7 @@ class CirculationHelper:
 
     def get_item_by_barcode(self, item_barcode):
         if item_barcode in self.missing_item_barcodes:
+            self.migration_report.add_general_statistics("Items already detected as missing")
             logging.info("Item is already detected as missing")
             return {}
         item_path = f"/item-storage/items?query=barcode=={item_barcode}"
@@ -66,7 +68,7 @@ class CirculationHelper:
             return {}
 
     def get_holding_by_uuid(self, holdings_uuid):
-        holdings_path = f"/holdings-storage/holdings{holdings_uuid}"
+        holdings_path = f"/holdings-storage/holdings/{holdings_uuid}"
         try:
             return self.folio_client.folio_get_single_object(holdings_path)
         except Exception as ee:
@@ -234,7 +236,6 @@ class CirculationHelper:
                 return False
             else:
                 req.raise_for_status()
-                migration_report.add_general_statistics(f"Created {legacy_request.request_type}")
                 logging.info(
                     "%s Successfully created %s",
                     req.status_code,

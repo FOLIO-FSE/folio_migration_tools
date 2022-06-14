@@ -88,25 +88,25 @@ class HoldingsStatementsParser:
                         return_dict["statements"].append(parsed_dict["statement"])
 
         if dedupe_results:
-            return_dict["statements"] = dedupe_list_of_dict(return_dict["statements"])
+            return_dict["statements"] = HoldingsStatementsParser.dedupe_list_of_dict(
+                return_dict["statements"]
+            )
         return return_dict
 
     @staticmethod
     def parse_linked_field(pattern_field: Field, linked_value_fields: Field):
-        break_ind = get_break_indicator(linked_value_fields)
-        return_dict = {
-            "hlm_stmt": "",
-            "statement": {
-                "statement": "",
-                "note": "",
-                "staffNote": "",
-            },
-        }
-        _from, _to, is_span = get_from_to(pattern_field, linked_value_fields)
-        cron_from, cron_to, hlm_stmt, is_cron_span = get_cron_from_to(
+        break_ind = HoldingsStatementsParser.get_break_indicator(linked_value_fields)
+        _from, _to, is_span = HoldingsStatementsParser.get_from_to(
             pattern_field, linked_value_fields
         )
-        return_dict["hlm_stmt"] = hlm_stmt
+        cron_from, cron_to, hlm_stmt, is_cron_span = HoldingsStatementsParser.get_cron_from_to(
+            pattern_field, linked_value_fields
+        )
+        return_dict = {
+            "statement": {"statement": "", "note": "", "staffNote": ""},
+            "hlm_stmt": hlm_stmt,
+        }
+
         if _from and cron_from:
             _from = f"{_from} ({cron_from})"
         if not _from and cron_from:
@@ -168,20 +168,19 @@ class HoldingsStatementsParser:
                 ("Holdings statements", f"From {field_textual}")
             )
 
+    @staticmethod
+    def get_break_indicator(field: Field):
+        if "w" not in field or field["w"] not in ["g", "n"]:
+            return ""
+        elif field["w"] == "g":
+            return ","
+        elif field["w"] == "n":
+            return ";"
+        else:
+            return ""
 
-def get_break_indicator(field: Field):
-    if "w" not in field or field["w"] not in ["g", "n"]:
-        return ""
-    elif field["w"] == "g":
-        return ","
-    elif field["w"] == "n":
-        return ";"
-    else:
-        return ""
-
-
-def get_season(val: str):
-    try:
+    @staticmethod
+    def g_s(val: str):
         val_int = int(val)
         if val_int == 21:
             return "Spring"
@@ -193,88 +192,99 @@ def get_season(val: str):
             return "Winter"
         else:
             return val
-    except Exception:
-        return val
 
+    @staticmethod
+    def get_season(val: str):
+        try:
+            result = HoldingsStatementsParser.g_s(val)
+            if result == val:
+                result = HoldingsStatementsParser.g_m(int(val))
+            return result
+        except Exception:
+            return val
 
-def dedupe_list_of_dict(list_of_dict):
-    return [dict(t) for t in {tuple(d.items()) for d in list_of_dict}]
+    @staticmethod
+    def dedupe_list_of_dict(list_of_dict):
+        return [dict(t) for t in {tuple(d.items()) for d in list_of_dict}]
 
+    @staticmethod
+    def g_m(m: int):
+        if m == 5:
+            return "May"
+        elif m == 6:
+            return "June"
+        elif m == 7:
+            return "July"
+        else:
+            return f"{calendar.month_abbr[m]}."
 
-def g_m(m: int):
-    if m == 5:
-        return "May"
-    elif m == 6:
-        return "June"
-    elif m == 7:
-        return "July"
-    else:
-        return f"{calendar.month_abbr[m]}."
+    @staticmethod
+    def get_month(month_str: str):
+        month_str = month_str.strip()
+        if "/" in month_str:
+            return "/".join([HoldingsStatementsParser.g_m(int(m)) for m in month_str.split("/")])
+        else:
+            result = HoldingsStatementsParser.g_m(int(month_str))
+            if result == month_str:
+                result = HoldingsStatementsParser.g_s(month_str)
+            return result
 
-
-def get_month(month_str: str):
-    month_str = month_str.strip()
-    if "/" in month_str:
-        return "/".join([g_m(int(m)) for m in month_str.split("/")])
-    else:
-        return g_m(int(month_str))
-
-
-def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
-    cron_from = ""
-    cron_to = ""
-    hlm_stmt = ""
-    year = False
-    is_span = False
-    for chron_level in [cl for cl in "ijkl" if cl in linked_value_field]:
-        desc = pattern_field[chron_level] or ""
-        if linked_value_field[chron_level]:
-            if chron_level == "i" and desc == "(year)":
-                hlm_stmt = linked_value_field[chron_level]
-            if desc == "(year)":
-                year = True
-            val, *val_rest = linked_value_field[chron_level].split("-")
-            is_span = "-" in linked_value_field[chron_level] or is_span
-            if desc == "(month)":
-                with contextlib.suppress(Exception):
-                    val = get_month(val)
-                with contextlib.suppress(Exception):
-                    val_rest = get_month(val_rest[0])
-                if "".join(val_rest):
+    @staticmethod
+    def get_cron_from_to(pattern_field: Field, linked_value_field: Field):
+        cron_from = ""
+        cron_to = ""
+        hlm_stmt = ""
+        year = False
+        is_span = False
+        for chron_level in [cl for cl in "ijkl" if cl in linked_value_field]:
+            desc = pattern_field[chron_level] or ""
+            if linked_value_field[chron_level]:
+                if chron_level == "i" and desc == "(year)":
+                    hlm_stmt = linked_value_field[chron_level]
+                if desc == "(year)":
+                    year = True
+                val, *val_rest = linked_value_field[chron_level].split("-")
+                is_span = "-" in linked_value_field[chron_level] or is_span
+                if desc == "(month)":
                     with contextlib.suppress(Exception):
-                        val_rest = get_month("".join(val_rest))
-                elif cron_to.strip() and val:
-                    val_rest = val
-                if year:
-                    spill_year = f"{hlm_stmt}:" if "-" not in hlm_stmt else ""
-                    cron_from = f"{cron_from.strip()}:{val} "
-                    if cron_to and "".join(val_rest):
-                        cron_to = f"{cron_to}:{''.join(val_rest)} "
-                    elif not cron_to and "".join(val_rest):
-                        cron_to = f"{spill_year}{''.join(val_rest)}"
-
-            else:
-                if "season" in desc:
-                    val = get_season(val)
+                        val = HoldingsStatementsParser.get_month(val)
+                    with contextlib.suppress(Exception):
+                        val_rest = HoldingsStatementsParser.get_month(val_rest[0])
                     if "".join(val_rest):
-                        val_rest = get_season("".join(val_rest))
-                cron_from = f"{cron_from} {val}".strip()
-                cron_to = f"{cron_to} {''.join(val_rest)}".strip()
-    return (f"{cron_from.strip()}", cron_to.strip(), hlm_stmt, is_span)
+                        with contextlib.suppress(Exception):
+                            val_rest = HoldingsStatementsParser.get_month("".join(val_rest))
+                    elif cron_to.strip() and val:
+                        val_rest = val
+                    if year:
+                        spill_year = f"{hlm_stmt}:" if "-" not in hlm_stmt else ""
+                        cron_from = f"{cron_from.strip()}:{val} "
+                        if cron_to and "".join(val_rest):
+                            cron_to = f"{cron_to}:{''.join(val_rest)} "
+                        elif not cron_to and "".join(val_rest):
+                            cron_to = f"{spill_year}{''.join(val_rest)}"
 
+                else:
+                    if "season" in desc:
+                        val = HoldingsStatementsParser.get_season(val)
+                        if "".join(val_rest):
+                            val_rest = HoldingsStatementsParser.get_season("".join(val_rest))
+                    cron_from = f"{cron_from} {val}".strip()
+                    cron_to = f"{cron_to} {''.join(val_rest)}".strip()
+        return (f"{cron_from.strip()}", cron_to.strip(), hlm_stmt, is_span)
 
-def get_from_to(pattern_field: Field, linked_value_field: Field):
-    _from = ""
-    _to = ""
-    is_span = False
-    for enum_level in [el for el in "abcdef" if el in linked_value_field]:
-        desc = pattern_field[enum_level] or ""
-        desc = desc.strip() if "(" not in desc else ""
-        if linked_value_field[enum_level]:
-            val, *val_rest = linked_value_field[enum_level].split("-")
-            is_span = "-" in linked_value_field[enum_level] or is_span
-            _from = f"{_from}{(':' if _from else '')}{desc}{val}"
-            temp_to = "".join(val_rest)
-            if temp_to.strip():
-                _to = f"{_to}{(':' if _to else '')}{desc}{temp_to}"
-    return (f"{_from.strip()}", _to.strip(), is_span)
+    @staticmethod
+    def get_from_to(pattern_field: Field, linked_value_field: Field):
+        _from = ""
+        _to = ""
+        is_span = False
+        for enum_level in [el for el in "abcdef" if el in linked_value_field]:
+            desc = pattern_field[enum_level] or ""
+            desc = desc.strip() if "(" not in desc else ""
+            if linked_value_field[enum_level]:
+                val, *val_rest = linked_value_field[enum_level].split("-")
+                is_span = "-" in linked_value_field[enum_level] or is_span
+                _from = f"{_from}{(':' if _from else '')}{desc}{val}"
+                temp_to = "".join(val_rest)
+                if temp_to.strip():
+                    _to = f"{_to}{(':' if _to else '')}{desc}{temp_to}"
+        return (f"{_from.strip()}", _to.strip(), is_span)

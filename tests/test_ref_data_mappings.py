@@ -58,6 +58,21 @@ def test_get_hybrid_mapping3_4():
     assert res == mappings[1]
 
 
+def test_get_hybrid_mapping3_5():
+    mappings = [
+        {"location": "l_2", "loan_type": "*", "material_type": "papa"},
+        {"location": "l_1", "loan_type": "lt_1", "material_type": "*"},
+        {"location": "l_1", "loan_type": "*", "material_type": "*"},
+    ]
+    legacy_object = {"location": "l_1", "loan_type": "lt_44", "material_type": "papa"}
+    mock = Mock(spec=RefDataMapping)
+    mock.hybrid_mappings = mappings
+    mock.cache = {}
+    mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
+    res = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
+    assert res == mappings[2]
+
+
 def test_get_hybrid_mapping_none():
     mappings = [
         {"location": "l_2", "loan_type": "*", "material_type": "papa"},

@@ -127,8 +127,9 @@ version = 1.2.1
 ```
 python3 -m build
 ```
-Make sure one of the builds aligns with the version number you choosed above
-
+Make sure one of the builds aligns with the version number you choosed above   
+Installing build: sudo apt install build-essential cmake python3-dev   
+```pipenv install build```   
 ### 3. Push the file to pypi test and make a test installation
 Upload:
 ```

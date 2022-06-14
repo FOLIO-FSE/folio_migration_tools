@@ -1,6 +1,8 @@
 import json
 import logging
 import sys
+from datetime import datetime
+from datetime import timezone
 
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -23,6 +25,7 @@ class MapperBase:
         folio_client: FolioClient,
     ):
         logging.info("MapperBase initiating")
+        self.start_datetime = datetime.now(timezone.utc)
         self.folio_client = folio_client
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.library_configuration: LibraryConfiguration = library_configuration
