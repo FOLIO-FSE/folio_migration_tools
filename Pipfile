@@ -13,7 +13,6 @@ mypy = "*"
 pytest-cov = "*"
 
 [packages]
-humps = "*"
 requests = "*"
 argparse-prompt = "*"
 pydantic = "*"
@@ -27,6 +26,7 @@ darglint = "*"
 python-dateutil = "*"
 lxml = "*"
 build = "*"
+pyhumps = "*"
 
 [requires]
 python_version = "3.9"
