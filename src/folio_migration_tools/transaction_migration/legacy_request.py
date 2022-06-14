@@ -112,11 +112,11 @@ class LegacyRequest(object):
             "fulfilmentPreference",
         ]
         if release == FolioRelease.kiwi:
-            del req["requestType"]
+            del req["requestLevel"]
             del req["holdingsRecordId"]
             del req["instanceId"]
             required = [
-                r for r in required if r not in ["requestType", "holdingsRecordId", "instanceId"]
+                r for r in required if r not in ["requestLevel", "holdingsRecordId", "instanceId"]
             ]
         missing = [r for r in required if not req.get(r, "")]
         if any(missing):
