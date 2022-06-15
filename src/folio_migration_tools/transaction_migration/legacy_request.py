@@ -1,15 +1,17 @@
 import datetime
 import logging
 import uuid
+from zoneinfo import ZoneInfo
 
 from dateutil.parser import parse
+from dateutil import tz
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FolioRelease
 
 
 class LegacyRequest(object):
-    def __init__(self, legacy_request_dict, utc_difference=0, row=0):
+    def __init__(self, legacy_request_dict, tenant_timezone=ZoneInfo("UTC"), row=0):
         # validate
         correct_headers = [
             "item_barcode",
@@ -30,7 +32,7 @@ class LegacyRequest(object):
 
         self.item_barcode = legacy_request_dict["item_barcode"].strip()
         self.patron_id = ""
-        self.utc_difference = utc_difference
+        self.tenant_timezone = tenant_timezone
         self.item_id = ""
         self.instance_id = ""
         self.holdings_record_id = ""
@@ -44,33 +46,44 @@ class LegacyRequest(object):
             self.errors.append((f"{self.request_type} not allowd", "request_type"))
 
         try:
-            temp_request_date: datetime.datetime = parse(legacy_request_dict["request_date"])
+            temp_request_date: datetime.datetime = parse(
+                legacy_request_dict["request_date"]
+            )
+            if temp_request_date.tzinfo != tz.UTC:
+                temp_request_date = temp_request_date.replace(tzinfo=self.tenant_timezone)
         except Exception:
             self.errors.append(("Parse date failure. Setting UTC NOW", "request_date"))
-            temp_request_date = datetime.now(datetime.timezone.utc)
+            temp_request_date = datetime.now(ZoneInfo("UTC"))
         try:
             temp_expiration_date: datetime.datetime = parse(
                 legacy_request_dict["request_expiration_date"]
             )
+            if temp_expiration_date.tzinfo != tz.UTC:
+                temp_expiration_date = temp_expiration_date.replace(tzinfo=self.tenant_timezone)
         except Exception:
-            temp_expiration_date = datetime.now(datetime.timezone.utc)
+            temp_expiration_date = datetime.now(ZoneInfo("UTC"))
             self.errors.append(("Parse date failure. Setting UTC NOW", "request_expiration_date"))
+        if temp_expiration_date.hour == 0 and temp_expiration_date.minute == 0:
+            temp_expiration_date = temp_expiration_date.replace(hour=23, minute=59)
 
         self.request_date: datetime.datetime = temp_request_date
         self.request_expiration_date: datetime.datetime = temp_expiration_date
+        self.correct_for_1_day_requests()
+    
+    def correct_for_1_day_requests(self):
         try:
-            self.make_request_utc()
-            if self.request_expiration_date <= self.request_date:
-                if self.request_expiration_date.hour == 0:
+            if self.request_expiration_date.date() <= self.request_date.date():
+                if self.request_expiration_date.hour == 0 and self.request_expiration_date.minute == 0:
                     self.request_expiration_date = self.request_expiration_date.replace(
                         hour=23, minute=59
                     )
-                if self.request_date.hour == 0:
+                if self.request_date.hour == 0 and self.request_date.minute == 0:
                     self.request_date = self.request_date.replace(hour=0, minute=1)
+            self.make_request_utc()
         except Exception as ee:
             logging.error(ee)
             self.errors.append(("Time alignment issues", "both dates"))
-
+        
     def to_dict(self):
         return {
             "requestLevel": "Item",
@@ -102,11 +115,11 @@ class LegacyRequest(object):
             "fulfilmentPreference",
         ]
         if release == FolioRelease.kiwi:
-            del req["requestType"]
+            del req["requestLevel"]
             del req["holdingsRecordId"]
             del req["instanceId"]
             required = [
-                r for r in required if r not in ["requestType", "holdingsRecordId", "instanceId"]
+                r for r in required if r not in ["requestLevel", "holdingsRecordId", "instanceId"]
             ]
         missing = [r for r in required if not req.get(r, "")]
         if any(missing):
@@ -127,8 +140,9 @@ class LegacyRequest(object):
         }
 
     def make_request_utc(self):
-        if self.utc_difference != 0:
-            self.request_date = self.request_date + datetime.timedelta(hours=self.utc_difference)
-            self.request_expiration_date = self.request_expiration_date + datetime.timedelta(
-                hours=self.utc_difference
-            )
+        try:
+            if self.tenant_timezone != ZoneInfo("UTC"):
+                self.request_date = self.request_date.astimezone(ZoneInfo("UTC"))
+                self.request_expiration_date = self.request_expiration_date.astimezone(ZoneInfo("UTC"))
+        except Exception:
+             self.errors.append(("UTC correction issues", "both dates"))

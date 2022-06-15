@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from datetime import timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
@@ -24,7 +25,6 @@ from folio_migration_tools.transaction_migration.legacy_request import LegacyReq
 class RequestsMigrator(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
-        utc_difference: int
         migration_task_type: str
         open_requests_file: FileDefinition
         starting_row: Optional[int] = 1
@@ -42,7 +42,7 @@ class RequestsMigrator(MigrationTaskBase):
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
-        self.start_datetime = datetime.now(timezone.utc)
+        self.start_datetime = datetime.now(ZoneInfo("UTC"))
         self.valid_legacy_requests = []
         super().__init__(library_config, task_configuration)
         self.circulation_helper = CirculationHelper(
@@ -50,6 +50,23 @@ class RequestsMigrator(MigrationTaskBase):
             "",
             self.migration_report,
         )
+        try:
+            logging.info(
+                "Attempting to retrieve tenant timezone configuration..."
+            )
+            self.tenant_timezone_str = json.loads(self.folio_client.folio_get_single_object(
+                "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
+                )["configs"][0]["value"])["timezone"]
+            logging.info(
+                "Tenant timezone is: %s", 
+                self.tenant_timezone_str
+            )
+        except Exception:
+            logging.info(
+                'Tenant locale settings not available. Using "UTC".'
+            )
+            self.tenant_timezone_str = "UTC"
+        self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         with open(
             self.folder_structure.legacy_records_folder
             / task_configuration.open_requests_file.file_name,
@@ -239,7 +256,7 @@ class RequestsMigrator(MigrationTaskBase):
             try:
                 legacy_request = LegacyRequest(
                     legacy_request_dict,
-                    self.task_configuration.utc_difference,
+                    self.tenant_timezone,
                     legacy_reques_count,
                 )
                 if any(legacy_request.errors):
