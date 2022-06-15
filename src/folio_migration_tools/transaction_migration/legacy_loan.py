@@ -1,13 +1,13 @@
 import logging
 from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from zoneinfo import ZoneInfo
 
 from dateutil.parser import parse
+from dateutil import tz
 
 
 class LegacyLoan(object):
-    def __init__(self, legacy_loan_dict, utc_difference=0, row=0):
+    def __init__(self, legacy_loan_dict, tenant_timezone=ZoneInfo("UTC"), row=0):
         # validate
         correct_headers = [
             "item_barcode",
@@ -25,7 +25,7 @@ class LegacyLoan(object):
             "Declared lost",
             "Lost and paid",
         ]
-        self.utc_difference = utc_difference
+        self.tenant_timezone = tenant_timezone
         self.errors = []
         for prop in correct_headers:
             if prop not in legacy_loan_dict:
@@ -34,14 +34,31 @@ class LegacyLoan(object):
                 self.errors.append(("Empty properties in legacy data", prop))
         try:
             temp_date_due: datetime = parse(legacy_loan_dict["due_date"])
+            if temp_date_due.tzinfo != tz.UTC:
+                temp_date_due = temp_date_due.replace(tzinfo=self.tenant_timezone)
+                logging.info(
+                    "Provided due_date is not UTC, setting tzinfo to tenant timezone (%s)",
+                    self.tenant_timezone
+                )
+            if temp_date_due.hour == 0 and temp_date_due.minute == 0:
+                temp_date_due = temp_date_due.replace(hour=23, minute=59)
+                logging.info(
+                    "Hour and minute not specified for due date. Assuming end of local calendar day (23:59)..."
+                )
         except Exception as ee:
             logging.error(ee)
             self.errors.append(("Parse date failure. Setting UTC NOW", "due_date"))
-            temp_date_due = datetime.now(timezone.utc)
+            temp_date_due = datetime.now(ZoneInfo("UTC"))
         try:
             temp_date_out: datetime = parse(legacy_loan_dict["out_date"])
+            if temp_date_out.tzinfo != tz.UTC:
+                temp_date_out = temp_date_out.replace(tzinfo=self.tenant_timezone)
+                logging.info(
+                    "Provided out_date is not UTC, setting tzinfo to tenant timezone (%s)",
+                    self.tenant_timezone
+                )         
         except Exception:
-            temp_date_out = datetime.now(timezone.utc)
+            temp_date_out = datetime.now(ZoneInfo("UTC"))#TODO: Consider moving this assignment block above the temp_date_due
             self.errors.append(("Parse date failure. Setting UTC NOW", "out_date"))
 
         # good to go, set properties
@@ -49,8 +66,8 @@ class LegacyLoan(object):
         self.patron_barcode: str = legacy_loan_dict["patron_barcode"].strip()
         self.due_date: datetime = temp_date_due
         self.out_date: datetime = temp_date_out
-        self.make_utc()
         self.correct_for_1_day_loans()
+        self.make_utc()
         self.renewal_count = int(legacy_loan_dict["renewal_count"])
         self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
@@ -58,7 +75,7 @@ class LegacyLoan(object):
 
     def correct_for_1_day_loans(self):
         try:
-            if self.due_date <= self.out_date:
+            if self.due_date.date() <= self.out_date.date():
                 if self.due_date.hour == 0:
                     self.due_date = self.due_date.replace(hour=23, minute=59)
                 if self.out_date.hour == 0:
@@ -80,9 +97,9 @@ class LegacyLoan(object):
 
     def make_utc(self):
         try:
-            hours_to_add = -1 * self.utc_difference
-            if self.utc_difference != 0:
-                self.due_date = self.due_date + timedelta(hours=hours_to_add)
-                self.out_date = self.out_date + timedelta(hours=hours_to_add)
+            if self.tenant_timezone != ZoneInfo("UTC"):
+                self.due_date = self.due_date.astimezone(ZoneInfo("UTC"))
+                self.out_date = self.out_date.astimezone(ZoneInfo("UTC"))
         except Exception:
             self.errors.append(("UTC correction issues", "both dates"))
+

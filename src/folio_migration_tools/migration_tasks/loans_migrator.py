@@ -10,9 +10,12 @@ from datetime import timedelta
 from datetime import timezone
 from typing import Optional
 from urllib.error import HTTPError
+from zoneinfo import ZoneInfo
 
 import requests
-from dateutil import parser as du_parser
+from dateutil import (
+    parser as du_parser,
+)
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
 
@@ -33,7 +36,6 @@ from folio_migration_tools.transaction_migration.transaction_result import (
 class LoansMigrator(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
-        utc_difference: int
         migration_task_type: str
         open_loans_file: FileDefinition
         fallback_service_point_id: str
@@ -51,7 +53,7 @@ class LoansMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        self.start_datetime = datetime.now(timezone.utc)
+        self.start_datetime = datetime.now(ZoneInfo("UTC"))
         self.migration_report = MigrationReport()
         self.valid_legacy_loans = []
         super().__init__(library_config, task_configuration)
@@ -60,6 +62,23 @@ class LoansMigrator(MigrationTaskBase):
             task_configuration.fallback_service_point_id,
             self.migration_report,
         )
+        logging.info(
+            "Attempting to retrieve tenant timezone configuration..."
+        )
+        try:
+            self.tenant_timezone_str = json.loads(self.folio_client.folio_get_single_object(
+                "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
+                )["configs"][0]["value"])["timezone"]
+            logging.info(
+                "Tenant timezone is: %s", 
+                self.tenant_timezone_str
+            )
+        except Exception:
+            logging.info(
+                'Tenant locale settings not available. Using "UTC".'
+            )
+            self.tenant_timezone_str = "UTC"
+        self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         with open(
             self.folder_structure.legacy_records_folder
             / task_configuration.open_loans_file.file_name,
@@ -242,7 +261,7 @@ class LoansMigrator(MigrationTaskBase):
             try:
                 legacy_loan = LegacyLoan(
                     legacy_loan_dict,
-                    self.task_configuration.utc_difference,
+                    self.tenant_timezone,
                     legacy_loan_count,
                 )
                 if any(legacy_loan.errors):
@@ -257,10 +276,10 @@ class LoansMigrator(MigrationTaskBase):
             except ValueError as ve:
                 logging.exception(ve)
         logging.info(
-            f"Done validating {legacy_loan_count} legacy loans with {num_bad} rotten apples"
+            f"Done validating {legacy_loan_count + 1} legacy loans with {num_bad} rotten apples"
         )
-        if num_bad / legacy_loan_count > 0.5:
-            q = num_bad / legacy_loan_count
+        if num_bad / (legacy_loan_count + 1) > 0.5:
+            q = num_bad / (legacy_loan_count + 1)
             logging.error("%s percent of loans failed to validate.", (q * 100))
             self.migration_report.log_me()
             logging.critical("Halting...")
