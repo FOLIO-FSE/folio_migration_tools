@@ -4,6 +4,7 @@ import uuid
 from zoneinfo import ZoneInfo
 
 from dateutil.parser import parse
+from dateutil import tz
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FolioRelease
@@ -48,7 +49,8 @@ class LegacyRequest(object):
             temp_request_date: datetime.datetime = parse(
                 legacy_request_dict["request_date"]
             )
-            temp_request_date = temp_request_date.replace(tzinfo=self.tenant_timezone)
+            if temp_request_date.tzinfo != tz.UTC:
+                temp_request_date = temp_request_date.replace(tzinfo=self.tenant_timezone)
         except Exception:
             self.errors.append(("Parse date failure. Setting UTC NOW", "request_date"))
             temp_request_date = datetime.now(ZoneInfo("UTC"))
@@ -56,7 +58,8 @@ class LegacyRequest(object):
             temp_expiration_date: datetime.datetime = parse(
                 legacy_request_dict["request_expiration_date"]
             )
-            temp_expiration_date = temp_expiration_date.replace(tzinfo=self.tenant_timezone)
+            if temp_expiration_date.tzinfo != tz.UTC:
+                temp_expiration_date = temp_expiration_date.replace(tzinfo=self.tenant_timezone)
         except Exception:
             temp_expiration_date = datetime.now(ZoneInfo("UTC"))
             self.errors.append(("Parse date failure. Setting UTC NOW", "request_expiration_date"))
