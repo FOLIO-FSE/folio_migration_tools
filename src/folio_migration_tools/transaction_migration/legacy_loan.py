@@ -2,12 +2,18 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from dateutil.parser import parse
 from dateutil import tz
+from dateutil.parser import parse
 
 
 class LegacyLoan(object):
-    def __init__(self, legacy_loan_dict, tenant_timezone=ZoneInfo("UTC"), row=0):
+    def __init__(
+        self,
+        legacy_loan_dict,
+        fallback_service_point_id: str,
+        tenant_timezone=ZoneInfo("UTC"),
+        row=0,
+    ):
         # validate
         correct_headers = [
             "item_barcode",
@@ -16,7 +22,9 @@ class LegacyLoan(object):
             "out_date",
             "renewal_count",
             "next_item_status",
+            "service_point_id",
         ]
+        optional_headers = ["service_point_id"]
         legal_statuses = [
             "",
             "Aged to lost",
@@ -25,12 +33,17 @@ class LegacyLoan(object):
             "Declared lost",
             "Lost and paid",
         ]
+
         self.tenant_timezone = tenant_timezone
         self.errors = []
         for prop in correct_headers:
-            if prop not in legacy_loan_dict:
+            if prop not in legacy_loan_dict and prop not in optional_headers:
                 self.errors.append(("Missing properties in legacy data", prop))
-            if prop != "next_item_status" and not legacy_loan_dict[prop].strip():
+            if (
+                prop != "next_item_status"
+                and not legacy_loan_dict.get(prop, "").strip()
+                and prop not in optional_headers
+            ):
                 self.errors.append(("Empty properties in legacy data", prop))
         try:
             temp_date_due: datetime = parse(legacy_loan_dict["due_date"])
@@ -38,12 +51,13 @@ class LegacyLoan(object):
                 temp_date_due = temp_date_due.replace(tzinfo=self.tenant_timezone)
                 logging.info(
                     "Provided due_date is not UTC, setting tzinfo to tenant timezone (%s)",
-                    self.tenant_timezone
+                    self.tenant_timezone,
                 )
             if temp_date_due.hour == 0 and temp_date_due.minute == 0:
                 temp_date_due = temp_date_due.replace(hour=23, minute=59)
                 logging.info(
-                    "Hour and minute not specified for due date. Assuming end of local calendar day (23:59)..."
+                    "Hour and minute not specified for due date. "
+                    "Assuming end of local calendar day (23:59)..."
                 )
         except Exception as ee:
             logging.error(ee)
@@ -55,10 +69,12 @@ class LegacyLoan(object):
                 temp_date_out = temp_date_out.replace(tzinfo=self.tenant_timezone)
                 logging.info(
                     "Provided out_date is not UTC, setting tzinfo to tenant timezone (%s)",
-                    self.tenant_timezone
-                )         
+                    self.tenant_timezone,
+                )
         except Exception:
-            temp_date_out = datetime.now(ZoneInfo("UTC"))#TODO: Consider moving this assignment block above the temp_date_due
+            temp_date_out = datetime.now(
+                ZoneInfo("UTC")
+            )  # TODO: Consider moving this assignment block above the temp_date_due
             self.errors.append(("Parse date failure. Setting UTC NOW", "out_date"))
 
         # good to go, set properties
@@ -72,6 +88,11 @@ class LegacyLoan(object):
         self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
             self.errors.append(("Not an allowed status", self.next_item_status))
+        self.service_point_id = (
+            legacy_loan_dict["service_point_id"]
+            if legacy_loan_dict.get("service_point_id", "")
+            else fallback_service_point_id
+        )
 
     def correct_for_1_day_loans(self):
         try:
@@ -102,4 +123,3 @@ class LegacyLoan(object):
                 self.out_date = self.out_date.astimezone(ZoneInfo("UTC"))
         except Exception:
             self.errors.append(("UTC correction issues", "both dates"))
-

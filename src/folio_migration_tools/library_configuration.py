@@ -15,6 +15,7 @@ class FileDefinition(BaseModel):
     file_name: str
     suppressed: Optional[bool] = False
     staff_suppressed: Optional[bool] = False
+    service_point_id: Optional[str] = ""
 
 
 class IlsFlavour(str, Enum):

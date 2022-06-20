@@ -13,9 +13,7 @@ from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
 
 import requests
-from dateutil import (
-    parser as du_parser,
-)
+from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
 
@@ -37,7 +35,7 @@ class LoansMigrator(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
         migration_task_type: str
-        open_loans_file: FileDefinition
+        open_loans_files: list[FileDefinition]
         fallback_service_point_id: str
         starting_row: Optional[int] = 1
         item_files: Optional[list[FileDefinition]] = []
@@ -62,38 +60,38 @@ class LoansMigrator(MigrationTaskBase):
             task_configuration.fallback_service_point_id,
             self.migration_report,
         )
-        logging.info(
-            "Attempting to retrieve tenant timezone configuration..."
-        )
+        logging.info("Attempting to retrieve tenant timezone configuration...")
+        my_path = "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
         try:
-            self.tenant_timezone_str = json.loads(self.folio_client.folio_get_single_object(
-                "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
-                )["configs"][0]["value"])["timezone"]
-            logging.info(
-                "Tenant timezone is: %s", 
-                self.tenant_timezone_str
-            )
+            self.tenant_timezone_str = json.loads(
+                self.folio_client.folio_get_single_object(my_path)["configs"][0]["value"]
+            )["timezone"]
+            logging.info("Tenant timezone is: %s", self.tenant_timezone_str)
         except Exception:
-            logging.info(
-                'Tenant locale settings not available. Using "UTC".'
-            )
+            logging.info('Tenant locale settings not available. Using "UTC".')
             self.tenant_timezone_str = "UTC"
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
-        with open(
-            self.folder_structure.legacy_records_folder
-            / task_configuration.open_loans_file.file_name,
-            "r",
-            encoding="utf-8",
-        ) as loans_file:
-            self.semi_valid_legacy_loans = list(
-                self.load_and_validate_legacy_loans(
-                    InsensitiveDictReader(loans_file, dialect="tsv")
+        self.semi_valid_legacy_loans = []
+        for file_def in task_configuration.open_loans_files:
+            with open(
+                self.folder_structure.legacy_records_folder / file_def.file_name,
+                "r",
+                encoding="utf-8",
+            ) as loans_file:
+
+                self.semi_valid_legacy_loans.extend(
+                    self.load_and_validate_legacy_loans(
+                        InsensitiveDictReader(loans_file, dialect="tsv"),
+                        file_def.service_point_id or task_configuration.fallback_service_point_id,
+                    )
                 )
-            )
-            logging.info(
-                "Loaded and validated %s loans in file",
-                len(self.semi_valid_legacy_loans),
-            )
+
+                logging.info(
+                    "Loaded and validated %s loans in file from %s",
+                    len(self.semi_valid_legacy_loans),
+                    file_def.file_name,
+                )
+        logging.info("Loaded and validated %s loans in total", len(self.semi_valid_legacy_loans))
         if any(self.task_configuration.item_files) or any(self.task_configuration.patron_files):
             self.valid_legacy_loans = list(self.check_barcodes())
             logging.info(
@@ -254,15 +252,14 @@ class LoansMigrator(MigrationTaskBase):
                     json.dumps(loan.to_dict()),
                 )
 
-    def load_and_validate_legacy_loans(self, loans_reader):
+    def load_and_validate_legacy_loans(self, loans_reader, service_point_id: str) -> list:
+        results = []
         num_bad = 0
         logging.info("Validating legacy loans in file...")
         for legacy_loan_count, legacy_loan_dict in enumerate(loans_reader):
             try:
                 legacy_loan = LegacyLoan(
-                    legacy_loan_dict,
-                    self.tenant_timezone,
-                    legacy_loan_count,
+                    legacy_loan_dict, service_point_id, self.tenant_timezone, legacy_loan_count
                 )
                 if any(legacy_loan.errors):
                     num_bad += 1
@@ -272,7 +269,7 @@ class LoansMigrator(MigrationTaskBase):
                             Blurbs.DiscardedLoans, f"{error[0]} - {error[1]}"
                         )
                 else:
-                    yield legacy_loan
+                    results.append(legacy_loan)
             except ValueError as ve:
                 logging.exception(ve)
         logging.info(
@@ -284,6 +281,7 @@ class LoansMigrator(MigrationTaskBase):
             self.migration_report.log_me()
             logging.critical("Halting...")
             sys.exit(1)
+        return results
 
     def handle_checkout_failure(
         self, legacy_loan, folio_checkout: TransactionResult
