@@ -1,5 +1,8 @@
 import ast
 
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
+
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -9,8 +12,6 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folioclient import FolioClient
 
 
 class HoldingsMapper(MappingFileMapperBase):
@@ -78,18 +79,7 @@ class HoldingsMapper(MappingFileMapperBase):
         elif folio_prop_name == "temporaryLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name, True)
         elif folio_prop_name == "callNumber":
-            if legacy_value.startswith("[") and len(legacy_value.split(",")) > 1:
-                self.migration_report.add_general_statistics(
-                    "Bound-with items callnumber identified"
-                )
-                self.migration_report.add(
-                    Blurbs.BoundWithMappings,
-                    (
-                        f"Number of bib-level callnumbers in record: "
-                        f"{len(legacy_value.split(','))}"
-                    ),
-                )
-            return legacy_value.removeprefix("[").removesuffix("]")
+            return self.get_call_number(legacy_value)
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
         elif folio_prop_name == "statisticalCodeIds":
@@ -103,6 +93,15 @@ class HoldingsMapper(MappingFileMapperBase):
         else:
             # edge case
             return ""
+
+    def get_call_number(self, legacy_value):
+        if legacy_value.startswith("[") and len(legacy_value.split(",")) > 1:
+            self.migration_report.add_general_statistics("Bound-with items callnumber identified")
+            self.migration_report.add(
+                Blurbs.BoundWithMappings,
+                (f"Number of bib-level callnumbers in record: {len(legacy_value.split(','))}"),
+            )
+        return legacy_value
 
     def get_location_id(
         self, legacy_item: dict, id_or_index, folio_prop_name, prevent_default=False
