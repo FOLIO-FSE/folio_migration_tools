@@ -55,6 +55,7 @@ def test_serialize_success_kiwi():
     legacy_request.patron_id = str(uuid.uuid4())
     assert legacy_request.serialize(FolioRelease.kiwi)
 
+
 def test_request_dates_to_utc():
     legacy_request_dict = {
         "item_barcode": "ib",

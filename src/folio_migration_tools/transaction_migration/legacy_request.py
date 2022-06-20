@@ -46,9 +46,7 @@ class LegacyRequest(object):
             self.errors.append((f"{self.request_type} not allowd", "request_type"))
 
         try:
-            temp_request_date: datetime.datetime = parse(
-                legacy_request_dict["request_date"]
-            )
+            temp_request_date: datetime.datetime = parse(legacy_request_dict["request_date"])
             if temp_request_date.tzinfo != tz.UTC:
                 temp_request_date = temp_request_date.replace(tzinfo=self.tenant_timezone)
         except Exception:
@@ -69,11 +67,14 @@ class LegacyRequest(object):
         self.request_date: datetime.datetime = temp_request_date
         self.request_expiration_date: datetime.datetime = temp_expiration_date
         self.correct_for_1_day_requests()
-    
+
     def correct_for_1_day_requests(self):
         try:
             if self.request_expiration_date.date() <= self.request_date.date():
-                if self.request_expiration_date.hour == 0 and self.request_expiration_date.minute == 0:
+                if (
+                    self.request_expiration_date.hour == 0
+                    and self.request_expiration_date.minute == 0
+                ):
                     self.request_expiration_date = self.request_expiration_date.replace(
                         hour=23, minute=59
                     )
@@ -83,7 +84,7 @@ class LegacyRequest(object):
         except Exception as ee:
             logging.error(ee)
             self.errors.append(("Time alignment issues", "both dates"))
-        
+
     def to_dict(self):
         return {
             "requestLevel": "Item",
@@ -143,6 +144,8 @@ class LegacyRequest(object):
         try:
             if self.tenant_timezone != ZoneInfo("UTC"):
                 self.request_date = self.request_date.astimezone(ZoneInfo("UTC"))
-                self.request_expiration_date = self.request_expiration_date.astimezone(ZoneInfo("UTC"))
+                self.request_expiration_date = self.request_expiration_date.astimezone(
+                    ZoneInfo("UTC")
+                )
         except Exception:
-             self.errors.append(("UTC correction issues", "both dates"))
+            self.errors.append(("UTC correction issues", "both dates"))

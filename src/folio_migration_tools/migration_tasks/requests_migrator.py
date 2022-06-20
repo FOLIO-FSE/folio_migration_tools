@@ -4,7 +4,6 @@ import logging
 import sys
 import time
 from datetime import datetime
-from datetime import timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -51,20 +50,16 @@ class RequestsMigrator(MigrationTaskBase):
             self.migration_report,
         )
         try:
-            logging.info(
-                "Attempting to retrieve tenant timezone configuration..."
-            )
-            self.tenant_timezone_str = json.loads(self.folio_client.folio_get_single_object(
+            logging.info("Attempting to retrieve tenant timezone configuration...")
+            my_path = (
                 "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
-                )["configs"][0]["value"])["timezone"]
-            logging.info(
-                "Tenant timezone is: %s", 
-                self.tenant_timezone_str
             )
+            self.tenant_timezone_str = json.loads(
+                self.folio_client.folio_get_single_object(my_path)["configs"][0]["value"]
+            )["timezone"]
+            logging.info("Tenant timezone is: %s", self.tenant_timezone_str)
         except Exception:
-            logging.info(
-                'Tenant locale settings not available. Using "UTC".'
-            )
+            logging.info('Tenant locale settings not available. Using "UTC".')
             self.tenant_timezone_str = "UTC"
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         with open(
