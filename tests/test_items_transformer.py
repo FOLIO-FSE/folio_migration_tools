@@ -1,5 +1,8 @@
 import uuid
+
 import pytest
+from folio_uuid.folio_namespaces import FOLIONamespaces
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 
@@ -28,3 +31,7 @@ def test_handle_circiulation_notes_happy_path():
     ItemsTransformer.handle_circiulation_notes(folio_rec, str(uuid.uuid4()))
     assert folio_rec["circulationNotes"][0]["note"] == "some_note"
     assert len(folio_rec["circulationNotes"]) == 1
+
+
+def test_get_object_type():
+    assert ItemsTransformer.get_object_type() == FOLIONamespaces.items
