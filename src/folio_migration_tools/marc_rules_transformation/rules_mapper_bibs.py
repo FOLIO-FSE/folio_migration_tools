@@ -126,8 +126,6 @@ class BibsRulesMapper(RulesMapperBase):
         self.dedupe_rec(clean_folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(clean_folio_instance, self.instance_json_schema)
-        if clean_folio_instance["discoverySuppress"]:
-            self.migration_report.add_general_statistics("Suppressed from discovery")
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         return clean_folio_instance
@@ -229,11 +227,15 @@ class BibsRulesMapper(RulesMapperBase):
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
 
-    def handle_suppression(self, folio_instance, file_def):
+    def handle_suppression(self, folio_instance, file_def: FileDefinition):
         folio_instance["discoverySuppress"] = file_def.suppressed
-        self.migration_report.add_general_statistics("Suppressed from discovery")
+        self.migration_report.add_general_statistics(
+            f'Suppressed from discovery = {folio_instance["discoverySuppress"]}'
+        )
         folio_instance["staffSuppress"] = file_def.staff_suppressed
-        self.migration_report.add_general_statistics("Staff suppressed")
+        self.migration_report.add_general_statistics(
+            f'Staff suppressed = {folio_instance["staffSuppress"]} '
+        )
 
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:

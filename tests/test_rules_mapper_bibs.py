@@ -1,5 +1,6 @@
 import json
 import re
+from unittest.mock import Mock
 
 import pymarc
 import pytest
@@ -12,6 +13,9 @@ from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
+)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
@@ -677,3 +681,43 @@ def test_format(mapper):
     formats = record[0]["instanceFormatIds"]
     m = message + "\n" + record[1]
     assert 4 == len(formats)
+
+
+def test_handle_suppression_set_false():
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    folio_instance = {}
+    file_def = FileDefinition(file_name="", staff_suppressed=False, suppressed=False)
+    BibsRulesMapper.handle_suppression(mocked_mapper, folio_instance, file_def)
+    assert folio_instance.get("staffSuppress") is False
+    assert folio_instance.get("discoverySuppress") is False
+    assert (
+        mocked_mapper.migration_report.report["General statistics"][
+            "Suppressed from discovery = False"
+        ]
+        == 1
+    )
+    assert (
+        mocked_mapper.migration_report.report["General statistics"]["Staff suppressed = False "]
+        == 1
+    )
+
+
+def test_handle_suppression_set_true():
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    folio_instance = {}
+    file_def = FileDefinition(file_name="", staff_suppressed=True, suppressed=True)
+    BibsRulesMapper.handle_suppression(mocked_mapper, folio_instance, file_def)
+    assert folio_instance.get("staffSuppress") is True
+    assert folio_instance.get("discoverySuppress") is True
+    assert (
+        mocked_mapper.migration_report.report["General statistics"][
+            "Suppressed from discovery = True"
+        ]
+        == 1
+    )
+    assert (
+        mocked_mapper.migration_report.report["General statistics"]["Staff suppressed = True "]
+        == 1
+    )
