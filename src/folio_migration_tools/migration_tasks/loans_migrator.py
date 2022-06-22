@@ -60,6 +60,9 @@ class LoansMigrator(MigrationTaskBase):
             task_configuration.fallback_service_point_id,
             self.migration_report,
         )
+        logging.info("Check that SMTP is disabled before migrating loans")
+        self.check_smtp_config()
+        logging.info("Proceeding with loans migration")
         logging.info("Attempting to retrieve tenant timezone configuration...")
         my_path = "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
         try:
@@ -113,6 +116,28 @@ class LoansMigrator(MigrationTaskBase):
         self.failed_and_not_dupe = {}
         logging.info("Starting row number is %s", task_configuration.starting_row)
         logging.info("Init completed")
+
+    def check_smtp_config(self):
+        okapi_config_base_path = "/configurations/entries"
+        okapi_config_query = "(module=={}%20and%20configName=={}%20and%20code=={})"
+        okapi_config_limit = 1000
+        okapi_config_module = "SMTP_SERVER"
+        okapi_config_name = "smtp"
+        okapi_config_code = "EMAIL_SMTP_HOST_DISABLED"
+        smtp_config_path = okapi_config_base_path + "?" + str(okapi_config_limit) + \
+            "&query=" + okapi_config_query.format(
+                okapi_config_module,
+                okapi_config_name,
+                okapi_config_code
+        )
+        print_smtp_warning()
+        if not self.folio_client.folio_get_single_object(smtp_config_path)["configs"]:
+            logging.warn("SMTP connection not disabled...")
+            for i in range(10, 0, -1):
+                sys.stdout.write("Pausing for {:02d} seconds. Press Ctrl+C to exit...\r".format(i))
+                time.sleep(1)
+        else:
+            logging.info("SMTP connection is disabled...")
 
     def do_work(self):
         logging.info("Starting")
@@ -613,3 +638,14 @@ def timings(t0, t0func, num_objects):
         f"Total objects: {num_objects}\tTotal elapsed: {elapsed:.2f}\t"
         f"Average per object: {avg:.2f}\tElapsed this time: {elapsed_func:.2f}"
     )
+
+
+def print_smtp_warning():
+    s = """
+          _____   __  __   _____   ______   ___
+         / ____| |  \/  | |_   _| |  __  | |__ \\
+        | (___   | \  / |   | |   | |__|_|    ) |
+         \___ \  | |\/| |   | |   | |        / /
+        |_____/  |_|  |_|   |_|   |_|       (_)
+    """  # noqa: E501, W605
+    print(s)
