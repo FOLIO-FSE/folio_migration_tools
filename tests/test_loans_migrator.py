@@ -3,8 +3,14 @@ from io import StringIO
 from unittest.mock import Mock
 from zoneinfo import ZoneInfo
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
+
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_tasks.loans_migrator import LoansMigrator
+
+
+def test_get_object_type():
+    assert LoansMigrator.get_object_type() == FOLIONamespaces.loans
 
 
 def test_load_and_validate_legacy_loans_set_in_source():

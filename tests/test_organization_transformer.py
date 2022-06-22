@@ -1,5 +1,13 @@
-from folio_migration_tools.migration_tasks.organization_transformer import OrganizationTransformer
+from folio_uuid.folio_namespaces import FOLIONamespaces
+
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.migration_tasks.organization_transformer import (
+    OrganizationTransformer,
+)
+
+
+def test_get_object_type():
+    assert OrganizationTransformer.get_object_type() == FOLIONamespaces.organizations
 
 
 def test_subclass_inheritance():

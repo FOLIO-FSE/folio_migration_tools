@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from unittest.mock import Mock
 
 import pytest
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -13,6 +14,10 @@ from folio_migration_tools.migration_tasks.user_transformer import UserTransform
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
+
+
+def test_get_object_type():
+    assert UserTransformer.get_object_type() == FOLIONamespaces.users
 
 
 def test_basic():

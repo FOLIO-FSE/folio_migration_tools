@@ -1,6 +1,7 @@
 import logging
 from unittest.mock import Mock
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
@@ -13,6 +14,10 @@ from folio_migration_tools.migration_tasks.holdings_csv_transformer import (
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
+
+
+def test_get_object_type():
+    assert HoldingsCsvTransformer.get_object_type() == FOLIONamespaces.holdings
 
 
 def test_generate_boundwith_part(caplog):

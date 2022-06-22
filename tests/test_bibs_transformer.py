@@ -1,9 +1,14 @@
+from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import MARCReader
 from pymarc import Record
 
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
 from folio_migration_tools.report_blurbs import Blurbs
+
+
+def test_get_object_type():
+    assert BibsTransformer.get_object_type() == FOLIONamespaces.instances
 
 
 def test_set_leader():
