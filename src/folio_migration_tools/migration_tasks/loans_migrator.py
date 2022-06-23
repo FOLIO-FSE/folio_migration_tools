@@ -124,11 +124,12 @@ class LoansMigrator(MigrationTaskBase):
         okapi_config_module = "SMTP_SERVER"
         okapi_config_name = "smtp"
         okapi_config_code = "EMAIL_SMTP_HOST_DISABLED"
-        smtp_config_path = okapi_config_base_path + "?" + str(okapi_config_limit) + \
-            "&query=" + okapi_config_query.format(
-                okapi_config_module,
-                okapi_config_name,
-                okapi_config_code
+        smtp_config_path = (
+            okapi_config_base_path
+            + "?"
+            + str(okapi_config_limit)
+            + "&query="
+            + okapi_config_query.format(okapi_config_module, okapi_config_name, okapi_config_code)
         )
         print_smtp_warning()
         if not self.folio_client.folio_get_single_object(smtp_config_path)["configs"]:
