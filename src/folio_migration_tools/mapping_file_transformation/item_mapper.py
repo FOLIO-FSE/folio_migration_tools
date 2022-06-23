@@ -2,8 +2,7 @@ import json
 import logging
 import sys
 from datetime import datetime
-from typing import Dict
-from typing import Set
+from typing import Dict, Set
 from uuid import uuid4
 
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -175,7 +174,7 @@ class ItemMapper(MappingFileMapperBase):
         elif folio_prop_name == "temporaryLocationId":
             if not self.temp_location_mapping:
                 raise TransformationProcessError(
-                    "Temporary location is mappet, but there is no "
+                    "Temporary location is mapped, but there is no "
                     "temporary location mapping file referenced in configuration"
                 )
             temp_loc = self.get_mapped_value(
