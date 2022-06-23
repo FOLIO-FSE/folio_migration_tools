@@ -110,7 +110,7 @@ class ItemsTransformer(MigrationTaskBase):
         else:
             logging.info(
                 "%s not found. No temporary location mapping will be performed",
-                self.folder_structure.temp_locations_map_path,
+                self.task_config.temp_location_map_file_name,
             )
             temporary_location_mapping = None
         self.mapper = ItemMapper(
