@@ -1,5 +1,17 @@
 # Changelog
 
+## 1_4_6 (24/06/2022)
+
+#### closed
+
+- [**closed**] Unclear error message when you have mapped temporary locations but no location map [#315](https://github.com/FOLIO-FSE/folio_migration_tools/issues/315)
+
+#### good first issue
+
+- [**good first issue**] Make Loans migration script clearly  WARN if SMTP is not disabled when posting new loans [#244](https://github.com/FOLIO-FSE/folio_migration_tools/issues/244)
+
+---
+
 ## 1_4_5 (22/06/2022)
 
 #### bug
