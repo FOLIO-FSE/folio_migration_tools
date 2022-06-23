@@ -3,16 +3,19 @@ import logging
 import sys
 from datetime import datetime
 from typing import Dict
+from typing import Set
 from uuid import uuid4
 
-from folioclient import FolioClient
 from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
+
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from folio_migration_tools.helper import Helper
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -47,7 +50,7 @@ class ItemMapper(MappingFileMapperBase):
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
-        self.unique_barcodes = set()
+        self.unique_barcodes: Set[str] = set()
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         self.status_mapping = {}
@@ -69,6 +72,8 @@ class ItemMapper(MappingFileMapperBase):
                 "code",
                 Blurbs.TemporaryLocationMapping,
             )
+        else:
+            self.temp_location_mapping = None
 
         if item_statuses_map:
             self.setup_status_mapping(item_statuses_map)
@@ -168,6 +173,11 @@ class ItemMapper(MappingFileMapperBase):
                 False,
             )
         elif folio_prop_name == "temporaryLocationId":
+            if not self.temp_location_mapping:
+                raise TransformationProcessError(
+                    "Temporary location is mappet, but there is no "
+                    "temporary location mapping file referenced in configuration"
+                )
             temp_loc = self.get_mapped_value(
                 self.temp_location_mapping,
                 *value_tuple,
