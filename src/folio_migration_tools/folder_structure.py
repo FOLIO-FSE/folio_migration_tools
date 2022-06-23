@@ -1,7 +1,7 @@
 import logging
 import sys
-from pathlib import Path
 import time
+from pathlib import Path
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
@@ -117,7 +117,6 @@ class FolderStructure:
         )
 
         # Mapping files
-        self.temp_locations_map_path = self.mapping_files_folder / "temp_locations.tsv"
         self.material_type_map_path = self.mapping_files_folder / "material_types.tsv"
         self.loan_type_map_path = self.mapping_files_folder / "loan_types.tsv"
         self.temp_loan_type_map_path = self.mapping_files_folder / "temp_loan_types.tsv"
