@@ -103,7 +103,8 @@ class ItemsTransformer(MigrationTaskBase):
         ).is_file():
             temporary_location_mapping = self.load_ref_data_mapping_file(
                 "temporaryLocationId",
-                self.folder_structure.temp_locations_map_path,
+                self.folder_structure.mapping_files_folder
+                / self.task_config.temp_location_map_file_name,
                 self.folio_keys,
             )
         else:
