@@ -278,6 +278,8 @@ class BatchPoster(MigrationTaskBase):
             try:
                 logging.info(response.text)
                 resp = json.dumps(response, indent=4)
+            except TypeError:
+                resp = response
             except Exception:
                 logging.exception("something unexpected happened")
                 resp = response
