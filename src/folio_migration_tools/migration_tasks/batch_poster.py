@@ -320,7 +320,7 @@ class BatchPoster(MigrationTaskBase):
                 self.folder_structure.failed_recs_path,
             )
         else:
-            logging.info("Done posting % records. % failed", self.num_posted, self.num_failures)
+            logging.info("Done posting %s records. %s failed", self.num_posted, self.num_failures)
 
         run = "second time" if self.performing_rerun else "first time"
         self.migration_report.set(

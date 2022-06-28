@@ -1,8 +1,28 @@
+import json
+
 from pymarc import MARCReader
 
 
 def get_path(file_name):
     return f"./tests/test_data/diacritics/{file_name}"
+
+
+def test_escapes_with_json():
+    with open("./tests/test_data/default/escape_chars.mrc", "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        record = next(reader)
+        title = record["245"]["a"]
+        assert title == '[HAROLD DAVID "HAL" SANDY AND WILDA BARMORE SANDY COLLECTION].]'
+
+        dumped_title = json.dumps({"title": record.title()})
+        assert (
+            dumped_title
+            == '{"title": "[HAROLD DAVID \\"HAL\\" SANDY AND WILDA BARMORE SANDY COLLECTION].]"}'
+        )
+        marc_json = record.as_json()
+        assert '"Hall"' not in marc_json
+
+        assert '\\"HAL\\"' in marc_json
 
 
 def test_amharic():
