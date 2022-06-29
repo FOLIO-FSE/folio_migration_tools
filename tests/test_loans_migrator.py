@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.loans_migrator import LoansMigrator
 
 
@@ -48,6 +49,7 @@ def test_load_and_validate_legacy_loans_set_in_source():
     mock_library_conf.okapi_password = ""
     mock_migrator = Mock(spec=LoansMigrator)
     mock_migrator.tenant_timezone = ZoneInfo("UTC")
+    mock_migrator.migration_report = MigrationReport()
     a = LoansMigrator.load_and_validate_legacy_loans(
         mock_migrator, reader, "Set on file or config"
     )
@@ -86,6 +88,7 @@ def test_load_and_validate_legacy_loans_set_centrally():
     mock_library_conf.okapi_username = ""
     mock_library_conf.okapi_password = ""
     mock_migrator = Mock(spec=LoansMigrator)
+    mock_migrator.migration_report = MigrationReport()
     mock_migrator.tenant_timezone = ZoneInfo("UTC")
     a = LoansMigrator.load_and_validate_legacy_loans(
         mock_migrator, reader, "Set on file or config"

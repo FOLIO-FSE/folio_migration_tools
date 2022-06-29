@@ -262,6 +262,8 @@ class LoansMigrator(MigrationTaskBase):
                 )
                 yield loan
             else:
+                # Add this loan to failed loans for later correction and re-run.
+                self.failed[loan.item_barcode] = loan
                 self.migration_report.add(
                     Blurbs.DiscardedLoans,
                     f"Loans discarded. Had migrated item barcode: {has_item_barcode}. "
@@ -285,7 +287,11 @@ class LoansMigrator(MigrationTaskBase):
         for legacy_loan_count, legacy_loan_dict in enumerate(loans_reader):
             try:
                 legacy_loan = LegacyLoan(
-                    legacy_loan_dict, service_point_id, self.tenant_timezone, legacy_loan_count
+                    legacy_loan_dict,
+                    service_point_id,
+                    self.migration_report,
+                    self.tenant_timezone,
+                    legacy_loan_count,
                 )
                 if any(legacy_loan.errors):
                     num_bad += 1
@@ -294,6 +300,10 @@ class LoansMigrator(MigrationTaskBase):
                         self.migration_report.add(
                             Blurbs.DiscardedLoans, f"{error[0]} - {error[1]}"
                         )
+                    # Add this loan to failed loans for later correction and re-run.
+                    self.failed[
+                        legacy_loan.item_barcode or f"no_barcode_{legacy_loan_count}"
+                    ] = legacy_loan
                 else:
                     results.append(legacy_loan)
             except ValueError as ve:

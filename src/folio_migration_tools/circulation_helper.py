@@ -90,7 +90,7 @@ class CirculationHelper:
             "itemBarcode": legacy_loan.item_barcode,
             "userBarcode": legacy_loan.patron_barcode,
             "loanDate": legacy_loan.out_date.isoformat(),
-            "servicePointId": self.service_point_id,
+            "servicePointId": legacy_loan.service_point_id,
             "overrideBlocks": {
                 "itemNotLoanableBlock": {"dueDate": legacy_loan.due_date.isoformat()},
                 "patronBlock": {},
