@@ -5,15 +5,20 @@ from zoneinfo import ZoneInfo
 from dateutil import tz
 from dateutil.parser import parse
 
+from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.report_blurbs import Blurbs
+
 
 class LegacyLoan(object):
     def __init__(
         self,
         legacy_loan_dict,
         fallback_service_point_id: str,
+        migration_report: MigrationReport,
         tenant_timezone=ZoneInfo("UTC"),
         row=0,
     ):
+        self.migration_report: MigrationReport = migration_report
         # validate
         correct_headers = [
             "item_barcode",
@@ -49,13 +54,13 @@ class LegacyLoan(object):
             temp_date_due: datetime = parse(legacy_loan_dict["due_date"])
             if temp_date_due.tzinfo != tz.UTC:
                 temp_date_due = temp_date_due.replace(tzinfo=self.tenant_timezone)
-                logging.info(
-                    "Provided due_date is not UTC, setting tzinfo to tenant timezone (%s)",
-                    self.tenant_timezone,
+                self.report(
+                    f"Provided due_date is not UTC, "
+                    f"setting tzinfo to tenant timezone ({self.tenant_timezone})"
                 )
             if temp_date_due.hour == 0 and temp_date_due.minute == 0:
                 temp_date_due = temp_date_due.replace(hour=23, minute=59)
-                logging.info(
+                self.report(
                     "Hour and minute not specified for due date. "
                     "Assuming end of local calendar day (23:59)..."
                 )
@@ -67,9 +72,9 @@ class LegacyLoan(object):
             temp_date_out: datetime = parse(legacy_loan_dict["out_date"])
             if temp_date_out.tzinfo != tz.UTC:
                 temp_date_out = temp_date_out.replace(tzinfo=self.tenant_timezone)
-                logging.info(
-                    "Provided out_date is not UTC, setting tzinfo to tenant timezone (%s)",
-                    self.tenant_timezone,
+                self.report(
+                    f"Provided out_date is not UTC, "
+                    f"setting tzinfo to tenant timezone ({self.tenant_timezone})"
                 )
         except Exception:
             temp_date_out = datetime.now(
@@ -123,3 +128,6 @@ class LegacyLoan(object):
                 self.out_date = self.out_date.astimezone(ZoneInfo("UTC"))
         except Exception:
             self.errors.append(("UTC correction issues", "both dates"))
+
+    def report(self, what_to_report: str):
+        self.migration_report.add(Blurbs.Details, what_to_report)
