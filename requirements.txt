@@ -14,7 +14,7 @@ folio-uuid==0.2.5
 folioclient==0.41.0
 humps==0.2.2
 idna==3.3; python_version >= '3'
-lxml==4.9.0
+lxml==4.9.1
 pydantic==1.9.1
 pymarc==4.2.0
 python-dateutil==2.8.2
