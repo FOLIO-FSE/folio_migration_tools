@@ -334,9 +334,9 @@ class BatchPoster(MigrationTaskBase):
         )
         self.rerun_run()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# Reserves migration results   \n")
-            report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
-            self.migration_report.write_migration_report(report_file, self.start_datetime)
+            self.migration_report.write_migration_report(
+                f"{self.task_config.object_type} loading report", report_file, self.start_datetime
+            )
 
     def rerun_run(self):
         if self.task_config.rerun_failed_records and (self.num_failures > 0):

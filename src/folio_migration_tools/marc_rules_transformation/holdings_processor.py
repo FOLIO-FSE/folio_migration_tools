@@ -253,9 +253,8 @@ class HoldingsProcessor:
         )
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# MFHD records transformation results   \n")
             self.mapper.migration_report.write_migration_report(
-                report_file, self.mapper.start_datetime
+                "MFHD records transformation report", report_file, self.mapper.start_datetime
             )
             Helper.print_mapping_report(
                 report_file,

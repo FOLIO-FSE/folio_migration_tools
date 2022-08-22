@@ -7,7 +7,6 @@ import time
 import traceback
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
 from typing import Optional
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
@@ -225,9 +224,9 @@ class LoansMigrator(MigrationTaskBase):
         self.write_failed_loans_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# Loans migration results   \n")
-            report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
-            self.migration_report.write_migration_report(report_file, self.start_datetime)
+            self.migration_report.write_migration_report(
+                "Loans migration report", report_file, self.start_datetime
+            )
 
     def write_failed_loans_to_file(self):
         csv_columns = [

@@ -4,8 +4,6 @@ import logging
 import sys
 import time
 import traceback
-from datetime import datetime
-from datetime import timezone
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
@@ -114,10 +112,8 @@ class CoursesMigrator(MigrationTaskBase):
 
     def wrap_up(self):
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# Courses migration results   \n")
-            report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
             self.mapper.migration_report.write_migration_report(
-                report_file, self.mapper.start_datetime
+                "Courses migration report", report_file, self.mapper.start_datetime
             )
 
 
