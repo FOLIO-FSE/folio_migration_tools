@@ -1,6 +1,5 @@
 import logging
 import sys
-from datetime import datetime as dt
 from io import IOBase
 from typing import List
 from typing import Optional
@@ -94,10 +93,10 @@ class BibsTransformer(MigrationTaskBase):
         logging.info("Done. Wrapping up...")
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# Bibliographic records transformation results   \n")
-            report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
             self.mapper.migration_report.write_migration_report(
-                report_file, self.mapper.start_datetime
+                "Bibliographic records transformation report",
+                report_file,
+                self.mapper.start_datetime,
             )
             Helper.print_mapping_report(
                 report_file,

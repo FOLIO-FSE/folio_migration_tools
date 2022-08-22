@@ -96,9 +96,9 @@ class ReservesMigrator(MigrationTaskBase):
         self.write_failed_reserves_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# Reserves migration results   \n")
-            report_file.write(f"Time Finished: {datetime.isoformat(datetime.now(timezone.utc))}\n")
-            self.migration_report.write_migration_report(report_file, self.start_datetime)
+            self.migration_report.write_migration_report(
+                "Reserves migration report", report_file, self.start_datetime
+            )
 
     def write_failed_reserves_to_file(self):
         # POST /coursereserves/courselistings/40a085bd-b44b-42b3-b92f-61894a75e3ce/reserves

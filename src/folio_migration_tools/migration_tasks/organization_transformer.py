@@ -6,20 +6,20 @@ import sys
 import time
 from os.path import isfile
 from typing import List
-from pydantic.main import BaseModel
-from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic.main import BaseModel
+
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
-from folio_migration_tools.library_configuration import FileDefinition, LibraryConfiguration
-from folio_migration_tools.mapping_file_transformation.organization_mapper import (
-    OrganizationMapper,
-)
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
+)
+from folio_migration_tools.mapping_file_transformation.organization_mapper import (
+    OrganizationMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
@@ -165,12 +165,10 @@ class OrganizationTransformer(MigrationTaskBase):
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logging.info(
-                "Writing migration- and mapping report to %s",
-                self.folder_structure.migration_reports_file,
-            )
             self.mapper.migration_report.write_migration_report(
-                migration_report_file, self.mapper.start_datetime
+                "Organizations transformation report",
+                migration_report_file,
+                self.mapper.start_datetime,
             )
 
             Helper.print_mapping_report(
@@ -183,25 +181,17 @@ class OrganizationTransformer(MigrationTaskBase):
 
     @staticmethod
     def clean_org(folio_rec):
-        if addresses := folio_rec.get("addresses", []):
-            primary_address_exists = False
-            empty_addresses = []
-
-            for address in addresses:
-                # Check if the address has content
-                address_content = {k: v for k, v in address.items() if k != "isPrimary"}
-                if not any(address_content.values()):
-                    empty_addresses.append(address)
-
-                # Check if the address is primary
-                if address["isPrimary"] is True:
-                    primary_address_exists = True
-
-            # If none of the existing addresses is pimrary
-            # Make the first one primary
-            if not primary_address_exists:
-                addresses[0]["isPrimary"] = True
-
-            folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
-
-            return folio_rec
+        if not (addresses := folio_rec.get("addresses", [])):
+            return
+        primary_address_exists = False
+        empty_addresses = []
+        for address in addresses:
+            address_content = {k: v for k, v in address.items() if k != "isPrimary"}
+            if not any(address_content.values()):
+                empty_addresses.append(address)
+            if address["isPrimary"] is True:
+                primary_address_exists = True
+        if not primary_address_exists:
+            addresses[0]["isPrimary"] = True
+        folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
+        return folio_rec

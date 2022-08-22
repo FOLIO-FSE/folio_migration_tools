@@ -197,12 +197,8 @@ class UserTransformer(MigrationTaskBase):
         with open(path, "w+") as id_map_file:
             json.dump(self.mapper.legacy_id_map, id_map_file, indent=4)
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logging.info(
-                "Writing migration- and mapping report to %s",
-                self.folder_structure.migration_reports_file,
-            )
             self.mapper.migration_report.write_migration_report(
-                migration_report_file, self.mapper.start_datetime
+                "Users transformation report", migration_report_file, self.mapper.start_datetime
             )
             Helper.print_mapping_report(
                 migration_report_file,

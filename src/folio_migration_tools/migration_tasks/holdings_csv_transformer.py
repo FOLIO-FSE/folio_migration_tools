@@ -231,12 +231,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.folder_structure.holdings_id_map_path, self.holdings_id_map
             )
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logging.info(
-                "Writing migration- and mapping report to %s",
-                self.folder_structure.migration_reports_file,
-            )
             self.mapper.migration_report.write_migration_report(
-                migration_report_file, self.mapper.start_datetime
+                "Holdings transformation report",
+                migration_report_file,
+                self.mapper.start_datetime,
             )
             Helper.print_mapping_report(
                 migration_report_file,

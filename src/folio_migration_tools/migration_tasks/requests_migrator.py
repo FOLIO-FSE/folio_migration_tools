@@ -182,8 +182,9 @@ class RequestsMigrator(MigrationTaskBase):
         self.write_failed_request_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# Requests migration results   \n")
-            self.migration_report.write_migration_report(report_file, self.start_datetime)
+            self.migration_report.write_migration_report(
+                "Requests migration report", report_file, self.start_datetime
+            )
 
     def write_failed_request_to_file(self):
         csv_columns = [
