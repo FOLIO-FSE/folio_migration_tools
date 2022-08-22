@@ -22,7 +22,7 @@ This is the loose roadmap, in order of most likely implementations first
 
 ### Can I use the tools for ongoing imports and integrations?
 The tools are primarliy maintained for performing initial data migrations. We recommend that you use native FOLIO functionality for ongoing loads where possible. 
-In theory, these tools can be used for ongoing patron loads from systems like Banner or PeopleSoft. But we recommend you to weigh your options carefully before going down this path. 
+In theory, these tools can be used for ongoing patron loads from systems like Banner, Workday, or PeopleSoft. But we recommend you to weigh your options carefully before going down this path. 
 
 # Contributing
 Want to contribute? Read the [CONTRIBUTING.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CONTRIBUTING.md)
