@@ -47,6 +47,7 @@ def mapper(pytestconfig) -> CoursesMapper:
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     """ conf = CoursesMigrator.TaskConfiguration(
