@@ -460,66 +460,80 @@ class BibsRulesMapper(RulesMapperBase):
         Raises:
             TransformationProcessError: _description_
         """
-        if self.hrid_handling == HridHandling.default or "001" not in marc_record:
+        if self.enumerate_hrid(marc_record):
+            self.generate_enumerated_hrid(folio_instance, marc_record, legacy_ids)
+        elif self.hrid_handling == HridHandling.preserve001:
+            self.preserve_001_as_hrid(folio_instance, marc_record, legacy_ids)
+        else:
+            raise TransformationProcessError("", f"Unknown HRID handling: {self.hrid_handling}")
+
+    def generate_enumerated_hrid(self, folio_instance, marc_record, legacy_ids):
+        num_part = self.generate_numeric_part()
+        folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
+        new_001 = Field(tag="001", data=folio_instance["hrid"])
+        try:
+            f_001 = marc_record["001"].value()
+            f_003 = marc_record["003"].value().strip() if "003" in marc_record else ""
+            self.migration_report.add(Blurbs.HridHandling, f'Values in 003: {f_003 or "Empty"}')
+
+            if self.task_configuration.deactivate035_from001:
+                self.migration_report.add(
+                    Blurbs.HridHandling, "035 generation from 001 turned off"
+                )
+            else:
+                str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
+                new_035 = Field(
+                    tag="035",
+                    indicators=[" ", " "],
+                    subfields=["a", str_035],
+                )
+                marc_record.add_ordered_field(new_035)
+                self.migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
+            marc_record.remove_fields("001")
+
+        except Exception:
+            if "001" in marc_record:
+                s = "Failed to create 035 from 001"
+                self.migration_report.add(Blurbs.HridHandling, s)
+                Helper.log_data_issue(legacy_ids, s, marc_record["001"])
+            else:
+                self.migration_report.add(Blurbs.HridHandling, "Legacy bib records without 001")
+        marc_record.add_ordered_field(new_001)
+        self.migration_report.add(Blurbs.HridHandling, "Created HRID using default settings")
+        self.instance_hrid_counter += 1
+
+    def generate_numeric_part(self):
+        return str(self.instance_hrid_counter).zfill(11)
+
+    def preserve_001_as_hrid(self, folio_instance, marc_record, legacy_ids):
+        value = marc_record["001"].value()
+        if value in self.unique_001s:
+            self.migration_report.add(Blurbs.HridHandling, "Duplicate 001. Creating HRID instead")
+            Helper.log_data_issue(
+                legacy_ids,
+                "Duplicate 001 for record. HRID created for record",
+                value,
+            )
             num_part = str(self.instance_hrid_counter).zfill(11)
             folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
-            try:
-                f_001 = marc_record["001"].value()
-                f_003 = marc_record["003"].value().strip() if "003" in marc_record else ""
-                self.migration_report.add(
-                    Blurbs.HridHandling, f'Values in 003: {f_003 or "Empty"}'
-                )
-
-                if self.task_configuration.deactivate035_from001:
-                    self.migration_report.add(
-                        Blurbs.HridHandling, "035 generation from 001 turned off"
-                    )
-                else:
-                    str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
-                    new_035 = Field(
-                        tag="035",
-                        indicators=[" ", " "],
-                        subfields=["a", str_035],
-                    )
-                    marc_record.add_ordered_field(new_035)
-                    self.migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
-                marc_record.remove_fields("001")
-
-            except Exception:
-                if "001" in marc_record:
-                    s = "Failed to create 035 from 001"
-                    self.migration_report.add(Blurbs.HridHandling, s)
-                    Helper.log_data_issue(legacy_ids, s, marc_record["001"])
-                else:
-                    self.migration_report.add(
-                        Blurbs.HridHandling, "Legacy bib records without 001"
-                    )
             marc_record.add_ordered_field(new_001)
-            self.migration_report.add(Blurbs.HridHandling, "Created HRID using default settings")
             self.instance_hrid_counter += 1
-        elif self.hrid_handling == HridHandling.preserve001:
-            value = marc_record["001"].value()
-            if value in self.unique_001s:
-                self.migration_report.add(
-                    Blurbs.HridHandling, "Duplicate 001. Creating HRID instead"
-                )
-                Helper.log_data_issue(
-                    legacy_ids,
-                    "Duplicate 001 for record. HRID created for record",
-                    value,
-                )
-                num_part = str(self.instance_hrid_counter).zfill(11)
-                folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
-                new_001 = Field(tag="001", data=folio_instance["hrid"])
-                marc_record.add_ordered_field(new_001)
-                self.instance_hrid_counter += 1
-            else:
-                self.unique_001s.add(value)
-                folio_instance["hrid"] = value
-                self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
         else:
-            raise TransformationProcessError("", f"Unknown HRID handling: {self.hrid_handling}")
+            self.unique_001s.add(value)
+            folio_instance["hrid"] = value
+            self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
+
+    def enumerate_hrid(self, marc_record):
+        enumerate_hrid = (
+            self.hrid_handling
+            in [
+                HridHandling.default,
+                HridHandling.default_reset,
+            ]
+            or "001" not in marc_record
+        )
+        return enumerate_hrid
 
     def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: List[str]) -> str:
         level = marc_record.leader[7]

@@ -22,6 +22,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings impor
     RulesMapperHoldings,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):
@@ -80,6 +81,11 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         )
         self.instance_id_map = self.load_id_map(self.folder_structure.instance_id_map_path, True)
         logging.info("%s Instance ids in map", len(self.instance_id_map))
+        if self.task_configuration.hrid_handling == HridHandling.preserve001:
+            raise TransformationProcessError(
+                "This HridHandling is not yet implemented for MFHD. "
+                "Choose default or default_reset"
+            )
         logging.info("Init done")
 
     def do_work(self):
@@ -102,6 +108,12 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 self.library_configuration,
             )
             mapper.mappings = rules_file["rules"]
+            if self.task_configuration.hrid_handling == HridHandling.default_reset:
+                logging.info("Resetting HRID settings to 1")
+                mapper.holdings_hrid_counter = 1
+            mapper.migration_report.set(
+                Blurbs.GeneralStatistics, "HRID starting number", mapper.holdings_hrid_counter
+            )
             processor = HoldingsProcessor(mapper, self.folder_structure)
             for file_def in self.task_config.files:
                 self.process_single_file(file_def, processor)

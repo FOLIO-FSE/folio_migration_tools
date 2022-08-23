@@ -31,6 +31,7 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
@@ -123,6 +124,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
             else:
                 logging.info("No file of legacy holdings setup.")
+
+            if self.task_configuration.hrid_handling == HridHandling.default_reset:
+                logging.info("Resetting HRID settings to 1")
+                self.mapper.holdings_hrid_counter = 1
+            self.mapper.migration_report.set(
+                Blurbs.GeneralStatistics, "HRID starting number", self.mapper.holdings_hrid_counter
+            )
         except HTTPError as http_error:
             logging.critical(http_error)
             sys.exit(1)

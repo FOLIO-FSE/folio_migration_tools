@@ -153,6 +153,12 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_location_mapping,
             self.library_configuration,
         )
+        if self.task_configuration.hrid_handling == HridHandling.default_reset:
+            logging.info("Resetting HRID settings to 1")
+            self.mapper.items_hrid_counter = 1
+        self.mapper.migration_report.set(
+            Blurbs.GeneralStatistics, "HRID starting number", self.mapper.items_hrid_counter
+        )
         logging.info("Init done")
 
     def do_work(self):
