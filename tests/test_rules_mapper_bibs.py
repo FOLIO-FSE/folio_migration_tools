@@ -41,6 +41,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         hrid_handling=HridHandling.default,
         files=[],
         ils_flavour="sierra",
+        reset_hrid_settings=False,
     )
     lib = LibraryConfiguration(
         okapi_url=pytestconfig.getoption("okapi_url"),

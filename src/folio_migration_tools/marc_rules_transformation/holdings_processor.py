@@ -172,10 +172,7 @@ class HoldingsProcessor:
                     new_004 = Field(tag="004", data=map_entity["instance_hrid"])
                     marc_record.remove_fields("004")
                     marc_record.add_ordered_field(new_004)
-                if self.mapper.task_configuration.hrid_handling in [
-                    HridHandling.default,
-                    HridHandling.default_reset,
-                ]:
+                if self.mapper.task_configuration.hrid_handling == HridHandling.default:
                     new_035 = Field(
                         tag="035",
                         indicators=[" ", " "],

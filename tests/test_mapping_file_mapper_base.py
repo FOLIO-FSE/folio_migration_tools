@@ -767,6 +767,7 @@ def test_validate_required_properties_item_notes_split_on_delimiter_notes():
     assert folio_rec["notes"][0]["note"] == "my note"
     assert folio_rec["notes"][0]["staffOnly"] == True
     assert folio_rec["notes"][0]["itemNoteTypeId"] == "A UUID"
+    assert "hrid" not in folio_rec
 
     assert folio_rec["notes"][1]["note"] == "my second note"
     assert folio_rec["notes"][1]["staffOnly"] == True

@@ -525,15 +525,7 @@ class BibsRulesMapper(RulesMapperBase):
             self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
 
     def enumerate_hrid(self, marc_record):
-        enumerate_hrid = (
-            self.hrid_handling
-            in [
-                HridHandling.default,
-                HridHandling.default_reset,
-            ]
-            or "001" not in marc_record
-        )
-        return enumerate_hrid
+        return self.hrid_handling == HridHandling.default or "001" not in marc_record
 
     def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: List[str]) -> str:
         level = marc_record.leader[7]

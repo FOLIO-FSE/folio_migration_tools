@@ -78,6 +78,30 @@ class MapperBase:
             logging.error(ee, stack_info=True)
             raise ee from ee
 
+    def reset_instance_hrid_counter(self):
+        logging.info("Resetting Instances HRID settings to 1")
+        self.instance_hrid_counter = 1
+        self.migration_report.set(
+            Blurbs.GeneralStatistics, "Instances HRID starting number", self.instance_hrid_counter
+        )
+        self.store_hrid_settings()
+
+    def reset_holdings_hrid_counter(self):
+        logging.info("Resetting Holdings HRID settings to 1")
+        self.holdings_hrid_counter = 1
+        self.migration_report.set(
+            Blurbs.GeneralStatistics, "Holdings HRID starting number", self.holdings_hrid_counter
+        )
+        self.store_hrid_settings()
+
+    def reset_item_hrid_counter(self):
+        logging.info("Resetting Items HRID settings to 1")
+        self.items_hrid_counter = 1
+        self.migration_report.set(
+            Blurbs.GeneralStatistics, "Items HRID starting number", self.items_hrid_counter
+        )
+        self.store_hrid_settings()
+
     def get_mapped_name(
         self,
         ref_data_mapping: RefDataMapping,
@@ -278,10 +302,11 @@ class MapperBase:
             logging.info("Wrote %s id:s to legacy map", len(legacy_map))
 
     def store_hrid_settings(self):
-        logging.info("Setting HRID counter to current +1")
+        logging.info("Setting HRID counter to current")
         try:
-            self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter + 1
-            self.hrid_settings["holdings"]["startNumber"] = self.holdings_hrid_counter + 1
+            self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter
+            self.hrid_settings["holdings"]["startNumber"] = self.holdings_hrid_counter
+            self.hrid_settings["items"]["startNumber"] = self.items_hrid_counter
             url = self.folio_client.okapi_url + self.hrid_path
             resp = requests.put(
                 url,
