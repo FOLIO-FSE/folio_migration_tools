@@ -49,18 +49,25 @@ class BibsTransformer(MigrationTaskBase):
     ):
 
         super().__init__(library_config, task_config, use_logging)
-        self.task_config = task_config
         self.processor: BibsProcessor = None
         self.check_source_files(
-            self.folder_structure.legacy_records_folder, self.task_config.files
+            self.folder_structure.legacy_records_folder, self.task_configuration.files
         )
-        logging.info(task_config.json(indent=4))
-        self.mapper = BibsRulesMapper(self.folio_client, library_config, task_config)
+        logging.info(self.task_configuration.json(indent=4))
+        self.mapper = BibsRulesMapper(self.folio_client, library_config, self.task_configuration)
         self.bib_ids = set()
         logging.info("Init done")
 
     def do_work(self):
         logging.info("Starting....")
+
+        if self.task_configuration.hrid_handling == HridHandling.default_reset:
+            logging.info("Resetting HRID settings to 1")
+            self.mapper.instance_hrid_counter = 1
+        self.mapper.migration_report.set(
+            Blurbs.GeneralStatistics, "HRID starting number", self.mapper.instance_hrid_counter
+        )
+
         with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
             self.processor = BibsProcessor(
                 self.mapper,
@@ -69,7 +76,7 @@ class BibsTransformer(MigrationTaskBase):
                 self.folder_structure,
             )
             with open(self.folder_structure.failed_bibs_file, "wb") as failed_bibs_file:
-                for file_obj in self.task_config.files:
+                for file_obj in self.task_configuration.files:
                     try:
                         with open(
                             self.folder_structure.legacy_records_folder / file_obj.file_name,

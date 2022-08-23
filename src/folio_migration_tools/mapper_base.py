@@ -34,6 +34,9 @@ class MapperBase:
         self.instance_hrid_counter = self.hrid_settings["instances"]["startNumber"]
         self.holdings_hrid_prefix = self.hrid_settings["holdings"]["prefix"]
         self.holdings_hrid_counter = self.hrid_settings["holdings"]["startNumber"]
+        self.items_hrid_prefix = self.hrid_settings["items"]["prefix"]
+        self.items_hrid_counter = self.hrid_settings["items"]["startNumber"]
+
         logging.info("Fetched HRID settings.")
         logging.info("Instance HRID prefix is %s", self.instance_hrid_prefix)
         logging.info("Instance start number is %s", self.instance_hrid_counter)
