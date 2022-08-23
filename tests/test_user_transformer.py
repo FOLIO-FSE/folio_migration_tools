@@ -50,6 +50,7 @@ def test_basic():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -89,6 +90,7 @@ def test_remove_preferred_first_name_if_empty():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -176,6 +178,7 @@ def test_boolean_values_explicitly_true():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -204,6 +207,7 @@ def test_boolean_values_explicitly_true_json_string():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -232,6 +236,7 @@ def test_boolean_values_explicitly_false_json_string():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -316,6 +321,7 @@ def test_boolean_values_explicitly_true_string():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -401,6 +407,7 @@ def test_boolean_values_explicitly_false_string():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -486,6 +493,7 @@ def test_boolean_values_explicitly_false():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -582,6 +590,7 @@ def test_notes(caplog):
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -664,6 +673,7 @@ def test_notes_empty_field(caplog):
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)

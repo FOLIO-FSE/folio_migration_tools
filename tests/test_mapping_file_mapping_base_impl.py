@@ -37,6 +37,7 @@ def test_get_prop():
         return_value={
             "instances": {"prefix": "pref", "startNumber": "1"},
             "holdings": {"prefix": "pref", "startNumber": "1"},
+            "items": {"prefix": "pref", "startNumber": "1"},
         }
     )
     mapper = MappingFileMappingBaseImpl(
