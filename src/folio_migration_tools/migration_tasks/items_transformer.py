@@ -45,6 +45,7 @@ class ItemsTransformer(MigrationTaskBase):
         statistical_codes_map_file_name: Optional[str] = ""
         item_statuses_map_file_name: str
         call_number_type_map_file_name: str
+        reset_hrid_settings: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -153,12 +154,9 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_location_mapping,
             self.library_configuration,
         )
-        if self.task_configuration.hrid_handling == HridHandling.default_reset:
-            logging.info("Resetting HRID settings to 1")
-            self.mapper.items_hrid_counter = 1
-        self.mapper.migration_report.set(
-            Blurbs.GeneralStatistics, "HRID starting number", self.mapper.items_hrid_counter
-        )
+        if self.task_configuration.reset_hrid_settings:
+            self.mapper.reset_item_hrid_counter()
+
         logging.info("Init done")
 
     def do_work(self):

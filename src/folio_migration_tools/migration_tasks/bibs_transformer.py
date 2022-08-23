@@ -36,6 +36,7 @@ class BibsTransformer(MigrationTaskBase):
         files: List[FileDefinition]
         ils_flavour: IlsFlavour
         tags_to_delete: Optional[List[str]] = []
+        reset_hrid_settings: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -57,16 +58,11 @@ class BibsTransformer(MigrationTaskBase):
         self.mapper = BibsRulesMapper(self.folio_client, library_config, self.task_configuration)
         self.bib_ids = set()
         logging.info("Init done")
+        if self.task_configuration.reset_hrid_settings:
+            self.mapper.reset_instance_hrid_counter()
 
     def do_work(self):
         logging.info("Starting....")
-
-        if self.task_configuration.hrid_handling == HridHandling.default_reset:
-            logging.info("Resetting HRID settings to 1")
-            self.mapper.instance_hrid_counter = 1
-        self.mapper.migration_report.set(
-            Blurbs.GeneralStatistics, "HRID starting number", self.mapper.instance_hrid_counter
-        )
 
         with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
             self.processor = BibsProcessor(

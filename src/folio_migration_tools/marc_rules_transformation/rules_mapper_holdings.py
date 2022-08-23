@@ -9,7 +9,6 @@ from folio_migration_tools.custom_exceptions import TransformationFieldMappingEr
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
@@ -191,7 +190,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
-        if self.task_configuration.hrid_handling == HridHandling.preserve001:
+        if self.task_configuration.create_source_records:
             self.store_hrid_settings()
         else:
             logging.info("NOT storing HRID settings since that is managed by FOLIO")
