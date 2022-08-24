@@ -11,6 +11,7 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
+from folio_migration_tools.test_infrastructure import mocked_classes
 
 
 # flake8: noqa
@@ -18,15 +19,7 @@ class MyTestableFileMapper(MappingFileMapperBase):
     def __init__(self, schema: dict, record_map: dict):
         mock_conf = Mock(spec=LibraryConfiguration)
         mock_conf.multi_field_delimiter = "<delimiter>"
-        mock_folio = Mock(spec=FolioClient)
-        mock_folio.okapi_url = "okapi_url"
-        mock_folio.folio_get_single_object = MagicMock(
-            return_value={
-                "instances": {"prefix": "pref", "startNumber": "1"},
-                "holdings": {"prefix": "pref", "startNumber": "1"},
-                "items": {"prefix": "pref", "startNumber": "1"},
-            }
-        )
+        mock_folio = mocked_classes.mocked_folio_client()
         super().__init__(
             mock_folio,
             schema,
