@@ -2,7 +2,6 @@ import logging
 from unittest.mock import Mock
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient import FolioClient
 
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
@@ -11,6 +10,7 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.holdings_csv_transformer import (
     HoldingsCsvTransformer,
 )
+from folio_migration_tools.test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
@@ -22,8 +22,7 @@ def test_get_object_type():
 
 def test_generate_boundwith_part(caplog):
     caplog.set_level(25)
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
+    mock_folio = mocked_classes.mocked_folio_client()
     HoldingsCsvTransformer.generate_boundwith_part(mock_folio, "legacy_id", {"id": "holding_uuid"})
     assert "Level 25" in caplog.text
     assert "boundwithPart\t" in caplog.text
@@ -33,8 +32,7 @@ def test_generate_boundwith_part(caplog):
 
 def test_merge_holding_in_first_boundwith(caplog):
 
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
+    mock_folio = mocked_classes.mocked_folio_client()
 
     mock_mapper = Mock(spec=HoldingsMapper)
     mock_mapper.migration_report = MigrationReport()
@@ -56,8 +54,7 @@ def test_merge_holding_in_first_boundwith(caplog):
 
 def test_merge_holding_in_second_boundwith_to_merge(caplog):
 
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
+    mock_folio = mocked_classes.mocked_folio_client()
 
     mock_mapper = Mock(spec=HoldingsMapper)
     mock_mapper.migration_report = MigrationReport()
@@ -89,8 +86,7 @@ def test_merge_holding_in_second_boundwith_to_merge(caplog):
 
 def test_merge_holding_in_second_boundwith_to_not_merge(caplog):
 
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
+    mock_folio = mocked_classes.mocked_folio_client()
 
     mock_mapper = Mock(spec=HoldingsMapper)
     mock_mapper.migration_report = MigrationReport()
