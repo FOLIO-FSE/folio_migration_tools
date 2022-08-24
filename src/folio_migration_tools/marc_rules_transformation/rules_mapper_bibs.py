@@ -503,7 +503,11 @@ class BibsRulesMapper(RulesMapperBase):
         self.instance_hrid_counter += 1
 
     def generate_numeric_part(self):
-        return str(self.instance_hrid_counter).zfill(11)
+        return (
+            str(self.instance_hrid_counter).zfill(11)
+            if self.common_retain_leading_zeroes
+            else str(self.instance_hrid_counter)
+        )
 
     def preserve_001_as_hrid(self, folio_instance, marc_record, legacy_ids):
         value = marc_record["001"].value()
@@ -514,7 +518,7 @@ class BibsRulesMapper(RulesMapperBase):
                 "Duplicate 001 for record. HRID created for record",
                 value,
             )
-            num_part = str(self.instance_hrid_counter).zfill(11)
+            num_part = self.generate_numeric_part()
             folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             marc_record.add_ordered_field(new_001)
