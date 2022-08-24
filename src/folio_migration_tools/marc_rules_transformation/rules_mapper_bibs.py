@@ -265,7 +265,8 @@ class BibsRulesMapper(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
-        self.store_hrid_settings()
+        if not self.task_configuration.never_update_hrid_settings:
+            self.store_hrid_settings()
 
     def report_bad_tags(self, marc_field, bad_tags, legacy_ids):
         if (

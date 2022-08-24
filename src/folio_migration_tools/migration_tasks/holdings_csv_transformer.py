@@ -55,6 +55,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             "callNumber",
         ]
         reset_hrid_settings: Optional[bool] = False
+        never_update_hrid_settings: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -125,7 +126,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             else:
                 logging.info("No file of legacy holdings setup.")
 
-            if self.task_configuration.reset_hrid_settings:
+            if (
+                self.task_configuration.reset_hrid_settings
+                and not self.task_configuration.never_update_hrid_settings
+            ):
                 self.mapper.reset_holdings_hrid_counter()
 
         except HTTPError as http_error:
