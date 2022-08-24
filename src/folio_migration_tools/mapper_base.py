@@ -305,6 +305,11 @@ class MapperBase:
     def store_hrid_settings(self):
         logging.info("Setting HRID counter to current")
         try:
+
+            if self.hrids_not_updated():
+                logging.info("NOT POSTing HRID settings, since did not change.")
+                return
+
             self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter
             self.hrid_settings["holdings"]["startNumber"] = self.holdings_hrid_counter
             self.hrid_settings["items"]["startNumber"] = self.items_hrid_counter
@@ -323,6 +328,13 @@ class MapperBase:
                 f"Something went wrong when setting the HRID settings. "
                 f"Update them manually. {json.dumps(self.hrid_settings)}"
             )
+
+    def hrids_not_updated(self):
+        return (
+            self.hrid_settings["instances"]["startNumber"] == self.instance_hrid_counter
+            and self.hrid_settings["holdings"]["startNumber"] == self.holdings_hrid_counter
+            and self.hrid_settings["items"]["startNumber"] == self.items_hrid_counter
+        )
 
     @staticmethod
     def validate_required_properties(
