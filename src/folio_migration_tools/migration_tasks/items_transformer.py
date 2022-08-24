@@ -46,6 +46,7 @@ class ItemsTransformer(MigrationTaskBase):
         item_statuses_map_file_name: str
         call_number_type_map_file_name: str
         reset_hrid_settings: Optional[bool] = False
+        never_update_hrid_settings: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -154,7 +155,10 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_location_mapping,
             self.library_configuration,
         )
-        if self.task_configuration.reset_hrid_settings:
+        if (
+            self.task_configuration.reset_hrid_settings
+            and not self.task_configuration.never_update_hrid_settings
+        ):
             self.mapper.reset_item_hrid_counter()
 
         logging.info("Init done")

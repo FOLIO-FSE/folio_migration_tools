@@ -190,10 +190,11 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
-        if self.task_configuration.create_source_records:
-            self.store_hrid_settings()
-        else:
-            logging.info("NOT storing HRID settings since that is managed by FOLIO")
+        if not self.task_configuration.never_update_hrid_settings:
+            if self.task_configuration.create_source_records:
+                self.store_hrid_settings()
+            else:
+                logging.info("NOT storing HRID settings since that is managed by FOLIO")
 
     def set_holdings_type(self, marc_record: Record, folio_holding, legacy_id: str):
         # Holdings type mapping

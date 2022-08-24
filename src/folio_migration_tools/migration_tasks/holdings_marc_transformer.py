@@ -39,6 +39,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         fallback_holdings_type_id: str
         create_source_records: Optional[bool] = False
         reset_hrid_settings: Optional[bool] = False
+        never_update_hrid_settings: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -108,8 +109,11 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 self.library_configuration,
             )
             mapper.mappings = rules_file["rules"]
-            if self.task_configuration.reset_hrid_settings:
-                self.mapper.reset_holdings_hrid_counter()
+            if (
+                self.task_configuration.reset_hrid_settings
+                and not self.task_configuration.never_update_hrid_settings
+            ):
+                mapper.reset_holdings_hrid_counter()
             processor = HoldingsProcessor(mapper, self.folder_structure)
             for file_def in self.task_config.files:
                 self.process_single_file(file_def, processor)
