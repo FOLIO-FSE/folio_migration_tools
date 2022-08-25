@@ -469,9 +469,14 @@ class BibsRulesMapper(RulesMapperBase):
             raise TransformationProcessError("", f"Unknown HRID handling: {self.hrid_handling}")
 
     def generate_enumerated_hrid(self, folio_instance, marc_record, legacy_ids):
-        num_part = self.generate_numeric_part()
-        folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
+        folio_instance["hrid"] = f"{self.instance_hrid_prefix}{self.generate_numeric_part()}"
         new_001 = Field(tag="001", data=folio_instance["hrid"])
+        self.handle_035_generation(marc_record, legacy_ids)
+        marc_record.add_ordered_field(new_001)
+        self.migration_report.add(Blurbs.HridHandling, "Created HRID using default settings")
+        self.instance_hrid_counter += 1
+
+    def handle_035_generation(self, marc_record, legacy_ids):
         try:
             f_001 = marc_record["001"].value()
             f_003 = marc_record["003"].value().strip() if "003" in marc_record else ""
@@ -499,9 +504,6 @@ class BibsRulesMapper(RulesMapperBase):
                 Helper.log_data_issue(legacy_ids, s, marc_record["001"])
             else:
                 self.migration_report.add(Blurbs.HridHandling, "Legacy bib records without 001")
-        marc_record.add_ordered_field(new_001)
-        self.migration_report.add(Blurbs.HridHandling, "Created HRID using default settings")
-        self.instance_hrid_counter += 1
 
     def generate_numeric_part(self):
         return (
@@ -513,14 +515,18 @@ class BibsRulesMapper(RulesMapperBase):
     def preserve_001_as_hrid(self, folio_instance, marc_record, legacy_ids):
         value = marc_record["001"].value()
         if value in self.unique_001s:
-            self.migration_report.add(Blurbs.HridHandling, "Duplicate 001. Creating HRID instead")
+            self.migration_report.add(
+                Blurbs.HridHandling,
+                "Duplicate 001. Creating HRID instead. "
+                "Previous 001 will be stored in a new 035 field",
+            )
+            self.handle_035_generation(marc_record, legacy_ids)
             Helper.log_data_issue(
                 legacy_ids,
                 "Duplicate 001 for record. HRID created for record",
                 value,
             )
-            num_part = self.generate_numeric_part()
-            folio_instance["hrid"] = f"{self.instance_hrid_prefix}{num_part}"
+            folio_instance["hrid"] = f"{self.instance_hrid_prefix}{self.generate_numeric_part()}"
             new_001 = Field(tag="001", data=folio_instance["hrid"])
             marc_record.add_ordered_field(new_001)
             self.instance_hrid_counter += 1
@@ -546,20 +552,23 @@ class BibsRulesMapper(RulesMapperBase):
                 (
                     i["id"]
                     for i in self.folio.modes_of_issuance
-                    if str(name).lower() == i["name"].lower()
+                    if name.lower() == i["name"].lower()
                 ),
                 "",
             )
+
             self.migration_report.add(Blurbs.MatchedModesOfIssuanceCode, f"{name} -- {ret}")
+
             if not ret:
                 self.migration_report.add(
-                    Blurbs.MatchedModesOfIssuanceCode,
-                    f"Unmatched level: {level}",
+                    Blurbs.MatchedModesOfIssuanceCode, f"Unmatched level: {level}"
                 )
+
                 return self.other_mode_of_issuance_id
             return ret
         except IndexError:
             self.migration_report.add(Blurbs.PossibleCleaningTasks, f"No Leader[7] in {legacy_id}")
+
             return self.other_mode_of_issuance_id
         except StopIteration as ee:
             logging.exception(f"{marc_record.leader} {list(self.folio.modes_of_issuance)}")
@@ -664,17 +673,7 @@ class BibsRulesMapper(RulesMapperBase):
         if ils_flavour in {IlsFlavour.sierra, IlsFlavour.millennium}:
             return get_iii_bib_id(marc_record)
         elif ils_flavour == IlsFlavour.tag907y:
-            try:
-                return list(set(marc_record["907"].get_subfields("a", "y")))
-            except Exception as e:
-                raise TransformationRecordFailedError(
-                    index_or_legacy_id,
-                    (
-                        "907 $y and $a is missing is missing, although they is "
-                        "required for this legacy ILS choice"
-                    ),
-                    marc_record.as_json(),
-                ) from e
+            return get_bib_id_from_907y(marc_record, index_or_legacy_id)
         elif ils_flavour == IlsFlavour.tagf990a:
             res = {f["a"].strip() for f in marc_record.get_fields("990") if "a" in f}
             if marc_record["001"].format_field().strip():
@@ -682,17 +681,16 @@ class BibsRulesMapper(RulesMapperBase):
             if any(res):
                 self.migration_report.add_general_statistics("legacy id from 990$a")
                 return list(res)
+            else:
+                raise TransformationRecordFailedError(
+                    index_or_legacy_id,
+                    "neither 990$a or 001 found in record.",
+                    marc_record.as_json(),
+                )
         elif ils_flavour == IlsFlavour.aleph:
             return self.get_aleph_bib_id(marc_record)
         elif ils_flavour in {IlsFlavour.voyager, "voyager", IlsFlavour.tag001}:
-            try:
-                return [marc_record["001"].format_field().strip()]
-            except Exception as e:
-                raise TransformationRecordFailedError(
-                    index_or_legacy_id,
-                    "001 is missing, although it is required for Voyager migrations",
-                    marc_record.as_json(),
-                ) from e
+            return get_bib_id_from_001(marc_record, index_or_legacy_id)
         elif ils_flavour == IlsFlavour.koha:
             try:
                 return [marc_record["999"]["c"]]
@@ -746,5 +744,30 @@ def get_iii_bib_id(marc_record: Record):
         raise TransformationRecordFailedError(
             "unknown identifier",
             "907 $a is missing, although it is required for Sierra/iii migrations",
+            marc_record.as_json(),
+        ) from e
+
+
+def get_bib_id_from_001(marc_record: Record, index_or_legacy_id):
+    try:
+        return [marc_record["001"].format_field().strip()]
+    except Exception as e:
+        raise TransformationRecordFailedError(
+            index_or_legacy_id,
+            "001 is missing, although it is required for Voyager migrations",
+            marc_record.as_json(),
+        ) from e
+
+
+def get_bib_id_from_907y(marc_record: Record, index_or_legacy_id):
+    try:
+        return list(set(marc_record["907"].get_subfields("a", "y")))
+    except Exception as e:
+        raise TransformationRecordFailedError(
+            index_or_legacy_id,
+            (
+                "907 $y and $a is missing is missing, although they is "
+                "required for this legacy ILS choice"
+            ),
             marc_record.as_json(),
         ) from e
