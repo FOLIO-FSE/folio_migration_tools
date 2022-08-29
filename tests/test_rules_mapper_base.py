@@ -1,17 +1,20 @@
 import datetime
 import json
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 from uuid import uuid4
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioClient
 from pymarc.reader import MARCReader
 from pymarc.record import Field
 from pymarc.record import Leader
 from pymarc.record import Record
 
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
+
 
 # flake8: noqa: E501
 
@@ -223,3 +226,25 @@ def test_get_instance_schema():
         # print("!")
         # print(folio_record)
         # assert folio_record != {}
+
+
+def test_create_preceding_succeeding_titles(caplog):
+    mock_folio = MagicMock(spec=FolioClient)
+    mock_library_conf = MagicMock(spec=LibraryConfiguration)
+    rules_mapper_base = RulesMapperBase(mock_folio, mock_library_conf, conditions=None)
+
+    rules_mapper_base.create_preceding_succeeding_titles(
+        { "title" : "A Succeeding Title" },
+        "succeedingTitles",
+        "1111-1111-1111-1111"
+    )
+    assert '"title": "A Succeeding Title"' in caplog.text
+    assert '"precedingInstanceId": "1111-1111-1111-1111"' in caplog.text
+
+    rules_mapper_base.create_preceding_succeeding_titles(
+        { "title" : "A Preceding Title" },
+        "precedingTitles",
+        "2222-2222-2222-2222"
+    )
+    assert '"title": "A Preceding Title"' in caplog.text
+    assert '"succeedingInstanceId": "2222-2222-2222-2222"' in caplog.text

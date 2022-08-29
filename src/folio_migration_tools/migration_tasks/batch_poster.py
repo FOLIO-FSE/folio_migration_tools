@@ -254,15 +254,10 @@ class BatchPoster(MigrationTaskBase):
             # Likely a json parsing error
             logging.error(response.text)
             raise TransformationProcessError("", "HTTP 400. Somehting is wrong. Quitting")
-        elif self.task_config.object_type == "SRS" and response.status_code == 500:
-            logging.info(
-                "Post failed. Size: %s Waiting 30s until reposting. Number of tries: %s of 5",
-                get_req_size(response),
-                recursion_depth,
-            )
-            logging.info(response.text)
-            time.sleep(30)
-            if recursion_depth > 4:
+        elif self.task_config.object_type == "SRS":
+            if response.status_code == 500:
+                if len(batch) == 1:
+                    logging.info(batch)
                 raise TransformationRecordFailedError(
                     "",
                     f"HTTP {response.status_code}\t"
@@ -270,6 +265,22 @@ class BatchPoster(MigrationTaskBase):
                     f"{datetime.utcnow().isoformat()} UTC\n",
                     response.text,
                 )
+            elif response.status_code == 503 or response.status_code == 504:
+                logging.info(
+                    "Post failed. Size: %s Waiting 30s until reposting. Number of tries: %s of 5",
+                    get_req_size(response),
+                    recursion_depth,
+                )
+                logging.info(response.text)
+                time.sleep(30)
+                if recursion_depth > 4:
+                    raise TransformationRecordFailedError(
+                        "",
+                        f"HTTP {response.status_code}\t"
+                        f"Request size: {get_req_size(response)}"
+                        f"{datetime.utcnow().isoformat()} UTC\n",
+                        response.text,
+                    )
             else:
                 self.post_batch(batch, failed_recs_file, num_records, recursion_depth + 1)
         else:
