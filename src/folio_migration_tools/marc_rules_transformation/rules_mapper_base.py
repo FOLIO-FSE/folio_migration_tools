@@ -4,6 +4,7 @@ import logging
 import time
 import uuid
 from textwrap import wrap
+from folio_migration_tools.folder_structure import FolderStructure
 
 import pymarc
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -17,6 +18,7 @@ from folio_migration_tools.custom_exceptions import TransformationFieldMappingEr
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.report_blurbs import Blurbs
@@ -373,8 +375,18 @@ class RulesMapperBase(MapperBase):
                 # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec, self.schema)
 
+
     def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
         self.migration_report.add(Blurbs.PrecedingSuccedingTitles, f"{e_parent} created")
+        folder_structure = FolderStructure(
+            self.library_configuration.base_folder,
+            FOLIONamespaces.instances,
+            "",
+            self.library_configuration.iteration_identifier,
+            self.library_configuration.add_time_stamp_to_file_names,
+        )
+        folder_structure.setup_migration_file_structure()
+        preceding_succeding_titles_file = open(folder_structure.preceding_succeeding_records_path, "a+")
         # TODO: Make these uuids deterministic
         new_entity = {
             "id": str(uuid.uuid4()),
@@ -385,6 +397,7 @@ class RulesMapperBase(MapperBase):
             new_entity["succeedingInstanceId"] = identifier
         else:
             new_entity["precedingInstanceId"] = identifier
+
         if new_entity.get("isbnValue", ""):
             new_entity["identifiers"].append(
                 {
@@ -400,6 +413,8 @@ class RulesMapperBase(MapperBase):
                 }
             )
         logging.log(25, f"{e_parent}\t{json.dumps(new_entity)}")
+        preceding_succeding_titles_file.write(f"{json.dumps(new_entity)}\n")
+        preceding_succeding_titles_file.close()
 
     def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):
         v = value
