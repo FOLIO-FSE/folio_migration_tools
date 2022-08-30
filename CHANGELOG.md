@@ -1,6 +1,14 @@
 # Changelog
 
-## 1.4.7 (25/06/2022)
+## 1.4.8 (30/08/2022)
+
+---
+
+## 1_4_7 (25/06/2022)
+
+#### bug
+
+- [**bug**] JSON parsing fails when 409:s are returned from batch apis [#320](https://github.com/FOLIO-FSE/folio_migration_tools/issues/320)
 
 ---
 
