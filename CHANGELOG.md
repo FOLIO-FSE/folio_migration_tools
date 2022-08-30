@@ -1,6 +1,21 @@
 # Changelog
 
-## 1.4.8 (30/08/2022)
+## 1_4_8 (30/08/2022)
+
+#### bug
+
+- [**bug**] Fix bugs and minor issues with loans migrations [#323](https://github.com/FOLIO-FSE/folio_migration_tools/issues/323)
+
+#### closed
+
+- [**closed**] Add toggle for updating hrid or not. [#338](https://github.com/FOLIO-FSE/folio_migration_tools/issues/338)
+- [**closed**] Honor commonRetainLeadingZeroes setting when generating instance HRIDs
+
+ [#231](https://github.com/FOLIO-FSE/folio_migration_tools/issues/231)
+
+#### simplify_migration_process
+
+- [**simplify_migration_process**] Add configuration option to reset HRID settings [#105](https://github.com/FOLIO-FSE/folio_migration_tools/issues/105)
 
 ---
 
