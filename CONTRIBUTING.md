@@ -36,9 +36,11 @@ When you make edits to this document, make sure you update the Table of contents
   - [Running an end-to-end transformation](#running-an-end-to-end-transformation)
 # Writing Issues.
 Writing good issues is key.
-Both for sharing to the larger group of users what is needed or not working, but also for helping the developer working on the issue to reach the DoD and beyond.
+Both for sharing to the larger group of users what is needed or not working, but also for helping the developer working on the issue to reach the Definition Of Done (DoD) and beyond.
 
 For the developer writing the issue, it is good practice to share a screenshot or some data examples or a drawing on what changed. Since Issues are linked into the [CHANGELOG.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CHANGELOG.md), this habit will propagate well-written issues over to Pypi and more.
+
+Formulating a DoD is good practice. Take a moment to do this properly.   
 
 
 # Git(hub) workflow
@@ -54,7 +56,11 @@ In the ideal situation, this is what you do:
 ```
 
 ## 2. :sparkles: Do you thing :sparkles:
-Write your tests, write your code. More on this part in sections below.
+* :test_tube: Write your tests 
+* :keyboard: Write your code
+* :ledger: Add documentation to the readme if necessary 
+* :vertical_traffic_light: It's good practice to add test data to the migration_repo_template in order to maintain a set of examples for new users and also maintain integration test coverage   
+
 
 
 ## 3. Prepare for merging
