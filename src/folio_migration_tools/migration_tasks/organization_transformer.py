@@ -58,7 +58,7 @@ class OrganizationTransformer(MigrationTaskBase):
             / self.task_config.organizations_mapping_file_name
         )
         self.results_path = self.folder_structure.created_objects_path
-        self.failed_files: List[str] = list()
+        self.failed_files: List[str] = []
 
         self.folio_keys = []
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
@@ -165,10 +165,12 @@ class OrganizationTransformer(MigrationTaskBase):
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
+            logging.info(
+                "Writing migration- and mapping report to %s",
+                self.folder_structure.migration_reports_file,
+            )
             self.mapper.migration_report.write_migration_report(
-                "Organizations transformation report",
-                migration_report_file,
-                self.mapper.start_datetime,
+                migration_report_file, self.mapper.start_datetime
             )
 
             Helper.print_mapping_report(
@@ -181,17 +183,25 @@ class OrganizationTransformer(MigrationTaskBase):
 
     @staticmethod
     def clean_org(folio_rec):
-        if not (addresses := folio_rec.get("addresses", [])):
-            return
-        primary_address_exists = False
-        empty_addresses = []
-        for address in addresses:
-            address_content = {k: v for k, v in address.items() if k != "isPrimary"}
-            if not any(address_content.values()):
-                empty_addresses.append(address)
-            if address["isPrimary"] is True:
-                primary_address_exists = True
-        if not primary_address_exists:
-            addresses[0]["isPrimary"] = True
-        folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
-        return folio_rec
+        if addresses := folio_rec.get("addresses", []):
+            primary_address_exists = False
+            empty_addresses = []
+
+            for address in addresses:
+                # Check if the address has content
+                address_content = {k: v for k, v in address.items() if k != "isPrimary"}
+                if not any(address_content.values()):
+                    empty_addresses.append(address)
+
+                # Check if the address is primary
+                if address["isPrimary"] is True:
+                    primary_address_exists = True
+
+            # If none of the existing addresses is pimrary
+            # Make the first one primary
+            if not primary_address_exists:
+                addresses[0]["isPrimary"] = True
+
+            folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
+
+            return folio_rec
