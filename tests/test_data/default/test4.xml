@@ -33,6 +33,9 @@
                     <datafield ind1="0" ind2="4" tag="245">
                         <subfield code="a">Les cahiers d'urbanisme</subfield>
                     </datafield>
+                     <datafield ind1="0" ind2="4" tag="246">
+                        <subfield code="a">Cahiers d'urbanisme et d'aménagement du territoire</subfield>
+                    </datafield>
                     <datafield ind1=" " ind2="1" tag="264">
                         <subfield code="c">19uu-</subfield>
                     </datafield>

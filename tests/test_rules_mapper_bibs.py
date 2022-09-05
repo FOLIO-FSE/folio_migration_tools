@@ -1,11 +1,19 @@
 import json
+import logging
 import re
 from unittest.mock import Mock
+from uuid import uuid4
 
 import pymarc
 import pytest
 from folioclient.FolioClient import FolioClient
 from lxml import etree
+
+from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.test_infrastructure.mocked_classes import mocked_folio_client
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.propagate = True
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FileDefinition
@@ -110,8 +118,9 @@ def test_suppression(mapper):
 
 def test_simple_title(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
-    instance_identifiers = set(["a", "b"])
+    instance_identifiers = {"a", "b"}
     assert "Modern Electrosynthetic Methods in Organic Chemistry" == record[0]["title"]
+
     with pytest.raises(TransformationRecordFailedError):
         BibsProcessor.get_valid_instance_ids(
             record[0], ["a", "b"], instance_identifiers, MigrationReport()
@@ -120,20 +129,22 @@ def test_simple_title(mapper):
 
 def test_simple_title2(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
-    instance_identifiers = set(["c", "d"])
+    instance_identifiers = {"c", "d"}
     ids = BibsProcessor.get_valid_instance_ids(
         record[0], ["a", "b"], instance_identifiers, MigrationReport()
     )
+
     assert "a" in ids
     assert "b" in ids
 
 
 def test_simple_title3(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
-    instance_identifiers = set(["b", "c", "d"])
+    instance_identifiers = {"b", "c", "d"}
     ids = BibsProcessor.get_valid_instance_ids(
         record[0], ["a", "b"], instance_identifiers, MigrationReport()
     )
+
     assert ids == ["a"]
 
 
@@ -153,8 +164,7 @@ def test_strange_isbn(mapper):
         assert 1 == len(str.split(i))
 
 
-def test_composed_title(mapper):
-    message = "Should create a composed title (245) with the [a, b, k, n, p] subfields"
+def test_should_create_a_composed_title_245_with_the_a_b_k_n_p_subfields(mapper):
     record = default_map("test_composed_title.xml", xpath_245, mapper)
     # self.assertFalse('/' in record['title'])
     assert (
@@ -163,53 +173,46 @@ def test_composed_title(mapper):
     )
 
 
-def test_alternative_titles_246(mapper):
-    message = "Should match 246 to alternativeTitles"
+def test_should_match_246_to_alternative_titles(mapper):
     xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+
     record = default_map("test3.xml", xpath, mapper)
-    # self.assertFalse(all('/' in t for t in record['alternativeTitles']))
     title = "Engineering identities, epistemologies and values"
-    alt_titles = list((t["alternativeTitle"] for t in record[0]["alternativeTitles"]))
-    assert title in alt_titles  # message
-
-
-def test_alternative_titles_130(mapper):
-    message = "Should match 130 to alternativeTitles"
-    xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
-    record = default_map("test4.xml", xpath, mapper)
-    # self.assertFalse(all('/' in t for t in record['alternativeTitles']))
-    title = "Les cahiers d'urbanisme"
-    alt_titles = list((t["alternativeTitle"] for t in record[0]["alternativeTitles"]))
-    assert title in alt_titles  #
-
-
-def alternative_titles_246_and_130(mapper):
-    message = "Should match 246 to alternativeTitles when there is also 130"
-    xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
-    record = default_map("test4.xml", xpath, mapper)
-    title = "Cahiers d'urbanisme et d'aménagement du territoire"
-    alt_titles = list((t["alternativeTitle"] for t in record[0]["alternativeTitles"]))
+    alt_titles = [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
     assert title in alt_titles
 
 
-def alternative_titles_4(mapper):
-    message = "Should match 222 to alternativeTitles when there is also 130"
+def test_should_match_130_to_alternative_titles(mapper):
     xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+
     record = default_map("test4.xml", xpath, mapper)
-    # self.assertFalse(all('/' in t for t in record['alternativeTitles']))
-    title = "Urbana tidskrifter"
-    assert title in list(t["alternativeTitle"] for t in record[0]["alternativeTitles"])
-    # message + "\n" + record[1],
-
-    title = "Cahiers d'urbanisme et d'aménagement du territoire 57/58/59"
-    assert title in list(t["alternativeTitle"] for t in record[0]["alternativeTitles"])
-    # message + "\n" + record[1],
     title = "Les cahiers d'urbanisme"
-    assert title in list(t["alternativeTitle"] for t in record[0]["alternativeTitles"])
+    alt_titles = [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
+    assert title in alt_titles
 
 
-def test_editions(mapper):
-    message = "Should add editions (250) to the editions list and enforce unique"
+def test_should_match_246_to_alternative_titles_when_there_is_also_130(mapper):
+    xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+
+    record = default_map("test4.xml", xpath, mapper)
+    title = "Cahiers d'urbanisme et d'aménagement du territoire"
+    alt_titles = [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
+    assert title in alt_titles
+
+
+def deprecated_test_should_match_222_to_alternative_titles_when_there_is_also_130(mapper):
+    xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+
+    record = default_map("test4.xml", xpath, mapper)
+    title = "Urbana tidskrifter"
+    assert title in [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
+    title = "Cahiers d'urbanisme et d'aménagement du territoire 57/58/59"
+    assert title in [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
+    title = "Les cahiers d'urbanisme"
+    assert title in [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
+
+
+def test_should_add_editions_250_to_the_editions_list_and_enforce_unique(mapper):
     xpath = "//marc:datafield[@tag='250']"
     record = default_map("test_editions.xml", xpath, mapper)
     editions_stmts = ["8. uppl", "[Revised]"]
@@ -251,20 +254,18 @@ def test_index_title(mapper):
 
 def test_alternative_titles_all(mapper):
     message = "Should add all types of alternative titles: 130, 222, 240, 246, 247 "
+
     xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
+
     record = default_map("test_alternative_titles.xml", xpath, mapper)
-    # 246
     title = "Engineering identities, epistemologies and values remainder title"
-    assert title in list(t["alternativeTitle"] for t in record[0]["alternativeTitles"])
-    # 247
+    assert title in [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
     title = "Medical world news annual review of medicine"
-    assert title in list(t["alternativeTitle"] for t in record[0]["alternativeTitles"])
-    # 240
+    assert title in [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
     title = "Laws, etc. (Laws of Kenya : 1948)"
-    assert title in list(t["alternativeTitle"] for t in record[0]["alternativeTitles"])
-    # 130
+    assert title in [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
     title = "Star is born (Motion picture : 1954)"
-    assert title in list(t["alternativeTitle"] for t in record[0]["alternativeTitles"])
+    assert title in [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
 
 
 def test_identifiers(mapper):
@@ -297,7 +298,7 @@ def test_identifiers(mapper):
         "a only",
         "z only",
     ]
-    m = message + "\n" + record[1]
+
     ids_in_rec = list([id["value"] for id in record[0]["identifiers"]])
 
     for id in expected_identifiers:
@@ -318,7 +319,7 @@ def test_series(mapper):
     message = "Should add series statements (800, 810, 811, 830, 440, 490) to series list"
     xpath = "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']"
     record = default_map("test_series.xml", xpath, mapper)
-    m = message + "\n" + record[1]
+
     # 800
     assert "Joyce, James, 1882-1941. James Joyce archive" in record[0]["series"]
     # 810
@@ -342,30 +343,29 @@ def test_contributors(mapper):
     message = "Should add contributors (100, 111 700) to the contributors list"
     xpath = "//marc:datafield[@tag='100' or @tag='111' or @tag='700']"
     record = default_map("test_contributors.xml", xpath, mapper)
-    contributors = list((c["name"] for c in record[0]["contributors"]))
-    m = message + "\n" + record[1]
+    contributors = [c["name"] for c in record[0]["contributors"]]
+
     assert "Chin, Stephen, 1977-" in contributors
     assert "Presthus, Robert Vance" in contributors
     assert "Lous, Christian Carl, 1724-1804" in contributors
     assert "Weaver, James L" in contributors
     assert "Wolfcon Durham 2018" in contributors
     assert "Kyōto Daigaku. Genshiro Jikkenjo. Senmon Kenkyūkai (2013 January 25)" in contributors
+
     assert "Tupera Tupera (Firm)" in contributors
 
 
 def test_classifications(mapper):
     message = "Should add classifications (050, 082, 090, 086) to the classifications list"
+
     xpath = "//marc:datafield[@tag='050' or @tag='082' or @tag='090' or @tag='086']"
+
     record = default_map("test_classifications.xml", xpath, mapper)
-    classes = list(c["classificationNumber"] for c in record[0]["classifications"])
-    m = message + "\n" + record[1]
-    # "LoC 050"):
+    classes = [c["classificationNumber"] for c in record[0]["classifications"]]
+
     assert "TK7895.E42 C45 2016", classes
-    # "Dewey 082"):
     assert "004.165 C4412r 2015", classes
-    # "LoC Local 090"):
     assert "HV6089 .M37 1989a", classes
-    # "SuDOC 086"):
     assert "ITC 1.12:TA-503 (A)-18 AND 332-279", classes
 
 
@@ -373,7 +373,7 @@ def test_subjects(mapper):
     message = "Should add subjects (600, 610, 611, 630, 647, 648, 650, 651) to the subjects list"
     xpath = "//marc:datafield[@tag='600' or @tag='610' or @tag='611' or @tag='630' or @tag='647' or @tag='648' or @tag='650' or @tag='651']"
     record = default_map("test_subjects.xml", xpath, mapper)
-    m = message + "\n" + record[1]
+
     assert (
         "Kougeas, Sōkr. V. IV Diogenes, Emperor of the East, active 1068-1071. (Sōkratēs V.)"
         in record[0]["subjects"]
@@ -392,11 +392,9 @@ def test_subjects(mapper):
     assert "Aix-en-Provence (France) Philosophy. Early works to 1800" in record[0]["subjects"]
 
 
-def test_publication(mapper):
-    message = "Should add publications (260$abc & 264$abc) to the publications list"
+def test_should_add_publications_260_abc_264_abc_to_the_publications_list(mapper):
     xpath = "//marc:datafield[@tag='260' or @tag='264']"
     record = default_map("test_publications.xml", xpath, mapper)
-    m = message + "\n" + record[1]
     publication = {
         "publisher": "Elsevier",
         "place": "New York, N.Y",
@@ -413,11 +411,9 @@ def test_publication(mapper):
     assert publication in record[0]["publication"]
 
 
-def test_publication_frequency(mapper):
-    message = "Should add publication frequency (310$ab & 321$ab) to the publicationFrequency list"
+def test_should_add_publication_frequency_310_ab_321_ab_to_the_publication_frequency_list(mapper):
     xpath = "//marc:datafield[@tag='310' or @tag='321']"
     record = default_map("test_publication_frequency.xml", xpath, mapper)
-    m = message + "\n" + record[1]
     assert 2 == len(record[0]["publicationFrequency"])
     # with self.subTest("310$ab"):
     assert "Varannan månad, 1983-" in record[0]["publicationFrequency"]
@@ -425,11 +421,9 @@ def test_publication_frequency(mapper):
     assert "Monthly, Mar. 1972-Dec. 1980" in record[0]["publicationFrequency"]
 
 
-def test_publication_range(mapper):
-    message = "Should add publication range (362$a) to the publicationRange list"
+def test_should_add_publication_range_362_a_to_the_publication_range_list(mapper):
     xpath = "//marc:datafield[@tag='362']"
     record = default_map("test_publication_range.xml", xpath, mapper)
-    m = message + "\n" + record[1]
     assert 1 == len(record[0]["publicationRange"])
     assert "No 1-" in record[0]["publicationRange"]
 
@@ -437,153 +431,147 @@ def test_publication_range(mapper):
 def test_notes_50x(mapper):
     message = "Should add notes (500-510) to notes list"
     xpath = "//marc:datafield[@tag='500' or @tag='501' or @tag='502' or @tag='504' or @tag='505' or @tag='506' or @tag='508' or @tag='510']"
+
     record = default_map("test_notes_50x.xml", xpath, mapper)
-    m = message + "\n" + record[1]
-    notes = list([note["note"] for note in record[0]["notes"]])
-    so = list([note["staffOnly"] for note in record[0]["notes"]])
+
+    notes = [note["note"] for note in record[0]["notes"]]
+    so = [note["staffOnly"] for note in record[0]["notes"]]
     print(so)
-    # with self.subTest("staffOnly"):
     for s in so:
         assert type(s) is bool
-    # with self.subTest("500$a"):
     assert '"Embedded application development for home and industry."--Cover' in notes
-    # with self.subTest("500$3a5"):
+
     assert (
         "Cotsen copy: Published plain red wrappers with first and last leaves pasted to interior wrappers. NjP"
         in notes
     )
-    # with self.subTest("501$a5"):
+
     assert (
         "With: Humiliations follow'd with deliverances. Boston : Printed by B. Green; J. Allen for S. Philips, 1697. Bound together subsequent to publication. DLC"
         in notes
     )
-    # with self.subTest("502$bcd"):
+
     assert "M. Eng. University of Louisville 2013" in notes
-    # with self.subTest("504$ab"):
     assert "Includes bibliographical references. 19" in notes
-    # with self.subTest("506$a"):
     assert "Classified" in notes
-    # with self.subTest("507$b"):
     assert "Not drawn to scale" in notes
-    # with self.subTest("508$a"):
     assert "Film editor, Martyn Down ; consultant, Robert F. Miller" in notes
-    # with self.subTest("508$a"):
     assert "Film editor, Martyn Down ; consultant, Robert F. Miller" in notes
-    # with self.subTest("510$axb"):
+    assert "Index medicus, 0019-3879, v1n1, 1984-" in notes
+    assert "Includes bibliographical references. 19" in notes
+    assert "Classified" in notes
+    assert "Not drawn to scale" in notes
+    assert "Film editor, Martyn Down ; consultant, Robert F. Miller" in notes
+    assert "Film editor, Martyn Down ; consultant, Robert F. Miller" in notes
     assert "Index medicus, 0019-3879, v1n1, 1984-" in notes
 
 
 def test_notes_51x(mapper):
     message = "Should add notes (511-518) to notes list"
     xpath = "//marc:datafield[@tag='511' or @tag='513' or @tag='514' or @tag='515' or @tag='516' or @tag='518']"
+
     record = default_map("test_notes_51x.xml", xpath, mapper)
-    m = message + "\n" + record[1]
-    notes = list([note["note"] for note in record[0]["notes"]])
-    # "511$a"):
+
+    notes = [note["note"] for note in record[0]["notes"]]
     assert "Marshall Moss, violin ; Neil Roberts, harpsichord" in notes
-    # "513$ab"):
     assert "Quarterly technical progress report; January-April 1, 1977" in notes
-    # "514$adef"):
     assert (
         "The map layer that displays Special Feature Symbols shows the approximate location of small (less than 2 acres in size) areas of soils... Quarter quadrangles edited and joined internally and to surrounding quads. All known errors corrected. The combination of spatial linework layer, Special Feature Symbols layer, and attribute data are considered a complete SSURGO dataset. The actual on ground transition between the area represented by the Special Feature Symbol and the surrounding soils generally is very narrow with a well defined edge. The center of the feature area was compiled and digitized as a point. The same standards for compilation and digitizing used for line data were applied to the development of the special feature symbols layer"
         in notes
     )
-    # "515$a"):
+
     assert "Designation New series dropped with volume 38, 1908" in notes
-    # "516$a"):
     assert "Numeric (Summary statistics)" in notes
-    # "518$3dp"):
     assert "3rd work 1981 November 25 Neues Gewandhaus, Leipzig" in notes
 
 
 def test_notes_52x(mapper):
     message = "Should add notes (520-525) to notes list"
     xpath = "//marc:datafield[@tag='520' or @tag='522' or @tag='524' or @tag='525']"
+
     record = default_map("test_notes_52x.xml", xpath, mapper)
-    m = message + "\n" + record[1]
-    notes = list([note["note"] for note in record[0]["notes"]])
-    # "520$a"):
+
+    notes = [note["note"] for note in record[0]["notes"]]
     assert (
         '"Create embedded projects for personal and professional applications. Join the Internet of Things revolution with a project-based approach to building embedded Java applications. Written by recognized Java experts, this Oracle Press guide features a series of low-cost, DIY projects that gradually escalate your development skills. Learn how to set up and configure your Raspberry Pi, connect external hardware, work with the NetBeans IDE, and write and embed powerful Java applications. Raspberry Pi with Java: Programming the Internet of Things (IoT) covers hobbyist as well as professional home and industry applications."--Back cover'
         in notes
-    )  # "522$a"):
+    )
+
     assert "County-level data from Virginia" in notes
-    # "524$a"):
     assert "Dakota usc" in notes
-    # "525$a"):
     assert "Supplements accompany some issues" in notes
 
 
 def test_notes_53x(mapper):
     message = "Should add notes (530-534) to notes list"
     xpath = "//marc:datafield[@tag='530' or @tag='532' or @tag='533' or @tag='534']"
+
     record = default_map("test_notes_53x.xml", xpath, mapper)
-    notes = list([note["note"] for note in record[0]["notes"]])
-    m = message + "\n" + record[1]
-    # "530$a"):
+    notes = [note["note"] for note in record[0]["notes"]]
+
     assert "Available on microfiche" in notes
-    # "532$a"):
     assert "Closed captioning in English" in notes
-    # "533$abcdfn5"):
     assert (
         "Electronic reproduction. Cambridge, Mass. Harvard College Library Digital Imaging Group, 2003 (Latin American pamphlet digital project at Harvard University ; 0005). Electronic reproduction from microfilm master negative produced by Harvard College Library Imaging Services. MH"
         in notes
-    )  # "534$patn"):
+    )
+
     assert "Originally issued: Frederick, John. Luck. Published in: Argosy, 1919" in notes
 
 
 def test_notes_54x(mapper):
     message = "Should add notes (540-546) to notes list"
     xpath = "//marc:datafield[@tag='540' or @tag='541' or @tag='542' or @tag='544' or @tag='545' or @tag='546']"
+
     record = default_map("test_notes_54x.xml", xpath, mapper)
-    notes = list([note["note"] for note in record[0]["notes"]])
-    m = message + "\n" + record[1]
-    # "540"):
+    notes = [note["note"] for note in record[0]["notes"]]
+
     assert (
         "Recorded radio programs There are copyright and contractual restrictions applying to the reproduction of most of these recordings; Department of Treasury; Treasury contracts 7-A130 through 39-A179"
         in notes
     )
-    # "541"):
+
     assert (
         "5 diaries 25 cubic feet; Merriwether, Stuart; 458 Yonkers Road, Poughkeepsie, NY 12601; Purchase at auction; 19810924; 81-325; Jonathan P. Merriwether Estate; $7,850"
         in notes
     )
-    # "542"):
+
     assert (
         "Duchess Foods Government of Canada Copyright Services, Library and Archives Canada, Ottawa, Ont. Copyright 1963, par la Compagnie Canadienne de l'Exposition Universelle de 1967 1963 1963 Duchess Foods under copyright protection through Dec. 31, 2013 published ǂn Copyright not renewable. This work will enter the public domain on Jan. 1, 2014 Nov. 2010 Canada CaQMCCA Canada Copyright Services, Library and Archives Canada"
         in notes
     )
-    # "544"):
+
     assert (
         "Correspondence files; Burt Barnes papers; Also located at; State Historical Society of Wisconsin"
         in notes
     )
-    # "545"):
+
     assert (
         "The Faribault State School and Hospital provided care, treatment, training, and a variety of other services to mentally retarded individuals and their families. It was operated by the State of Minnesota from 1879 to 1998 under different administrative structures and with different names. A more detailed history of the Hospital may be found at http://www.mnhs.org/library/findaids/80881.html"
         in notes
     )
-    # "546"):
+
     assert "Marriage certificate German; Fraktur" in notes
 
 
 def test_notes_55x(mapper):
     message = "Should add notes (550-556) to notes list"
     xpath = "//marc:datafield[@tag='550' or @tag='552' or @tag='555' or @tag='556']"
+
     record = default_map("test_notes_55x.xml", xpath, mapper)
-    notes = list([note["note"] for note in record[0]["notes"]])
-    m = message + "\n" + record[1]
-    # "550$a"):
+    notes = [note["note"] for note in record[0]["notes"]]
+
     assert "Organ of the Potomac-side Naturalists' Club" in notes
-    # "552"):
     assert (
         "NYROADS The roads of New York, none NYROADS_TYPE The road types of New York, none 1 Interstate Highway, none 1-4 New York Road Types, none 1999010-19990201 unknown irregular"
         in notes
-    )  # "555"):
+    )
+
     assert (
         "Finding aid Available in repository and on Internet; Folder level control; http://digital.library.pitt.edu/cgi-bin/f/findaid/findaid-idx?type=simple;c=ascead;view=text;subview=outline;didno=US-PPiU-ais196815"
         in notes
-    )  # "556"):
+    )
+
     assert (
         "Disaster recovery : a model plan for libraries and information centers. 0959328971"
         in notes
@@ -596,22 +584,21 @@ def test_modes_of_issuance(mapper):
     # "m"):
     record = default_map("test1.xml", xpath, mapper)
     moi = record[0]["modeOfIssuanceId"]
-    m = message + "\n" + record[1]
+
     assert "9d18a02f-5897-4c31-9106-c9abb5c7ae8b" == moi
 
     # "s"):
     record = default_map("test4.xml", xpath, mapper)
     moi = record[0]["modeOfIssuanceId"]
-    m = message + "\n" + record[1]
+
     assert "363895f3-3c52-421e-8f78-9ec105ec15f1" == moi
 
 
-def test_notes_56x(mapper):
-    message = "Should add notes (561-567) to notes list"
+def test_should_add_notes_561_567_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='561' or @tag='562' or @tag='563' or @tag='565' or @tag='567']"
     record = default_map("test_notes_56x.xml", xpath, mapper)
     notes = list([note["note"] for note in record[0]["notes"]])
-    m = message + "\n" + record[1]
+
     # "561$3a"):
     assert (
         "Family correspondence Originally collected by Henry Fitzhugh, willed to his wife Sarah Jackson Fitzhugh and given by her to her grandson Jonathan Irving Jackson, who collected some further information about his grandmother and the papers of their relatives and Cellarsville neighbors, the Arnold Fitzhugh's, before donating the materials along with his own papers as mayor of Cellarsville to the Historical Society"
@@ -634,53 +621,47 @@ def test_notes_56x(mapper):
     assert "Continuous, deterministic, predictive" in notes
 
 
-def test_notes_58x(mapper):
-    message = "Should add notes (580-586) to notes list"
+def test_should_add_notes_580_586_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='580' or @tag='583' or @tag='586']"
     record = default_map("test_notes_58x.xml", xpath, mapper)
-    notes = list([note["note"] for note in record[0]["notes"]])
-    m = message + "\n" + record[1]
-    # "580"):
+    notes = [note["note"] for note in record[0]["notes"]]
+
     assert "Forms part of the Frances Benjamin Johnston Collection" in notes
-    # "583"):
     assert (
         "scrapbooks (10 volumes) 1 cu. ft. microfilm 198303 at completion of arrangement 1983 master film schedule Thomas Swing"
         in notes
     )
-    # "586"):
+
     assert "Tempest fantasy Pulitzer prize in music, 2004" in notes
 
 
-def test_notes_59x(mapper):
-    message = "Should add notes (590-599) to notes list"
+def test_should_add_notes_590_599_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='590' or @tag='592' or @tag='599']"
     record = default_map("test_notes_59x.xml", xpath, mapper)
-    notes = list([note["note"] for note in record[0]["notes"]])
-    m = message + "\n" + record[1]
-    # "590$a"):
+    notes = [note["note"] for note in record[0]["notes"]]
+
     assert "Labels reversed on library's copy" in notes
 
 
-def test_format(mapper):
-    message = "Should parse Mode of issuance correctly"
+def test_should_parse_mode_of_issuance_correctly(mapper):
     xpath = "//marc:datafield[@tag='337' or @tag='338']"
     # "2-character code in 338"):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)
     # print(json.dumps(record, sort_keys=True, indent=4))
     moi = record[0]["modeOfIssuanceId"]
-    m = message + "\n" + record[1]
+
     assert "9d18a02f-5897-4c31-9106-c9abb5c7ae8b" == moi
 
     # "337+338"):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)
     formats = record[0]["instanceFormatIds"]
-    m = message + "\n" + record[1]
+
     assert "b1d001a3-57ae-4e7c-aa6e-066d764a5fe7" in formats
 
     # "2 338$b"):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)
     formats = record[0]["instanceFormatIds"]
-    m = message + "\n" + record[1]
+
     assert 4 == len(formats)
 
 
@@ -722,3 +703,111 @@ def test_handle_suppression_set_true():
         mocked_mapper.migration_report.report["General statistics"]["Staff suppressed = True "]
         == 1
     )
+
+
+def test_get_folio_id_by_code_except(caplog):
+    caplog.set_level(26)
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.get_instance_format_id_by_code(
+        mocked_mapper, "legacy_id_99", "test_code_99"
+    )
+    assert "Instance format Code not found in FOLIO" in caplog.text
+    assert "test_code_99" in caplog.text
+    assert "legacy_id_99" in caplog.text
+    assert res == ""
+
+
+def test_should_add_notes_550_556_to_notes_list(mapper):
+    xpath = "//marc:datafield[@tag='550' or @tag='552' or @tag='555' or @tag='556']"
+
+    record = default_map("test_notes_55x.xml", xpath, mapper)
+    notes = [note["note"] for note in record[0]["notes"]]
+
+    assert "Organ of the Potomac-side Naturalists' Club" in notes
+    assert (
+        "NYROADS The roads of New York, none NYROADS_TYPE The road types of New York, none 1 Interstate Highway, none 1-4 New York Road Types, none 1999010-19990201 unknown irregular"
+        in notes
+    )
+
+    assert (
+        "Finding aid Available in repository and on Internet; Folder level control; http://digital.library.pitt.edu/cgi-bin/f/findaid/findaid-idx?type=simple;c=ascead;view=text;subview=outline;didno=US-PPiU-ais196815"
+        in notes
+    )
+
+    assert (
+        "Disaster recovery : a model plan for libraries and information centers. 0959328971"
+        in notes
+    )
+
+
+def test_get_instance_format_ids_no_rda(caplog):
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "", "b", ""]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "", "b", ""]))
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99")
+    assert not any(res)
+
+
+def test_f338_source_is_rda_carrier(caplog):
+    field = pymarc.Field(tag="338", subfields=["a", "", "b", ""])
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.f338_source_is_rda_carrier(mocked_mapper, field)
+    assert not res
+
+
+def test_f338_source_is_rda_carrier_2(caplog):
+    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", " "])
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.f338_source_is_rda_carrier(mocked_mapper, field)
+    assert not res
+
+
+def test_f338_source_is_rda_carrier_3(caplog):
+    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", "rdacarrier"])
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.f338_source_is_rda_carrier(mocked_mapper, field)
+    assert res
+
+
+def test_f338_source_is_rda_carrier_4(caplog):
+    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", " rdacarrier"])
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.f338_source_is_rda_carrier(mocked_mapper, field)
+    assert res
+
+
+def test_get_folio_id_by_name_except(caplog):
+    caplog.set_level(26)
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.get_instance_format_id_by_name(
+        mocked_mapper, "test_failed", "name", "legacy_id_99"
+    )
+    assert "Unsuccessful matching on 337" in caplog.text
+    assert "test_failed -- name" in caplog.text
+    assert "legacy_id_99" in caplog.text
+    assert res == ""
+
+
+def test_get_folio_id_by_name(caplog):
+    caplog.set_level(26)
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    mocked_mapper.folio = mocked_folio_client()
+    res = BibsRulesMapper.get_instance_format_id_by_name(
+        mocked_mapper, "test", "name", "legacy_id_99"
+    )
+    assert not caplog.text
+    bmt = mocked_mapper.migration_report.report[Blurbs.InstanceFormat[0]]
+    assert (
+        "Successful matching on 337$a & 338$a - test -- name->test -- name"
+        in mocked_mapper.migration_report.report[Blurbs.InstanceFormat[0]]
+    )
+    assert res == "605e9527-4008-45e2-a78a-f6bfb027c43a"
