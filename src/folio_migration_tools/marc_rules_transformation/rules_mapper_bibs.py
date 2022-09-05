@@ -354,88 +354,101 @@ class BibsRulesMapper(RulesMapperBase):
             return_id = t[0]
         return return_id
 
+    def get_instance_format_id_by_code(self, legacy_id: str, code: str):
+        try:
+            match = next(f for f in self.folio.instance_formats if f["code"] == code)
+            self.migration_report.add(
+                Blurbs.InstanceFormat,
+                f"Successful match  - {code}->{match['name']}",
+            )
+            return match["id"]
+        except Exception:
+            # TODO: Distinguish between generated codes and proper 338bs
+            Helper.log_data_issue(legacy_id, "Instance format Code not found in FOLIO", code)
+            self.migration_report.add(
+                Blurbs.InstanceFormat,
+                f"Code '{code}' not found in FOLIO",
+            )
+            return ""
+
+    def get_instance_format_id_by_name(self, f337a: str, f338a: str, legacy_id: str):
+        f337a = f337a.lower().replace(" ", "")
+        f338a = f338a.lower().replace(" ", "")
+        match_template = f"{f337a} -- {f338a}"
+        try:
+            match = next(
+                f for f in self.folio.instance_formats if f["name"].lower() == match_template
+            )
+            self.migration_report.add(
+                Blurbs.InstanceFormat,
+                f"Successful matching on 337$a & 338$a - {match_template}->{match['name']}",
+            )
+            return match["id"]
+        except Exception:
+            Helper.log_data_issue(
+                legacy_id,
+                "Unsuccessful matching on 337$a and 338$a",
+                match_template,
+            )
+            self.migration_report.add(
+                Blurbs.InstanceFormat,
+                f"Unsuccessful matching on 337$a and 338$a - {match_template}",
+            )
+            return ""
+
+    def f338_source_is_rda_carrier(self, field: pymarc.Field):
+        if "2" not in field:
+            self.migration_report.add(
+                Blurbs.InstanceFormat,
+                ("Instance Format not mapped from field since 338$2 is missing"),
+            )
+            return False
+        elif field["2"].strip().startswith("rdacarrier"):
+            return True
+        self.migration_report.add(
+            Blurbs.InstanceFormat,
+            ("InstanceFormat not mapped since 338$2 (Source) " f"is set to {field['2']}. "),
+        )
+        return False
+
+    def get_instance_format_ids_from_a(self, field_index, f: pymarc.Field, all_337s, legacy_id):
+        self.migration_report.add(
+            Blurbs.InstanceFormat,
+            "338$b is missing. Will try parse from 337$a and 338$b",
+        )
+        for a in f.get_subfields("a"):
+            corresponding_337 = all_337s[field_index] if field_index < len(all_337s) else None
+            if corresponding_337 and "a" in corresponding_337:
+                if fmt_id := self.get_instance_format_id_by_name(
+                    corresponding_337["a"], a, legacy_id
+                ):
+                    yield fmt_id
+
     def get_instance_format_ids(self, marc_record, legacy_id):
-        # Lambdas
-        def get_folio_id(code: str):
-            try:
-                match = next(f for f in self.folio.instance_formats if f["code"] == code)
-                self.migration_report.add(
-                    Blurbs.InstanceFormat,
-                    f"Successful match  - {code}->{match['name']}",
-                )
-                return match["id"]
-            except Exception:
-                # TODO: Distinguish between generated codes and proper 338bs
-                Helper.log_data_issue(legacy_id, "Instance format Code not found in FOLIO", code)
-                self.migration_report.add(
-                    Blurbs.InstanceFormat,
-                    f"Code '{code}' not found in FOLIO",
-                )
-                return ""
-
-        def get_folio_id_by_name(f337a: str, f338a: str, legacy_id: str):
-            f337a = f337a.lower().replace(" ", "")
-            f338a = f338a.lower().replace(" ", "")
-            match_template = f"{f337a} -- {f338a}"
-            try:
-                match = next(
-                    f
-                    for f in self.folio.instance_formats
-                    if f["name"].lower().replace(" ", "") == match_template
-                )
-                self.migration_report.add(
-                    Blurbs.InstanceFormat,
-                    f"Successful matching on 337$a & 338$a - {match_template}->{match['name']}",
-                )
-                return match["id"]
-            except Exception:
-                Helper.log_data_issue(
-                    legacy_id,
-                    "Unsuccessful matching on 337$a and 338$a",
-                    match_template,
-                )
-                self.migration_report.add(
-                    Blurbs.InstanceFormat,
-                    f"Unsuccessful matching on 337$a and 338$a - {match_template}",
-                )
-                return ""
-
         all_337s = marc_record.get_fields("337")
         all_338s = marc_record.get_fields("338")
         for fidx, f in enumerate(all_338s):
-            source = f["2"] if "2" in f else "Not set"
-            if not source.strip().startswith("rdacarrier"):
-                self.migration_report.add(
-                    Blurbs.InstanceFormat,
-                    ("InstanceFormat not mapped since 338$2 (Source) " f"is set to {source}. "),
-                )
-            else:
+            if self.f338_source_is_rda_carrier(f):
                 if "b" not in f and "a" in f:
-                    self.migration_report.add(
-                        Blurbs.InstanceFormat,
-                        "338$b is missing. Will try parse from 337$a and 338$b",
-                    )
-                    for a in f.get_subfields("a"):
-                        corresponding_337 = all_337s[fidx] if fidx < len(all_337s) else None
-                        if corresponding_337 and "a" in corresponding_337:
-                            fmt_id = get_folio_id_by_name(corresponding_337["a"], a, legacy_id)
-                            if fmt_id:
-                                yield fmt_id
+                    yield self.get_instance_format_ids_from_a(fidx, f, all_337s, legacy_id)
 
                 for sfidx, b in enumerate(f.get_subfields("b")):
                     b = b.replace(" ", "")
-                    if len(b) == 2:  # Normal 338b. should be able to map this
-                        yield get_folio_id(b)
+                    if len(b) == 2:
+                        # Normal 338b. should be able to map this
+                        yield self.get_instance_format_id_by_code(legacy_id, b)
                     elif len(b) == 1:
                         corresponding_337 = all_337s[fidx] if fidx < len(all_337s) else None
-                        if not corresponding_337:  # No matching 337. No use mapping the 338
+                        if not corresponding_337:
+                            # No matching 337. No use mapping the 338
                             s = "No corresponding 337 to 338 even though 338$b was one character"
                             Helper.log_data_issue(legacy_id, s, b)
                             self.migration_report.add(
                                 Blurbs.InstanceFormat,
                                 s,
                             )
-                        else:  # Corresponding 337. Try to combine the codes.
+                        else:
+                            # Corresponding 337. Try to combine the codes.
                             corresponding_b = (
                                 corresponding_337.get_subfields("b")[sfidx]
                                 if sfidx < len(corresponding_337.get_subfields("b"))
@@ -448,7 +461,9 @@ class BibsRulesMapper(RulesMapperBase):
                             else:
                                 combined_code = (corresponding_b + b).strip()
                                 if len(combined_code) == 2:
-                                    yield get_folio_id(combined_code)
+                                    yield self.get_instance_format_id_by_code(
+                                        legacy_id, combined_code
+                                    )
 
     def handle_hrid(self, folio_instance, marc_record: Record, legacy_ids) -> None:
         """Create HRID if not mapped. Add hrid as MARC record 001

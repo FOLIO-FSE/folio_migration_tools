@@ -19,6 +19,13 @@ def mocked_folio_client() -> FolioClient:
             "commonRetainLeadingZeroes": True,
         }
     )
+    mocked_folio.instance_formats = [
+        {
+            "code": "test_code_99",
+            "id": "605e9527-4008-45e2-a78a-f6bfb027c43a",
+            "name": "test -- name",
+        }
+    ]
     return mocked_folio
 
 
