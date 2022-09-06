@@ -220,8 +220,7 @@ def test_should_add_editions_250_to_the_editions_list_and_enforce_unique(mapper)
         assert stmt in record[0]["editions"]
 
 
-def test_languages_041(mapper):
-    message = "Should add languages (041$a) to the languages list; ignores non-ISO languages"
+def test_should_add_languages_041_a_to_the_languages_list_ignores_non_iso_languages(mapper):
     xpath = "//marc:datafield[@tag='041']"
     record = default_map("test_multiple_languages.xml", xpath, mapper)
     lang_codes = ["eng", "ger", "fre", "ita"]
@@ -232,15 +231,13 @@ def test_languages_041(mapper):
         assert lang_code in record[0]["languages"]
 
 
-def test_languages_008(mapper):
-    message = "Should add language found in 008 where there is no 041"
+def test_should_add_language_found_in_008_where_there_is_no_041(mapper):
     xpath = "//marc:controlfield[@tag='008']"
     record = default_map("test_language_in_008.xml", xpath, mapper)
     assert "fre", record[0]["languages"]
 
 
-def test_physical_descriptions(mapper):
-    message = "Should add physical descriptions (300$abce)"
+def test_should_add_physical_descriptions_300_abce(mapper):
     xpath = "//marc:datafield[@tag='300']"
     record = default_map("test_physical_descriptions.xml", xpath, mapper)
     phy_des = "xxxiv, 416 pages illustrations 24 cm."
@@ -252,9 +249,7 @@ def test_index_title(mapper):
     assert "Cahiers d'urbanisme" == record[0]["indexTitle"]
 
 
-def test_alternative_titles_all(mapper):
-    message = "Should add all types of alternative titles: 130, 222, 240, 246, 247 "
-
+def test_should_add_all_types_of_alternative_titles_130_222_240_246_247(mapper):
     xpath = "//marc:datafield[@tag='130' or @tag='222' or @tag='240' or @tag='246' or @tag='247']"
 
     record = default_map("test_alternative_titles.xml", xpath, mapper)
@@ -268,8 +263,7 @@ def test_alternative_titles_all(mapper):
     assert title in [t["alternativeTitle"] for t in record[0]["alternativeTitles"]]
 
 
-def test_identifiers(mapper):
-    message = "Should add identifiers: 010, 019, 020, 022, 024, 028, 035"
+def test_should_add_identifiers_010_019_020_022_024_028_035(mapper):
     xpath = "//marc:datafield[@tag='010' or @tag='020' or @tag='022' or @tag='024' or @tag='028' or @tag='035' or @tag='019']"
     record = default_map("test_identifiers.xml", xpath, mapper)
 
@@ -315,8 +309,7 @@ def test_identifiers(mapper):
         assert len(str.split(i)) == 1
 
 
-def test_series(mapper):
-    message = "Should add series statements (800, 810, 811, 830, 440, 490) to series list"
+def test_should_add_series_statements_800_810_811_830_440_490_to_series_list(mapper):
     xpath = "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']"
     record = default_map("test_series.xml", xpath, mapper)
 
@@ -339,8 +332,7 @@ def test_series(mapper):
     """assert "Pediatric clinics of North America ; v. 2, no. 4", record[0]["series"]   )"""
 
 
-def test_contributors(mapper):
-    message = "Should add contributors (100, 111 700) to the contributors list"
+def test_should_add_contributors_100_111_700_to_the_contributors_list(mapper):
     xpath = "//marc:datafield[@tag='100' or @tag='111' or @tag='700']"
     record = default_map("test_contributors.xml", xpath, mapper)
     contributors = [c["name"] for c in record[0]["contributors"]]
@@ -355,9 +347,7 @@ def test_contributors(mapper):
     assert "Tupera Tupera (Firm)" in contributors
 
 
-def test_classifications(mapper):
-    message = "Should add classifications (050, 082, 090, 086) to the classifications list"
-
+def test_should_add_classifications_050_082_090_086_to_the_classifications_list(mapper):
     xpath = "//marc:datafield[@tag='050' or @tag='082' or @tag='090' or @tag='086']"
 
     record = default_map("test_classifications.xml", xpath, mapper)
@@ -369,8 +359,7 @@ def test_classifications(mapper):
     assert "ITC 1.12:TA-503 (A)-18 AND 332-279", classes
 
 
-def test_subjects(mapper):
-    message = "Should add subjects (600, 610, 611, 630, 647, 648, 650, 651) to the subjects list"
+def test_should_add_subjects_600_610_611_630_647_648_650_651_to_the_subjects_list(mapper):
     xpath = "//marc:datafield[@tag='600' or @tag='610' or @tag='611' or @tag='630' or @tag='647' or @tag='648' or @tag='650' or @tag='651']"
     record = default_map("test_subjects.xml", xpath, mapper)
 
@@ -428,8 +417,7 @@ def test_should_add_publication_range_362_a_to_the_publication_range_list(mapper
     assert "No 1-" in record[0]["publicationRange"]
 
 
-def test_notes_50x(mapper):
-    message = "Should add notes (500-510) to notes list"
+def test_should_add_notes_500_510_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='500' or @tag='501' or @tag='502' or @tag='504' or @tag='505' or @tag='506' or @tag='508' or @tag='510']"
 
     record = default_map("test_notes_50x.xml", xpath, mapper)
@@ -466,8 +454,7 @@ def test_notes_50x(mapper):
     assert "Index medicus, 0019-3879, v1n1, 1984-" in notes
 
 
-def test_notes_51x(mapper):
-    message = "Should add notes (511-518) to notes list"
+def test_should_add_notes_511_518_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='511' or @tag='513' or @tag='514' or @tag='515' or @tag='516' or @tag='518']"
 
     record = default_map("test_notes_51x.xml", xpath, mapper)
@@ -485,8 +472,7 @@ def test_notes_51x(mapper):
     assert "3rd work 1981 November 25 Neues Gewandhaus, Leipzig" in notes
 
 
-def test_notes_52x(mapper):
-    message = "Should add notes (520-525) to notes list"
+def test_should_add_notes_520_525_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='520' or @tag='522' or @tag='524' or @tag='525']"
 
     record = default_map("test_notes_52x.xml", xpath, mapper)
@@ -502,8 +488,7 @@ def test_notes_52x(mapper):
     assert "Supplements accompany some issues" in notes
 
 
-def test_notes_53x(mapper):
-    message = "Should add notes (530-534) to notes list"
+def test_should_add_notes_530_534_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='530' or @tag='532' or @tag='533' or @tag='534']"
 
     record = default_map("test_notes_53x.xml", xpath, mapper)
@@ -519,8 +504,7 @@ def test_notes_53x(mapper):
     assert "Originally issued: Frederick, John. Luck. Published in: Argosy, 1919" in notes
 
 
-def test_notes_54x(mapper):
-    message = "Should add notes (540-546) to notes list"
+def test_should_add_notes_540_546_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='540' or @tag='541' or @tag='542' or @tag='544' or @tag='545' or @tag='546']"
 
     record = default_map("test_notes_54x.xml", xpath, mapper)
@@ -554,8 +538,7 @@ def test_notes_54x(mapper):
     assert "Marriage certificate German; Fraktur" in notes
 
 
-def test_notes_55x(mapper):
-    message = "Should add notes (550-556) to notes list"
+def test_should_add_notes_550_556_to_notes_list(mapper):
     xpath = "//marc:datafield[@tag='550' or @tag='552' or @tag='555' or @tag='556']"
 
     record = default_map("test_notes_55x.xml", xpath, mapper)
@@ -578,8 +561,7 @@ def test_notes_55x(mapper):
     )
 
 
-def test_modes_of_issuance(mapper):
-    message = "Should parse Mode of issuance correctly"
+def test_should_parse_mode_of_issuance_correctly(mapper):
     xpath = "//marc:leader"
     # "m"):
     record = default_map("test1.xml", xpath, mapper)
@@ -749,6 +731,90 @@ def test_get_instance_format_ids_no_rda(caplog):
     mocked_mapper.migration_report = MigrationReport()
     res = BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99")
     assert not any(res)
+
+
+def test_get_instance_format_ids_empty_values_are_ignored(caplog):
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "", "b", "", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", "rdacarrier"]))
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99")
+    assert not any(res)
+
+
+def test_get_instance_format_ids_three_digit_values_are_ignored(caplog):
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(tag="337", subfields=["a", "aaa", "b", "aaa", "2", "rdacarrier"])
+    )
+    record.add_field(
+        pymarc.Field(tag="338", subfields=["a", "aaa", "b", "aaa", "2", "rdacarrier"])
+    )
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99")
+    assert not any(res)
+
+
+def test_get_instance_format_ids_338b_is_mapped(caplog):
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(tag="337", subfields=["a", "ignored", "b", "ignored", "2", "rdacarrier"])
+    )
+    record.add_field(
+        pymarc.Field(tag="338", subfields=["a", "ignored", "b", "ab", "2", "rdacarrier"])
+    )
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
+    assert any(res)
+
+
+def test_get_instance_format_ids_one_338_two_337(caplog):
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
+    assert len(res) == 1
+
+
+def test_get_instance_format_ids_two_338_two_337(caplog):
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
+    assert len(res) == 2
+
+
+def test_get_instance_format_ids_two_338a_one_337(caplog):
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
+    record.add_field(
+        pymarc.Field(tag="338", subfields=["a", "name 2", "2", "b", "ab", "rdacarrier"])
+    )
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
+    assert len(res) == 2
+
+
+def test_get_instance_format_ids_338a_is_mapped(caplog):
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
+    mocked_mapper = Mock(spec=BibsRulesMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
+    assert any(res)
 
 
 def test_f338_source_is_rda_carrier(caplog):
