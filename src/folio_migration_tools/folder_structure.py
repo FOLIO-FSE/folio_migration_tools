@@ -59,15 +59,6 @@ class FolderStructure:
         logging.info("Migration report file will be saved at %s", self.migration_reports_file)
 
 
-    # def setup_preceding_succeeding_file_structure(self):
-    #     time_stamp = f'_{time.strftime("%Y%m%d-%H%M%S")}'
-    #     time_str = time_stamp if self.add_time_stamp_to_file_names else ""
-
-    #     self.preceding_succeeding_records_path = (
-    #             self.results_folder / f"preceding_succeeding_titles-{self.iteration_identifier}{time_str}.json"
-    #         )
-
-
     def setup_migration_file_structure(self, source_file_type: str = ""):
         self.time_stamp = f'_{time.strftime("%Y%m%d-%H%M%S")}'
         self.time_str = self.time_stamp if self.add_time_stamp_to_file_names else ""
