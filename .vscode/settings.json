@@ -1,0 +1,32 @@
+{
+    "python.pythonPath": "/home/theodor/.local/share/virtualenvs/MARC21-To-FOLIO-eeRw57n6/bin/python",
+    "python.linting.pylintEnabled": false,
+    "python.linting.enabled": true,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.analysis.extraPaths": [
+        "./src",
+        "./tests/infrastructure"
+    ],
+    "python.formatting.blackArgs": [
+        "--line-length=99"
+    ],
+    "python.formatting.provider": "black",
+    "python.languageServer": "Pylance",
+    "python.linting.flake8Args": [
+        "--max-line-length=99",
+        "--ignore=E203,W503 ",
+        "--select=B,B9,BLK,C,E,F,I,S,W"
+    ],
+    "python.linting.flake8Enabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.sortImports.args": [
+        "--profile",
+        "black",
+        "--force-single-line-imports"
+    ],
+    
+}
