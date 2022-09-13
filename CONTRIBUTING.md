@@ -34,7 +34,9 @@ When you make edits to this document, make sure you update the Table of contents
   - [Writing tests](#writing-tests)
   - [Code coverage](#code-coverage)
   - [Running an end-to-end transformation](#running-an-end-to-end-transformation)
-# Writing Issues.
+
+
+# Writing issues
 Writing good issues is key.
 Both for sharing to the larger group of users what is needed or not working, but also for helping the developer working on the issue to reach the Definition Of Done (DoD) and beyond.
 
@@ -43,7 +45,7 @@ For the developer writing the issue, it is good practice to share a screenshot o
 Formulating a DoD is good practice. Take a moment to do this properly.   
 
 
-# Git(hub) workflow
+# Code contribution workflow
 We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-flow)
 In the ideal situation, this is what you do:
 ## 1. Create a branch off of main and name it according to the feature you are working on
@@ -71,6 +73,7 @@ Run
 pipenv run safety check
 ```
 and update any packages with a vulnerability.
+
 ### 3.2. :monocle_face: Check and format your code
 The following command runs Flake8 with plugins on your code. It:
 * Uses black to format the code. The Line-lenght is to be 99 characters
@@ -108,7 +111,7 @@ optional arguments:
 ```
 
 ## 3.5. Create a pull request in GitHub
-## 3.6. :people_holding_hands: Code review.
+## 3.6. :people_holding_hands: Code review
 
 # Create release
 ## Create the release on Github
