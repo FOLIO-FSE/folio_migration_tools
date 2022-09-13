@@ -18,7 +18,6 @@ from folio_migration_tools.custom_exceptions import TransformationFieldMappingEr
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.report_blurbs import Blurbs
@@ -375,7 +374,6 @@ class RulesMapperBase(MapperBase):
                 # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec, self.schema)
 
-
     def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
         self.migration_report.add(Blurbs.PrecedingSuccedingTitles, f"{e_parent} created")
         folder_structure = FolderStructure(
@@ -386,7 +384,9 @@ class RulesMapperBase(MapperBase):
             self.library_configuration.add_time_stamp_to_file_names,
         )
         folder_structure.setup_migration_file_structure()
-        preceding_succeding_titles_file = open(folder_structure.preceding_succeeding_records_path, "a+")
+        preceding_succeding_titles_file = open(
+            folder_structure.preceding_succeeding_records_path, "a+"
+        )
         # TODO: Make these uuids deterministic
         new_entity = {
             "id": str(uuid.uuid4()),
