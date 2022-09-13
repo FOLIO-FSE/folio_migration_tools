@@ -4,7 +4,6 @@ import time
 from pathlib import Path
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_migration_tools.library_configuration import LibraryConfiguration
 
 
 class FolderStructure:
@@ -58,7 +57,6 @@ class FolderStructure:
         logging.info("Created objects will be stored at  %s", self.created_objects_path)
         logging.info("Migration report file will be saved at %s", self.migration_reports_file)
 
-
     def setup_migration_file_structure(self, source_file_type: str = ""):
         self.time_stamp = f'_{time.strftime("%Y%m%d-%H%M%S")}'
         self.time_str = self.time_stamp if self.add_time_stamp_to_file_names else ""
@@ -111,9 +109,10 @@ class FolderStructure:
         self.holdings_id_map_path = self.results_folder / "holdings_id_map.json"
 
         self.preceding_succeeding_records_path = (
-            self.results_folder / f"preceding_succeeding_titles-{self.iteration_identifier}{time_str}.json"
+            self.results_folder / (
+                f"preceding_succeeding_titles-{self.iteration_identifier}{time_str}.json"
+            )
         )
-
 
         # Mapping files
         self.material_type_map_path = self.mapping_files_folder / "material_types.tsv"
