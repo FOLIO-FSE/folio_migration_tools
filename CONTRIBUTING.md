@@ -208,12 +208,22 @@ https://cereblanco.medium.com/setup-black-and-isort-in-vscode-514804590bf9
 
 
 # Testing
-## Running tests
+## Running tests 
+### Running tests against a FOLIO environment
 Pytest. Run the test suite against the latest bugfest release. Example call:
 
 ```
 pipenv run pytest -v --cov=./ --cov-report=xml --log-level=DEBUG --password PASSWORD --tenant_id fs09000000 --okapi_url https://okapi-bugfest-lotus.int.aws.folio.org --username USERNAME
 ```
+### Running unit tests
+If you configure VS code properly (for example by using the vs code settings in this repository), you will be able to either run or debug your tests from the IDE itself. Just right-click the green triangle next to the test method and either choose Run test or Debug test
+![image](https://user-images.githubusercontent.com/1894384/190123117-4f98dbbd-7954-44a9-ae22-18f336a83f48.png)
+
+Running will just run the test for you, but debugging the test will allow you to step through the code and look at the values in the varous objects. Make sure you add a breakpoint at the right place. The following screenshot shows how the value of the schema variable is visible in the Variables pane in VS Code
+![image](https://user-images.githubusercontent.com/1894384/190123875-b4cd6d67-45e4-41d0-bfcc-fe4450680847.png)
+
+
+
 
 ## Writing tests
 ### Naming
