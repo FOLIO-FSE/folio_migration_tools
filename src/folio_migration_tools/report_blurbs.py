@@ -176,7 +176,7 @@ class Blurbs:
     )
     GeneralStatistics = (
         "General statistics",
-        "A list of general counterts to outline the transformation as a whole.",
+        "A list of general counters to outline the transformation as a whole.",
     )
     MappedPublisherRoleFromIndicator2 = (
         "Mapped publisher role from Indicator2",
