@@ -5,7 +5,6 @@ import sys
 import time
 import traceback
 from datetime import datetime
-from datetime import timezone
 from typing import List
 from typing import Optional
 from uuid import uuid4
@@ -49,7 +48,6 @@ class BatchPoster(MigrationTaskBase):
     ):
         super().__init__(library_config, task_config, use_logging)
         self.task_config = task_config
-        self.start_datetime = datetime.now(timezone.utc)
         self.migration_report = MigrationReport()
         self.performing_rerun = False
         self.failed_ids = []
