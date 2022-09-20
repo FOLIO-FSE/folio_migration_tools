@@ -191,11 +191,6 @@ class UserTransformer(MigrationTaskBase):
             ) from exception
 
     def wrap_up(self):
-        path = self.folder_structure.results_folder / "user_id_map.json"
-        logging.info(f"Saving map of {len(self.mapper.legacy_id_map)} old and new IDs to {path}")
-
-        with open(path, "w+") as id_map_file:
-            json.dump(self.mapper.legacy_id_map, id_map_file, indent=4)
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
                 "Users transformation report", migration_report_file, self.mapper.start_datetime
