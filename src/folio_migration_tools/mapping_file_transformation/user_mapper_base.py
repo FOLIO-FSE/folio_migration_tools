@@ -1,9 +1,10 @@
 import collections.abc
 from abc import abstractmethod
-from typing import Dict
 
-from folio_uuid import FOLIONamespaces, FolioUUID
+from folio_uuid import FOLIONamespaces
+from folio_uuid import FolioUUID
 from folioclient import FolioClient
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
@@ -13,7 +14,6 @@ from folio_migration_tools.migration_report import MigrationReport
 class UserMapperBase(MapperBase):
     def __init__(self, folio_client: FolioClient, library_configuration: LibraryConfiguration):
         super().__init__(library_configuration, folio_client)
-        self.legacy_id_map: Dict[str, str] = {}
 
         self.migration_report = MigrationReport()
         self.folio_client = folio_client
