@@ -409,17 +409,17 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     Blurbs.ContributorTypeMapping,
-                    f'Mapping failed for $e "{subfield}" ({normalized_subfield}) ',
+                    f"Mapping failed for {marc_field.tag} $e {subfield} (Normalized: {normalized_subfield}) ",
                 )
                 Helper.log_data_issue(
                     legacy_id,
-                    "Mapping failed for $e",
+                    f"Mapping failed for {marc_field.tag} $e",
                     f'{subfield}" ({normalized_subfield}) ',
                 )
             else:
                 self.mapper.migration_report.add(
                     Blurbs.ContributorTypeMapping,
-                    f'Contributor type name {t[1]} found for $e "{normalized_subfield}" ({subfield}) ',
+                    f"Contributor type name {t[1]} found for {marc_field.tag} $e {normalized_subfield} ({subfield}) ",
                 )
                 return t[0]
         return self.default_contributor_type["id"]
