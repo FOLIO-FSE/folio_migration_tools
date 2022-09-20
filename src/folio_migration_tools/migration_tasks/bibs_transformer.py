@@ -103,7 +103,7 @@ class BibsTransformer(MigrationTaskBase):
             self.mapper.migration_report.write_migration_report(
                 "Bibliographic records transformation report",
                 report_file,
-                self.mapper.start_datetime,
+                self.start_datetime,
             )
             Helper.print_mapping_report(
                 report_file,

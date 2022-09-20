@@ -4,6 +4,8 @@ import logging
 import sys
 import time
 from abc import abstractmethod
+from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -30,6 +32,7 @@ class MigrationTaskBase:
     ):
 
         logging.info("MigrationTaskBase init")
+        self.start_datetime = datetime.now(timezone.utc)
         self.task_configuration = task_configuration
         self.folio_client: FolioClient = FolioClient(
             library_configuration.okapi_url,
