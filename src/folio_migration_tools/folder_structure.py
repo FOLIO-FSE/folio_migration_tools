@@ -28,20 +28,20 @@ class FolderStructure:
 
         # Basic folders
         self.mapping_files_folder = self.base_folder / "mapping_files"
-        verify_folder(self.mapping_files_folder)
+        self.verify_folder(self.mapping_files_folder)
         gitignore = self.base_folder / ".gitignore"
         verify_git_ignore(gitignore)
-        verify_folder(self.base_folder / "iterations")
+        self.verify_folder(self.base_folder / "iterations")
 
         # Iteration-specific folders
         self.iteration_folder = self.base_folder / "iterations" / self.iteration_identifier
-        verify_folder(self.iteration_folder)
+        self.verify_folder(self.iteration_folder)
         self.data_folder = self.iteration_folder / "source_data"
-        verify_folder(self.data_folder)
+        self.verify_folder(self.data_folder)
         self.results_folder = self.iteration_folder / "results"
-        verify_folder(self.results_folder)
+        self.verify_folder(self.results_folder)
         self.reports_folder = self.iteration_folder / "reports"
-        verify_folder(self.reports_folder)
+        self.verify_folder(self.reports_folder)
 
     def log_folder_structure(self):
         logging.info("Mapping files folder is %s", self.mapping_files_folder)
@@ -58,9 +58,9 @@ class FolderStructure:
         logging.info("Migration report file will be saved at %s", self.migration_reports_file)
 
     def setup_migration_file_structure(self, source_file_type: str = ""):
-        time_stamp = f'_{time.strftime("%Y%m%d-%H%M%S")}'
-        time_str = time_stamp if self.add_time_stamp_to_file_names else ""
-        file_template = f"{time_str}_{self.migration_task_name}"
+        self.time_stamp = f'_{time.strftime("%Y%m%d-%H%M%S")}'
+        self.time_str = self.time_stamp if self.add_time_stamp_to_file_names else ""
+        self.file_template = f"{self.time_str}_{self.migration_task_name}"
         object_type_string = str(self.object_type.name).lower()
         if source_file_type:
             self.legacy_records_folder = self.data_folder / source_file_type
@@ -68,36 +68,40 @@ class FolderStructure:
             self.legacy_records_folder = self.data_folder
         else:
             self.legacy_records_folder = self.data_folder / object_type_string
-        verify_folder(self.legacy_records_folder)
+        self.verify_folder(self.legacy_records_folder)
 
         # Make sure the items are there if the Holdings processor is run
         if self.object_type == FOLIONamespaces.holdings:
-            verify_folder(self.data_folder / str(FOLIONamespaces.items.name).lower())
+            self.verify_folder(self.data_folder / str(FOLIONamespaces.items.name).lower())
 
         self.transformation_log_path = self.reports_folder / (
-            f"log_{object_type_string}{file_template}.log"
+            f"log_{object_type_string}{self.file_template}.log"
         )
 
         self.failed_recs_path = (
-            self.results_folder / f"failed_records{file_template}{time_stamp}.txt"
+            self.results_folder / f"failed_records{self.file_template}{self.time_stamp}.txt"
         )
 
         self.transformation_extra_data_path = (
-            self.results_folder / f"extradata{file_template}.extradata"
+            self.results_folder / f"extradata{self.file_template}.extradata"
         )
 
-        self.data_issue_file_path = self.reports_folder / f"data_issues_log{file_template}.tsv"
+        self.data_issue_file_path = (
+            self.reports_folder / f"data_issues_log{self.file_template}.tsv"
+        )
         self.created_objects_path = (
-            self.results_folder / f"folio_{object_type_string}{file_template}.json"
+            self.results_folder / f"folio_{object_type_string}{self.file_template}.json"
         )
 
-        self.failed_bibs_file = self.results_folder / f"failed_bib_records{file_template}.mrc"
-        self.failed_mfhds_file = self.results_folder / f"failed_mfhd_records{file_template}.mrc"
+        self.failed_bibs_file = self.results_folder / f"failed_bib_records{self.file_template}.mrc"
+        self.failed_mfhds_file = (
+            self.results_folder / f"failed_mfhd_records{self.file_template}.mrc"
+        )
 
-        self.migration_reports_file = self.reports_folder / f"report{file_template}.md"
+        self.migration_reports_file = self.reports_folder / f"report{self.file_template}.md"
 
         self.srs_records_path = (
-            self.results_folder / f"folio_srs_{object_type_string}{file_template}.json"
+            self.results_folder / f"folio_srs_{object_type_string}{self.file_template}.json"
         )
 
         self.instance_id_map_path = (
@@ -115,6 +119,14 @@ class FolderStructure:
         self.statistical_codes_map_path = self.mapping_files_folder / "statcodes.tsv"
         self.item_statuses_map_path = self.mapping_files_folder / "item_statuses.tsv"
 
+    def verify_folder(self, folder_path: Path):
+        if not folder_path.is_dir():
+            logging.critical("There is no folder located at %s. Exiting.", folder_path)
+            logging.critical("Create a folder by calling\n\tmkdir %s", folder_path)
+            sys.exit(1)
+        else:
+            logging.info("Located %s", folder_path)
+
 
 def verify_git_ignore(gitignore: Path):
     with open(gitignore, "r+") as f:
@@ -123,17 +135,8 @@ def verify_git_ignore(gitignore: Path):
             f.write("results/\n")
         if "archive/" not in contents:
             f.write("archive/\n")
-        if "data/" not in contents:
+        if "source_data/" not in contents:
             f.write("source_data/\n")
         if "*.data" not in contents:
             f.write("*.data\n")
     logging.info("Made sure there was a valid .gitignore file at %s", gitignore)
-
-
-def verify_folder(folder_path: Path):
-    if not folder_path.is_dir():
-        logging.critical("There is no folder located at %s. Exiting.", folder_path)
-        logging.critical("Create a folder by calling\n\tmkdir %s", folder_path)
-        sys.exit(1)
-    else:
-        logging.info("Located %s", folder_path)
