@@ -6,20 +6,20 @@ import sys
 import time
 from os.path import isfile
 from typing import List
-from pydantic.main import BaseModel
-from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic.main import BaseModel
+
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.custom_exceptions import (
-    TransformationProcessError,
-    TransformationRecordFailedError,
-)
-from folio_migration_tools.library_configuration import FileDefinition, LibraryConfiguration
-from folio_migration_tools.mapping_file_transformation.organization_mapper import (
-    OrganizationMapper,
-)
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
+)
+from folio_migration_tools.mapping_file_transformation.organization_mapper import (
+    OrganizationMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
@@ -58,7 +58,7 @@ class OrganizationTransformer(MigrationTaskBase):
             / self.task_config.organizations_mapping_file_name
         )
         self.results_path = self.folder_structure.created_objects_path
-        self.failed_files: List[str] = list()
+        self.failed_files: List[str] = []
 
         self.folio_keys = []
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(

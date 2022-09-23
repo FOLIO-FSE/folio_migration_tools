@@ -1,12 +1,9 @@
 import json
 import logging
-from unittest.mock import MagicMock
-from unittest.mock import Mock
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient import FolioClient
-
+from folio_migration_tools.test_infrastructure import mocked_classes
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.courses_mapper import (
@@ -17,17 +14,6 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
-def get_latest_from_github(owner, repo, file_path):
-    return FolioClient.get_latest_from_github(owner, repo, file_path, "")
-
-
-def folio_get_all(ref_data_path, array_name, query, limit):
-    return [
-        {"name": "Fall 2022", "id": "42093be3-d1e7-4bb6-b2b9-18e153d109b2"},
-        {"name": "Summer 2022", "id": "415b14a8-c94c-4aa1-a0a8-d397efae343e"},
-    ]
-
-
 @pytest.fixture(scope="module")
 def mapper(pytestconfig) -> CoursesMapper:
     okapi_url = "okapi_url"
@@ -36,24 +22,8 @@ def mapper(pytestconfig) -> CoursesMapper:
     password = "password"  # noqa: S105
 
     print("init")
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.tenant_id = "tenant_id"
-    mock_folio.username = "username"
-    mock_folio.password = "password"  # noqa: S105
-    mock_folio.get_latest_from_github = get_latest_from_github
-    mock_folio.folio_get_all = folio_get_all
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
-    """ conf = CoursesMigrator.TaskConfiguration(
-        name="test",
-        migration_task_type="BibsTransformer",
-        courses_file=FileDefinition(file_name="some path"),
-    ) """
+    mock_folio = mocked_classes.mocked_folio_client()
+
     lib = LibraryConfiguration(
         okapi_url=okapi_url,
         tenant_id=tenant_id,

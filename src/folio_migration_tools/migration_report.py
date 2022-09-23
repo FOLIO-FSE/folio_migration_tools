@@ -51,15 +51,18 @@ class MigrationReport:
 
     def write_migration_report(
         self,
+        report_title,
         report_file,
         time_started: datetime,
     ):
         """Writes the migration report, including section headers, section blurbs, and values.
 
         Args:
+            report_title (_type_):the header of the report.
             report_file (_type_):path to file
             time_started (datetime): The datetime stamp (in utc), of when the process started
         """
+        report_file.write(f"# {report_title}   \n")
         time_finished = datetime.now(timezone.utc)
         report_file.write(f"{Blurbs.Introduction[1]}\n")
         report_file.write("## Timings   \n")

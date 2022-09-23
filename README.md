@@ -50,6 +50,13 @@ In order to perform migrations according to this process, you need the following
 * Access to the [Data mapping file creator](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) web tool
 * A FOLIO tenant running the latest or the second latest version of FOLIO
 
+
+
+# Running the scripts
+For information on syntax, what files are needed and produced by the toolkit, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template). We are building out the docs section in this repository as well: [Documentation](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/docs)
+¨
+
+
 # Tests
 There is a test suite for Bibs-to-Instance mapping. You need to add arguments in order to run it against a FOLIO environment. The tests are run against the latest [FOLIO Bugfest environment](https://wiki.folio.org/dosearchsite.action?cql=siteSearch%20~%20%22bugfest%22%20AND%20type%20in%20(%22space%22%2C%22user%22%2C%22com.atlassian.confluence.extra.team-calendars%3Acalendar-content-type%22%2C%22attachment%22%2C%22page%22%2C%22com.atlassian.confluence.extra.team-calendars%3Aspace-calendars-view-content-type%22%2C%22blogpost%22)&includeArchivedSpaces=false) as part of the commit process in this repo.
 
@@ -57,8 +64,3 @@ There is a test suite for Bibs-to-Instance mapping. You need to add arguments in
 
 * Install the packages in the Pipfile
 * Run ```clear; pipenv run pytest -v --log-level=DEBUG --password PASSWORD --tenant_id TENANT_ID --okapi_url OKAPI URL --username USERNAME```
-
-
-# Running the scripts
-For information on syntax, what files are needed and produced by the toolkit, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template). We are building out the docs section in this repository as well: [Documentation](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/docs)
-¨

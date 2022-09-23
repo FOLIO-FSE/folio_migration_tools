@@ -38,6 +38,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         default_call_number_type_name: str
         fallback_holdings_type_id: str
         create_source_records: Optional[bool] = False
+        reset_hrid_settings: Optional[bool] = False
+        never_update_hrid_settings: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -80,6 +82,11 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         )
         self.instance_id_map = self.load_id_map(self.folder_structure.instance_id_map_path, True)
         logging.info("%s Instance ids in map", len(self.instance_id_map))
+        if self.task_configuration.hrid_handling == HridHandling.preserve001:
+            raise TransformationProcessError(
+                "This HridHandling is not yet implemented for MFHD. "
+                "Choose default or default_reset"
+            )
         logging.info("Init done")
 
     def do_work(self):
@@ -102,6 +109,11 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 self.library_configuration,
             )
             mapper.mappings = rules_file["rules"]
+            if (
+                self.task_configuration.reset_hrid_settings
+                and not self.task_configuration.never_update_hrid_settings
+            ):
+                mapper.reset_holdings_hrid_counter()
             processor = HoldingsProcessor(mapper, self.folder_structure)
             for file_def in self.task_config.files:
                 self.process_single_file(file_def, processor)

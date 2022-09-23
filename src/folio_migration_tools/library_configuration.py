@@ -7,6 +7,15 @@ from pydantic.types import DirectoryPath
 
 
 class HridHandling(str, Enum):
+    """Enum determining how the HRID generation should be handled.
+        - default: Enumerates the HRID, building on the current value in the HRID settings
+        - preserve001: Takes the 001 and uses this as the HRID.
+
+    Args:
+        str (_type_): _description_
+        Enum (_type_): _description_
+    """
+
     default = "default"
     preserve001 = "preserve001"
 

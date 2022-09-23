@@ -1,6 +1,5 @@
 import logging
 import sys
-from datetime import datetime as dt
 from io import IOBase
 from typing import List
 from typing import Optional
@@ -36,6 +35,8 @@ class BibsTransformer(MigrationTaskBase):
         files: List[FileDefinition]
         ils_flavour: IlsFlavour
         tags_to_delete: Optional[List[str]] = []
+        reset_hrid_settings: Optional[bool] = False
+        never_update_hrid_settings: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -49,18 +50,23 @@ class BibsTransformer(MigrationTaskBase):
     ):
 
         super().__init__(library_config, task_config, use_logging)
-        self.task_config = task_config
         self.processor: BibsProcessor = None
         self.check_source_files(
-            self.folder_structure.legacy_records_folder, self.task_config.files
+            self.folder_structure.legacy_records_folder, self.task_configuration.files
         )
-        logging.info(task_config.json(indent=4))
-        self.mapper = BibsRulesMapper(self.folio_client, library_config, task_config)
+        logging.info(self.task_configuration.json(indent=4))
+        self.mapper = BibsRulesMapper(self.folio_client, library_config, self.task_configuration)
         self.bib_ids = set()
         logging.info("Init done")
+        if (
+            self.task_configuration.reset_hrid_settings
+            and not self.task_configuration.never_update_hrid_settings
+        ):
+            self.mapper.reset_instance_hrid_counter()
 
     def do_work(self):
         logging.info("Starting....")
+
         with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
             self.processor = BibsProcessor(
                 self.mapper,
@@ -69,7 +75,7 @@ class BibsTransformer(MigrationTaskBase):
                 self.folder_structure,
             )
             with open(self.folder_structure.failed_bibs_file, "wb") as failed_bibs_file:
-                for file_obj in self.task_config.files:
+                for file_obj in self.task_configuration.files:
                     try:
                         with open(
                             self.folder_structure.legacy_records_folder / file_obj.file_name,
@@ -94,10 +100,10 @@ class BibsTransformer(MigrationTaskBase):
         logging.info("Done. Wrapping up...")
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# Bibliographic records transformation results   \n")
-            report_file.write(f"Time Run: {dt.isoformat(dt.utcnow())}   \n")
             self.mapper.migration_report.write_migration_report(
-                report_file, self.mapper.start_datetime
+                "Bibliographic records transformation report",
+                report_file,
+                self.mapper.start_datetime,
             )
             Helper.print_mapping_report(
                 report_file,

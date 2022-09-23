@@ -1,16 +1,15 @@
 import json
 import logging
 import uuid
-from unittest.mock import MagicMock
 from unittest.mock import Mock
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient import FolioClient
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
+from folio_migration_tools.test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
@@ -44,14 +43,7 @@ def test_basic():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
 
@@ -83,14 +75,7 @@ def test_remove_preferred_first_name_if_empty():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
 
@@ -170,14 +155,7 @@ def test_boolean_values_explicitly_true():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
@@ -198,14 +176,7 @@ def test_boolean_values_explicitly_true_json_string():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
@@ -226,14 +197,7 @@ def test_boolean_values_explicitly_false_json_string():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
@@ -310,14 +274,7 @@ def test_boolean_values_explicitly_true_string():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
 
@@ -395,14 +352,7 @@ def test_boolean_values_explicitly_false_string():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
 
@@ -480,14 +430,7 @@ def test_boolean_values_explicitly_false():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
 
@@ -576,14 +519,7 @@ def test_notes(caplog):
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
 
@@ -658,14 +594,7 @@ def test_notes_empty_field(caplog):
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
 
-    mock_folio = Mock(spec=FolioClient)
-    mock_folio.okapi_url = "okapi_url"
-    mock_folio.folio_get_single_object = MagicMock(
-        return_value={
-            "instances": {"prefix": "pref", "startNumber": "1"},
-            "holdings": {"prefix": "pref", "startNumber": "1"},
-        }
-    )
+    mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user = user_mapper.do_map(legacy_user_record, "001")
 

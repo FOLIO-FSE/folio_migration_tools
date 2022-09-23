@@ -202,11 +202,11 @@ class HoldingsProcessor:
                     "Duplicate 001 for record. HRID created for record",
                     value,
                 )
-                num_part = str(self.mapper.instance_hrid_counter).zfill(11)
-                folio_rec["hrid"] = f"{self.mapper.instance_hrid_prefix}{num_part}"
+                num_part = self.generate_num_part()
+                folio_rec["hrid"] = f"{self.mapper.holdings_hrid_prefix}{num_part}"
                 new_001 = Field(tag="001", data=folio_rec["hrid"])
                 marc_record.add_ordered_field(new_001)
-                self.mapper.instance_hrid_counter += 1
+                self.mapper.holdings_hrid_counter += 1
             else:
                 self.unique_001s.add(value)
                 folio_rec["hrid"] = value
@@ -219,12 +219,19 @@ class HoldingsProcessor:
             and marc_record["001"].value() == folio_record["hrid"]
         ):
             return
-        num_part = str(self.mapper.holdings_hrid_counter).zfill(11)
+        num_part = self.generate_num_part()
         folio_record["hrid"] = f"{self.mapper.holdings_hrid_prefix}{num_part}"
         new_001 = Field(tag="001", data=folio_record["hrid"])
         marc_record.remove_fields("001")
         marc_record.add_ordered_field(new_001)
         self.mapper.holdings_hrid_counter += 1
+
+    def generate_num_part(self):
+        return (
+            str(self.mapper.holdings_hrid_counter).zfill(11)
+            if self.mapper.common_retain_leading_zeroes
+            else str(self.mapper.holdings_hrid_counter)
+        )
 
     @staticmethod
     def set_source_id(task_configuration, folio_rec, holdingssources):
@@ -246,9 +253,8 @@ class HoldingsProcessor:
         )
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            report_file.write("# MFHD records transformation results   \n")
             self.mapper.migration_report.write_migration_report(
-                report_file, self.mapper.start_datetime
+                "MFHD records transformation report", report_file, self.mapper.start_datetime
             )
             Helper.print_mapping_report(
                 report_file,

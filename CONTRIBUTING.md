@@ -34,14 +34,18 @@ When you make edits to this document, make sure you update the Table of contents
   - [Writing tests](#writing-tests)
   - [Code coverage](#code-coverage)
   - [Running an end-to-end transformation](#running-an-end-to-end-transformation)
-# Writing Issues.
+
+
+# Writing issues
 Writing good issues is key.
-Both for sharing to the larger group of users what is needed or not working, but also for helping the developer working on the issue to reach the DoD and beyond.
+Both for sharing to the larger group of users what is needed or not working, but also for helping the developer working on the issue to reach the Definition Of Done (DoD) and beyond.
 
 For the developer writing the issue, it is good practice to share a screenshot or some data examples or a drawing on what changed. Since Issues are linked into the [CHANGELOG.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CHANGELOG.md), this habit will propagate well-written issues over to Pypi and more.
 
+Formulating a DoD is good practice. Take a moment to do this properly.   
 
-# Git(hub) workflow
+
+# Code contribution workflow
 We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-flow)
 In the ideal situation, this is what you do:
 ## 1. Create a branch off of main and name it according to the feature you are working on
@@ -54,7 +58,11 @@ In the ideal situation, this is what you do:
 ```
 
 ## 2. :sparkles: Do you thing :sparkles:
-Write your tests, write your code. More on this part in sections below.
+* :test_tube: Write your tests 
+* :keyboard: Write your code
+* :ledger: Add documentation to the readme if necessary 
+* :vertical_traffic_light: It's good practice to add test data to the migration_repo_template in order to maintain a set of examples for new users and also maintain integration test coverage   
+
 
 
 ## 3. Prepare for merging
@@ -65,6 +73,7 @@ Run
 pipenv run safety check
 ```
 and update any packages with a vulnerability.
+
 ### 3.2. :monocle_face: Check and format your code
 The following command runs Flake8 with plugins on your code. It:
 * Uses black to format the code. The Line-lenght is to be 99 characters
@@ -102,7 +111,7 @@ optional arguments:
 ```
 
 ## 3.5. Create a pull request in GitHub
-## 3.6. :people_holding_hands: Code review.
+## 3.6. :people_holding_hands: Code review
 
 # Create release
 ## Create the release on Github
@@ -202,18 +211,51 @@ https://cereblanco.medium.com/setup-black-and-isort-in-vscode-514804590bf9
 
 
 # Testing
-## Running tests
+## Running tests 
+### Running tests against a FOLIO environment
 Pytest. Run the test suite against the latest bugfest release. Example call:
 
 ```
 pipenv run pytest -v --cov=./ --cov-report=xml --log-level=DEBUG --password PASSWORD --tenant_id fs09000000 --okapi_url https://okapi-bugfest-lotus.int.aws.folio.org --username USERNAME
 ```
+### Running unit tests
+If you configure VS code properly (for example by using the vs code settings in this repository), you will be able to either run or debug your tests from the IDE itself. Just right-click the green triangle next to the test method and either choose Run test or Debug test
+![image](https://user-images.githubusercontent.com/1894384/190123117-4f98dbbd-7954-44a9-ae22-18f336a83f48.png)
+
+Running will just run the test for you, but debugging the test will allow you to step through the code and look at the values in the varous objects. Make sure you add a breakpoint at the right place. The following screenshot shows how the value of the schema variable is visible in the Variables pane in VS Code
+![image](https://user-images.githubusercontent.com/1894384/190123875-b4cd6d67-45e4-41d0-bfcc-fe4450680847.png)
+
+
+
 
 ## Writing tests
-TBD
+### Naming
+Tests are written and maintained in the tests folder in the repository. Test files should be named after the class/file they are testing, and then the tests are named according to the methods being tested. 
+So, if you are to test a method named *condition_trim_period* in the *conditions.py* file, your test file should be named *test_conditions.py* and the test method should be named *test_condition_trim_period*
+![image](https://user-images.githubusercontent.com/1894384/190117341-55d78ca0-853d-4e2b-b55a-48c04a111df3.png)
+
+### Unit tests or integration-like tests?
+The test suite contains both tests that needs a connection to a FOLIO tenant to run, as well as a growing number of unit tests that can be run without any actual FOLIO tennant. The latter is preferable, so try to write unit tests, mocking the behaviour of a FOLIO tenant. 
+
+The exception to this is the test suite in *test_rules_mapper_bibs.py* that needs to be rewritten long-term, but that will remain in the current form as is. So if you want to test the tools agains real-world data and a tenant, then this is the place to do it.
+
+### Test libraries used
+We rely on Pytest in conjunction with unittest.mock. There are numerous introductions to both libraries:   
+* [Intro to test framework Pytest](https://medium.com/testcult/intro-to-test-framework-pytest-5b1ce4d011ae)   
+* [Understanding the Python Mock Object Library](https://realpython.com/python-mock-library/)   
+
+### Test data
+In the past we have used OAI-PMH-formatted MARC records. This is for historical reasons no longer needed, and going MARC records should be as close to the original form as possible. One could argue that having all MARC records in JSON or .mrk for readability and for searching, but this would risk loosing important nuances.
+
+Test records should be placed in the tests/test_data folder.
+
+### Testing infrastructure
+There is a folder in the *src/* folder named *test_infrastructure*. This folder contains classes and mocks that are and could be shared in a wider set of tests.  This way the behaviour of ```FolioClient.folio_get_all()``` method could be standardized for example, and more complexity could be added to these mocks as we introduce new tests.
 
 ## Code coverage
-TBD
+Your ambition should be to increase code coverage with every new commit. Coverage does not have to mean that you cover every single outcome or side-effect of a method, but start by testing and verifying that the "happy path" works as expected.
+
+By ensuring we have at least "happy path" test coverage, when a bug is discovered, the threshold for writing a test to make sure the bug is handled gets significantly lowered..
 
 ## Running an end-to-end transformation
 (migration_repo_template)[] contains a bash script called bash run_test_data_suite.sh allowing you to run the transformers against the latest bugfest environment:
