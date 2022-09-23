@@ -1,5 +1,7 @@
 import pymarc
 
+from unittest.mock import Mock
+
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
@@ -29,3 +31,24 @@ def test_get_marc_textual_stmt_correct_order_and_not_deduped():
         all_stmts = [f["statement"] for f in rec["holdingsStatements"]]
         all_94s = [f for f in all_stmts if stmt == f]
         assert len(all_94s) == 2
+
+
+def test_remove_from_id_map():
+    mocked_rules_mapper_holdings = Mock(spec=RulesMapperHoldings)
+    former_ids = ["formerid123"]
+
+    RulesMapperHoldings.remove_from_id_map(mocked_rules_mapper_holdings, former_ids)
+
+    assert "formerid123" not in mocked_rules_mapper_holdings.holdings_id_map
+
+
+def test_set_default_call_number_type_if_empty():
+    mocked_rules_mapper_holdings = Mock(spec=RulesMapperHoldings)
+
+    folio_holding = {"callNumberTypeId": ""}
+
+    RulesMapperHoldings.set_default_call_number_type_if_empty(
+        mocked_rules_mapper_holdings, folio_holding
+    )
+
+    assert folio_holding["callNumberTypeId"]
