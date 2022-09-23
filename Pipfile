@@ -11,6 +11,7 @@ pep8 = "*"
 black = "*"
 mypy = "*"
 pytest-cov = "*"
+pylint = "*"
 
 [packages]
 requests = "*"
