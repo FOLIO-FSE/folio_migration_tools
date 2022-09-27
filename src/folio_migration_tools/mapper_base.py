@@ -19,6 +19,9 @@ from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MapperBase:
+
+    legacy_id_template = "Identifier(s) from previous systems:"
+
     def __init__(
         self,
         library_configuration: LibraryConfiguration,
@@ -370,6 +373,26 @@ class MapperBase:
             elif v is not None:
                 clean[k] = v
         return clean
+
+    @staticmethod
+    def add_legacy_id_to_admin_note(folio_record: dict, legacy_id: str):
+        if "administrativeNotes" not in folio_record:
+            folio_record["administrativeNotes"] = []
+        if id_string := next(
+            (f for f in folio_record["administrativeNotes"] if MapperBase.legacy_id_template in f),
+            None,
+        ):
+            if legacy_id not in id_string:
+                folio_record["administrativeNotes"] = [
+                    f
+                    for f in folio_record["administrativeNotes"]
+                    if MapperBase.legacy_id_template not in f
+                ]
+                folio_record["administrativeNotes"].append(f"{id_string}, {legacy_id}")
+        else:
+            folio_record["administrativeNotes"].append(
+                f"{MapperBase.legacy_id_template} {legacy_id}"
+            )
 
 
 def flatten(my_dict: dict, path=""):
