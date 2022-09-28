@@ -109,14 +109,7 @@ class Conditions:
             f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships"
         )
         logging.info(f"{len(self.folio.class_types)}\tclass_types")
-        self.statistical_codes = list(
-            self.folio.folio_get_all(
-                "/statistical-codes",
-                "statisticalCodes",
-                "?query=cql.allRecords=1",
-                1000,
-            )
-        )
+        self.statistical_codes = self.folio.statistical_codes
         logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")
 
         # Raise for empty settings

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pymarc
 import pytest
-from folioclient.FolioClient import FolioClient
+from folioclient import FolioClient
 from lxml import etree
 
 from folio_migration_tools.report_blurbs import Blurbs
@@ -29,14 +29,16 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
+from folio_migration_tools.test_infrastructure import mocked_classes
 
 xpath_245 = "//marc:datafield[@tag='245']"
 # flake8: noqa
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session", autouse=True)
 def mapper(pytestconfig) -> BibsRulesMapper:
-    print("init")
+    print("mapper was called")
+    # folio = mocked_classes.mocked_folio_client()
     folio = FolioClient(
         pytestconfig.getoption("okapi_url"),
         pytestconfig.getoption("tenant_id"),
@@ -51,6 +53,17 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         ils_flavour="sierra",
         reset_hrid_settings=False,
     )
+    """ lib = LibraryConfiguration(
+        okapi_url=folio.okapi_url,
+        tenant_id=folio.tenant_id,
+        okapi_username=folio.username,
+        okapi_password=folio.password,
+        folio_release=FolioRelease.kiwi,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="I have no clue",
+        base_folder="/",
+    ) """
     lib = LibraryConfiguration(
         okapi_url=pytestconfig.getoption("okapi_url"),
         tenant_id=pytestconfig.getoption("tenant_id"),
@@ -59,7 +72,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         folio_release=FolioRelease.kiwi,
         library_name="Test Run Library",
         log_level_debug=False,
-        iteration_identifier="I have no clue",
+        iteration_identifier="test_iteration",
         base_folder="/",
     )
     return BibsRulesMapper(folio, lib, conf)
