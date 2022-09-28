@@ -19,6 +19,7 @@ from folio_migration_tools.custom_exceptions import TransformationRecordFailedEr
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
@@ -51,7 +52,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         migration_task_type="BibsTransformer",
         hrid_handling=HridHandling.default,
         files=[],
-        ils_flavour="sierra",
+        ils_flavour=IlsFlavour.sierra,
         reset_hrid_settings=False,
     )
     """ lib = LibraryConfiguration(
@@ -133,6 +134,7 @@ def test_suppression(mapper):
 def test_admin_note(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
     assert MapperBase.legacy_id_template in record[0]["administrativeNotes"][0]
+    assert "legacy_id" in record[0]["administrativeNotes"][0]
 
 
 def test_simple_title(mapper):
