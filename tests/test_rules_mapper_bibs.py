@@ -20,6 +20,7 @@ from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
@@ -127,6 +128,11 @@ def test_suppression(mapper):
     record = default_map_suppression("test1.xml", xpath_245, mapper)
     assert record[0]["staffSuppress"] == True
     assert record[0]["discoverySuppress"] == True
+
+
+def test_admin_note(mapper):
+    record = default_map("test1.xml", xpath_245, mapper)
+    assert MapperBase.legacy_id_template in record[0]["administrativeNotes"][0]
 
 
 def test_simple_title(mapper):
