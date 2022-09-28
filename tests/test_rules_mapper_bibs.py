@@ -37,16 +37,40 @@ xpath_245 = "//marc:datafield[@tag='245']"
 # flake8: noqa
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="module")
 def mapper(pytestconfig) -> BibsRulesMapper:
     print("mapper was called")
-    # folio = mocked_classes.mocked_folio_client()
-    folio = FolioClient(
-        pytestconfig.getoption("okapi_url"),
-        pytestconfig.getoption("tenant_id"),
-        pytestconfig.getoption("username"),
-        pytestconfig.getoption("password"),
-    )
+    if pytestconfig.getoption("okapi_url"):
+        folio = FolioClient(
+            pytestconfig.getoption("okapi_url"),
+            pytestconfig.getoption("tenant_id"),
+            pytestconfig.getoption("username"),
+            pytestconfig.getoption("password"),
+        )
+        lib = LibraryConfiguration(
+            okapi_url=pytestconfig.getoption("okapi_url"),
+            tenant_id=pytestconfig.getoption("tenant_id"),
+            okapi_username=pytestconfig.getoption("username"),
+            okapi_password=pytestconfig.getoption("password"),
+            folio_release=FolioRelease.kiwi,
+            library_name="Test Run Library",
+            log_level_debug=False,
+            iteration_identifier="test_iteration",
+            base_folder="/",
+        )
+    else:
+        folio = mocked_classes.mocked_folio_client()
+        lib = LibraryConfiguration(
+            okapi_url=folio.okapi_url,
+            tenant_id=folio.tenant_id,
+            okapi_username=folio.username,
+            okapi_password=folio.password,
+            folio_release=FolioRelease.kiwi,
+            library_name="Test Run Library",
+            log_level_debug=False,
+            iteration_identifier="I have no clue",
+            base_folder="/",
+        )
     conf = BibsTransformer.TaskConfiguration(
         name="test",
         migration_task_type="BibsTransformer",
@@ -54,28 +78,6 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         files=[],
         ils_flavour=IlsFlavour.sierra,
         reset_hrid_settings=False,
-    )
-    """ lib = LibraryConfiguration(
-        okapi_url=folio.okapi_url,
-        tenant_id=folio.tenant_id,
-        okapi_username=folio.username,
-        okapi_password=folio.password,
-        folio_release=FolioRelease.kiwi,
-        library_name="Test Run Library",
-        log_level_debug=False,
-        iteration_identifier="I have no clue",
-        base_folder="/",
-    ) """
-    lib = LibraryConfiguration(
-        okapi_url=pytestconfig.getoption("okapi_url"),
-        tenant_id=pytestconfig.getoption("tenant_id"),
-        okapi_username=pytestconfig.getoption("username"),
-        okapi_password=pytestconfig.getoption("password"),
-        folio_release=FolioRelease.kiwi,
-        library_name="Test Run Library",
-        log_level_debug=False,
-        iteration_identifier="test_iteration",
-        base_folder="/",
     )
     return BibsRulesMapper(folio, lib, conf)
 
@@ -645,7 +647,7 @@ def test_should_add_notes_590_599_to_notes_list(mapper):
     assert "Labels reversed on library's copy" in notes
 
 
-def test_should_parse_mode_of_issuance_correctly(mapper):
+def test_should_parse_mode_of_issuance_correctly_2(mapper):
     xpath = "//marc:datafield[@tag='337' or @tag='338']"
     # "2-character code in 338"):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)
@@ -720,7 +722,7 @@ def test_get_folio_id_by_code_except(caplog):
     assert res == ""
 
 
-def test_should_add_notes_550_556_to_notes_list(mapper):
+def test_should_add_notes_550_556_to_notes_list_2(mapper):
     xpath = "//marc:datafield[@tag='550' or @tag='552' or @tag='555' or @tag='556']"
 
     record = default_map("test_notes_55x.xml", xpath, mapper)
