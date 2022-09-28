@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
@@ -67,14 +69,16 @@ def test_clean_none_props():
 def test_add_legacy_identifier_to_admin_note():
     folio_record = {}
     legacy_id = "legacy_ID"
-    MapperBase.add_legacy_id_to_admin_note(folio_record, legacy_id)
+    mapper = Mock(spec=MapperBase)
+    MapperBase.add_legacy_id_to_admin_note(mapper, folio_record, legacy_id)
     assert f"{MapperBase.legacy_id_template} {legacy_id}" in folio_record["administrativeNotes"]
 
 
 def test_add_legacy_identifier_to_admin_note_additional_id():
     folio_record = {"administrativeNotes": [f"{MapperBase.legacy_id_template} legacy_ID"]}
     legacy_id = "legacy_ID_2"
-    MapperBase.add_legacy_id_to_admin_note(folio_record, legacy_id)
+    mapper = Mock(spec=MapperBase)
+    MapperBase.add_legacy_id_to_admin_note(mapper, folio_record, legacy_id)
     assert len(folio_record["administrativeNotes"]) == 1
     assert (
         f"{MapperBase.legacy_id_template} legacy_ID, legacy_ID_2"
@@ -85,5 +89,6 @@ def test_add_legacy_identifier_to_admin_note_additional_id():
 def test_add_legacy_identifier_to_admin_note_dupe():
     folio_record = {"administrativeNotes": [f"{MapperBase.legacy_id_template} legacy_ID"]}
     legacy_id = "legacy_ID"
-    MapperBase.add_legacy_id_to_admin_note(folio_record, legacy_id)
+    mapper = Mock(spec=MapperBase)
+    MapperBase.add_legacy_id_to_admin_note(mapper, folio_record, legacy_id)
     assert f"{MapperBase.legacy_id_template} legacy_ID" in folio_record["administrativeNotes"]
