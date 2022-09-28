@@ -8,6 +8,7 @@ import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -374,8 +375,9 @@ class MapperBase:
                 clean[k] = v
         return clean
 
-    @staticmethod
-    def add_legacy_id_to_admin_note(folio_record: dict, legacy_id: str):
+    def add_legacy_id_to_admin_note(self, folio_record: dict, legacy_id: str):
+        if not legacy_id:
+            raise TransformationFieldMappingError(legacy_id, "Legacy id is empty", legacy_id)
         if "administrativeNotes" not in folio_record:
             folio_record["administrativeNotes"] = []
         if id_string := next(

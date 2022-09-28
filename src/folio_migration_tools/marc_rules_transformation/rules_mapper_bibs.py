@@ -88,6 +88,8 @@ class BibsRulesMapper(RulesMapperBase):
         leader_05 = marc_record.leader[5]
         self.migration_report.add(Blurbs.RecordStatus, leader_05 or "Empty")
         self.handle_hrid(folio_instance, marc_record, legacy_ids)
+        for legacy_id in legacy_ids:
+            self.add_legacy_id_to_admin_note(folio_instance, legacy_id)
         if leader_05 == "d":
             Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
         return folio_instance
