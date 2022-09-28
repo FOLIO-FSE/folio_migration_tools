@@ -411,12 +411,14 @@ class BibsRulesMapper(RulesMapperBase):
         )
         return False
 
-    def get_instance_format_ids_from_a(self, field_index, f: pymarc.Field, all_337s, legacy_id):
+    def get_instance_format_ids_from_a(
+        self, field_index, f_338: pymarc.Field, all_337s, legacy_id
+    ):
         self.migration_report.add(
             Blurbs.InstanceFormat,
-            "338$b is missing. Will try parse from 337$a and 338$b",
+            "338$b is missing. Will try parse from 337$a and 338$a",
         )
-        for a in f.get_subfields("a"):
+        for a in f_338.get_subfields("a"):
             corresponding_337 = all_337s[field_index] if field_index < len(all_337s) else None
             if corresponding_337 and "a" in corresponding_337:
                 if fmt_id := self.get_instance_format_id_by_name(
@@ -427,12 +429,12 @@ class BibsRulesMapper(RulesMapperBase):
     def get_instance_format_ids(self, marc_record, legacy_id):
         all_337s = marc_record.get_fields("337")
         all_338s = marc_record.get_fields("338")
-        for fidx, f in enumerate(all_338s):
-            if self.f338_source_is_rda_carrier(f):
-                if "b" not in f and "a" in f:
-                    yield self.get_instance_format_ids_from_a(fidx, f, all_337s, legacy_id)
+        for fidx, f_338 in enumerate(all_338s):
+            if self.f338_source_is_rda_carrier(f_338):
+                if "b" not in f_338 and "a" in f_338:
+                    yield self.get_instance_format_ids_from_a(fidx, f_338, all_337s, legacy_id)
 
-                for sfidx, b in enumerate(f.get_subfields("b")):
+                for sfidx, b in enumerate(f_338.get_subfields("b")):
                     b = b.replace(" ", "")
                     if len(b) == 2:
                         # Normal 338b. should be able to map this
