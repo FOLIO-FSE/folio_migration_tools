@@ -11,7 +11,6 @@ from folio_migration_tools.mapping_file_transformation.courses_mapper import (
     CoursesMapper,
 )
 from folio_migration_tools.migration_tasks.courses_migrator import CoursesMigrator
-from folio_migration_tools.test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True

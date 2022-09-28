@@ -201,6 +201,15 @@ def folio_get_single_object_mocked(*args, **kwargs):
     }
 
 
+def folio_get_single_object_mocked(*args, **kwargs):
+    return {
+        "instances": {"prefix": "pref", "startNumber": "1"},
+        "holdings": {"prefix": "pref", "startNumber": "1"},
+        "items": {"prefix": "pref", "startNumber": "1"},
+        "commonRetainLeadingZeroes": True,
+    }
+
+
 def get_latest_from_github(owner, repo, file_path):
     return FolioClient.get_latest_from_github(owner, repo, file_path, "")
 
