@@ -11,7 +11,7 @@ certifi==2021.10.8; python_version >= '3.6'
 charset-normalizer==2.0.12; python_version >= '3'
 defusedxml==0.7.1
 folio-uuid==0.2.5
-folioclient==0.41.0
+folioclient==0.42.0
 humps==0.2.2
 idna==3.3; python_version >= '3'
 lxml==4.9.1

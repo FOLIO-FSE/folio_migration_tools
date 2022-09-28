@@ -3,12 +3,13 @@ import logging
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folio_migration_tools.test_infrastructure import mocked_classes
+
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.courses_mapper import (
     CoursesMapper,
 )
+from folio_migration_tools.test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
