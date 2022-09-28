@@ -16,6 +16,18 @@ def mocked_folio_client() -> FolioClient:
         mocked_folio.username = "username"
         mocked_folio.password = "password"  # noqa: S105
         # setup_ref_data_from_github(mocked_folio)
+        mocked_folio.instance_formats = [
+            {
+                "code": "test_code_99",
+                "id": "605e9527-4008-45e2-a78a-f6bfb027c43a",
+                "name": "test -- name",
+            },
+            {
+                "code": "ab",
+                "id": "605e9527-4008-45e2-a78a-f6bfb027c43a",
+                "name": "test -- name 2",
+            },
+        ]
 
         mocked_folio.folio_get_single_object = folio_get_single_object_mocked
         mocked_folio.folio_get_all = folio_get_all_mocked
