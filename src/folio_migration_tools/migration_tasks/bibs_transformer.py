@@ -29,6 +29,7 @@ class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
         deactivate035_from001: Optional[bool] = False
+        add_administrative_notes_with_legacy_ids: Optional[bool] = True
         migration_task_type: str
         use_tenant_mapping_rules: Optional[bool] = True
         hrid_handling: Optional[HridHandling] = HridHandling.default

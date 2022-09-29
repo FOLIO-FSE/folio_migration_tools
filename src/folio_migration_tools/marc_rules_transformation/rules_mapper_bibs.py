@@ -88,8 +88,9 @@ class BibsRulesMapper(RulesMapperBase):
         leader_05 = marc_record.leader[5]
         self.migration_report.add(Blurbs.RecordStatus, leader_05 or "Empty")
         self.handle_hrid(folio_instance, marc_record, legacy_ids)
-        for legacy_id in legacy_ids:
-            self.add_legacy_id_to_admin_note(folio_instance, legacy_id)
+        if self.task_configuration.add_administrative_notes_with_legacy_ids:
+            for legacy_id in legacy_ids:
+                self.add_legacy_id_to_admin_note(folio_instance, legacy_id)
         if leader_05 == "d":
             Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
         return folio_instance
@@ -212,7 +213,6 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["instanceFormatIds"] = list(
             set(self.get_instance_format_ids(marc_record, legacy_ids))
         )
-
         folio_instance["instanceTypeId"] = self.get_instance_type_id(marc_record, legacy_ids)
 
         folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record, legacy_ids)
@@ -374,8 +374,8 @@ class BibsRulesMapper(RulesMapperBase):
             return ""
 
     def get_instance_format_id_by_name(self, f337a: str, f338a: str, legacy_id: str):
-        f337a = f337a.lower().replace(" ", "")
-        f338a = f338a.lower().replace(" ", "")
+        f337a = f337a.lower().strip()
+        f338a = f338a.lower().strip()
         match_template = f"{f337a} -- {f338a}"
         try:
             match = next(
@@ -434,7 +434,9 @@ class BibsRulesMapper(RulesMapperBase):
         for fidx, f_338 in enumerate(all_338s):
             if self.f338_source_is_rda_carrier(f_338):
                 if "b" not in f_338 and "a" in f_338:
-                    yield self.get_instance_format_ids_from_a(fidx, f_338, all_337s, legacy_id)
+                    yield from self.get_instance_format_ids_from_a(
+                        fidx, f_338, all_337s, legacy_id
+                    )
 
                 for sfidx, b in enumerate(f_338.get_subfields("b")):
                     b = b.replace(" ", "")
