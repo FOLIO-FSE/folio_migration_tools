@@ -21,7 +21,7 @@ from folio_migration_tools.report_blurbs import Blurbs
 
 class MapperBase:
 
-    legacy_id_template = "Identifier(s) from previous systems:"
+    legacy_id_template = "Identifier(s) from previous system:"
 
     def __init__(
         self,
@@ -385,11 +385,14 @@ class MapperBase:
             None,
         ):
             if legacy_id not in id_string:
-                folio_record["administrativeNotes"] = [
-                    f
-                    for f in folio_record["administrativeNotes"]
-                    if MapperBase.legacy_id_template not in f
-                ]
+                folio_record["administrativeNotes"] = list(
+                    [
+                        f
+                        for f in folio_record["administrativeNotes"]
+                        if MapperBase.legacy_id_template not in f
+                    ]
+                )
+
                 folio_record["administrativeNotes"].append(f"{id_string}, {legacy_id}")
         else:
             folio_record["administrativeNotes"].append(
