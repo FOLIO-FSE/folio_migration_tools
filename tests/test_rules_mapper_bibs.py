@@ -1,7 +1,10 @@
 import json
 import logging
 import re
+import unittest
+from unittest.mock import MagicMock
 from unittest.mock import Mock
+from unittest.mock import patch
 from uuid import uuid4
 
 import pymarc
@@ -9,6 +12,7 @@ import pytest
 from folioclient import FolioClient
 from lxml import etree
 
+from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.test_infrastructure.mocked_classes import mocked_folio_client
 
@@ -116,11 +120,6 @@ def default_map_suppression(file_name, xpath, the_mapper):
     return [result, data]
 
 
-def test_init_file_def():
-    file_def = FileDefinition(file_name="", suppressed=False, staff_suppressed=False)
-    assert file_def.file_name == ""
-
-
 def test_non_suppression(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
     assert record[0]["staffSuppress"] == False
@@ -137,6 +136,12 @@ def test_admin_note(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
     assert MapperBase.legacy_id_template in record[0]["administrativeNotes"][0]
     assert "legacy_id" in record[0]["administrativeNotes"][0]
+
+
+def test_admin_note_disabled(mapper: BibsRulesMapper):
+    mapper.task_configuration.add_administrative_notes_with_legacy_ids = False
+    record = default_map("test1.xml", xpath_245, mapper)
+    assert "administrativeNotes" not in record[0]
 
 
 def test_simple_title(mapper):
@@ -669,59 +674,6 @@ def test_should_parse_mode_of_issuance_correctly_2(mapper):
     assert 4 == len(formats)
 
 
-def test_handle_suppression_set_false():
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    folio_instance = {}
-    file_def = FileDefinition(file_name="", staff_suppressed=False, suppressed=False)
-    BibsRulesMapper.handle_suppression(mocked_mapper, folio_instance, file_def)
-    assert folio_instance.get("staffSuppress") is False
-    assert folio_instance.get("discoverySuppress") is False
-    assert (
-        mocked_mapper.migration_report.report["General statistics"][
-            "Suppressed from discovery = False"
-        ]
-        == 1
-    )
-    assert (
-        mocked_mapper.migration_report.report["General statistics"]["Staff suppressed = False "]
-        == 1
-    )
-
-
-def test_handle_suppression_set_true():
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    folio_instance = {}
-    file_def = FileDefinition(file_name="", staff_suppressed=True, suppressed=True)
-    BibsRulesMapper.handle_suppression(mocked_mapper, folio_instance, file_def)
-    assert folio_instance.get("staffSuppress") is True
-    assert folio_instance.get("discoverySuppress") is True
-    assert (
-        mocked_mapper.migration_report.report["General statistics"][
-            "Suppressed from discovery = True"
-        ]
-        == 1
-    )
-    assert (
-        mocked_mapper.migration_report.report["General statistics"]["Staff suppressed = True "]
-        == 1
-    )
-
-
-def test_get_folio_id_by_code_except(caplog):
-    caplog.set_level(26)
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.get_instance_format_id_by_code(
-        mocked_mapper, "legacy_id_99", "test_code_99"
-    )
-    assert "Instance format Code not found in FOLIO" in caplog.text
-    assert "test_code_99" in caplog.text
-    assert "legacy_id_99" in caplog.text
-    assert res == ""
-
-
 def test_should_add_notes_550_556_to_notes_list_2(mapper):
     xpath = "//marc:datafield[@tag='550' or @tag='552' or @tag='555' or @tag='556']"
 
@@ -743,159 +695,3 @@ def test_should_add_notes_550_556_to_notes_list_2(mapper):
         "Disaster recovery : a model plan for libraries and information centers. 0959328971"
         in notes
     )
-
-
-def test_get_instance_format_ids_no_rda(caplog):
-    record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "", "b", ""]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "", "b", ""]))
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99")
-    assert not any(res)
-
-
-def test_get_instance_format_ids_empty_values_are_ignored(caplog):
-    record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "", "b", "", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", "rdacarrier"]))
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99")
-    assert not any(res)
-
-
-def test_get_instance_format_ids_three_digit_values_are_ignored(caplog):
-    record = pymarc.Record()
-    record.add_field(
-        pymarc.Field(tag="337", subfields=["a", "aaa", "b", "aaa", "2", "rdacarrier"])
-    )
-    record.add_field(
-        pymarc.Field(tag="338", subfields=["a", "aaa", "b", "aaa", "2", "rdacarrier"])
-    )
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99")
-    assert not any(res)
-
-
-def test_get_instance_format_ids_338b_is_mapped(caplog):
-    record = pymarc.Record()
-    record.add_field(
-        pymarc.Field(tag="337", subfields=["a", "ignored", "b", "ignored", "2", "rdacarrier"])
-    )
-    record.add_field(
-        pymarc.Field(tag="338", subfields=["a", "ignored", "b", "ab", "2", "rdacarrier"])
-    )
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
-    assert any(res)
-
-
-def test_get_instance_format_ids_one_338_two_337(caplog):
-    record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
-    assert len(res) == 1
-
-
-def test_get_instance_format_ids_two_338_two_337(caplog):
-    record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
-    assert len(res) == 2
-
-
-def test_get_instance_format_ids_two_338a_one_337(caplog):
-    record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
-    record.add_field(
-        pymarc.Field(tag="338", subfields=["a", "name 2", "2", "b", "ab", "rdacarrier"])
-    )
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
-    assert len(res) == 2
-
-
-def test_get_instance_format_ids_338a_is_mapped(caplog):
-    record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = list(BibsRulesMapper.get_instance_format_ids(mocked_mapper, record, "legacy_id_99"))
-    assert any(res)
-
-
-def test_f338_source_is_rda_carrier(caplog):
-    field = pymarc.Field(tag="338", subfields=["a", "", "b", ""])
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.f338_source_is_rda_carrier(mocked_mapper, field)
-    assert not res
-
-
-def test_f338_source_is_rda_carrier_2(caplog):
-    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", " "])
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.f338_source_is_rda_carrier(mocked_mapper, field)
-    assert not res
-
-
-def test_f338_source_is_rda_carrier_3(caplog):
-    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", "rdacarrier"])
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.f338_source_is_rda_carrier(mocked_mapper, field)
-    assert res
-
-
-def test_f338_source_is_rda_carrier_4(caplog):
-    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", " rdacarrier"])
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.f338_source_is_rda_carrier(mocked_mapper, field)
-    assert res
-
-
-def test_get_folio_id_by_name_except(caplog):
-    caplog.set_level(26)
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    res = BibsRulesMapper.get_instance_format_id_by_name(
-        mocked_mapper, "test_failed", "name", "legacy_id_99"
-    )
-    assert "Unsuccessful matching on 337" in caplog.text
-    assert "test_failed -- name" in caplog.text
-    assert "legacy_id_99" in caplog.text
-    assert res == ""
-
-
-def test_get_folio_id_by_name(caplog):
-    caplog.set_level(26)
-    mocked_mapper = Mock(spec=BibsRulesMapper)
-    mocked_mapper.migration_report = MigrationReport()
-    mocked_mapper.folio = mocked_folio_client()
-    res = BibsRulesMapper.get_instance_format_id_by_name(
-        mocked_mapper, "test", "name", "legacy_id_99"
-    )
-    assert not caplog.text
-    bmt = mocked_mapper.migration_report.report[Blurbs.InstanceFormat[0]]
-    assert (
-        "Successful matching on 337$a & 338$a - test -- name->test -- name"
-        in mocked_mapper.migration_report.report[Blurbs.InstanceFormat[0]]
-    )
-    assert res == "605e9527-4008-45e2-a78a-f6bfb027c43a"
