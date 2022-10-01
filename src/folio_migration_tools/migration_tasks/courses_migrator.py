@@ -29,6 +29,7 @@ class CoursesMigrator(MigrationTaskBase):
         migration_task_type: str
         courses_file: FileDefinition
         terms_map_path: str
+        departments_map_path: str
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -57,6 +58,12 @@ class CoursesMigrator(MigrationTaskBase):
                 "terms",
                 self.folder_structure.mapping_files_folder
                 / self.task_configuration.terms_map_path,
+                self.folio_keys,
+            ),
+            self.load_ref_data_mapping_file(
+                "departments",
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.departments_map_path,
                 self.folio_keys,
             ),
             self.library_configuration,
