@@ -25,6 +25,7 @@ class CoursesMapper(MappingFileMapperBase):
         folio_client: FolioClient,
         course_map,
         terms_map,
+        departments_map,
         library_configuration: LibraryConfiguration,
     ):
         self.folio_client = folio_client
@@ -45,7 +46,6 @@ class CoursesMapper(MappingFileMapperBase):
             library_configuration,
         )
         self.course_map = course_map
-        self.terms_map = terms_map
         self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         if terms_map:
@@ -59,6 +59,18 @@ class CoursesMapper(MappingFileMapperBase):
             )
         else:
             self.terms_map = None
+
+        if departments_map:
+            self.departments_map = RefDataMapping(
+                self.folio_client,
+                "/coursereserves/departments",
+                "departments",
+                departments_map,
+                "name",
+                Blurbs.DepartmentsMapping,
+            )
+        else:
+            self.departments_map = None
 
     def store_objects(self, composite_course):
         try:
@@ -137,6 +149,12 @@ class CoursesMapper(MappingFileMapperBase):
         if folio_prop_name == "courselisting.termId":
             return self.get_mapped_value(
                 self.terms_map,
+                *value_tuple,
+                False,
+            )
+        elif folio_prop_name == "course.departmentId":
+            return self.get_mapped_value(
+                self.departments_map,
                 *value_tuple,
                 False,
             )
