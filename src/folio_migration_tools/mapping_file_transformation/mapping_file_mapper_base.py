@@ -12,6 +12,7 @@ from uuid import UUID
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
+from numpy import empty
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -435,16 +436,47 @@ class MappingFileMapperBase(MapperBase):
                 folio_object[prop] = mapped_prop
             self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
 
-    def get_objects(self, source_file, file_name: Path):
+    @staticmethod
+    def _get_delimited_file_reader(source_file, file_name: Path):
+        """
+        First, let's count:
+            * The total number of lines in the source file
+            * The total number of empty lines in the source file
+
+        Then, we'll return those counts and a csv.DictReader
+        """
+        empty_rows = 0
+        total_rows = -1  # Do not count header row
         if str(file_name).endswith("tsv"):
-            reader = csv.DictReader(source_file, dialect="tsv")
+            delimiter = "\t"
         else:
-            reader = csv.DictReader(source_file)
-        idx = 0
+            delimiter = ","
+        for line in source_file:
+            if not "".join(line.split(delimiter)):  # check for empty lines
+                empty_rows += 1
+            total_rows += 1
+        source_file.seek(0)  # Set file position back to start
+        if str(file_name).endswith("tsv"):
+            dict_reader = csv.DictReader(source_file, dialect="tsv")
+        else:
+            dict_reader = csv.DictReader(source_file)
+        return total_rows, empty_rows, dict_reader
+
+    def get_objects(self, source_file, file_name: Path):
+
+        total_rows, empty_rows, reader = self._get_delimited_file_reader(source_file, file_name)
+        logging.info("Source data file contains %d rows", total_rows)
+        logging.info("Source data file contains %d empty lines", empty_rows)
+        self.migration_report.set(
+            Blurbs.GeneralStatistics, "Total lines in {}".format(file_name.name), total_rows
+        )
+        self.migration_report.set(
+            Blurbs.GeneralStatistics, "Empty lines in {}".format(file_name.name), empty_rows
+        )
         try:
             yield from reader
         except Exception as exception:
-            logging.error("%s at row %s", exception, idx)
+            logging.error("%s at row %s", exception, reader.line_num)
             raise exception from exception
 
     def has_property(self, legacy_object, folio_prop_name: str):
