@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
+from numpy import empty
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -13,6 +14,9 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
 
+import io
+from pathlib import Path
+import csv
 
 # flake8: noqa
 class MyTestableFileMapper(MappingFileMapperBase):
@@ -1101,3 +1105,29 @@ def test_validate_no_leakage_between_properties():
     assert folio_rec["holdingsStatementsForIndexes"][0]["statement"] == "idx"
     assert len(folio_rec["holdingsStatementsForSupplements"]) == 1
     assert folio_rec["holdingsStatementsForSupplements"][0]["statement"] == "suppl"
+
+
+delimited_data = """\
+header_1\theader_2\theader_3
+\t\t
+value_1\tvalue_2\tvalue_3
+"""
+delimited_file = (Path("/tmp/delimited_data.tsv"), io.StringIO(delimited_data))
+
+
+def test__get_delimited_file_reader():
+    csv.register_dialect("tsv", delimiter="\t")
+    total_rows, empty_rows, reader = MappingFileMapperBase._get_delimited_file_reader(
+        delimited_file[1], delimited_file[0]
+    )
+    assert total_rows == 2 and empty_rows == 1
+    for idx, row in enumerate(reader):
+        if idx == 0:
+            for key in row.keys():
+                assert row[key] == ""
+        if idx == 1:
+            assert (
+                row["header_1"] == "value_1"
+                and row["header_2"] == "value_2"
+                and row["header_3"] == "value_3"
+            )
