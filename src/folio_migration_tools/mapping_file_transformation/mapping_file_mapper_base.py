@@ -452,7 +452,7 @@ class MappingFileMapperBase(MapperBase):
         else:
             delimiter = ","
         for line in source_file:
-            if not "".join(line.split(delimiter)):  # check for empty lines
+            if not "".join(line.strip().split(delimiter)):  # check for empty lines
                 empty_rows += 1
             total_rows += 1
         source_file.seek(0)  # Set file position back to start
@@ -463,7 +463,6 @@ class MappingFileMapperBase(MapperBase):
         return total_rows, empty_rows, dict_reader
 
     def get_objects(self, source_file, file_name: Path):
-
         total_rows, empty_rows, reader = self._get_delimited_file_reader(source_file, file_name)
         logging.info("Source data file contains %d rows", total_rows)
         logging.info("Source data file contains %d empty lines", empty_rows)
