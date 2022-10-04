@@ -1107,27 +1107,34 @@ def test_validate_no_leakage_between_properties():
     assert folio_rec["holdingsStatementsForSupplements"][0]["statement"] == "suppl"
 
 
-delimited_data = """\
+delimited_data_tab = """\
 header_1\theader_2\theader_3
 \t\t
 value_1\tvalue_2\tvalue_3
 """
-delimited_file = (Path("/tmp/delimited_data.tsv"), io.StringIO(delimited_data))
+delimited_data_comma = """\
+header_1,header_2,header_3
+,,
+value_1,value_2,value_3
+"""
+delimited_file_tab = (Path("/tmp/delimited_data.tsv"), io.StringIO(delimited_data_tab))
+delimited_file_comma = (Path("/tmp/delimited_data.csv"), io.StringIO(delimited_data_comma))
 
 
 def test__get_delimited_file_reader():
     csv.register_dialect("tsv", delimiter="\t")
-    total_rows, empty_rows, reader = MappingFileMapperBase._get_delimited_file_reader(
-        delimited_file[1], delimited_file[0]
-    )
-    assert total_rows == 2 and empty_rows == 1
-    for idx, row in enumerate(reader):
-        if idx == 0:
-            for key in row.keys():
-                assert row[key] == ""
-        if idx == 1:
-            assert (
-                row["header_1"] == "value_1"
-                and row["header_2"] == "value_2"
-                and row["header_3"] == "value_3"
-            )
+    for file in (delimited_file_tab, delimited_file_comma):
+        total_rows, empty_rows, reader = MappingFileMapperBase._get_delimited_file_reader(
+            file[1], file[0]
+        )
+        assert total_rows == 2 and empty_rows == 1
+        for idx, row in enumerate(reader):
+            if idx == 0:
+                for key in row.keys():
+                    assert row[key] == ""
+            if idx == 1:
+                assert (
+                    row["header_1"] == "value_1"
+                    and row["header_2"] == "value_2"
+                    and row["header_3"] == "value_3"
+                )
