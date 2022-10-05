@@ -12,7 +12,6 @@ from uuid import UUID
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
-from numpy import empty
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -439,11 +438,18 @@ class MappingFileMapperBase(MapperBase):
     @staticmethod
     def _get_delimited_file_reader(source_file, file_name: Path):
         """
-        First, let's count:
+            First, let's count:
             * The total number of lines in the source file
             * The total number of empty lines in the source file
 
-        Then, we'll return those counts and a csv.DictReader
+            Then, we'll return those counts and a csv.DictReader
+
+        Args:
+            source_file (_type_): _description_
+            file_name (Path): _description_
+
+        Returns:
+            (int, int, DictReader): total rows, empty rows, dict reader
         """
         empty_rows = 0
         total_rows = -1  # Do not count header row
