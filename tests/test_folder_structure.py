@@ -59,12 +59,16 @@ def test_setup_migration_file_structure():
     assert folder_structure.time_str in str(folder_structure.failed_recs_path)
     assert (
         str(folder_structure.holdings_id_map_path)
-        == "iterations/test_iteration/results/holdings_id_map_test_iteration.json"
+        == "iterations/test_iteration/results/holdings_id_map.json"
     )
 
     assert (
         str(folder_structure.instance_id_map_path)
-        == "iterations/test_iteration/results/instance_id_map_test_iteration.json"
+        == "iterations/test_iteration/results/instance_id_map.json"
+    )
+    assert (
+        str(folder_structure.holdings_id_map_path)
+        == "iterations/test_iteration/results/holdings_id_map.json"
     )
 
     assert str(folder_structure.item_statuses_map_path) == "mapping_files/item_statuses.tsv"
