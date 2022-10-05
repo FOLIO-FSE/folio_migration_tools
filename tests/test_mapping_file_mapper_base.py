@@ -1,11 +1,9 @@
-import itertools
-from typing import List
-from unittest.mock import MagicMock
+import csv
+import io
+from pathlib import Path
 from unittest.mock import Mock
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient import FolioClient
-from numpy import empty
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -14,9 +12,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
 
-import io
-from pathlib import Path
-import csv
 
 # flake8: noqa
 class MyTestableFileMapper(MappingFileMapperBase):
