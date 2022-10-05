@@ -11,6 +11,8 @@ import pymarc
 import pytest
 from folioclient import FolioClient
 from lxml import etree
+from pymarc import MARCReader
+from pymarc import Record
 
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.report_blurbs import Blurbs
@@ -240,3 +242,20 @@ def test_get_folio_id_by_name(mapper, caplog):
         in mapper.migration_report.report[Blurbs.InstanceFormat[0]]
     )
     assert res == "605e9527-4008-45e2-a78a-f6bfb027c43a"
+
+
+def test_handle_leader_05(mapper, caplog):
+    path = "./tests/test_data/with_control_caracther_and_corrupt_ldr05.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record: Record = None
+        record = next(reader)
+        assert record.leader[5] == "s"
+        BibsRulesMapper.handle_leader_05(mapper, record, ["legacy id"])
+        assert record.leader[5] == "c"
+        assert (
+            "Original value: s" in mapper.migration_report.report["Record status (leader pos 5)"]
+        )
+        assert "Changed s to c" in mapper.migration_report.report["Record status (leader pos 5)"]
