@@ -44,7 +44,7 @@ class Blurbs:
     )
     RecordStatus = (
         "Record status (leader pos 5)",
-        "Library action: **Consider fixing d-values before migration**<br/>An overview of the Record statuses (Leader position 5) present in your source data.    Pay attention to the number of occurrences of the value 'd'. These d's are expressing that they are deleted, and the records might not work as expected in FOLIO. Consider marking them as suppressed in your current system and export them as a separate batch in order to have them suppressed in FOLIO. Allowed values according to the MARC standard are a,c,d,n,p",
+        "Library action: **All values that are no a, c, d, n or p will be set to c. If this is not what you want, you need to correct these values in your systen. **<br/>An overview of the Record statuses (Leader position 5) present in your source data.    Pay attention to the number of occurrences of the value 'd'. These d's are expressing that they are deleted, and the records might not work as expected in FOLIO. Consider marking them as suppressed in your current system and export them as a separate batch in order to have them suppressed in FOLIO. Allowed values according to the MARC standard are a,c,d,n,p",
     )
     ValueErrors = (
         "Records failed to migrate due to Value errors found in Transformation",
