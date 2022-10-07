@@ -40,7 +40,11 @@ def mapper(pytestconfig) -> CoursesMapper:
         {"BEGIN DATE": "01-10-2022", "END DATE": "05-06-2022", "folio_name": "Fall 2022"},
         {"BEGIN DATE": "*", "END DATE": "*", "folio_name": "Summer 2022"},
     ]
-    return CoursesMapper(mock_folio, basic_course_map, terms_map, lib)
+    departments_map = [
+        {"DEPT": "dep1", "folio_name": "Department_t"},
+        {"DEPT": "*", "folio_name": "Department_FALLBACK"},
+    ]
+    return CoursesMapper(mock_folio, basic_course_map, terms_map, departments_map, lib)
 
 
 def test_schema():
@@ -58,6 +62,7 @@ def test_basic_mapping2(mapper, caplog):
         "COURSE": "Course 101",
         "END DATE": "05-06-2022",
         "BEGIN DATE": "01-10-2022",
+        "DEPT": "dep1",
     }
     res = mapper.do_map(data, 1, FOLIONamespaces.course)
     mapper.perform_additional_mappings(res)
@@ -90,6 +95,7 @@ def test_basic_mapping2(mapper, caplog):
     course = generated_objects["course"]
     assert course["name"] == "Course 101"
     assert course["description"] == "Some note"
+    assert course["departmentId"] == "7532e5ab-9812-496c-ab77-4fbb6a7e5dbf"
 
     instructor = generated_objects["instructor"]
     assert instructor["name"] == "Some instructor"

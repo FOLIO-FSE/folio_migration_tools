@@ -30,7 +30,7 @@ def mocked_folio_client() -> FolioClient:
         ]
 
         mocked_folio.folio_get_single_object = folio_get_single_object_mocked
-        mocked_folio.folio_get_all = folio_get_all_mocked
+        mocked_folio.folio_get_all = folio_get_all
         return mocked_folio
     except Exception as ee:
         logging.error(ee)
@@ -141,11 +141,26 @@ def setup_ref_data_from_github(mocked_folio):
     return mocked_folio
 
 
-def folio_get_all_mocked(ref_data_path, array_name, query, limit):
-    return [
-        {"name": "Fall 2022", "id": "42093be3-d1e7-4bb6-b2b9-18e153d109b2"},
-        {"name": "Summer 2022", "id": "415b14a8-c94c-4aa1-a0a8-d397efae343e"},
-    ]
+def folio_get_all(ref_data_path, array_name, query, limit):
+    if ref_data_path == "/coursereserves/terms":
+        return [
+            {"name": "Fall 2022", "id": "42093be3-d1e7-4bb6-b2b9-18e153d109b2"},
+            {"name": "Summer 2022", "id": "415b14a8-c94c-4aa1-a0a8-d397efae343e"},
+        ]
+    elif ref_data_path == "/coursereserves/departments":
+        return [
+            {
+                "id": "7532e5ab-9812-496c-ab77-4fbb6a7e5dbf",
+                "name": "Department_t",
+                "description": "Art & Art History",
+            },
+            {
+                "id": "af7ae6be-c0b2-444d-b76f-4061098d17cd",
+                "name": "Department_FALLBACK",
+                "description": "FALLBACK",
+            },
+        ]
+    return {}
 
 
 def folio_get_single_object_mocked(*args, **kwargs):

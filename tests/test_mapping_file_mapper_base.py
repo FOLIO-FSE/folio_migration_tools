@@ -1,10 +1,9 @@
-import itertools
-from typing import List
-from unittest.mock import MagicMock
+import csv
+import io
+from pathlib import Path
 from unittest.mock import Mock
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient import FolioClient
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -1101,3 +1100,36 @@ def test_validate_no_leakage_between_properties():
     assert folio_rec["holdingsStatementsForIndexes"][0]["statement"] == "idx"
     assert len(folio_rec["holdingsStatementsForSupplements"]) == 1
     assert folio_rec["holdingsStatementsForSupplements"][0]["statement"] == "suppl"
+
+
+delimited_data_tab = """\
+header_1\theader_2\theader_3
+\t\t
+value_1\tvalue_2\tvalue_3
+"""
+delimited_data_comma = """\
+header_1,header_2,header_3
+,,
+value_1,value_2,value_3
+"""
+delimited_file_tab = (Path("/tmp/delimited_data.tsv"), io.StringIO(delimited_data_tab))
+delimited_file_comma = (Path("/tmp/delimited_data.csv"), io.StringIO(delimited_data_comma))
+
+
+def test__get_delimited_file_reader():
+    csv.register_dialect("tsv", delimiter="\t")
+    for file in (delimited_file_tab, delimited_file_comma):
+        total_rows, empty_rows, reader = MappingFileMapperBase._get_delimited_file_reader(
+            file[1], file[0]
+        )
+        assert total_rows == 2 and empty_rows == 1
+        for idx, row in enumerate(reader):
+            if idx == 0:
+                for key in row.keys():
+                    assert row[key] == ""
+            if idx == 1:
+                assert (
+                    row["header_1"] == "value_1"
+                    and row["header_2"] == "value_2"
+                    and row["header_3"] == "value_3"
+                )

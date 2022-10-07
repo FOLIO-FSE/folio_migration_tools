@@ -1,5 +1,46 @@
 # Changelog
 
+## 1_5_0 (05/10/2022)
+
+#### bug
+
+- [**bug**] The bib transformer task should not update the holdings HRID start number in Inventory HRID Settings [#259](https://github.com/FOLIO-FSE/folio_migration_tools/issues/259)
+
+#### closed
+
+- [**closed**] QuickMARC only accepts correct leader 05 values (a,c,d,n,p).  Fail records with other leaders? [#367](https://github.com/FOLIO-FSE/folio_migration_tools/issues/367)
+- [**closed**] instance_id_map and holdings_id_map still retrain iteration_identifier in filename [#364](https://github.com/FOLIO-FSE/folio_migration_tools/issues/364)
+- [**closed**] Always add an Administrative note on the Legacy system identifier in Instance records [#356](https://github.com/FOLIO-FSE/folio_migration_tools/issues/356)
+- [**closed**] Count number of rows in CSV/TSV file before feeding them to the CSV Dictreader  [#339](https://github.com/FOLIO-FSE/folio_migration_tools/issues/339)
+- [**closed**] Clarify handling of true/false values for User > addresses > primaryAddress [#265](https://github.com/FOLIO-FSE/folio_migration_tools/issues/265)
+- [**closed**] Change heading from "Git(hub) workflow" to "Code contribution workflow" to avoid confusion with git workflows [#218](https://github.com/FOLIO-FSE/folio_migration_tools/issues/218)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**][**wontfix**] Store failed records in BIB and MFHD transformer for other failures than encoding issues [#317](https://github.com/FOLIO-FSE/folio_migration_tools/issues/317)
+- [**enhancement/new feature**] When creating Courses, assign Course Department based on a Course Departments reference data map [#308](https://github.com/FOLIO-FSE/folio_migration_tools/issues/308)
+
+#### improve_test_coverage
+
+- [**improve_test_coverage**] Increase test coverage in src/folio_migration_tools/marc_rules_transformation/holdings_processor.py [#348](https://github.com/FOLIO-FSE/folio_migration_tools/issues/348)
+- [**improve_test_coverage**] Increase test coverage in src/folio_migration_tools/marc_rules_transformation/rules_mapper_holdings.py [#347](https://github.com/FOLIO-FSE/folio_migration_tools/issues/347)
+
+#### reporting
+
+- [**reporting**] Add header to Item migration report [#336](https://github.com/FOLIO-FSE/folio_migration_tools/issues/336)
+- [**reporting**] Placeholder issue for Records in File before parsing [#331](https://github.com/FOLIO-FSE/folio_migration_tools/issues/331)
+- [**reporting**] Remove "Time Started" from reports [#330](https://github.com/FOLIO-FSE/folio_migration_tools/issues/330)
+
+#### simplify_migration_process
+
+- [**simplify_migration_process**] Proposal: Create and save to an [iterationIdentifier] folder in migration_repo/reports  [#110](https://github.com/FOLIO-FSE/folio_migration_tools/issues/110)
+
+#### wontfix
+
+- [**wontfix**][**reporting**] if no --base_folder_path CLI argument is supplied, assume it is the same as the root of the configuration file [#335](https://github.com/FOLIO-FSE/folio_migration_tools/issues/335)
+
+---
+
 ## 1_4_8 (30/08/2022)
 
 #### bug

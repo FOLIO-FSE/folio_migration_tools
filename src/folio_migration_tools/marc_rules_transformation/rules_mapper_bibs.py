@@ -85,15 +85,22 @@ class BibsRulesMapper(RulesMapperBase):
                 str(legacy_ids[-1]),
             )
         )
-        leader_05 = marc_record.leader[5]
-        self.migration_report.add(Blurbs.RecordStatus, leader_05 or "Empty")
         self.handle_hrid(folio_instance, marc_record, legacy_ids)
+        self.handle_leader_05(marc_record, legacy_ids)
         if self.task_configuration.add_administrative_notes_with_legacy_ids:
             for legacy_id in legacy_ids:
                 self.add_legacy_id_to_admin_note(folio_instance, legacy_id)
+
+        return folio_instance
+
+    def handle_leader_05(self, marc_record, legacy_ids):
+        leader_05 = marc_record.leader[5] or "Empty"
+        self.migration_report.add(Blurbs.RecordStatus, f"Original value: {leader_05}")
+        if leader_05 not in ["a", "c", "d", "n", "p"]:
+            marc_record.leader = f"{marc_record.leader[:5]}c{marc_record.leader[6:]}"
+            self.migration_report.add(Blurbs.RecordStatus, f"Changed {leader_05} to c")
         if leader_05 == "d":
             Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
-        return folio_instance
 
     def parse_bib(self, legacy_ids, marc_record: pymarc.Record, file_def: FileDefinition):
         """Parses a bib recod into a FOLIO Inventory instance object
