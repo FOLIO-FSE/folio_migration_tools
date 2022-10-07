@@ -20,6 +20,7 @@ class OrganizationMapper(MappingFileMapperBase):
         self,
         folio_client: FolioClient,
         organization_map: dict,
+        categories_map,
         library_configuration: LibraryConfiguration,
     ):
 
