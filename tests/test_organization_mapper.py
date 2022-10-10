@@ -79,7 +79,9 @@ def test_basic_mapping(mapper, caplog):
         "status": "Active",
         "org_note": "Good stuff!",
         "address_line_1": "Suite 500 - 655 Typee Rd",
-        "address_city": "Victoria"
+        "address_city": "Victoria",
+        "tp": "Consortium",
+        "tgs": "A, B, C"
     }
 
     res = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
@@ -98,10 +100,12 @@ def test_basic_mapping(mapper, caplog):
     # organization = generated_objects["organization"]
 
     assert organization["name"] == "Abe Books"
+    # assert organization["type"] == "Consortium"
     assert organization["emails"][0]["value"] == "buyertech@abebooks.com"
     assert organization["emails"][0]["isPrimary"] == True
     assert organization["addresses"][0]["categories"] == ["returns"]
     assert organization["emails"][0]["categories"] == ["spt"]
+
 
 
 
@@ -238,7 +242,13 @@ basic_organization_map = {
     },
     {
         "folio_field": "tags.tagList[0]",
-        "legacy_field": "Not mapped",
+        "legacy_field": "tgs",
+        "value": "",
+        "description": ""
+    },
+    {
+        "folio_field": "type",
+        "legacy_field": "tp",
         "value": "",
         "description": ""
     }
