@@ -90,9 +90,9 @@ class MappingFileMapperBase(MapperBase):
             ):
                 legacy_fields.add(k["legacy_field"])
                 if not self.mapped_from_legacy_data.get(k["folio_field"]):
-                    self.mapped_from_legacy_data[k["folio_field"]] = {k["legacy_field"]}
-                else:
-                    self.mapped_from_legacy_data[k["folio_field"]].add(k["legacy_field"])
+                    self.mapped_from_legacy_data[k["folio_field"]] = [k["legacy_field"]]
+                elif k["legacy_field"] not in self.mapped_from_legacy_data[k["folio_field"]]:
+                    self.mapped_from_legacy_data[k["folio_field"]].append(k["legacy_field"])
 
         logging.info(
             "Mapped legacy fields:\n%s",
@@ -288,9 +288,12 @@ class MappingFileMapperBase(MapperBase):
 
     @staticmethod
     def get_legacy_vals(legacy_item, legacy_item_keys):
-        return {
-            legacy_item[k] for k in legacy_item_keys if legacy_item.get(k, "") not in ["", None]
-        }
+        result_list = []
+        for legacy_item_key in legacy_item_keys:
+            val = legacy_item.get(legacy_item_key, "")
+            if val not in ["", None]:
+                result_list.append(val)
+        return result_list
 
     def map_object_props(
         self,
