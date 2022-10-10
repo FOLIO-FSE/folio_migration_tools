@@ -49,6 +49,8 @@ Formulating a DoD is good practice. Take a moment to do this properly.
 We use [Github Flow](https://docs.github.com/en/get-started/quickstart/github-flow)
 In the ideal situation, this is what you do:
 ## 1. Create a branch off of main and name it according to the feature you are working on
+If you are working based on a GitHub issue (which you should be), it is good practice to [create your branch from the issue in GitHub](https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-a-branch-for-an-issue). This will automatically give the branch a descriptive name, and link it to the issue.
+
 ```
 > git checkout main    <-- Everything starts with main
 > git pull    <-- Make sure you have the latest
@@ -112,6 +114,12 @@ optional arguments:
 
 ## 3.5. Create a pull request in GitHub
 ## 3.6. :people_holding_hands: Code review
+## 3.6. After a successful code review, merge the branch into main
+Use the closes tag in your merge commit message to automatically close any issue(s) that should be closed by your merged changes.
+
+```
+closes #123 #456 #789
+```
 
 # Create release
 ## Create the release on Github
