@@ -955,6 +955,55 @@ def test_concatenate_fields_if_mapped_multiple_times():
         assert folio_rec["uber_prop"]["prop1"] == "my note my second note"
 
 
+def test_concatenate_fields_if_mapped_multiple_times_and_data_is_in_random_order():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "uber_prop": {
+                "type": "object",
+                "properties": {
+                    "prop1": {
+                        "description": "",
+                        "type": "string",
+                    }
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "uber_prop.prop1",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "uber_prop.prop1",
+                "legacy_field": "note_2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"note_2": "my second note", "id": "12", "note_1": "my note"}
+    # Loop to make sure the right order occurs the first time.
+    for _ in range(2000):
+        tfm = MyTestableFileMapper(schema, fake_item_map)
+        folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+        assert folio_rec["uber_prop"]["prop1"] == "my note my second note"
+
+
 def test_zip3():
     o = {"p1": "a<delimiter>b", "p2": "c<delimiter>d<delimiter>e", "p3": "same for both"}
     d = "<delimiter>"
