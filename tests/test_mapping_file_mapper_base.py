@@ -1,4 +1,5 @@
 import csv
+import functools
 import io
 from pathlib import Path
 from unittest.mock import Mock
@@ -1231,3 +1232,316 @@ def test__get_delimited_file_reader():
                     and row["header_2"] == "value_2"
                     and row["header_3"] == "value_3"
                 )
+
+
+def test_map_string_first_level():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": "",
+            }
+        },
+    }
+    fake_holdings_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "title",
+                "legacy_field": "title_",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"title_": "actual value", "id": "id"}
+    tfm = MyTestableFileMapper(schema, fake_holdings_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["title"] == "actual value"
+
+
+def test_map_string_array_first_level():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "stringArray": {
+                "type": "array",
+                "description": "",
+                "items": {"type": "string"},
+                "uniqueItems": True,
+            },
+        },
+    }
+    fake_holdings_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "stringArray[0]",
+                "legacy_field": "title_",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"title_": "actual value", "id": "id"}
+    tfm = MyTestableFileMapper(schema, fake_holdings_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["stringArray"][0] == "actual value"
+
+
+def test_map_string_second_level():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "object",
+                "properties": {
+                    "secondLevel": {
+                        "description": "",
+                        "type": "string",
+                    }
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel.secondLevel",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"id": "12", "note_1": "my note"}
+    # Loop to make sure the right order occurs the first time.
+    for _ in range(2000):
+        tfm = MyTestableFileMapper(schema, fake_item_map)
+        folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+        assert folio_rec["firstLevel"]["secondLevel"] == "my note"
+
+
+def test_map_string_array_second_level():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "object",
+                "properties": {
+                    "stringArray": {
+                        "type": "array",
+                        "description": "",
+                        "items": {"type": "string"},
+                        "uniqueItems": True,
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel.stringArray[0]",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"id": "12", "note_1": "my note"}
+    # Loop to make sure the right order occurs the first time.
+
+    tfm = MyTestableFileMapper(schema, fake_item_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["firstLevel"]["stringArray"] == ["my note"]
+
+
+def test_map_string_array_second_level_multiple_values():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "object",
+                "properties": {
+                    "stringArray": {
+                        "type": "array",
+                        "description": "",
+                        "items": {"type": "string"},
+                        "uniqueItems": True,
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel.stringArray[0]",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.stringArray[1]",
+                "legacy_field": "note_2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"id": "12", "note_1": "my note", "note_2": "my note 2"}
+    # Loop to make sure the right order occurs the first time.
+
+    tfm = MyTestableFileMapper(schema, fake_item_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["firstLevel"]["stringArray"] == ["my note", "my note 2"]
+
+
+def test_map_string_array_second_level_multiple_additional_split_values():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "object",
+                "properties": {
+                    "stringArray": {
+                        "type": "array",
+                        "description": "",
+                        "items": {"type": "string"},
+                        "uniqueItems": True,
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel.stringArray[0]",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.stringArray[1]",
+                "legacy_field": "note_2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"id": "12", "note_1": "my note", "note_2": "my note 2<delimiter>my note 3"}
+    # Loop to make sure the right order occurs the first time.
+
+    tfm = MyTestableFileMapper(schema, fake_item_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["firstLevel"]["stringArray"] == ["my note", "my note 2", "my note 3"]
+
+
+def test_map_string_array_second_level_split_values():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "object",
+                "properties": {
+                    "stringArray": {
+                        "type": "array",
+                        "description": "",
+                        "items": {"type": "string"},
+                        "uniqueItems": True,
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel.stringArray[0]",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.stringArray[1]",
+                "legacy_field": "note_2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"id": "12", "note_2": "my note 2<delimiter>my note 3"}
+    # Loop to make sure the right order occurs the first time.
+
+    tfm = MyTestableFileMapper(schema, fake_item_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["firstLevel"]["stringArray"] == ["my note 2", "my note 3"]
