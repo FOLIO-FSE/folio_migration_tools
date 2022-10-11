@@ -110,7 +110,7 @@ class FolderStructure:
 
         self.preceding_succeeding_records_path = (
             self.results_folder / (
-                f"preceding_succeeding_titles-{self.iteration_identifier}{time_str}.json"
+                "preceding_succeeding_titles.json"
             )
         )
 
