@@ -1,0 +1,15 @@
+[flake8]
+import-order-style = black 
+per-file-ignores = tests/*:S101
+select = B,B9,BLK,C,DAR,E,F,S,W
+ignore =
+    S101,
+    W605,
+    E203,
+    W503,
+    I201,
+    I100
+max-complexity = 22
+max-line-length = 99
+exclude = .git,__pycache__,docs/source/conf.py,old,build,dist,tests, src/folio_migration_tools/report_blurbs.py
+statistics = True

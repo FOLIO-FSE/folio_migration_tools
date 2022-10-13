@@ -1,0 +1,322 @@
+{
+    "properties": {
+        "course": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "description": "A course offered by the institution",
+            "additionalProperties": false,
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "UUID to identify this course",
+                    "$ref": "uuid.json"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The name of course"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "A description of the course"
+                },
+                "departmentId": {
+                    "type": "string",
+                    "description": "The department that this course belongs to",
+                    "$ref": "uuid.json"
+                },
+                "departmentObject": {
+                    "type": "object",
+                    "description": "The department associated with this course",
+                    "$ref": "department.json"
+                },
+                "courseListingId": {
+                    "type": "string",
+                    "description": "The id for the course listing this course belongs to",
+                    "$ref": "uuid.json"
+                },
+                "courseListingObject": {
+                    "type": "object",
+                    "description": "The course listing associated with this course",
+                    "$ref": "courselisting.json"
+                },
+                "courseNumber": {
+                    "type": "string",
+                    "description": "A unique code identifying this course"
+                },
+                "sectionName": {
+                    "type": "string",
+                    "description": "A text field denoting this course's section"
+                },
+                "numberOfStudents": {
+                    "type": "integer",
+                    "description": "The number of students enrolled in this course"
+                },
+                "metadata": {
+                    "type": "object",
+                    "$ref": "raml-util/schemas/metadata.schema"
+                }
+            },
+            "required": [
+                "name",
+                "departmentId",
+                "courseListingId"
+            ]
+        },
+        "courselisting": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "description": "An actual instantiation in time and space of a course",
+            "additionalProperties": false,
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "UUID for this listing",
+                    "$ref": "uuid.json"
+                },
+                "registrarId": {
+                    "type": "string",
+                    "description": "The registration id"
+                },
+                "externalId": {
+                    "type": "string",
+                    "description": "An external identifier associated with this listing"
+                },
+                "servicepointId": {
+                    "type": "string",
+                    "description": "The ID of the service point associated with this listing's reserves",
+                    "$ref": "uuid.json"
+                },
+                "servicepointObject": {
+                    "type": "object",
+                    "description": "The service point associated with this listing's reserves",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "description": "Id of service-point object"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "service-point name, a required field"
+                        },
+                        "code": {
+                            "type": "string",
+                            "description": "service-point code, a required field"
+                        },
+                        "discoveryDisplayName": {
+                            "type": "string",
+                            "description": "display name, a required field"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "description of the service-point"
+                        },
+                        "shelvingLagTime": {
+                            "type": "integer",
+                            "description": "shelving lag time"
+                        },
+                        "pickupLocation": {
+                            "type": "boolean",
+                            "description": "indicates whether or not the service point is a pickup location"
+                        },
+                        "holdShelfExpiryPeriod": {
+                            "type": "object",
+                            "$ref": "time-period.json",
+                            "description": "expiration period for items on the hold shelf at the service point"
+                        },
+                        "staffSlips": {
+                            "type": "array",
+                            "description": "List of staff slips for this service point",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                                        "description": "The ID of the staff slip"
+                                    },
+                                    "printByDefault": {
+                                        "type": "boolean",
+                                        "description": "Whether or not to print the staff slip by default"
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "required": [
+                                    "id",
+                                    "printByDefault"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "locationId": {
+                    "type": "string",
+                    "description": "The ID of the location associated with this listing's reserves",
+                    "$ref": "uuid.json"
+                },
+                "locationObject": {
+                    "type": "object",
+                    "description": "The location associated with this listing's reserves",
+                    "properties": {
+                        "id": {
+                            "description": "id of this (shelf) location record as UUID.",
+                            "type": "string"
+                        },
+                        "name": {
+                            "description": "Name of the (shelf) location",
+                            "type": "string"
+                        },
+                        "code": {
+                            "description": "Code of the (shelf) location, usually an abbreviation of the name.",
+                            "type": "string"
+                        },
+                        "description": {
+                            "description": "Description of the (shelf) location.",
+                            "type": "string"
+                        },
+                        "discoveryDisplayName": {
+                            "description": "Name of the (shelf) location to be shown in the discovery.",
+                            "type": "string"
+                        },
+                        "isActive": {
+                            "description": "Whether this (shelf) location is active. Inactive (shelf) locations can no longer been used.",
+                            "type": "boolean"
+                        },
+                        "institutionId": {
+                            "description": "The UUID of the institution, the first-level location unit, this (shelf) location belongs to.",
+                            "type": "string"
+                        },
+                        "campusId": {
+                            "description": "The UUID of the campus, the second-level location unit, this (shelf) location belongs to.",
+                            "type": "string"
+                        },
+                        "libraryId": {
+                            "description": "The UUID of the library, the third-level location unit, this (shelf) location belongs to.",
+                            "type": "string"
+                        },
+                        "details": {
+                            "description": "Details about this (shelf) location.",
+                            "type": "object"
+                        },
+                        "primaryServicePoint": {
+                            "description": "The UUID of the primary service point of this (shelf) location.",
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
+                            "type": "string"
+                        },
+                        "servicePointIds": {
+                            "description": "All service points that this (shelf) location has.",
+                            "type": "array",
+                            "items": {
+                                "description": "The UUID of a service point that belongs to this (shelf) location.",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
+                                "not": {
+                                    "type": "null"
+                                }
+                            }
+                        }
+                    }
+                },
+                "termId": {
+                    "type": "string",
+                    "description": "The ID of the term for this listing",
+                    "$ref": "uuid.json"
+                },
+                "termObject": {
+                    "type": "object",
+                    "description": "The term associated with this listing",
+                    "$ref": "term.json"
+                },
+                "courseTypeId": {
+                    "type": "string",
+                    "description": "The ID of the course type for this listing",
+                    "$ref": "uuid.json"
+                },
+                "courseTypeObject": {
+                    "type": "object",
+                    "description": "The course type associated with this listing",
+                    "$ref": "coursetype.json"
+                },
+                "instructorObjects": {
+                    "type": "array",
+                    "description": "A listing of associated instructor objects",
+                    "items": {
+                        "type": "object",
+                        "$ref": "instructor.json"
+                    }
+                },
+                "metadata": {
+                    "type": "object",
+                    "$ref": "raml-util/schemas/metadata.schema"
+                }
+            },
+            "required": [
+                "termId"
+            ]
+        },
+        "instructors": {
+            "type": "array",
+            "items": {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "type": "object",
+                "description": "Describes an instructor for a given section",
+                "additionalProperties": false,
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "UUID for this instructor",
+                        "$ref": "uuid.json"
+                    },
+                    "userId": {
+                        "type": "string",
+                        "description": "ID of associated FOLIO user (if exists)",
+                        "$ref": "uuid.json"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "The name of this instructor"
+                    },
+                    "barcode": {
+                        "type": "string",
+                        "description": "The instructor's user barcode"
+                    },
+                    "patronGroup": {
+                        "type": "string",
+                        "description": "The id of the patrongroup associated with the user"
+                    },
+                    "patronGroupObject": {
+                        "type": "object",
+                        "description": "The instructor's user patrongroup",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "description": "UUID for the group",
+                                "$ref": "uuid.json"
+                            },
+                            "desc": {
+                                "type": "string",
+                                "description": "description of the group"
+                            },
+                            "group": {
+                                "type": "string",
+                                "description": "the unique name of the group"
+                            }
+                        }
+                    },
+                    "courseListingId": {
+                        "type": "string",
+                        "description": "The course listing this instructor teaches",
+                        "$ref": "uuid.json"
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "$ref": "raml-util/schemas/metadata.schema"
+                    }
+                },
+                "required": [
+                    "courseListingId",
+                    "name"
+                ]
+            }
+        }
+    }
+}

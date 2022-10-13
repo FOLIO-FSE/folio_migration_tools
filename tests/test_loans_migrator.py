@@ -46,7 +46,7 @@ def test_load_and_validate_legacy_loans_set_in_source():
     mock_library_conf.okapi_url = "http://okapi_url"
     mock_library_conf.tenant_id = ""
     mock_library_conf.okapi_username = ""
-    mock_library_conf.okapi_password = ""
+    mock_library_conf.okapi_password = ""  # noqa: 105
     mock_migrator = Mock(spec=LoansMigrator)
     mock_migrator.tenant_timezone = ZoneInfo("UTC")
     mock_migrator.migration_report = MigrationReport()
@@ -86,7 +86,7 @@ def test_load_and_validate_legacy_loans_set_centrally():
     mock_library_conf.okapi_url = "http://okapi_url"
     mock_library_conf.tenant_id = ""
     mock_library_conf.okapi_username = ""
-    mock_library_conf.okapi_password = ""
+    mock_library_conf.okapi_password = ""  # noqa: 105
     mock_migrator = Mock(spec=LoansMigrator)
     mock_migrator.migration_report = MigrationReport()
     mock_migrator.tenant_timezone = ZoneInfo("UTC")

@@ -1,14 +1,14 @@
-import pymarc
-
 from unittest.mock import Mock
 
+import pymarc
+
+from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
 )
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
-from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 
 
 def test_get_marc_textual_stmt_correct_order_and_not_deduped():
