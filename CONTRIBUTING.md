@@ -166,14 +166,13 @@ Save the file and commit (and push) the file back to main.
 # Python Coding standards and practices
 ## What to install
 ```
-> pipx install pre-commit 
+> pipx install pre-commit  (and run pre-commit install)
+> pipx install isort
+> pipx install nox
+> pipx install poetry
 > pipx install twine 
-> pipenv install flake8
-> pipenv install black
-> pipenv install flake8-bugbear
-> pipenv install flake8-bandit
-> pipenv install darglint
-> pipenv install safety
+> poetry shell
+> poetry install
 > npm install github-release-notes -g
 ```
 ## Important settings
