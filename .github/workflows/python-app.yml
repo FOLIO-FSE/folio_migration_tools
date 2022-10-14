@@ -26,6 +26,10 @@ jobs:
     - name: Install dependencies
       run: |
         poetry install --with dev
+    
+    - name: Make sure the code can run
+      run: |
+        # cd src; poetry run python -m folio_migration_tools -h
 
     - name: Run the nox test session
       run: |
@@ -51,10 +55,7 @@ jobs:
         name: codecov-umbrella
         verbose: true
 
-    - name: Make sure the code can run
-      run: |
-        cd src; pipenv run python -m folio_migration_tools -h
-
+    
     - name: clone repo_template
       uses: actions/checkout@master
       with:
