@@ -1,18 +1,19 @@
 # noxfile.py
+import logging
 import tempfile
 
 import nox
-from genericpath import isfile
 
 nox.options.sessions = "lint", "safety", "tests"
 locations = "src", "tests", "noxfile.py"
 
-if isfile(".env"):
+try:
     with open(".env") as f:
         lines = f.readlines()
         token = lines[0].replace("GITHUB_TOKEN=", "")
         env = {"GITHUB_TOKEN": token}
-else:
+except Exception as ee:
+    logging.error(ee)
     env = {}
 
 
