@@ -27,9 +27,18 @@ jobs:
       run: |
         poetry install --with dev
 
-    - name: Run the nox sessions
+    - name: Run the nox test session
       run: |
-        nox -- ${{ secrets.OKAPI_URL }} ${{ secrets.TENANT_ID }} ${{ secrets.USERNAME }} ${{ secrets.PASSWORD }}
+        nox -rs tests -- ${{ secrets.OKAPI_URL }} ${{ secrets.TENANT_ID }} ${{ secrets.USERNAME }} ${{ secrets.PASSWORD }}
+
+    - name: Run the nox lint session
+      run: |
+        nox -rs lint
+
+    - name: Run the nox safety session
+      run: |
+        nox -rs safety
+
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
