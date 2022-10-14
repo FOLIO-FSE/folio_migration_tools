@@ -1,5 +1,6 @@
 # noxfile.py
 import logging
+import os
 import tempfile
 
 import nox
@@ -13,8 +14,11 @@ try:
         token = lines[0].replace("GITHUB_TOKEN=", "")
         env = {"GITHUB_TOKEN": token}
 except Exception as ee:
-    logging.error(ee)
-    env = {}
+    if "GITHUB_TOKEN" in os.environ:
+        env = {"GITHUB_TOKEN": os.environ["GITHUB_TOKEN"]}
+    else:
+        logging.error(ee)
+        env = {}
 
 
 @nox.session()

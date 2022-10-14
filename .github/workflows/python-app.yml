@@ -32,6 +32,9 @@ jobs:
         # cd src; poetry run python -m folio_migration_tools -h
 
     - name: Run the nox test session
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       run: |
         nox -rs tests -- ${{ secrets.OKAPI_URL }} ${{ secrets.TENANT_ID }} ${{ secrets.USERNAME }} ${{ secrets.PASSWORD }}
 
