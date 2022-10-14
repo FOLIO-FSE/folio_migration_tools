@@ -15,33 +15,22 @@ jobs:
       with:
         python-version: 3.9
 
-    - name: Install pipenv
+    - name: Install nox
       run: |
-          python -m pip install --upgrade pipenv wheel
+          python -m pip install nox
+      
+    - name: Install poetry
+      run: |
+          python -m pip install poetry
 
     - name: Install dependencies
       run: |
-        pipenv install --deploy --dev --clear
+        poetry install --with dev
 
-    - name: Lint with flake8
+    - name: Run the nox sessions
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        pipenv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        pipenv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        nox -- ${{ secrets.OKAPI_URL }} ${{ secrets.TENANT_ID }} ${{ secrets.USERNAME }} ${{ secrets.PASSWORD }}
 
-    - name: Run test suite
-      shell: bash
-      env:
-        PASSWORD: ${{ secrets.PASSWORD }}
-        TENANT_ID: ${{ secrets.TENANT_ID }}
-        OKAPI_URL: ${{ secrets.OKAPI_URL }}
-        USERNAME: ${{ secrets.USERNAME }}
-      run: |
-        pip install pytest
-        pip install pytest-cov
-        echo $OKAPI_URL
-        pipenv run pytest --cov=./ --cov-report=xml --password "$PASSWORD" --tenant_id "$TENANT_ID" --okapi_url "$OKAPI_URL" --username "$USERNAME" -s
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
@@ -52,6 +41,7 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         verbose: true
+
     - name: Make sure the code can run
       run: |
         cd src; pipenv run python -m folio_migration_tools -h

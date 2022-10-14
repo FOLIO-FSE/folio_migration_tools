@@ -1,29 +1,38 @@
 # noxfile.py
-import json
 import tempfile
+
 import nox
+from genericpath import isfile
 
 nox.options.sessions = "lint", "safety", "tests"
 locations = "src", "tests", "noxfile.py"
 
-with open(".env.json") as f:
-    env_file = json.load(f)
+if isfile(".env"):
+    with open(".env") as f:
+        lines = f.readlines()
+        token = lines[0].replace("GITHUB_TOKEN=", "")
+        env = {"GITHUB_TOKEN": token}
+else:
+    env = {}
 
 
 @nox.session()
 def tests(session):
+    print(session.posargs)
     posargs = [
-        "--password",
-        env_file["password"],
-        "--tenant_id",
-        env_file["tenant_id"],
         "--okapi_url",
-        env_file["okapi_url"],
+        session.posargs[0],
+        "--tenant_id",
+        session.posargs[1],
         "--username",
-        env_file["username"],
+        session.posargs[2],
+        "--password",
+        session.posargs[3],
+        "--cov=./",
+        "--cov-report=xml",
     ]
     session.run("poetry", "install", "--only", "main", external=True)
-    session.run("pytest", "--cov", *posargs, env=env_file)
+    session.run("pytest", "--cov", *posargs, env=env)
 
 
 @nox.session()
