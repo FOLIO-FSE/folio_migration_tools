@@ -32,7 +32,7 @@ def tests(session):
         "--cov=./",
         "--cov-report=xml",
     ]
-    session.run("poetry", "install", "--only", "main", external=True)
+    session.run("poetry", "install", external=True)
     session.run("pytest", "--cov", *posargs, env=env)
 
 
