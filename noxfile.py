@@ -13,11 +13,11 @@ try:
         lines = f.readlines()
         token = lines[0].replace("GITHUB_TOKEN=", "")
         env = {"GITHUB_TOKEN": token}
-except Exception as ee:
+except Exception:
     if "GITHUB_TOKEN" in os.environ:
         env = {"GITHUB_TOKEN": os.environ["GITHUB_TOKEN"]}
     else:
-        logging.error(f"No GITHUB_TOKEN environment variable set nor any .env file exists: {ee}")
+        logging.error("No GITHUB_TOKEN environment variable set nor any .env file exists")
         env = {}
 
 
