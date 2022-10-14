@@ -17,7 +17,7 @@ except Exception as ee:
     if "GITHUB_TOKEN" in os.environ:
         env = {"GITHUB_TOKEN": os.environ["GITHUB_TOKEN"]}
     else:
-        logging.error(ee)
+        logging.error(f"No GITHUB_TOKEN environment variable set nor any .env file exists: {ee}")
         env = {}
 
 
