@@ -1,0 +1,128 @@
+{
+    "title": "TaskConfiguration",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "type": "string"
+        },
+        "migration_task_type": {
+            "title": "Migration Task Type",
+            "type": "string"
+        },
+        "hrid_handling": {
+            "$ref": "#/definitions/HridHandling"
+        },
+        "files": {
+            "title": "Files",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/FileDefinition"
+            }
+        },
+        "holdings_map_file_name": {
+            "title": "Holdings Map File Name",
+            "type": "string"
+        },
+        "location_map_file_name": {
+            "title": "Location Map File Name",
+            "type": "string"
+        },
+        "default_call_number_type_name": {
+            "title": "Default Call Number Type Name",
+            "type": "string"
+        },
+        "previously_generated_holdings_files": {
+            "title": "Previously Generated Holdings Files",
+            "default": [],
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "fallback_holdings_type_id": {
+            "title": "Fallback Holdings Type Id",
+            "type": "string"
+        },
+        "holdings_type_uuid_for_boundwiths": {
+            "title": "Holdings Type Uuid For Boundwiths",
+            "type": "string"
+        },
+        "call_number_type_map_file_name": {
+            "title": "Call Number Type Map File Name",
+            "type": "string"
+        },
+        "holdings_merge_criteria": {
+            "title": "Holdings Merge Criteria",
+            "default": [
+                "instanceId",
+                "permanentLocationId",
+                "callNumber"
+            ],
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "reset_hrid_settings": {
+            "title": "Reset Hrid Settings",
+            "default": false,
+            "type": "boolean"
+        },
+        "never_update_hrid_settings": {
+            "title": "Never Update Hrid Settings",
+            "default": false,
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "name",
+        "migration_task_type",
+        "hrid_handling",
+        "files",
+        "holdings_map_file_name",
+        "location_map_file_name",
+        "default_call_number_type_name",
+        "fallback_holdings_type_id",
+        "holdings_type_uuid_for_boundwiths"
+    ],
+    "definitions": {
+        "HridHandling": {
+            "title": "HridHandling",
+            "description": "Enum determining how the HRID generation should be handled.\n        - default: Enumerates the HRID, building on the current value in the HRID settings\n        - preserve001: Takes the 001 and uses this as the HRID.\n\n    Args:\n        str (_type_): _description_\n        Enum (_type_): _description_\n    ",
+            "enum": [
+                "default",
+                "preserve001"
+            ],
+            "type": "string"
+        },
+        "FileDefinition": {
+            "title": "FileDefinition",
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "title": "File Name",
+                    "type": "string"
+                },
+                "suppressed": {
+                    "title": "Suppressed",
+                    "default": false,
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "title": "Staff Suppressed",
+                    "default": false,
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "title": "Service Point Id",
+                    "default": "",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "file_name"
+            ]
+        }
+    }
+}

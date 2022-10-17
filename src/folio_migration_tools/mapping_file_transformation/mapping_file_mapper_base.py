@@ -4,6 +4,7 @@ import json
 import logging
 import uuid
 from abc import abstractmethod
+from functools import reduce
 from pathlib import Path
 from typing import Dict
 from typing import List
@@ -90,9 +91,9 @@ class MappingFileMapperBase(MapperBase):
             ):
                 legacy_fields.add(k["legacy_field"])
                 if not self.mapped_from_legacy_data.get(k["folio_field"]):
-                    self.mapped_from_legacy_data[k["folio_field"]] = {k["legacy_field"]}
-                else:
-                    self.mapped_from_legacy_data[k["folio_field"]].add(k["legacy_field"])
+                    self.mapped_from_legacy_data[k["folio_field"]] = [k["legacy_field"]]
+                elif k["legacy_field"] not in self.mapped_from_legacy_data[k["folio_field"]]:
+                    self.mapped_from_legacy_data[k["folio_field"]].append(k["legacy_field"])
 
         logging.info(
             "Mapped legacy fields:\n%s",
@@ -288,9 +289,12 @@ class MappingFileMapperBase(MapperBase):
 
     @staticmethod
     def get_legacy_vals(legacy_item, legacy_item_keys):
-        return {
-            legacy_item[k] for k in legacy_item_keys if legacy_item.get(k, "") not in ["", None]
-        }
+        result_list = []
+        for legacy_item_key in legacy_item_keys:
+            val = legacy_item.get(legacy_item_key, "")
+            if val not in ["", None]:
+                result_list.append(val)
+        return result_list
 
     def map_object_props(
         self,
@@ -311,6 +315,12 @@ class MappingFileMapperBase(MapperBase):
                     # not parsing stuff on level three.
                     pass
             elif property_level2["type"] == "array":
+                self.map_string_array_props(
+                    legacy_object,
+                    f"{property_name_level1}.{property_name_level2}",
+                    folio_object,
+                    index_or_id,
+                )
                 """
                 # Object with subprop array
                 temp_object[property_name_level2] = []
@@ -419,15 +429,22 @@ class MappingFileMapperBase(MapperBase):
 
     @staticmethod
     def add_values_to_string_array(prop, folio_object, mapped_prop_value, delimiter: str):
-        if prop in folio_object and mapped_prop_value not in folio_object.get(prop, []):
+        if in_deep(folio_object, prop) and mapped_prop_value not in get_deep(
+            folio_object, prop, []
+        ):
             if isinstance(mapped_prop_value, str) and delimiter in mapped_prop_value:
-                folio_object.get(prop, []).extend(mapped_prop_value.split(delimiter))
+                old_prop = get_deep(folio_object, prop)
+                set_deep(folio_object, prop, old_prop.extend(mapped_prop_value.split(delimiter)))
+
             else:
-                folio_object.get(prop, []).append(mapped_prop_value)
+                old_prop = get_deep(folio_object, prop)
+                added_prop = old_prop.append(mapped_prop_value)
+                set_deep(folio_object, prop, [added_prop])
         elif isinstance(mapped_prop_value, str) and delimiter in mapped_prop_value:
-            folio_object[prop] = mapped_prop_value.split(delimiter)
+            set_deep(folio_object, prop, mapped_prop_value.split(delimiter))
         else:
-            folio_object[prop] = [mapped_prop_value]
+            # No values in array previously
+            set_deep(folio_object, prop, [mapped_prop_value])
 
     def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
         if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
@@ -559,3 +576,55 @@ def skip_property(property_name_level1, property_level1):
 
 def weird_division(number, divisor):
     return number / divisor if divisor else 0
+
+
+def set_deep(dictionary, key, value):
+    """sets a nested property in a dict given a dot notated address
+
+    Args:
+        dictionary (_type_): a python dictionary ({"a":{"b":{"c":"value"}}})
+        key (_type_): A string of dot notated address (a.b.c)
+        value (_type_): the value to set
+
+    """
+    dd = dictionary
+    keys = key.split(".")
+    latest = keys.pop()
+    for k in keys:
+        dd = dd.setdefault(k, {})
+    dd.setdefault(latest, value)
+
+
+def get_deep(dictionary, keys, default=None):
+    """returns a nested property in a dict given a dot notated address
+
+    Args:
+        dictionary (_type_): a python dictionary ({"a":{"b":{"c":"value"}}})
+        keys (_type_): A string of dot notated address (a.b.c)
+        default (_type_): Default value to return
+
+    Returns:
+        _type_: the value/property of the dict
+    """
+    return reduce(
+        lambda d, key: d.get(key, default) if isinstance(d, dict) else default,
+        keys.split("."),
+        dictionary,
+    )
+
+
+def in_deep(dictionary, keys):
+    """Checks if a property exists given a dot notated address
+
+    Args:
+        dictionary (_type_): a python dictionary ({"a":{"b":{"c":"value"}}})
+        keys (_type_): A string of dot notated address (a.b.c)
+
+    Returns:
+        _type_: a truthy value or False is there is a property in the dict
+    """
+    return reduce(
+        lambda d, key: d.get(key, False) if isinstance(d, dict) else False,
+        keys.split("."),
+        dictionary,
+    )
