@@ -114,7 +114,7 @@ optional arguments:
 
 ## 3.5. Create a pull request in GitHub
 ## 3.6. :people_holding_hands: Code review
-## 3.6. After a successful code review, merge the branch into main
+## 3.7. After a successful code review, merge the branch into main
 Use the closes tag in your merge commit message to automatically close any issue(s) that should be closed by your merged changes.
 
 ```
