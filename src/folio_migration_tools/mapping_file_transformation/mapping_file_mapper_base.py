@@ -219,15 +219,9 @@ class MappingFileMapperBase(MapperBase):
     ) -> tuple[dict, str]:
 
         folio_object, legacy_id = self.instantiate_record(legacy_object, index_or_id, object_type)
-        for property_name_level1, property_level1 in self.schema["properties"].items():
+        for property_name, property in self.schema["properties"].items():
             try:
-                self.map_level1_property(
-                    property_name_level1,
-                    property_level1,
-                    folio_object,
-                    legacy_id,
-                    legacy_object,
-                )
+                self.map_property(property_name, property, folio_object, legacy_id, legacy_object)
             except TransformationFieldMappingError as data_error:
                 self.handle_transformation_field_mapping_error(legacy_id, data_error)
         clean_folio_object = self.validate_required_properties(
@@ -235,57 +229,51 @@ class MappingFileMapperBase(MapperBase):
         )
         return (clean_folio_object, legacy_id)
 
-    def map_level1_property(
-        self,
-        property_name_level1,
-        property_level1,
-        folio_object,
-        index_or_id,
-        legacy_object,
+    def map_property(
+        self, schema_property_name: str, schema_property, folio_object, index_or_id, legacy_object
     ):
-        if property_level1.get("description", "") == "Deprecated" or skip_property(
-            property_name_level1, property_level1
-        ):
+        if skip_property(schema_property_name, schema_property):
             pass
-        elif property_level1["type"] == "object":
-            if "properties" in property_level1:
+        elif schema_property["type"] == "object":
+            if "properties" in schema_property:
                 self.map_object_props(
                     legacy_object,
-                    property_name_level1,
-                    property_level1,
+                    schema_property_name,
+                    schema_property,
                     folio_object,
                     index_or_id,
+                    1,
                 )
-        elif property_level1["type"] == "array":
+        elif schema_property["type"] == "array":
             try:
-                if property_level1["items"]["type"] == "object":
+                if schema_property["items"]["type"] == "object":
                     self.map_objects_array_props(
                         legacy_object,
-                        property_name_level1,
-                        property_level1["items"]["properties"],
+                        schema_property_name,
+                        schema_property["items"]["properties"],
                         folio_object,
                         index_or_id,
-                        property_level1["items"].get("required", []),
+                        schema_property["items"].get("required", []),
                     )
-                elif property_level1["items"]["type"] == "string":
+                elif schema_property["items"]["type"] == "string":
                     self.map_string_array_props(
                         legacy_object,
-                        property_name_level1,
+                        schema_property_name,
                         folio_object,
                         index_or_id,
                     )
                 else:
-                    logging.info("Edge case %s", property_name_level1)
+                    logging.info("Edge case %s", schema_property_name)
 
             except KeyError as schema_anomaly:
                 logging.error(
                     "Cannot create property '%s'. Unsupported schema format: %s",
-                    property_name_level1,
+                    schema_property_name,
                     schema_anomaly,
                 )
 
         else:  # Basic property
-            self.map_basic_props(legacy_object, property_name_level1, folio_object, index_or_id)
+            self.map_basic_props(legacy_object, schema_property_name, folio_object, index_or_id)
 
     @staticmethod
     def get_legacy_vals(legacy_item, legacy_item_keys):
@@ -299,31 +287,37 @@ class MappingFileMapperBase(MapperBase):
     def map_object_props(
         self,
         legacy_object,
-        property_name_level1,
-        property_level1,
+        schema_property_name: str,
+        schema_property,
         folio_object,
         index_or_id,
+        level: int,
     ):
         temp_object = {}
-        prop_key = property_name_level1
-        for property_name_level2, property_level2 in property_level1["properties"].items():
-            sub_prop_key = f"{prop_key}.{property_name_level2}"
-            if "properties" in property_level2:
-                for _property_name_level3, _property_level3 in property_level2[
-                    "properties"
-                ].items():
-                    pass
-            elif property_level2["type"] == "array":
+        for child_property_name, child_property in schema_property["properties"].items():
+            sub_prop_path = f"{schema_property_name}.{child_property_name}"
+            if "properties" in child_property:
+                self.map_object_props(
+                    legacy_object,
+                    sub_prop_path,
+                    child_property,
+                    folio_object,
+                    index_or_id,
+                    level + 1,
+                )
+            elif child_property["type"] == "array":
                 self.map_string_array_props(
                     legacy_object,
-                    f"{property_name_level1}.{property_name_level2}",
+                    f"{schema_property_name}.{child_property_name}",
                     folio_object,
                     index_or_id,
                 )
-            elif p := self.get_prop(legacy_object, sub_prop_key, index_or_id):
-                temp_object[property_name_level2] = p
+            elif p := self.get_prop(legacy_object, sub_prop_path, index_or_id):
+                set_deep(folio_object, sub_prop_path, p)
+                # temp_object[child_property_name] = p
         if temp_object:
-            folio_object[property_name_level1] = temp_object
+            set_deep(folio_object, schema_property_name, temp_object)
+            # folio_object[schema_property_name] = temp_object
 
     def map_objects_array_props(
         self,
@@ -548,11 +542,12 @@ class MappingFileMapperBase(MapperBase):
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ())
 
 
-def skip_property(property_name_level1, property_level1):
+def skip_property(property_name, property):
     return bool(
-        property_name_level1 in ["metadata", "id", "type", "lastCheckIn"]
-        or property_name_level1.startswith("effective")
-        or property_level1.get("folio:isVirtual", False)
+        property_name in ["metadata", "id", "type", "lastCheckIn"]
+        or property_name.startswith("effective")
+        or property.get("folio:isVirtual", False)
+        or property.get("description", "") == "Deprecated"
     )
 
 

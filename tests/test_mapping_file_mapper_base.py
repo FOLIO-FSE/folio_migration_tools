@@ -1689,4 +1689,176 @@ def test_map_string_third_level():
     record = {"id": "12", "note_1": "my note"}
     tfm = MyTestableFileMapper(schema, fake_item_map)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
-    assert "firstLevel" not in folio_rec  # No mapping on third level yet...
+    assert (
+        folio_rec["firstLevel"]["secondLevel"]["thirdLevel"] == "my note"
+    )  # No mapping on third level yet...
+
+
+def test_map_string_and_array_of_strings_fourth_level():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "object",
+                "properties": {
+                    "secondLevel": {
+                        "type": "object",
+                        "properties": {
+                            "thirdLevel": {
+                                "type": "object",
+                                "properties": {
+                                    "fourthLevel": {
+                                        "type": "string",
+                                    },
+                                    "fourthLevelArr": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                },
+                            }
+                        },
+                    }
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel.secondLevel.thirdLevel.fourthLevel",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.secondLevel.thirdLevel.fourthLevelArr[0]",
+                "legacy_field": "note_2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.secondLevel.thirdLevel.fourthLevelArr[1]",
+                "legacy_field": "note_3",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"id": "12", "note_1": "my note", "note_2": "my note 2", "note_3": "my note 3"}
+    tfm = MyTestableFileMapper(schema, fake_item_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["firstLevel"]["secondLevel"]["thirdLevel"]["fourthLevel"] == "my note"
+    assert folio_rec["firstLevel"]["secondLevel"]["thirdLevel"]["fourthLevelArr"] == [
+        "my note 2",
+        "my note 3",
+    ]  # No mapping on third level yet...
+
+
+def test_map_object_and_array_of_strings_fourth_level():
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "object",
+                "properties": {
+                    "secondLevel": {
+                        "type": "object",
+                        "properties": {
+                            "thirdLevel": {
+                                "type": "object",
+                                "properties": {
+                                    "fourthLevel": {
+                                        "type": "object",
+                                        "properties": {
+                                            "fifthLevel1": {
+                                                "type": "string",
+                                            },
+                                            "fifthLevel2": {
+                                                "type": "string",
+                                            },
+                                        },
+                                    },
+                                    "fourthLevelArr": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                },
+                            }
+                        },
+                    }
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel.secondLevel.thirdLevel.fourthLevel.fifthLevel2",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.secondLevel.thirdLevel.fourthLevel.fifthLevel1",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.secondLevel.thirdLevel.fourthLevel",
+                "legacy_field": "note_1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.secondLevel.thirdLevel.fourthLevelArr[0]",
+                "legacy_field": "note_2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "firstLevel.secondLevel.thirdLevel.fourthLevelArr[1]",
+                "legacy_field": "note_3",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"id": "12", "note_1": "my note", "note_2": "my note 2", "note_3": "my note 3"}
+    tfm = MyTestableFileMapper(schema, fake_item_map)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert (
+        folio_rec["firstLevel"]["secondLevel"]["thirdLevel"]["fourthLevel"]["fifthLevel1"]
+        == "my note"
+    )
+    assert folio_rec["firstLevel"]["secondLevel"]["thirdLevel"]["fourthLevelArr"] == [
+        "my note 2",
+        "my note 3",
+    ]  # No mapping on third level yet...
+
+
+def test_set_default():
+    d1 = {"level1": {"level2": {}}}
+    d1["level1"]["level2"] = {"apa": 1}
+    d1["level1"]["level2"].setdefault("papa", 2)
+    assert d1["level1"]["level2"] == {"apa": 1, "papa": 2}
