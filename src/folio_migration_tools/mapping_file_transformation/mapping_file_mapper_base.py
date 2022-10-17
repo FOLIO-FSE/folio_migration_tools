@@ -140,10 +140,10 @@ class MappingFileMapperBase(MapperBase):
             )
         if not ignore_legacy_identifier:
             try:
-                self.legacy_id_property_name = field_map["legacyIdentifier"][0]
+                self.legacy_id_property_names = field_map["legacyIdentifier"]
                 logging.info(
                     "Legacy identifier will be mapped from %s",
-                    self.legacy_id_property_name,
+                    ",".join(self.legacy_id_property_names),
                 )
             except Exception as exception:
                 raise TransformationProcessError(
@@ -184,27 +184,29 @@ class MappingFileMapperBase(MapperBase):
         if self.ignore_legacy_identifier:
             return ({}, str(uuid.uuid4()))
 
-        legacy_id = legacy_object.get(self.legacy_id_property_name)
-        if not legacy_id:
+        if legacy_id := " ".join(
+            legacy_object.get(li, "") for li in self.legacy_id_property_names
+        ).strip():
+            return (
+                {
+                    "id": str(
+                        FolioUUID(
+                            self.folio_client.okapi_url,
+                            object_type,
+                            legacy_id,
+                        )
+                    ),
+                    "metadata": self.folio_client.get_metadata_construct(),
+                    "type": "object",
+                },
+                legacy_id,
+            )
+        else:
             raise TransformationRecordFailedError(
                 index_or_id,
                 "Could not get a value from legacy object from the property "
                 f"{self.legacy_id_property_name}. Check mapping and data",
             )
-        return (
-            {
-                "id": str(
-                    FolioUUID(
-                        self.folio_client.okapi_url,
-                        object_type,
-                        legacy_id,
-                    )
-                ),
-                "metadata": self.folio_client.get_metadata_construct(),
-                "type": "object",
-            },
-            legacy_id,
-        )
 
     def get_statistical_codes(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:
