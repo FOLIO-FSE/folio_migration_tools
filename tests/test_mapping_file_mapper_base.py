@@ -1862,3 +1862,78 @@ def test_set_default():
     d1["level1"]["level2"] = {"apa": 1}
     d1["level1"]["level2"].setdefault("papa", 2)
     assert d1["level1"]["level2"] == {"apa": 1, "papa": 2}
+
+def test_get_prop_multiple_legacy_identifiers_only_one():
+    record_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "string",
+                "additionalProperties": False,
+            },
+        },
+    }
+    legacy_record = {"firstLevel": "user_name_1", "id": "1 1"}
+    tfm = MyTestableFileMapper(schema, record_map)
+    folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["id"] == "6ba39416-de70-591e-a45f-62c9ca4e2d98"
+
+
+def test_get_prop_multiple_legacy_identifiers():
+    record_map = {
+        "data": [
+            {
+                "folio_field": "firstLevel",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id2",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "string",
+                "additionalProperties": False,
+            },
+        },
+    }
+    legacy_record = {"firstLevel": "user_name_1", "id": "1", "id2": "1"}
+    tfm = MyTestableFileMapper(schema, record_map)
+    folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["id"] == "6ba39416-de70-591e-a45f-62c9ca4e2d98"
