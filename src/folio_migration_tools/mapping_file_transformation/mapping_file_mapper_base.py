@@ -312,7 +312,6 @@ class MappingFileMapperBase(MapperBase):
                 for _property_name_level3, _property_level3 in property_level2[
                     "properties"
                 ].items():
-                    # not parsing stuff on level three.
                     pass
             elif property_level2["type"] == "array":
                 self.map_string_array_props(
@@ -321,32 +320,6 @@ class MappingFileMapperBase(MapperBase):
                     folio_object,
                     index_or_id,
                 )
-                """
-                # Object with subprop array
-                temp_object[property_name_level2] = []
-                for i in range(5):
-                    prop_path = f"{sub_prop_key}.{sub_prop_name2}[{i}]"
-                    if property_level2["items"]["type"] == "object":
-                        # Array of objects
-                        temp = {
-                            sub_prop_name2: self.get_prop(
-                                folio_object,
-                                ,
-                                index_or_id,
-                            )
-                            for sub_prop_name2, sub_prop2 in property_level2["items"][
-                                "properties"
-                            ].items()
-                        }
-                        if not all(value for key, value in temp.items()):
-                            continue
-                        temp_object[property_name_level2].append(temp)
-                    else:
-
-                        mkey = sub_prop_key + "." + sub_prop_name2
-                        a = self.get_prop(legacy_object, mkey, index_or_id, i)
-                        if a:
-                            temp_object[property_name_level2] = a"""
             elif p := self.get_prop(legacy_object, sub_prop_key, index_or_id):
                 temp_object[property_name_level2] = p
         if temp_object:
@@ -379,8 +352,17 @@ class MappingFileMapperBase(MapperBase):
                         and self.library_configuration.multi_field_delimiter in res
                     ):
                         multi_field_props.append(prop)
-
                     temp_object[prop] = res
+                else:
+                    for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
+                        res = self.get_prop(legacy_object, array_path, index_or_id)
+                        self.add_values_to_string_array(
+                            prop,
+                            temp_object,
+                            res,
+                            self.library_configuration.multi_field_delimiter,
+                        )
+
             if temp_object != {} and all(
                 (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
             ):
