@@ -1,0 +1,90 @@
+{
+    "title": "LibraryConfiguration",
+    "type": "object",
+    "properties": {
+        "okapi_url": {
+            "title": "Okapi Url",
+            "type": "string"
+        },
+        "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+        },
+        "okapi_username": {
+            "title": "Okapi Username",
+            "type": "string"
+        },
+        "okapi_password": {
+            "title": "Okapi Password",
+            "type": "string"
+        },
+        "base_folder": {
+            "title": "Base Folder",
+            "description": "The base folder for migration. Should ideally be a github clone of the migration_repo_template",
+            "format": "directory-path",
+            "type": "string"
+        },
+        "multi_field_delimiter": {
+            "title": "Multi Field Delimiter",
+            "default": "<delimiter>",
+            "type": "string"
+        },
+        "failed_records_threshold": {
+            "title": "Failed Records Threshold",
+            "default": 5000,
+            "type": "integer"
+        },
+        "failed_percentage_threshold": {
+            "title": "Failed Percentage Threshold",
+            "default": 20,
+            "type": "integer"
+        },
+        "library_name": {
+            "title": "Library Name",
+            "type": "string"
+        },
+        "log_level_debug": {
+            "title": "Log Level Debug",
+            "type": "boolean"
+        },
+        "folio_release": {
+            "description": "The Flavour of the ILS you are migrating from. This choice is maninly tied to the handling of legacy identifiers and thereby the deterministic UUIDs generated from them.",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/FolioRelease"
+                }
+            ]
+        },
+        "iteration_identifier": {
+            "title": "Iteration Identifier",
+            "type": "string"
+        },
+        "add_time_stamp_to_file_names": {
+            "title": "Add Time Stamp To File Names",
+            "default": false,
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "okapi_url",
+        "tenant_id",
+        "okapi_username",
+        "okapi_password",
+        "base_folder",
+        "library_name",
+        "log_level_debug",
+        "folio_release",
+        "iteration_identifier"
+    ],
+    "definitions": {
+        "FolioRelease": {
+            "title": "FolioRelease",
+            "description": "An enumeration.",
+            "enum": [
+                "kiwi",
+                "lotus"
+            ],
+            "type": "string"
+        }
+    }
+}

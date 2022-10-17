@@ -34,13 +34,29 @@ The scripts requires a FOLIO tenant with reference data properly set up. The scr
 # Installing
 Make sure you are running Python 3.9 or above. 
 ## 1. Using pip and venv
-1. Create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment)
-2. Install using pip: `python3 -m pip install folio_migration_tools`
-3. Test the installation by running `python3 -m folio_migration_tools -h`
-## 2. Using pipenv
-1. Run `pipenv install folio-migration-tools`
-2. Test the installation by calling `pipenv run python3 -m folio_migration_tools -h`
+### 2.1. Create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment)   
+```   
+python -m venv ./.venv     # Creates a virtual env in the current folder
+source .venv/bin/activate  # Activates the venv    
+```
+### 2. Install using pip: 
+```
+python -m pip install folio_migration_tools
+```
+### 3. Test the installation by showing the help pages 
+```   
+python -m folio_migration_tools -h
+```    
 
+## 2. Using pipenv
+### 1. Run
+```   
+pipenv install folio-migration-tools
+```   
+### 2. Test the installation by showing the help pages
+```  
+pipenv run python3 -m folio_migration_tools -h
+```  
 
 # FOLIO migration process
 This repo plays the main part in a process using a collection of tools. The process itself is documented in more detail, including example configuration files, at [this template repository](https://github.com/FOLIO-FSE/migration_repo_template)
@@ -60,7 +76,17 @@ For information on syntax, what files are needed and produced by the toolkit, re
 # Tests
 There is a test suite for Bibs-to-Instance mapping. You need to add arguments in order to run it against a FOLIO environment. The tests are run against the latest [FOLIO Bugfest environment](https://wiki.folio.org/dosearchsite.action?cql=siteSearch%20~%20%22bugfest%22%20AND%20type%20in%20(%22space%22%2C%22user%22%2C%22com.atlassian.confluence.extra.team-calendars%3Acalendar-content-type%22%2C%22attachment%22%2C%22page%22%2C%22com.atlassian.confluence.extra.team-calendars%3Aspace-calendars-view-content-type%22%2C%22blogpost%22)&includeArchivedSpaces=false) as part of the commit process in this repo.
 
-## Running the tests for the Rules mapper
+IMPORTANT!
+the tests and the tools relies on many calls to GitHub, and you need to create a [GitHub personal Access token](https://github.com/settings/tokens) and add a .env file in the root of the folder with the following contents:   
+```GITHUB_TOKEN=ghp_.....```   
+Then, either restart your shell or run   
+```source .env```    
+from the command line
 
+## Running the tests for the Rules mapper
+### Pipenv
 * Install the packages in the Pipfile
 * Run ```clear; pipenv run pytest -v --log-level=DEBUG --password PASSWORD --tenant_id TENANT_ID --okapi_url OKAPI URL --username USERNAME```
+### Poetry
+* Install the packages from the pyproject.toml
+* Run ```clear; poetry run pytest -v --log-level=DEBUG --password folio --tenant_id fs09000000 --okapi_url https://okapi-bugfest-lotus.int.aws.folio.org --username folio --cov```

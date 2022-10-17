@@ -323,11 +323,6 @@ class BibsRulesMapper(RulesMapperBase):
 
         if "336" in marc_record and "b" not in marc_record["336"]:
             self.migration_report.add(Blurbs.RecourceTypeMapping, "Subfield b not in 336")
-            Helper.log_data_issue(
-                legacy_id,
-                "Subfield b not in 336",
-                "",
-            )
             if "a" in marc_record["336"]:
                 return_id = get_folio_id_by_name(marc_record["336"]["a"])
 

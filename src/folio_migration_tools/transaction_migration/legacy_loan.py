@@ -8,6 +8,8 @@ from dateutil.parser import parse
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
 
+utc = ZoneInfo("UTC")
+
 
 class LegacyLoan(object):
     def __init__(
@@ -15,7 +17,7 @@ class LegacyLoan(object):
         legacy_loan_dict,
         fallback_service_point_id: str,
         migration_report: MigrationReport,
-        tenant_timezone=ZoneInfo("UTC"),
+        tenant_timezone=utc,
         row=0,
     ):
         self.migration_report: MigrationReport = migration_report

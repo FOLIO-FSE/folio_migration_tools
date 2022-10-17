@@ -1,8 +1,8 @@
-from folio_migration_tools.mapping_file_transformation.organization_mapper import (
-    OrganizationMapper,
-)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
+)
+from folio_migration_tools.mapping_file_transformation.organization_mapper import (
+    OrganizationMapper,
 )
 
 

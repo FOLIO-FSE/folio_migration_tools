@@ -1,0 +1,72 @@
+{
+    "title": "TaskConfiguration",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "type": "string"
+        },
+        "migration_task_type": {
+            "title": "Migration Task Type",
+            "type": "string"
+        },
+        "group_map_path": {
+            "title": "Group Map Path",
+            "type": "string"
+        },
+        "departments_map_path": {
+            "title": "Departments Map Path",
+            "default": "",
+            "type": "string"
+        },
+        "use_group_map": {
+            "title": "Use Group Map",
+            "default": true,
+            "type": "boolean"
+        },
+        "user_mapping_file_name": {
+            "title": "User Mapping File Name",
+            "type": "string"
+        },
+        "user_file": {
+            "$ref": "#/definitions/FileDefinition"
+        }
+    },
+    "required": [
+        "name",
+        "migration_task_type",
+        "group_map_path",
+        "user_mapping_file_name",
+        "user_file"
+    ],
+    "definitions": {
+        "FileDefinition": {
+            "title": "FileDefinition",
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "title": "File Name",
+                    "type": "string"
+                },
+                "suppressed": {
+                    "title": "Suppressed",
+                    "default": false,
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "title": "Staff Suppressed",
+                    "default": false,
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "title": "Service Point Id",
+                    "default": "",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "file_name"
+            ]
+        }
+    }
+}

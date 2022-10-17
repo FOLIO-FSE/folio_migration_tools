@@ -20,7 +20,7 @@ When you make edits to this document, make sure you update the Table of contents
   - [Create the release on Github](#create-the-release-on-github)
   - [Create release notes and change log using gren](#create-release-notes-and-change-log-using-gren)
   - [Publish package to pypi](#publish-package-to-pypi)
-    - [1. Up the release in setup.cfg](#1-up-the-release-in-setupcfg)
+    - [1. Up the release in pyproject.toml](#1-up-the-release-in-setupcfg)
     - [2. Build the package](#2-build-the-package)
     - [3. Push the file to pypi test and make a test installation](#3-push-the-file-to-pypi-test-and-make-a-test-installation)
     - [4. Push the release to pypi](#4-push-the-release-to-pypi)
@@ -72,7 +72,7 @@ If you are working based on a GitHub issue (which you should be), it is good pra
 ### 3.1. :adhesive_bandage: Check for vulnerabilities
 Run
 ```
-pipenv run safety check
+nox -rs safety
 ```
 and update any packages with a vulnerability.
 
@@ -86,13 +86,13 @@ The following command runs Flake8 with plugins on your code. It:
 ### 3.3. :test_tube: Run the entire tests suite.
 This is cruical for making sure nothing else has broken during your work
 ```
-pipenv run pytest -v --cov=./ --cov-report=xml --log-level=DEBUG --password PASSWORD --tenant_id fs09000000 --okapi_url https://okapi-LATEST_BUGFEST_URI --username USERNAME
+nox -rs tests -- https://okapi-LATEST_BUGFEST_URI TENANT_ID USERNAME PASSWORD
 ```
 
 ## 3.4. Make sure the code can run
 ```
 > cd src
-> pipenv run python3 -m folio_migration_tools -h
+> poetry run python3 -m folio_migration_tools -h
 
 ```
 should output
@@ -135,53 +135,43 @@ gren changelog --override
 ```
 
 ## Publish package to pypi
-### 1. Up the release in setup.cfg
-Open setup.cfg and apply the new version number
+### 1. Up the release in pyproject.toml
+Open pyproject.toml and apply the new version number
 ```
-version = 1.2.1
+version = "1.5.1"
 ```
 ### 2. Build the package
 ```
-python3 -m build
+poetry build
 ```
 Make sure one of the builds aligns with the version number you choosed above   
-Installing build: sudo apt install build-essential cmake python3-dev   
-```pipenv install build```   
-### 3. Push the file to pypi test and make a test installation
-Upload:
-```
-twine upload --repository testpypi dist/*
-```
-Test install 
-```
-pipenv install folio_migration_tools -i https://test.pypi.org/simple/
-```
-### 4. Push the release to pypi
+
+
+### 3. Push the release to pypi
 Run
 ```
-twine upload dist/*  
+poetry publish --username $PYPI_USERNAME --password $PYPI_PASSWORD
 ```
 and follow the instructions
 
-### 5. Finalize the release
+### 4. Finalize the release
 Save the file and commit (and push) the file back to main.
 ```
-(main) > git add setup.cfg
-(main) > git commit -m "version 1.2.1
+(main) > git add pyproject.toml
+(main) > git commit -m "version VERSION_NUMBER"
 (main) > git push
 ```
 
 # Python Coding standards and practices
 ## What to install
 ```
-> pipx install pre-commit 
+> pipx install pre-commit  (and run pre-commit install)
+> pipx install isort
+> pipx install nox
+> pipx install poetry
 > pipx install twine 
-> pipenv install flake8
-> pipenv install black
-> pipenv install flake8-bugbear
-> pipenv install flake8-bandit
-> pipenv install darglint
-> pipenv install safety
+> poetry shell
+> poetry install
 > npm install github-release-notes -g
 ```
 ## Important settings
@@ -224,7 +214,7 @@ https://cereblanco.medium.com/setup-black-and-isort-in-vscode-514804590bf9
 Pytest. Run the test suite against the latest bugfest release. Example call:
 
 ```
-pipenv run pytest -v --cov=./ --cov-report=xml --log-level=DEBUG --password PASSWORD --tenant_id fs09000000 --okapi_url https://okapi-bugfest-lotus.int.aws.folio.org --username USERNAME
+ nox -rs tests -- https://okapi-LATEST_BUGFEST_URI TENANT_ID USERNAME PASSWORD
 ```
 ### Running unit tests
 If you configure VS code properly (for example by using the vs code settings in this repository), you will be able to either run or debug your tests from the IDE itself. Just right-click the green triangle next to the test method and either choose Run test or Debug test

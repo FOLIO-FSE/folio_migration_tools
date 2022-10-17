@@ -9,9 +9,11 @@ from dateutil import tz
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FolioRelease
 
+utc = ZoneInfo("UTC")
+
 
 class LegacyRequest(object):
-    def __init__(self, legacy_request_dict, tenant_timezone=ZoneInfo("UTC"), row=0):
+    def __init__(self, legacy_request_dict, tenant_timezone=utc, row=0):
         # validate
         correct_headers = [
             "item_barcode",
