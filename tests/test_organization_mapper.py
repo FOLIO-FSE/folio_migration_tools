@@ -2,18 +2,17 @@ import json
 import logging
 
 import pytest
-
 from folio_uuid.folio_namespaces import FOLIONamespaces
+
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
-from folio_migration_tools.mapping_file_transformation.organization_mapper import (
-    OrganizationMapper,
-)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from folio_migration_tools.mapping_file_transformation.organization_mapper import (
+    OrganizationMapper,
+)
 from folio_migration_tools.test_infrastructure import mocked_classes
-
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
@@ -105,11 +104,6 @@ def test_basic_mapping(mapper, caplog):
     assert organization["emails"][0]["isPrimary"] == True
     assert organization["addresses"][0]["categories"] == ["returns"]
     assert organization["emails"][0]["categories"] == ["spt"]
-
-
-
-
-
 
 
 basic_organization_map = {
