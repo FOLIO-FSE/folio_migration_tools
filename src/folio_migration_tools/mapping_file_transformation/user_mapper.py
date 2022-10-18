@@ -225,11 +225,11 @@ class UserMapper(UserMapperBase):
             )
             return value
         # All other cases are mapped from legacy fields.
-        legacy_user_keys = list(get_legacy_user_keys(folio_prop_name, user_map["data"], i))
-        if not any(legacy_user_keys):
+        legacy_user_mappings = list(get_legacy_user_mappings(folio_prop_name, user_map["data"], i))
+        if not any(legacy_user_mappings):
             return ""
 
-        legacy_user_key = legacy_user_keys[0]
+        legacy_user_mapping = legacy_user_mappings[0]
 
         if folio_prop_name == "personal.addresses.id":
             return ""
@@ -240,7 +240,7 @@ class UserMapper(UserMapperBase):
                     "No Departments mapping set up. Set up a departments mapping file "
                     " or remove the mapping of the Departments field",
                 )
-            legacy_dept = legacy_user.get(legacy_user_key, "")
+            legacy_dept = self.get_legacy_value(legacy_user, legacy_user_mapping)
             gid = self.get_mapped_name(
                 self.departments_mapping,
                 legacy_user,
@@ -251,7 +251,7 @@ class UserMapper(UserMapperBase):
             self.migration_report.add(Blurbs.DepartmentsMapping, f"{legacy_dept} -> {gid}")
             return gid
         elif folio_prop_name == "patronGroup":
-            legacy_group = legacy_user.get(legacy_user_key, "")
+            legacy_group = self.get_legacy_value(legacy_user, legacy_user_mapping)
             if self.groups_mapping:
                 gid = self.get_mapped_name(
                     self.groups_mapping,
@@ -274,17 +274,19 @@ class UserMapper(UserMapperBase):
             "personal.dateOfBirth",
         ]:
             try:
-                if not legacy_user.get(legacy_user_key):
+                if not self.get_legacy_value(legacy_user, legacy_user_mapping):
                     return ""
-                format_date = parse(legacy_user.get(legacy_user_key), fuzzy=True)
+                format_date = parse(
+                    self.get_legacy_value(legacy_user, legacy_user_mapping), fuzzy=True
+                )
                 fmt_string = (
-                    f"{folio_prop_name}: {legacy_user.get(legacy_user_key)}"
+                    f"{folio_prop_name}: {self.get_legacy_value(legacy_user, legacy_user_mapping)}"
                     f" -> {format_date.isoformat()}"
                 )
                 self.migration_report.add(Blurbs.DateTimeConversions, fmt_string)
                 return format_date.isoformat()
             except Exception as ee:
-                v = legacy_user.get(legacy_user_key)
+                v = self.get_legacy_value(legacy_user, legacy_user_mapping)
                 logging.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
                 fmt_string = f"Parsing error! {folio_prop_name}: {v}. NOW() was returned"
                 self.migration_report.add(Blurbs.DateTimeConversions, fmt_string)
@@ -296,25 +298,40 @@ class UserMapper(UserMapperBase):
                 return user_map["addressTypes"][i]
             except (KeyError, IndexError):
                 return ""
-        elif legacy_user_keys:
-            if len(legacy_user_keys) > 1:
+        elif legacy_user_mappings:
+            if len(legacy_user_mappings) > 1:
                 self.migration_report.add(
-                    Blurbs.Details, f"{legacy_user_keys} concatenated into one string"
+                    Blurbs.Details, f"{legacy_user_mappings} concatenated into one string"
                 )
-            return " ".join(legacy_user.get(key, "").strip() for key in legacy_user_keys)
+            return " ".join(
+                self.get_legacy_value(legacy_user, mapping) for mapping in legacy_user_mappings
+            ).strip()
         else:
             return ""
 
+    def get_legacy_value(self, legacy_object: dict, mapping: dict):
+        original_value = legacy_object.get(mapping["legacy_field"], "").strip()
+        if not original_value and mapping.get("falback_legacy_field", ""):
+            self.migration_report.add(
+                Blurbs.AddedValueFromFallback,
+                (
+                    f"Added fallback value from {mapping['legacy_field']} instead of "
+                    f"{mapping['falback_legacy_field']}"
+                ),
+            )
+            return legacy_object.get(mapping.get("falback_legacy_field", ""), "")
+        return original_value
+
     def has_property(self, user, user_map, folio_prop_name):
-        user_key = next(
-            (
-                k["legacy_field"]
-                for k in user_map["data"]
-                if k["folio_field"].split("[")[0] == folio_prop_name
-            ),
+        user_mapping = next(
+            (k for k in user_map["data"] if k["folio_field"].split("[")[0] == folio_prop_name),
             "",
         )
-        return user_key and user_key not in ["", "Not mapped"] and user.get(user_key, "")
+        return (
+            user_mapping
+            and user_mapping["legacy_field"] not in ["", "Not mapped"]
+            and self.get_legacy_value(user, user_mapping)
+        )
 
     def legacy_property(self, user_map, folio_prop_name):
         if value := next(
@@ -342,9 +359,9 @@ def get_legacy__user_value(folio_prop_name, data, i):
     )
 
 
-def get_legacy_user_keys(folio_prop_name, data, i):
+def get_legacy_user_mappings(folio_prop_name, data, i):
     return (
-        k["legacy_field"]
+        k
         for k in data
         if k["folio_field"].replace(f"[{i}]", "") == folio_prop_name and k["legacy_field"].strip()
     )
