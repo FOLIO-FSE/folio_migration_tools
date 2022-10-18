@@ -479,7 +479,7 @@ def test_notes(caplog):
                 "description": "",
             },
             {
-                "folio_field": "domain",
+                "folio_field": "notes[0].domain",
                 "legacy_field": "user_note_title",
                 "value": "users",
                 "description": "",

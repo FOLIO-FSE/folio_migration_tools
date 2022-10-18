@@ -219,7 +219,7 @@ class UserMapper(UserMapperBase):
 
     def get_prop(self, legacy_user, user_map, folio_prop_name, i=0):
         # The value is set on the mapping. Return this instead of the default field
-        if value := get_legacy__user_value(folio_prop_name, user_map["data"], i):
+        if value := get_value_from_map(folio_prop_name, user_map["data"], i):
             self.migration_report.add(
                 Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
             )
@@ -309,19 +309,6 @@ class UserMapper(UserMapperBase):
         else:
             return ""
 
-    def get_legacy_value(self, legacy_object: dict, mapping: dict):
-        original_value = legacy_object.get(mapping["legacy_field"], "").strip()
-        if not original_value and mapping.get("falback_legacy_field", ""):
-            self.migration_report.add(
-                Blurbs.AddedValueFromFallback,
-                (
-                    f"Added fallback value from {mapping['legacy_field']} instead of "
-                    f"{mapping['falback_legacy_field']}"
-                ),
-            )
-            return legacy_object.get(mapping.get("falback_legacy_field", ""), "")
-        return original_value
-
     def has_property(self, user, user_map, folio_prop_name):
         user_mapping = next(
             (k for k in user_map["data"] if k["folio_field"].split("[")[0] == folio_prop_name),
@@ -347,7 +334,7 @@ class UserMapper(UserMapperBase):
         )
 
 
-def get_legacy__user_value(folio_prop_name, data, i):
+def get_value_from_map(folio_prop_name, data, i):
     return next(
         (
             k.get("value", "")

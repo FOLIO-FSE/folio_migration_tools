@@ -340,6 +340,19 @@ class MapperBase:
             and self.hrid_settings["items"]["startNumber"] == self.items_hrid_counter
         )
 
+    def get_legacy_value(self, legacy_object: dict, mapping: dict):
+        original_value = legacy_object.get(mapping["legacy_field"], "").strip()
+        if not original_value and mapping.get("falback_legacy_field", ""):
+            self.migration_report.add(
+                Blurbs.AddedValueFromFallback,
+                (
+                    f"Added fallback value from {mapping['legacy_field']} instead of "
+                    f"{mapping['falback_legacy_field']}"
+                ),
+            )
+            return legacy_object.get(mapping.get("falback_legacy_field", ""), "")
+        return original_value
+
     @staticmethod
     def validate_required_properties(
         legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
@@ -354,7 +367,7 @@ class MapperBase:
             required = (
                 schema.get("properties", {}).get("notes", {}).get("items", {}).get("required", [])
             )
-            for note in cleaned_folio_object["notes"]:
+            for note in cleaned_folio_object.get("notes", []):
                 missing.extend(MapperBase.list_missing(required, note))
 
         if any(missing):
