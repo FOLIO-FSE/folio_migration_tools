@@ -1,3 +1,4 @@
+import collections
 import json
 import logging
 import sys
@@ -82,6 +83,23 @@ class MapperBase:
         except Exception as ee:
             logging.error(ee, stack_info=True)
             raise ee from ee
+
+    def report_legacy_mapping_no_schema(self, legacy_object):
+        for field_name, value in legacy_object.items():
+            v = 1 if value else 0
+            if field_name not in self.mapped_legacy_fields:
+                self.mapped_legacy_fields[field_name] = [1, v]
+            else:
+                self.mapped_legacy_fields[field_name][0] += 1
+                self.mapped_legacy_fields[field_name][1] += v
+
+    def report_folio_mapping_no_schema(self, folio_object):
+        for field_name in flatten(folio_object):
+            if field_name not in self.mapped_folio_fields:
+                self.mapped_folio_fields[field_name] = [1, 1]
+            else:
+                self.mapped_folio_fields[field_name][0] += 1
+                self.mapped_folio_fields[field_name][1] += 1
 
     def reset_instance_hrid_counter(self):
         logging.info("Resetting Instances HRID settings to 1")
@@ -340,19 +358,6 @@ class MapperBase:
             and self.hrid_settings["items"]["startNumber"] == self.items_hrid_counter
         )
 
-    def get_legacy_value(self, legacy_object: dict, mapping: dict):
-        original_value = legacy_object.get(mapping["legacy_field"], "").strip()
-        if not original_value and mapping.get("falback_legacy_field", ""):
-            self.migration_report.add(
-                Blurbs.AddedValueFromFallback,
-                (
-                    f"Added fallback value from {mapping['legacy_field']} instead of "
-                    f"{mapping['falback_legacy_field']}"
-                ),
-            )
-            return legacy_object.get(mapping.get("falback_legacy_field", ""), "")
-        return original_value
-
     @staticmethod
     def validate_required_properties(
         legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
@@ -424,6 +429,17 @@ class MapperBase:
             folio_record["administrativeNotes"].append(
                 f"{MapperBase.legacy_id_template} {legacy_id}"
             )
+
+
+def flatten_2(d, parent_key="", sep="."):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.abc.MutableMapping):
+            items.extend(flatten(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
 
 def flatten(my_dict: dict, path=""):

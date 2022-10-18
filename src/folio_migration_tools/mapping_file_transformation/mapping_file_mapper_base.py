@@ -2,6 +2,7 @@ import csv
 import itertools
 import json
 import logging
+import re
 import uuid
 from abc import abstractmethod
 from functools import reduce
@@ -22,6 +23,7 @@ from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
+from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
 
 empty_vals = ["Not mapped", None, ""]
@@ -43,7 +45,6 @@ class MappingFileMapperBase(MapperBase):
         self.ignore_legacy_identifier = ignore_legacy_identifier
         self.schema = schema
         self.total_records = 0
-        self.folio_client = folio_client
         self.use_map = True  # Legacy
         self.record_map = record_map
         self.ref_data_dicts: Dict = {}
@@ -69,26 +70,19 @@ class MappingFileMapperBase(MapperBase):
             json.dumps(self.mapped_from_values, indent=4, sort_keys=True),
         )
         legacy_fields = set()
-        if statistical_codes_map:
-            self.statistical_codes_mapping = RefDataMapping(
-                self.folio_client,
-                "/statistical-codes",
-                "statisticalCodes",
-                statistical_codes_map,
-                "code",
-                Blurbs.StatisticalCodeMapping,
-            )
-            logging.info("Statistical codes mapping set up")
-        else:
-            self.statistical_codes_mapping = None
-            logging.info("Statistical codes map is not set up")
-        self.mapped_from_legacy_data = {}
+        self.setup_statistical_codes_map(statistical_codes_map)
+        self.mapped_from_legacy_data: dict = {}
+        self.legacy_user_mappings: dict = {}
         for k in self.record_map["data"]:
             if (
                 k["legacy_field"] not in self.empty_vals
                 # or k["folio_field"] != "legacyIdentifier"
                 or k["value"] not in self.empty_vals
             ):
+                clean_folio_field = re.sub(r"\[\d+\]", "", k["folio_field"])
+                self.legacy_user_mappings[k["folio_field"]] = list(
+                    self.get_legacy_user_mappings(clean_folio_field, self.record_map["data"])
+                )
                 legacy_fields.add(k["legacy_field"])
                 if not self.mapped_from_legacy_data.get(k["folio_field"]):
                     self.mapped_from_legacy_data[k["folio_field"]] = [k["legacy_field"]]
@@ -104,6 +98,21 @@ class MappingFileMapperBase(MapperBase):
             json.dumps(self.folio_keys, indent=4, sort_keys=True),
         )
         csv.register_dialect("tsv", delimiter="\t")
+
+    def setup_statistical_codes_map(self, statistical_codes_map):
+        if statistical_codes_map:
+            self.statistical_codes_mapping = RefDataMapping(
+                self.folio_client,
+                "/statistical-codes",
+                "statisticalCodes",
+                statistical_codes_map,
+                "code",
+                Blurbs.StatisticalCodeMapping,
+            )
+            logging.info("Statistical codes mapping set up")
+        else:
+            self.statistical_codes_mapping = None
+            logging.info("Statistical codes map is not set up")
 
     def setup_field_map(self, ignore_legacy_identifier):
         field_map = {}  # Map of folio_fields and source fields as an array
@@ -276,6 +285,27 @@ class MappingFileMapperBase(MapperBase):
             self.map_basic_props(legacy_object, schema_property_name, folio_object, index_or_id)
 
     @staticmethod
+    def get_legacy_value(legacy_object: dict, mapping: dict, migration_report: MigrationReport):
+        value = legacy_object.get(mapping["legacy_field"], "").strip()
+        if not value and mapping.get("fallback_legacy_field", ""):
+            migration_report.add(
+                Blurbs.FieldMappingDetails,
+                (
+                    f"Added fallback value from {mapping['legacy_field']} instead of "
+                    f"{mapping['fallback_legacy_field']}"
+                ),
+            )
+            value = legacy_object.get(mapping.get("fallback_legacy_field", ""), "").strip()
+        if value and mapping.get("rules", {}).get("replaceValues", {}):
+            if replaced_val := mapping["rules"]["replaceValues"].get(value, ""):
+                migration_report.add(
+                    Blurbs.FieldMappingDetails,
+                    (f"Replaced {value} in {mapping['legacy_field']} with {replaced_val}"),
+                )
+                return replaced_val
+        return value
+
+    @staticmethod
     def get_legacy_vals(legacy_item, legacy_item_keys):
         result_list = []
         for legacy_item_key in legacy_item_keys:
@@ -293,7 +323,7 @@ class MappingFileMapperBase(MapperBase):
         index_or_id,
         level: int,
     ):
-        temp_object = {}
+        temp_object: dict = {}
         for child_property_name, child_property in schema_property["properties"].items():
             sub_prop_path = f"{schema_property_name}.{child_property_name}"
             if "properties" in child_property:
@@ -305,7 +335,23 @@ class MappingFileMapperBase(MapperBase):
                     index_or_id,
                     level + 1,
                 )
-            elif child_property["type"] == "array":
+            elif (
+                child_property["type"] == "array"
+                and child_property.get("items", {}).get("type", "") == "object"
+                and child_property.get("items", {}).get("properties", "")
+            ):
+                self.map_objects_array_props(
+                    legacy_object,
+                    f"{schema_property_name}.{child_property_name}",
+                    child_property["items"]["properties"],
+                    folio_object,
+                    index_or_id,
+                    [],
+                )
+            elif (
+                child_property["type"] == "array"
+                and child_property.get("items", {}).get("type", "") == "string"
+            ):
                 self.map_string_array_props(
                     legacy_object,
                     f"{schema_property_name}.{child_property_name}",
@@ -329,34 +375,40 @@ class MappingFileMapperBase(MapperBase):
         required: list[str],
     ):
         resulting_array = []
-        keys_to_map = {k.split(".")[0] for k in self.folio_keys if k.startswith(f"{prop_name}[")}
-        for object_key in keys_to_map:
-            temp_object = {}
-            multi_field_props: List[str] = []
-            for prop in (
-                k for k, p in sub_properties.items() if not p.get("folio:isVirtual", False)
-            ):
-                prop_path = f"{object_key}.{prop}"
-                if prop_path in self.folio_keys:
-                    res = self.get_prop(legacy_object, prop_path, index_or_id)
-                    self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
+        i = 0
+        while True:
+            keys_to_map = {
+                k.split(".")[0] for k in self.folio_keys if k.startswith(f"{prop_name}[{i}")
+            }
+            if not any(keys_to_map):
+                break
+            for _ in keys_to_map:
+                temp_object = {}
+                multi_field_props: List[str] = []
+                for prop in (
+                    k for k, p in sub_properties.items() if not p.get("folio:isVirtual", False)
+                ):
+                    prop_path = f"{prop_name}[{i}].{prop}"
+                    if prop_path in self.folio_keys:
+                        res = self.get_prop(legacy_object, prop_path, index_or_id)
+                        self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
 
-                    if (
-                        isinstance(res, str)
-                        and self.library_configuration.multi_field_delimiter in res
-                    ):
-                        multi_field_props.append(prop)
-                    temp_object[prop] = res
-                else:
-                    for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
-                        res = self.get_prop(legacy_object, array_path, index_or_id)
-                        self.add_values_to_string_array(
-                            prop,
-                            temp_object,
-                            res,
-                            self.library_configuration.multi_field_delimiter,
-                        )
-
+                        if (
+                            isinstance(res, str)
+                            and self.library_configuration.multi_field_delimiter in res
+                        ):
+                            multi_field_props.append(prop)
+                        temp_object[prop] = res
+                    else:
+                        for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
+                            res = self.get_prop(legacy_object, array_path, index_or_id)
+                            self.add_values_to_string_array(
+                                prop,
+                                temp_object,
+                                res,
+                                self.library_configuration.multi_field_delimiter,
+                            )
+            i = i + 1
             if temp_object != {} and all(
                 (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
             ):
@@ -371,7 +423,7 @@ class MappingFileMapperBase(MapperBase):
                 else:
                     resulting_array.append(temp_object)
         if any(resulting_array):
-            folio_object[prop_name] = resulting_array
+            set_deep(folio_object, prop_name, resulting_array)
 
     @staticmethod
     def split_obj_by_delim(delimiter: str, folio_obj: dict, delimited_props: List[str]):
@@ -494,11 +546,21 @@ class MappingFileMapperBase(MapperBase):
 
         if folio_prop_name not in self.folio_keys:
             return False
-        legacy_keys = self.field_map.get(folio_prop_name, [])
+        legacy_mappings = self.legacy_user_mappings.get(folio_prop_name, [])
         return (
-            any(legacy_keys)
-            and any(k not in empty_vals for k in legacy_keys)
-            and any(legacy_object.get(legacy_key, "") for legacy_key in legacy_keys)
+            any(legacy_mappings)
+            and any(legacy_mapping not in empty_vals for legacy_mapping in legacy_mappings)
+            and any(
+                legacy_object.get(legacy_mapping["legacy_field"], "")
+                or legacy_object.get(legacy_mapping["fallback_legacy_field"], "")
+                for legacy_mapping in legacy_mappings
+            )
+        )
+
+    @staticmethod
+    def get_legacy_user_mappings(folio_prop_name, data):
+        return (
+            k for k in data if k["folio_field"] == folio_prop_name and k["legacy_field"].strip()
         )
 
     def legacy_basic_property(self, folio_prop):

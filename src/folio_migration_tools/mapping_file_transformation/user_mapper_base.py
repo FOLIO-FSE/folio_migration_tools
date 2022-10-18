@@ -39,25 +39,6 @@ class UserMapperBase(MapperBase):
             mapped_per = "{:.0%}".format(max(mp, 0))
             print(f"{k} | {mapped_per} | {v}")
 
-    def report_legacy_mapping(self, legacy_object):
-        for field_name, value in legacy_object.items():
-            v = 1 if value else 0
-            if field_name not in self.mapped_legacy_fields:
-                self.mapped_legacy_fields[field_name] = [1, v]
-            else:
-                self.mapped_legacy_fields[field_name][0] += 1
-                self.mapped_legacy_fields[field_name][1] += v
-
-    def report_folio_mapping(self, folio_object):
-        flat_object = flatten(folio_object)
-        for field_name, value in flat_object.items():
-            v = 1 if value else 0
-            if field_name not in self.mapped_folio_fields:
-                self.mapped_folio_fields[field_name] = [1, v]
-            else:
-                self.mapped_folio_fields[field_name][0] += 1
-                self.mapped_folio_fields[field_name][1] += v
-
     def instantiate_user(self, legacy_id):
         if not legacy_id:
             raise TransformationProcessError(
