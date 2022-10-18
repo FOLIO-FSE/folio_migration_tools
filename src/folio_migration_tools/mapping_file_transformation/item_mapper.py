@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 from datetime import datetime
-from typing import Dict, Set
+from typing import Set
 from uuid import uuid4
 
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -50,7 +50,6 @@ class ItemMapper(MappingFileMapperBase):
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
         self.unique_barcodes: Set[str] = set()
-        self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         self.status_mapping = {}
         if temporary_loan_type_mapping:

@@ -120,9 +120,13 @@ class UserTransformer(MigrationTaskBase):
                                 logging.info("First Legacy  user")
                                 logging.info(json.dumps(legacy_user, indent=4))
                                 print_email_warning()
-                            folio_user = self.mapper.do_map(
+                            folio_user, index_or_id = self.mapper.do_map(
                                 legacy_user,
                                 legacy_user.get(self.legacy_property_name),
+                                FOLIONamespaces.users,
+                            )
+                            folio_user = self.mapper.perform_additional_mapping(
+                                legacy_user, folio_user, index_or_id
                             )
                             self.clean_user(folio_user)
                             results_file.write(f"{json.dumps(folio_user)}\n")

@@ -46,7 +46,6 @@ class CoursesMapper(MappingFileMapperBase):
             library_configuration,
         )
         self.course_map = course_map
-        self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         if terms_map:
             self.terms_map = RefDataMapping(
