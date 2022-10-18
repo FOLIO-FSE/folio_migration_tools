@@ -307,10 +307,15 @@ class OrganizationMapper(MappingFileMapperBase):
 
             for property_name_level1, property_level1 in object_schema["properties"].items():
                 
-                # Treat UUIDs like strings (the FOLIO way)
+                # For now, treat references to UUIDs like strings
+                # It's not great practice, but it's the way FOLIO mostly handles it
                 if "../../common/schemas/uuid.json" in property_level1.get(
                     "$ref", ""):
                     property_level1["type"] = "string"
+
+                elif property_level1.get("type") == "array" and property_level1.get("items").get(
+                    "$ref") == "../../common/schemas/uuid.json":
+                    property_level1["items"]["type"] = "string"
 
                 # Report and discard unhandled properties
                 elif (
@@ -334,11 +339,6 @@ class OrganizationMapper(MappingFileMapperBase):
                     req.raise_for_status()
 
                     property_level1 = dict(property_level1, **json.loads(req.text))
-
-                # Handle arrays of items properties
-                elif property_level1.get("type") == "array" and property_level1.get("items").get(
-                    "$ref") == "../../common/schemas/uuid.json":
-                    property_level1["items"]["type"] = "string"
                     
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
                     "$ref"
