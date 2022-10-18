@@ -160,6 +160,21 @@ def folio_get_all(ref_data_path, array_name, query, limit):
                 "description": "FALLBACK",
             },
         ]
+    elif ref_data_path == "/organizations-storage/categories":
+        return [
+            {
+                "id": "76b06c55-d95a-4ae0-a47d-5708f4e5e166",
+                "value": "Returns"
+            },
+            {
+                "id": "7532e5ab-9812-496c-ab77-4fbb6a7e5dbf",
+                "value": "Support"
+            },
+            {
+                "id": "62042758-5266-472a-a3e9-ea1ca0ccf056",
+                "value": "General"
+            }
+        ]
     return {}
 
 

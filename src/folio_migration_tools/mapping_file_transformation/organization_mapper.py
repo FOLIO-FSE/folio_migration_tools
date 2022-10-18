@@ -2,16 +2,19 @@ import json
 import logging
 import os
 import sys
+
 import requests
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
 from requests.exceptions import HTTPError
 
-from folioclient import FolioClient
-from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.report_blurbs import Blurbs
 
 
@@ -19,12 +22,16 @@ class OrganizationMapper(MappingFileMapperBase):
     def __init__(
         self,
         folio_client: FolioClient,
-        organization_map: dict,
-        categories_map,
         library_configuration: LibraryConfiguration,
+        organization_map: dict,
+        address_categories_map,
+        email_categories_map,
+        phone_categories_map,
+        types_map
+
     ):
 
-        # Get organization schema
+        # Build composite organization schema
         organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
         )
@@ -38,13 +45,55 @@ class OrganizationMapper(MappingFileMapperBase):
             library_configuration,
         )
 
+        # Set up reference data maps
+        self.use_map = True
+
+        categories_shared_args = (
+            self.folio_client,
+            "/organizations-storage/categories",
+            "categories",
+            email_categories_map,
+            "value",
+            Blurbs.CategoriesMapping,
+            )
+
+        if address_categories_map:
+            self.address_categories_map = RefDataMapping(
+                *categories_shared_args
+            )
+        else:
+            self.address_categories_map = None
+
+        if email_categories_map:
+            self.email_categories_map = RefDataMapping(
+                *categories_shared_args
+            )        
+        else:
+            self.email_categories_map = None
+
+        if phone_categories_map:
+            self.phone_categories_map = RefDataMapping(
+                *categories_shared_args
+            )
+        else:
+            self.phone_categories_map = None
+
+        if phone_categories_map:
+            self.phone_categories_map = RefDataMapping(
+                *categories_shared_args
+            )
+        else:
+            self.phone_categories_map = None
+
     def get_prop(self, legacy_organization, folio_prop_name, index_or_id):
+        value_tuple = (legacy_organization, index_or_id, folio_prop_name, )
+
         if not self.use_map:
             return legacy_organization[folio_prop_name]
 
         legacy_organization_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
 
-        # If there is a value mapped, return that one
+        # If there is a verbatim "value" set in the object map, return that one
         if len(legacy_organization_keys) == 1 and folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
             self.migration_report.add(
@@ -55,9 +104,16 @@ class OrganizationMapper(MappingFileMapperBase):
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_organization, legacy_organization_keys
         )
-
         legacy_value = " ".join(legacy_values).strip()
 
+        if folio_prop_name == "addresses[0].categories[0]":
+            return self.get_mapped_value(
+                self.address_categories_map,
+                *value_tuple,
+                False,
+            )
+
+        # What dores the below do?
         if any(legacy_organization_keys):
             return legacy_value
         else:

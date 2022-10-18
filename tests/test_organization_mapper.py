@@ -42,9 +42,9 @@ def mapper(pytestconfig) -> OrganizationMapper:
     password = "password"  # noqa: S105
 
     print("init")
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio_client = mocked_classes.mocked_folio_client()
 
-    lib = LibraryConfiguration(
+    lib_config = LibraryConfiguration(
         okapi_url=okapi_url,
         tenant_id=tenant_id,
         okapi_username=username,
@@ -56,12 +56,20 @@ def mapper(pytestconfig) -> OrganizationMapper:
         base_folder="/",
         multi_field_delimiter="^-^"
     )
-    
-    categories_map = [
-        {"category": "spt", "folio_name": "Support"},
-        {"category": "*", "folio_name": "General"},
+
+    address_categories_map = [
+        {"address_categories": "rt", "folio_value": "Returns"},
+        {"address_categories": "*", "folio_value": "General"},
     ]
-    return OrganizationMapper(mock_folio, basic_organization_map, categories_map, lib)
+
+    email_categories_map = [
+        {"email_categories": "tspt", "folio_value": "Technical Support"},
+        {"email_categories": "mspt", "folio_value": "Moral Support"},
+        {"email_categories": "*", "folio_value": "General"},
+    ]
+
+    return OrganizationMapper(
+        mock_folio_client, lib_config, basic_organization_map, address_categories_map, email_categories_map)
 
 
 def test_basic_mapping(mapper, caplog):
@@ -70,8 +78,9 @@ def test_basic_mapping(mapper, caplog):
         "vendor_code": "AbeBooks",
         "ACCTNUM": "aha112233",
         "VENNAME": "Abe Books",
-        "EMAIL": "buyertech@abebooks.com",
-        "catagory": "spt",
+        "EMAIL": "email1@abebooks.com",
+        "EMAIL2": "email2@abebooks.com",
+        "email_categories": "spt",
         "PHONE NUM": "123-456",
         "Alt name type": "Nickname",
         "Alternative Names": "Abby",
@@ -79,6 +88,7 @@ def test_basic_mapping(mapper, caplog):
         "org_note": "Good stuff!",
         "address_line_1": "Suite 500 - 655 Typee Rd",
         "address_city": "Victoria",
+        "address_categories": "rt",
         "tp": "Consortium",
         "tgs": "A, B, C"
     }
@@ -100,10 +110,14 @@ def test_basic_mapping(mapper, caplog):
 
     assert organization["name"] == "Abe Books"
     # assert organization["type"] == "Consortium"
-    assert organization["emails"][0]["value"] == "buyertech@abebooks.com"
-    assert organization["emails"][0]["isPrimary"] == True
-    assert organization["addresses"][0]["categories"] == ["returns"]
-    assert organization["emails"][0]["categories"] == ["spt"]
+    assert organization["emails"][0]["value"] == "email1@abebooks.com"
+    assert organization["emails"][0]["isPrimary"]
+    assert organization["emails"][0]["categories"] == ["rt"]
+    assert organization["emails"][1]["value"] == "email2@abebooks.com"
+    assert not organization["emails"][1]["isPrimary"]
+    assert organization["emails"][1]["categories"] == ["spt"]
+    assert organization["addresses"][0]["categories"] == ["Returns"]
+
 
 
 basic_organization_map = {
@@ -122,9 +136,9 @@ basic_organization_map = {
     },
     {
         "folio_field": "addresses[0].categories[0]",
-        "legacy_field": "",
-        "value": "returns",
-        "description": ""
+        "legacy_field": "address_categories",
+        "value": "",
+        "description": "Use ref data mapping"
     },
     {
         "folio_field": "addresses[0].city",
@@ -164,8 +178,8 @@ basic_organization_map = {
     },
     {
         "folio_field": "emails[0].categories[0]",
-        "legacy_field": "category",
-        "value": "",
+        "legacy_field": "",
+        "value": "Claims",
         "description": ""
     },
     {
@@ -177,6 +191,24 @@ basic_organization_map = {
     {
         "folio_field": "emails[0].value",
         "legacy_field": "EMAIL",
+        "value": "",
+        "description": ""
+    },
+    {
+        "folio_field": "emails[1].isPrimary",
+        "legacy_field": "Not mapped",
+        "value": False,
+        "description": ""
+    },
+    {
+        "folio_field": "emails[1].value",
+        "legacy_field": "EMAIL2",
+        "value": "",
+        "description": ""
+    },
+        {
+        "folio_field": "emails[1].categories[0]",
+        "legacy_field": "email_categories",
         "value": "",
         "description": ""
     },
