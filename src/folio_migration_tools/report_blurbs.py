@@ -9,6 +9,7 @@ class ReportSection(Enum):
 
 
 class Blurbs:
+    AddedValueFromFallback = ("Added value from fallback field", "")
     LeaderManipulation = ("Leader manipulation", "")
     TermsMapping = ("Terms Mapping", "Reference data mapping for Terms.")
     DateTimeConversions = (
