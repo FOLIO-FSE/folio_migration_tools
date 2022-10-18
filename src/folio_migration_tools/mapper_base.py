@@ -345,13 +345,18 @@ class MapperBase:
         legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
     ):
         cleaned_folio_object = MapperBase.clean_none_props(folio_object)
-        required = schema.get("required", [])
+        required = []
         missing = []
-        for required_prop in required:
-            if required_prop not in cleaned_folio_object:
-                missing.append(f"Missing: {required_prop}")
-            elif not cleaned_folio_object[required_prop]:
-                missing.append(f"Empty: {required_prop}")
+        if object_type != FOLIONamespaces.note:
+            required = schema.get("required", [])
+            missing = list(MapperBase.list_missing(required, cleaned_folio_object))
+        else:
+            required = (
+                schema.get("properties", {}).get("notes", {}).get("items", {}).get("required", [])
+            )
+            for note in cleaned_folio_object["notes"]:
+                missing.extend(MapperBase.list_missing(required, note))
+
         if any(missing):
             raise TransformationRecordFailedError(
                 legacy_id,
@@ -360,6 +365,14 @@ class MapperBase:
             )
         cleaned_folio_object.pop("type", None)
         return cleaned_folio_object
+
+    @staticmethod
+    def list_missing(required: list, cleaned_folio_object: dict):
+        for required_prop in required:
+            if required_prop not in cleaned_folio_object:
+                yield f"Missing: {required_prop}"
+            elif not cleaned_folio_object[required_prop]:
+                yield f"Empty: {required_prop}"
 
     @staticmethod
     def clean_none_props(d: dict):
