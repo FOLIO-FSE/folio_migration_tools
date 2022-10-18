@@ -27,8 +27,7 @@ class OrganizationMapper(MappingFileMapperBase):
         address_categories_map,
         email_categories_map,
         phone_categories_map,
-        types_map
-
+        organization_types_map,
     ):
 
         # Build composite organization schema
@@ -47,46 +46,20 @@ class OrganizationMapper(MappingFileMapperBase):
 
         # Set up reference data maps
         self.use_map = True
-
-        categories_shared_args = (
-            self.folio_client,
-            "/organizations-storage/categories",
-            "categories",
+        self.set_up_reference_data_mapping(
+            address_categories_map,
             email_categories_map,
-            "value",
-            Blurbs.CategoriesMapping,
-            )
+            phone_categories_map,
+            organization_types_map,
+        )
 
-        if address_categories_map:
-            self.address_categories_map = RefDataMapping(
-                *categories_shared_args
-            )
-        else:
-            self.address_categories_map = None
-
-        if email_categories_map:
-            self.email_categories_map = RefDataMapping(
-                *categories_shared_args
-            )        
-        else:
-            self.email_categories_map = None
-
-        if phone_categories_map:
-            self.phone_categories_map = RefDataMapping(
-                *categories_shared_args
-            )
-        else:
-            self.phone_categories_map = None
-
-        if phone_categories_map:
-            self.phone_categories_map = RefDataMapping(
-                *categories_shared_args
-            )
-        else:
-            self.phone_categories_map = None
-
+    # Commence the mapping work
     def get_prop(self, legacy_organization, folio_prop_name, index_or_id):
-        value_tuple = (legacy_organization, index_or_id, folio_prop_name, )
+        value_tuple = (
+            legacy_organization,
+            index_or_id,
+            folio_prop_name,
+        )
 
         if not self.use_map:
             return legacy_organization[folio_prop_name]
@@ -106,9 +79,31 @@ class OrganizationMapper(MappingFileMapperBase):
         )
         legacy_value = " ".join(legacy_values).strip()
 
+        # Perfrom reference data mappings
         if folio_prop_name == "addresses[0].categories[0]":
             return self.get_mapped_value(
                 self.address_categories_map,
+                *value_tuple,
+                False,
+            )
+
+        if folio_prop_name == "emails[0].categories[0]":
+            return self.get_mapped_value(
+                self.email_categories_map,
+                *value_tuple,
+                False,
+            )
+
+        if folio_prop_name == "phoneNumbers[0].categories[0]":
+            return self.get_mapped_value(
+                self.phone_categories_map,
+                *value_tuple,
+                False,
+            )
+
+        if folio_prop_name == "organizationTypes":
+            return self.get_mapped_value(
+                self.organization_types_map,
                 *value_tuple,
                 False,
             )
@@ -119,6 +114,63 @@ class OrganizationMapper(MappingFileMapperBase):
         else:
             # edge case
             return ""
+
+    def set_up_reference_data_mapping(
+        self,
+        address_categories_map,
+        email_categories_map,
+        phone_categories_map,
+        organization_types_map,
+    ):
+        """
+
+        Args:
+            address_categories_map (_type_): _description_
+            email_categories_map (_type_): _description_
+            phone_categories_map (_type_): _description_
+            organization_types_map (_type_): _description_
+        """
+
+        categories_shared_args = (
+            self.folio_client,
+            "/organizations-storage/categories",
+            "categories",
+        )
+
+        if address_categories_map:
+            self.address_categories_map = RefDataMapping(
+                *categories_shared_args,
+                address_categories_map, "value", Blurbs.CategoriesMapping
+            )
+        else:
+            self.address_categories_map = None
+
+        if email_categories_map:
+            self.email_categories_map = RefDataMapping(
+                *categories_shared_args,
+                email_categories_map, "value", Blurbs.CategoriesMapping)
+        else:
+            self.email_categories_map = None
+
+        if phone_categories_map:
+            self.phone_categories_map = RefDataMapping(
+                *categories_shared_args,
+                phone_categories_map, "value", Blurbs.CategoriesMapping
+            )
+        else:
+            self.phone_categories_map = None
+
+        if organization_types_map:
+            self.organization_types_map = RefDataMapping(
+                self.folio_client,
+                "/organizations-storage/organization-types",
+                "organizationTypes",
+                organization_types_map,
+                "name",
+                Blurbs.OrganizationTypeMapping,
+            )
+        else:
+            self.phone_categories_map = None
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
@@ -254,9 +306,14 @@ class OrganizationMapper(MappingFileMapperBase):
         try:
 
             for property_name_level1, property_level1 in object_schema["properties"].items():
+                
+                # Treat UUIDs like strings (the FOLIO way)
+                if "../../common/schemas/uuid.json" in property_level1.get(
+                    "$ref", ""):
+                    property_level1["type"] = "string"
 
                 # Report and discard unhandled properties
-                if (
+                elif (
                     property_level1.get("type") not in supported_types
                     or "../" in property_level1.get("$ref", "")
                     or "../" in property_level1.get("items", {}).get("$ref", "")
@@ -279,6 +336,10 @@ class OrganizationMapper(MappingFileMapperBase):
                     property_level1 = dict(property_level1, **json.loads(req.text))
 
                 # Handle arrays of items properties
+                elif property_level1.get("type") == "array" and property_level1.get("items").get(
+                    "$ref") == "../../common/schemas/uuid.json":
+                    property_level1["items"]["type"] = "string"
+                    
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
                     "$ref"
                 ):

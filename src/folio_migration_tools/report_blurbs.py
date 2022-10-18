@@ -11,7 +11,9 @@ class ReportSection(Enum):
 class Blurbs:
     LeaderManipulation = ("Leader manipulation", "")
     TermsMapping = ("Terms Mapping", "Reference data mapping for Terms.")
-    CategoriesMapping = ("Categories Mapping", "Reference data mapping for  Categories assigned to addresses, emails, and phones numbers.")
+    CategoriesMapping = ("Organization Contact Information Categories Mapping", "Reference data mapping for Categories assigned to Organization contacts, addresses, emails, and phones numbers.")
+    OrganizationTypeMapping = ("Organization Type Mapping", "Reference data mapping for Organization types.")
+
     DateTimeConversions = (
         "DateTime conversions",
         "Some date and date time strings are converted to UTC DateTime objects and then printed accoding to ISO standard.",

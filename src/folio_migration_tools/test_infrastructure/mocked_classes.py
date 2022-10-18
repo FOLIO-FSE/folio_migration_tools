@@ -173,7 +173,27 @@ def folio_get_all(ref_data_path, array_name, query, limit):
             {
                 "id": "62042758-5266-472a-a3e9-ea1ca0ccf056",
                 "value": "General"
+            },
+            {
+                "id": "93042758-5266-472a-a3e9-ea1ca0ccf056",
+                "value": "Technical Support"
+            },
+            {
+                "id": "87042758-5266-472a-a3e9-ea1ca0ccf056",
+                "value": "Moral Support"
             }
+        ]
+        
+    elif ref_data_path == "/organizations-storage/organization-types":
+        return [
+            {
+                "id": "76b06c55-d95a-4ae0-a47d-5708f4e5e166",
+                "name": "Consortium"
+            },
+            {
+                "id": "7532e5ab-9812-496c-ab77-4fbb6a7e5dbf",
+                "name": "General"
+            },
         ]
     return {}
 

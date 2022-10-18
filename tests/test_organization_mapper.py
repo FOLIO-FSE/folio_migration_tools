@@ -20,6 +20,7 @@ LOGGER.propagate = True
 
 # Test inheritance and schema
 
+
 def test_subclass_inheritance():
     assert issubclass(OrganizationMapper, MappingFileMapperBase)
 
@@ -33,6 +34,7 @@ def test_fetch_acq_schemas_from_github_happy_path():
 
 
 # Mock mapper object
+
 
 @pytest.fixture(scope="module")
 def mapper(pytestconfig) -> OrganizationMapper:
@@ -54,7 +56,7 @@ def mapper(pytestconfig) -> OrganizationMapper:
         log_level_debug=False,
         iteration_identifier="I have no clue",
         base_folder="/",
-        multi_field_delimiter="^-^"
+        multi_field_delimiter="^-^",
     )
 
     address_categories_map = [
@@ -64,12 +66,28 @@ def mapper(pytestconfig) -> OrganizationMapper:
 
     email_categories_map = [
         {"email_categories": "tspt", "folio_value": "Technical Support"},
-        {"email_categories": "mspt", "folio_value": "Moral Support"},
         {"email_categories": "*", "folio_value": "General"},
     ]
 
+    phone_categories_map = [
+        {"phone_categories": "crt", "folio_value": "Moral Support"},
+        {"phone_categories": "*", "folio_value": "General"},
+    ]
+
+    organization_types_map = [
+        {"organization_types": "cst", "folio_name": "Consortium"},
+        {"organization_types": "*", "folio_name": "General"},
+    ]
+
     return OrganizationMapper(
-        mock_folio_client, lib_config, basic_organization_map, address_categories_map, email_categories_map)
+        mock_folio_client,
+        lib_config,
+        basic_organization_map,
+        address_categories_map,
+        email_categories_map,
+        phone_categories_map,
+        organization_types_map,
+    )
 
 
 def test_basic_mapping(mapper, caplog):
@@ -79,9 +97,10 @@ def test_basic_mapping(mapper, caplog):
         "ACCTNUM": "aha112233",
         "VENNAME": "Abe Books",
         "EMAIL": "email1@abebooks.com",
+        "email_categories": "aspt",
         "EMAIL2": "email2@abebooks.com",
-        "email_categories": "spt",
         "PHONE NUM": "123-456",
+        "phone_categories": "mspt",
         "Alt name type": "Nickname",
         "Alternative Names": "Abby",
         "status": "Active",
@@ -90,7 +109,8 @@ def test_basic_mapping(mapper, caplog):
         "address_city": "Victoria",
         "address_categories": "rt",
         "tp": "Consortium",
-        "tgs": "A, B, C"
+        "tgs": "A, B, C",
+        "organization_types": "cst",
     }
 
     res = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
@@ -109,174 +129,155 @@ def test_basic_mapping(mapper, caplog):
     # organization = generated_objects["organization"]
 
     assert organization["name"] == "Abe Books"
-    # assert organization["type"] == "Consortium"
+    assert organization["organizationTypes"] == "76b06c55-d95a-4ae0-a47d-5708f4e5e166"
     assert organization["emails"][0]["value"] == "email1@abebooks.com"
     assert organization["emails"][0]["isPrimary"]
-    assert organization["emails"][0]["categories"] == ["rt"]
+    assert organization["emails"][0]["categories"] == "93042758-5266-472a-a3e9-ea1ca0ccf056"
     assert organization["emails"][1]["value"] == "email2@abebooks.com"
     assert not organization["emails"][1]["isPrimary"]
-    assert organization["emails"][1]["categories"] == ["spt"]
-    assert organization["addresses"][0]["categories"] == ["Returns"]
+    assert organization["emails"][1]["categories"] == [""]
+    assert organization["addresses"][0]["categories"] == "76b06c55-d95a-4ae0-a47d-5708f4e5e166"
+    assert organization["phoneNumbers"][0]["categories"] == "87042758-5266-472a-a3e9-ea1ca0ccf056"
 
 
 
 basic_organization_map = {
     "data": [
-    {
-        "folio_field": "accounts[0].accountNo",
-        "legacy_field": "ACCTNUM",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "addresses[0].addressLine1",
-        "legacy_field": "address_line_1",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "addresses[0].categories[0]",
-        "legacy_field": "address_categories",
-        "value": "",
-        "description": "Use ref data mapping"
-    },
-    {
-        "folio_field": "addresses[0].city",
-        "legacy_field": "address_city",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "addresses[0].isPrimary",
-        "legacy_field": "",
-        "value": True,
-        "description": ""
-    },
-    {
-        "folio_field": "addresses[0].stateRegion",
-        "legacy_field": "address_state",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "addresses[0].zipCode",
-        "legacy_field": "address_zip",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "aliases[0].description",
-        "legacy_field": "Alt name type",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "aliases[0].value",
-        "legacy_field": "Alternative Names",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "emails[0].categories[0]",
-        "legacy_field": "",
-        "value": "Claims",
-        "description": ""
-    },
-    {
-        "folio_field": "emails[0].isPrimary",
-        "legacy_field": "Not mapped",
-        "value": True,
-        "description": ""
-    },
-    {
-        "folio_field": "emails[0].value",
-        "legacy_field": "EMAIL",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "emails[1].isPrimary",
-        "legacy_field": "Not mapped",
-        "value": False,
-        "description": ""
-    },
-    {
-        "folio_field": "emails[1].value",
-        "legacy_field": "EMAIL2",
-        "value": "",
-        "description": ""
-    },
         {
-        "folio_field": "emails[1].categories[0]",
-        "legacy_field": "email_categories",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "isVendor",
-        "legacy_field": "Not mapped",
-        "value": True,
-        "description": ""
-    },
-    {
-        "folio_field": "legacyIdentifier",
-        "legacy_field": "vendor_code",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "name",
-        "legacy_field": "VENNAME",
-        "value": "",
-        "description": ""
-    },
+            "folio_field": "accounts[0].accountNo",
+            "legacy_field": "ACCTNUM",
+            "value": "",
+            "description": "",
+        },
         {
-        "folio_field": "code",
-        "legacy_field": "vendor_code",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "phoneNumbers[0].categories[0]",
-        "legacy_field": "Not mapped",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "phoneNumbers[0].isPrimary",
-        "legacy_field": "Not mapped",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "phoneNumbers[0].phoneNumber",
-        "legacy_field": "PHONE NUM",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "phoneNumbers[0].type",
-        "legacy_field": "Not mapped",
-        "value": "Mobile",
-        "description": ""
-    },
-    {
-        "folio_field": "status",
-        "legacy_field": "status",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "tags.tagList[0]",
-        "legacy_field": "tgs",
-        "value": "",
-        "description": ""
-    },
-    {
-        "folio_field": "type",
-        "legacy_field": "tp",
-        "value": "",
-        "description": ""
-    }
+            "folio_field": "addresses[0].addressLine1",
+            "legacy_field": "address_line_1",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "addresses[0].categories[0]",
+            "legacy_field": "address_categories",
+            "value": "",
+            "description": "Use ref data mapping",
+        },
+        {
+            "folio_field": "addresses[0].city",
+            "legacy_field": "address_city",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "addresses[0].isPrimary",
+            "legacy_field": "",
+            "value": True,
+            "description": "",
+        },
+        {
+            "folio_field": "addresses[0].stateRegion",
+            "legacy_field": "address_state",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "addresses[0].zipCode",
+            "legacy_field": "address_zip",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "aliases[0].description",
+            "legacy_field": "Alt name type",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "aliases[0].value",
+            "legacy_field": "Alternative Names",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "emails[0].categories[0]",
+            "legacy_field": "email_categories",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "emails[0].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": True,
+            "description": "",
+        },
+        {
+            "folio_field": "emails[0].value",
+            "legacy_field": "EMAIL",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "emails[1].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": False,
+            "description": "",
+        },
+        {
+            "folio_field": "emails[1].value",
+            "legacy_field": "EMAIL2",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "emails[1].categories[0]",
+            "legacy_field": "Not mapped",
+            "value": "",
+            "description": "If we have multiple email addresses, how can that be mapped?",
+        },
+        {
+            "folio_field": "isVendor",
+            "legacy_field": "Not mapped",
+            "value": True,
+            "description": "",
+        },
+        {
+            "folio_field": "legacyIdentifier",
+            "legacy_field": "vendor_code",
+            "value": "",
+            "description": "",
+        },
+        {"folio_field": "name", "legacy_field": "VENNAME", "value": "", "description": ""},
+        {"folio_field": "code", "legacy_field": "vendor_code", "value": "", "description": ""},
+        {
+            "folio_field": "phoneNumbers[0].categories[0]",
+            "legacy_field": "phone_categories_map",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "phoneNumbers[0].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "phoneNumbers[0].phoneNumber",
+            "legacy_field": "PHONE NUM",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "phoneNumbers[0].type",
+            "legacy_field": "Not mapped",
+            "value": "Mobile",
+            "description": "",
+        },
+        {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
+        {"folio_field": "tags.tagList[0]", "legacy_field": "tgs", "value": "", "description": ""},
+        {
+            "folio_field": "organizationTypes",
+            "legacy_field": "organization_types",
+            "value": "",
+            "description": "",
+        },
     ]
 }
