@@ -1863,6 +1863,7 @@ def test_set_default():
     d1["level1"]["level2"].setdefault("papa", 2)
     assert d1["level1"]["level2"] == {"apa": 1, "papa": 2}
 
+
 def test_get_prop_multiple_legacy_identifiers_only_one():
     record_map = {
         "data": [
