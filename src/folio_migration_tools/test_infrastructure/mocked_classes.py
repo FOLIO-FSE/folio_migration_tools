@@ -141,7 +141,7 @@ def setup_ref_data_from_github(mocked_folio):
     return mocked_folio
 
 
-def folio_get_all(ref_data_path, array_name, query, limit):
+def folio_get_all(ref_data_path, array_name, query, limit=10):
     if ref_data_path == "/coursereserves/terms":
         return [
             {"name": "Fall 2022", "id": "42093be3-d1e7-4bb6-b2b9-18e153d109b2"},
@@ -186,6 +186,10 @@ def folio_get_all(ref_data_path, array_name, query, limit):
                 "code": "fb",
             },
         ]
+    elif ref_data_path == "/users" and query == '?query=(externalSystemId=="Some external id")':
+        res = [{"id": "some id", "barcode": "some barcode", "patronGroup": "some group"}]
+        return iter(res)
+
     return {}
 
 
