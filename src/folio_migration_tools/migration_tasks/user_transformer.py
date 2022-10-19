@@ -27,6 +27,7 @@ class UserTransformer(MigrationTaskBase):
         use_group_map: Optional[bool] = True
         user_mapping_file_name: str
         user_file: FileDefinition
+        remove_id_and_request_preferences: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:

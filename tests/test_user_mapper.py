@@ -41,6 +41,7 @@ def test_basic():
     legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1"}
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -54,6 +55,45 @@ def test_basic():
     assert folio_user["personal"]["preferredContactTypeId"] == "Email"
     assert folio_user["active"] is True
     assert folio_user["requestPreference"]["userId"] == folio_user["id"]
+
+
+def test_basic_turn_off_id_and_request_preferences():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1"}
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = True
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+
+    assert "id" not in folio_user
+    assert "requestPreference" not in folio_user
 
 
 def test_one_to_one_group_mapping():
@@ -93,6 +133,7 @@ def test_one_to_one_group_mapping():
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -144,6 +185,7 @@ def test_ref_data_group_mapping():
     ]
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(
@@ -197,6 +239,7 @@ def test_ref_data_departments_mapping():
     ]
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(
@@ -246,6 +289,7 @@ def test_custom_fields_mapping():
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -763,6 +807,7 @@ def test_notes(caplog):
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
@@ -846,6 +891,7 @@ def test_notes_empty_field(caplog):
     }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
 
     mock_folio = mocked_classes.mocked_folio_client()
