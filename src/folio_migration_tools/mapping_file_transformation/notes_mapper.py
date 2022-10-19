@@ -58,6 +58,7 @@ class NotesMapper(MappingFileMappingBaseImpl):
                         FOLIONamespaces.course: "course",
                     }.get(record_type)
                     note["links"] = [{"id": object_uuid, "type": type_string}]
+                    del note["type"]
                     logging.log(25, "notes\t%s", json.dumps(note))
                     self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
                 else:
