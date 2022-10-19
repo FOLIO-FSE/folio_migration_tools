@@ -49,10 +49,186 @@ def test_basic():
     mock_folio = mocked_classes.mocked_folio_client()
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
-
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
     assert folio_user["externalSystemId"] == "externalid_1"
     assert folio_user["username"] == "user_name_1"
     assert folio_user["id"] == "c2a8733b-4fbc-5ef1-ace9-f02e7b3a6f35"
+    assert folio_user["personal"]["preferredContactTypeId"] == "Email"
+    assert folio_user["active"] is True
+    assert folio_user["requestPreference"]["userId"] == folio_user["id"]
+
+
+def test_one_to_one_group_mapping():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "patronGroup",
+                "legacy_field": "group",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "group": "Group name",
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["externalSystemId"] == "externalid_1"
+    assert folio_user["username"] == "user_name_1"
+    assert folio_user["id"] == "c2a8733b-4fbc-5ef1-ace9-f02e7b3a6f35"
+    assert folio_user["personal"]["preferredContactTypeId"] == "Email"
+    assert folio_user["active"] is True
+    assert folio_user["patronGroup"] == "Group name"
+    assert folio_user["requestPreference"]["userId"] == folio_user["id"]
+
+
+def test_ref_data_group_mapping():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "patronGroup",
+                "legacy_field": "group",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "group": "Group name",
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+    }
+    groups_map = [
+        {"group": "Group name", "folio_group": "FOLIO group name"},
+        {"group": "*", "folio_group": "FOLIO fallback group name"},
+    ]
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(
+        mock_folio, mock_task_config, mock_library_conf, user_map, None, groups_map
+    )
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["externalSystemId"] == "externalid_1"
+    assert folio_user["username"] == "user_name_1"
+    assert folio_user["id"] == "c2a8733b-4fbc-5ef1-ace9-f02e7b3a6f35"
+    assert folio_user["personal"]["preferredContactTypeId"] == "Email"
+    assert folio_user["active"] is True
+    assert folio_user["patronGroup"] == "FOLIO group name"
+    assert folio_user["requestPreference"]["userId"] == folio_user["id"]
+
+
+def test_ref_data_departments_mapping():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "departments[0]",
+                "legacy_field": "dept",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "dept": "Department name",
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+    }
+    departments_map = [
+        {"dept": "Department name", "folio_name": "FOLIO user department name"},
+        {"dept": "*", "folio_name": "FOLIO fallback user department name"},
+    ]
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(
+        mock_folio, mock_task_config, mock_library_conf, user_map, departments_map, None
+    )
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["externalSystemId"] == "externalid_1"
+    assert folio_user["username"] == "user_name_1"
+    assert folio_user["id"] == "c2a8733b-4fbc-5ef1-ace9-f02e7b3a6f35"
+    assert folio_user["personal"]["preferredContactTypeId"] == "Email"
+    assert folio_user["active"] is True
+    assert folio_user["departments"][0] == "FOLIO user department name"
+    assert folio_user["requestPreference"]["userId"] == folio_user["id"]
 
 
 def test_remove_preferred_first_name_if_empty():

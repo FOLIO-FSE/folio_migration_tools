@@ -160,6 +160,32 @@ def folio_get_all(ref_data_path, array_name, query, limit):
                 "description": "FALLBACK",
             },
         ]
+    elif ref_data_path == "/groups":
+        return [
+            {
+                "group": "FOLIO fallback group name",
+                "desc": "Mocked response",
+                "id": "27ab99d3-0e17-41f0-a20a-99e05acc0e6f",
+            },
+            {
+                "group": "FOLIO group name",
+                "desc": "Mocked response",
+                "id": "5fc96cbd-a860-42a7-8d2b-72af30206712",
+            },
+        ]
+    elif ref_data_path == "/departments":
+        return [
+            {
+                "id": "12a2ad12-951d-4124-9fb2-58c70f0b7f71",
+                "name": "FOLIO user department name",
+                "code": "fdp",
+            },
+            {
+                "id": "2f452d21-507d-4b32-a89d-8ea9753cc946",
+                "name": "FOLIO fallback user department name",
+                "code": "fb",
+            },
+        ]
     return {}
 
 

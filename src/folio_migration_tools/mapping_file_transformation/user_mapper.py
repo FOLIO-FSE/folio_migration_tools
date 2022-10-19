@@ -169,15 +169,27 @@ class UserMapper(MappingFileMapperBase):
         self.notes_mapper.map_notes(
             legacy_user, index_or_id, folio_user["id"], FOLIONamespaces.users
         )
+        if "personal" not in folio_user:
+            folio_user["personal"] = {}
+        folio_user["personal"]["preferredContactTypeId"] = "Email"
+        folio_user["active"] = True
+        folio_user["requestPreference"] = {
+            "userId": folio_user["id"],
+            "holdShelf": True,
+            "delivery": False,
+            "metadata": self.folio_client.get_metadata_construct(),
+        }
         clean_folio_object = self.validate_required_properties(
             index_or_id, folio_user, self.schema, FOLIONamespaces.users
         )
+
         if "preferredFirstName" in clean_folio_object.get(
             "personal", {}
         ) and not clean_folio_object.get("personal", {}).get("preferredFirstName", ""):
             del clean_folio_object["personal"]["preferredFirstName"]
         self.report_folio_mapping_no_schema(clean_folio_object)
         self.report_legacy_mapping_no_schema(legacy_user)
+
         return clean_folio_object
 
     def get_users(self, source_file, file_format: str):
@@ -194,7 +206,7 @@ class UserMapper(MappingFileMapperBase):
             yield row
 
     def get_prop(self, legacy_user, folio_prop_name, index_or_id):
-        # value_tuple = (legacy_user, folio_prop_name, index_or_id)
+        value_tuple = (legacy_user, folio_prop_name, index_or_id)
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
         lm = list(
             MappingFileMapperBase.get_legacy_user_mappings(
@@ -207,7 +219,28 @@ class UserMapper(MappingFileMapperBase):
         elif folio_prop_name == "personal.addresses.id":
             return ""
         elif folio_prop_name == "patronGroup":
-            pass
+            if self.groups_mapping:
+                return self.get_mapped_name(
+                    self.groups_mapping,
+                    *value_tuple,
+                    False,
+                )
+            else:
+                return MappingFileMapperBase.get_legacy_value(
+                    legacy_user, lm[0], self.migration_report
+                )
+        elif folio_prop_name.startswith("departments"):
+            if not self.departments_mapping:
+                raise TransformationProcessError(
+                    "",
+                    "No Departments mapping set up. Set up a departments mapping file "
+                    " or remove the mapping of the Departments field",
+                )
+            return self.get_mapped_name(
+                self.departments_mapping,
+                *value_tuple,
+                False,
+            )
         elif any(lm) and folio_prop_name in [
             "expirationDate",
             "enrollmentDate",
