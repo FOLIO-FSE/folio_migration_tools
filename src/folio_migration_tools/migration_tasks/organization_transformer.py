@@ -6,6 +6,7 @@ import sys
 import time
 from os.path import isfile
 from typing import List
+from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic.main import BaseModel
@@ -33,7 +34,12 @@ class OrganizationTransformer(MigrationTaskBase):
         name: str
         migration_task_type: str
         files: List[FileDefinition]
-        organizations_mapping_file_name: str
+        organization_map_path: str
+        organization_types_map_path: Optional[str] = ""
+        address_categories_map_path: Optional[str] = ""
+        email_categories_map_path: Optional[str] = ""
+        phone_categories_map_path: Optional[str] = ""
+
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -41,22 +47,23 @@ class OrganizationTransformer(MigrationTaskBase):
 
     def __init__(
         self,
-        task_config: TaskConfiguration,
+        task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
         use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
 
-        super().__init__(library_config, task_config, use_logging)
+        super().__init__(library_config, task_configuration, use_logging)
         self.object_type_name = self.get_object_type().name
-        self.task_config = task_config
+        self.task_configuration = task_configuration
         self.files = self.list_source_files()
         self.total_records = 0
 
         self.organization_map = self.setup_records_map(
             self.folder_structure.mapping_files_folder
-            / self.task_config.organizations_mapping_file_name
+            / self.task_configuration.organization_map_path
         )
+
         self.results_path = self.folder_structure.created_objects_path
         self.failed_files: List[str] = []
 
@@ -65,24 +72,45 @@ class OrganizationTransformer(MigrationTaskBase):
             self.organization_map
         )
 
+        # TODO Find out if "FOLIO property name" can be anything here
         self.mapper = OrganizationMapper(
             self.folio_client,
-            self.organization_map,
-            # self.load_ref_data_mapping_file(
-            #     self.folder_structure.mapping_files_folder,
-            #     self.folio_keys,
-            #     ),
             self.library_configuration,
+            self.organization_map,
+            self.load_ref_data_mapping_file(
+                "organizationTypes",
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.organization_types_map_path,
+                self.folio_keys, False
+            ),
+            self.load_ref_data_mapping_file(
+                "addresses[0].categories[0]",
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.address_categories_map_path,
+                self.folio_keys, False
+            ),
+            self.load_ref_data_mapping_file(
+                "emails[0].categories[0]",
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.email_categories_map_path,
+                self.folio_keys, False
+            ),
+            self.load_ref_data_mapping_file(
+                "phoneNumbers[0].categories[0]",
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.phone_categories_map_path,
+                self.folio_keys, False
+            ),
         )
 
     def list_source_files(self):
         files = [
             self.folder_structure.data_folder / self.object_type_name / f.file_name
-            for f in self.task_config.files
+            for f in self.task_configuration.files
             if isfile(self.folder_structure.data_folder / self.object_type_name / f.file_name)
         ]
         if not any(files):
-            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            ret_str = ",".join(f.file_name for f in self.task_configuration.files)
             raise TransformationProcessError(
                 f"Files {ret_str} not found in"
                 "{self.folder_structure.data_folder} / {self.object_type_name}"
@@ -151,7 +179,6 @@ class OrganizationTransformer(MigrationTaskBase):
         for file in self.files:
             logging.info("Processing %s", file)
             try:
-                print(file)
                 self.process_single_file(file)
             except Exception as ee:
                 error_str = (

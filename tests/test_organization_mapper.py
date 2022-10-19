@@ -83,10 +83,10 @@ def mapper(pytestconfig) -> OrganizationMapper:
         mock_folio_client,
         lib_config,
         basic_organization_map,
+        organization_types_map,
         address_categories_map,
         email_categories_map,
         phone_categories_map,
-        organization_types_map,
     )
 
 
@@ -107,15 +107,13 @@ def test_basic_mapping(mapper, caplog):
         "org_note": "Good stuff!",
         "address_line_1": "Suite 500 - 655 Typee Rd",
         "address_city": "Victoria",
-        "address_categories": "rt",
+        "address_categories": "rt^-^ad",
         "tp": "Consortium",
         "tgs": "A, B, C",
-        "organization_types": "cst",
+        "organization_types": "cst^-^aah",
     }
 
-    res = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-
-    organization = res[0]
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # TODO Add tests for extradata
     # mapper.perform_additional_mappings(res)
@@ -128,20 +126,38 @@ def test_basic_mapping(mapper, caplog):
     #     generated_objects[s[0]] = json.loads(s[1])
     # organization = generated_objects["organization"]
 
+    # Test basic values
     assert organization["name"] == "Abe Books"
-    assert organization["organizationTypes"] == ['76b06c55-d95a-4ae0-a47d-5708f4e5e166']
+
+    # Test reference data mappings
+    assert organization["organizationTypes"] == ["76b06c55-d95a-4ae0-a47d-5708f4e5e166"]
+
+    # Test arrays of contact information
     assert organization["addresses"][0]["categories"] == ["76b06c55-d95a-4ae0-a47d-5708f4e5e166"]
-    assert organization["phoneNumbers"][0]["categories"] == ["87042758-5266-472a-a3e9-ea1ca0ccf056"]
+
+    assert organization["phoneNumbers"][0]["categories"] == [
+        "87042758-5266-472a-a3e9-ea1ca0ccf056"
+    ]
+
+    # TODO Sort out the below index-specific tests which are currently failing because items are
+    # added to the emails array in random order.
     # assert organization["emails"][0]["value"] == "email1@abebooks.com"
     # assert organization["emails"][0]["isPrimary"]
     # assert organization["emails"][0]["categories"] == ["93042758-5266-472a-a3e9-ea1ca0ccf056"]
+
     # assert organization["emails"][1]["value"] == "email2@abebooks.com"
     # assert not organization["emails"][1]["isPrimary"]
     # assert organization["emails"][1]["categories"] == [""]
 
 
+def test_parse_record_mapping_file(mapper):
+    folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+        basic_organization_map
+    )
+    
+    assert folio_keys
 
-
+# A mocked mapping file
 basic_organization_map = {
     "data": [
         {

@@ -24,10 +24,10 @@ class OrganizationMapper(MappingFileMapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         organization_map: dict,
+        organization_types_map,
         address_categories_map,
         email_categories_map,
         phone_categories_map,
-        organization_types_map,
     ):
 
         # Build composite organization schema
@@ -44,13 +44,14 @@ class OrganizationMapper(MappingFileMapperBase):
             library_configuration,
         )
 
-        # Set up reference data maps
         self.use_map = True
+
+        # Set up reference data maps
         self.set_up_reference_data_mapping(
+            organization_types_map,
             address_categories_map,
             email_categories_map,
             phone_categories_map,
-            organization_types_map,
         )
 
     # Commence the mapping work
@@ -74,11 +75,6 @@ class OrganizationMapper(MappingFileMapperBase):
             )
             return value
 
-        legacy_values = MappingFileMapperBase.get_legacy_vals(
-            legacy_organization, legacy_organization_keys
-        )
-        legacy_value = " ".join(legacy_values).strip()
-
         # Perfrom reference data mappings
         if folio_prop_name == "addresses[0].categories[0]":
             return self.get_mapped_value(
@@ -87,26 +83,32 @@ class OrganizationMapper(MappingFileMapperBase):
                 False,
             )
 
-        if folio_prop_name == "emails[0].categories[0]":
+        elif folio_prop_name == "emails[0].categories[0]":
             return self.get_mapped_value(
                 self.email_categories_map,
                 *value_tuple,
                 False,
             )
 
-        if folio_prop_name == "phoneNumbers[0].categories[0]":
+        elif folio_prop_name == "phoneNumbers[0].categories[0]":
             return self.get_mapped_value(
                 self.phone_categories_map,
                 *value_tuple,
                 False,
             )
+        elif folio_prop_name == "organizationTypes":
 
-        if folio_prop_name == "organizationTypes":
             return self.get_mapped_value(
                 self.organization_types_map,
                 *value_tuple,
                 False,
             )
+
+        legacy_values = MappingFileMapperBase.get_legacy_vals(
+            legacy_organization, legacy_organization_keys
+        )
+        legacy_value = " ".join(legacy_values).strip()
+
 
         # What dores the below do?
         if any(legacy_organization_keys):
@@ -117,18 +119,18 @@ class OrganizationMapper(MappingFileMapperBase):
 
     def set_up_reference_data_mapping(
         self,
+        organization_types_map,
         address_categories_map,
         email_categories_map,
         phone_categories_map,
-        organization_types_map,
     ):
         """
 
         Args:
+            organization_types_map (_type_): _description_
             address_categories_map (_type_): _description_
             email_categories_map (_type_): _description_
             phone_categories_map (_type_): _description_
-            organization_types_map (_type_): _description_
         """
 
         categories_shared_args = (
@@ -170,7 +172,7 @@ class OrganizationMapper(MappingFileMapperBase):
                 Blurbs.OrganizationTypeMapping,
             )
         else:
-            self.phone_categories_map = None
+            self.organization_types_map = None
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
