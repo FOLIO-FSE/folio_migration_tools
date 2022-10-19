@@ -51,21 +51,25 @@ class CoursesMigrator(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.courses_map
         )
-        self.mapper: CoursesMapper = CoursesMapper(
-            self.folio_client,
-            self.courses_map,
+        terms_map = (
             self.load_ref_data_mapping_file(
                 "terms",
                 self.folder_structure.mapping_files_folder
                 / self.task_configuration.terms_map_path,
                 self.folio_keys,
             ),
-            self.load_ref_data_mapping_file(
-                "departments",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.departments_map_path,
-                self.folio_keys,
-            ),
+        )
+        departments_map = self.load_ref_data_mapping_file(
+            "departments",
+            self.folder_structure.mapping_files_folder
+            / self.task_configuration.departments_map_path,
+            self.folio_keys,
+        )
+        self.mapper: CoursesMapper = CoursesMapper(
+            self.folio_client,
+            self.courses_map,
+            terms_map,
+            departments_map,
             self.library_configuration,
         )
         logging.info("Init completed")

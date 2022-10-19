@@ -1,9 +1,7 @@
 import logging
 
-import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
 
 LOGGER = logging.getLogger(__name__)
@@ -23,8 +21,8 @@ def test_clean_user():
             ]
         }
     }
-    with pytest.raises(TransformationProcessError):
-        UserTransformer.clean_user(folio_user, "id")
+    UserTransformer.clean_user(folio_user, "id")
+    assert any(a["primaryAddress"] for a in folio_user["personal"]["addresses"])
 
 
 def test_clean_user_all_true():
@@ -36,5 +34,5 @@ def test_clean_user_all_true():
             ]
         }
     }
-    with pytest.raises(TransformationProcessError):
-        UserTransformer.clean_user(folio_user, "id")
+    UserTransformer.clean_user(folio_user, "id")
+    assert any(a["primaryAddress"] is not True for a in folio_user["personal"]["addresses"])

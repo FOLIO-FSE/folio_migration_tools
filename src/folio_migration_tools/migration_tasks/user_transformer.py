@@ -180,12 +180,13 @@ class UserTransformer(MigrationTaskBase):
     @staticmethod
     def clean_user(folio_user, index_or_id):
         if addresses := folio_user.get("personal", {}).get("addresses", []):
-            if len([a["primaryAddress"] is True for a in addresses]) > 1:
-                raise TransformationProcessError(
-                    index_or_id, "More than one address set to primary"
-                )
-            if all(a["primaryAddress"] is not True for a in addresses):
-                raise TransformationProcessError(index_or_id, "No address is mapped to primary")
+            # More than one primary address
+            if primaries := [a for a in addresses if a["primaryAddress"] is True]:
+                for primary in primaries[1:]:
+                    primary["primaryAddress"] = False
+            else:
+                # No primary address
+                addresses[0]["primaryAddress"] = True
 
 
 def print_email_warning():

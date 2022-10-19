@@ -118,8 +118,8 @@ class UserMapper(MappingFileMapperBase):
     def get_prop(self, legacy_user, folio_prop_name, index_or_id):
         value_tuple = (legacy_user, folio_prop_name, index_or_id)
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        lm = list(
-            MappingFileMapperBase.get_legacy_user_mappings(
+        map_entries = list(
+            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
                 folio_prop_name, self.record_map["data"]
             )
         )
@@ -137,7 +137,7 @@ class UserMapper(MappingFileMapperBase):
                 )
             else:
                 return MappingFileMapperBase.get_legacy_value(
-                    legacy_user, lm[0], self.migration_report
+                    legacy_user, map_entries[0], self.migration_report
                 )
         elif folio_prop_name.startswith("departments"):
             if not self.departments_mapping:
@@ -151,18 +151,18 @@ class UserMapper(MappingFileMapperBase):
                 *value_tuple,
                 False,
             )
-        elif any(lm) and folio_prop_name in [
+        elif any(map_entries) and folio_prop_name in [
             "expirationDate",
             "enrollmentDate",
             "personal.dateOfBirth",
         ]:
-            return self.get_parsed_date(legacy_user, lm[0], folio_prop_name)
+            return self.get_parsed_date(legacy_user, map_entries[0], folio_prop_name)
 
-        if len(lm) > 1:
+        if len(map_entries) > 1:
             self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
         return " ".join(
-            MappingFileMapperBase.get_legacy_value(legacy_user, m, self.migration_report)
-            for m in lm
+            MappingFileMapperBase.get_legacy_value(legacy_user, map_entry, self.migration_report)
+            for map_entry in map_entries
         ).strip()
 
     def get_parsed_date(self, legacy_user: dict, legacy_mapping: dict, folio_prop_name: str):
