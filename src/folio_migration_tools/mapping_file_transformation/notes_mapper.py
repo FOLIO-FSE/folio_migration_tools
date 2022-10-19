@@ -24,7 +24,7 @@ class NotesMapper(MappingFileMappingBaseImpl):
         ignore_legacy_identifier: bool = False,
     ) -> None:
         self.folio_client = folio_client
-        self.setup_statistical_codes_mapping()
+        self.setup_notes_schema()
         super().__init__(
             library_configuration,
             folio_client,
@@ -40,7 +40,7 @@ class NotesMapper(MappingFileMappingBaseImpl):
         logging.info("Set %s props used for note mapping", len(self.noteprops["data"]))
         logging.info("Initiated mapper for Notes")
 
-    def setup_statistical_codes_mapping(self):
+    def setup_notes_schema(self):
         notes_schemas = self.get_notes_schema()
         self.notes_schema = notes_schemas["noteCollection"]
         self.notes_schema["properties"]["notes"]["items"] = notes_schemas["note"]
@@ -73,16 +73,16 @@ class NotesMapper(MappingFileMappingBaseImpl):
         if folio_prop_name in self.mapped_from_values and len(legacy_item_keys) == 1:
             return self.mapped_from_values.get(folio_prop_name, "")
 
-        lm = list(
-            MappingFileMapperBase.get_legacy_user_mappings(
+        map_entries = list(
+            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
                 folio_prop_name, self.record_map["data"]
             )
         )
-        if len(lm) > 1:
+        if len(map_entries) > 1:
             self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
         return " ".join(
-            MappingFileMapperBase.get_legacy_value(legacy_item, m, self.migration_report)
-            for m in lm
+            MappingFileMapperBase.get_legacy_value(legacy_item, map_entry, self.migration_report)
+            for map_entry in map_entries
         ).strip()
 
     @staticmethod

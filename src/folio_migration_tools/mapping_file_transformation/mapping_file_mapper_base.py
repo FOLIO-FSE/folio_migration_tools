@@ -81,7 +81,9 @@ class MappingFileMapperBase(MapperBase):
             ):
                 clean_folio_field = re.sub(r"\[\d+\]", "", k["folio_field"])
                 self.legacy_user_mappings[k["folio_field"]] = list(
-                    self.get_legacy_user_mappings(clean_folio_field, self.record_map["data"])
+                    self.get_map_entries_by_folio_prop_name(
+                        clean_folio_field, self.record_map["data"]
+                    )
                 )
                 legacy_fields.add(k["legacy_field"])
                 if not self.mapped_from_legacy_data.get(k["folio_field"]):
@@ -287,30 +289,37 @@ class MappingFileMapperBase(MapperBase):
     @staticmethod
     def get_legacy_value(
         legacy_object: dict,
-        mapping: dict,
+        mapping_file_entry: dict,
         migration_report: MigrationReport,
         index_or_id: str = "",
     ):
-        value = legacy_object.get(mapping["legacy_field"], "").strip()
-        if value and mapping.get("rules", {}).get("replaceValues", {}):
-            if replaced_val := mapping["rules"]["replaceValues"].get(value, ""):
+        value = legacy_object.get(mapping_file_entry["legacy_field"], "").strip()
+        if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
+            if replaced_val := mapping_file_entry["rules"]["replaceValues"].get(value, ""):
                 migration_report.add(
                     Blurbs.FieldMappingDetails,
-                    (f"Replaced {value} in {mapping['legacy_field']} with {replaced_val}"),
+                    (
+                        f"Replaced {value} in {mapping_file_entry['legacy_field']} "
+                        f"with {replaced_val}"
+                    ),
                 )
                 value = replaced_val
-        if value and mapping.get("rules", {}).get("regexGetFirstMatchOrEmpty", ""):
-            my_pattern = f'{mapping.get("rules", {}).get("regexGetFirstMatchOrEmpty")}|$'
+        if value and mapping_file_entry.get("rules", {}).get("regexGetFirstMatchOrEmpty", ""):
+            my_pattern = (
+                f'{mapping_file_entry.get("rules", {}).get("regexGetFirstMatchOrEmpty")}|$'
+            )
             value = re.findall(my_pattern, value)[0]
-        if not value and mapping.get("fallback_legacy_field", ""):
+        if not value and mapping_file_entry.get("fallback_legacy_field", ""):
             migration_report.add(
                 Blurbs.FieldMappingDetails,
                 (
-                    f"Added fallback value from {mapping['legacy_field']} instead of "
-                    f"{mapping['fallback_legacy_field']}"
+                    f"Added fallback value from {mapping_file_entry['fallback_legacy_field']} "
+                    f"instead of {mapping_file_entry['legacy_field']}"
                 ),
             )
-            value = legacy_object.get(mapping.get("fallback_legacy_field", ""), "").strip()
+            value = legacy_object.get(
+                mapping_file_entry.get("fallback_legacy_field", ""), ""
+            ).strip()
         return value
 
     @staticmethod
@@ -560,13 +569,16 @@ class MappingFileMapperBase(MapperBase):
             and any(legacy_mapping not in empty_vals for legacy_mapping in legacy_mappings)
             and any(
                 legacy_object.get(legacy_mapping["legacy_field"], "")
-                or legacy_object.get(legacy_mapping["fallback_legacy_field"], "")
+                or (
+                    "fallback_legacy_field" in legacy_mapping
+                    and legacy_object.get(legacy_mapping["fallback_legacy_field"], "")
+                )
                 for legacy_mapping in legacy_mappings
             )
         )
 
     @staticmethod
-    def get_legacy_user_mappings(folio_prop_name, data):
+    def get_map_entries_by_folio_prop_name(folio_prop_name, data):
         return (
             k for k in data if k["folio_field"] == folio_prop_name and k["legacy_field"].strip()
         )
