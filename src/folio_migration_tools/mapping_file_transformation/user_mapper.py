@@ -9,6 +9,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -85,6 +86,8 @@ class UserMapper(MappingFileMapperBase):
         clean_folio_object = self.validate_required_properties(
             index_or_id, folio_user, self.schema, FOLIONamespaces.users
         )
+        if not clean_folio_object.get("personal", {}).get("lastName", ""):
+            raise TransformationRecordFailedError(index_or_id, "Last name is missing", "")
 
         if "preferredFirstName" in clean_folio_object.get(
             "personal", {}
