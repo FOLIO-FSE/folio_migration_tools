@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
@@ -36,6 +37,12 @@ def test_basic():
                 "value": "",
                 "description": "",
             },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
         ]
     }
     legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1"}
@@ -57,6 +64,342 @@ def test_basic():
     assert folio_user["requestPreference"]["userId"] == folio_user["id"]
 
 
+def test_basic_fallback():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+                "fallback_legacy_field": "ext_id2",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "",
+        "user_name": "user_name_1",
+        "id": "1",
+        "ext_id2": "externalid_2",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["externalSystemId"] == "externalid_2"
+
+
+def test_basic_replace():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+                "rules": {"replaceValues": {"0": "Non-Matriculated"}},
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "0",
+        "user_name": "user_name_1",
+        "id": "1",
+        "ext_id2": "externalid_2",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["externalSystemId"] == "Non-Matriculated"
+
+
+def test_basic_replace_no_replace():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+                "rules": {"replaceValues": {"0": "Non-Matriculated"}},
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "1",
+        "user_name": "user_name_1",
+        "id": "1",
+        "ext_id2": "externalid_2",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["externalSystemId"] == "1"
+
+
+def test_basic_replace_regex_match():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.firstName",
+                "legacy_field": "name",
+                "value": "",
+                "description": "",
+                "rules": {"regexGetFirstMatchOrEmpty": ".*, (\\S+)|$"},
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "name",
+                "value": "",
+                "description": "",
+                "rules": {"regexGetFirstMatchOrEmpty": "(.*),.*"},
+            },
+            {
+                "folio_field": "personal.middleName",
+                "legacy_field": "name",
+                "value": "",
+                "description": "",
+                "rules": {"regexGetFirstMatchOrEmpty": ".*, .* (.*)"},
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "my external id",
+        "user_name": "user_name_1",
+        "id": "1",
+        "name": "Graney, Carol Homan",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["personal"]["lastName"] == "Graney"
+    assert folio_user["personal"]["middleName"] == "Homan"
+    assert folio_user["personal"]["firstName"] == "Carol"
+
+
+def test_basic_replace_regex_match_no_middle():
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.firstName",
+                "legacy_field": "name",
+                "value": "",
+                "description": "",
+                "rules": {"regexGetFirstMatchOrEmpty": ".*, (\\S+)"},
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "name",
+                "value": "",
+                "description": "",
+                "rules": {"regexGetFirstMatchOrEmpty": "(.*),.*"},
+            },
+            {
+                "folio_field": "personal.middleName",
+                "legacy_field": "name",
+                "value": "",
+                "description": "",
+                "rules": {"regexGetFirstMatchOrEmpty": ".*, .* (.*)"},
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "my external id",
+        "user_name": "user_name_1",
+        "id": "1",
+        "name": "Graney, Carol",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_classes.mocked_folio_client()
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["personal"]["lastName"] == "Graney"
+    assert "middleName" not in folio_user["personal"]
+    assert folio_user["personal"]["firstName"] == "Carol"
+
+
+def test_basic_fallback_all_empty():
+    with pytest.raises(TransformationRecordFailedError):
+        user_map = {
+            "data": [
+                {
+                    "folio_field": "username",
+                    "legacy_field": "user_name",
+                    "value": "",
+                    "description": "",
+                },
+                {
+                    "folio_field": "externalSystemId",
+                    "legacy_field": "ext_id",
+                    "value": "",
+                    "description": "",
+                    "fallback_legacy_field": "ext_id2",
+                },
+                {
+                    "folio_field": "legacyIdentifier",
+                    "legacy_field": "id",
+                    "value": "",
+                    "description": "",
+                },
+            ]
+        }
+        legacy_user_record = {
+            "ext_id": "",
+            "user_name": "user_name_1",
+            "id": "1",
+            "ext_id2": "",
+        }
+        mock_library_conf = Mock(spec=LibraryConfiguration)
+        mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+        mock_task_config.remove_id_and_request_preferences = False
+        mock_library_conf.multi_field_delimiter = "<delimiter>"
+        mock_folio = mocked_classes.mocked_folio_client()
+        user_mapper = UserMapper(
+            mock_folio, mock_task_config, mock_library_conf, user_map, None, None
+        )
+        folio_user, index_or_id = user_mapper.do_map(
+            legacy_user_record, "001", FOLIONamespaces.users
+        )
+        folio_user = user_mapper.perform_additional_mapping(
+            legacy_user_record, folio_user, index_or_id
+        )
+
+
 def test_basic_turn_off_id_and_request_preferences():
     user_map = {
         "data": [
@@ -76,6 +419,12 @@ def test_basic_turn_off_id_and_request_preferences():
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
                 "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
                 "description": "",
             },
         ]
@@ -115,6 +464,12 @@ def test_one_to_one_group_mapping():
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
                 "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
                 "description": "",
             },
             {
@@ -163,6 +518,12 @@ def test_ref_data_group_mapping():
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
                 "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
                 "description": "",
             },
             {
@@ -220,6 +581,12 @@ def test_ref_data_departments_mapping():
                 "description": "",
             },
             {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+            {
                 "folio_field": "departments[0]",
                 "legacy_field": "dept",
                 "value": "",
@@ -274,6 +641,12 @@ def test_custom_fields_mapping():
                 "description": "",
             },
             {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+            {
                 "folio_field": "customFields.homeLibrary",
                 "legacy_field": "homeLibrary",
                 "value": "",
@@ -321,6 +694,12 @@ def test_remove_preferred_first_name_if_empty():
                 "value": "",
                 "description": "",
             },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
         ]
     }
     legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1"}
@@ -333,7 +712,7 @@ def test_remove_preferred_first_name_if_empty():
 
     assert folio_user["externalSystemId"] == "externalid_1"
     assert folio_user["username"] == "user_name_1"
-    assert "personal" not in folio_user
+    assert "preferredFirstName" not in folio_user["personal"]
 
 
 def test_boolean_values_explicitly_true():
@@ -397,6 +776,12 @@ def test_boolean_values_explicitly_true():
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
                 "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
                 "description": "",
             },
         ]
@@ -527,6 +912,12 @@ def test_boolean_values_explicitly_true_string():
                 "value": "",
                 "description": "",
             },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
         ]
     }
     legacy_user_record = {
@@ -612,6 +1003,12 @@ def test_boolean_values_explicitly_false_string():
                 "value": "",
                 "description": "",
             },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
         ]
     }
     legacy_user_record = {
@@ -695,6 +1092,12 @@ def test_boolean_values_explicitly_false():
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
                 "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
                 "description": "",
             },
         ]
@@ -796,6 +1199,12 @@ def test_notes(caplog):
                 "value": "",
                 "description": "",
             },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
         ]
     }
     legacy_user_record = {
@@ -878,6 +1287,12 @@ def test_notes_empty_field(caplog):
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
                 "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
                 "description": "",
             },
         ]

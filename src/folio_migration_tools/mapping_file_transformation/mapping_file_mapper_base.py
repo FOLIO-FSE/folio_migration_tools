@@ -285,8 +285,23 @@ class MappingFileMapperBase(MapperBase):
             self.map_basic_props(legacy_object, schema_property_name, folio_object, index_or_id)
 
     @staticmethod
-    def get_legacy_value(legacy_object: dict, mapping: dict, migration_report: MigrationReport):
+    def get_legacy_value(
+        legacy_object: dict,
+        mapping: dict,
+        migration_report: MigrationReport,
+        index_or_id: str = "",
+    ):
         value = legacy_object.get(mapping["legacy_field"], "").strip()
+        if value and mapping.get("rules", {}).get("replaceValues", {}):
+            if replaced_val := mapping["rules"]["replaceValues"].get(value, ""):
+                migration_report.add(
+                    Blurbs.FieldMappingDetails,
+                    (f"Replaced {value} in {mapping['legacy_field']} with {replaced_val}"),
+                )
+                value = replaced_val
+        if value and mapping.get("rules", {}).get("regexGetFirstMatchOrEmpty", ""):
+            my_pattern = f'{mapping.get("rules", {}).get("regexGetFirstMatchOrEmpty")}|$'
+            value = re.findall(my_pattern, value)[0]
         if not value and mapping.get("fallback_legacy_field", ""):
             migration_report.add(
                 Blurbs.FieldMappingDetails,
@@ -296,13 +311,6 @@ class MappingFileMapperBase(MapperBase):
                 ),
             )
             value = legacy_object.get(mapping.get("fallback_legacy_field", ""), "").strip()
-        if value and mapping.get("rules", {}).get("replaceValues", {}):
-            if replaced_val := mapping["rules"]["replaceValues"].get(value, ""):
-                migration_report.add(
-                    Blurbs.FieldMappingDetails,
-                    (f"Replaced {value} in {mapping['legacy_field']} with {replaced_val}"),
-                )
-                return replaced_val
         return value
 
     @staticmethod
