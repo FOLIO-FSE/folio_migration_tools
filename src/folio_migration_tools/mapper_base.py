@@ -1,4 +1,3 @@
-import collections
 import json
 import logging
 import sys
@@ -429,17 +428,6 @@ class MapperBase:
             folio_record["administrativeNotes"].append(
                 f"{MapperBase.legacy_id_template} {legacy_id}"
             )
-
-
-def flatten_2(d, parent_key="", sep="."):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, collections.abc.MutableMapping):
-            items.extend(flatten(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
 
 
 def flatten(my_dict: dict, path=""):
