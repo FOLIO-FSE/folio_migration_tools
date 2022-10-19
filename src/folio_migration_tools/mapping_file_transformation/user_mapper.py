@@ -90,6 +90,10 @@ class UserMapper(MappingFileMapperBase):
             "personal", {}
         ) and not clean_folio_object.get("personal", {}).get("preferredFirstName", ""):
             del clean_folio_object["personal"]["preferredFirstName"]
+
+        if self.task_config.remove_id_and_request_preferences:
+            del clean_folio_object["id"]
+            del clean_folio_object["requestPreference"]
         self.report_folio_mapping_no_schema(clean_folio_object)
         self.report_legacy_mapping_no_schema(legacy_user)
 
