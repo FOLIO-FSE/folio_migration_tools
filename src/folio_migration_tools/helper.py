@@ -60,6 +60,6 @@ class Helper:
             pg_dump (bool, optional): _description_. Defaults to False.
         """
         if pg_dump:
-            file.write("{}\t{}\n".format(folio_record["id"], json.dumps(folio_record)))
+            file.write(f'{folio_record["id"]}\t{json.dumps(folio_record)}\n')
         else:
-            file.write("{}\n".format(json.dumps(folio_record)))
+            file.write(f"{json.dumps(folio_record)}\n")

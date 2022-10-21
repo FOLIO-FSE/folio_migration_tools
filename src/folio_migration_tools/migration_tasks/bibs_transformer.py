@@ -29,6 +29,7 @@ class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
         deactivate035_from001: Optional[bool] = False
+        add_administrative_notes_with_legacy_ids: Optional[bool] = True
         migration_task_type: str
         use_tenant_mapping_rules: Optional[bool] = True
         hrid_handling: Optional[HridHandling] = HridHandling.default
@@ -103,7 +104,7 @@ class BibsTransformer(MigrationTaskBase):
             self.mapper.migration_report.write_migration_report(
                 "Bibliographic records transformation report",
                 report_file,
-                self.mapper.start_datetime,
+                self.start_datetime,
             )
             Helper.print_mapping_report(
                 report_file,
@@ -128,7 +129,7 @@ class BibsTransformer(MigrationTaskBase):
                 else:
                     self.set_leader(record, self.mapper.migration_report)
                     self.mapper.migration_report.add_general_statistics(
-                        "Records successfully parsed from MARC21",
+                        "Records successfully decoded from MARC21",
                     )
                     self.processor.process_record(idx, record, source_file)
             except TransformationRecordFailedError as error:

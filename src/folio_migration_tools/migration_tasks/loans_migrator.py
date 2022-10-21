@@ -50,7 +50,13 @@ class LoansMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        self.start_datetime = datetime.now(ZoneInfo("UTC"))
+        self.patron_item_combos = set()
+        self.t0 = time.time()
+        self.num_duplicate_loans = 0
+        self.skipped_since_already_added = 0
+        self.processed_items = set()
+        self.failed = {}
+        self.failed_and_not_dupe = {}
         self.migration_report = MigrationReport()
         self.valid_legacy_loans = []
         super().__init__(library_config, task_configuration)
@@ -106,13 +112,6 @@ class LoansMigrator(MigrationTaskBase):
                 "previously migrated objects"
             )
             self.valid_legacy_loans = self.semi_valid_legacy_loans
-        self.patron_item_combos = set()
-        self.t0 = time.time()
-        self.num_duplicate_loans = 0
-        self.skipped_since_already_added = 0
-        self.processed_items = set()
-        self.failed = {}
-        self.failed_and_not_dupe = {}
         logging.info("Starting row number is %s", task_configuration.starting_row)
         logging.info("Init completed")
 

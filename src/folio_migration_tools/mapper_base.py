@@ -8,6 +8,7 @@ import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -19,6 +20,9 @@ from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MapperBase:
+
+    legacy_id_template = "Identifier(s) from previous system:"
+
     def __init__(
         self,
         library_configuration: LibraryConfiguration,
@@ -78,6 +82,23 @@ class MapperBase:
         except Exception as ee:
             logging.error(ee, stack_info=True)
             raise ee from ee
+
+    def report_legacy_mapping_no_schema(self, legacy_object):
+        for field_name, value in legacy_object.items():
+            v = 1 if value else 0
+            if field_name not in self.mapped_legacy_fields:
+                self.mapped_legacy_fields[field_name] = [1, v]
+            else:
+                self.mapped_legacy_fields[field_name][0] += 1
+                self.mapped_legacy_fields[field_name][1] += v
+
+    def report_folio_mapping_no_schema(self, folio_object):
+        for field_name in flatten(folio_object):
+            if field_name not in self.mapped_folio_fields:
+                self.mapped_folio_fields[field_name] = [1, 1]
+            else:
+                self.mapped_folio_fields[field_name][0] += 1
+                self.mapped_folio_fields[field_name][1] += 1
 
     def reset_instance_hrid_counter(self):
         logging.info("Resetting Instances HRID settings to 1")
@@ -341,13 +362,18 @@ class MapperBase:
         legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
     ):
         cleaned_folio_object = MapperBase.clean_none_props(folio_object)
-        required = schema.get("required", [])
+        required = []
         missing = []
-        for required_prop in required:
-            if required_prop not in cleaned_folio_object:
-                missing.append(f"Missing: {required_prop}")
-            elif not cleaned_folio_object[required_prop]:
-                missing.append(f"Empty: {required_prop}")
+        if object_type != FOLIONamespaces.note:
+            required = schema.get("required", [])
+            missing = list(MapperBase.list_missing(required, cleaned_folio_object))
+        else:
+            required = (
+                schema.get("properties", {}).get("notes", {}).get("items", {}).get("required", [])
+            )
+            for note in cleaned_folio_object.get("notes", []):
+                missing.extend(MapperBase.list_missing(required, note))
+
         if any(missing):
             raise TransformationRecordFailedError(
                 legacy_id,
@@ -356,6 +382,14 @@ class MapperBase:
             )
         cleaned_folio_object.pop("type", None)
         return cleaned_folio_object
+
+    @staticmethod
+    def list_missing(required: list, cleaned_folio_object: dict):
+        for required_prop in required:
+            if required_prop not in cleaned_folio_object:
+                yield f"Missing: {required_prop}"
+            elif not cleaned_folio_object[required_prop]:
+                yield f"Empty: {required_prop}"
 
     @staticmethod
     def clean_none_props(d: dict):
@@ -370,6 +404,30 @@ class MapperBase:
             elif v is not None:
                 clean[k] = v
         return clean
+
+    def add_legacy_id_to_admin_note(self, folio_record: dict, legacy_id: str):
+        if not legacy_id:
+            raise TransformationFieldMappingError(legacy_id, "Legacy id is empty", legacy_id)
+        if "administrativeNotes" not in folio_record:
+            folio_record["administrativeNotes"] = []
+        if id_string := next(
+            (f for f in folio_record["administrativeNotes"] if MapperBase.legacy_id_template in f),
+            None,
+        ):
+            if legacy_id not in id_string:
+                folio_record["administrativeNotes"] = list(
+                    [
+                        f
+                        for f in folio_record["administrativeNotes"]
+                        if MapperBase.legacy_id_template not in f
+                    ]
+                )
+
+                folio_record["administrativeNotes"].append(f"{id_string}, {legacy_id}")
+        else:
+            folio_record["administrativeNotes"].append(
+                f"{MapperBase.legacy_id_template} {legacy_id}"
+            )
 
 
 def flatten(my_dict: dict, path=""):

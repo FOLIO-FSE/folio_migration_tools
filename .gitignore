@@ -14,6 +14,7 @@ Pipfile.lock
 .idea/
 env/
 build/
+temp/
 develop-eggs/
 dist/
 downloads/
@@ -114,3 +115,9 @@ srs_marc_records.json
 srs_raw_records.json
 coverage-reports/coverage-1.xml
 tests/test_data/bibsTransformation.json
+archive/
+*.data
+source_data/
+
+.env.json
+poetry.lock

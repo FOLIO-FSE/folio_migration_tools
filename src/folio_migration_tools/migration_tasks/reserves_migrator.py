@@ -4,8 +4,6 @@ import logging
 import sys
 import time
 import traceback
-from datetime import datetime
-from datetime import timezone
 from typing import Dict
 from urllib.error import HTTPError
 
@@ -41,7 +39,6 @@ class ReservesMigrator(MigrationTaskBase):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
         self.valid_reserves = []
-        self.start_datetime = datetime.now(timezone.utc)
         super().__init__(library_config, task_configuration)
         with open(
             self.folder_structure.legacy_records_folder

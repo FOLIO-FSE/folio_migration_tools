@@ -1,0 +1,119 @@
+{
+    "title": "TaskConfiguration",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "type": "string"
+        },
+        "legacy_id_marc_path": {
+            "title": "Legacy Id Marc Path",
+            "type": "string"
+        },
+        "deduplicate_holdings_statements": {
+            "title": "Deduplicate Holdings Statements",
+            "default": true,
+            "type": "boolean"
+        },
+        "migration_task_type": {
+            "title": "Migration Task Type",
+            "type": "string"
+        },
+        "use_tenant_mapping_rules": {
+            "title": "Use Tenant Mapping Rules",
+            "type": "boolean"
+        },
+        "hrid_handling": {
+            "$ref": "#/definitions/HridHandling"
+        },
+        "files": {
+            "title": "Files",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/FileDefinition"
+            }
+        },
+        "mfhd_mapping_file_name": {
+            "title": "Mfhd Mapping File Name",
+            "type": "string"
+        },
+        "location_map_file_name": {
+            "title": "Location Map File Name",
+            "type": "string"
+        },
+        "default_call_number_type_name": {
+            "title": "Default Call Number Type Name",
+            "type": "string"
+        },
+        "fallback_holdings_type_id": {
+            "title": "Fallback Holdings Type Id",
+            "type": "string"
+        },
+        "create_source_records": {
+            "title": "Create Source Records",
+            "default": false,
+            "type": "boolean"
+        },
+        "reset_hrid_settings": {
+            "title": "Reset Hrid Settings",
+            "default": false,
+            "type": "boolean"
+        },
+        "never_update_hrid_settings": {
+            "title": "Never Update Hrid Settings",
+            "default": false,
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "name",
+        "legacy_id_marc_path",
+        "migration_task_type",
+        "use_tenant_mapping_rules",
+        "hrid_handling",
+        "files",
+        "mfhd_mapping_file_name",
+        "location_map_file_name",
+        "default_call_number_type_name",
+        "fallback_holdings_type_id"
+    ],
+    "definitions": {
+        "HridHandling": {
+            "title": "HridHandling",
+            "description": "Enum determining how the HRID generation should be handled.\n        - default: Enumerates the HRID, building on the current value in the HRID settings\n        - preserve001: Takes the 001 and uses this as the HRID.\n\n    Args:\n        str (_type_): _description_\n        Enum (_type_): _description_\n    ",
+            "enum": [
+                "default",
+                "preserve001"
+            ],
+            "type": "string"
+        },
+        "FileDefinition": {
+            "title": "FileDefinition",
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "title": "File Name",
+                    "type": "string"
+                },
+                "suppressed": {
+                    "title": "Suppressed",
+                    "default": false,
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "title": "Staff Suppressed",
+                    "default": false,
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "title": "Service Point Id",
+                    "default": "",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "file_name"
+            ]
+        }
+    }
+}

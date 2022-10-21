@@ -1,7 +1,14 @@
 from unittest.mock import Mock
+
 from pymarc import Field
 
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
+
+
+def test_condition_trim_period():
+    mock = Mock(spec=Conditions)
+    res = Conditions.condition_trim_period(None, mock, "value with period.", None, None)
+    assert res == "value with period"
 
 
 def test_condition():

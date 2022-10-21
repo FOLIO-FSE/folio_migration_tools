@@ -10,13 +10,13 @@ argparse-prompt==0.0.5
 certifi==2021.10.8; python_version >= '3.6'
 charset-normalizer==2.0.12; python_version >= '3'
 defusedxml==0.7.1
-folio-uuid==0.2.5
-folioclient==0.41.0
+folio-uuid==0.2.6
+folioclient==0.42.0
 humps==0.2.2
 idna==3.3; python_version >= '3'
 lxml==4.9.1
 pydantic==1.9.1
-pymarc==4.2.0
+pymarc==4.2.1
 python-dateutil==2.8.2
 pyyaml==6.0; python_version >= '3.6'
 requests==2.27.1

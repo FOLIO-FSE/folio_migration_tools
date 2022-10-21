@@ -172,6 +172,8 @@ class RulesMapperBase(MapperBase):
             values = []
             value = ""
             if has_conditions(mapping):
+                if isinstance(legacy_ids, str):
+                    legacy_ids = [legacy_ids]
                 value = self.get_value_from_condition(",".join(legacy_ids), mapping, marc_field)
             elif has_value_to_add(mapping):
                 value = mapping["rules"][0]["value"]

@@ -1,7 +1,6 @@
 import json
 import logging
 import sys
-from typing import Dict
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -28,6 +27,7 @@ class UserTransformer(MigrationTaskBase):
         use_group_map: Optional[bool] = True
         user_mapping_file_name: str
         user_file: FileDefinition
+        remove_id_and_request_preferences: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -93,7 +93,6 @@ class UserTransformer(MigrationTaskBase):
                 departments_mapping,
                 group_mapping,
             )
-            self.legacy_property_name = self.get_legacy_id_prop(self.user_map)
 
         logging.info("UserTransformer init done")
 
@@ -120,11 +119,15 @@ class UserTransformer(MigrationTaskBase):
                                 logging.info("First Legacy  user")
                                 logging.info(json.dumps(legacy_user, indent=4))
                                 print_email_warning()
-                            folio_user = self.mapper.do_map(
+                            folio_user, index_or_id = self.mapper.do_map(
                                 legacy_user,
-                                legacy_user.get(self.legacy_property_name),
+                                num_users,
+                                FOLIONamespaces.users,
                             )
-                            self.clean_user(folio_user)
+                            folio_user = self.mapper.perform_additional_mapping(
+                                legacy_user, folio_user, index_or_id
+                            )
+                            self.clean_user(folio_user, index_or_id)
                             results_file.write(f"{json.dumps(folio_user)}\n")
                             if num_users == 1:
                                 logging.info("## First FOLIO  user")
@@ -161,41 +164,7 @@ class UserTransformer(MigrationTaskBase):
             print(f"\n{fnfe}")
             sys.exit(1)
 
-    @staticmethod
-    def get_legacy_id_prop(record_map):
-        field_map = {}  # Map of folio_fields and source fields as an array
-        for k in record_map["data"]:
-            if not field_map.get(k["folio_field"]):
-                field_map[k["folio_field"]] = [k["legacy_field"]]
-            else:
-                field_map[k["folio_field"]].append(k["legacy_field"])
-        if "legacyIdentifier" not in field_map:
-            raise TransformationProcessError(
-                "",
-                (
-                    "property legacyIdentifier is not in map. Add this property "
-                    "to the mapping file as if it was a FOLIO property"
-                ),
-            )
-        try:
-            legacy_id_property_name = field_map["legacyIdentifier"][0]
-            logging.info("Legacy identifier will be mapped from %s", legacy_id_property_name)
-            return legacy_id_property_name
-        except Exception as exception:
-            raise TransformationProcessError(
-                "",
-                (
-                    f"property legacyIdentifier not setup in map: "
-                    f"{field_map.get('legacyIdentifier', '') ({exception})}"
-                ),
-            ) from exception
-
     def wrap_up(self):
-        path = self.folder_structure.results_folder / "user_id_map.json"
-        logging.info(f"Saving map of {len(self.mapper.legacy_id_map)} old and new IDs to {path}")
-
-        with open(path, "w+") as id_map_file:
-            json.dump(self.mapper.legacy_id_map, id_map_file, indent=4)
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
                 "Users transformation report", migration_report_file, self.mapper.start_datetime
@@ -209,18 +178,14 @@ class UserTransformer(MigrationTaskBase):
         logging.info("All done!")
 
     @staticmethod
-    def clean_user(folio_user):
+    def clean_user(folio_user, index_or_id):
         if addresses := folio_user.get("personal", {}).get("addresses", []):
-            primary_address_exists = False
-
-            for address in addresses:
-                if "id" in address:
-                    del address["id"]
-
-                if address["primaryAddress"] is True:
-                    primary_address_exists = True
-
-            if not primary_address_exists:
+            # More than one primary address
+            if primaries := [a for a in addresses if a["primaryAddress"] is True]:
+                for primary in primaries[1:]:
+                    primary["primaryAddress"] = False
+            else:
+                # No primary address
                 addresses[0]["primaryAddress"] = True
 
 
@@ -235,13 +200,3 @@ def print_email_warning():
         "                                                       \n"
     )
     print(s)
-
-
-def get_import_struct(batch) -> Dict:
-    return {
-        "source_type": "",
-        "deactivateMissingUsers": False,
-        "users": list(batch),
-        "updateOnlyPresentFields": False,
-        "totalRecords": len(batch),
-    }

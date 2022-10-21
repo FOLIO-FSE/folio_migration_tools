@@ -1,7 +1,10 @@
+from unittest.mock import Mock
+
 import pytest
+from folio_uuid.folio_namespaces import FOLIONamespaces
+
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.mapper_base import MapperBase
-from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 def test_validate_required_properties():
@@ -61,3 +64,31 @@ def test_clean_none_props():
     assert len(cleaned["i"]) == 1
     assert next(iter(cleaned["i"])) == "j"
     assert "l" in cleaned["k"]
+
+
+def test_add_legacy_identifier_to_admin_note():
+    folio_record = {}
+    legacy_id = "legacy_ID"
+    mapper = Mock(spec=MapperBase)
+    MapperBase.add_legacy_id_to_admin_note(mapper, folio_record, legacy_id)
+    assert f"{MapperBase.legacy_id_template} {legacy_id}" in folio_record["administrativeNotes"]
+
+
+def test_add_legacy_identifier_to_admin_note_additional_id():
+    folio_record = {"administrativeNotes": [f"{MapperBase.legacy_id_template} legacy_ID"]}
+    legacy_id = "legacy_ID_2"
+    mapper = Mock(spec=MapperBase)
+    MapperBase.add_legacy_id_to_admin_note(mapper, folio_record, legacy_id)
+    assert len(folio_record["administrativeNotes"]) == 1
+    assert (
+        f"{MapperBase.legacy_id_template} legacy_ID, legacy_ID_2"
+        in folio_record["administrativeNotes"]
+    )
+
+
+def test_add_legacy_identifier_to_admin_note_dupe():
+    folio_record = {"administrativeNotes": [f"{MapperBase.legacy_id_template} legacy_ID"]}
+    legacy_id = "legacy_ID"
+    mapper = Mock(spec=MapperBase)
+    MapperBase.add_legacy_id_to_admin_note(mapper, folio_record, legacy_id)
+    assert f"{MapperBase.legacy_id_template} legacy_ID" in folio_record["administrativeNotes"]

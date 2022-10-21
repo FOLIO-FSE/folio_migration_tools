@@ -3,7 +3,6 @@ import json
 import logging
 import sys
 import time
-from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -41,7 +40,6 @@ class RequestsMigrator(MigrationTaskBase):
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
-        self.start_datetime = datetime.now(ZoneInfo("UTC"))
         self.valid_legacy_requests = []
         super().__init__(library_config, task_configuration)
         self.circulation_helper = CirculationHelper(
