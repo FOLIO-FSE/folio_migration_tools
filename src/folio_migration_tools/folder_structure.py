@@ -114,12 +114,6 @@ class FolderStructure:
             )
         )
 
-        self.preceding_succeeding_records_path = (
-            self.results_folder / (
-                f"preceding_succeeding_titles-{self.iteration_identifier}{time_str}.json"
-            )
-        )
-
         # Mapping files
         self.material_type_map_path = self.mapping_files_folder / "material_types.tsv"
         self.loan_type_map_path = self.mapping_files_folder / "loan_types.tsv"
