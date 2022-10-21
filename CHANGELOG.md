@@ -1,5 +1,17 @@
 # Changelog
 
+## 1_6_1 (21/10/2022)
+
+#### bug
+
+- [**bug**][**Course Reserves**] Courses: Remove user id field if there is no match in the call to the users app [#407](https://github.com/FOLIO-FSE/folio_migration_tools/issues/407)
+
+---
+
+## 1.6.0 (21/10/2022)
+
+---
+
 ## 1_5_0 (05/10/2022)
 
 #### bug
