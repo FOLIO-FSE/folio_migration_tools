@@ -121,7 +121,7 @@ class UserTransformer(MigrationTaskBase):
                                 print_email_warning()
                             folio_user, index_or_id = self.mapper.do_map(
                                 legacy_user,
-                                legacy_user.get(self.mapper.legacy_id_property_name),
+                                num_users,
                                 FOLIONamespaces.users,
                             )
                             folio_user = self.mapper.perform_additional_mapping(
