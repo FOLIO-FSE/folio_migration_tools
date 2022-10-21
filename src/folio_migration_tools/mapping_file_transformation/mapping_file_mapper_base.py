@@ -322,6 +322,15 @@ class MappingFileMapperBase(MapperBase):
             value = legacy_object.get(
                 mapping_file_entry.get("fallback_legacy_field", ""), ""
             ).strip()
+        if not value and mapping_file_entry.get("fallback_value", ""):
+            migration_report.add(
+                Blurbs.FieldMappingDetails,
+                (
+                    f"Added fallback value {mapping_file_entry['fallback_value']} "
+                    f"instead of empty {mapping_file_entry['legacy_field']}"
+                ),
+            )
+            value = mapping_file_entry.get("fallback_value", "").strip()
         return value
 
     @staticmethod
