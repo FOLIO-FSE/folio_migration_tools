@@ -67,6 +67,13 @@ def test_instructor_fetch(mapper: CoursesMapper, caplog):
     assert instructor["patronGroup"] == "some group"
 
 
+def test_instructor_fetch_no_user(mapper: CoursesMapper, caplog):
+    mapper.task_configuration.look_up_instructor = True
+    instructor = {"userId": "Some external id that does not exist"}
+    mapper.populate_instructor_from_users(instructor)
+    assert "userId" not in instructor
+
+
 def test_instructor_cache(mapper: CoursesMapper, caplog):
     mapper.task_configuration.look_up_instructor = True
     instructor = {"userId": "Some external id"}

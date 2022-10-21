@@ -134,12 +134,14 @@ class CoursesMapper(MappingFileMapperBase):
         if instructor["userId"] not in self.user_cache:
             path = "/users"
             query = f'?query=(externalSystemId=="{instructor["userId"]}")'
-            if user := next(self.folio_client.folio_get_all(path, "users", query), {}):
+            if user := next(self.folio_client.folio_get_all(path, "users", query), None):
                 self.user_cache[instructor["userId"]] = user
         if user := self.user_cache.get(instructor["userId"], {}):
             instructor["userId"] = user.get("id", "")
             instructor["barcode"] = user.get("barcode", "")
             instructor["patronGroup"] = user.get("patronGroup", "")
+        else:
+            del instructor["userId"]
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         value_tuple = (legacy_item, folio_prop_name, index_or_id)
