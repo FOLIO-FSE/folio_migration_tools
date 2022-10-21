@@ -28,6 +28,23 @@ def write_failed_batch_to_file(batch, file):
 
 
 class BatchPoster(MigrationTaskBase):
+    """Batchposter
+
+    Args:
+        MigrationTaskBase (_type_): _description_
+
+    Raises:
+        ee: _description_
+        TransformationRecordFailedError: _description_
+        TransformationProcessError: _description_
+        TransformationRecordFailedError: _description_
+        TransformationRecordFailedError: _description_
+        TransformationProcessError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+
     class TaskConfiguration(BaseModel):
         name: str
         migration_task_type: str

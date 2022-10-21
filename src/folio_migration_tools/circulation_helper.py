@@ -85,6 +85,7 @@ class CirculationHelper:
         Returns:
             TransactionResult: _description_
         """
+
         t0_function = time.time()
         data = {
             "itemBarcode": legacy_loan.item_barcode,
