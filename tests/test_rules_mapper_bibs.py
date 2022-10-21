@@ -41,7 +41,7 @@ xpath_245 = "//marc:datafield[@tag='245']"
 # flake8: noqa
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="module")
 def mapper(pytestconfig) -> BibsRulesMapper:
     print("mapper was called")
     if pytestconfig.getoption("okapi_url"):
@@ -82,28 +82,6 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         files=[],
         ils_flavour=IlsFlavour.sierra,
         reset_hrid_settings=False,
-    )
-   """ lib = LibraryConfiguration(
-        okapi_url=folio.okapi_url,
-        tenant_id=folio.tenant_id,
-        okapi_username=folio.username,
-        okapi_password=folio.password,
-        folio_release=FolioRelease.kiwi,
-        library_name="Test Run Library",
-        log_level_debug=False,
-        iteration_identifier="I have no clue",
-        base_folder="/",
-    ) """
-    lib = LibraryConfiguration(
-        okapi_url=pytestconfig.getoption("okapi_url"),
-        tenant_id=pytestconfig.getoption("tenant_id"),
-        okapi_username=pytestconfig.getoption("username"),
-        okapi_password=pytestconfig.getoption("password"),
-        folio_release=FolioRelease.kiwi,
-        library_name="Test Run Library",
-        log_level_debug=False,
-        iteration_identifier="test_iteration",
-        base_folder="/",
     )
     return BibsRulesMapper(folio, lib, conf)
 
