@@ -59,3 +59,6 @@ darglint = "^1.8.1"
 sphinx = "^5.3.0"
 sphinx-autodoc-typehints = "^1.19.4"
 myst-parser = "^0.18.1"
+
+[tool.poetry.extras]
+docs = ["m2r", "sphinx", "sphinx-autodoc-typehints", "sphinx-rtd-theme", "toml"]
