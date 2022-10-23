@@ -3,7 +3,7 @@
 project = "FSE FOLIO Migration Tools"
 author = "Theodor Tolstoy"
 copyright = f"2022, {author}"
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon"]
+extensions = ["myst_parser", "sphinx.ext.autodoc"]
 
 source_suffix = {
     ".rst": "restructuredtext",
