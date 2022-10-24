@@ -1,5 +1,13 @@
+from unittest.mock import Mock
+
+import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapping_file_transformation.organization_mapper import (
+    OrganizationMapper,
+)
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.migration_tasks.organization_transformer import (
     OrganizationTransformer,
@@ -12,6 +20,37 @@ def test_get_object_type():
 
 def test_subclass_inheritance():
     assert issubclass(OrganizationTransformer, MigrationTaskBase)
+
+
+def test_remove_organization_types_pre_morning_glory():
+    rec = {
+        "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
+        "name": "Academic International Press",
+        "organizationTypes": ["fc54327d-fd60-4f6a-ba37-a4375511b91b"],
+    }
+
+    clean_org_lotus = OrganizationTransformer.clean_org_type_pre_morning_glory(
+        OrganizationTransformer, rec, "lotus"
+    )
+    assert clean_org_lotus == {
+        "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
+        "name": "Academic International Press",
+    }
+
+    rec = {
+        "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
+        "name": "Academic International Press",
+        "organizationTypes": ["fc54327d-fd60-4f6a-ba37-a4375511b91b"],
+    }
+
+    clean_org_morning_glory = OrganizationTransformer.clean_org_type_pre_morning_glory(
+        OrganizationTransformer, rec, "morning_glory"
+    )
+    assert clean_org_morning_glory == {
+        "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
+        "name": "Academic International Press",
+        "organizationTypes": ["fc54327d-fd60-4f6a-ba37-a4375511b91b"],
+    }
 
 
 def test_clean_up_one_address():
@@ -27,7 +66,7 @@ def test_clean_up_one_address():
         ]
     }
 
-    clean_address = OrganizationTransformer.clean_org(rec)
+    clean_address = OrganizationTransformer.clean_addresses(OrganizationTransformer, rec)
 
     assert clean_address == {
         "addresses": [
@@ -62,7 +101,7 @@ def test_clean_up_two_addresses_no_primary():
         ]
     }
 
-    clean_address = OrganizationTransformer.clean_org(rec)
+    clean_address = OrganizationTransformer.clean_addresses(OrganizationTransformer, rec)
 
     assert clean_address == {
         "addresses": [
@@ -108,7 +147,7 @@ def test_clean_up_two_addresses_both_primary():
         ]
     }
 
-    clean_address = OrganizationTransformer.clean_org(rec)
+    clean_address = OrganizationTransformer.clean_addresses(OrganizationTransformer, rec)
 
     assert clean_address == {
         "addresses": [
@@ -144,7 +183,7 @@ def test_clean_up_two_addresses_one_empty():
         ]
     }
 
-    clean_address = OrganizationTransformer.clean_org(rec)
+    clean_address = OrganizationTransformer.clean_addresses(OrganizationTransformer, rec)
 
     assert clean_address == {
         "addresses": [
@@ -167,6 +206,6 @@ def test_clean_up_two_addresses_both_empty():
         ]
     }
 
-    clean_address = OrganizationTransformer.clean_org(rec)
+    clean_address = OrganizationTransformer.clean_addresses(OrganizationTransformer, rec)
 
     assert clean_address == {"addresses": []}
