@@ -261,3 +261,24 @@ By ensuring we have at least "happy path" test coverage, when a bug is discovere
 > bash run_test_data_suite.sh -pwd
 ```
 When doing larger changes to the code base, it is a good idea to see that all of this works.
+
+
+# Contributing to the documentation
+Documentation is hosted on [Read the docs](https://folio-migration-tools.readthedocs.io/)
+
+## Writing
+The documentation is build in Sphinx, using the MyST parser to enable Markdown.
+Some documentation can be found here:
+* https://www.sphinx-doc.org/en/master/usage/index.html
+* https://myst-parser.readthedocs.io/en/latest/
+
+
+## Publishing
+There is a Github Hook that automatically builds the documentation when pushing to main.
+
+## Building
+In order to build the documentation locally, run
+```
+nox -rs docs
+```
+The documentation should now have been built in the docs/_build folder. Open up the *index.html* file in a browser to see how it looks. Note that the formatting on Read the docs will make it look different, but that the resulting HTML should be the same
