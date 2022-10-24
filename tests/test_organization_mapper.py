@@ -50,7 +50,7 @@ def mapper(pytestconfig) -> OrganizationMapper:
         tenant_id=tenant_id,
         okapi_username=username,
         okapi_password=password,
-        folio_release=FolioRelease.lotus,
+        folio_release=FolioRelease.morning_glory,
         library_name="Organization tester Library",
         log_level_debug=False,
         iteration_identifier="Test!",

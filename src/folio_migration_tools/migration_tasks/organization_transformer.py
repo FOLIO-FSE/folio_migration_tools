@@ -71,7 +71,6 @@ class OrganizationTransformer(MigrationTaskBase):
             self.organization_map
         )
 
-        # TODO Find out if "FOLIO property name" can be anything here
         self.mapper = OrganizationMapper(
             self.folio_client,
             self.library_configuration,
@@ -142,7 +141,7 @@ class OrganizationTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.organizations
                     )
 
-                    clean_folio_rec = OrganizationTransformer.clean_org(folio_rec)
+                    clean_folio_rec = self.clean_org(folio_rec)
 
                     if idx == 0:
                         logging.info("First FOLIO record:")
@@ -211,8 +210,13 @@ class OrganizationTransformer(MigrationTaskBase):
             )
         logging.info("All done!")
 
-    @staticmethod
-    def clean_org(folio_rec):
+    def clean_org(self, folio_rec):
+
+        # Remove the organizationTypes for older releases
+        if self.library_configuration.folio_release in ["lotus", "kiwi"]:
+            if folio_rec.get("organizationTypes"):
+                del folio_rec["organizationTypes"]
+
         if addresses := folio_rec.get("addresses", []):
             primary_address_exists = False
             empty_addresses = []

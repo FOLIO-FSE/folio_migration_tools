@@ -172,6 +172,7 @@ class OrganizationMapper(MappingFileMapperBase):
         else:
             self.organization_types_map = None
 
+
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
         """
@@ -345,10 +346,6 @@ class OrganizationMapper(MappingFileMapperBase):
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
                     "$ref"
                 ):
-
-                    logging.info(
-                        "Fetching referenced schema for array object %s", property_name_level1
-                    )
 
                     ref_object = property_level1["items"]["$ref"]
                     schema_url = f"{submodule_path}/{ref_object}"
