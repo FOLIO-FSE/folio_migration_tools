@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+
 from argparse_prompt import PromptParser
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -15,7 +16,12 @@ from folio_migration_tools.migration_tasks import migration_task_base
 
 
 def parse_args():
-    """Parse CLI Arguments"""
+    """
+    Parse CLI Arguments
+
+    Returns:
+        _type_: _description_
+    """
     parser = PromptParser()
     parser.add_argument("results_path", help="Path to store schemas")
     return parser.parse_args()
