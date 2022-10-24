@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import sys
 
 import requests
@@ -76,30 +77,30 @@ class OrganizationMapper(MappingFileMapperBase):
             return value
 
         # Perfrom reference data mappings
-        if folio_prop_name == "addresses[0].categories[0]":
+        elif folio_prop_name == "organizationTypes":
+            return self.get_mapped_value(
+                self.organization_types_map,
+                *value_tuple,
+                False,
+            )
+
+        elif re.compile("addresses\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
             return self.get_mapped_value(
                 self.address_categories_map,
                 *value_tuple,
                 False,
             )
 
-        elif folio_prop_name == "emails[0].categories[0]":
+        elif re.compile("emails\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
             return self.get_mapped_value(
                 self.email_categories_map,
                 *value_tuple,
                 False,
             )
 
-        elif folio_prop_name == "phoneNumbers[0].categories[0]":
+        elif re.compile("phoneNumbers\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
             return self.get_mapped_value(
                 self.phone_categories_map,
-                *value_tuple,
-                False,
-            )
-        elif folio_prop_name == "organizationTypes":
-
-            return self.get_mapped_value(
-                self.organization_types_map,
                 *value_tuple,
                 False,
             )
