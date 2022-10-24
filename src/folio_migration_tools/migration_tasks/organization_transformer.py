@@ -212,11 +212,20 @@ class OrganizationTransformer(MigrationTaskBase):
 
     def clean_org(self, folio_rec):
 
+        self.clean_org_type_pre_morning_glory(
+            folio_rec, self.library_configuration.folio_release)
+        self.clean_addresses(folio_rec)
+
+        return folio_rec
+
+    def clean_org_type_pre_morning_glory(self, folio_rec, folio_release):
         # Remove the organizationTypes for older releases
-        if self.library_configuration.folio_release in ["lotus", "kiwi"]:
+        if folio_release in ["lotus", "kiwi"]:
             if folio_rec.get("organizationTypes"):
                 del folio_rec["organizationTypes"]
+        return folio_rec
 
+    def clean_addresses(self, folio_rec):
         if addresses := folio_rec.get("addresses", []):
             primary_address_exists = False
             empty_addresses = []
