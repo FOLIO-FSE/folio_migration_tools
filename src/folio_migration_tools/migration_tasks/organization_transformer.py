@@ -40,7 +40,6 @@ class OrganizationTransformer(MigrationTaskBase):
         email_categories_map_path: Optional[str] = ""
         phone_categories_map_path: Optional[str] = ""
 
-
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.organizations
@@ -81,25 +80,29 @@ class OrganizationTransformer(MigrationTaskBase):
                 "organizationTypes",
                 self.folder_structure.mapping_files_folder
                 / self.task_configuration.organization_types_map_path,
-                self.folio_keys, False
+                self.folio_keys,
+                False,
             ),
             self.load_ref_data_mapping_file(
                 "addresses[0].categories[0]",
                 self.folder_structure.mapping_files_folder
                 / self.task_configuration.address_categories_map_path,
-                self.folio_keys, False
+                self.folio_keys,
+                False,
             ),
             self.load_ref_data_mapping_file(
                 "emails[0].categories[0]",
                 self.folder_structure.mapping_files_folder
                 / self.task_configuration.email_categories_map_path,
-                self.folio_keys, False
+                self.folio_keys,
+                False,
             ),
             self.load_ref_data_mapping_file(
                 "phoneNumbers[0].categories[0]",
                 self.folder_structure.mapping_files_folder
                 / self.task_configuration.phone_categories_map_path,
-                self.folio_keys, False
+                self.folio_keys,
+                False,
             ),
         )
 

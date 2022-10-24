@@ -110,7 +110,6 @@ class OrganizationMapper(MappingFileMapperBase):
         )
         legacy_value = " ".join(legacy_values).strip()
 
-
         # What dores the below do?
         if any(legacy_organization_keys):
             return legacy_value
@@ -142,23 +141,21 @@ class OrganizationMapper(MappingFileMapperBase):
 
         if address_categories_map:
             self.address_categories_map = RefDataMapping(
-                *categories_shared_args,
-                address_categories_map, "value", Blurbs.CategoriesMapping
+                *categories_shared_args, address_categories_map, "value", Blurbs.CategoriesMapping
             )
         else:
             self.address_categories_map = None
 
         if email_categories_map:
             self.email_categories_map = RefDataMapping(
-                *categories_shared_args,
-                email_categories_map, "value", Blurbs.CategoriesMapping)
+                *categories_shared_args, email_categories_map, "value", Blurbs.CategoriesMapping
+            )
         else:
             self.email_categories_map = None
 
         if phone_categories_map:
             self.phone_categories_map = RefDataMapping(
-                *categories_shared_args,
-                phone_categories_map, "value", Blurbs.CategoriesMapping
+                *categories_shared_args, phone_categories_map, "value", Blurbs.CategoriesMapping
             )
         else:
             self.phone_categories_map = None
@@ -309,15 +306,17 @@ class OrganizationMapper(MappingFileMapperBase):
         try:
 
             for property_name_level1, property_level1 in object_schema["properties"].items():
-                
+
                 # For now, treat references to UUIDs like strings
                 # It's not great practice, but it's the way FOLIO mostly handles it
-                if "../../common/schemas/uuid.json" in property_level1.get(
-                    "$ref", ""):
+                if "../../common/schemas/uuid.json" in property_level1.get("$ref", ""):
                     property_level1["type"] = "string"
 
-                elif property_level1.get("type") == "array" and property_level1.get("items").get(
-                    "$ref") == "../../common/schemas/uuid.json":
+                elif (
+                    property_level1.get("type") == "array"
+                    and property_level1.get("items").get("$ref")
+                    == "../../common/schemas/uuid.json"
+                ):
                     property_level1["items"]["type"] = "string"
 
                 # Report and discard unhandled properties
@@ -342,7 +341,7 @@ class OrganizationMapper(MappingFileMapperBase):
                     req.raise_for_status()
 
                     property_level1 = dict(property_level1, **json.loads(req.text))
-                    
+
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
                     "$ref"
                 ):
