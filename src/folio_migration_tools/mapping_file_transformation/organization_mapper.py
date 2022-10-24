@@ -172,7 +172,6 @@ class OrganizationMapper(MappingFileMapperBase):
         else:
             self.organization_types_map = None
 
-
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
         """
