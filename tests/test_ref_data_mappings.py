@@ -121,3 +121,42 @@ def test_normal_refdata_mapping_strip():
     mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
     res = RefDataMapping.get_ref_data_mapping(mock, legacy_object)
     assert res == mappings[2]
+
+
+def test_mapping_for_multiple_fields():
+    mappings = [
+        {
+            "email1_categories": "tspt",
+            "email2_categories": "*",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
+        {
+            "email1_categories": "*",
+            "email2_categories": "tspt",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
+        {"email1_categories": "*", "email2_categories": "*", "folio_value": "General"},
+    ]
+
+    legacy_object = {
+        "EMAIL": "email1@abebooks.com",
+        "email1_categories": "sls",
+        "EMAIL2": "email2@abebooks.com",
+        "email2_categories": "tspt",
+    }
+
+    mock = Mock(spec=RefDataMapping)
+    mock.regular_mappings = [
+        {
+            "email1_categories": "heja",
+            "email2_categories": "Sverige",
+            "folio_value": "Nationalizm",
+        },
+    ]
+    mock.hybrid_mappings = mappings
+    mock.cache = {}
+    mock.mapped_legacy_keys = ["email1_categories", "email2_categories"]
+    res = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
+    assert res == mappings[1]
