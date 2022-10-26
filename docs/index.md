@@ -7,6 +7,7 @@ Migration Tasks <migration_tasks.md>
 Mapping-file based mapping <mapping_file_based_mapping.md>
 MARC Rules based mapping <marc_rule_based_mapping.md>
 Mapping files <mapping_files.md>
+Q&A <q_and_a.md>
 
 ```   
 ```{contents} 

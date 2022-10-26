@@ -36,10 +36,9 @@ A typical mapping file looks like this:
         }
     ]
 }
-
+```    
 You do not have to map every FOLIO property. You can either leave the entries unmapped or remove them from the file alltogether.
 
-```
 ## The mapping file mapping entries
 A typical entry looks like this:
 ```
@@ -149,4 +148,44 @@ The fallback_legacy_field is used as a falback, so when the legacy_field and the
 The fallback_value is used as a last resort, so if no other mappings have returned a value, this value will be set.
 
 ### The rules mapping entry
-TBA
+This is a placeHolder for more advanced mappings. 
+
+### rules.regexGetFirstMatchOrEmpty
+This propety should contain a regular expression with a capturing group. The resulting string will be the first capturing group. Imagine the following mapping:
+
+```
+{
+    "folio_field": "username",
+    "legacy_field": "EMAIL",
+    "value": "",
+    "description": "",
+    "fallback_legacy_field": "RECORD #(PATRON)",
+    "rules": {
+        "regexGetFirstMatchOrEmpty": "(.*)@.*"
+    }
+}
+```
+If the contents of the EMAIL field is *someone@example.com*, the resulting string will be *someone*
+If there is no match, the empty string will be returned.
+
+### rules.replaceValues
+This rule allows you to map codes to strings. Given the following mapping:
+
+```
+{
+            "folio_field": "notes[0].title",
+            "legacy_field": "STATUS",
+            "value": "",
+            "description": "",
+            "fallback_legacy_field": "",
+            "rules": {
+                "replaceValues": {
+                    "0": "Graduate",
+                    "a": "Alumni"
+                }
+            }
+        },
+```
+
+If the STATUS field contains *0*, then the resulting value in the note title will be *Graduate*.
+If no match is made, the original string will be returned. So if STATUS is *1*, then the note title will be *1*.
