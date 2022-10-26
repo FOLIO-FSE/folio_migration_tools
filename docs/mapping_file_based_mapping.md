@@ -173,18 +173,18 @@ This rule allows you to map codes to strings. Given the following mapping:
 
 ```
 {
-            "folio_field": "notes[0].title",
-            "legacy_field": "STATUS",
-            "value": "",
-            "description": "",
-            "fallback_legacy_field": "",
-            "rules": {
-                "replaceValues": {
-                    "0": "Graduate",
-                    "a": "Alumni"
-                }
-            }
-        },
+    "folio_field": "notes[0].title",
+    "legacy_field": "STATUS",
+    "value": "",
+    "description": "",
+    "fallback_legacy_field": "",
+    "rules": {
+        "replaceValues": {
+            "0": "Graduate",
+            "a": "Alumni"
+        }
+    }
+},
 ```
 
 If the STATUS field contains *0*, then the resulting value in the note title will be *Graduate*.

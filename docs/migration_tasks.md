@@ -6,7 +6,21 @@ Post tranformed FOLIO objects to a FOLIO tenant
 ## Bibs Transformer   
 Transform MARC21 Bib records to FOLIO Instances and SRS records   
 ## Courses Migrator   
-
+### Instructor enrichment from the Users app
+If you have turned this feature on in the configuration like this, 
+```
+"lookUpInstructor": true,
+```
+and also mapped mapped the value that is mapped to the User record's *externalSystemId* to the Instructor *userId* field, like this,
+```
+{
+    "folio_field": "instructors[0].userId",
+    "legacy_field": "FACULTY_ID",
+    "value": "",
+    "description": ""
+},
+```
+The tool will perform a lookup in the Users app, and if a match is found, the Instructor record will be populated with data from the user
 ## Holdings CSV Transformer
 Creates FOLIO holdingsrecords from a TSV or CSV File   
 ## Holdings MARC Transformer   
