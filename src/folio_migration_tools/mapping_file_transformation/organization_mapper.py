@@ -1,17 +1,21 @@
 import json
 import logging
 import os
+import re
 import sys
+
 import requests
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
 from requests.exceptions import HTTPError
 
-from folioclient import FolioClient
-from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.report_blurbs import Blurbs
 
 
@@ -19,11 +23,15 @@ class OrganizationMapper(MappingFileMapperBase):
     def __init__(
         self,
         folio_client: FolioClient,
-        organization_map: dict,
         library_configuration: LibraryConfiguration,
+        organization_map: dict,
+        organization_types_map,
+        address_categories_map,
+        email_categories_map,
+        phone_categories_map,
     ):
 
-        # Get organization schema
+        # Build composite organization schema
         organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
         )
@@ -37,13 +45,30 @@ class OrganizationMapper(MappingFileMapperBase):
             library_configuration,
         )
 
+        self.use_map = True
+
+        # Set up reference data maps
+        self.set_up_reference_data_mapping(
+            organization_types_map,
+            address_categories_map,
+            email_categories_map,
+            phone_categories_map,
+        )
+
+    # Commence the mapping work
     def get_prop(self, legacy_organization, folio_prop_name, index_or_id):
+        value_tuple = (
+            legacy_organization,
+            index_or_id,
+            folio_prop_name,
+        )
+
         if not self.use_map:
             return legacy_organization[folio_prop_name]
 
         legacy_organization_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
 
-        # If there is a value mapped, return that one
+        # If there is a verbatim "value" set in the object map, return that one
         if len(legacy_organization_keys) == 1 and folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")
             self.migration_report.add(
@@ -51,17 +76,101 @@ class OrganizationMapper(MappingFileMapperBase):
             )
             return value
 
+        # Perfrom reference data mappings
+        elif folio_prop_name == "organizationTypes":
+            return self.get_mapped_value(
+                self.organization_types_map,
+                *value_tuple,
+                False,
+            )
+
+        elif re.compile("addresses\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+            return self.get_mapped_value(
+                self.address_categories_map,
+                *value_tuple,
+                False,
+            )
+
+        elif re.compile("emails\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+            return self.get_mapped_value(
+                self.email_categories_map,
+                *value_tuple,
+                False,
+            )
+
+        elif re.compile("phoneNumbers\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+            return self.get_mapped_value(
+                self.phone_categories_map,
+                *value_tuple,
+                False,
+            )
+
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_organization, legacy_organization_keys
         )
-
         legacy_value = " ".join(legacy_values).strip()
 
+        # What dores the below do?
         if any(legacy_organization_keys):
             return legacy_value
         else:
             # edge case
             return ""
+
+    def set_up_reference_data_mapping(
+        self,
+        organization_types_map,
+        address_categories_map,
+        email_categories_map,
+        phone_categories_map,
+    ):
+        """
+
+        Args:
+            organization_types_map (_type_): _description_
+            address_categories_map (_type_): _description_
+            email_categories_map (_type_): _description_
+            phone_categories_map (_type_): _description_
+        """
+
+        categories_shared_args = (
+            self.folio_client,
+            "/organizations-storage/categories",
+            "categories",
+        )
+
+        if address_categories_map:
+            self.address_categories_map = RefDataMapping(
+                *categories_shared_args, address_categories_map, "value", Blurbs.CategoriesMapping
+            )
+        else:
+            self.address_categories_map = None
+
+        if email_categories_map:
+            self.email_categories_map = RefDataMapping(
+                *categories_shared_args, email_categories_map, "value", Blurbs.CategoriesMapping
+            )
+        else:
+            self.email_categories_map = None
+
+        if phone_categories_map:
+            self.phone_categories_map = RefDataMapping(
+                *categories_shared_args, phone_categories_map, "value", Blurbs.CategoriesMapping
+            )
+        else:
+            self.phone_categories_map = None
+
+        if organization_types_map:
+            self.organization_types_map = RefDataMapping(
+                self.folio_client,
+                "/organizations-storage/organization-types",
+                "organizationTypes",
+                organization_types_map,
+                "name",
+                Blurbs.OrganizationTypeMapping,
+            )
+        else:
+            self.organization_types_map = None
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
@@ -198,8 +307,20 @@ class OrganizationMapper(MappingFileMapperBase):
 
             for property_name_level1, property_level1 in object_schema["properties"].items():
 
+                # For now, treat references to UUIDs like strings
+                # It's not great practice, but it's the way FOLIO mostly handles it
+                if "../../common/schemas/uuid.json" in property_level1.get("$ref", ""):
+                    property_level1["type"] = "string"
+
+                elif (
+                    property_level1.get("type") == "array"
+                    and property_level1.get("items").get("$ref")
+                    == "../../common/schemas/uuid.json"
+                ):
+                    property_level1["items"]["type"] = "string"
+
                 # Report and discard unhandled properties
-                if (
+                elif (
                     property_level1.get("type") not in supported_types
                     or "../" in property_level1.get("$ref", "")
                     or "../" in property_level1.get("items", {}).get("$ref", "")
@@ -221,14 +342,9 @@ class OrganizationMapper(MappingFileMapperBase):
 
                     property_level1 = dict(property_level1, **json.loads(req.text))
 
-                # Handle arrays of items properties
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
                     "$ref"
                 ):
-
-                    logging.info(
-                        "Fetching referenced schema for array object %s", property_name_level1
-                    )
 
                     ref_object = property_level1["items"]["$ref"]
                     schema_url = f"{submodule_path}/{ref_object}"

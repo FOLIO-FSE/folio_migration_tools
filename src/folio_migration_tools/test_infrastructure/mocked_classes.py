@@ -160,6 +160,20 @@ def folio_get_all(ref_data_path, array_name, query, limit=10):
                 "description": "FALLBACK",
             },
         ]
+    elif ref_data_path == "/organizations-storage/categories":
+        yield from [
+            {"id": "c78640d5-a1ec-4721-9a1f-c6f876d4c179", "value": "Returns"},
+            {"id": "604c2c9d-ed3a-46cd-bec4-69926c303b22", "value": "Sales"},
+            {"id": "c5b175bd-34a0-4a4d-9bd9-8eddae8e67f8", "value": "General"},
+            {"id": "97dcb23df-1aba-444e-b88d-804d17c715a5", "value": "Technical Support"},
+            {"id": "e193b0d1-4674-4a9e-818b-375f013d963f", "value": "Moral Support"},
+        ]
+
+    elif ref_data_path == "/organizations-storage/organization-types":
+        yield from [
+            {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "name": "Consortium"},
+            {"id": "fc54327d-fd60-4f6a-ba37-a4375511b91b", "name": "Unspecified"},
+        ]
     elif ref_data_path == "/groups":
         yield from [
             {

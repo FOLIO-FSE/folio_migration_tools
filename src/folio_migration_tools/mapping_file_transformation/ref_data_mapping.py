@@ -2,9 +2,10 @@ import json
 import logging
 import sys
 
+from folioclient import FolioClient
+
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.report_blurbs import Blurbs
-from folioclient import FolioClient
 
 
 class RefDataMapping(object):
@@ -207,5 +208,13 @@ def get_mapped_legacy_keys(mapping):
     return [
         k.strip()
         for k in mapping.keys()
-        if k not in ["folio_group", "folio_code", "folio_id", "folio_name", "legacy_code"]
+        if k
+        not in [
+            "folio_group",
+            "folio_code",
+            "folio_id",
+            "folio_name",
+            "legacy_code",
+            "folio_value",
+        ]
     ]
