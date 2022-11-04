@@ -27,8 +27,10 @@ class CoursesMapper(MappingFileMapperBase):
         terms_map,
         departments_map,
         library_configuration: LibraryConfiguration,
+        task_configuration,
     ):
         self.folio_client = folio_client
+        self.user_cache: dict = {}
         self.notes_mapper: NotesMapper = NotesMapper(
             library_configuration,
             self.folio_client,
@@ -37,6 +39,7 @@ class CoursesMapper(MappingFileMapperBase):
             True,
         )
         self.composite_course_schema = self.get_composite_course_schema()
+        self.task_configuration = task_configuration
         super().__init__(
             folio_client,
             self.composite_course_schema,
@@ -46,7 +49,6 @@ class CoursesMapper(MappingFileMapperBase):
             library_configuration,
         )
         self.course_map = course_map
-        self.ids_dict: Dict[str, set] = {}
         self.use_map = True
         if terms_map:
             self.terms_map = RefDataMapping(
@@ -104,6 +106,8 @@ class CoursesMapper(MappingFileMapperBase):
                     )
                     # Link instructor to course listing
                     instructor["courseListingId"] = composite_course[0]["courselisting"]["id"]
+                    if self.task_configuration.look_up_instructor:
+                        self.populate_instructor_from_users(instructor)
             else:
                 self.migration_report.add_general_statistics("Missing Instructors")
 
@@ -125,6 +129,19 @@ class CoursesMapper(MappingFileMapperBase):
                 composite_course[1] if idx == 0 else f"{composite_course[1]}_{idx}",
             )
         )
+
+    def populate_instructor_from_users(self, instructor: dict):
+        if instructor["userId"] not in self.user_cache:
+            path = "/users"
+            query = f'?query=(externalSystemId=="{instructor["userId"]}")'
+            if user := next(self.folio_client.folio_get_all(path, "users", query), None):
+                self.user_cache[instructor["userId"]] = user
+        if user := self.user_cache.get(instructor["userId"], {}):
+            instructor["userId"] = user.get("id", "")
+            instructor["barcode"] = user.get("barcode", "")
+            instructor["patronGroup"] = user.get("patronGroup", "")
+        else:
+            del instructor["userId"]
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         value_tuple = (legacy_item, folio_prop_name, index_or_id)

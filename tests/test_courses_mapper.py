@@ -1,5 +1,6 @@
 import json
 import logging
+from unittest.mock import Mock
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -9,6 +10,7 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.courses_mapper import (
     CoursesMapper,
 )
+from folio_migration_tools.migration_tasks.courses_migrator import CoursesMigrator
 from folio_migration_tools.test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
@@ -44,7 +46,11 @@ def mapper(pytestconfig) -> CoursesMapper:
         {"DEPT": "dep1", "folio_name": "Department_t"},
         {"DEPT": "*", "folio_name": "Department_FALLBACK"},
     ]
-    return CoursesMapper(mock_folio, basic_course_map, terms_map, departments_map, lib)
+    mocked_config = Mock(spec=CoursesMigrator.TaskConfiguration)
+    mocked_config.look_up_instructor = False
+    return CoursesMapper(
+        mock_folio, basic_course_map, terms_map, departments_map, lib, mocked_config
+    )
 
 
 def test_schema():
@@ -52,7 +58,37 @@ def test_schema():
     assert schema
 
 
-def test_basic_mapping2(mapper, caplog):
+def test_instructor_fetch(mapper: CoursesMapper, caplog):
+    mapper.task_configuration.look_up_instructor = True
+    instructor = {"userId": "Some external id"}
+    mapper.populate_instructor_from_users(instructor)
+    assert instructor["barcode"] == "some barcode"
+    assert instructor["userId"] == "some id"
+    assert instructor["patronGroup"] == "some group"
+
+
+def test_instructor_fetch_no_user(mapper: CoursesMapper, caplog):
+    mapper.task_configuration.look_up_instructor = True
+    instructor = {"userId": "Some external id that does not exist"}
+    mapper.populate_instructor_from_users(instructor)
+    assert "userId" not in instructor
+
+
+def test_instructor_cache(mapper: CoursesMapper, caplog):
+    mapper.task_configuration.look_up_instructor = True
+    instructor = {"userId": "Some external id"}
+    mapper.user_cache["Some external id"] = {
+        "id": "some id",
+        "barcode": "some barcode",
+        "patronGroup": "some group",
+    }
+    mapper.populate_instructor_from_users(instructor)
+    assert instructor["barcode"] == "some barcode"
+    assert instructor["userId"] == "some id"
+    assert instructor["patronGroup"] == "some group"
+
+
+def test_basic_mapping2(mapper: CoursesMapper, caplog):
     caplog.set_level(25)
     data = {
         "RECORD #(COURSE)": ".r1",
@@ -64,6 +100,7 @@ def test_basic_mapping2(mapper, caplog):
         "BEGIN DATE": "01-10-2022",
         "DEPT": "dep1",
     }
+    mapper.task_configuration.look_up_instructor = False
     res = mapper.do_map(data, 1, FOLIONamespaces.course)
     mapper.perform_additional_mappings(res)
     mapper.notes_mapper.map_notes(data, 1, res[0]["course"]["id"], FOLIONamespaces.course)

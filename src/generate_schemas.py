@@ -16,12 +16,12 @@ from folio_migration_tools.migration_tasks import migration_task_base
 
 
 def parse_args():
-    """
-    Parse CLI Arguments
+    """Parses arguments from the tool
 
     Returns:
-        _type_: _description_
+        _type_: The parsed areguments
     """
+
     parser = PromptParser()
     parser.add_argument("results_path", help="Path to store schemas")
     return parser.parse_args()

@@ -5,8 +5,8 @@ import tempfile
 
 import nox
 
-nox.options.sessions = "lint", "safety", "tests"
-locations = "src", "tests", "noxfile.py"
+nox.options.sessions = "lint", "safety", "tests", "docs"
+locations = "src", "tests", "noxfile.py", "docs/conf.py"
 
 try:
     with open(".env") as f:
@@ -45,10 +45,13 @@ def lint(session):
     args = session.posargs or locations
     session.install(
         "flake8",
+        "flake8-annotations",
         "flake8-bandit",
         "flake8-black",
         "flake8-bugbear",
+        "flake8-docstrings",
         "flake8-import-order",
+        "darglint",
     )
     session.run("flake8", *args)
 
@@ -74,3 +77,13 @@ def safety(session):
         )
         session.install("safety")
         session.run("safety", "check", f"--file={requirements.name}", "--full-report")
+
+
+@nox.session()
+def docs(session) -> None:
+    """Build the documentation."""
+    session.run("poetry", "install", "--no-dev", external=True)
+    session.install("sphinx")
+    session.install("sphinx-autodoc-typehints")
+    session.install("myst_parser")
+    session.run("sphinx-build", "docs", "docs/_build")

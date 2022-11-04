@@ -1,5 +1,48 @@
 # Changelog
 
+## 1_6_1 (21/10/2022)
+
+#### bug
+
+- [**bug**][**Course Reserves**] Courses: Remove user id field if there is no match in the call to the users app [#407](https://github.com/FOLIO-FSE/folio_migration_tools/issues/407)
+
+---
+
+## 1_6_0 (21/10/2022)
+
+#### closed
+
+- [**closed**] Add "Fallback value" in addition to the "Fallback legacy field" mapping entry [#405](https://github.com/FOLIO-FSE/folio_migration_tools/issues/405)
+- [**closed**] Rewrite UserMapper and UserTransformer to use MappingFileMapperBase [#402](https://github.com/FOLIO-FSE/folio_migration_tools/issues/402)
+- [**closed**] Pick first Match on regex [#400](https://github.com/FOLIO-FSE/folio_migration_tools/issues/400)
+- [**closed**] look for missing required properties in notes [#399](https://github.com/FOLIO-FSE/folio_migration_tools/issues/399)
+- [**closed**] up the dependencies on pymarc and folio_uuid [#398](https://github.com/FOLIO-FSE/folio_migration_tools/issues/398)
+- [**closed**] allow multiple legacyIdentifier fields to be concatenated into one [#396](https://github.com/FOLIO-FSE/folio_migration_tools/issues/396)
+- [**closed**] Explore format for string replacements in mapping files [#393](https://github.com/FOLIO-FSE/folio_migration_tools/issues/393)
+- [**closed**] Remove "Subfield b not in 336" warning if mapping to resource type by $a is successful and report the mapping in the report. [#392](https://github.com/FOLIO-FSE/folio_migration_tools/issues/392)
+- [**closed**] Implement array mapping on level 2 in MappingFileMapperBase [#379](https://github.com/FOLIO-FSE/folio_migration_tools/issues/379)
+- [**closed**] Pull Courses Instructor information from externalSystemId [#378](https://github.com/FOLIO-FSE/folio_migration_tools/issues/378)
+- [**closed**] Concatenated fields in mapping file transformed data comes out in different order [#370](https://github.com/FOLIO-FSE/folio_migration_tools/issues/370)
+- [**closed**] When creating Users never set more than one address as "primary" [#301](https://github.com/FOLIO-FSE/folio_migration_tools/issues/301)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**] Move to Poetry from Pipenv, Build etc. [#305](https://github.com/FOLIO-FSE/folio_migration_tools/issues/305)
+- [**enhancement/new feature**][**users**] Make Id field and requestPreference optional when processing users [#205](https://github.com/FOLIO-FSE/folio_migration_tools/issues/205)
+- [**enhancement/new feature**][**wontfix**] Create migration task for PO lines [#203](https://github.com/FOLIO-FSE/folio_migration_tools/issues/203)
+
+#### question/decision
+
+- [**question/decision**][**new_folio_functionality**] Create summary of missing conditions in MARC mapping rules for Morning glory [#377](https://github.com/FOLIO-FSE/folio_migration_tools/issues/377)
+
+#### wontfix
+
+- [**wontfix**] Map system identifier to barcode where barcode is null [#387](https://github.com/FOLIO-FSE/folio_migration_tools/issues/387)
+- [**wontfix**] Trouble shoot false negatives in RDA field mappings [#386](https://github.com/FOLIO-FSE/folio_migration_tools/issues/386)
+- [**wontfix**] Loans migrator needs to add timestamps [#340](https://github.com/FOLIO-FSE/folio_migration_tools/issues/340)
+
+---
+
 ## 1_5_0 (05/10/2022)
 
 #### bug

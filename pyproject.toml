@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "folio_migration_tools"
-version = "1.5.1"
+version = "1.6.1"
 description =  "A tool allowing you to migrate data from legacy ILS:s (Library systems) into FOLIO LSP"
 authors = ["Theodor Tolstoy <github.teddes@tolstoy.se>", "Lisa Sjögren", "Brooks Travis"]
 license = "MIT"
@@ -37,8 +37,8 @@ folioclient = "^0.42.0"
 pyhumps = "^3.7.3"
 defusedxml = "^0.7.1"
 python-dateutil = "^2.8.2"
-folio-uuid = "^0.2.5"
-pymarc = "^4.2.0"
+folio-uuid = "^0.2.6"
+pymarc = "^4.2.1"
 pydantic = "^1.10.2"
 argparse-prompt = "^0.0.5"
 
@@ -54,3 +54,11 @@ flake8-black = "^0.3.3"
 flake8-bugbear = "^22.9.23"
 flake8-bandit = "^4.1.1"
 flake8-isort = "^5.0.0"
+flake8-docstrings = "^1.6.0"
+darglint = "^1.8.1"
+sphinx = "^5.3.0"
+sphinx-autodoc-typehints = "^1.19.4"
+myst-parser = "^0.18.1"
+
+[tool.poetry.extras]
+docs = ["m2r", "sphinx", "sphinx-autodoc-typehints", "sphinx-rtd-theme", "toml"]

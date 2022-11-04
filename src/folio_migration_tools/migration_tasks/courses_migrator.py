@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 import traceback
+from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import BaseModel
@@ -30,6 +31,7 @@ class CoursesMigrator(MigrationTaskBase):
         courses_file: FileDefinition
         terms_map_path: str
         departments_map_path: str
+        look_up_instructor: Optional[bool] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -51,22 +53,25 @@ class CoursesMigrator(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.courses_map
         )
+        terms_map = self.load_ref_data_mapping_file(
+            "terms",
+            self.folder_structure.mapping_files_folder / self.task_configuration.terms_map_path,
+            self.folio_keys,
+        )
+
+        departments_map = self.load_ref_data_mapping_file(
+            "departments",
+            self.folder_structure.mapping_files_folder
+            / self.task_configuration.departments_map_path,
+            self.folio_keys,
+        )
         self.mapper: CoursesMapper = CoursesMapper(
             self.folio_client,
             self.courses_map,
-            self.load_ref_data_mapping_file(
-                "terms",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.terms_map_path,
-                self.folio_keys,
-            ),
-            self.load_ref_data_mapping_file(
-                "departments",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.departments_map_path,
-                self.folio_keys,
-            ),
+            terms_map,
+            departments_map,
             self.library_configuration,
+            self.task_configuration,
         )
         logging.info("Init completed")
 
@@ -88,10 +93,10 @@ class CoursesMigrator(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.course
                     )
+                    self.mapper.perform_additional_mappings((folio_rec, legacy_id))
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
-                    self.mapper.perform_additional_mappings((folio_rec, legacy_id))
                     self.mapper.store_objects((folio_rec, legacy_id))
                     self.mapper.notes_mapper.map_notes(
                         record, legacy_id, folio_rec["course"]["id"], FOLIONamespaces.course
