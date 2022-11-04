@@ -187,10 +187,8 @@ def test_multiple_emails_array_objects_with_different_ref_data_mappings():
     }
 
     # In this ref data mapping, the first row which matches the condition
-    # email1_categories == sls
-    # is row number 2, where
-    # email1_categories": "sls"
-    # This maps to Sales
+    # email1_categories == sls/* and email2_categories == tsp/*
+    # is row number 2, which maps to Sales
     mapping_a = [
         {
             "email1_categories": "tspt",
@@ -208,10 +206,8 @@ def test_multiple_emails_array_objects_with_different_ref_data_mappings():
     ]
 
     # In this ref data mapping, the first row which matches the condition
-    # email1_categories == sls
-    # is row number 3, where
-    # "email1_categories": "*"
-    # This maps to Support
+    # email1_categories == sls/* and email2_categories == tsp/*
+    # is row number 3, which maps to Support
     mapping_b = [
         {
             "email1_categories": "tspt",
