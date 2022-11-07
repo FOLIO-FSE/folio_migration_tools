@@ -160,3 +160,78 @@ def test_mapping_for_multiple_fields():
     mock.mapped_legacy_keys = ["email1_categories", "email2_categories"]
     res = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
     assert res == mappings[1]
+
+def test_multiple_emails_array_objects_with_different_ref_data_mappings():
+    # This test demonstrates that, when you have multiple mapped fields,
+    # the ref data mapping for the same legacy value will
+    # differ depending on the order of the rows in the ref data mapping
+
+    # See def test_multiple_emails_array_objects in organization_mapper.py
+    # to see what happens when you have multiple array items with different
+    # mapped reference data values and where some ref data mapping rows
+    # effectively become unreachable as all properties are taken into account
+    # for all array items
+
+    
+    # The source data contains two email objects
+    # The FOLIO category of the email1 object should always be "Sales"
+    # The FOLIO category of the email2 object should always be "Technical Support"
+    legacy_object = {
+        "EMAIL": "email1@abebooks.com",
+        "email1_categories": "sls",
+        "EMAIL2": "email2@abebooks.com",
+        "email2_categories": "tspt",
+    }
+
+    # In this ref data mapping, the first row which matches the condition
+    # email1_categories == sls/* and email2_categories == tsp/*
+    # is row number 2, which maps to Sales
+    mapping_a = [
+        {
+            "email1_categories": "tspt",
+            "email2_categories": "*",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
+        {
+            "email1_categories": "*",
+            "email2_categories": "tspt",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
+        {"email1_categories": "*", "email2_categories": "*", "folio_value": "General"},
+    ]
+
+    # In this ref data mapping, the first row which matches the condition
+    # email1_categories == sls/* and email2_categories == tsp/*
+    # is row number 3, which maps to Support
+    mapping_b = [
+        {
+            "email1_categories": "tspt",
+            "email2_categories": "*",
+            "folio_value": "Technical Support",
+        },
+        {
+            "email1_categories": "*",
+            "email2_categories": "tspt",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
+        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
+        {"email1_categories": "*", "email2_categories": "*", "folio_value": "General"},
+    ]
+
+
+    mock = Mock(spec=RefDataMapping)
+
+    mock.hybrid_mappings = mapping_a
+    mock.cache = {}
+    mock.mapped_legacy_keys = ["email1_categories", "email2_categories"]
+    res_1 = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
+
+    mock.hybrid_mappings = mapping_b
+    mock.cache = {}
+    mock.mapped_legacy_keys = ["email1_categories", "email2_categories"]
+    res_2 = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
+
+    assert res_1 == res_2
