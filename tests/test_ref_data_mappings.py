@@ -163,7 +163,7 @@ def test_mapping_for_multiple_fields():
     assert res == mappings[1]
 
 
-
+@pytest.mark.skip()
 def test_multiple_emails_array_objects_with_different_ref_data_mappings():
     # This test demonstrates that, when you have multiple mapped fields,
     # the ref data mapping for the same legacy value will
