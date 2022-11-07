@@ -161,7 +161,7 @@ def test_mapping_for_multiple_fields():
     res = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
     assert res == mappings[1]
 
-def test_multiple_emails_array_objects_with_different_ref_data_mappings():
+def test_multiple_emails_array_objects_with_different_ref_data_mappings("The code doesn't handle this case."):
     # This test demonstrates that, when you have multiple mapped fields,
     # the ref data mapping for the same legacy value will
     # differ depending on the order of the rows in the ref data mapping
