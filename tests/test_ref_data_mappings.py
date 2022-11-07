@@ -1,5 +1,7 @@
 from unittest.mock import Mock
 
+import pytest
+
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -148,11 +150,12 @@ def test_mapping_for_multiple_fields():
     }
 
     mock = Mock(spec=RefDataMapping)
+
     mock.regular_mappings = [
         {
-            "email1_categories": "heja",
-            "email2_categories": "Sverige",
-            "folio_value": "Nationalizm",
+            "email1_categories": "hpd",
+            "email2_categories": "has_nothing_to_do_with_email1",
+            "folio_value": "Helpdesk",
         },
     ]
     mock.hybrid_mappings = mappings
@@ -161,7 +164,9 @@ def test_mapping_for_multiple_fields():
     res = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
     assert res == mappings[1]
 
-def test_multiple_emails_array_objects_with_different_ref_data_mappings("The code doesn't handle this case."):
+
+@pytest.mark.skip(reason="The code doesn't handle this case.")
+def test_multiple_emails_array_objects_with_different_ref_data_mappings():
     # This test demonstrates that, when you have multiple mapped fields,
     # the ref data mapping for the same legacy value will
     # differ depending on the order of the rows in the ref data mapping
@@ -172,7 +177,6 @@ def test_multiple_emails_array_objects_with_different_ref_data_mappings("The cod
     # effectively become unreachable as all properties are taken into account
     # for all array items
 
-    
     # The source data contains two email objects
     # The FOLIO category of the email1 object should always be "Sales"
     # The FOLIO category of the email2 object should always be "Technical Support"
@@ -220,7 +224,6 @@ def test_multiple_emails_array_objects_with_different_ref_data_mappings("The cod
         {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
         {"email1_categories": "*", "email2_categories": "*", "folio_value": "General"},
     ]
-
 
     mock = Mock(spec=RefDataMapping)
 
