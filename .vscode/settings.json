@@ -32,4 +32,10 @@
             "source.organizeImports": true
         }
     },
+    "grammarly.selectors": [
+        {
+            "language": "markdown",
+            "scheme": "file"
+        }
+    ],
 }
