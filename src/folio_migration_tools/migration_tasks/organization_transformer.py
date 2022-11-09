@@ -219,7 +219,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
     def clean_org_type_pre_morning_glory(self, folio_rec, folio_release):
         # Remove the organizationTypes for older releases
-        if folio_release in ["lotus", "kiwi"]:
+        if folio_release in ["lotus"]:
             if folio_rec.get("organizationTypes"):
                 del folio_rec["organizationTypes"]
         return folio_rec

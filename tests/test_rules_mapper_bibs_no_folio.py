@@ -51,7 +51,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
-        folio_release=FolioRelease.kiwi,
+        folio_release=FolioRelease.morning_glory,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",
