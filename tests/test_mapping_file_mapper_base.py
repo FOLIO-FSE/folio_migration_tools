@@ -2007,3 +2007,37 @@ def test_value_mapped_non_enum_properties():
     tfm = MyTestableFileMapper(schema, record_map)
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
     assert folio_rec["my_enum"] == "014/EAN"
+
+
+def test_value_not_mapped_mapped_non_enum_properties():
+    record_map = {
+        "data": [
+            {
+                "folio_field": "my_enum",
+                "legacy_field": "Not mapped",
+                "value": "014/EAN",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "my_enum": {
+                "type": "string",
+            },
+        },
+    }
+    legacy_record = {"id": "1"}
+    tfm = MyTestableFileMapper(schema, record_map)
+    folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["my_enum"] == "014/EAN"
