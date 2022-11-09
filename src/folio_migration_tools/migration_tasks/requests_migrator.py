@@ -150,10 +150,7 @@ class RequestsMigrator(MigrationTaskBase):
                 res, legacy_request = self.prepare_legacy_request(legacy_request)
                 if res:
                     if self.circulation_helper.create_request(
-                        self.folio_client,
-                        legacy_request,
-                        self.migration_report,
-                        self.library_configuration.folio_release,
+                        self.folio_client, legacy_request, self.migration_report
                     ):
                         self.migration_report.add_general_statistics(
                             "Successfully migrated requests"
@@ -175,6 +172,7 @@ class RequestsMigrator(MigrationTaskBase):
                 sys.exit(1)
             if num_requests % 10 == 0:
                 logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
+        logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
 
     def wrap_up(self):
         self.write_failed_request_to_file()

@@ -51,7 +51,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
-        folio_release=FolioRelease.kiwi,
+        folio_release=FolioRelease.morning_glory,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",
@@ -242,6 +242,11 @@ def test_get_folio_id_by_name(mapper, caplog):
         in mapper.migration_report.report[Blurbs.InstanceFormat[0]]
     )
     assert res == "605e9527-4008-45e2-a78a-f6bfb027c43a"
+
+
+def test_get_get_langs(mapper: BibsRulesMapper, caplog):
+    langs = BibsRulesMapper.fetch_language_codes(mapper)
+    assert any(langs)
 
 
 def test_handle_leader_05(mapper, caplog):

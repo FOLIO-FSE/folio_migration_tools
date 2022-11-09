@@ -3,11 +3,10 @@ import logging
 import uuid
 from zoneinfo import ZoneInfo
 
-from dateutil.parser import parse
 from dateutil import tz
+from dateutil.parser import parse
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.library_configuration import FolioRelease
 
 utc = ZoneInfo("UTC")
 
@@ -105,7 +104,7 @@ class LegacyRequest(object):
             "id": str(uuid.uuid4()),
         }
 
-    def serialize(self, release: FolioRelease):
+    def serialize(self):
         req = self.to_dict()
         required = [
             "instanceId",
@@ -116,14 +115,10 @@ class LegacyRequest(object):
             "holdingsRecordId",
             "itemId",
             "fulfilmentPreference",
+            "pickupServicePointId",
         ]
-        if release == FolioRelease.kiwi:
-            del req["requestLevel"]
-            del req["holdingsRecordId"]
-            del req["instanceId"]
-            required = [
-                r for r in required if r not in ["requestLevel", "holdingsRecordId", "instanceId"]
-            ]
+        if req["requestLevel"] == "Title":
+            required = [r for r in required if r not in ["itemId", "holdingsRecordId"]]
         missing = [r for r in required if not req.get(r, "")]
         if any(missing):
             raise TransformationRecordFailedError(

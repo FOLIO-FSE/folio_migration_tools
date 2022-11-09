@@ -10,7 +10,6 @@ from folioclient import FolioClient
 from requests import HTTPError
 
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
@@ -209,15 +208,12 @@ class CirculationHelper:
 
     @staticmethod
     def create_request(
-        folio_client: FolioClient,
-        legacy_request: LegacyRequest,
-        migration_report: MigrationReport,
-        release: FolioRelease,
+        folio_client: FolioClient, legacy_request: LegacyRequest, migration_report: MigrationReport
     ):
         try:
             path = "/circulation/requests"
             url = f"{folio_client.okapi_url}{path}"
-            data = legacy_request.serialize(release)
+            data = legacy_request.serialize()
             data["requestProcessingParameters"] = {
                 "overrideBlocks": {
                     "itemNotLoanableBlock": {
@@ -232,7 +228,7 @@ class CirculationHelper:
             logging.debug(f"POST {req.status_code}\t{url}\t{json.dumps(data)}")
             if str(req.status_code) == "422":
                 message = json.loads(req.text)["errors"][0]["message"]
-                logging.error(f"{message}\t{json.dumps(data)}")
+                logging.error(f"{message}")
                 migration_report.add_general_statistics(message)
                 return False
             else:
