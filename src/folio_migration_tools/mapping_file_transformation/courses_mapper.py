@@ -1,5 +1,3 @@
-import json
-import logging
 from typing import Any
 from typing import Dict
 
@@ -76,13 +74,13 @@ class CoursesMapper(MappingFileMapperBase):
 
     def store_objects(self, composite_course):
         try:
-            logging.log(25, "courselisting\t%s", json.dumps(composite_course[0]["courselisting"]))
+            self.write_extradata("courselisting", composite_course[0]["courselisting"])
             self.migration_report.add_general_statistics("Stored courselistings")
-            logging.log(25, "course\t%s", json.dumps(composite_course[0]["course"]))
+            self.write_extradata("course", composite_course[0]["course"])
             self.migration_report.add_general_statistics("Stored courses")
             if "instructors" in composite_course[0] and any(composite_course[0]["instructors"]):
                 for instructor in composite_course[0]["instructors"]:
-                    logging.log(25, "instructor\t%s", json.dumps(instructor))
+                    self.write_extradata("instructor", instructor)
                     self.migration_report.add_general_statistics("Stored instructors")
 
         except Exception as ee:

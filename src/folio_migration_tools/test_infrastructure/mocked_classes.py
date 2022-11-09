@@ -6,6 +6,23 @@ from unittest.mock import Mock
 import requests
 from folioclient import FolioClient
 
+from folio_migration_tools.mapper_base import MapperBase
+from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
+    HoldingsMapper,
+)
+from folio_migration_tools.migration_report import MigrationReport
+
+
+def mocked_holdings_mapper() -> HoldingsMapper:
+    mock_mapper = Mock(spec=HoldingsMapper)
+    mock_mapper.migration_report = MigrationReport()
+    mock_mapper.write_extradata = write_extradata
+    return mock_mapper
+
+
+def write_extradata(object_type: str, object_to_store: dict):
+    MapperBase.write_extradata(object_type, object_to_store)
+
 
 # @pytest.fixture(scope="session", autouse=True)
 def mocked_folio_client() -> FolioClient:
