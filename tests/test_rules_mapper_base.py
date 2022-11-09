@@ -9,9 +9,13 @@ from pymarc.record import Field
 from pymarc.record import Leader
 from pymarc.record import Record
 
+from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
+from folio_migration_tools.test_infrastructure import mocked_classes
 
 # flake8: noqa: E501
 
@@ -223,3 +227,147 @@ def test_get_instance_schema():
         # print("!")
         # print(folio_record)
         # assert folio_record != {}
+
+
+
+def test_subfielddelimiter():
+
+    folio = mocked_classes.mocked_folio_client()
+
+    library_configuration = LibraryConfiguration(
+        okapi_url=folio.okapi_url,
+        tenant_id=folio.tenant_id,
+        okapi_username=folio.username,
+        okapi_password=folio.password,
+        folio_release=FolioRelease.morning_glory,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="I have no clue",
+        base_folder="/",
+    )
+
+    mapper_base = RulesMapperBase(folio, library_configuration)
+    conditions = Conditions(folio, mapper_base, "bibs")
+    mapper_base.conditions = conditions
+
+    mapping = {
+    "264": [
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "remove_ending_punc, trim"
+                        }
+                    ]
+                }
+            ],
+            "target": "publication.place",
+            "subfield": [
+                "a"
+            ],
+            "description": "Place of publication",
+            "subFieldDelimiter": [
+                {
+                    "value": " ; ",
+                    "subfields": [
+                        "a"
+                    ]
+                }
+            ]
+        },
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "remove_ending_punc, trim"
+                        }
+                    ]
+                }
+            ],
+            "target": "publication.publisher",
+            "subfield": [
+                "b"
+            ],
+            "description": "Publisher of publication",
+            "subFieldDelimiter": [
+                {
+                    "value": " ; ",
+                    "subfields": [
+                        "b"
+                    ]
+                }
+            ]
+        },
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "remove_ending_punc, trim, trim_period"
+                        }
+                    ]
+                }
+            ],
+            "target": "publication.dateOfPublication",
+            "subfield": [
+                "c"
+            ],
+            "description": "Date of publication",
+            "subFieldDelimiter": [
+                {
+                    "value": " ; ",
+                    "subfields": [
+                        "c"
+                    ]
+                }
+            ]
+        },
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "set_publisher_role"
+                        }
+                    ]
+                }
+            ],
+            "target": "publication.role",
+            "subfield": [
+                "a",
+                "b",
+                "c"
+            ],
+            "description": "Role of publication, defined by 2nd indicator",
+            "applyRulesOnConcatenatedData": True
+        }
+    ]
+}
+
+    legacy_id = "legacy_id"
+    marc_field = Field(
+        tag="264",
+        indicators=["0", "1"],
+        subfields=[
+            "a",
+            "Santa Monica, Calif. :",
+            "b",
+            "Empowerment Project ;",
+            "a",
+            "[Los Angeles, CA] :",
+            "b",
+            "Rhino Home Video ;",
+            "c",
+            "(c)1991.",
+        ],
+    )
+    
+    folio_record = {"publication" : {}}
+    
+    RulesMapperBase.handle_normal_mapping(
+        mapper_base, mapping["264"][0], marc_field, folio_record, [legacy_id]
+    )
+    
+    assert folio_record["publication"][0]["place"] == "Santa Monica, Calif. ; [Los Angeles, CA]"
