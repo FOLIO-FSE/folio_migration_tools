@@ -1,4 +1,3 @@
-import json
 import logging
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -59,7 +58,7 @@ class NotesMapper(MappingFileMappingBaseImpl):
                     }.get(record_type)
                     note["links"] = [{"id": object_uuid, "type": type_string}]
                     del note["type"]
-                    logging.log(25, "notes\t%s", json.dumps(note))
+                    self.write_extradata("notes", note)
                     self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
                 else:
                     self.migration_report.add_general_statistics(

@@ -380,9 +380,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.mapper.migration_report.add_general_statistics("Bound-with holdings created")
             yield bound_with_holding
 
-    @staticmethod
     def generate_boundwith_part(
-        folio_client: FolioClient, legacy_item_id: str, bound_with_holding: dict
+        self, folio_client: FolioClient, legacy_item_id: str, bound_with_holding: dict
     ):
         part = {
             "id": str(uuid.uuid4()),
@@ -395,7 +394,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 )
             ),
         }
-        logging.log(25, f"boundwithPart\t{json.dumps(part)}")
+        self.mapper.write_extradata("boundwithPart", part)
 
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str

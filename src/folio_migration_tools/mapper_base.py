@@ -429,6 +429,9 @@ class MapperBase:
                 f"{MapperBase.legacy_id_template} {legacy_id}"
             )
 
+    def write_extradata(self, record_type: str, data_to_write: dict):
+        logging.log(25, "%s\t%s", record_type, json.dumps(data_to_write))
+
 
 def flatten(my_dict: dict, path=""):
     for k, v in iter(my_dict.items()):
