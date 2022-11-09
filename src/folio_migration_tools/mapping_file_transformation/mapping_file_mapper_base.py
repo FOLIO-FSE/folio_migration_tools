@@ -205,7 +205,7 @@ class MappingFileMapperBase(MapperBase):
             raise TransformationRecordFailedError(
                 index_or_id,
                 "Could not get a value from legacy object from the property "
-                f"{self.legacy_id_property_name}. Check mapping and data",
+                f"{self.legacy_id_property_names}. Check mapping and data",
             )
 
     def get_statistical_codes(self, legacy_item: dict, folio_prop_name: str, index_or_id):
