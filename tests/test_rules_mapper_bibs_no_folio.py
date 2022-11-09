@@ -244,6 +244,11 @@ def test_get_folio_id_by_name(mapper, caplog):
     assert res == "605e9527-4008-45e2-a78a-f6bfb027c43a"
 
 
+def test_get_get_langs(mapper: BibsRulesMapper, caplog):
+    langs = BibsRulesMapper.fetch_language_codes(mapper)
+    assert any(langs)
+
+
 def test_handle_leader_05(mapper, caplog):
     path = "./tests/test_data/with_control_caracther_and_corrupt_ldr05.mrc"
     with open(path, "rb") as marc_file:

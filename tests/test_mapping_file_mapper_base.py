@@ -1938,3 +1938,106 @@ def test_get_prop_multiple_legacy_identifiers():
     tfm = MyTestableFileMapper(schema, record_map)
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
     assert folio_rec["id"] == "6ba39416-de70-591e-a45f-62c9ca4e2d98"
+
+
+def test_value_mapped_enum_properties():
+    record_map = {
+        "data": [
+            {
+                "folio_field": "my_enum",
+                "legacy_field": "",
+                "value": "014/EAN",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "my_enum": {
+                "type": "string",
+                "enum": ["014/EAN", "31B/US-SAN", "091/Vendor-assigned", "092/Customer-assigned"],
+            },
+        },
+    }
+    legacy_record = {"id": "1"}
+    tfm = MyTestableFileMapper(schema, record_map)
+    folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["my_enum"] == "014/EAN"
+
+
+def test_value_mapped_non_enum_properties():
+    record_map = {
+        "data": [
+            {
+                "folio_field": "my_enum",
+                "legacy_field": "",
+                "value": "014/EAN",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "my_enum": {
+                "type": "string",
+            },
+        },
+    }
+    legacy_record = {"id": "1"}
+    tfm = MyTestableFileMapper(schema, record_map)
+    folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["my_enum"] == "014/EAN"
+
+
+def test_value_not_mapped_mapped_non_enum_properties():
+    record_map = {
+        "data": [
+            {
+                "folio_field": "my_enum",
+                "legacy_field": "Not mapped",
+                "value": "014/EAN",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "my_enum": {
+                "type": "string",
+            },
+        },
+    }
+    legacy_record = {"id": "1"}
+    tfm = MyTestableFileMapper(schema, record_map)
+    folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["my_enum"] == "014/EAN"

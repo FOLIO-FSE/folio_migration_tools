@@ -574,6 +574,8 @@ class MappingFileMapperBase(MapperBase):
 
         if folio_prop_name not in self.folio_keys:
             return False
+        if folio_prop_name in self.mapped_from_values:
+            return True
         legacy_mappings = self.legacy_user_mappings.get(folio_prop_name, [])
         return (
             any(legacy_mappings)

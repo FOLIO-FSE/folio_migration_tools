@@ -6,12 +6,12 @@ import sys
 import time
 import typing
 import uuid
+from pathlib import Path
 from typing import Generator
 from typing import List
 from typing import Set
 
 import pymarc
-import requests
 from defusedxml.ElementTree import fromstring
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -651,13 +651,15 @@ class BibsRulesMapper(RulesMapperBase):
         return list(languages)
 
     def fetch_language_codes(self) -> Generator[str, None, None]:
-        """fetches the list of standardized language codes from LoC
+        """Loads the  list of standardized language codes from LoC
 
         Yields:
             Generator[str, None, None]: _description_
         """
-        url = "https://www.loc.gov/standards/codelists/languages.xml"
-        tree = fromstring(requests.get(url).content)
+        path = Path(__file__).parent / "loc_language_codes.xml"
+        with open(path) as f:
+            lines = "".join(f.readlines())
+        tree = fromstring(lines)
         name_space = "{info:lc/xmlns/codelist-v1}"
         xpath_expr = "{0}languages/{0}language/{0}code".format(name_space)
         for code in tree.findall(xpath_expr):
