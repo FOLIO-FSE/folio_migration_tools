@@ -48,11 +48,11 @@ class MapperBase:
         logging.info("Holdings HRID prefix is %s", self.instance_hrid_prefix)
         logging.info("Holdings start number is %s", self.holdings_hrid_counter)
 
-        self.mapped_folio_fields = {}
+        self.mapped_folio_fields: dict = {}
         self.migration_report = MigrationReport()
         self.num_criticalerrors = 0
         self.num_exeptions = 0
-        self.mapped_legacy_fields = {}
+        self.mapped_legacy_fields: dict = {}
         self.schema_properties = None
 
     def report_legacy_mapping(self, field_name, present, mapped):
