@@ -177,7 +177,7 @@ class ReservesMigrator(MigrationTaskBase):
                     data=json.dumps(data_dict),
                 )
             else:
-                raise TransformationProcessError("Bad verb supplied. This is a code issue.")
+                raise TransformationProcessError("", "Bad verb supplied. This is a code issue.")
             if resp.status_code == 422:
                 error_message = json.loads(resp.text)["errors"][0]["message"]
                 logging.error(error_message)

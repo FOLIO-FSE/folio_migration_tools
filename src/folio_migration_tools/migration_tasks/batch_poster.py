@@ -376,7 +376,7 @@ class BatchPoster(MigrationTaskBase):
                 logging.info("Done rerunning the posting")
             except Exception as ee:
                 logging.exception("Occurred during rerun")
-                raise TransformationProcessError("Error during rerun") from ee
+                raise TransformationProcessError("", "Error during rerun") from ee
 
     def create_snapshot(self):
         snapshot = {

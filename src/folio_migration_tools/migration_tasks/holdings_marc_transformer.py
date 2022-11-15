@@ -84,8 +84,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         logging.info("%s Instance ids in map", len(self.instance_id_map))
         if self.task_configuration.hrid_handling == HridHandling.preserve001:
             raise TransformationProcessError(
-                "This HridHandling is not yet implemented for MFHD. "
-                "Choose default or default_reset"
+                "",
+                "This HridHandling is not yet implemented for MFHD. Choose 'default' instead",
             )
         logging.info("Init done")
 

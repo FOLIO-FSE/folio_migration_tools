@@ -330,9 +330,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
         if not self.task_config.holdings_type_uuid_for_boundwiths:
             raise TransformationProcessError(
-                "Missing task setting holdingsTypeUuidForBoundwiths. Add a "
-                "holdingstype specifically for boundwith holdings and reference "
-                "the UUID in this parameter."
+                "",
+                (
+                    "Missing task setting holdingsTypeUuidForBoundwiths. Add a "
+                    "holdingstype specifically for boundwith holdings and reference "
+                    "the UUID in this parameter."
+                ),
             )
 
         # Add former ids
