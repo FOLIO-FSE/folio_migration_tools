@@ -38,7 +38,7 @@ class RulesMapperHoldings(RulesMapperBase):
             self.task_configuration.default_call_number_type_name,
         )
         self.folio = folio
-        super().__init__(folio, library_configuration, self.conditions)
+        super().__init__(folio, library_configuration, task_configuration, self.conditions)
         self.location_map = location_map
         self.schema = self.holdings_json_schema
         self.holdings_id_map = {}
@@ -149,6 +149,9 @@ class RulesMapperHoldings(RulesMapperBase):
         self.set_default_call_number_type_if_empty(folio_holding)
         self.pick_first_location_if_many(folio_holding, legacy_id)
         self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_id)
+        self.hrid_handler.handle_hrid(
+            FOLIONamespaces.holdings, folio_holding, marc_record, [legacy_id]
+        )
 
     def pick_first_location_if_many(self, folio_holding, legacy_id: str):
         if " " in folio_holding.get("permanentLocationId", ""):

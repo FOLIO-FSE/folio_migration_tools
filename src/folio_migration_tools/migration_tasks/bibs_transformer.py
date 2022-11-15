@@ -28,11 +28,11 @@ from folio_migration_tools.report_blurbs import Blurbs
 class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(BaseModel):
         name: str
-        deactivate035_from001: Optional[bool] = False
         add_administrative_notes_with_legacy_ids: Optional[bool] = True
         migration_task_type: str
         use_tenant_mapping_rules: Optional[bool] = True
         hrid_handling: Optional[HridHandling] = HridHandling.default
+        deactivate035_from001: Optional[bool] = False
         files: List[FileDefinition]
         ils_flavour: IlsFlavour
         tags_to_delete: Optional[List[str]] = []
@@ -57,7 +57,7 @@ class BibsTransformer(MigrationTaskBase):
         )
         logging.info(self.task_configuration.json(indent=4))
         self.mapper = BibsRulesMapper(self.folio_client, library_config, self.task_configuration)
-        self.bib_ids = set()
+        self.bib_ids: set = set()
         logging.info("Init done")
         if (
             self.task_configuration.reset_hrid_settings

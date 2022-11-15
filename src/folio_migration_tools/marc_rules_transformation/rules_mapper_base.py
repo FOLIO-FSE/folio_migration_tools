@@ -19,6 +19,7 @@ from folio_migration_tools.custom_exceptions import TransformationRecordFailedEr
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
+from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
 from folio_migration_tools.report_blurbs import Blurbs
 
 
@@ -27,6 +28,7 @@ class RulesMapperBase(MapperBase):
         self,
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
+        task_configuration,
         conditions=None,
     ):
         super().__init__(library_configuration, folio_client)
@@ -36,11 +38,18 @@ class RulesMapperBase(MapperBase):
         self.folio_client: FolioClient = folio_client
         self.holdings_json_schema = self.fetch_holdings_schema()
         self.instance_json_schema = self.get_instance_schema()
-        self.schema = {}
+        self.schema: dict = {}
+        self.task_configuration = task_configuration
         self.conditions = conditions
         self.item_json_schema = ""
-        self.mappings = {}
+        self.mappings: dict = {}
         self.schema_properties = None
+        self.hrid_handler = HRIDHandler(
+            folio_client,
+            self.task_configuration.hrid_handling,
+            self.migration_report,
+            self.task_configuration.deactivate035_from001,
+        )
         logging.info("Current user id is %s", self.folio_client.current_user)
 
     # TODO: Rebuild and move
@@ -448,19 +457,17 @@ class RulesMapperBase(MapperBase):
         Returns:
             _type_: _description_
         """
-        unique_subfields = []
-        repeated_subfields = []
-        results = list()
+        unique_subfields: list = []
+        repeated_subfields: list = []
+        results = []
         for sf, sf_vals in marc_field.subfields_as_dict().items():
             if len(sf_vals) == 1:
                 unique_subfields.extend([sf, sf_vals[0]])
             else:
-                for sf_val in sf_vals:
-                    repeated_subfields.append([sf, sf_val])
+                repeated_subfields.extend([sf, sf_val] for sf_val in sf_vals)
         if any(repeated_subfields):
             for repeated_subfield in repeated_subfields:
-                new_subfields = [repeated_subfield[0], repeated_subfield[1]]
-                new_subfields.extend(unique_subfields)
+                new_subfields = [repeated_subfield[0], repeated_subfield[1], *unique_subfields]
                 temp_field = Field(
                     tag=marc_field.tag,
                     indicators=marc_field.indicators,
