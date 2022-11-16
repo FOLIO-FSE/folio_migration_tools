@@ -58,7 +58,7 @@ class HRIDHandler:
         if self.enumerate_hrid(marc_record):
             self.generate_enumerated_hrid(folio_record, marc_record, legacy_ids, namespace)
         elif self.handling == HridHandling.preserve001:
-            self.preserve_001_as_hrid(folio_record, marc_record, legacy_ids)
+            self.preserve_001_as_hrid(folio_record, marc_record, legacy_ids, namespace)
         else:
             raise TransformationProcessError("", f"Unknown HRID handling: {self.handling}")
 
@@ -69,6 +69,16 @@ class HRIDHandler:
         legacy_ids: list[str],
         namespace: FOLIONamespaces,
     ):
+        folio_record["hrid"] = self.get_next_hrid(namespace)
+        new_001 = Field(tag="001", data=folio_record["hrid"])
+        self.handle_035_generation(marc_record, legacy_ids)
+        marc_record.add_ordered_field(new_001)
+        self.migration_report.add(Blurbs.HridHandling, "Created HRID using default settings")
+
+    def enumerate_hrid(self, marc_record):
+        return self.handling == HridHandling.default or "001" not in marc_record
+
+    def get_next_hrid(self, namespace: FOLIONamespaces):
         prefix = {
             FOLIONamespaces.instances: self.instance_hrid_prefix,
             FOLIONamespaces.holdings: self.holdings_hrid_prefix,
@@ -77,15 +87,9 @@ class HRIDHandler:
             FOLIONamespaces.instances: self.instance_hrid_counter,
             FOLIONamespaces.holdings: self.instance_hrid_counter,
         }.get(namespace)
-        folio_record["hrid"] = f"{prefix}{self.generate_numeric_part(counter)}"
-        new_001 = Field(tag="001", data=folio_record["hrid"])
-        self.handle_035_generation(marc_record, legacy_ids)
-        marc_record.add_ordered_field(new_001)
-        self.migration_report.add(Blurbs.HridHandling, "Created HRID using default settings")
-        self.instance_hrid_counter += 1
-
-    def enumerate_hrid(self, marc_record):
-        return self.handling == HridHandling.default or "001" not in marc_record
+        hrid = f"{prefix}{self.generate_numeric_part(counter)}"
+        counter += 1
+        return hrid
 
     def generate_numeric_part(self, counter):
         return str(counter).zfill(11) if self.common_retain_leading_zeroes else str(counter)
@@ -119,7 +123,13 @@ class HRIDHandler:
             else:
                 self.migration_report.add(Blurbs.HridHandling, "Legacy bib records without 001")
 
-    def preserve_001_as_hrid(self, folio_record: dict, marc_record: Record, legacy_ids: list[str]):
+    def preserve_001_as_hrid(
+        self,
+        folio_record: dict,
+        marc_record: Record,
+        legacy_ids: list[str],
+        namespace: FOLIONamespaces,
+    ):
         value = marc_record["001"].value()
         if value in self.unique_001s:
             self.migration_report.add(
@@ -133,7 +143,7 @@ class HRIDHandler:
                 "Duplicate 001 for record. HRID created for record",
                 value,
             )
-            folio_record["hrid"] = f"{self.instance_hrid_prefix}{self.generate_numeric_part()}"
+            folio_record["hrid"] = self.get_next_hrid(namespace)
             new_001 = Field(tag="001", data=folio_record["hrid"])
             marc_record.add_ordered_field(new_001)
             self.instance_hrid_counter += 1
