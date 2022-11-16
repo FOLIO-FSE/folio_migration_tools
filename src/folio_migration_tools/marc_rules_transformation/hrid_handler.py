@@ -79,16 +79,21 @@ class HRIDHandler:
         return self.handling == HridHandling.default or "001" not in marc_record
 
     def get_next_hrid(self, namespace: FOLIONamespaces):
-        prefix = {
-            FOLIONamespaces.instances: self.instance_hrid_prefix,
-            FOLIONamespaces.holdings: self.holdings_hrid_prefix,
-        }.get(namespace)
-        counter = {
-            FOLIONamespaces.instances: self.instance_hrid_counter,
-            FOLIONamespaces.holdings: self.instance_hrid_counter,
-        }.get(namespace)
-        hrid = f"{prefix}{self.generate_numeric_part(counter)}"
-        counter += 1
+        hrid = ""
+        if namespace == FOLIONamespaces.instances:
+            hrid = (
+                f"{self.instance_hrid_prefix}"
+                f"{self.generate_numeric_part(self.instance_hrid_counter)}"
+            )
+            self.instance_hrid_counter += 1
+        elif namespace == FOLIONamespaces.holdings:
+            hrid = (
+                f"{self.holdings_hrid_prefix}"
+                f"{self.generate_numeric_part(self.holdings_hrid_counter)}"
+            )
+            self.holdings_hrid_counter += 1
+        else:
+            raise TransformationProcessError("", "Unimplemented namespace")
         return hrid
 
     def generate_numeric_part(self, counter):
