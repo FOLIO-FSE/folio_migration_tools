@@ -1,17 +1,312 @@
 # Changelog
 
-## 1.2.0 (22/04/2022)
-<!-- Release notes generated using configuration in .github/release.yml at main -->
+## 1_6_2 (16/11/2022)
+- [**closed**] Implement preserve001 for MFHD transformations [#427](https://github.com/FOLIO-FSE/folio_migration_tools/issues/427)
+- [**bug**] MARC Holdings transformer crashes silently when hridhandling is set to preserve001 [#425](https://github.com/FOLIO-FSE/folio_migration_tools/issues/425)
+- [**bug**] MappingFileMapperBase value mappings does not work unless the legacy field is populated [#423](https://github.com/FOLIO-FSE/folio_migration_tools/issues/423)
+- [**closed**] Remove Kiwi references from the code base [#421](https://github.com/FOLIO-FSE/folio_migration_tools/issues/421)
+- [**closed**] Add documentation from migration_repo_template. In a course manner. [#416](https://github.com/FOLIO-FSE/folio_migration_tools/issues/416)
+- [**morning-glory**]  Add FOLIO Release Enum for Morning Glory in configuration [#414](https://github.com/FOLIO-FSE/folio_migration_tools/issues/414)
+- [**organizations**] Clean out organizationType if configured FOLIO version is "lotus" [#413](https://github.com/FOLIO-FSE/folio_migration_tools/issues/413)
+- [**closed**] Create proper technical structure for documentation and publish it on Read The Docs [#410](https://github.com/FOLIO-FSE/folio_migration_tools/issues/410)
+- [**enhancement/new feature**][**organizations**] Add reference data mapping for Organizations: Categories [#359](https://github.com/FOLIO-FSE/folio_migration_tools/issues/359)
 
+---
 
+## 1_6_1 (21/10/2022)
 
-**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/1_1_0...1_2_0
+#### bug
 
-<!-- Release notes generated using configuration in .github/release.yml at main -->
+- [**bug**][**Course Reserves**] Courses: Remove user id field if there is no match in the call to the users app [#407](https://github.com/FOLIO-FSE/folio_migration_tools/issues/407)
 
+---
 
+## 1_6_0 (21/10/2022)
 
-**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/1_1_0...1_2_0
+#### closed
+
+- [**closed**] Add "Fallback value" in addition to the "Fallback legacy field" mapping entry [#405](https://github.com/FOLIO-FSE/folio_migration_tools/issues/405)
+- [**closed**] Rewrite UserMapper and UserTransformer to use MappingFileMapperBase [#402](https://github.com/FOLIO-FSE/folio_migration_tools/issues/402)
+- [**closed**] Pick first Match on regex [#400](https://github.com/FOLIO-FSE/folio_migration_tools/issues/400)
+- [**closed**] look for missing required properties in notes [#399](https://github.com/FOLIO-FSE/folio_migration_tools/issues/399)
+- [**closed**] up the dependencies on pymarc and folio_uuid [#398](https://github.com/FOLIO-FSE/folio_migration_tools/issues/398)
+- [**closed**] allow multiple legacyIdentifier fields to be concatenated into one [#396](https://github.com/FOLIO-FSE/folio_migration_tools/issues/396)
+- [**closed**] Explore format for string replacements in mapping files [#393](https://github.com/FOLIO-FSE/folio_migration_tools/issues/393)
+- [**closed**] Remove "Subfield b not in 336" warning if mapping to resource type by $a is successful and report the mapping in the report. [#392](https://github.com/FOLIO-FSE/folio_migration_tools/issues/392)
+- [**closed**] Implement array mapping on level 2 in MappingFileMapperBase [#379](https://github.com/FOLIO-FSE/folio_migration_tools/issues/379)
+- [**closed**] Pull Courses Instructor information from externalSystemId [#378](https://github.com/FOLIO-FSE/folio_migration_tools/issues/378)
+- [**closed**] Concatenated fields in mapping file transformed data comes out in different order [#370](https://github.com/FOLIO-FSE/folio_migration_tools/issues/370)
+- [**closed**] When creating Users never set more than one address as "primary" [#301](https://github.com/FOLIO-FSE/folio_migration_tools/issues/301)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**] Move to Poetry from Pipenv, Build etc. [#305](https://github.com/FOLIO-FSE/folio_migration_tools/issues/305)
+- [**enhancement/new feature**][**users**] Make Id field and requestPreference optional when processing users [#205](https://github.com/FOLIO-FSE/folio_migration_tools/issues/205)
+- [**enhancement/new feature**][**wontfix**] Create migration task for PO lines [#203](https://github.com/FOLIO-FSE/folio_migration_tools/issues/203)
+
+#### question/decision
+
+- [**question/decision**][**new_folio_functionality**] Create summary of missing conditions in MARC mapping rules for Morning glory [#377](https://github.com/FOLIO-FSE/folio_migration_tools/issues/377)
+
+#### wontfix
+
+- [**wontfix**] Map system identifier to barcode where barcode is null [#387](https://github.com/FOLIO-FSE/folio_migration_tools/issues/387)
+- [**wontfix**] Trouble shoot false negatives in RDA field mappings [#386](https://github.com/FOLIO-FSE/folio_migration_tools/issues/386)
+- [**wontfix**] Loans migrator needs to add timestamps [#340](https://github.com/FOLIO-FSE/folio_migration_tools/issues/340)
+
+---
+
+## 1_5_0 (05/10/2022)
+
+#### bug
+
+- [**bug**] The bib transformer task should not update the holdings HRID start number in Inventory HRID Settings [#259](https://github.com/FOLIO-FSE/folio_migration_tools/issues/259)
+
+#### closed
+
+- [**closed**] QuickMARC only accepts correct leader 05 values (a,c,d,n,p).  Fail records with other leaders? [#367](https://github.com/FOLIO-FSE/folio_migration_tools/issues/367)
+- [**closed**] instance_id_map and holdings_id_map still retrain iteration_identifier in filename [#364](https://github.com/FOLIO-FSE/folio_migration_tools/issues/364)
+- [**closed**] Always add an Administrative note on the Legacy system identifier in Instance records [#356](https://github.com/FOLIO-FSE/folio_migration_tools/issues/356)
+- [**closed**] Count number of rows in CSV/TSV file before feeding them to the CSV Dictreader  [#339](https://github.com/FOLIO-FSE/folio_migration_tools/issues/339)
+- [**closed**] Clarify handling of true/false values for User > addresses > primaryAddress [#265](https://github.com/FOLIO-FSE/folio_migration_tools/issues/265)
+- [**closed**] Change heading from "Git(hub) workflow" to "Code contribution workflow" to avoid confusion with git workflows [#218](https://github.com/FOLIO-FSE/folio_migration_tools/issues/218)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**][**wontfix**] Store failed records in BIB and MFHD transformer for other failures than encoding issues [#317](https://github.com/FOLIO-FSE/folio_migration_tools/issues/317)
+- [**enhancement/new feature**] When creating Courses, assign Course Department based on a Course Departments reference data map [#308](https://github.com/FOLIO-FSE/folio_migration_tools/issues/308)
+
+#### improve_test_coverage
+
+- [**improve_test_coverage**] Increase test coverage in src/folio_migration_tools/marc_rules_transformation/holdings_processor.py [#348](https://github.com/FOLIO-FSE/folio_migration_tools/issues/348)
+- [**improve_test_coverage**] Increase test coverage in src/folio_migration_tools/marc_rules_transformation/rules_mapper_holdings.py [#347](https://github.com/FOLIO-FSE/folio_migration_tools/issues/347)
+
+#### reporting
+
+- [**reporting**] Add header to Item migration report [#336](https://github.com/FOLIO-FSE/folio_migration_tools/issues/336)
+- [**reporting**] Placeholder issue for Records in File before parsing [#331](https://github.com/FOLIO-FSE/folio_migration_tools/issues/331)
+- [**reporting**] Remove "Time Started" from reports [#330](https://github.com/FOLIO-FSE/folio_migration_tools/issues/330)
+
+#### simplify_migration_process
+
+- [**simplify_migration_process**] Proposal: Create and save to an [iterationIdentifier] folder in migration_repo/reports  [#110](https://github.com/FOLIO-FSE/folio_migration_tools/issues/110)
+
+#### wontfix
+
+- [**wontfix**][**reporting**] if no --base_folder_path CLI argument is supplied, assume it is the same as the root of the configuration file [#335](https://github.com/FOLIO-FSE/folio_migration_tools/issues/335)
+
+---
+
+## 1_4_8 (30/08/2022)
+
+#### bug
+
+- [**bug**] Fix bugs and minor issues with loans migrations [#323](https://github.com/FOLIO-FSE/folio_migration_tools/issues/323)
+
+#### closed
+
+- [**closed**] Add toggle for updating hrid or not. [#338](https://github.com/FOLIO-FSE/folio_migration_tools/issues/338)
+- [**closed**] Honor commonRetainLeadingZeroes setting when generating instance HRIDs
+
+ [#231](https://github.com/FOLIO-FSE/folio_migration_tools/issues/231)
+
+#### simplify_migration_process
+
+- [**simplify_migration_process**] Add configuration option to reset HRID settings [#105](https://github.com/FOLIO-FSE/folio_migration_tools/issues/105)
+
+---
+
+## 1_4_7 (25/06/2022)
+
+#### bug
+
+- [**bug**] JSON parsing fails when 409:s are returned from batch apis [#320](https://github.com/FOLIO-FSE/folio_migration_tools/issues/320)
+
+---
+
+## 1_4_6 (24/06/2022)
+
+#### closed
+
+- [**closed**] Unclear error message when you have mapped temporary locations but no location map [#315](https://github.com/FOLIO-FSE/folio_migration_tools/issues/315)
+
+#### good first issue
+
+- [**good first issue**] Make Loans migration script clearly  WARN if SMTP is not disabled when posting new loans [#244](https://github.com/FOLIO-FSE/folio_migration_tools/issues/244)
+
+---
+
+## 1_4_5 (22/06/2022)
+
+#### bug
+
+- [**bug**][**organizations**] When creating Organizations, clean out address objects where all properties, or all properties except "isPrimary", are empty [#293](https://github.com/FOLIO-FSE/folio_migration_tools/issues/293)
+- [**bug**][**wontfix**] HoldingsStatements generated from multiple items does not get extended, but instead overwritten [#287](https://github.com/FOLIO-FSE/folio_migration_tools/issues/287)
+- [**bug**] Organization transformation lacks report writing parameter [#286](https://github.com/FOLIO-FSE/folio_migration_tools/issues/286)
+- [**bug**] Don't strip leading and trailing brackets from callNumbers as these are likely to be part of the callNumber value [#269](https://github.com/FOLIO-FSE/folio_migration_tools/issues/269)
+
+#### closed
+
+- [**closed**] Request migration always fails in Kiwi (request not allowed for patron/item combination) [#302](https://github.com/FOLIO-FSE/folio_migration_tools/issues/302)
+- [**closed**] FOLIO handles preferred first names weird.  [#291](https://github.com/FOLIO-FSE/folio_migration_tools/issues/291)
+- [**closed**] Make Requests Migrator UTC offset handling DST-aware [#288](https://github.com/FOLIO-FSE/folio_migration_tools/issues/288)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**] Tie a servicepoint per loans file [#303](https://github.com/FOLIO-FSE/folio_migration_tools/issues/303)
+- [**enhancement/new feature**] Make LoansPoster UTC offset handling DST-aware [#279](https://github.com/FOLIO-FSE/folio_migration_tools/issues/279)
+- [**enhancement/new feature**] Add support for servicePointIdAtCheckout from source data of open loans [#251](https://github.com/FOLIO-FSE/folio_migration_tools/issues/251)
+
+#### improve_test_coverage
+
+- [**improve_test_coverage**] Add test files for all migration tasks [#311](https://github.com/FOLIO-FSE/folio_migration_tools/issues/311)
+
+---
+
+## 1_4_4 (13/06/2022)
+
+#### bug
+
+- [**bug**] Courses transformation task halts if property utc_difference not in task config -- not reflected the migration repo template [#282](https://github.com/FOLIO-FSE/folio_migration_tools/issues/282)
+- [**bug**] UTF Handling of MFHD records are not handled the same way as bibs, leading to more encoding errors [#278](https://github.com/FOLIO-FSE/folio_migration_tools/issues/278)
+
+#### closed
+
+- [**closed**] Fetch organization schemas linked to latest mod-organizations-storage release [#234](https://github.com/FOLIO-FSE/folio_migration_tools/issues/234)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**] Allow month codes in season fields and vice versa when parsing 853/863 combos [#283](https://github.com/FOLIO-FSE/folio_migration_tools/issues/283)
+- [**enhancement/new feature**][**good first issue**] Include task name in INFO output [#245](https://github.com/FOLIO-FSE/folio_migration_tools/issues/245)
+- [**enhancement/new feature**] Create transformation task for simple organizations [#146](https://github.com/FOLIO-FSE/folio_migration_tools/issues/146)
+
+#### reporting
+
+- [**reporting**] Add time duration for migration task to migration reports [#264](https://github.com/FOLIO-FSE/folio_migration_tools/issues/264)
+- [**reporting**] Create migration report for BatchPoster [#60](https://github.com/FOLIO-FSE/folio_migration_tools/issues/60)
+
+---
+
+## 1_4_2 (05/06/2022)
+
+#### bug
+
+- [**bug**] Holdings statements for indexes and supplementes are leaking into the regular holdings statements [#276](https://github.com/FOLIO-FSE/folio_migration_tools/issues/276)
+- [**bug**] UTF Handling of MFHD records are not handled the same way as bibs, leading to more encoding errors [#278]
+
+---
+
+## 1_4_0 (04/06/2022)
+
+#### bug
+
+- [**bug**] Holdings statements generated from marc records do get deduplicated despite it should be turned off. [#274](https://github.com/FOLIO-FSE/folio_migration_tools/issues/274)
+- [**bug**] holdings statements in holdings generated from csv items are not getting deduplicated properly [#271](https://github.com/FOLIO-FSE/folio_migration_tools/issues/271)
+- [**bug**] FOLIO Client causes 403:s due to missing authentication tokens in GITHUB API requests [#266](https://github.com/FOLIO-FSE/folio_migration_tools/issues/266)
+- [**bug**] Failed bib records file overwritten for each file in bib transformation task [#252](https://github.com/FOLIO-FSE/folio_migration_tools/issues/252)
+
+#### closed
+
+- [**closed**] Add data and examples to migration_repo_template [#261](https://github.com/FOLIO-FSE/folio_migration_tools/issues/261)
+- [**closed**] Add Batchposter support for courses objects [#260](https://github.com/FOLIO-FSE/folio_migration_tools/issues/260)
+- [**closed**] Make Notes mapping more generic [#258](https://github.com/FOLIO-FSE/folio_migration_tools/issues/258)
+- [**closed**] Create migration task for reserves [#257](https://github.com/FOLIO-FSE/folio_migration_tools/issues/257)
+- [**closed**] Create Migration Task for courses [#256](https://github.com/FOLIO-FSE/folio_migration_tools/issues/256)
+- [**closed**] Add refDataMapping for Terms [#255](https://github.com/FOLIO-FSE/folio_migration_tools/issues/255)
+- [**closed**] Generate schema for "Composite Courses" [#254](https://github.com/FOLIO-FSE/folio_migration_tools/issues/254)
+- [**closed**] Update FOLIO Namespaces with course-related objects [#253](https://github.com/FOLIO-FSE/folio_migration_tools/issues/253)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**][**question/decision**] Handle loans with incomplete date/time information [#226](https://github.com/FOLIO-FSE/folio_migration_tools/issues/226)
+
+---
+
+## 1_3_10 (18/05/2022)
+
+#### closed
+
+- [**closed**] Multiple empty holdings statements are being generated. [#249](https://github.com/FOLIO-FSE/folio_migration_tools/issues/249)
+
+---
+
+## 1_3_9 (16/05/2022)
+
+#### bug
+
+- [**bug**] Loans migration fails if you only supply the script only one of items or patron files [#247](https://github.com/FOLIO-FSE/folio_migration_tools/issues/247)
+- [**bug**] MFHD Parsing: Nonexistant holdings statements on holdingsRecords are getting created as empty lists, making them render in the UI [#243](https://github.com/FOLIO-FSE/folio_migration_tools/issues/243)
+- [**bug**] UserMapper: Concatenated fields from multiple xSV fields are not stripped from spaces before getting joined [#242](https://github.com/FOLIO-FSE/folio_migration_tools/issues/242)
+
+---
+
+## 1_3_0 (11/05/2022)
+
+#### bug
+
+- [**bug**][**reporting**] Configuration error reporting reports wrong search location for MARC bibs in BibTransformer [#238](https://github.com/FOLIO-FSE/folio_migration_tools/issues/238)
+- [**bug**] Migrate open loans task skips first loan (row) when creating loams [#236](https://github.com/FOLIO-FSE/folio_migration_tools/issues/236)
+- [**bug**][**good first issue**] Improve 853/863 mapping according to feedback - Part 2 [#112](https://github.com/FOLIO-FSE/folio_migration_tools/issues/112)
+- [**bug**] Make sure that holdings callNumbers are correctly formatted for III non-boundwiths when there are boundwiths in the file [#98](https://github.com/FOLIO-FSE/folio_migration_tools/issues/98)
+
+#### closed
+
+- [**closed**] Exception TypeError being raised in rules_mapper_bibs [#232](https://github.com/FOLIO-FSE/folio_migration_tools/issues/232)
+- [**closed**] Report and halt when mapped legacy field in reference data mapping is not found in the data [#229](https://github.com/FOLIO-FSE/folio_migration_tools/issues/229)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**] Introduce Lotus support [#201](https://github.com/FOLIO-FSE/folio_migration_tools/issues/201)
+- [**enhancement/new feature**] Split string according to delimiter and create multiple fields for the elements [#183](https://github.com/FOLIO-FSE/folio_migration_tools/issues/183)
+
+---
+
+## y1_2_3 (02/05/2022)
+
+#### bug
+
+- [**bug**] UTC correction increases utc difference [#223](https://github.com/FOLIO-FSE/folio_migration_tools/issues/223)
+- [**bug**] HoldingsCSVTransformer does not halt if previously_generated_holdings_files is not found [#216](https://github.com/FOLIO-FSE/folio_migration_tools/issues/216)
+
+#### closed
+
+- [**closed**] Handle issues with positions in leader20-23 [#219](https://github.com/FOLIO-FSE/folio_migration_tools/issues/219)
+- [**closed**] Implement staffSuppress for bib migrations [#206](https://github.com/FOLIO-FSE/folio_migration_tools/issues/206)
+
+#### reporting
+
+- [**reporting**] Create proper report on suppression for all objects [#145](https://github.com/FOLIO-FSE/folio_migration_tools/issues/145)
+
+---
+
+## 1_2_2 (27/04/2022)
+### breaking changes
+Batchposter now allows running multiple files of the same object type in one run, so configuration has changed to facilitate that.
+#### bug
+
+- [**bug**][**wontfix**] Merged BW Holdings are losing their BW part links [#215](https://github.com/FOLIO-FSE/folio_migration_tools/issues/215)
+
+#### simplify_migration_process
+
+- [**simplify_migration_process**] Make BatchPoster more responsive to failing batches  [#108](https://github.com/FOLIO-FSE/folio_migration_tools/issues/108)
+
+---
+
+## 1_2_0 (22/04/2022)
+- [**closed**] Halt when instance id maps are empty [#214](https://github.com/FOLIO-FSE/folio_migration_tools/issues/214)
+- [**closed**] Add reporting on legacy fields that get concatenated from being mapped to the same folio field [#212](https://github.com/FOLIO-FSE/folio_migration_tools/issues/212)
+- [**closed**] Report on date parsing results for User expiration and enrollment dates [#209](https://github.com/FOLIO-FSE/folio_migration_tools/issues/209)
+- [**closed**] Add numeric values to sys.exit() calls [#208](https://github.com/FOLIO-FSE/folio_migration_tools/issues/208)
+- [**closed**] test monday status updates [#204](https://github.com/FOLIO-FSE/folio_migration_tools/issues/204)
+- [**enhancement/new feature**] Use the mechanism for logging data issues for open loans and open requests [#194](https://github.com/FOLIO-FSE/folio_migration_tools/issues/194)
+- [**enhancement/new feature**] Include open requests migration to migration tools [#162](https://github.com/FOLIO-FSE/folio_migration_tools/issues/162)
+- [**enhancement/new feature**] Include Open Loans migrations to migration tools [#161](https://github.com/FOLIO-FSE/folio_migration_tools/issues/161)
+- [**simplify_migration_process**] Make the Batchposter handle the failed  batches, running the failed batches one-by-one and only store the "true failures" to disk. [#129](https://github.com/FOLIO-FSE/folio_migration_tools/issues/129)
+- [**simplify_migration_process**] Speed up loans migration [#126](https://github.com/FOLIO-FSE/folio_migration_tools/issues/126)
+- [**simplify_migration_process**] Make it possible to add multiple files to one batchposter run. [#109](https://github.com/FOLIO-FSE/folio_migration_tools/issues/109)
+- [**enhancement/new feature**][**simplify_migration_process**] Validate that all mapped legacy fields correspond to a header in the data [#107](https://github.com/FOLIO-FSE/folio_migration_tools/issues/107)
+- [**wontfix**][**new_folio_functionality**] Add support for migrating MARC Authority records [#90](https://github.com/FOLIO-FSE/folio_migration_tools/issues/90)
+
 ---
 
 ## 1_1_0 (13/04/2022)
@@ -45,7 +340,7 @@
 * #165 Bug: Item transformation: Don't add a "notes" object when there is no a "note" property
 * #167 Bug: mapping_file_mapper_base.py: object is excluded from array if non-required sub-property is ""
 * #174 Make scripts create separate extradata files per task
-* #175 Reset extradata file when running a task
+* #175 Reset extradata file when running a task 
 * #178 Bug: Fix issue with srs mfhd ids
 * #180 Bug: Bound-with-holdings does not come over from previously run holdings
 * #181 Handle MFHD with illegal lengths in 008:s
@@ -66,10 +361,10 @@
 ## Juniper 1.2 (09/12/2021)
 ## What's Changed
 #69 ##Handle duplicate barcodes
-#85 Remove suppression CLI argument from main_holdings_csv since this is not used.
-#82 ## Add options for getting Cataloged date from 008
+#85 Remove suppression CLI argument from main_holdings_csv since this is not used. 
+#82 ## Add options for getting Cataloged date from 008 
 #51 ## 001s as HRIDs: Log Instances that had 001 collisions and where assigned FOLIO-style HRIDs
-## Handling of duplicate Instance ids at main_holdings_marc.py.
+## Handling of duplicate Instance ids at main_holdings_marc.py. 
 ## Log failing location mapping to Data issues log
 ## Report on duplicate instance ids from multible main_bibs.py runs when running any of the main_holdings scripts
 
@@ -94,12 +389,12 @@ main_items.py and main_holdings_csv.py will halt if the property is missing:
 ## What is new?
 ### Introducing the Data Issues Log file
 ![image](https://user-images.githubusercontent.com/1894384/136540471-a471fb6f-d195-4eeb-996e-37be5797212b.png)
-As part of every transformation, there is now a logfile named according to
+As part of every transformation, there is now a logfile named according to 
 
 > folio_OBJECTTYPE_data_issues_TIMESTAMP.tsv
 
-There are four columns:
-* Severity of issue
+There are four columns: 	
+* Severity of issue	
 * Legacy Identifier or filename+index in file
 * Description of the issue
 * The data causing the issue
@@ -136,7 +431,7 @@ HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.1$a
 ![image](https://user-images.githubusercontent.com/1894384/136540274-c89b827d-1079-47f4-b38b-2242f6f53fba.png)
 
 ### Enable mapping of temporary loan types and temporary locations from separate mapping files.
-In the migration_repo_template there are now two mapping files with the file ending .optional. Remove that file ending if you want these mappings enabled for FOLIO. Syntax and mapping are the same as their siblings (permanent location and loan type).
+In the migration_repo_template there are now two mapping files with the file ending .optional. Remove that file ending if you want these mappings enabled for FOLIO. Syntax and mapping are the same as their siblings (permanent location and loan type). 
 
 ### Ability to specify FOLIO Release
 There is a small breaking change between Juniper and Iris. In order for the script to handle both cases, there is a new parameter in main_bibs.py allowing you to specify FOLIO release name
@@ -180,7 +475,7 @@ Stepping stone release before Juniper support
 ---
 
 ## Iris 1.0 (27/07/2021)
-Release compliant with FOLIO Iris release.
+Release compliant with FOLIO Iris release. 
 
 It has not been tested with Hotfix #3 and #4 in Iris, but it should be compliant.
 ---
