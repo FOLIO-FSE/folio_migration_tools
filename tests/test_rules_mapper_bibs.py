@@ -179,7 +179,7 @@ def test_simple_title3(mapper):
 def test_multiple336s(mapper):
     xpath = "//marc:datafield[@tag='336']"
     record = default_map("test_multiple_336.xml", xpath, mapper)
-    assert "bd068f05-9de5-40c4-8f5e-e164a625b26f" in record[0]["instanceTypeId"]
+    assert "8105bd44-e7bd-487e-a8f2-b804a361d92f" in record[0]["instanceTypeId"]
 
 
 def test_strange_isbn(mapper):
@@ -600,7 +600,7 @@ def test_should_parse_mode_of_issuance_correctly(mapper):
     record = default_map("test4.xml", xpath, mapper)
     moi = record[0]["modeOfIssuanceId"]
 
-    assert "363895f3-3c52-421e-8f78-9ec105ec15f1" == moi
+    assert "068b5344-e2a6-40df-9186-1829e13cd344" == moi
 
 
 def test_should_add_notes_561_567_to_notes_list(mapper):
@@ -665,7 +665,7 @@ def test_should_parse_mode_of_issuance_correctly_2(mapper):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)
     formats = record[0]["instanceFormatIds"]
 
-    assert "b1d001a3-57ae-4e7c-aa6e-066d764a5fe7" in formats
+    assert "8d511d33-5e85-4c5d-9bce-6e3c9cd0c324" in formats
 
     # "2 338$b"):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)
