@@ -174,7 +174,7 @@ class BibsRulesMapper(RulesMapperBase):
                 raise ee
 
     def report_marc_stats(self, marc_field, bad_tags, legacy_ids, ignored_subsequent_fields):
-        self.migration_report.add_general_statistics("Total number of Tags processed")
+        self.migration_report.add(Blurbs.Trivia, "Total number of Tags processed")
         self.report_bad_tags(marc_field, bad_tags, legacy_ids)
         mapped = marc_field.tag in self.mappings
         if marc_field.tag in ignored_subsequent_fields:

@@ -10,6 +10,7 @@ class ReportSection(Enum):
 
 class Blurbs:
     FieldMappingDetails = ("Mapping details", "")
+    Trivia = ("Trivia", "")
     LeaderManipulation = ("Leader manipulation", "")
     TermsMapping = ("Terms Mapping", "Reference data mapping for Terms.")
     CategoriesMapping = (
