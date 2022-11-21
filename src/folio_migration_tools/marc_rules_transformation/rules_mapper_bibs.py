@@ -237,16 +237,6 @@ class BibsRulesMapper(RulesMapperBase):
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
 
-    def handle_suppression(self, folio_instance, file_def: FileDefinition):
-        folio_instance["discoverySuppress"] = file_def.suppressed
-        self.migration_report.add_general_statistics(
-            f'Suppressed from discovery = {folio_instance["discoverySuppress"]}'
-        )
-        folio_instance["staffSuppress"] = file_def.staff_suppressed
-        self.migration_report.add_general_statistics(
-            f'Staff suppressed = {folio_instance["staffSuppress"]} '
-        )
-
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:
             holdingsfields = marc_record.get_fields(

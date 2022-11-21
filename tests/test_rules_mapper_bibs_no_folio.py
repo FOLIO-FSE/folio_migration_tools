@@ -82,15 +82,10 @@ def test_handle_suppression_set_false(mapper):
     assert folio_instance.get("staffSuppress") is False
     assert folio_instance.get("discoverySuppress") is False
     assert (
-        mapper.migration_report.report[Blurbs.GeneralStatistics[0]][
-            "Suppressed from discovery = False"
-        ]
+        mapper.migration_report.report[Blurbs.Suppression[0]]["Suppressed from discovery = False"]
         == 1
     )
-    assert (
-        mapper.migration_report.report[Blurbs.GeneralStatistics[0]]["Staff suppressed = False "]
-        == 1
-    )
+    assert mapper.migration_report.report[Blurbs.Suppression[0]]["Staff suppressed = False "] == 1
 
 
 def test_handle_suppression_set_true(mapper):
@@ -100,15 +95,10 @@ def test_handle_suppression_set_true(mapper):
     assert folio_instance.get("staffSuppress") is True
     assert folio_instance.get("discoverySuppress") is True
     assert (
-        mapper.migration_report.report[Blurbs.GeneralStatistics[0]][
-            "Suppressed from discovery = True"
-        ]
+        mapper.migration_report.report[Blurbs.Suppression[0]]["Suppressed from discovery = True"]
         == 1
     )
-    assert (
-        mapper.migration_report.report[Blurbs.GeneralStatistics[0]]["Staff suppressed = True "]
-        == 1
-    )
+    assert mapper.migration_report.report[Blurbs.Suppression[0]]["Staff suppressed = True "] == 1
 
 
 def test_get_folio_id_by_code_except(mapper, caplog):
