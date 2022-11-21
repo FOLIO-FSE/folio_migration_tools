@@ -218,6 +218,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Work done. Wrapping up...")
+        self.extradata_writer.flush()
         if any(self.holdings):
             logging.info(
                 "Saving holdings created to %s",
@@ -394,7 +395,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 )
             ),
         }
-        self.mapper.write_extradata("boundwithPart", part)
+        self.mapper.extradata_writer.write("boundwithPart", part)
 
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str

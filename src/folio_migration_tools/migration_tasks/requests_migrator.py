@@ -175,6 +175,7 @@ class RequestsMigrator(MigrationTaskBase):
         logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
 
     def wrap_up(self):
+        self.extradata_writer.flush()
         self.write_failed_request_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:

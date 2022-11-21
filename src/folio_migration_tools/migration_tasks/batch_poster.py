@@ -322,6 +322,7 @@ class BatchPoster(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Done. Wrapping up")
+        self.extradata_writer.flush()
         if self.task_config.object_type == "SRS":
             self.commit_snapshot()
         if self.task_config.object_type != "Extradata":

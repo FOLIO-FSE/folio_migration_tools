@@ -87,6 +87,7 @@ class ReservesMigrator(MigrationTaskBase):
             logging.error(ee)
 
     def wrap_up(self):
+        self.extradata_writer.flush()
         for k, v in self.failed.items():
             self.failed_and_not_dupe[k] = [v.to_dict()]
         self.migration_report.set(Blurbs.GeneralStatistics, "Failed loans", len(self.failed))

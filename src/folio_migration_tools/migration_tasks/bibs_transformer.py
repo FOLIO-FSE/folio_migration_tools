@@ -99,6 +99,7 @@ class BibsTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
+        self.extradata_writer.flush()
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
