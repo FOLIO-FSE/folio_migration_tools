@@ -134,6 +134,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("wapping up")
+        self.extradata_writer.flush()
 
 
 def read_records(reader, processor: HoldingsProcessor, file_def: FileDefinition):

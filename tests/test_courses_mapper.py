@@ -89,7 +89,6 @@ def test_instructor_cache(mapper: CoursesMapper, caplog):
 
 
 def test_basic_mapping2(mapper: CoursesMapper, caplog):
-    caplog.set_level(25)
     data = {
         "RECORD #(COURSE)": ".r1",
         "COURSE NOTE": "Some note",
@@ -105,13 +104,13 @@ def test_basic_mapping2(mapper: CoursesMapper, caplog):
     mapper.perform_additional_mappings(res)
     mapper.notes_mapper.map_notes(data, 1, res[0]["course"]["id"], FOLIONamespaces.course)
     mapper.store_objects(res)
-    assert "Level 25" in caplog.text
-    assert "notes\t" in caplog.text
-    assert "courselisting\t" in caplog.text
-    assert "instructor\t" in caplog.text
-    assert "course\t" in caplog.text
+    assert any("notes\t" in ed for ed in mapper.extradata_writer.cache)
+
+    assert any("courselisting\t" in ed for ed in mapper.extradata_writer.cache)
+    assert any("instructor\t" in ed for ed in mapper.extradata_writer.cache)
+    assert any("course\t" in ed for ed in mapper.extradata_writer.cache)
     generated_objects = {}
-    for m in caplog.messages:
+    for m in mapper.extradata_writer.cache:
         s = m.split("\t")
         generated_objects[s[0]] = json.loads(s[1])
     note = generated_objects["notes"]

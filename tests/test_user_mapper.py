@@ -1311,7 +1311,6 @@ def test_json_load_s_booleans_bad_json():
 
 
 def test_notes(caplog):
-    caplog.set_level(25)
     user_map = {
         "data": [
             {
@@ -1393,15 +1392,13 @@ def test_notes(caplog):
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
     )
-    assert "Level 25" in caplog.text
-    assert "Some title" in caplog.text
+    assert any("Some title" in ed for ed in user_mapper.extradata_writer.cache)
 
     assert folio_user["externalSystemId"] == "externalid_1"
     assert user_mapper.notes_mapper.noteprops is not None
 
 
 def test_notes_empty_field(caplog):
-    caplog.set_level(25)
     user_map = {
         "data": [
             {
@@ -1484,7 +1481,5 @@ def test_notes_empty_field(caplog):
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
     )
-    assert "Level 25" not in caplog.text
-
     assert folio_user["externalSystemId"] == "externalid_1"
     assert user_mapper.notes_mapper.noteprops is not None

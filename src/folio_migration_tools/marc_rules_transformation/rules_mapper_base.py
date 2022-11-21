@@ -423,7 +423,7 @@ class RulesMapperBase(MapperBase):
                     "value": new_entity.get("issnValue"),
                 }
             )
-        self.write_extradata(e_parent, new_entity)
+        self.extradata_writer.write(e_parent, new_entity)
 
     def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):
         v = value

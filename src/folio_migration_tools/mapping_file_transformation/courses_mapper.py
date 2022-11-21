@@ -74,13 +74,13 @@ class CoursesMapper(MappingFileMapperBase):
 
     def store_objects(self, composite_course):
         try:
-            self.write_extradata("courselisting", composite_course[0]["courselisting"])
+            self.extradata_writer.write("courselisting", composite_course[0]["courselisting"])
             self.migration_report.add_general_statistics("Stored courselistings")
-            self.write_extradata("course", composite_course[0]["course"])
+            self.extradata_writer.write("course", composite_course[0]["course"])
             self.migration_report.add_general_statistics("Stored courses")
             if "instructors" in composite_course[0] and any(composite_course[0]["instructors"]):
                 for instructor in composite_course[0]["instructors"]:
-                    self.write_extradata("instructor", instructor)
+                    self.extradata_writer.write("instructor", instructor)
                     self.migration_report.add_general_statistics("Stored instructors")
 
         except Exception as ee:

@@ -3,6 +3,7 @@ import logging
 import sys
 from datetime import datetime
 from datetime import timezone
+from pathlib import Path
 
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -11,6 +12,7 @@ from folioclient import FolioClient
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
@@ -23,14 +25,11 @@ class MapperBase:
 
     legacy_id_template = "Identifier(s) from previous system:"
 
-    def __init__(
-        self,
-        library_configuration: LibraryConfiguration,
-        folio_client: FolioClient,
-    ):
+    def __init__(self, library_configuration: LibraryConfiguration, folio_client: FolioClient):
         logging.info("MapperBase initiating")
+        self.extradata_writer: ExtradataWriter = ExtradataWriter(Path(""))
         self.start_datetime = datetime.now(timezone.utc)
-        self.folio_client = folio_client
+        self.folio_client: FolioClient = folio_client
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.library_configuration: LibraryConfiguration = library_configuration
         self.hrid_settings = self.folio_client.folio_get_single_object(self.hrid_path)
@@ -428,9 +427,6 @@ class MapperBase:
             folio_record["administrativeNotes"].append(
                 f"{MapperBase.legacy_id_template} {legacy_id}"
             )
-
-    def write_extradata(self, record_type: str, data_to_write: dict):
-        logging.log(25, "%s\t%s", record_type, json.dumps(data_to_write))
 
 
 def flatten(my_dict: dict, path=""):

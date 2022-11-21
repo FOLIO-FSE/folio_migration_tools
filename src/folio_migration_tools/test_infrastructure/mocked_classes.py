@@ -1,11 +1,13 @@
 import json
 import logging
 import os
+from pathlib import Path
 from unittest.mock import Mock
 
 import requests
 from folioclient import FolioClient
 
+from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
@@ -16,7 +18,8 @@ from folio_migration_tools.migration_report import MigrationReport
 def mocked_holdings_mapper() -> HoldingsMapper:
     mock_mapper = Mock(spec=HoldingsMapper)
     mock_mapper.migration_report = MigrationReport()
-    mock_mapper.write_extradata = write_extradata
+    mock_mapper.extradata_writer = ExtradataWriter(Path(""))
+
     return mock_mapper
 
 
