@@ -89,7 +89,7 @@ class HoldingsProcessor:
                     "Missing instance ids. Something is wrong.",
                     "",
                 )
-            folio_rec["discoverySuppress"] = file_def.suppressed
+            self.mapper.handle_suppression(folio_rec, file_def, True)
             self.set_source_id(self.mapper.task_configuration, folio_rec, self.holdingssources)
             self.set_hrid(marc_record, folio_rec)
             self.save_srs_record(marc_record, file_def, folio_rec, legacy_id)

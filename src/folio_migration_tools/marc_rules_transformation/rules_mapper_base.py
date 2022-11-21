@@ -17,6 +17,7 @@ from folio_migration_tools.custom_exceptions import TransformationFieldMappingEr
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
@@ -381,6 +382,20 @@ class RulesMapperBase(MapperBase):
                 )
                 # Experimental
                 # self.add_entity_to_record(entity, e_parent, rec, self.schema)
+
+    def handle_suppression(
+        self, folio_record, file_def: FileDefinition, only_discovery_suppress: bool = False
+    ):
+        folio_record["discoverySuppress"] = file_def.suppressed
+        self.migration_report.add(
+            Blurbs.Suppression,
+            f'Suppressed from discovery = {folio_record["discoverySuppress"]}',
+        )
+        if not only_discovery_suppress:
+            folio_record["staffSuppress"] = file_def.staff_suppressed
+            self.migration_report.add(
+                Blurbs.Suppression, f'Staff suppressed = {folio_record["staffSuppress"]} '
+            )
 
     def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
         self.migration_report.add(Blurbs.PrecedingSuccedingTitles, f"{e_parent} created")
