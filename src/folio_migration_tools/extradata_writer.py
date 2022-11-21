@@ -41,7 +41,7 @@ class ExtradataWriter:
             raise TransformationProcessError("", error_message, record_type) from ee
 
     def flush(self):
-        self.write("", "", True)
+        self.write("", {}, True)
         if self.path_to_file.is_file() and os.stat(self.path_to_file).st_size == 0:
             logging.info("Removing extradata file since it is empty")
             os.remove(self.path_to_file)
