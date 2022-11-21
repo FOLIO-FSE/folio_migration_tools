@@ -7,7 +7,6 @@ from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
 from pymarc import MARCReader
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -22,10 +21,11 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings impor
     RulesMapperHoldings,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):
-    class TaskConfiguration(BaseModel):
+    class TaskConfiguration(AbstractTaskConfiguration):
         name: str
         legacy_id_marc_path: str
         deduplicate_holdings_statements: Optional[bool] = True

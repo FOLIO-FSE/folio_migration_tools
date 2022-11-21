@@ -6,18 +6,18 @@
             "title": "Name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "course_reserve_file_path": {
+        "courseReserveFilePath": {
             "$ref": "#/definitions/FileDefinition"
         }
     },
     "required": [
         "name",
-        "migration_task_type",
-        "course_reserve_file_path"
+        "migrationTaskType",
+        "courseReserveFilePath"
     ],
     "definitions": {
         "FileDefinition": {

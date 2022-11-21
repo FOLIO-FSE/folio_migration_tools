@@ -11,7 +11,6 @@ from uuid import uuid4
 
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -20,6 +19,7 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
 def write_failed_batch_to_file(batch, file):
@@ -45,7 +45,7 @@ class BatchPoster(MigrationTaskBase):
         _type_: _description_
     """
 
-    class TaskConfiguration(BaseModel):
+    class TaskConfiguration(AbstractTaskConfiguration):
         name: str
         migration_task_type: str
         object_type: str

@@ -6,28 +6,28 @@
             "title": "Name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "open_requests_file": {
+        "openRequestsFile": {
             "$ref": "#/definitions/FileDefinition"
         },
-        "starting_row": {
-            "title": "Starting Row",
+        "startingRow": {
+            "title": "Startingrow",
             "default": 1,
             "type": "integer"
         },
-        "item_files": {
-            "title": "Item Files",
+        "itemFiles": {
+            "title": "Itemfiles",
             "default": [],
             "type": "array",
             "items": {
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "patron_files": {
-            "title": "Patron Files",
+        "patronFiles": {
+            "title": "Patronfiles",
             "default": [],
             "type": "array",
             "items": {
@@ -37,8 +37,8 @@
     },
     "required": [
         "name",
-        "migration_task_type",
-        "open_requests_file"
+        "migrationTaskType",
+        "openRequestsFile"
     ],
     "definitions": {
         "FileDefinition": {

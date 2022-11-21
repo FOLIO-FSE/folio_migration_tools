@@ -6,11 +6,11 @@
             "title": "Name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "hrid_handling": {
+        "hridHandling": {
             "$ref": "#/definitions/HridHandling"
         },
         "files": {
@@ -20,72 +20,72 @@
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "items_mapping_file_name": {
-            "title": "Items Mapping File Name",
+        "itemsMappingFileName": {
+            "title": "Itemsmappingfilename",
             "type": "string"
         },
-        "location_map_file_name": {
-            "title": "Location Map File Name",
+        "locationMapFileName": {
+            "title": "Locationmapfilename",
             "type": "string"
         },
-        "default_call_number_type_name": {
-            "title": "Default Call Number Type Name",
+        "defaultCallNumberTypeName": {
+            "title": "Defaultcallnumbertypename",
             "type": "string"
         },
-        "temp_location_map_file_name": {
-            "title": "Temp Location Map File Name",
+        "tempLocationMapFileName": {
+            "title": "Templocationmapfilename",
             "default": "",
             "type": "string"
         },
-        "material_types_map_file_name": {
-            "title": "Material Types Map File Name",
+        "materialTypesMapFileName": {
+            "title": "Materialtypesmapfilename",
             "type": "string"
         },
-        "loan_types_map_file_name": {
-            "title": "Loan Types Map File Name",
+        "loanTypesMapFileName": {
+            "title": "Loantypesmapfilename",
             "type": "string"
         },
-        "temp_loan_types_map_file_name": {
-            "title": "Temp Loan Types Map File Name",
+        "tempLoanTypesMapFileName": {
+            "title": "Temploantypesmapfilename",
             "default": "",
             "type": "string"
         },
-        "statistical_codes_map_file_name": {
-            "title": "Statistical Codes Map File Name",
+        "statisticalCodesMapFileName": {
+            "title": "Statisticalcodesmapfilename",
             "default": "",
             "type": "string"
         },
-        "item_statuses_map_file_name": {
-            "title": "Item Statuses Map File Name",
+        "itemStatusesMapFileName": {
+            "title": "Itemstatusesmapfilename",
             "type": "string"
         },
-        "call_number_type_map_file_name": {
-            "title": "Call Number Type Map File Name",
+        "callNumberTypeMapFileName": {
+            "title": "Callnumbertypemapfilename",
             "type": "string"
         },
-        "reset_hrid_settings": {
-            "title": "Reset Hrid Settings",
+        "resetHridSettings": {
+            "title": "Resethridsettings",
             "default": false,
             "type": "boolean"
         },
-        "never_update_hrid_settings": {
-            "title": "Never Update Hrid Settings",
+        "neverUpdateHridSettings": {
+            "title": "Neverupdatehridsettings",
             "default": false,
             "type": "boolean"
         }
     },
     "required": [
         "name",
-        "migration_task_type",
-        "hrid_handling",
+        "migrationTaskType",
+        "hridHandling",
         "files",
-        "items_mapping_file_name",
-        "location_map_file_name",
-        "default_call_number_type_name",
-        "material_types_map_file_name",
-        "loan_types_map_file_name",
-        "item_statuses_map_file_name",
-        "call_number_type_map_file_name"
+        "itemsMappingFileName",
+        "locationMapFileName",
+        "defaultCallNumberTypeName",
+        "materialTypesMapFileName",
+        "loanTypesMapFileName",
+        "itemStatusesMapFileName",
+        "callNumberTypeMapFileName"
     ],
     "definitions": {
         "HridHandling": {

@@ -6,38 +6,43 @@
             "title": "Name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "group_map_path": {
-            "title": "Group Map Path",
+        "groupMapPath": {
+            "title": "Groupmappath",
             "type": "string"
         },
-        "departments_map_path": {
-            "title": "Departments Map Path",
+        "departmentsMapPath": {
+            "title": "Departmentsmappath",
             "default": "",
             "type": "string"
         },
-        "use_group_map": {
-            "title": "Use Group Map",
+        "useGroupMap": {
+            "title": "Usegroupmap",
             "default": true,
             "type": "boolean"
         },
-        "user_mapping_file_name": {
-            "title": "User Mapping File Name",
+        "userMappingFileName": {
+            "title": "Usermappingfilename",
             "type": "string"
         },
-        "user_file": {
+        "userFile": {
             "$ref": "#/definitions/FileDefinition"
+        },
+        "removeIdAndRequestPreferences": {
+            "title": "Removeidandrequestpreferences",
+            "default": false,
+            "type": "boolean"
         }
     },
     "required": [
         "name",
-        "migration_task_type",
-        "group_map_path",
-        "user_mapping_file_name",
-        "user_file"
+        "migrationTaskType",
+        "groupMapPath",
+        "userMappingFileName",
+        "userFile"
     ],
     "definitions": {
         "FileDefinition": {
