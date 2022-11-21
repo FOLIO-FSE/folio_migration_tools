@@ -15,7 +15,7 @@ from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
 from folio_migration_tools.migration_report import MigrationReport
 
 
-def mocked_holdings_mapper() -> HoldingsMapper:
+def mocked_holdings_mapper() -> Mock:
     mock_mapper = Mock(spec=HoldingsMapper)
     mock_mapper.migration_report = MigrationReport()
     mock_mapper.extradata_writer = ExtradataWriter(Path(""))
