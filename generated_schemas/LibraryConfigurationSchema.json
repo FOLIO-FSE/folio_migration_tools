@@ -81,8 +81,8 @@
             "title": "FolioRelease",
             "description": "An enumeration.",
             "enum": [
-                "kiwi",
-                "lotus"
+                "lotus",
+                "morning-glory"
             ],
             "type": "string"
         }

@@ -6,11 +6,11 @@
             "title": "Name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "hrid_handling": {
+        "hridHandling": {
             "$ref": "#/definitions/HridHandling"
         },
         "files": {
@@ -20,40 +20,40 @@
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "holdings_map_file_name": {
-            "title": "Holdings Map File Name",
+        "holdingsMapFileName": {
+            "title": "Holdingsmapfilename",
             "type": "string"
         },
-        "location_map_file_name": {
-            "title": "Location Map File Name",
+        "locationMapFileName": {
+            "title": "Locationmapfilename",
             "type": "string"
         },
-        "default_call_number_type_name": {
-            "title": "Default Call Number Type Name",
+        "defaultCallNumberTypeName": {
+            "title": "Defaultcallnumbertypename",
             "type": "string"
         },
-        "previously_generated_holdings_files": {
-            "title": "Previously Generated Holdings Files",
+        "previouslyGeneratedHoldingsFiles": {
+            "title": "Previouslygeneratedholdingsfiles",
             "default": [],
             "type": "array",
             "items": {
                 "type": "string"
             }
         },
-        "fallback_holdings_type_id": {
-            "title": "Fallback Holdings Type Id",
+        "fallbackHoldingsTypeId": {
+            "title": "Fallbackholdingstypeid",
             "type": "string"
         },
-        "holdings_type_uuid_for_boundwiths": {
-            "title": "Holdings Type Uuid For Boundwiths",
+        "holdingsTypeUuidForBoundwiths": {
+            "title": "Holdingstypeuuidforboundwiths",
             "type": "string"
         },
-        "call_number_type_map_file_name": {
-            "title": "Call Number Type Map File Name",
+        "callNumberTypeMapFileName": {
+            "title": "Callnumbertypemapfilename",
             "type": "string"
         },
-        "holdings_merge_criteria": {
-            "title": "Holdings Merge Criteria",
+        "holdingsMergeCriteria": {
+            "title": "Holdingsmergecriteria",
             "default": [
                 "instanceId",
                 "permanentLocationId",
@@ -64,27 +64,27 @@
                 "type": "string"
             }
         },
-        "reset_hrid_settings": {
-            "title": "Reset Hrid Settings",
+        "resetHridSettings": {
+            "title": "Resethridsettings",
             "default": false,
             "type": "boolean"
         },
-        "never_update_hrid_settings": {
-            "title": "Never Update Hrid Settings",
+        "neverUpdateHridSettings": {
+            "title": "Neverupdatehridsettings",
             "default": false,
             "type": "boolean"
         }
     },
     "required": [
         "name",
-        "migration_task_type",
-        "hrid_handling",
+        "migrationTaskType",
+        "hridHandling",
         "files",
-        "holdings_map_file_name",
-        "location_map_file_name",
-        "default_call_number_type_name",
-        "fallback_holdings_type_id",
-        "holdings_type_uuid_for_boundwiths"
+        "holdingsMapFileName",
+        "locationMapFileName",
+        "defaultCallNumberTypeName",
+        "fallbackHoldingsTypeId",
+        "holdingsTypeUuidForBoundwiths"
     ],
     "definitions": {
         "HridHandling": {

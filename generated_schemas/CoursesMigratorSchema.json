@@ -6,33 +6,38 @@
             "title": "Name",
             "type": "string"
         },
-        "composite_course_map_path": {
-            "title": "Composite Course Map Path",
+        "compositeCourseMapPath": {
+            "title": "Compositecoursemappath",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "courses_file": {
+        "coursesFile": {
             "$ref": "#/definitions/FileDefinition"
         },
-        "terms_map_path": {
-            "title": "Terms Map Path",
+        "termsMapPath": {
+            "title": "Termsmappath",
             "type": "string"
         },
-        "departments_map_path": {
-            "title": "Departments Map Path",
+        "departmentsMapPath": {
+            "title": "Departmentsmappath",
             "type": "string"
+        },
+        "lookUpInstructor": {
+            "title": "Lookupinstructor",
+            "default": false,
+            "type": "boolean"
         }
     },
     "required": [
         "name",
-        "composite_course_map_path",
-        "migration_task_type",
-        "courses_file",
-        "terms_map_path",
-        "departments_map_path"
+        "compositeCourseMapPath",
+        "migrationTaskType",
+        "coursesFile",
+        "termsMapPath",
+        "departmentsMapPath"
     ],
     "definitions": {
         "FileDefinition": {

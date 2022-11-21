@@ -9,7 +9,6 @@ from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic.main import BaseModel
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -24,13 +23,14 @@ from folio_migration_tools.mapping_file_transformation.organization_mapper impor
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
 # Read files and do some work
 class OrganizationTransformer(MigrationTaskBase):
-    class TaskConfiguration(BaseModel):
+    class TaskConfiguration(AbstractTaskConfiguration):
         name: str
         migration_task_type: str
         files: List[FileDefinition]

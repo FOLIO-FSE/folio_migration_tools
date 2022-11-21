@@ -6,7 +6,7 @@
         "id": {
             "description": "The unique UUID for this organization",
             "$ref": "../../common/schemas/uuid.json",
-            "type": "Deprecated"
+            "type": "string"
         },
         "name": {
             "description": "The name of this organization",
@@ -37,10 +37,11 @@
         },
         "organizationTypes": {
             "description": "A list of organization types assigned to this organization",
-            "type": "Deprecated",
+            "type": "array",
             "items": {
                 "description": "UUID of an organization type record",
-                "$ref": "../../common/schemas/uuid.json"
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string"
             },
             "uniqueItems": true
         },
@@ -300,10 +301,11 @@
         "contacts": {
             "id": "contact",
             "description": "An array of contact record IDs",
-            "type": "Deprecated",
+            "type": "array",
             "items": {
                 "description": "UUID of a contact record",
-                "$ref": "../../common/schemas/uuid.json"
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string"
             }
         },
         "agreements": {
@@ -612,10 +614,11 @@
         "interfaces": {
             "id": "interfaces",
             "description": "The list of interfaces assigned to this organization",
-            "type": "Deprecated",
+            "type": "array",
             "items": {
                 "description": "UUID of an interface record",
-                "$ref": "../../common/schemas/uuid.json"
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string"
             }
         },
         "accounts": {
@@ -733,9 +736,10 @@
         },
         "acqUnitIds": {
             "description": "Acquisition unit UUIDs associated with this organization",
-            "type": "Deprecated",
+            "type": "array",
             "items": {
-                "$ref": "../../common/schemas/uuid.json"
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string"
             }
         },
         "tags": {

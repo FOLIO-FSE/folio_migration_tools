@@ -9,7 +9,6 @@ from urllib.error import HTTPError
 
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
 
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -18,11 +17,12 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_reserve import LegacyReserve
 
 
 class ReservesMigrator(MigrationTaskBase):
-    class TaskConfiguration(BaseModel):
+    class TaskConfiguration(AbstractTaskConfiguration):
         name: str
         migration_task_type: str
         course_reserve_file_path: FileDefinition
