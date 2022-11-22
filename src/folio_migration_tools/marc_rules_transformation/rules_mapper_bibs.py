@@ -183,23 +183,29 @@ class BibsRulesMapper(RulesMapperBase):
 
     def perform_proxy_mapping(self, marc_field):
         proxy_mapping = next(iter(self.mappings.get("880", [])), [])
-        if proxy_mapping and "fieldReplacementRule" in proxy_mapping:
-            target_field = next(
-                (
-                    r["targetField"]
-                    for r in proxy_mapping["fieldReplacementRule"]
-                    if r["sourceDigits"] == marc_field["6"][:3]
-                ),
-                "",
-            )
-            mappings = self.mappings.get(target_field, {})
-
+        if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
+            return None
+        if "6" not in marc_field:
+            self.migration_report.add(Blurbs.Field880Mappings, "Records without $6")
+            return None
+        target_field = next(
+            (
+                r.get("targetField", "")
+                for r in proxy_mapping.get("fieldReplacementRule", [])
+                if r["sourceDigits"] == marc_field["6"][:3]
+            ),
+            marc_field["6"][:3],
+        )
+        self.migration_report.add(
+            Blurbs.Field880Mappings,
+            f"Source digits: {marc_field['6']} Target field: {target_field}",
+        )
+        mappings = self.mappings.get(target_field, {})
+        if not mappings:
             self.migration_report.add(
                 Blurbs.Field880Mappings,
-                f"Source digits: {marc_field['6'][:3]} Target field: {target_field}",
+                f"Mapping not set up for target field: {target_field} ({marc_field['6']})",
             )
-        else:
-            raise TransformationProcessError("", "Mapping rules for 880 is missing. Halting")
         return mappings
 
     def perform_additional_parsing(

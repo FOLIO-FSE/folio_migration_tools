@@ -363,6 +363,7 @@ class RulesMapperBase(MapperBase):
                         "primary",
                         "isbnValue",
                         "issnValue",
+                        "authorityId",
                     ]
                 )
                 or e_parent in ["electronicAccess", "publication"]
