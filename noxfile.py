@@ -23,16 +23,7 @@ except Exception:
 
 @nox.session()
 def tests(session):
-    print(session.posargs)
     posargs = [
-        "--okapi_url",
-        session.posargs[0],
-        "--tenant_id",
-        session.posargs[1],
-        "--username",
-        session.posargs[2],
-        "--password",
-        session.posargs[3],
         "--cov=./",
         "--cov-report=xml",
     ]

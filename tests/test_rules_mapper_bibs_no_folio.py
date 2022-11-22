@@ -65,10 +65,10 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         ils_flavour=IlsFlavour.sierra,
         reset_hrid_settings=False,
     )
-    BibsRulesMapper.__init__ = MagicMock(name="__init__", return_value=None)
-    BibsRulesMapper.get_instance_schema = MagicMock(name="get_instance_schema")
-    Conditions.setup_reference_data_for_all = MagicMock(name="setup_reference_data_for_all")
-    Conditions.setup_reference_data_for_bibs = MagicMock(name="setup_reference_data_for_bibs")
+    # BibsRulesMapper.__init__ = MagicMock(name="__init__", return_value=None)
+    # BibsRulesMapper.get_instance_schema = MagicMock(name="get_instance_schema")
+    # Conditions.setup_reference_data_for_all = MagicMock(name="setup_reference_data_for_all")
+    # Conditions.setup_reference_data_for_bibs = MagicMock(name="setup_reference_data_for_bibs")
     mapper = BibsRulesMapper(folio, lib, conf)
     mapper.folio = folio
     mapper.migration_report = MigrationReport()
@@ -138,13 +138,13 @@ def test_get_instance_format_ids_three_digit_values_are_ignored(mapper, caplog):
     assert not any(res)
 
 
-def test_get_instance_format_ids_338b_is_mapped(mapper, caplog):
+def test_get_instance_format_ids_338b_is_mapped(mapper: BibsRulesMapper, caplog):
     record = pymarc.Record()
     record.add_field(
         pymarc.Field(tag="337", subfields=["a", "ignored", "b", "ignored", "2", "rdacarrier"])
     )
     record.add_field(
-        pymarc.Field(tag="338", subfields=["a", "ignored", "b", "ab", "2", "rdacarrier"])
+        pymarc.Field(tag="338", subfields=["a", "ignored", "b", "sb", "2", "rdacarrier"])
     )
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
     assert any(res)
@@ -152,29 +152,29 @@ def test_get_instance_format_ids_338b_is_mapped(mapper, caplog):
 
 def test_get_instance_format_ids_one_338_two_337(mapper, caplog):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
     assert len(res) == 1
 
 
 def test_get_instance_format_ids_two_338_two_337(mapper):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
     assert len(res) == 2
 
 
 def test_get_instance_format_ids_two_338a_one_337(mapper: BibsRulesMapper):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
     record.add_field(
-        pymarc.Field(tag="338", subfields=["a", "name 2", "b", "ab", "2", "rdacarrier"])
+        pymarc.Field(tag="338", subfields=["a", "audio belt", "b", "ab", "2", "rdacarrier"])
     )
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
     assert len(res) == 2
@@ -182,8 +182,8 @@ def test_get_instance_format_ids_two_338a_one_337(mapper: BibsRulesMapper):
 
 def test_get_instance_format_ids_338a_is_mapped(mapper):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "test", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "name 2", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
+    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
     mocked_mapper = Mock(spec=BibsRulesMapper)
     mocked_mapper.migration_report = MigrationReport()
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
@@ -225,13 +225,13 @@ def test_get_folio_id_by_name_except(mapper, caplog):
 
 def test_get_folio_id_by_name(mapper, caplog):
     caplog.set_level(26)
-    res = mapper.get_instance_format_id_by_name("test", "name", "legacy_id_99")
+    res = mapper.get_instance_format_id_by_name("audio", "audio belt", "legacy_id_99")
     assert not caplog.text
     assert (
-        "Successful matching on 337$a & 338$a - test -- name->test -- name"
+        "Successful matching on 337$a & 338$a - audio -- audio belt->audio -- audio belt"
         in mapper.migration_report.report[Blurbs.InstanceFormat[0]]
     )
-    assert res == "605e9527-4008-45e2-a78a-f6bfb027c43a"
+    assert res == "0d9b1c3d-2d13-4f18-9472-cc1b91bf1752"
 
 
 def test_get_get_langs(mapper: BibsRulesMapper, caplog):
@@ -254,3 +254,20 @@ def test_handle_leader_05(mapper, caplog):
             "Original value: s" in mapper.migration_report.report["Record status (leader pos 5)"]
         )
         assert "Changed s to c" in mapper.migration_report.report["Record status (leader pos 5)"]
+
+
+def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
+    path = "./tests/test_data/diacritics/test-880.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record: Record = None
+        record = next(reader)
+        res = mapper.parse_bib(
+            ["ii"], record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False)
+        )
+        assert "宝塚歌劇団" in res["subjects"]
+        assert "[東京宝塚劇場公演パンフレット. ]" in res["alternativeTitles"][0]["alternativeTitle"]
+        assert "1. 7月星組公演.  淀君, シャンソン・ダムール (1959)" in res["notes"][2]["note"]
+        assert "宝塚" in res["publication"][1]["place"]
