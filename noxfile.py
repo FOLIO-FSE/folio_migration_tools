@@ -1,6 +1,7 @@
 # noxfile.py
 import logging
 import os
+import sys
 import tempfile
 
 import nox
@@ -8,17 +9,11 @@ import nox
 nox.options.sessions = "lint", "safety", "tests", "docs"
 locations = "src", "tests", "noxfile.py", "docs/conf.py"
 
-try:
-    with open(".env") as f:
-        lines = f.readlines()
-        token = lines[0].replace("GITHUB_TOKEN=", "")
-        env = {"GITHUB_TOKEN": token}
-except Exception:
-    if "GITHUB_TOKEN" in os.environ:
-        env = {"GITHUB_TOKEN": os.environ["GITHUB_TOKEN"]}
-    else:
-        logging.error("No GITHUB_TOKEN environment variable set nor any .env file exists")
-        env = {}
+if "GITHUB_TOKEN" in os.environ:
+    env = {"GITHUB_TOKEN": os.environ["GITHUB_TOKEN"]}
+else:
+    logging.error("No GITHUB_TOKEN environment variable set nor any .env file exists")
+    sys.exit(0)
 
 
 @nox.session()
