@@ -97,6 +97,9 @@ class FolderStructure:
         self.failed_mfhds_file = (
             self.results_folder / f"failed_mfhd_records{self.file_template}.mrc"
         )
+        self.failed_auth_file = (
+            self.results_folder / f"failed_auth_records{self.file_template}.mrc"
+        )
 
         self.migration_reports_file = self.reports_folder / f"report{self.file_template}.md"
 
@@ -105,6 +108,7 @@ class FolderStructure:
         )
 
         self.instance_id_map_path = self.results_folder / "instance_id_map.json"
+        self.auth_id_map_path = self.results_folder / "auth_id_map.json"
 
         self.holdings_id_map_path = self.results_folder / "holdings_id_map.json"
 

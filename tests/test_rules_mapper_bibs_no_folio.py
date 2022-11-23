@@ -70,7 +70,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
     # Conditions.setup_reference_data_for_all = MagicMock(name="setup_reference_data_for_all")
     # Conditions.setup_reference_data_for_bibs = MagicMock(name="setup_reference_data_for_bibs")
     mapper = BibsRulesMapper(folio, lib, conf)
-    mapper.folio = folio
+    mapper.folio_client = folio
     mapper.migration_report = MigrationReport()
     return mapper
 

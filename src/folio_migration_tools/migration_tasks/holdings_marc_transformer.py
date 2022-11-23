@@ -2,20 +2,20 @@
 import csv
 import json
 import logging
-import sys
 from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pymarc import MARCReader
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.holdings_processor import (
     HoldingsProcessor,
+)
+from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
+    MARCReaderWrapper,
 )
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
@@ -112,46 +112,14 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 mapper.reset_holdings_hrid_counter()
             processor = HoldingsProcessor(mapper, self.folder_structure)
             for file_def in self.task_config.files:
-                self.process_single_file(file_def, processor)
+                MARCReaderWrapper.process_single_file(
+                    file_def,
+                    processor,
+                    self.folder_structure.failed_mfhds_file,
+                    self.folder_structure,
+                )
             processor.wrap_up()
-
-    def process_single_file(self, file_def: FileDefinition, processor: HoldingsProcessor):
-        try:
-            with open(
-                self.folder_structure.legacy_records_folder / file_def.file_name,
-                "rb",
-            ) as marc_file:
-                reader = MARCReader(marc_file, to_unicode=True, permissive=True)
-                reader.hide_utf8_warnings = True
-                reader.force_utf8 = False
-                logging.info("Running %s", file_def.file_name)
-                read_records(reader, processor, file_def)
-        except TransformationProcessError as tpe:
-            logging.critical(tpe)
-            sys.exit(1)
-        except Exception:
-            logging.exception("Failure in Main: %s", file_def.file_name, stack_info=True)
 
     def wrap_up(self):
         logging.info("wapping up")
         self.extradata_writer.flush()
-
-
-def read_records(reader, processor: HoldingsProcessor, file_def: FileDefinition):
-    for idx, record in enumerate(reader):
-        try:
-            if record is None:
-                processor.mapper.migration_report.add_general_statistics(
-                    "Records with encoding errors. See data issues log for details"
-                )
-                raise TransformationRecordFailedError(
-                    f"Index in file:{idx}",
-                    f"MARC parsing error: {reader.current_exception}",
-                    f"{reader.current_chunk}",
-                )
-            else:
-                processor.process_record(record, file_def)
-        except TransformationRecordFailedError as error:
-            error.log_it()
-        except ValueError as error:
-            logging.error(error)

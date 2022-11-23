@@ -1,6 +1,5 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
-import json
 import logging
 import sys
 import time
@@ -46,33 +45,27 @@ class BibsRulesMapper(RulesMapperBase):
             task_configuration,
             Conditions(folio_client, self, "bibs"),
         )
-        self.folio: FolioClient = folio_client
-        self.task_configuration = task_configuration
         self.record_status: dict = {}
-        self.holdings_map: dict = {}
         self.id_map: dict = {}
         self.srs_recs: list = []
         self.schema = self.instance_json_schema
         self.contrib_name_types: dict = {}
         self.mapped_folio_fields: dict = {}
-        self.unmapped_folio_fields: dict = {}
         self.alt_title_map: dict = {}
         logging.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-bib"
-        self.mappings = self.folio.folio_get_single_object(rules_endpoint)
+        self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
         logging.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
-        self.unmapped_tags: dict = {}
-        self.unmapped_conditions: dict = {}
         self.instance_relationships: dict = {}
         self.instance_relationship_types: dict = {}
-        self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio)
+        self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio_client)
 
         self.start = time.time()
 
     def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
         folio_instance = {
-            "metadata": self.folio.get_metadata_construct(),
+            "metadata": self.folio_client.get_metadata_construct(),
         }
         folio_instance["id"] = str(
             FolioUUID(
@@ -140,73 +133,6 @@ class BibsRulesMapper(RulesMapperBase):
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         return clean_folio_instance
-
-    def process_marc_field(
-        self,
-        folio_instance,
-        marc_field,
-        ignored_subsequent_fields,
-        legacy_ids,
-    ):
-        if marc_field.tag == "880" and "6" in marc_field:
-            mappings = self.perform_proxy_mapping(marc_field)
-        else:
-            tags_to_ignore = {"880", "001", "008"}
-            mappings = (
-                self.mappings.get(marc_field.tag, {})
-                if marc_field.tag not in tags_to_ignore
-                else []
-            )
-        if mappings:
-            try:
-                self.map_field_according_to_mapping(
-                    marc_field, mappings, folio_instance, legacy_ids
-                )
-                if any(m.get("ignoreSubsequentFields", False) for m in mappings):
-                    ignored_subsequent_fields.add(marc_field.tag)
-            except Exception as ee:
-                logging.error(
-                    "map_field_according_to_mapping %s %s %s",
-                    marc_field.tag,
-                    marc_field.format_field(),
-                    json.dumps(mappings),
-                )
-                raise ee
-
-    def report_marc_stats(self, marc_field, bad_tags, legacy_ids, ignored_subsequent_fields):
-        self.migration_report.add(Blurbs.Trivia, "Total number of Tags processed")
-        self.report_bad_tags(marc_field, bad_tags, legacy_ids)
-        mapped = marc_field.tag in self.mappings
-        if marc_field.tag in ignored_subsequent_fields:
-            mapped = False
-        self.report_legacy_mapping(marc_field.tag, True, mapped)
-
-    def perform_proxy_mapping(self, marc_field):
-        proxy_mapping = next(iter(self.mappings.get("880", [])), [])
-        if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
-            return None
-        if "6" not in marc_field:
-            self.migration_report.add(Blurbs.Field880Mappings, "Records without $6")
-            return None
-        target_field = next(
-            (
-                r.get("targetField", "")
-                for r in proxy_mapping.get("fieldReplacementRule", [])
-                if r["sourceDigits"] == marc_field["6"][:3]
-            ),
-            marc_field["6"][:3],
-        )
-        self.migration_report.add(
-            Blurbs.Field880Mappings,
-            f"Source digits: {marc_field['6']} Target field: {target_field}",
-        )
-        mappings = self.mappings.get(target_field, {})
-        if not mappings:
-            self.migration_report.add(
-                Blurbs.Field880Mappings,
-                f"Mapping not set up for target field: {target_field} ({marc_field['6']})",
-            )
-        return mappings
 
     def perform_additional_parsing(
         self,
@@ -293,7 +219,7 @@ class BibsRulesMapper(RulesMapperBase):
             match = next(
                 (
                     f["id"]
-                    for f in self.folio.instance_types
+                    for f in self.folio_client.instance_types
                     if f["name"].lower().replace(" ", "") == match_template
                 ),
                 "",
@@ -315,7 +241,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
             return match
 
-        if not self.folio.instance_types:
+        if not self.folio_client.instance_types:
             raise TransformationProcessError("", "No instance_types setup in tenant")
 
         if "336" in marc_record and "b" not in marc_record["336"]:
@@ -327,7 +253,7 @@ class BibsRulesMapper(RulesMapperBase):
             f336_b = marc_record["336"]["b"].lower().replace(" ", "")
             f336_b_norm = f336_b.lower().replace(" ", "")
             t = self.conditions.get_ref_data_tuple_by_code(
-                self.folio.instance_types,
+                self.folio_client.instance_types,
                 "instance_types",
                 f336_b_norm,
             )
@@ -350,14 +276,14 @@ class BibsRulesMapper(RulesMapperBase):
 
         if not return_id:
             t = self.conditions.get_ref_data_tuple_by_code(
-                self.folio.instance_types, "instance_types", "zzz"
+                self.folio_client.instance_types, "instance_types", "zzz"
             )
             return_id = t[0]
         return return_id
 
     def get_instance_format_id_by_code(self, legacy_id: str, code: str):
         try:
-            match = next(f for f in self.folio.instance_formats if f["code"] == code)
+            match = next(f for f in self.folio_client.instance_formats if f["code"] == code)
             self.migration_report.add(
                 Blurbs.InstanceFormat,
                 f"Successful match  - {code}->{match['name']}",
@@ -378,7 +304,9 @@ class BibsRulesMapper(RulesMapperBase):
         match_template = f"{f337a} -- {f338a}"
         try:
             match = next(
-                f for f in self.folio.instance_formats if f["name"].lower() == match_template
+                f
+                for f in self.folio_client.instance_formats
+                if f["name"].lower() == match_template
             )
             self.migration_report.add(
                 Blurbs.InstanceFormat,
@@ -483,7 +411,7 @@ class BibsRulesMapper(RulesMapperBase):
             ret = next(
                 (
                     i["id"]
-                    for i in self.folio.modes_of_issuance
+                    for i in self.folio_client.modes_of_issuance
                     if name.lower() == i["name"].lower()
                 ),
                 "",
@@ -503,7 +431,7 @@ class BibsRulesMapper(RulesMapperBase):
 
             return self.other_mode_of_issuance_id
         except StopIteration as ee:
-            logging.exception(f"{marc_record.leader} {list(self.folio.modes_of_issuance)}")
+            logging.exception(f"{marc_record.leader} {list(self.folio_client.modes_of_issuance)}")
             raise ee from ee
 
     def get_nature_of_content(self, marc_record: Record) -> List[str]:

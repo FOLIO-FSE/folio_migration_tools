@@ -35,6 +35,7 @@ class MigrationTaskBase:
         logging.info("MigrationTaskBase init")
         self.start_datetime = datetime.now(timezone.utc)
         self.task_configuration = task_configuration
+        logging.info(self.task_configuration.json(indent=4))
         self.folio_client: FolioClient = FolioClient(
             library_configuration.okapi_url,
             library_configuration.tenant_id,
