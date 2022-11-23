@@ -28,14 +28,14 @@ def mocked_folio_client() -> FolioClient:
         mocked_folio = FolioClient("okapi_url", "tenant_id", "username", "password")
 
         mocked_folio.folio_get_single_object = folio_get_single_object_mocked
-        mocked_folio.folio_get_all = folio_get_all
+        mocked_folio.folio_get_all = folio_get_all_mocked
         return mocked_folio
     except Exception as ee:
         logging.error(ee)
         raise ee
 
 
-def folio_get_all(ref_data_path, array_name, query, limit=10):
+def folio_get_all_mocked(ref_data_path, array_name, query, limit=10):
     with open("./static/reference_data.json", "r") as super_schema_file:
         super_schema = json.load(super_schema_file)
     if ref_data_path == "/coursereserves/terms":
