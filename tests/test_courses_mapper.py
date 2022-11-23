@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def mapper(pytestconfig) -> CoursesMapper:
     okapi_url = "okapi_url"
     tenant_id = "tenant_id"
