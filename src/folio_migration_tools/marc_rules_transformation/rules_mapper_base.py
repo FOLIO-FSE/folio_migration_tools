@@ -39,6 +39,7 @@ class RulesMapperBase(MapperBase):
         self.folio_client: FolioClient = folio_client
         self.holdings_json_schema = self.fetch_holdings_schema()
         self.instance_json_schema = self.get_instance_schema()
+        self.authority_schema = self.get
         self.schema: dict = {}
         self.task_configuration = task_configuration
         self.conditions = conditions
@@ -175,6 +176,71 @@ class RulesMapperBase(MapperBase):
         else:
             value1 = marc_field.format_field() if marc_field else ""
             return self.apply_rule(legacy_id, value1, condition_types, marc_field, parameter)
+
+    def process_marc_field(
+        self,
+        folio_record: dict,
+        marc_field: Field,
+        ignored_subsequent_fields,
+        legacy_ids,
+    ):
+        if marc_field.tag == "880" and "6" in marc_field:
+            mappings = self.perform_proxy_mapping(marc_field)
+        else:
+            tags_to_ignore = {"880", "001", "008"}
+            mappings = (
+                self.mappings.get(marc_field.tag, {})
+                if marc_field.tag not in tags_to_ignore
+                else []
+            )
+        if mappings:
+            try:
+                self.map_field_according_to_mapping(marc_field, mappings, folio_record, legacy_ids)
+                if any(m.get("ignoreSubsequentFields", False) for m in mappings):
+                    ignored_subsequent_fields.add(marc_field.tag)
+            except Exception as ee:
+                logging.error(
+                    "map_field_according_to_mapping %s %s %s",
+                    marc_field.tag,
+                    marc_field.format_field(),
+                    json.dumps(mappings),
+                )
+                raise ee
+
+    def perform_proxy_mapping(self, marc_field):
+        proxy_mapping = next(iter(self.mappings.get("880", [])), [])
+        if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
+            return None
+        if "6" not in marc_field:
+            self.migration_report.add(Blurbs.Field880Mappings, "Records without $6")
+            return None
+        target_field = next(
+            (
+                r.get("targetField", "")
+                for r in proxy_mapping.get("fieldReplacementRule", [])
+                if r["sourceDigits"] == marc_field["6"][:3]
+            ),
+            marc_field["6"][:3],
+        )
+        self.migration_report.add(
+            Blurbs.Field880Mappings,
+            f"Source digits: {marc_field['6']} Target field: {target_field}",
+        )
+        mappings = self.mappings.get(target_field, {})
+        if not mappings:
+            self.migration_report.add(
+                Blurbs.Field880Mappings,
+                f"Mapping not set up for target field: {target_field} ({marc_field['6']})",
+            )
+        return mappings
+
+    def report_marc_stats(self, marc_field, bad_tags, legacy_ids, ignored_subsequent_fields):
+        self.migration_report.add(Blurbs.Trivia, "Total number of Tags processed")
+        self.report_bad_tags(marc_field, bad_tags, legacy_ids)
+        mapped = marc_field.tag in self.mappings
+        if marc_field.tag in ignored_subsequent_fields:
+            mapped = False
+        self.report_legacy_mapping(marc_field.tag, True, mapped)
 
     def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
         try:

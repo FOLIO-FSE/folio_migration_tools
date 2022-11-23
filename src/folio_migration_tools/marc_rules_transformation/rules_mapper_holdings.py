@@ -72,9 +72,9 @@ class RulesMapperHoldings(RulesMapperBase):
                 if marc_field.tag == "852":
                     num_852s += 1
                 self.process_marc_field(
+                    folio_holding,
                     marc_field,
                     ignored_subsequent_fields,
-                    folio_holding,
                     legacy_id,
                 )
             except TransformationFieldMappingError as tfme:
@@ -120,11 +120,19 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def process_marc_field(
         self,
+        folio_holding: dict,
         marc_field: Field,
         ignored_subsequent_fields,
-        folio_holding,
         index_or_legacy_ids,
     ):
+        """This overwrites the implementation for Auth and instances
+
+        Args:
+            folio_holding (dict): _description_
+            marc_field (Field): _description_
+            ignored_subsequent_fields (_type_): _description_
+            index_or_legacy_ids (_type_): _description_
+        """
         self.migration_report.add(Blurbs.Trivia, "Total number of Tags processed")
         if marc_field.tag not in self.mappings:
             self.report_legacy_mapping(marc_field.tag, True, False)
