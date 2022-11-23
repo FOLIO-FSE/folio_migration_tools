@@ -316,11 +316,11 @@ class OrganizationMapper(MappingFileMapperBase):
                 # https://github.com/folio-org/raml/blob/master/schemas/tags.schema
                 elif property_name_level1 == "tags":
                     property_level1["properties"] = {
-                            "tagList": {
-                                "description": "List of tags",
-                                "type": "array",
-                                "items": {"type": "string"},
-                            }
+                        "tagList": {
+                            "description": "List of tags",
+                            "type": "array",
+                            "items": {"type": "string"},
+                        }
                     }
 
                 elif (
