@@ -16,7 +16,12 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
-def test_basic():
+@pytest.fixture(scope="session", autouse=True)
+def mocked_folio_client(pytestconfig):
+    return mocked_classes.mocked_folio_client()
+
+
+def test_basic(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -50,8 +55,9 @@ def test_basic():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
@@ -64,7 +70,7 @@ def test_basic():
     assert folio_user["requestPreference"]["userId"] == folio_user["id"]
 
 
-def test_basic_fallback():
+def test_basic_fallback(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -104,8 +110,9 @@ def test_basic_fallback():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
@@ -113,7 +120,7 @@ def test_basic_fallback():
     assert folio_user["externalSystemId"] == "externalid_2"
 
 
-def test_basic_fallback_value():
+def test_basic_fallback_value(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -159,8 +166,9 @@ def test_basic_fallback_value():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
@@ -168,7 +176,7 @@ def test_basic_fallback_value():
     assert folio_user["personal"]["email"] == "missing@lost.yes"
 
 
-def test_basic_fallback_value_and_fallback_legacy_value():
+def test_basic_fallback_value_and_fallback_legacy_value(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -216,8 +224,9 @@ def test_basic_fallback_value_and_fallback_legacy_value():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
@@ -225,7 +234,7 @@ def test_basic_fallback_value_and_fallback_legacy_value():
     assert folio_user["personal"]["email"] == "missing@lost.yes"
 
 
-def test_basic_fallback_value_and_fallback_legacy_value2():
+def test_basic_fallback_value_and_fallback_legacy_value2(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -273,8 +282,9 @@ def test_basic_fallback_value_and_fallback_legacy_value2():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
@@ -282,7 +292,7 @@ def test_basic_fallback_value_and_fallback_legacy_value2():
     assert folio_user["personal"]["email"] == "secondary@lost.yes"
 
 
-def test_basic_replace():
+def test_basic_replace(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -322,7 +332,7 @@ def test_basic_replace():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
@@ -331,7 +341,7 @@ def test_basic_replace():
     assert folio_user["externalSystemId"] == "Non-Matriculated"
 
 
-def test_basic_replace_no_replace():
+def test_basic_replace_no_replace(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -371,7 +381,7 @@ def test_basic_replace_no_replace():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
@@ -380,7 +390,7 @@ def test_basic_replace_no_replace():
     assert folio_user["externalSystemId"] == "1"
 
 
-def test_basic_replace_regex_match():
+def test_basic_replace_regex_match(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -440,7 +450,7 @@ def test_basic_replace_regex_match():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
@@ -451,7 +461,7 @@ def test_basic_replace_regex_match():
     assert folio_user["personal"]["firstName"] == "Carol"
 
 
-def test_basic_replace_regex_match_no_middle():
+def test_basic_replace_regex_match_no_middle(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -511,7 +521,7 @@ def test_basic_replace_regex_match_no_middle():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
@@ -522,7 +532,7 @@ def test_basic_replace_regex_match_no_middle():
     assert folio_user["personal"]["firstName"] == "Carol"
 
 
-def test_basic_fallback_all_empty():
+def test_basic_fallback_all_empty(mocked_folio_client):
     with pytest.raises(TransformationRecordFailedError):
         user_map = {
             "data": [
@@ -557,7 +567,7 @@ def test_basic_fallback_all_empty():
         mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
         mock_task_config.remove_id_and_request_preferences = False
         mock_library_conf.multi_field_delimiter = "<delimiter>"
-        mock_folio = mocked_classes.mocked_folio_client()
+        mock_folio = mocked_folio_client
         user_mapper = UserMapper(
             mock_folio, mock_task_config, mock_library_conf, user_map, None, None
         )
@@ -569,7 +579,7 @@ def test_basic_fallback_all_empty():
         )
 
 
-def test_basic_turn_off_id_and_request_preferences():
+def test_basic_turn_off_id_and_request_preferences(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -603,7 +613,7 @@ def test_basic_turn_off_id_and_request_preferences():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = True
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
@@ -614,7 +624,7 @@ def test_basic_turn_off_id_and_request_preferences():
     assert "requestPreference" not in folio_user
 
 
-def test_one_to_one_group_mapping():
+def test_one_to_one_group_mapping(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -659,7 +669,7 @@ def test_one_to_one_group_mapping():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
@@ -668,7 +678,7 @@ def test_one_to_one_group_mapping():
     assert folio_user["patronGroup"] == "Group name"
 
 
-def test_ref_data_group_mapping():
+def test_ref_data_group_mapping(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -717,7 +727,7 @@ def test_ref_data_group_mapping():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(
         mock_folio, mock_task_config, mock_library_conf, user_map, None, groups_map
     )
@@ -728,7 +738,7 @@ def test_ref_data_group_mapping():
     assert folio_user["patronGroup"] == "FOLIO group name"
 
 
-def test_ref_data_departments_mapping():
+def test_ref_data_departments_mapping(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -777,7 +787,7 @@ def test_ref_data_departments_mapping():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(
         mock_folio, mock_task_config, mock_library_conf, user_map, departments_map, None
     )
@@ -788,7 +798,7 @@ def test_ref_data_departments_mapping():
     assert folio_user["departments"][0] == "FOLIO user department name"
 
 
-def test_custom_fields_mapping():
+def test_custom_fields_mapping(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -833,7 +843,7 @@ def test_custom_fields_mapping():
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
@@ -842,7 +852,7 @@ def test_custom_fields_mapping():
     assert folio_user["customFields"]["homeLibrary"] == "Alma liber"
 
 
-def test_remove_preferred_first_name_if_empty():
+def test_remove_preferred_first_name_if_empty(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -875,7 +885,7 @@ def test_remove_preferred_first_name_if_empty():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
 
@@ -884,7 +894,7 @@ def test_remove_preferred_first_name_if_empty():
     assert "preferredFirstName" not in folio_user["personal"]
 
 
-def test_boolean_values_explicitly_true():
+def test_boolean_values_explicitly_true(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -968,13 +978,13 @@ def test_boolean_values_explicitly_true():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
 
 
-def test_boolean_values_explicitly_true_json_string():
+def test_boolean_values_explicitly_true_json_string(mocked_folio_client):
     user_map_str = '{ "data": [{ "folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""}, { "folio_field": "username", "legacy_field": "user_name", "value": "", "description": "" }, { "folio_field": "externalSystemId", "legacy_field": "ext_id", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine1", "legacy_field": "HOMEADDRESS1", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine2", "legacy_field": "HOMEADDRESS2", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressTypeId", "legacy_field": "Not mapped", "value": "Home", "description": "" }, { "folio_field": "personal.addresses[0].city", "legacy_field": "HOMECITY", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].postalCode", "legacy_field": "HOMEZIP", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].region", "legacy_field": "HOMESTATE", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].primaryAddress", "legacy_field": "Not mapped", "value": true, "description": "" } ] }'  # noqa
     user_map = json.loads(user_map_str)
     legacy_user_record = {
@@ -990,13 +1000,13 @@ def test_boolean_values_explicitly_true_json_string():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
 
 
-def test_boolean_values_explicitly_false_json_string():
+def test_boolean_values_explicitly_false_json_string(mocked_folio_client):
     user_map_str = '{ "data": [{ "folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},  { "folio_field": "username", "legacy_field": "user_name", "value": "", "description": "" }, { "folio_field": "externalSystemId", "legacy_field": "ext_id", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine1", "legacy_field": "HOMEADDRESS1", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine2", "legacy_field": "HOMEADDRESS2", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressTypeId", "legacy_field": "Not mapped", "value": "Home", "description": "" }, { "folio_field": "personal.addresses[0].city", "legacy_field": "HOMECITY", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].postalCode", "legacy_field": "HOMEZIP", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].region", "legacy_field": "HOMESTATE", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].primaryAddress", "legacy_field": "Not mapped", "value": false, "description": "" } ] }'  # noqa: E501, B950
     user_map = json.loads(user_map_str)
     legacy_user_record = {
@@ -1012,13 +1022,13 @@ def test_boolean_values_explicitly_false_json_string():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
 
 
-def test_boolean_values_explicitly_true_string():
+def test_boolean_values_explicitly_true_string(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -1102,14 +1112,14 @@ def test_boolean_values_explicitly_true_string():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
 
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] == "true"
 
 
-def test_boolean_values_explicitly_false_string():
+def test_boolean_values_explicitly_false_string(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -1193,14 +1203,14 @@ def test_boolean_values_explicitly_false_string():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
 
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] == "false"
 
 
-def test_boolean_values_explicitly_false():
+def test_boolean_values_explicitly_false(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -1284,14 +1294,14 @@ def test_boolean_values_explicitly_false():
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
 
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
 
 
-def test_json_load_s_booleans():
+def test_json_load_s_booleans(mocked_folio_client):
     json_str = '{"a": true, "b": "true", "c": false, "d": "false", "e": "True", "f": "False"}'
     my_json = json.loads(json_str)
     assert my_json["a"] is True
@@ -1310,7 +1320,7 @@ def test_json_load_s_booleans_bad_json():
         json.loads(json_str)
 
 
-def test_notes(caplog):
+def test_notes(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -1386,7 +1396,7 @@ def test_notes(caplog):
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(
@@ -1398,7 +1408,7 @@ def test_notes(caplog):
     assert user_mapper.notes_mapper.noteprops is not None
 
 
-def test_notes_empty_field(caplog):
+def test_notes_empty_field(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -1475,7 +1485,7 @@ def test_notes_empty_field(caplog):
     mock_task_config.remove_id_and_request_preferences = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
 
-    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
     folio_user = user_mapper.perform_additional_mapping(

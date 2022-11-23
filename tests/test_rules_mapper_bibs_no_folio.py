@@ -43,7 +43,7 @@ xpath_245 = "//marc:datafield[@tag='245']"
 # flake8: noqa
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session", autouse=True)
 def mapper(pytestconfig) -> BibsRulesMapper:
     folio = mocked_classes.mocked_folio_client()
     lib = LibraryConfiguration(

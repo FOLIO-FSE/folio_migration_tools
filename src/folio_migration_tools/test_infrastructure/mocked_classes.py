@@ -7,7 +7,6 @@ from unittest.mock import Mock
 from folioclient import FolioClient
 
 from folio_migration_tools.extradata_writer import ExtradataWriter
-from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
 )
@@ -22,7 +21,6 @@ def mocked_holdings_mapper() -> Mock:
     return mock_mapper
 
 
-# @pytest.fixture(scope="session", autouse=True)
 def mocked_folio_client() -> FolioClient:
     try:
         FolioClient.login = MagicMock(name="login", return_value=None)

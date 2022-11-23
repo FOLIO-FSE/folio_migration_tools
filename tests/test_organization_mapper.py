@@ -35,7 +35,7 @@ def test_fetch_acq_schemas_from_github_happy_path():
 # Mock mapper object
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session", autouse=True)
 def mapper(pytestconfig) -> OrganizationMapper:
     okapi_url = "okapi_url"
     tenant_id = "tenant_id"
