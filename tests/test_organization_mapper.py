@@ -130,6 +130,13 @@ def test_single_category_refdata_mapping(mapper):
         "e193b0d1-4674-4a9e-818b-375f013d963f"
     ]
 
+    
+def test_tags_object_array(mapper):
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["tags"] == {"tagList": ["A", "B", "C"]}
+
+
 
 @pytest.mark.skip(
     reason="We would need a way of using the same ref data file for multiple values. See #411"
@@ -184,7 +191,7 @@ data = {
     "address_city": "Victoria",
     "address_categories": "rt",
     "tp": "Consortium",
-    "tgs": "A, B, C",
+    "tgs": "A^-^B^-^C",
     "organization_types": "cst",
     "org_note": "Good stuff!",
 }
