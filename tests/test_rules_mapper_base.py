@@ -12,6 +12,9 @@ from pymarc.record import Record
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
+from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
+    BibsRulesMapper,
+)
 
 # flake8: noqa: E501
 
@@ -87,16 +90,11 @@ def test_date_from_008_holding():
     # assert holding["metadata"]["createdDate"] == "2017-03-09T00:00:00"
 
 
-def test_get_holdings_schema():
-    schema = RulesMapperBase.fetch_holdings_schema()
-    assert schema["required"]
-
-
 def test_add_entity_to_record():
     entity = {"id": "id", "type": "type"}
     rec = {}
     RulesMapperBase.add_entity_to_record(
-        entity, "identifiers", rec, RulesMapperBase.get_instance_schema()
+        entity, "identifiers", rec, BibsRulesMapper.get_instance_schema()
     )
     assert rec == {"identifiers": [{"id": "id", "type": "type"}]}
 
@@ -191,35 +189,3 @@ def test_create_srs_uuid():
     assert str(created_id) == "6734f228-cba2-54c7-b129-c6437375a864"
     created_id_2 = RulesMapperBase.create_srs_id(FOLIONamespaces.instances, "some_url", "id_1")
     assert str(created_id) != str(created_id_2)
-
-
-def test_get_instance_schema():
-    path = "./tests/test_data/two020a.mrc"
-    with open(path, "rb") as marc_file:
-        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
-        reader.hide_utf8_warnings = True
-        reader.force_utf8 = True
-        record1 = None
-        for record in reader:
-            record1 = record
-        entity_mapping = json.loads(
-            '[ { "rules": [ { "conditions": [ { "type": "set_identifier_type_id_by_name", "parameter": { "name": "ISBN" } } ] } ], "target": "identifiers.identifierTypeId", "subfield": [ "a" ], "requiredSubfield": [ "a" ], "description": "Type for Valid ISBN" }, { "rules": [ { "conditions": [ { "type": "remove_ending_punc, trim" } ] } ], "target": "identifiers.value", "subfield": [ "a", "c", "q" ], "description": "Valid ISBN", "requiredSubfield": [ "a" ], "applyRulesOnConcatenatedData": true } ]'
-        )
-        marc_field = record1["020"]
-        folio_record = {}
-        mock = Mock(spec=RulesMapperBase)
-        schema = RulesMapperBase.get_instance_schema()
-        assert record1["020"]["a"] == "0870990004 (v. 1)"
-        assert schema["required"]
-        # mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        # RulesMapperBase.handle_entity_mapping(
-        #    mock,
-        #    marc_field,
-        #    entity_mapping,
-        #    folio_record,
-        #    False,
-        #    [],
-        # )
-        # print("!")
-        # print(folio_record)
-        # assert folio_record != {}

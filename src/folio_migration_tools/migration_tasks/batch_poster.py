@@ -99,6 +99,10 @@ class BatchPoster(MigrationTaskBase):
                                 try:
                                     if self.task_configuration.object_type == "Extradata":
                                         self.post_extra_data(row, self.processed, failed_recs_file)
+                                    elif self.task_configuration.object_type == "Authorities":
+                                        self.post_authorities(
+                                            row, self.processed, failed_recs_file
+                                        )
                                     else:
                                         json_rec = json.loads(row.split("\t")[-1])
                                         if self.task_configuration.object_type == "SRS":
@@ -151,6 +155,28 @@ class BatchPoster(MigrationTaskBase):
         url = f"{self.folio_client.okapi_url}/{endpoint}"
         body = data
         response = self.post_objects(url, body)
+        if response.status_code == 201:
+            self.num_posted += 1
+        elif response.status_code == 422:
+            self.num_failures += 1
+            error_msg = json.loads(response.text)["errors"][0]["message"]
+            logging.error("Row %s\tHTTP %s\t %s", num_records, response.status_code, error_msg)
+            if "id value already exists" not in json.loads(response.text)["errors"][0]["message"]:
+                failed_recs_file.write(row)
+        else:
+            self.num_failures += 1
+            logging.error("Row %s\tHTTP %s\t%s", num_records, response.status_code, response.text)
+            failed_recs_file.write(row)
+        if num_records % 50 == 0:
+            logging.info(
+                "%s records posted successfully. %s failed",
+                self.num_posted,
+                self.num_failures,
+            )
+
+    def post_authorities(self, row: str, num_records: int, failed_recs_file):
+        url = f"{self.folio_client.okapi_url}/authority-storage/authorities"
+        response = self.post_objects(url, row)
         if response.status_code == 201:
             self.num_posted += 1
         elif response.status_code == 422:
@@ -449,6 +475,12 @@ def list_objects(object_type: str):
         "Instances": {
             "object_name": "instances",
             "api_endpoint": "/instance-storage/batch/synchronous?upsert=true",
+            "total_records": False,
+            "addSnapshotId": False,
+        },
+        "Authorities": {
+            "object_name": "",
+            "api_endpoint": "/authority-storage/authorities",
             "total_records": False,
             "addSnapshotId": False,
         },

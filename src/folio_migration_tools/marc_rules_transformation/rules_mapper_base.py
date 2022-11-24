@@ -30,6 +30,7 @@ class RulesMapperBase(MapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         task_configuration,
+        schema: dict,
         conditions=None,
     ):
         super().__init__(library_configuration, folio_client)
@@ -37,21 +38,19 @@ class RulesMapperBase(MapperBase):
         self.start = time.time()
         self.last_batch_time = time.time()
         self.folio_client: FolioClient = folio_client
-        self.holdings_json_schema = self.fetch_holdings_schema()
-        self.instance_json_schema = self.get_instance_schema()
-        self.authority_schema = self.get
-        self.schema: dict = {}
+        self.schema: dict = schema
         self.task_configuration = task_configuration
         self.conditions = conditions
         self.item_json_schema = ""
         self.mappings: dict = {}
         self.schema_properties = None
-        self.hrid_handler = HRIDHandler(
-            folio_client,
-            self.task_configuration.hrid_handling,
-            self.migration_report,
-            self.task_configuration.deactivate035_from001,
-        )
+        if hasattr(self.task_configuration, "hrid_handling"):
+            self.hrid_handler = HRIDHandler(
+                folio_client,
+                self.task_configuration.hrid_handling,
+                self.migration_report,
+                self.task_configuration.deactivate035_from001,
+            )
         logging.info("Current user id is %s", self.folio_client.current_user)
 
     # TODO: Rebuild and move
@@ -280,6 +279,17 @@ class RulesMapperBase(MapperBase):
         except Exception as exception:
             self.handle_generic_exception(self.parsed_records, exception)
 
+    def report_bad_tags(self, marc_field, bad_tags, legacy_ids):
+        if (
+            (not marc_field.tag.isnumeric())
+            and marc_field.tag != "LDR"
+            and marc_field.tag not in bad_tags
+        ):
+            self.migration_report.add(Blurbs.NonNumericTagsInRecord, marc_field.tag)
+            message = "Non-numeric tags in records"
+            Helper.log_data_issue(legacy_ids, message, marc_field.tag)
+            bad_tags.add(marc_field.tag)
+
     def add_value_to_target(self, rec, target_string, value):
         if not value:
             return
@@ -495,7 +505,14 @@ class RulesMapperBase(MapperBase):
     def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):
         v = value
         for condition_type in iter(condition_types):
-            v = self.conditions.get_condition(condition_type, legacy_id, v, parameter, marc_field)
+            try:
+                v = self.conditions.get_condition(
+                    condition_type, legacy_id, v, parameter, marc_field
+                )
+            except AttributeError as attr_error:
+                raise TransformationProcessError(
+                    legacy_id, attr_error, condition_type
+                ) from attr_error
         return v
 
     @staticmethod
@@ -508,24 +525,6 @@ class RulesMapperBase(MapperBase):
                 rec[entity_parent_key].append(entity)
         else:
             rec[entity_parent_key] = entity
-
-    @staticmethod
-    def get_instance_schema():
-        logging.info("Fetching Instance schema...")
-        instance_schema = FolioClient.get_latest_from_github(
-            "folio-org", "mod-inventory-storage", "ramls/instance.json"
-        )
-        logging.info("done")
-        return instance_schema
-
-    @staticmethod
-    def fetch_holdings_schema():
-        logging.info("Fetching HoldingsRecord schema...")
-        holdings_record_schema = FolioClient.get_latest_from_github(
-            "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
-        )
-        logging.info("done")
-        return holdings_record_schema
 
     @staticmethod
     def grouped(marc_field: Field):
@@ -644,13 +643,46 @@ class RulesMapperBase(MapperBase):
             FOLIONamespaces.edifact: FOLIONamespaces.srs_records_edifact,
         }
 
-        return str(
-            FolioUUID(
-                okapi_url,
-                srs_types.get(record_type),
-                str(legacy_id),
+        return str(FolioUUID(okapi_url, srs_types.get(record_type), legacy_id))
+
+    @staticmethod
+    def get_bib_id_from_907y(marc_record: Record, index_or_legacy_id):
+        try:
+            return list(set(marc_record["907"].get_subfields("a", "y")))
+        except Exception as e:
+            raise TransformationRecordFailedError(
+                index_or_legacy_id,
+                (
+                    "907 $y and $a is missing is missing, although they is "
+                    "required for this legacy ILS choice"
+                ),
+                marc_record.as_json(),
+            ) from e
+
+    @staticmethod
+    def get_bib_id_from_990a(marc_record: Record, index_or_legacy_id):
+        res = {f["a"].strip() for f in marc_record.get_fields("990") if "a" in f}
+        if marc_record["001"].format_field().strip():
+            res.add(marc_record["001"].format_field().strip())
+        if any(res):
+            return list(res)
+        else:
+            raise TransformationRecordFailedError(
+                index_or_legacy_id,
+                "neither 990$a or 001 found in record.",
+                marc_record.as_json(),
             )
-        )
+
+    @staticmethod
+    def get_bib_id_from_001(marc_record: Record, index_or_legacy_id):
+        try:
+            return [marc_record["001"].format_field().strip()]
+        except Exception as e:
+            raise TransformationRecordFailedError(
+                index_or_legacy_id,
+                "001 is missing, although it is required for Voyager migrations",
+                marc_record.as_json(),
+            ) from e
 
     @staticmethod
     def get_srs_string(
@@ -671,13 +703,16 @@ class RulesMapperBase(MapperBase):
         id_holders = {
             FOLIONamespaces.instances: {
                 "instanceId": folio_object["id"],
-                "instanceHrid": folio_object["hrid"],
+                "instanceHrid": folio_object.get("hrid", ""),
             },
             FOLIONamespaces.holdings: {
                 "holdingsId": folio_object["id"],
-                "holdingsHrid": folio_object["hrid"],
+                "holdingsHrid": folio_object.get("hrid", ""),
             },
-            FOLIONamespaces.authorities: {},
+            FOLIONamespaces.authorities: {
+                "authorityId": folio_object["id"],
+                "authorityHrid": marc_record["001"].data,
+            },
             FOLIONamespaces.edifact: {},
         }
 

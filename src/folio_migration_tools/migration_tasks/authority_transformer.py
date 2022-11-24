@@ -29,16 +29,6 @@ class AuthorityTransformer(MigrationTaskBase):
         migration_task_type: Annotated[
             str, Field(description=("The string represenation of this class. Do not set"))
         ]
-        add_administrative_notes_with_legacy_ids: Annotated[
-            bool,
-            Field(
-                description=(
-                    "If set to true, an Administrative note will be added to the records "
-                    "containing the legacy ID. Use this in order to protect the values from "
-                    "getting overwritten by overlays,"
-                ),
-            ),
-        ] = True
         files: Annotated[
             List[FileDefinition],
             Field(description=("List of MARC21 files with authority records")),

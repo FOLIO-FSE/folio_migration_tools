@@ -2,6 +2,9 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import MARCReader
 from pymarc import Record
 
+from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
+    MARCReaderWrapper,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
 from folio_migration_tools.report_blurbs import Blurbs
@@ -20,7 +23,7 @@ def test_set_leader():
         reader.force_utf8 = True
         record: Record = None
         record = next(reader)
-        BibsTransformer.set_leader(record, migration_report)
+        MARCReaderWrapper.set_leader(record, migration_report)
         assert record.leader.endswith("4500")
         assert record.leader[9] == "a"
         assert record.leader[10] == "2"
