@@ -43,12 +43,12 @@ class BibsRulesMapper(RulesMapperBase):
             folio_client,
             library_configuration,
             task_configuration,
-            Conditions(folio_client, self, "bibs"),
+            self.get_instance_schema(),
+            Conditions(folio_client, self, "bibs", library_configuration.folio_release),
         )
         self.record_status: dict = {}
         self.id_map: dict = {}
         self.srs_recs: list = []
-        self.schema = self.instance_json_schema
         self.contrib_name_types: dict = {}
         self.mapped_folio_fields: dict = {}
         self.alt_title_map: dict = {}
@@ -129,7 +129,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
         self.dedupe_rec(clean_folio_instance)
         marc_record.remove_fields(*list(bad_tags))
-        self.report_folio_mapping(clean_folio_instance, self.instance_json_schema)
+        self.report_folio_mapping(clean_folio_instance, self.schema)
         # TODO: trim away multiple whitespace and newlines..
         # TODO: createDate and update date and catalogeddate
         return clean_folio_instance
@@ -169,6 +169,15 @@ class BibsRulesMapper(RulesMapperBase):
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
 
+    @staticmethod
+    def get_instance_schema():
+        logging.info("Fetching Instance schema...")
+        instance_schema = FolioClient.get_latest_from_github(
+            "folio-org", "mod-inventory-storage", "ramls/instance.json"
+        )
+        logging.info("done")
+        return instance_schema
+
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:
             holdingsfields = marc_record.get_fields(
@@ -199,17 +208,6 @@ class BibsRulesMapper(RulesMapperBase):
         logging.info("Mapper wrapping up")
         if not self.task_configuration.never_update_hrid_settings:
             self.store_hrid_settings()
-
-    def report_bad_tags(self, marc_field, bad_tags, legacy_ids):
-        if (
-            (not marc_field.tag.isnumeric())
-            and marc_field.tag != "LDR"
-            and marc_field.tag not in bad_tags
-        ):
-            self.migration_report.add(Blurbs.NonNumericTagsInRecord, marc_field.tag)
-            message = "Non-numeric tags in records"
-            Helper.log_data_issue(legacy_ids, message, marc_field.tag)
-            bad_tags.add(marc_field.tag)
 
     def get_instance_type_id(self, marc_record, legacy_id):
         return_id = ""
@@ -535,24 +533,13 @@ class BibsRulesMapper(RulesMapperBase):
         if ils_flavour in {IlsFlavour.sierra, IlsFlavour.millennium}:
             return get_iii_bib_id(marc_record)
         elif ils_flavour == IlsFlavour.tag907y:
-            return get_bib_id_from_907y(marc_record, index_or_legacy_id)
+            return self.get_bib_id_from_907y(marc_record, index_or_legacy_id)
         elif ils_flavour == IlsFlavour.tagf990a:
-            res = {f["a"].strip() for f in marc_record.get_fields("990") if "a" in f}
-            if marc_record["001"].format_field().strip():
-                res.add(marc_record["001"].format_field().strip())
-            if any(res):
-                self.migration_report.add_general_statistics("legacy id from 990$a")
-                return list(res)
-            else:
-                raise TransformationRecordFailedError(
-                    index_or_legacy_id,
-                    "neither 990$a or 001 found in record.",
-                    marc_record.as_json(),
-                )
+            return self.get_bib_id_from_990a(marc_record, index_or_legacy_id)
         elif ils_flavour == IlsFlavour.aleph:
             return self.get_aleph_bib_id(marc_record)
         elif ils_flavour in {IlsFlavour.voyager, "voyager", IlsFlavour.tag001}:
-            return get_bib_id_from_001(marc_record, index_or_legacy_id)
+            return self.get_bib_id_from_001(marc_record, index_or_legacy_id)
         elif ils_flavour == IlsFlavour.koha:
             try:
                 return [marc_record["999"]["c"]]
@@ -606,30 +593,5 @@ def get_iii_bib_id(marc_record: Record):
         raise TransformationRecordFailedError(
             "unknown identifier",
             "907 $a is missing, although it is required for Sierra/iii migrations",
-            marc_record.as_json(),
-        ) from e
-
-
-def get_bib_id_from_001(marc_record: Record, index_or_legacy_id):
-    try:
-        return [marc_record["001"].format_field().strip()]
-    except Exception as e:
-        raise TransformationRecordFailedError(
-            index_or_legacy_id,
-            "001 is missing, although it is required for Voyager migrations",
-            marc_record.as_json(),
-        ) from e
-
-
-def get_bib_id_from_907y(marc_record: Record, index_or_legacy_id):
-    try:
-        return list(set(marc_record["907"].get_subfields("a", "y")))
-    except Exception as e:
-        raise TransformationRecordFailedError(
-            index_or_legacy_id,
-            (
-                "907 $y and $a is missing is missing, although they is "
-                "required for this legacy ILS choice"
-            ),
             marc_record.as_json(),
         ) from e

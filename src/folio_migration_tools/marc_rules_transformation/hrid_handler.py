@@ -71,7 +71,9 @@ class HRIDHandler:
     ):
         folio_record["hrid"] = self.get_next_hrid(namespace)
         new_001 = Field(tag="001", data=folio_record["hrid"])
-        self.handle_035_generation(marc_record, legacy_ids)
+        self.handle_035_generation(
+            marc_record, legacy_ids, self.migration_report, self.deactivate035_from001
+        )
         marc_record.add_ordered_field(new_001)
         self.migration_report.add(Blurbs.HridHandling, "Created HRID using default settings")
 
@@ -99,16 +101,21 @@ class HRIDHandler:
     def generate_numeric_part(self, counter):
         return str(counter).zfill(11) if self.common_retain_leading_zeroes else str(counter)
 
-    def handle_035_generation(self, marc_record, legacy_ids):
+    @staticmethod
+    def handle_035_generation(
+        marc_record: Record,
+        legacy_ids,
+        migration_report: MigrationReport,
+        deactivate035_from001: bool,
+        remove_001: bool = True,
+    ):
         try:
             f_001 = marc_record["001"].value()
             f_003 = marc_record["003"].value().strip() if "003" in marc_record else ""
-            self.migration_report.add(Blurbs.HridHandling, f'Values in 003: {f_003 or "Empty"}')
+            migration_report.add(Blurbs.HridHandling, f'Values in 003: {f_003 or "Empty"}')
 
-            if self.deactivate035_from001:
-                self.migration_report.add(
-                    Blurbs.HridHandling, "035 generation from 001 turned off"
-                )
+            if deactivate035_from001:
+                migration_report.add(Blurbs.HridHandling, "035 generation from 001 turned off")
             else:
                 str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
                 new_035 = Field(
@@ -117,16 +124,17 @@ class HRIDHandler:
                     subfields=["a", str_035],
                 )
                 marc_record.add_ordered_field(new_035)
-                self.migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
-            marc_record.remove_fields("001")
+                migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
+            if remove_001:
+                marc_record.remove_fields("001")
 
         except Exception:
             if "001" in marc_record:
                 s = "Failed to create 035 from 001"
-                self.migration_report.add(Blurbs.HridHandling, s)
+                migration_report.add(Blurbs.HridHandling, s)
                 Helper.log_data_issue(legacy_ids, s, marc_record["001"])
             else:
-                self.migration_report.add(Blurbs.HridHandling, "Legacy bib records without 001")
+                migration_report.add(Blurbs.HridHandling, "Legacy bib records without 001")
 
     def preserve_001_as_hrid(
         self,
@@ -142,7 +150,9 @@ class HRIDHandler:
                 "Duplicate 001. Creating HRID instead. "
                 "Previous 001 will be stored in a new 035 field",
             )
-            self.handle_035_generation(marc_record, legacy_ids)
+            self.handle_035_generation(
+                marc_record, legacy_ids, self.migration_report, self.deactivate035_from001
+            )
             Helper.log_data_issue(
                 legacy_ids,
                 "Duplicate 001 for record. HRID created for record",

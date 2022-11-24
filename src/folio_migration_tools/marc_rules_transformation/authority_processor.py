@@ -81,7 +81,7 @@ class AuthorityProcessor:
             Helper.write_to_file(self.results_file, folio_rec)
             self.mapper.save_source_record(
                 self.srs_records_file,
-                FOLIONamespaces.instances,
+                FOLIONamespaces.athorities,
                 self.folio_client,
                 marc_record,
                 folio_rec,
@@ -119,6 +119,9 @@ class AuthorityProcessor:
             if folio_rec:
                 logging.error(folio_rec)
             raise inst from inst
+
+    def wrap_up(self):
+        logging.info("Processor wrapping up...")
 
     def save_autority_ids_to_file(self, file_def: FileDefinition, folio_rec, filtered_legacy_ids):
         for legacy_id in filtered_legacy_ids:

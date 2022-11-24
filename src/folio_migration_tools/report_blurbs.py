@@ -158,7 +158,7 @@ class Blurbs:
     Section3 = ("__Section 3: items", "The entries below seem to be related to items")
     Exceptions = ("Exceptions", "")
     HridHandling = (
-        "HRID Handling",
+        "HRID and 001/035 handling",
         "There are two ways of handling HRIDs. The default behaviour is to take the current 001 and move that to a new 035. This will also emerge as an Identifier on the Inventory Instances. The 001 and Instance HRID will be generated from the HRID settings in FOLIO. The second option is to maintain the 001s in the records, and also add this as the Instance HRID",
     )
     PrecedingSuccedingTitles = (

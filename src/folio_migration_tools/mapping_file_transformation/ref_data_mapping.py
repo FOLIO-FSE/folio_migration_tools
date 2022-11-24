@@ -5,7 +5,6 @@ import sys
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class RefDataMapping(object):
@@ -16,16 +15,16 @@ class RefDataMapping(object):
         array_name,
         the_map,
         key_type,
-        blurb: Blurbs,
+        blurb,
     ):
         self.name = array_name
-        self.cache = {}
+        self.cache: dict = {}
         self.blurb = blurb
         logging.info("%s reference data mapping. Initializing", self.name)
         logging.info("Fetching %s reference data from FOLIO", self.name)
         self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name, "", 1000))
         self.map = the_map
-        self.regular_mappings = []
+        self.regular_mappings: list = []
         self.key_type = key_type
         self.hybrid_mappings = []
         self.mapped_legacy_keys = []

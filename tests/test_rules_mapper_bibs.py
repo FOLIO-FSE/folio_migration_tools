@@ -1,20 +1,11 @@
 import json
 import logging
 import re
-import unittest
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
-from uuid import uuid4
 
 import pymarc
 import pytest
-from folioclient import FolioClient
 from lxml import etree
-
-from folio_migration_tools.marc_rules_transformation.conditions import Conditions
-from folio_migration_tools.report_blurbs import Blurbs
-from folio_migration_tools.test_infrastructure.mocked_classes import mocked_folio_client
+from pymarc import MARCReader
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
@@ -27,9 +18,6 @@ from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
-from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
-    RulesMapperBase,
-)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
@@ -152,7 +140,7 @@ def test_simple_title3(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
     instance_identifiers = {"b", "c", "d"}
     ids = BibsProcessor.get_valid_folio_record_ids(
-        record[0], ["a", "b"], instance_identifiers, MigrationReport()
+        ["a", "b"], instance_identifiers, MigrationReport()
     )
 
     assert ids == ["a"]
@@ -162,6 +150,38 @@ def test_multiple336s(mapper):
     xpath = "//marc:datafield[@tag='336']"
     record = default_map("test_multiple_336.xml", xpath, mapper)
     assert "8105bd44-e7bd-487e-a8f2-b804a361d92f" in record[0]["instanceTypeId"]
+
+
+def test_get_instance_schema():
+    path = "./tests/test_data/two020a.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record1 = None
+        for record in reader:
+            record1 = record
+        entity_mapping = json.loads(
+            '[ { "rules": [ { "conditions": [ { "type": "set_identifier_type_id_by_name", "parameter": { "name": "ISBN" } } ] } ], "target": "identifiers.identifierTypeId", "subfield": [ "a" ], "requiredSubfield": [ "a" ], "description": "Type for Valid ISBN" }, { "rules": [ { "conditions": [ { "type": "remove_ending_punc, trim" } ] } ], "target": "identifiers.value", "subfield": [ "a", "c", "q" ], "description": "Valid ISBN", "requiredSubfield": [ "a" ], "applyRulesOnConcatenatedData": true } ]'
+        )
+        marc_field = record1["020"]
+        folio_record = {}
+        # mock = Mock(spec=RulesMapperBase)
+        schema = BibsRulesMapper.get_instance_schema()
+        assert record1["020"]["a"] == "0870990004 (v. 1)"
+        assert schema["required"]
+        # mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
+        # RulesMapperBase.handle_entity_mapping(
+        #    mock,
+        #    marc_field,
+        #    entity_mapping,
+        #    folio_record,
+        #    False,
+        #    [],
+        # )
+        # print("!")
+        # print(folio_record)
+        # assert folio_record != {}
 
 
 def test_strange_isbn(mapper):

@@ -11,6 +11,11 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings impor
 )
 
 
+def test_get_holdings_schema():
+    schema = RulesMapperHoldings.fetch_holdings_schema()
+    assert schema["required"]
+
+
 def test_get_marc_textual_stmt_correct_order_and_not_deduped():
     path = "./tests/test_data/mfhd/c_record_repeated_holdings_statements.mrc"
     with open(path, "rb") as marc_file:

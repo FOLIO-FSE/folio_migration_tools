@@ -2,6 +2,7 @@ import logging
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
+from folioclient import FolioClient
 from pymarc.field import Field
 from pymarc.record import Record
 
@@ -35,14 +36,20 @@ class RulesMapperHoldings(RulesMapperBase):
             folio,
             self,
             "holdings",
+            library_configuration.folio_release,
             self.task_configuration.default_call_number_type_name,
         )
         self.folio = folio
-        super().__init__(folio, library_configuration, task_configuration, self.conditions)
+        super().__init__(
+            folio,
+            library_configuration,
+            task_configuration,
+            self.fetch_holdings_schema(),
+            self.conditions,
+        )
         self.location_map = location_map
-        self.schema = self.holdings_json_schema
-        self.holdings_id_map = {}
-        self.ref_data_dicts = {}
+        self.holdings_id_map: dict = {}
+        self.ref_data_dicts: dict = {}
         self.fallback_holdings_type_id = self.task_configuration.fallback_holdings_type_id
 
     def parse_hold(self, marc_record, legacy_id):
@@ -100,7 +107,7 @@ class RulesMapperHoldings(RulesMapperBase):
         cleaned_folio_holding = self.validate_required_properties(
             "-".join(folio_holding.get("formerIds")),
             folio_holding,
-            self.holdings_json_schema,
+            self.schema,
             FOLIONamespaces.holdings,
         )
         props_to_not_dedupe = (
@@ -206,6 +213,15 @@ class RulesMapperHoldings(RulesMapperBase):
                 self.store_hrid_settings()
             else:
                 logging.info("NOT storing HRID settings since that is managed by FOLIO")
+
+    @staticmethod
+    def fetch_holdings_schema():
+        logging.info("Fetching HoldingsRecord schema...")
+        holdings_record_schema = FolioClient.get_latest_from_github(
+            "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
+        )
+        logging.info("done")
+        return holdings_record_schema
 
     def set_holdings_type(self, marc_record: Record, folio_holding, legacy_id: str):
         # Holdings type mapping
