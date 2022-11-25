@@ -1,8 +1,9 @@
-""" Class that processes each MARC record """
+import json
 import logging
 import sys
 import time
 import traceback
+from pathlib import Path
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Field
@@ -12,54 +13,35 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.holdings_helper import HoldingsHelper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import HridHandling
-from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
-    RulesMapperHoldings,
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
 )
+from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_blurbs import Blurbs
 
 
-class HoldingsProcessor:
-    """the processor"""
-
-    def __init__(self, mapper, folder_structure: FolderStructure):
+class MarcFileProcessor:
+    def __init__(
+        self, mapper: RulesMapperBase, folder_structure: FolderStructure, id_map_path: Path
+    ):
+        self.id_map_file = open(id_map_path, "w+")
+        self.object_type: FOLIONamespaces = folder_structure.object_type
         self.folder_structure: FolderStructure = folder_structure
-        self.records_count = 0
-        self.unique_001s = set()
-        self.failed_records_count = 0
-        self.mapper: RulesMapperHoldings = mapper
-        self.start = time.time()
+        self.mapper: RulesMapperBase = mapper
         self.created_objects_file = open(self.folder_structure.created_objects_path, "w+")
         self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
-        self.setup_holdings_sources()
+        self.unique_001s: set = set()
+        self.failed_records_count: int = 0
+        self.start: float = time.time()
+        self.legacy_ids: set = set()
 
-    def setup_holdings_sources(self):
-        holdings_sources = list(
-            self.mapper.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
-        )
-        logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
-        self.holdingssources = {n["name"].upper(): n["id"] for n in holdings_sources}
-        if "FOLIO" not in self.holdingssources:
-            raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
-        if "MARC" not in self.holdingssources:
-            raise TransformationProcessError("", "No holdings source with name MARC in tenant")
-
-    def exit_on_too_many_exceptions(self):
-        if (
-            self.failed_records_count / (self.records_count + 1)
-            > (self.mapper.library_configuration.failed_percentage_threshold / 100)
-            and self.failed_records_count
-            > self.mapper.library_configuration.failed_records_threshold
-        ):
-            logging.critical("More than 20 percent of the records have failed. Halting")
-            sys.exit(1)
-
-    def process_record(self, marc_record: Record, file_def: FileDefinition):
+    def process_record(self, idx: int, marc_record: Record, file_def: FileDefinition):
         """processes a marc holdings record and saves it
 
         Args:
+            idx (int): Index in file being parsed
             marc_record (Record): _description_
             file_def (FileDefinition): _description_
 
@@ -70,31 +52,25 @@ class HoldingsProcessor:
         success = True
         folio_rec = {}
         try:
-            self.records_count += 1
             # Transform the MARC21 to a FOLIO record
-            legacy_id = self.get_legacy_id(
-                self.mapper.task_configuration.legacy_id_marc_path, marc_record
+            legacy_ids = self.mapper.get_legacy_ids(marc_record, idx)
+            if not legacy_ids:
+                raise TransformationRecordFailedError(
+                    f"Index in file: {idx}", "No legacy id found", idx
+                )
+            folio_rec = self.mapper.parse_record(marc_record, file_def, legacy_ids)
+            filtered_legacy_ids = self.get_valid_folio_record_ids(
+                legacy_ids,
+                self.legacy_ids,
+                self.mapper.migration_report,
             )
-            if not legacy_id:
-                raise TransformationRecordFailedError(
-                    self.records_count,
-                    "legacy_id was empty",
-                    self.mapper.task_configuration.legacy_id_marc_path,
-                )
-            folio_rec = self.mapper.parse_hold(marc_record, legacy_id)
-            HoldingsHelper.handle_notes(folio_rec)
-            if not folio_rec.get("instanceId", ""):
-                raise TransformationRecordFailedError(
-                    "".join(folio_rec.get("formerIds", [])),
-                    "Missing instance ids. Something is wrong.",
-                    "",
-                )
-            self.mapper.handle_suppression(folio_rec, file_def, True)
-            self.set_source_id(self.mapper.task_configuration, folio_rec, self.holdingssources)
-            self.set_hrid(marc_record, folio_rec)
-            self.save_srs_record(marc_record, file_def, folio_rec, legacy_id)
+            self.save_id_map_to_file(file_def, folio_rec, filtered_legacy_ids)
+
+            self.save_srs_record(marc_record, file_def, folio_rec, legacy_ids)
             Helper.write_to_file(self.created_objects_file, folio_rec)
-            self.mapper.migration_report.add_general_statistics("Holdings records written to disk")
+            self.mapper.migration_report.add_general_statistics(
+                "Inventory records written to disk"
+            )
 
             self.exit_on_too_many_exceptions()
         except TransformationRecordFailedError as error:
@@ -125,35 +101,6 @@ class HoldingsProcessor:
                 ):
                     self.mapper.remove_from_id_map(folio_rec["formerIds"])
 
-    @staticmethod
-    def get_legacy_id(marc_path: str, marc_record: Record):
-        split = marc_path.split("$", maxsplit=1)
-        if not (split[0].isnumeric() and len(split[0]) == 3):
-            raise TransformationProcessError(
-                "",
-                (
-                    "the marc field used for determining the legacy id is not numeric "
-                    "or does not have the stipulated lenght of 3."
-                    "Make sure the task configuration setting for 'legacyIdMarcPath' "
-                    "is correct or make this piece of code more allowing"
-                ),
-                marc_path,
-            )
-        elif len(split) == 1:
-            return marc_record[split[0]].value()
-        elif len(split) == 2 and len(split[1]) == 1:
-            for field in marc_record.get_fields(split[0]):
-                if sf := field.get_subfields(split[1]):
-                    return sf[0]
-            raise TransformationRecordFailedError("", "Subfield not found in record", split[1])
-
-        else:
-            raise TransformationProcessError(
-                "",
-                ("Something is wrong with 'legacyIdMarcPath' property in the settings"),
-                marc_path,
-            )
-
     def save_srs_record(self, marc_record, file_def, folio_rec, legacy_id: str):
         if self.mapper.task_configuration.create_source_records:
             self.add_hrid_to_records(folio_rec, marc_record)
@@ -181,7 +128,7 @@ class HoldingsProcessor:
                     marc_record.add_ordered_field(new_035)
             self.mapper.save_source_record(
                 self.srs_records_file,
-                FOLIONamespaces.holdings,
+                self.object_type,
                 self.mapper.folio_client,
                 marc_record,
                 folio_rec,
@@ -189,28 +136,6 @@ class HoldingsProcessor:
                 file_def.suppressed,
             )
             self.mapper.migration_report.add_general_statistics("SRS records written to disk")
-
-    def set_hrid(self, marc_record, folio_rec):
-        if self.mapper.task_configuration.hrid_handling == HridHandling.preserve001:
-            value = marc_record["001"].value()
-            if value in self.unique_001s:
-                self.mapper.migration_report.add(
-                    Blurbs.HridHandling, "Duplicate 001. Creating HRID instead"
-                )
-                Helper.log_data_issue(
-                    folio_rec["formerIds"],
-                    "Duplicate 001 for record. HRID created for record",
-                    value,
-                )
-                num_part = self.generate_num_part()
-                folio_rec["hrid"] = f"{self.mapper.holdings_hrid_prefix}{num_part}"
-                new_001 = Field(tag="001", data=folio_rec["hrid"])
-                marc_record.add_ordered_field(new_001)
-                self.mapper.holdings_hrid_counter += 1
-            else:
-                self.unique_001s.add(value)
-                folio_rec["hrid"] = value
-                self.mapper.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
 
     def add_hrid_to_records(self, folio_record: dict, marc_record: Record):
         if (
@@ -226,19 +151,45 @@ class HoldingsProcessor:
         marc_record.add_ordered_field(new_001)
         self.mapper.holdings_hrid_counter += 1
 
+    def exit_on_too_many_exceptions(self):
+        if (
+            self.failed_records_count / (self.records_count + 1)
+            > (self.mapper.library_configuration.failed_percentage_threshold / 100)
+            and self.failed_records_count
+            > self.mapper.library_configuration.failed_records_threshold
+        ):
+            logging.critical("More than 20 percent of the records have failed. Halting")
+            sys.exit(1)
+
+    @staticmethod
+    def get_valid_folio_record_ids(
+        legacy_ids, folio_record_identifiers, migration_report: MigrationReport
+    ):
+        new_ids = set()
+        for legacy_id in legacy_ids:
+            if legacy_id not in folio_record_identifiers:
+                new_ids.add(legacy_id)
+            else:
+                s = "Duplicate MARC record identifiers "
+                migration_report.add_general_statistics(s)
+                Helper.log_data_issue(legacy_id, s, "-".join(legacy_ids))
+                logging.error(s)
+        if not any(new_ids):
+            s = "Failed records. No unique MARC record identifiers in legacy record"
+            migration_report.add_general_statistics(s)
+            raise TransformationRecordFailedError(
+                "-".join(legacy_ids),
+                "Duplicate recod identifier(s). See logs. Record Failed",
+                "-".join(legacy_ids),
+            )
+        return list(new_ids)
+
     def generate_num_part(self):
         return (
             str(self.mapper.holdings_hrid_counter).zfill(11)
             if self.mapper.common_retain_leading_zeroes
             else str(self.mapper.holdings_hrid_counter)
         )
-
-    @staticmethod
-    def set_source_id(task_configuration, folio_rec, holdingssources):
-        if task_configuration.create_source_records:
-            folio_rec["sourceId"] = holdingssources.get("MARC")
-        else:
-            folio_rec["sourceId"] = holdingssources.get("FOLIO")
 
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
@@ -264,6 +215,20 @@ class HoldingsProcessor:
             )
         self.srs_records_file.close()
         self.mapper.wrap_up()
+        self.id_map_file.close()
 
         logging.info("Done. Transformation report written to %s", report_file.name)
         logging.info("Done.")
+
+    def save_id_map_to_file(self, file_def: FileDefinition, folio_rec, filtered_legacy_ids):
+        for legacy_id in filtered_legacy_ids:
+            self.legacy_ids.add(legacy_id)
+            s = json.dumps(
+                {
+                    "legacy_id": legacy_id,
+                    "folio_id": folio_rec["id"],
+                    "suppressed": file_def.suppressed,
+                }
+            )
+            self.id_map_file.write(f"{s}\n")
+            self.mapper.migration_report.add_general_statistics("Lines written to identifier map")

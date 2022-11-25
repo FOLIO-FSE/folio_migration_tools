@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -10,6 +11,9 @@ from folio_migration_tools.custom_exceptions import TransformationFieldMappingEr
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.holdings_helper import HoldingsHelper
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
@@ -51,28 +55,33 @@ class RulesMapperHoldings(RulesMapperBase):
         self.holdings_id_map: dict = {}
         self.ref_data_dicts: dict = {}
         self.fallback_holdings_type_id = self.task_configuration.fallback_holdings_type_id
+        self.setup_holdings_sources()
 
-    def parse_hold(self, marc_record, legacy_id):
+    def parse_record(
+        self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
+    ) -> dict:
         """Parses a mfhd recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://tinyurl.com/3rh52e2x
          This is the main function
 
         Args:
-            marc_record (_type_): _description_
-            legacy_id (_type_): _description_
+            marc_record (Record): _description_
+            file_def (FileDefinition): _description_
+            legacy_ids (List[str]): _description_
 
         Raises:
             TransformationRecordFailedError: _description_
 
         Returns:
-            _type_: _description_
+            dict: _description_
         """
+
         self.print_progress()
         folio_holding = {
             "metadata": self.folio_client.get_metadata_construct(),
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
-        ignored_subsequent_fields = set()
+        ignored_subsequent_fields: set = set()
         num_852s = 0
         for marc_field in marc_record:
             try:
@@ -82,28 +91,28 @@ class RulesMapperHoldings(RulesMapperBase):
                     folio_holding,
                     marc_field,
                     ignored_subsequent_fields,
-                    legacy_id,
+                    legacy_ids,
                 )
             except TransformationFieldMappingError as tfme:
                 tfme.log_it()
         if num_852s > 1:
-            Helper.log_data_issue(legacy_id, "More than 1 852 found", "")
+            Helper.log_data_issue(legacy_ids, "More than 1 852 found", "")
 
         folio_holding["id"] = str(
             FolioUUID(
                 self.folio_client.okapi_url,
                 FOLIONamespaces.holdings,
-                legacy_id,
+                legacy_ids,
             )
         )
 
         if not folio_holding.get("instanceId", ""):
             raise TransformationRecordFailedError(
-                legacy_id,
+                legacy_ids,
                 "No Instance id mapped. ",
                 folio_holding["formerIds"],
             )
-        self.perform_additional_mapping(marc_record, folio_holding, legacy_id)
+        self.perform_additional_mapping(marc_record, folio_holding, legacy_ids, file_def)
         cleaned_folio_holding = self.validate_required_properties(
             "-".join(folio_holding.get("formerIds")),
             folio_holding,
@@ -120,10 +129,21 @@ class RulesMapperHoldings(RulesMapperBase):
             ]
         )
         self.dedupe_rec(cleaned_folio_holding, props_to_not_dedupe)
-        self.holdings_id_map[legacy_id] = self.get_id_map_dict(legacy_id, cleaned_folio_holding)
+        self.holdings_id_map[legacy_ids] = self.get_id_map_dict(legacy_ids, cleaned_folio_holding)
 
         self.report_folio_mapping(cleaned_folio_holding, self.schema)
         return cleaned_folio_holding
+
+    def setup_holdings_sources(self):
+        holdings_sources = list(
+            self.mapper.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
+        )
+        logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
+        self.holdingssources = {n["name"].upper(): n["id"] for n in holdings_sources}
+        if "FOLIO" not in self.holdingssources:
+            raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
+        if "MARC" not in self.holdingssources:
+            raise TransformationProcessError("", "No holdings source with name MARC in tenant")
 
     def process_marc_field(
         self,
@@ -152,26 +172,64 @@ class RulesMapperHoldings(RulesMapperBase):
             if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                 ignored_subsequent_fields.add(marc_field.tag)
 
-    def perform_additional_mapping(self, marc_record: Record, folio_holding, legacy_id: str):
-        """Perform additional tasks not easily handled in the mapping rules
+    def perform_additional_mapping(
+        self, marc_record: Record, folio_holding, legacy_ids: List[str], file_def: FileDefinition
+    ):
+        """_summary_
 
         Args:
             marc_record (Record): _description_
             folio_holding (_type_): _description_
-            legacy_id (str): _description_
-        """
-        self.set_holdings_type(marc_record, folio_holding, legacy_id)
-        self.set_default_call_number_type_if_empty(folio_holding)
-        self.pick_first_location_if_many(folio_holding, legacy_id)
-        self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_id)
-        self.hrid_handler.handle_hrid(
-            FOLIONamespaces.holdings, folio_holding, marc_record, [legacy_id]
-        )
+            legacy_ids (List[str]): _description_
+            file_def (FileDefinition): _description_
 
-    def pick_first_location_if_many(self, folio_holding, legacy_id: str):
+        Raises:
+            TransformationRecordFailedError: _description_
+        """
+        self.set_holdings_type(marc_record, folio_holding, legacy_ids)
+        self.set_default_call_number_type_if_empty(folio_holding)
+        self.pick_first_location_if_many(folio_holding, legacy_ids)
+        self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
+        HoldingsHelper.handle_notes(folio_holding)
+        self.hrid_handler.handle_hrid(
+            FOLIONamespaces.holdings, folio_holding, marc_record, legacy_ids
+        )
+        if not folio_holding.get("instanceId", ""):
+            raise TransformationRecordFailedError(
+                "".join(folio_holding.get("formerIds", [])),
+                "Missing instance ids. Something is wrong.",
+                "",
+            )
+        self.handle_suppression(folio_holding, file_def, True)
+        self.set_source_id(self.task_configuration, folio_holding, self.holdingssources)
+        self.set_hrid(marc_record, folio_holding)
+
+    def set_hrid(self, marc_record, folio_rec):
+        if self.mapper.task_configuration.hrid_handling == HridHandling.preserve001:
+            value = marc_record["001"].value()
+            if value in self.unique_001s:
+                self.mapper.migration_report.add(
+                    Blurbs.HridHandling, "Duplicate 001. Creating HRID instead"
+                )
+                Helper.log_data_issue(
+                    folio_rec["formerIds"],
+                    "Duplicate 001 for record. HRID created for record",
+                    value,
+                )
+                num_part = self.generate_num_part()
+                folio_rec["hrid"] = f"{self.mapper.holdings_hrid_prefix}{num_part}"
+                new_001 = Field(tag="001", data=folio_rec["hrid"])
+                marc_record.add_ordered_field(new_001)
+                self.mapper.holdings_hrid_counter += 1
+            else:
+                self.unique_001s.add(value)
+                folio_rec["hrid"] = value
+                self.mapper.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
+
+    def pick_first_location_if_many(self, folio_holding, legacy_ids: List[str]):
         if " " in folio_holding.get("permanentLocationId", ""):
             Helper.log_data_issue(
-                legacy_id,
+                legacy_ids,
                 "Space in permanentLocationId. Was this MFHD attached to multiple holdings?",
                 folio_holding["permanentLocationId"],
             )
@@ -179,7 +237,16 @@ class RulesMapperHoldings(RulesMapperBase):
                 0
             ]
 
-    def parse_coded_holdings_statements(self, marc_record: Record, folio_holding, legacy_id):
+    @staticmethod
+    def set_source_id(task_configuration, folio_rec, holdingssources):
+        if task_configuration.create_source_records:
+            folio_rec["sourceId"] = holdingssources.get("MARC")
+        else:
+            folio_rec["sourceId"] = holdingssources.get("FOLIO")
+
+    def parse_coded_holdings_statements(
+        self, marc_record: Record, folio_holding, legacy_ids: List[str]
+    ):
         # TODO: Should one be able to switch these things off?
         a = {
             "holdingsStatements": ("853", "863", "866"),
@@ -193,7 +260,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     v[0],
                     v[1],
                     v[2],
-                    legacy_id,
+                    legacy_ids,
                     self.task_configuration.deduplicate_holdings_statements,
                 )
                 if res["statements"]:
@@ -223,7 +290,7 @@ class RulesMapperHoldings(RulesMapperBase):
         logging.info("done")
         return holdings_record_schema
 
-    def set_holdings_type(self, marc_record: Record, folio_holding, legacy_id: str):
+    def set_holdings_type(self, marc_record: Record, folio_holding, legacy_ids: List[str]):
         # Holdings type mapping
         ldr06 = marc_record.leader[6]
         # TODO: map this better
@@ -251,7 +318,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 )
                 if holdings_type == "Unknown":
                     Helper.log_data_issue(
-                        legacy_id,
+                        legacy_ids,
                         (
                             f"{Blurbs.HoldingsTypeMapping[0]} is 'unknown'. "
                             "(leader 06 is set to 'u') Check if this is correct"
@@ -270,7 +337,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
                 )
                 Helper.log_data_issue(
-                    legacy_id,
+                    legacy_ids,
                     (f"{Blurbs.HoldingsTypeMapping[0]}. leader 06 was unmapped."),
                     ldr06,
                 )
@@ -288,3 +355,36 @@ class RulesMapperHoldings(RulesMapperBase):
         for former_id in [id for id in former_ids if id]:
             if former_id in self.holdings_id_map:
                 del self.holdings_id_map[former_id]
+
+    def get_legacy_ids(self, marc_record: Record, idx: int) -> List[str]:
+        marc_path = self.task_configuration.legacy_id_marc_path
+        split = marc_path.split("$", maxsplit=1)
+        results = []
+        if not (split[0].isnumeric() and len(split[0]) == 3):
+            raise TransformationProcessError(
+                "",
+                (
+                    "the marc field used for determining the legacy id is not numeric "
+                    "or does not have the stipulated lenght of 3."
+                    "Make sure the task configuration setting for 'legacyIdMarcPath' "
+                    "is correct or make this piece of code more allowing"
+                ),
+                marc_path,
+            )
+        elif len(split) == 1:
+            results.append(marc_record[split[0]].value())
+        elif len(split) == 2 and len(split[1]) == 1:
+            for field in marc_record.get_fields(split[0]):
+                if sf := field.get_subfields(split[1]):
+                    results.append(sf[0])
+        else:
+            raise TransformationProcessError(
+                "",
+                ("Something is wrong with 'legacyIdMarcPath' property in the settings"),
+                marc_path,
+            )
+        if not any(results):
+            raise TransformationRecordFailedError(
+                idx, f"No legacy id found in record from {marc_path}", ""
+            )
+        return results

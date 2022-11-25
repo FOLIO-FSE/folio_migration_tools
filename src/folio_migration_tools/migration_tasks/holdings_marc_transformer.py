@@ -11,8 +11,8 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
-from folio_migration_tools.marc_rules_transformation.holdings_processor import (
-    HoldingsProcessor,
+from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
+    MarcFileProcessor,
 )
 from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
     MARCReaderWrapper,
@@ -110,7 +110,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 and not self.task_configuration.never_update_hrid_settings
             ):
                 mapper.reset_holdings_hrid_counter()
-            processor = HoldingsProcessor(mapper, self.folder_structure)
+            processor = MarcFileProcessor(mapper, self.folder_structure)
             for file_def in self.task_config.files:
                 MARCReaderWrapper.process_single_file(
                     file_def,

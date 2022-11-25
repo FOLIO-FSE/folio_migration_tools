@@ -46,12 +46,6 @@ class BibsRulesMapper(RulesMapperBase):
             self.get_instance_schema(),
             Conditions(folio_client, self, "bibs", library_configuration.folio_release),
         )
-        self.record_status: dict = {}
-        self.id_map: dict = {}
-        self.srs_recs: list = []
-        self.contrib_name_types: dict = {}
-        self.mapped_folio_fields: dict = {}
-        self.alt_title_map: dict = {}
         logging.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-bib"
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
@@ -96,18 +90,20 @@ class BibsRulesMapper(RulesMapperBase):
         if leader_05 == "d":
             Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
 
-    def parse_bib(self, legacy_ids, marc_record: pymarc.Record, file_def: FileDefinition):
+    def parse_record(
+        self, marc_record: pymarc.Record, file_def: FileDefinition, legacy_ids: List[str]
+    ) -> dict:
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function
 
         Args:
-            legacy_ids (_type_): _description_
             marc_record (pymarc.Record): _description_
             file_def (FileDefinition): _description_
+            legacy_ids (List[str]): List of legacy ids in record
 
         Returns:
-            _type_: _description_
+            dict: _description_
         """
         self.print_progress()
         ignored_subsequent_fields: set = set()
@@ -159,6 +155,12 @@ class BibsRulesMapper(RulesMapperBase):
         self.handle_languages(folio_instance, marc_record, legacy_ids)
         self.handle_suppression(folio_instance, file_def)
         self.handle_holdings(marc_record)
+        if prec_titles := folio_instance.get("precedingTitles", []):
+            self.migration_report.add(Blurbs.PrecedingSuccedingTitles, f"{len(prec_titles)}")
+            del folio_instance["precedingTitles"]
+        if succ_titles := folio_instance.get("succeedingTitles", []):
+            del folio_instance["succeedingTitles"]
+            self.migration_report.add(Blurbs.PrecedingSuccedingTitles, f"{len(succ_titles)}")
 
     def handle_languages(self, folio_instance, marc_record, legacy_ids):
         if "languages" in folio_instance:
@@ -527,25 +529,24 @@ class BibsRulesMapper(RulesMapperBase):
                     f"{m}: {language_value}",
                 )
 
-    def get_legacy_ids(
-        self, marc_record: Record, ils_flavour: IlsFlavour, index_or_legacy_id: str
-    ) -> List[str]:
+    def get_legacy_ids(self, marc_record: Record, idx: int) -> List[str]:
+        ils_flavour: IlsFlavour = self.task_configuration.ils_flavour
         if ils_flavour in {IlsFlavour.sierra, IlsFlavour.millennium}:
             return get_iii_bib_id(marc_record)
         elif ils_flavour == IlsFlavour.tag907y:
-            return self.get_bib_id_from_907y(marc_record, index_or_legacy_id)
+            return RulesMapperBase.get_bib_id_from_907y(marc_record, idx)
         elif ils_flavour == IlsFlavour.tagf990a:
-            return self.get_bib_id_from_990a(marc_record, index_or_legacy_id)
+            return RulesMapperBase.get_bib_id_from_990a(marc_record, idx)
         elif ils_flavour == IlsFlavour.aleph:
             return self.get_aleph_bib_id(marc_record)
         elif ils_flavour in {IlsFlavour.voyager, "voyager", IlsFlavour.tag001}:
-            return self.get_bib_id_from_001(marc_record, index_or_legacy_id)
+            return RulesMapperBase.get_bib_id_from_001(marc_record, idx)
         elif ils_flavour == IlsFlavour.koha:
             try:
                 return [marc_record["999"]["c"]]
             except Exception as e:
                 raise TransformationRecordFailedError(
-                    index_or_legacy_id,
+                    idx,
                     "999 $c is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
                 ) from e

@@ -3,7 +3,9 @@ import json
 import logging
 import time
 import uuid
+from abc import abstractmethod
 from textwrap import wrap
+from typing import List
 
 import pymarc
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -35,6 +37,7 @@ class RulesMapperBase(MapperBase):
     ):
         super().__init__(library_configuration, folio_client)
         self.parsed_records = 0
+        self.id_map: dict = {}
         self.start = time.time()
         self.last_batch_time = time.time()
         self.folio_client: FolioClient = folio_client
@@ -67,6 +70,10 @@ class RulesMapperBase(MapperBase):
                 f"records/sec.\t\t{self.parsed_records:,} records processed"
             )
             self.last_batch_time = time.time()
+
+    @abstractmethod
+    def get_legacy_ids(self, marc_record: Record, idx: int):
+        raise NotImplementedError()
 
     @staticmethod
     def dedupe_rec(rec, props_to_not_dedupe=None):
@@ -136,6 +143,12 @@ class RulesMapperBase(MapperBase):
                     f"Could not parse Last transaction date from 005 {exception}",
                     marc_record["005"].data,
                 )
+
+    @abstractmethod
+    def parse_record(
+        self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
+    ) -> dict:
+        raise NotImplementedError()
 
     @staticmethod
     def use_008_for_dates(marc_record: Record, folio_object: dict, legacy_ids):

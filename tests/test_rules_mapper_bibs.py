@@ -17,7 +17,9 @@ from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
-from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
+from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
+    MarcFileProcessor,
+)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
@@ -63,7 +65,7 @@ def default_map(file_name, xpath, the_mapper: BibsRulesMapper):
     file_path = f"./tests/test_data/default/{file_name}"
     record = pymarc.parse_xml_to_array(file_path)[0]
     file_def = FileDefinition(file_name="", suppressed=False, staff_suppressed=False)
-    result = the_mapper.parse_bib(["legacy_id"], record, file_def)
+    result = the_mapper.parse_record(record, file_def, ["legacy_id"])
     the_mapper.perform_additional_parsing(result, record, ["legacy_id"], file_def)
     root = etree.parse(file_path)
     data = ""
@@ -81,7 +83,7 @@ def default_map_suppression(file_name, xpath, the_mapper):
     file_path = f"./tests/test_data/default/{file_name}"
     record = pymarc.parse_xml_to_array(file_path)[0]
     file_def = FileDefinition(file_name="", suppressed=True, staff_suppressed=True)
-    result = the_mapper.parse_bib(["legacy_id"], record, file_def)
+    result = the_mapper.parse_record(record, file_def, ["legacy_id"])
     root = etree.parse(file_path)
     data = ""
     for element in root.xpath(xpath, namespaces=ns):
@@ -120,7 +122,7 @@ def test_simple_title(mapper):
     assert "Modern Electrosynthetic Methods in Organic Chemistry" == record[0]["title"]
 
     with pytest.raises(TransformationRecordFailedError):
-        BibsProcessor.get_valid_folio_record_ids(
+        MarcFileProcessor.get_valid_folio_record_ids(
             ["a", "b"], instance_identifiers, MigrationReport()
         )
 
@@ -128,7 +130,7 @@ def test_simple_title(mapper):
 def test_simple_title2(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
     instance_identifiers = {"c", "d"}
-    ids = BibsProcessor.get_valid_folio_record_ids(
+    ids = MarcFileProcessor.get_valid_folio_record_ids(
         ["a", "b"], instance_identifiers, MigrationReport()
     )
 
@@ -139,7 +141,7 @@ def test_simple_title2(mapper):
 def test_simple_title3(mapper):
     record = default_map("test1.xml", xpath_245, mapper)
     instance_identifiers = {"b", "c", "d"}
-    ids = BibsProcessor.get_valid_folio_record_ids(
+    ids = MarcFileProcessor.get_valid_folio_record_ids(
         ["a", "b"], instance_identifiers, MigrationReport()
     )
 
