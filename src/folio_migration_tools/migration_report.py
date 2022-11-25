@@ -24,7 +24,6 @@ class MigrationReport:
             self.report[blurb_tuple[0]][measure_to_add] += number
         except KeyError:
             if blurb_tuple[0] not in self.report:
-                # TODO: Is this correct?
                 self.report[blurb_tuple[0]] = {"blurb_tuple": blurb_tuple}
             if measure_to_add not in self.report[blurb_tuple[0]]:
                 self.report[blurb_tuple[0]][measure_to_add] = number

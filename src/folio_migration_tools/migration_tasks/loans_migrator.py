@@ -404,7 +404,6 @@ class LoansMigrator(MigrationTaskBase):
         due_date = du_parser.isoparse(str(legacy_loan.due_date))
         out_date = du_parser.isoparse(str(legacy_loan.out_date))
         renewal_count = legacy_loan.renewal_count
-        # TODO: add logging instead of print out
         try:
             loan_to_put = copy.deepcopy(folio_loan)
             del loan_to_put["metadata"]
@@ -467,7 +466,6 @@ class LoansMigrator(MigrationTaskBase):
         else:
             logging.error(f"Unsuccessfully declared loan {folio_loan} as lost")
             self.migration_report.add(Blurbs.Details, "Unsuccessfully declared loan as lost")
-        # TODO: Exception handling
 
     def claim_returned(self, folio_loan):
         claim_returned_url = f"/circulation/loans/{folio_loan['id']}/claim-item-returned"
@@ -488,7 +486,6 @@ class LoansMigrator(MigrationTaskBase):
                 Blurbs.Details,
                 f"Unsuccessfully declared loan {folio_loan} as Claimed returned",
             )
-        # TODO: Exception handling
 
     def set_item_status(self, legacy_loan: LegacyLoan):
         try:

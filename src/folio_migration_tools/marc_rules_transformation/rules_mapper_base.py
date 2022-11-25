@@ -56,7 +56,6 @@ class RulesMapperBase(MapperBase):
             )
         logging.info("Current user id is %s", self.folio_client.current_user)
 
-    # TODO: Rebuild and move
     def print_progress(self):
         self.parsed_records += 1
         num_recs = 5000
@@ -108,7 +107,6 @@ class RulesMapperBase(MapperBase):
             marc_field = self.remove_repeated_subfields(marc_field)
         if has_conditions(mapping):
             values = self.apply_rules(marc_field, mapping, legacy_ids)
-            # TODO: add condition to customize this hardcoded thing
             if marc_field.tag == "655":
                 values[0] = f"Genre: {values[0]}"
             self.add_value_to_target(folio_record, target, values)

@@ -23,6 +23,24 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
 
 
 class AuthorityMapper(RulesMapperBase):
+    non_repatable_fields = [
+        "100",
+        "110",
+        "111",
+        "130",
+        "147",
+        "148",
+        "150",
+        "151",
+        "155",
+        "162",
+        "180",
+        "181",
+        "182",
+        "185",
+        "378",
+        "384",
+    ]
     """_summary_
 
     Args:
@@ -96,15 +114,13 @@ class AuthorityMapper(RulesMapperBase):
                     legacy_ids,
                 )
 
-        self.perform_additional_parsing(folio_authority, marc_record, legacy_ids, file_def)
+        self.perform_additional_parsing(folio_authority)
         clean_folio_authority = self.validate_required_properties(
             "-".join(legacy_ids), folio_authority, self.schema, FOLIONamespaces.instances
         )
         self.dedupe_rec(clean_folio_authority)
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(clean_folio_authority, self.schema)
-        # TODO: trim away multiple whitespace and newlines..
-        # TODO: createDate and update date and catalogeddate
         return clean_folio_authority
 
     def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
@@ -127,21 +143,15 @@ class AuthorityMapper(RulesMapperBase):
     def perform_additional_parsing(
         self,
         folio_authority: dict,
-        marc_record: Record,
-        legacy_ids: List[str],
-        file_def: FileDefinition,
     ) -> None:
         """Do stuff not easily captured by the mapping rules
 
         Args:
             folio_authority (dict): _description_
-            marc_record (Record): _description_
-            legacy_ids (List[str]): _description_
-            file_def (FileDefinition): _description_
         """
         folio_authority["source"] = "MARC"
 
-    def get_autority_json_schema(self, latest_release=True):
+    def get_autority_json_schema(self):
         """Fetches the JSON Schema for autorities"""
         return FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "/ramls/authorities/authority.json"

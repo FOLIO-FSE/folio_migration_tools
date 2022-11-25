@@ -271,7 +271,6 @@ class CirculationHelper:
 
     @staticmethod
     def extend_open_loan(folio_client: FolioClient, loan, extension_due_date, extend_out_date):
-        # TODO: add logging instead of print out
         try:
             loan_to_put = copy.deepcopy(loan)
             del loan_to_put["metadata"]

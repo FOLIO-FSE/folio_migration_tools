@@ -300,7 +300,7 @@ class Conditions:
             ) from ee
 
     def condition_set_authority_note_type_id(
-        self, legacy_id, value, parameter, marc_field: field.Field
+        self, legacy_id, _, parameter, marc_field: field.Field
     ):
         try:
             t = self.get_ref_data_tuple_by_name(

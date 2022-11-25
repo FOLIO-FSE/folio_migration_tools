@@ -126,8 +126,6 @@ class BibsRulesMapper(RulesMapperBase):
         self.dedupe_rec(clean_folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(clean_folio_instance, self.schema)
-        # TODO: trim away multiple whitespace and newlines..
-        # TODO: createDate and update date and catalogeddate
         return clean_folio_instance
 
     def perform_additional_parsing(
