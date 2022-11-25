@@ -59,7 +59,7 @@ class BibsTransformer(MigrationTaskBase):
     ):
 
         super().__init__(library_config, task_config, use_logging)
-        self.processor: MarcFileProcessor = None
+        self.processor: MarcFileProcessor
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_configuration.files
         )
