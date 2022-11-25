@@ -2,6 +2,7 @@ import calendar
 import contextlib
 import logging
 import re
+from typing import List
 
 from pymarc import Field
 from pymarc import Record
@@ -16,17 +17,17 @@ class HoldingsStatementsParser:
         pattern_tag: str,
         value_tag: str,
         field_textual: str,
-        legacy_id: str,
+        legacy_ids: List[str],
         dedupe_results: bool = True,
     ) -> dict:
-        """The main method
+        """_summary_
 
         Args:
             marc_record (Record): _description_
             pattern_tag (str): _description_
             value_tag (str): _description_
             field_textual (str): _description_
-            legacy_id (str): _description_
+            legacy_ids (List[str]): _description_
             dedupe_results (bool): _description_. Defaults to True.
 
         Raises:
@@ -39,14 +40,14 @@ class HoldingsStatementsParser:
         # Textual holdings statements
         return_dict: dict = {"statements": [], "migration_report": [], "hlm_stmts": []}
         HoldingsStatementsParser.get_textual_statements(
-            marc_record, field_textual, return_dict, legacy_id
+            marc_record, field_textual, return_dict, legacy_ids
         )
 
         value_fields = marc_record.get_fields(value_tag)
         for pattern_field in marc_record.get_fields(pattern_tag):
             if "8" not in pattern_field:
                 raise TransformationFieldMappingError(
-                    legacy_id,
+                    legacy_ids,
                     f"{pattern_tag} subfield 8 not in field",
                     pattern_field.format_field(),
                 )
@@ -73,7 +74,7 @@ class HoldingsStatementsParser:
                         return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
                     if parsed_dict["statement"]:
                         logging.info(
-                            f"HOLDINGS STATEMENT PATTERN\t{legacy_id}\t{pattern_field}"
+                            f"HOLDINGS STATEMENT PATTERN\t{'-'.join(legacy_ids)}\t{pattern_field}"
                             f"\t{linked_value_field}"
                             f"\t{parsed_dict['statement']['statement']}"
                             f"\t{parsed_dict['statement']['note']}"
@@ -134,7 +135,7 @@ class HoldingsStatementsParser:
 
     @staticmethod
     def get_textual_statements(
-        marc_record: Record, field_textual: str, return_dict: dict, legacy_id: str
+        marc_record: Record, field_textual: str, return_dict: dict, legacy_ids: List[str]
     ):
         """Returns the textual statements from the relevant marc fields
 
@@ -142,7 +143,7 @@ class HoldingsStatementsParser:
             marc_record (Record): _description_
             field_textual (str): _description_
             return_dict (dict): _description_
-            legacy_id (str): _description_
+            legacy_ids (List[str]): List of legacy ids in record
 
         Raises:
             TransformationFieldMappingError: _description_
@@ -151,13 +152,13 @@ class HoldingsStatementsParser:
         for f in marc_record.get_fields(field_textual):
             if "a" not in f and "z" not in f:
                 raise TransformationFieldMappingError(
-                    legacy_id,
+                    legacy_ids,
                     f"{field_textual} subfield a or z not in field",
                     f.format_field(),
                 )
             if not (f["a"] or f["z"]):
                 raise TransformationFieldMappingError(
-                    legacy_id,
+                    legacy_ids,
                     f"{field_textual} Both a or z are empty",
                     f.format_field(),
                 )

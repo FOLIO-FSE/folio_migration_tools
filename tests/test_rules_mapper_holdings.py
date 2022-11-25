@@ -1,6 +1,8 @@
 from unittest.mock import Mock
 
 import pymarc
+from pymarc import Field
+from pymarc import Record
 
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
@@ -9,6 +11,70 @@ from folio_migration_tools.marc_rules_transformation.holdings_statementsparser i
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
+from folio_migration_tools.migration_tasks.holdings_marc_transformer import (
+    HoldingsMarcTransformer,
+)
+
+
+def test_get_legacy_ids_001():
+    record = Record()
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    record.add_field(Field(tag="001", data="0001"))
+    mocked_config = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+    mocked_config.legacy_id_marc_path = "001"
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.task_configuration = mocked_config
+    legacy_ids = RulesMapperHoldings.get_legacy_ids(mock_mapper, record, 1)
+    assert legacy_ids == ["0001"]
+
+
+def test_get_legacy_id_001_wrong_order():
+    record = Record()
+    record.add_field(Field(tag="001", data="0001"))
+    record.add_field(
+        Field(
+            tag="951",
+            subfields=["b", "bid"],
+        )
+    )
+    record.add_field(
+        Field(
+            tag="951",
+            subfields=["c", "cid"],
+        )
+    )
+    record.add_field(Field(tag="001", data="0001"))
+    mocked_config = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+    mocked_config.legacy_id_marc_path = "951$c"
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.task_configuration = mocked_config
+
+    legacy_ids = RulesMapperHoldings.get_legacy_ids(mock_mapper, record, 1)
+    assert legacy_ids == ["cid"]
+
+
+def test_get_legacy_id_001_right_order():
+    record = Record()
+    record.add_field(Field(tag="001", data="0001"))
+    record.add_field(
+        Field(
+            tag="951",
+            subfields=["c", "cid"],
+        )
+    )
+    record.add_field(
+        Field(
+            tag="951",
+            subfields=["b", "bid"],
+        )
+    )
+    record.add_field(Field(tag="001", data="0001"))
+    mocked_config = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+    mocked_config.legacy_id_marc_path = "951$c"
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.task_configuration = mocked_config
+    legacy_ids = RulesMapperHoldings.get_legacy_ids(mock_mapper, record, 1)
+    assert legacy_ids == ["cid"]
 
 
 def test_get_holdings_schema():

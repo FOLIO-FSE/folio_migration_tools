@@ -42,8 +42,6 @@ class AuthorityMapper(RulesMapperBase):
             self.get_autority_json_schema(),
             Conditions(folio_client, self, "auth", library_configuration.folio_release),
         )
-        self.record_status: dict = {}
-        self.id_map: dict = {}
         self.srs_recs: list = []
         self.mapped_folio_fields: dict = {}
         logging.info("Fetching mapping rules from the tenant")
@@ -51,19 +49,18 @@ class AuthorityMapper(RulesMapperBase):
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
         self.start = time.time()
 
-    def get_legacy_ids(
-        self, marc_record: Record, ils_flavour: IlsFlavour, index_or_legacy_id: str
-    ) -> List[str]:
+    def get_legacy_ids(self, marc_record: Record, idx: int) -> List[str]:
+        ils_flavour: IlsFlavour = self.task_configuration.ils_flavour
         if ils_flavour in {IlsFlavour.sierra, IlsFlavour.millennium}:
             raise TransformationProcessError("", f"ILS {ils_flavour} not configured")
         elif ils_flavour == IlsFlavour.tag907y:
-            return self.get_bib_id_from_907y(marc_record, index_or_legacy_id)
+            return RulesMapperBase.get_bib_id_from_907y(marc_record, idx)
         elif ils_flavour == IlsFlavour.tagf990a:
-            return self.get_bib_id_from_990a(marc_record, index_or_legacy_id)
+            return RulesMapperBase.get_bib_id_from_990a(marc_record, idx)
         elif ils_flavour == IlsFlavour.aleph:
             raise TransformationProcessError("", f"ILS {ils_flavour} not configured")
         elif ils_flavour in {IlsFlavour.voyager, "voyager", IlsFlavour.tag001}:
-            return self.get_bib_id_from_001(marc_record, index_or_legacy_id)
+            return RulesMapperBase.get_bib_id_from_001(marc_record, idx)
         elif ils_flavour == IlsFlavour.koha:
             raise TransformationProcessError("", f"ILS {ils_flavour} not configured")
         elif ils_flavour == IlsFlavour.none:
@@ -71,7 +68,9 @@ class AuthorityMapper(RulesMapperBase):
         else:
             raise TransformationProcessError("", f"ILS {ils_flavour} not configured")
 
-    def parse_auth(self, legacy_ids, marc_record: Record, file_def: FileDefinition):
+    def parse_record(
+        self, marc_record: pymarc.Record, file_def: FileDefinition, legacy_ids: List[str]
+    ) -> dict:
         """Parses an auth recod into a FOLIO Authority object
          This is the main function
 
@@ -81,7 +80,7 @@ class AuthorityMapper(RulesMapperBase):
             file_def (FileDefinition): _description_
 
         Returns:
-            _type_: _description_
+            dict: _description_
         """
         self.print_progress()
         ignored_subsequent_fields: set = set()

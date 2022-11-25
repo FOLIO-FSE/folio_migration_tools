@@ -10,8 +10,8 @@ from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
-from folio_migration_tools.marc_rules_transformation.authority_processor import (
-    AuthorityProcessor,
+from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
+    MarcFileProcessor,
 )
 from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
     MARCReaderWrapper,
@@ -47,7 +47,7 @@ class AuthorityTransformer(MigrationTaskBase):
         use_logging: bool = True,
     ):
         super().__init__(library_config, task_config, use_logging)
-        self.processor: AuthorityProcessor = None
+        self.processor: MarcFileProcessor = None
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_configuration.files
         )
@@ -60,7 +60,7 @@ class AuthorityTransformer(MigrationTaskBase):
     def do_work(self):
         logging.info("Starting....")
         with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
-            self.processor = AuthorityProcessor(
+            self.processor = MarcFileProcessor(
                 self.mapper,
                 self.folio_client,
                 created_records_file,

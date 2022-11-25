@@ -28,7 +28,9 @@ from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
-from folio_migration_tools.marc_rules_transformation.bibs_processor import BibsProcessor
+from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
+    MarcFileProcessor,
+)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
@@ -264,8 +266,8 @@ def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
         reader.force_utf8 = True
         record: Record = None
         record = next(reader)
-        res = mapper.parse_bib(
-            ["ii"], record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False)
+        res = mapper.parse_record(
+            record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False), ["ii"]
         )
         assert "宝塚歌劇団" in res["subjects"]
         assert "[東京宝塚劇場公演パンフレット. ]" in res["alternativeTitles"][0]["alternativeTitle"]
