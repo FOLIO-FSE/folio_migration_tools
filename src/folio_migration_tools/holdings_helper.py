@@ -166,5 +166,4 @@ def extend_list(
 
 
 def dedupe(list_of_dicts):
-    # TODO: Move to interface or parent class
     return [dict(t) for t in {tuple(d.items()) for d in list_of_dicts}]

@@ -467,8 +467,3 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             raise TransformationProcessError("", "No holdings source with name MARC in tenant")
         logging.info(json.dumps(res, indent=4))
         return res
-
-
-def dedupe(list_of_dicts):
-    # TODO: Move to interface or parent class
-    return [dict(t) for t in {tuple(d.items()) for d in list_of_dicts}]
