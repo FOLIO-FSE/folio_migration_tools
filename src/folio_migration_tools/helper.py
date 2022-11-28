@@ -50,16 +50,11 @@ class Helper:
         logging.log(26, "DATA ISSUE\t%s\t%s\t%s", index_or_id, message, legacy_value)
 
     @staticmethod
-    def write_to_file(file, folio_record, pg_dump=False):
-        """Writes record to file. pg_dump=true for importing directly via the
-        psql copy command
+    def write_to_file(file, folio_record):
+        """Writes record to file.
 
         Args:
             file (_type_): _description_
             folio_record (_type_): _description_
-            pg_dump (bool, optional): _description_. Defaults to False.
         """
-        if pg_dump:
-            file.write(f'{folio_record["id"]}\t{json.dumps(folio_record)}\n')
-        else:
-            file.write(f"{json.dumps(folio_record)}\n")
+        file.write(f"{json.dumps(folio_record)}\n")
