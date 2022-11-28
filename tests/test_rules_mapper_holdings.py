@@ -107,7 +107,7 @@ def test_get_marc_textual_stmt_correct_order_and_not_deduped():
 
 def test_remove_from_id_map():
     mocked_rules_mapper_holdings = Mock(spec=RulesMapperHoldings)
-    mocked_rules_mapper_holdings.holdings_id_map = {
+    mocked_rules_mapper_holdings.id_map = {
         "h15066915": "5a0af31f-aa4a-5215-8a60-712b38cd6cb6",
         "h14554914": "c9c44650-11e2-5534-ae50-01a1aa0fbd66",
     }
@@ -117,8 +117,8 @@ def test_remove_from_id_map():
     RulesMapperHoldings.remove_from_id_map(mocked_rules_mapper_holdings, former_ids)
 
     # The ids in the former_ids have been removed, any others are still there
-    assert "h15066915" not in mocked_rules_mapper_holdings.holdings_id_map.keys()
-    assert "h14554914" in mocked_rules_mapper_holdings.holdings_id_map.keys()
+    assert "h15066915" not in mocked_rules_mapper_holdings.id_map.keys()
+    assert "h14554914" in mocked_rules_mapper_holdings.id_map.keys()
 
 
 def test_set_default_call_number_type_if_empty():

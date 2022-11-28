@@ -290,4 +290,5 @@ class ItemsTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        self.clean_out_empty_logs()
         logging.info("All done!")

@@ -177,6 +177,7 @@ class UserTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
+        self.clean_out_empty_logs()
 
     @staticmethod
     def clean_user(folio_user, index_or_id):

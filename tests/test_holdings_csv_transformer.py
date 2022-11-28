@@ -75,7 +75,7 @@ def test_merge_holding_in_second_boundwith_to_merge(caplog):
     mock_transformer.holdings_id_map = {}
     mock_transformer.folio_client = mock_folio
     mock_transformer.mapper = mock_mapper
-
+    mock_transformer.object_type = FOLIONamespaces.holdings
     new_holding = {"instanceId": "Instance_1"}
     instance_ids: list[str] = ["Instance_1", "Instance_2"]
     item_id: str = "item_1"

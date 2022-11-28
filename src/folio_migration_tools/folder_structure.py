@@ -92,13 +92,8 @@ class FolderStructure:
         self.created_objects_path = (
             self.results_folder / f"folio_{object_type_string}{self.file_template}.json"
         )
-
-        self.failed_bibs_file = self.results_folder / f"failed_bib_records{self.file_template}.mrc"
-        self.failed_mfhds_file = (
-            self.results_folder / f"failed_mfhd_records{self.file_template}.mrc"
-        )
-        self.failed_auth_file = (
-            self.results_folder / f"failed_auth_records{self.file_template}.mrc"
+        self.failed_marc_recs_file = (
+            self.results_folder / f"failed_records{self.file_template}.mrc"
         )
 
         self.migration_reports_file = self.reports_folder / f"report{self.file_template}.md"
@@ -107,11 +102,19 @@ class FolderStructure:
             self.results_folder / f"folio_srs_{object_type_string}{self.file_template}.json"
         )
 
-        self.instance_id_map_path = self.results_folder / "instance_id_map.json"
-        self.auth_id_map_path = self.results_folder / "auth_id_map.json"
+        self.instance_id_map_path = (
+            self.results_folder / f"{str(FOLIONamespaces.instances.name).lower()}_id_map.json"
+        )
+        self.auth_id_map_path = (
+            self.results_folder / f"{str(FOLIONamespaces.athorities.name).lower()}_id_map.json"
+        )
 
-        self.holdings_id_map_path = self.results_folder / "holdings_id_map.json"
-
+        self.holdings_id_map_path = (
+            self.results_folder / f"{str(FOLIONamespaces.holdings.name).lower()}_id_map.json"
+        )
+        self.id_map_path = (
+            self.results_folder / f"{str(self.object_type.name).lower()}_id_map.json"
+        )
         # Mapping files
         self.material_type_map_path = self.mapping_files_folder / "material_types.tsv"
         self.loan_type_map_path = self.mapping_files_folder / "loan_types.tsv"

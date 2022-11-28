@@ -1,6 +1,7 @@
 import csv
 import json
 import logging
+import os
 import sys
 import time
 from abc import abstractmethod
@@ -17,6 +18,12 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
+    MarcFileProcessor,
+)
+from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
+    MARCReaderWrapper,
+)
 
 
 class MigrationTaskBase:
@@ -73,6 +80,22 @@ class MigrationTaskBase:
     @abstractmethod
     def wrap_up(self):
         raise NotImplementedError()
+
+    def clean_out_empty_logs(self):
+        if (
+            self.folder_structure.data_issue_file_path.is_file()
+            and os.stat(self.folder_structure.data_issue_file_path).st_size == 0
+        ):
+            logging.info("Removing data issues file since it is empty")
+            os.remove(self.folder_structure.data_issue_file_path)
+            logging.info("Removed data issues file since it was empty")
+
+        if (
+            self.folder_structure.failed_marc_recs_file.is_file()
+            and os.stat(self.folder_structure.failed_marc_recs_file).st_size == 0
+        ):
+            os.remove(self.folder_structure.failed_marc_recs_file)
+            logging.info("Removed empty failed marc records file since it was empty")
 
     @abstractmethod
     def do_work(self):
@@ -228,6 +251,26 @@ class MigrationTaskBase:
             elapsed = num_processed / (time.time() - start_time)
             elapsed_formatted = "{0:.4g}".format(elapsed)
             logging.info(f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} ")
+
+    def do_work_marc_transformer(
+        self,
+    ):
+        logging.info("Starting....")
+        if self.folder_structure.failed_marc_recs_file.is_file():
+            os.remove(self.folder_structure.failed_marc_recs_file)
+            logging.info("Removed failed marc records file to prevent duplicating data")
+        with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
+            self.processor = MarcFileProcessor(
+                self.mapper, self.folder_structure, created_records_file
+            )
+            for file_def in self.task_configuration.files:
+                MARCReaderWrapper.process_single_file(
+                    file_def,
+                    self.processor,
+                    self.folder_structure.failed_marc_recs_file,
+                    self.folder_structure,
+                )
+        self.processor.wrap_up()
 
     def load_ref_data_mapping_file(
         self,

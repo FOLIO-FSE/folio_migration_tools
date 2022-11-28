@@ -11,12 +11,6 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
-from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
-    MarcFileProcessor,
-)
-from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
-    MARCReaderWrapper,
-)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
@@ -78,48 +72,44 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             "%s will be used as default holdings type",
             self.default_holdings_type.get("name", ""),
         )
+        location_map_path = (
+            self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name
+        )
+        with open(location_map_path) as location_map_file:
+            self.location_map = list(csv.DictReader(location_map_file, dialect="tsv"))
+            logging.info("Locations in map: %s", len(self.location_map))
+
+        map_path = (
+            self.folder_structure.mapping_files_folder / self.task_config.mfhd_mapping_file_name
+        )
+        with open(map_path) as map_f:
+            self.rules_file = json.load(map_f)
+
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_config.files
         )
         self.instance_id_map = self.load_id_map(self.folder_structure.instance_id_map_path, True)
+        self.mapper = RulesMapperHoldings(
+            self.folio_client,
+            self.instance_id_map,
+            self.location_map,
+            self.task_config,
+            self.library_configuration,
+            self.instance_id_map,
+        )
+        self.mapper.mappings = self.rules_file["rules"]
+        if (
+            self.task_configuration.reset_hrid_settings
+            and not self.task_configuration.never_update_hrid_settings
+        ):
+            self.mapper.reset_holdings_hrid_counter()
         logging.info("%s Instance ids in map", len(self.instance_id_map))
         logging.info("Init done")
 
     def do_work(self):
-        loc_map_path = (
-            self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name
-        )
-        map_path = (
-            self.folder_structure.mapping_files_folder / self.task_config.mfhd_mapping_file_name
-        )
-        with open(loc_map_path) as loc_map_f, open(map_path) as map_f:
-            location_map = list(csv.DictReader(loc_map_f, dialect="tsv"))
-            logging.info("Locations in map: %s", len(location_map))
-            rules_file = json.load(map_f)
-            logging.info("Default location code %s", rules_file["defaultLocationCode"])
-            mapper = RulesMapperHoldings(
-                self.folio_client,
-                self.instance_id_map,
-                location_map,
-                self.task_config,
-                self.library_configuration,
-            )
-            mapper.mappings = rules_file["rules"]
-            if (
-                self.task_configuration.reset_hrid_settings
-                and not self.task_configuration.never_update_hrid_settings
-            ):
-                mapper.reset_holdings_hrid_counter()
-            processor = MarcFileProcessor(mapper, self.folder_structure)
-            for file_def in self.task_config.files:
-                MARCReaderWrapper.process_single_file(
-                    file_def,
-                    processor,
-                    self.folder_structure.failed_mfhds_file,
-                    self.folder_structure,
-                )
-            processor.wrap_up()
+        self.do_work_marc_transformer()
 
     def wrap_up(self):
         logging.info("wapping up")
         self.extradata_writer.flush()
+        self.clean_out_empty_logs()

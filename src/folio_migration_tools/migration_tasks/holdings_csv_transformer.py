@@ -231,7 +231,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         # TODO: Find out why not
                         # if legacy_id not in self.holdings_id_map:
                         self.holdings_id_map[legacy_id] = self.mapper.get_id_map_dict(
-                            legacy_id, holding
+                            legacy_id, holding, self.object_type
                         )
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
@@ -253,6 +253,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
+        self.clean_out_empty_logs()
 
     def validate_merge_criterias(self):
         holdings_schema = self.folio_client.get_holdings_schema()
@@ -425,7 +426,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     self.folio_client, legacy_item_id, self.holdings[bw_key]
                 )
                 self.holdings_id_map[legacy_item_id] = self.mapper.get_id_map_dict(
-                    legacy_item_id, self.holdings[bw_key]
+                    legacy_item_id, self.holdings[bw_key], self.object_type
                 )
                 self.mapper.migration_report.add_general_statistics(
                     "BW Items found tied to previously created BW Holdings"

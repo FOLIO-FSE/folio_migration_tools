@@ -97,6 +97,7 @@ class ReservesMigrator(MigrationTaskBase):
             self.migration_report.write_migration_report(
                 "Reserves migration report", report_file, self.start_datetime
             )
+        self.clean_out_empty_logs()
 
     def write_failed_reserves_to_file(self):
         # POST /coursereserves/courselistings/40a085bd-b44b-42b3-b92f-61894a75e3ce/reserves
