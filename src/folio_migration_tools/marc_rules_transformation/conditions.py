@@ -469,9 +469,9 @@ class Conditions:
     ):
         try:
             if value:
-                if value.strip() not in self.mapper.instance_id_map:
+                if value.strip() not in self.mapper.parent_id_map:
                     raise ValueError()
-                return self.mapper.instance_id_map[value.strip()]["folio_id"]
+                return self.mapper.parent_id_map[value.strip()]["folio_id"]
             Helper.log_data_issue("", "No instance id provided", marc_field.format_field())
             return ""
         except Exception:

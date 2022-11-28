@@ -14,9 +14,6 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
 )
-from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
-    MARCReaderWrapper,
-)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
@@ -46,6 +43,9 @@ class BibsTransformer(MigrationTaskBase):
         tags_to_delete: Optional[List[str]] = []
         reset_hrid_settings: Optional[bool] = False
         never_update_hrid_settings: Optional[bool] = False
+        create_source_records: Annotated[
+            bool, Field(description="Controls wheter or not to retain the MARC records in SRS.")
+        ] = True
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -73,22 +73,7 @@ class BibsTransformer(MigrationTaskBase):
         logging.info("Init done")
 
     def do_work(self):
-        logging.info("Starting....")
-
-        with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
-            self.processor = MarcFileProcessor(
-                self.mapper,
-                self.folio_client,
-                created_records_file,
-                self.folder_structure,
-            )
-            for file_def in self.task_configuration.files:
-                MARCReaderWrapper.process_single_file(
-                    file_def,
-                    self.processor,
-                    self.folder_structure.failed_auth_file,
-                    self.folder_structure,
-                )
+        self.do_work_marc_transformer()
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
@@ -111,3 +96,4 @@ class BibsTransformer(MigrationTaskBase):
             "Done. Transformation report written to %s",
             self.folder_structure.migration_reports_file.name,
         )
+        self.clean_out_empty_logs()

@@ -182,6 +182,7 @@ class RequestsMigrator(MigrationTaskBase):
             self.migration_report.write_migration_report(
                 "Requests migration report", report_file, self.start_datetime
             )
+        self.clean_out_empty_logs()
 
     def write_failed_request_to_file(self):
         csv_columns = [

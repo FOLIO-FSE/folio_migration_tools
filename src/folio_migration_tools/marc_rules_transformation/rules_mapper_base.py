@@ -34,8 +34,9 @@ class RulesMapperBase(MapperBase):
         task_configuration,
         schema: dict,
         conditions=None,
+        parent_id_map: dict = None,
     ):
-        super().__init__(library_configuration, folio_client)
+        super().__init__(library_configuration, folio_client, parent_id_map)
         self.parsed_records = 0
         self.id_map: dict = {}
         self.start = time.time()
@@ -407,6 +408,16 @@ class RulesMapperBase(MapperBase):
                 ),
             )
 
+    def remove_from_id_map(self, former_ids: List[str]):
+        """removes the ID from the map in case parsing failed
+
+        Args:
+            former_ids (_type_): _description_
+        """
+        for former_id in [id for id in former_ids if id]:
+            if former_id in self.id_map:
+                del self.id_map[former_id]
+
     def create_entity(self, entity_mappings, marc_field, entity_parent_key, index_or_legacy_id):
         entity = {}
         for entity_mapping in entity_mappings:
@@ -602,7 +613,7 @@ class RulesMapperBase(MapperBase):
         folio_client: FolioClient,
         marc_record: Record,
         folio_record,
-        legacy_id: str,
+        legacy_ids: List[str],
         suppress: bool,
     ):
         """Saves the source Marc_record to the Source record Storage module
@@ -613,10 +624,10 @@ class RulesMapperBase(MapperBase):
             folio_client (FolioClient): _description_
             marc_record (Record): _description_
             folio_record (_type_): _description_
-            legacy_id (str): _description_
+            legacy_ids (List[str]): _description_
             suppress (bool): _description_
         """
-        srs_id = RulesMapperBase.create_srs_id(record_type, folio_client.okapi_url, legacy_id)
+        srs_id = RulesMapperBase.create_srs_id(record_type, folio_client.okapi_url, legacy_ids[-1])
 
         marc_record.add_ordered_field(
             Field(

@@ -380,6 +380,7 @@ class BatchPoster(MigrationTaskBase):
                 report_file,
                 self.start_datetime,
             )
+        self.clean_out_empty_logs()
 
     def rerun_run(self):
         if self.task_configuration.rerun_failed_records and (self.num_failures > 0):

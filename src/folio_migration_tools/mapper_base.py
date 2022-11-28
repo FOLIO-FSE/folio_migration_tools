@@ -25,27 +25,18 @@ class MapperBase:
 
     legacy_id_template = "Identifier(s) from previous system:"
 
-    def __init__(self, library_configuration: LibraryConfiguration, folio_client: FolioClient):
+    def __init__(
+        self,
+        library_configuration: LibraryConfiguration,
+        folio_client: FolioClient,
+        parent_id_map: dict = None,
+    ):
         logging.info("MapperBase initiating")
+        self.parent_id_map: dict = parent_id_map
         self.extradata_writer: ExtradataWriter = ExtradataWriter(Path(""))
         self.start_datetime = datetime.now(timezone.utc)
         self.folio_client: FolioClient = folio_client
-        self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.library_configuration: LibraryConfiguration = library_configuration
-        self.hrid_settings = self.folio_client.folio_get_single_object(self.hrid_path)
-        self.instance_hrid_prefix = self.hrid_settings["instances"]["prefix"]
-        self.instance_hrid_counter = self.hrid_settings["instances"]["startNumber"]
-        self.holdings_hrid_prefix = self.hrid_settings["holdings"]["prefix"]
-        self.holdings_hrid_counter = self.hrid_settings["holdings"]["startNumber"]
-        self.items_hrid_prefix = self.hrid_settings["items"]["prefix"]
-        self.items_hrid_counter = self.hrid_settings["items"]["startNumber"]
-        self.common_retain_leading_zeroes: bool = self.hrid_settings["commonRetainLeadingZeroes"]
-
-        logging.info("Fetched HRID settings.")
-        logging.info("Instance HRID prefix is %s", self.instance_hrid_prefix)
-        logging.info("Instance start number is %s", self.instance_hrid_counter)
-        logging.info("Holdings HRID prefix is %s", self.instance_hrid_prefix)
-        logging.info("Holdings start number is %s", self.holdings_hrid_counter)
 
         self.mapped_folio_fields: dict = {}
         self.migration_report = MigrationReport()
@@ -294,9 +285,11 @@ class MapperBase:
             )
             sys.exit(1)
 
-    @staticmethod
-    def get_id_map_dict(legacy_id, folio_record):
-        return {"legacy_id": legacy_id, "folio_id": folio_record["id"]}
+    def get_id_map_dict(self, legacy_id: str, folio_record: dict, object_type: FOLIONamespaces):
+        base_dict = {"legacy_id": legacy_id, "folio_id": folio_record["id"]}
+        if object_type == FOLIONamespaces.instances:
+            base_dict["hrid"] = folio_record["hrid"]
+        return base_dict
 
     def handle_generic_exception(self, idx, excepion: Exception):
         self.num_exeptions += 1
@@ -313,12 +306,12 @@ class MapperBase:
             )
             sys.exit(1)
 
-    @staticmethod
-    def save_id_map_file(path, legacy_map: dict):
+    def save_id_map_file(self, path, legacy_map: dict):
         with open(path, "w") as legacy_map_file:
-            for id_string in legacy_map.values():
+            for _idx, id_string in enumerate(legacy_map.values(), start=1):
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
-            logging.info("Wrote %s id:s to legacy map", len(legacy_map))
+            logging.info("Wrote %s id:s to legacy map", _idx)
+            self.migration_report.add_general_statistics(f"Wrote {_idx} id:s to legacy map")
 
     def store_hrid_settings(self):
         logging.info("Setting HRID counter to current")

@@ -13,7 +13,6 @@ from folio_migration_tools.custom_exceptions import TransformationRecordFailedEr
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
 from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
@@ -33,8 +32,8 @@ class RulesMapperHoldings(RulesMapperBase):
         location_map,
         task_configuration,
         library_configuration: LibraryConfiguration,
+        parent_id_map: dict,
     ):
-        self.instance_id_map = instance_id_map
         self.task_configuration = task_configuration
         self.conditions = Conditions(
             folio,
@@ -50,6 +49,7 @@ class RulesMapperHoldings(RulesMapperBase):
             task_configuration,
             self.fetch_holdings_schema(),
             self.conditions,
+            parent_id_map,
         )
         self.location_map = location_map
         self.holdings_id_map: dict = {}
@@ -77,7 +77,7 @@ class RulesMapperHoldings(RulesMapperBase):
         """
 
         self.print_progress()
-        folio_holding = {
+        folio_holding: dict = {
             "metadata": self.folio_client.get_metadata_construct(),
         }
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
@@ -129,14 +129,12 @@ class RulesMapperHoldings(RulesMapperBase):
             ]
         )
         self.dedupe_rec(cleaned_folio_holding, props_to_not_dedupe)
-        self.holdings_id_map[legacy_ids] = self.get_id_map_dict(legacy_ids, cleaned_folio_holding)
-
         self.report_folio_mapping(cleaned_folio_holding, self.schema)
         return cleaned_folio_holding
 
     def setup_holdings_sources(self):
         holdings_sources = list(
-            self.mapper.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
+            self.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
         )
         logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
         self.holdingssources = {n["name"].upper(): n["id"] for n in holdings_sources}
@@ -202,29 +200,6 @@ class RulesMapperHoldings(RulesMapperBase):
             )
         self.handle_suppression(folio_holding, file_def, True)
         self.set_source_id(self.task_configuration, folio_holding, self.holdingssources)
-        self.set_hrid(marc_record, folio_holding)
-
-    def set_hrid(self, marc_record, folio_rec):
-        if self.mapper.task_configuration.hrid_handling == HridHandling.preserve001:
-            value = marc_record["001"].value()
-            if value in self.unique_001s:
-                self.mapper.migration_report.add(
-                    Blurbs.HridHandling, "Duplicate 001. Creating HRID instead"
-                )
-                Helper.log_data_issue(
-                    folio_rec["formerIds"],
-                    "Duplicate 001 for record. HRID created for record",
-                    value,
-                )
-                num_part = self.generate_num_part()
-                folio_rec["hrid"] = f"{self.mapper.holdings_hrid_prefix}{num_part}"
-                new_001 = Field(tag="001", data=folio_rec["hrid"])
-                marc_record.add_ordered_field(new_001)
-                self.mapper.holdings_hrid_counter += 1
-            else:
-                self.unique_001s.add(value)
-                folio_rec["hrid"] = value
-                self.mapper.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
 
     def pick_first_location_if_many(self, folio_holding, legacy_ids: List[str]):
         if " " in folio_holding.get("permanentLocationId", ""):
@@ -345,16 +320,6 @@ class RulesMapperHoldings(RulesMapperBase):
     def set_default_call_number_type_if_empty(self, folio_holding):
         if not folio_holding.get("callNumberTypeId", ""):
             folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type["id"]
-
-    def remove_from_id_map(self, former_ids):
-        """removes the ID from the map in case parsing failed
-
-        Args:
-            former_ids (_type_): _description_
-        """
-        for former_id in [id for id in former_ids if id]:
-            if former_id in self.holdings_id_map:
-                del self.holdings_id_map[former_id]
 
     def get_legacy_ids(self, marc_record: Record, idx: int) -> List[str]:
         marc_path = self.task_configuration.legacy_id_marc_path

@@ -156,3 +156,6 @@ class AuthorityMapper(RulesMapperBase):
         return FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "/ramls/authorities/authority.json"
         )
+
+    def wrap_up(self):
+        logging.info("Mapper wrapping up")

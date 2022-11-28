@@ -23,7 +23,7 @@ class MARCReaderWrapper:
         folder_structure: FolderStructure,
     ):
         try:
-            with open(failed_records_path, "wb") as failed_mfhds_file:
+            with open(failed_records_path, "ab") as failed_marc_records_file:
                 with open(
                     folder_structure.legacy_records_folder / file_def.file_name,
                     "rb",
@@ -32,7 +32,9 @@ class MARCReaderWrapper:
                     reader.hide_utf8_warnings = True
                     reader.force_utf8 = False
                     logging.info("Running %s", file_def.file_name)
-                    MARCReaderWrapper.read_records(reader, file_def, failed_mfhds_file, processor)
+                    MARCReaderWrapper.read_records(
+                        reader, file_def, failed_marc_records_file, processor
+                    )
         except TransformationProcessError as tpe:
             logging.critical(tpe)
             sys.exit(1)

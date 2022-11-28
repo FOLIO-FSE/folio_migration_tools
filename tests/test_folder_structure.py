@@ -43,13 +43,8 @@ def test_setup_migration_file_structure():
     )
 
     assert (
-        str(folder_structure.failed_bibs_file)
-        == "iterations/test_iteration/results/failed_bib_records_test_task.mrc"
-    )
-
-    assert (
-        str(folder_structure.failed_mfhds_file)
-        == "iterations/test_iteration/results/failed_mfhd_records_test_task.mrc"
+        str(folder_structure.failed_marc_recs_file)
+        == "iterations/test_iteration/results/failed_records_test_task.mrc"
     )
 
     assert str(folder_structure.failed_recs_path).startswith(
@@ -64,7 +59,7 @@ def test_setup_migration_file_structure():
 
     assert (
         str(folder_structure.instance_id_map_path)
-        == "iterations/test_iteration/results/instance_id_map.json"
+        == "iterations/test_iteration/results/instances_id_map.json"
     )
 
     assert str(folder_structure.item_statuses_map_path) == "mapping_files/item_statuses.tsv"

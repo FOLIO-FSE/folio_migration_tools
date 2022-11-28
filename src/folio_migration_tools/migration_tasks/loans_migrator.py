@@ -226,6 +226,7 @@ class LoansMigrator(MigrationTaskBase):
             self.migration_report.write_migration_report(
                 "Loans migration report", report_file, self.start_datetime
             )
+        self.clean_out_empty_logs()
 
     def write_failed_loans_to_file(self):
         csv_columns = [
