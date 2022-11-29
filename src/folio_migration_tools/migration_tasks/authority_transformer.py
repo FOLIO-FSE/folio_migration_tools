@@ -38,7 +38,7 @@ class AuthorityTransformer(MigrationTaskBase):
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
-        return FOLIONamespaces.athorities
+        return FOLIONamespaces.authorities
 
     def __init__(
         self,
