@@ -30,6 +30,12 @@
             "items": {
                 "type": "string"
             }
+        },
+        "createSourceRecords": {
+            "title": "Createsourcerecords",
+            "description": "Controls wheter or not to retain the MARC records in SRS.",
+            "default": true,
+            "type": "boolean"
         }
     },
     "required": [
