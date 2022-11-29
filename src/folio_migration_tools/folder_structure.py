@@ -106,7 +106,7 @@ class FolderStructure:
             self.results_folder / f"{str(FOLIONamespaces.instances.name).lower()}_id_map.json"
         )
         self.auth_id_map_path = (
-            self.results_folder / f"{str(FOLIONamespaces.athorities.name).lower()}_id_map.json"
+            self.results_folder / f"{str(FOLIONamespaces.authorities.name).lower()}_id_map.json"
         )
 
         self.holdings_id_map_path = (
