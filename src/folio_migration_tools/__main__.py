@@ -95,7 +95,7 @@ def main():
                 print("Halting")
 
             # task_obj.do_work()
-            logging.info("Work done, wrapping up")
+            logging.info("Work done. Shutting down")
             sys.exit(0)
             # task_obj.wrap_up()
     except requests.exceptions.SSLError:
