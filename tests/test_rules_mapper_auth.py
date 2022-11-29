@@ -78,6 +78,10 @@ def test_basic(mapper: AuthorityMapper, caplog):
 def test_saft(mapper: AuthorityMapper, caplog):
     path = "./tests/test_data/auth_918643.mrc"
     with open(path, "rb") as marc_file:
+        mapper.mapped_folio_fields["sftPersonalName"] = [0]
+        mapper.mapped_folio_fields["personalNameTitle"] = [0]
+        mapper.mapped_folio_fields["personalName"] = [0]
+
         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
         reader.hide_utf8_warnings = True
         reader.force_utf8 = True
