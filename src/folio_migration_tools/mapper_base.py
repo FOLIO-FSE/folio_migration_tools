@@ -427,6 +427,10 @@ def flatten(my_dict: dict, path=""):
                 for e in v:
                     if isinstance(e, dict):
                         yield from flatten(dict(e), f"{path}.{k}")
+                    elif isinstance(e, str):
+                        yield k
+                    else:
+                        raise TypeError("Unexpected type")
             elif isinstance(v, dict):
                 yield from flatten(dict(v), f"{path}.{k}")
             else:
