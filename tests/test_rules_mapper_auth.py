@@ -63,3 +63,29 @@ def test_basic(mapper: AuthorityMapper, caplog):
         record = next(reader)
         auth = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])
         assert auth["personalName"] == "Ericsson, Leif KE, 1964-"
+        assert auth["personalNameTitle"] == "Ericsson, Leif KE, 1964-"
+        assert auth["id"] == "f3d00218-a42c-5310-84c5-2ff6f985e3e1"
+        assert all(id["identifierTypeId"] and id["value"] for id in auth["identifiers"])
+        assert len(auth["identifiers"]) == 2
+        assert auth["source"] == "MARC"
+        assert mapper.mapped_folio_fields["personalNameTitle"] == [1]
+        assert mapper.mapped_folio_fields["personalName"] == [1]
+        assert mapper.mapped_folio_fields["source"] == [1]
+        assert mapper.mapped_folio_fields["identifiers.value"] == [2]
+        assert mapper.mapped_folio_fields["identifiers.identifierTypeId"] == [2]
+
+
+def test_saft(mapper: AuthorityMapper, caplog):
+    path = "./tests/test_data/auth_918643.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record: Record = None
+        record = next(reader)
+        auth = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])
+        assert "Yu, Tanling" in auth["sftPersonalName"]
+        assert "于丹翎" in auth["sftPersonalName"]
+        assert mapper.mapped_folio_fields["personalNameTitle"] == [1]
+        assert mapper.mapped_folio_fields["personalName"] == [1]
+        assert mapper.mapped_folio_fields["sftPersonalName"] == [2]

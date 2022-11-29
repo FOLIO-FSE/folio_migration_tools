@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Annotated
 from typing import Optional
 
 from pydantic import BaseModel
@@ -58,8 +59,12 @@ class LibraryConfiguration(BaseModel):
         )
     )
     multi_field_delimiter: Optional[str] = "<delimiter>"
-    failed_records_threshold: Optional[int] = 5000
-    failed_percentage_threshold: Optional[int] = 20
+    failed_records_threshold: Annotated[
+        int, Field(description=("Number of failed records until the process shuts down"))
+    ] = 5000
+    failed_percentage_threshold: Annotated[
+        int, Field(description=("Percentage of failed records until the process shuts down"))
+    ] = 20
     library_name: str
     log_level_debug: bool
     folio_release: FolioRelease = Field(
