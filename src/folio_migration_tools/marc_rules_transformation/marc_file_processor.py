@@ -213,7 +213,7 @@ class MarcFileProcessor:
             len(self.mapper.id_map),
             self.folder_structure.id_map_path,
         )
-        self.mapper.save_id_map_file(self.folder_structure.id_map_path, self.mapper.id_map)
+        # self.mapper.save_id_map_file(self.folder_structure.id_map_path, self.mapper.id_map)
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
@@ -228,8 +228,8 @@ class MarcFileProcessor:
         self.srs_records_file.close()
         self.mapper.wrap_up()
 
-        logging.info("Done. Transformation report written to %s", report_file.name)
-        logging.info("Done.")
+        logging.info("Transformation report written to %s", report_file.name)
+        logging.info("Processor is done.")
 
     def add_legacy_ids_to_map(self, folio_rec, filtered_legacy_ids):
         for legacy_id in filtered_legacy_ids:

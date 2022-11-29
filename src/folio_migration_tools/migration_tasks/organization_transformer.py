@@ -192,7 +192,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 sys.exit()
 
     def wrap_up(self):
-        logging.info("Done. Wrapping up...")
+        logging.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             logging.info(

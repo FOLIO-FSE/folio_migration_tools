@@ -61,7 +61,7 @@ class AuthorityTransformer(MigrationTaskBase):
         self.do_work_marc_transformer()
 
     def wrap_up(self):
-        logging.info("Done. Wrapping up...")
+        logging.info("Done. Transformer Wrapping up...")
         self.extradata_writer.flush()
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
