@@ -71,8 +71,8 @@ def test_basic(mapper: AuthorityMapper, caplog):
         assert mapper.mapped_folio_fields["personalNameTitle"] == [1]
         assert mapper.mapped_folio_fields["personalName"] == [1]
         assert mapper.mapped_folio_fields["source"] == [1]
-        assert mapper.mapped_folio_fields["identifiers.value"] == [2]
-        assert mapper.mapped_folio_fields["identifiers.identifierTypeId"] == [2]
+        assert mapper.mapped_folio_fields["identifiers.value"] == [1]
+        assert mapper.mapped_folio_fields["identifiers.identifierTypeId"] == [1]
 
 
 def test_saft(mapper: AuthorityMapper, caplog):
@@ -81,6 +81,8 @@ def test_saft(mapper: AuthorityMapper, caplog):
         mapper.mapped_folio_fields["sftPersonalName"] = [0]
         mapper.mapped_folio_fields["personalNameTitle"] = [0]
         mapper.mapped_folio_fields["personalName"] = [0]
+        mapper.mapped_folio_fields["identifiers"] = [0]
+        mapper.mapped_folio_fields["identifiers.identifierTypeId"] = [0]
 
         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
         reader.hide_utf8_warnings = True
@@ -91,5 +93,7 @@ def test_saft(mapper: AuthorityMapper, caplog):
         assert "Yu, Tanling" in auth["sftPersonalName"]
         assert "于丹翎" in auth["sftPersonalName"]
         assert mapper.mapped_folio_fields["personalNameTitle"] == [1]
+        assert mapper.mapped_folio_fields["identifiers"] == [1]
+        assert mapper.mapped_folio_fields["identifiers.identifierTypeId"] == [1]
         assert mapper.mapped_folio_fields["personalName"] == [1]
-        assert mapper.mapped_folio_fields["sftPersonalName"] == [2]
+        assert mapper.mapped_folio_fields["sftPersonalName"] == [1]

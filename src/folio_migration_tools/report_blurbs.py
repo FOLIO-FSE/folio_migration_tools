@@ -9,7 +9,9 @@ class ReportSection(Enum):
 
 
 class Blurbs:
+    AuthoritySources = ("Authorization sources and related information", "")
     FieldMappingDetails = ("Mapping details", "")
+    CatalogingAgency = ("Cataloging sources", "")
     Trivia = ("Trivia", "")
     LeaderManipulation = ("Leader manipulation", "")
     TermsMapping = ("Terms Mapping", "Reference data mapping for Terms.")

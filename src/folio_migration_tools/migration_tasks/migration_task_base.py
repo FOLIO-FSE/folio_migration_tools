@@ -270,7 +270,6 @@ class MigrationTaskBase:
                     self.folder_structure.failed_marc_recs_file,
                     self.folder_structure,
                 )
-        self.processor.wrap_up()
 
     def load_ref_data_mapping_file(
         self,

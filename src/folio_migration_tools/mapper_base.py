@@ -55,7 +55,7 @@ class MapperBase:
 
     def report_folio_mapping(self, folio_record, schema):
         try:
-            for field_name in flatten(folio_record):
+            for field_name in set(flatten(folio_record)):
                 try:
                     self.mapped_folio_fields[field_name][0] += 1
                 except KeyError:
@@ -83,7 +83,7 @@ class MapperBase:
                 self.mapped_legacy_fields[field_name][1] += v
 
     def report_folio_mapping_no_schema(self, folio_object):
-        for field_name in flatten(folio_object):
+        for field_name in set(flatten(folio_object)):
             if field_name not in self.mapped_folio_fields:
                 self.mapped_folio_fields[field_name] = [1, 1]
             else:
@@ -311,7 +311,9 @@ class MapperBase:
             for _idx, id_string in enumerate(legacy_map.values(), start=1):
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
             logging.info("Wrote %s id:s to legacy map", _idx)
-            self.migration_report.add_general_statistics(f"Wrote {_idx} id:s to legacy map")
+            self.migration_report.set(
+                Blurbs.GeneralStatistics, "Unique ID:s written to legacy map", _idx
+            )
 
     def store_hrid_settings(self):
         logging.info("Setting HRID counter to current")
@@ -421,17 +423,27 @@ class MapperBase:
 
 
 def flatten(my_dict: dict, path=""):
+
     for k, v in iter(my_dict.items()):
+        if not path:
+            yield k
         if v:
             if isinstance(v, list):
+                if path and check_if_list_with_dict_keys(v):
+                    yield f"{path}.{k}".strip(".")
                 for e in v:
                     if isinstance(e, dict):
                         yield from flatten(dict(e), f"{path}.{k}")
-                    elif isinstance(e, str):
-                        yield k
-                    else:
-                        raise TypeError("Unexpected type")
+                    elif isinstance(e, str) and path:
+                        yield f"{path}.{k}".strip(".")
+
             elif isinstance(v, dict):
+                if path:
+                    yield f"{path}.{k}".strip(".")
                 yield from flatten(dict(v), f"{path}.{k}")
-            else:
+            elif path:
                 yield f"{path}.{k}".strip(".")
+
+
+def check_if_list_with_dict_keys(data):
+    return isinstance(data, list) and all(isinstance(x, dict) for x in data)
