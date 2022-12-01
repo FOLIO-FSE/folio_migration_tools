@@ -22,7 +22,11 @@ class Helper:
             mapped = v[0]
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
-            report_file.write(f"{k} | {max(mapped, 0):,} ({mapped_per}) | {unmapped:,}  \n")
+            up = unmapped / total_records if total_records else 0
+            unmapped_per = "{:.0%}".format(max(up, 0))
+            report_file.write(
+                f"{k} | {max(mapped, 0):,} ({mapped_per}) | {unmapped:,} ({unmapped_per}) \n"
+            )
         report_file.write(details_end)
 
         report_file.write("\n## Mapped Legacy fields\n")

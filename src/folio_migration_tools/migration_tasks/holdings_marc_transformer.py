@@ -8,6 +8,7 @@ from typing import Optional
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -110,6 +111,25 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         self.do_work_marc_transformer()
 
     def wrap_up(self):
-        logging.info("wapping up")
+        logging.info("Done. Transformer Wrapping up...")
         self.extradata_writer.flush()
+        self.processor.wrap_up()
+        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
+            self.mapper.migration_report.write_migration_report(
+                "Bibliographic records transformation report",
+                report_file,
+                self.start_datetime,
+            )
+            Helper.print_mapping_report(
+                report_file,
+                self.mapper.parsed_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
+
+        logging.info(
+            "Done. Transformation report written to %s",
+            self.folder_structure.migration_reports_file.name,
+        )
+
         self.clean_out_empty_logs()

@@ -61,7 +61,6 @@ class AuthorityMapper(RulesMapperBase):
             Conditions(folio_client, self, "auth", library_configuration.folio_release),
         )
         self.srs_recs: list = []
-        self.mapped_folio_fields: dict = {}
         logging.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-authority"
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)

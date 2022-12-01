@@ -25,7 +25,6 @@ class MarcFileProcessor:
     def __init__(
         self, mapper: RulesMapperBase, folder_structure: FolderStructure, created_objects_file
     ):
-        self.id_map_file = open(folder_structure.id_map_path, "w+")
         self.object_type: FOLIONamespaces = folder_structure.object_type
         self.folder_structure: FolderStructure = folder_structure
         self.mapper: RulesMapperBase = mapper
@@ -213,7 +212,7 @@ class MarcFileProcessor:
             len(self.mapper.id_map),
             self.folder_structure.id_map_path,
         )
-        # self.mapper.save_id_map_file(self.folder_structure.id_map_path, self.mapper.id_map)
+        self.mapper.save_id_map_file(self.folder_structure.id_map_path, self.mapper.id_map)
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(

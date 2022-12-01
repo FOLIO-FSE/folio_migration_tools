@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import time
+import urllib.parse
 import uuid
 from abc import abstractmethod
 from textwrap import wrap
@@ -245,13 +246,34 @@ class RulesMapperBase(MapperBase):
             )
         return mappings
 
-    def report_marc_stats(self, marc_field, bad_tags, legacy_ids, ignored_subsequent_fields):
+    def report_marc_stats(
+        self, marc_field: Field, bad_tags, legacy_ids, ignored_subsequent_fields
+    ):
         self.migration_report.add(Blurbs.Trivia, "Total number of Tags processed")
+        self.report_source_and_links(marc_field)
         self.report_bad_tags(marc_field, bad_tags, legacy_ids)
         mapped = marc_field.tag in self.mappings
         if marc_field.tag in ignored_subsequent_fields:
             mapped = False
         self.report_legacy_mapping(marc_field.tag, True, mapped)
+
+    def report_source_and_links(self, marc_field: Field):
+        for subfield_2 in marc_field.get_subfields("2"):
+            self.migration_report.add(
+                Blurbs.AuthoritySources, f"Source of heading or term: {subfield_2.split()[0]}"
+            )
+        for subfield_0 in marc_field.get_subfields("0"):
+            code = ""
+            if "(" in subfield_0 and ")" in subfield_0:
+                code = subfield_0[subfield_0.find("(") + 1 : subfield_0.find(")")]
+                code = code.split(" ")[0]
+            elif url := urllib.parse.urlparse(subfield_0):
+                if url.hostname:
+                    code = subfield_0[: subfield_0.find(url.path)]
+            if code:
+                self.migration_report.add(
+                    Blurbs.AuthoritySources, f"$0 base uri or source code: {code}"
+                )
 
     def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
         try:
