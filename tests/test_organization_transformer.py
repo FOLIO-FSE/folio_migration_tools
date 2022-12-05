@@ -45,6 +45,13 @@ def test_remove_organization_types_pre_morning_glory():
     }
 
 
+def test_extra_data():
+    rec = {"contacts": ["Jane"]}
+    organization = OrganizationTransformer.create_extradata_objects(rec)
+
+    assert organization["contacts"] == ["uuid"]
+    
+
 def test_clean_up_one_address():
     rec = {
         "addresses": [

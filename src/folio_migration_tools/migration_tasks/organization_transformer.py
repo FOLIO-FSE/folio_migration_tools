@@ -141,6 +141,8 @@ class OrganizationTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.organizations
                     )
 
+                    folio_rec = self.create_extradata_objects(folio_rec)
+                    
                     clean_folio_rec = self.clean_org(folio_rec)
 
                     if idx == 0:
@@ -250,3 +252,18 @@ class OrganizationTransformer(MigrationTaskBase):
             folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
 
             return folio_rec
+    
+    def create_extradata_objects(self, record):
+        if "contacts" in record:
+            # for each contact
+                # Create a contact using contact schema
+                contact = {}
+                contact["name"] = "name"
+                contact["uuid"] = "generatedUUID"
+
+                # Save contact to extradata file
+
+                record["contacts"].append("generatedUUID")
+
+        return record
+
