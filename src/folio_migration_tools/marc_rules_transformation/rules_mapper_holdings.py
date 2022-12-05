@@ -109,6 +109,8 @@ class RulesMapperHoldings(RulesMapperBase):
             try:
                 if marc_field.tag == "852":
                     num_852s += 1
+                    if num_852s > 1:
+                        continue
                 self.process_marc_field(
                     folio_holding,
                     marc_field,
