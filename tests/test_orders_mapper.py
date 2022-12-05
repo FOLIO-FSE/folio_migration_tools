@@ -43,17 +43,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
     )
 
     return CompositeOrderMapper(
-        mock_folio_client,
-        composite_order_map,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        lib_config,
-        ""
+        mock_folio_client, composite_order_map, "", "", "", "", "", "", "", lib_config, ""
     )
 
 
@@ -82,11 +72,7 @@ def test_composite_order_mapping(mapper):
     assert composite_order["orderType"] == "One-Time"
 
 
-data = {
-    "order_number": "o123",
-    "vendor": "EBSCO",
-    "type": "One-Time"
-}
+data = {"order_number": "o123", "vendor": "EBSCO", "type": "One-Time"}
 
 composite_order_map = {
     "data": [
@@ -100,30 +86,20 @@ composite_order_map = {
             "folio_field": "poNumber",
             "legacy_field": "order_number",
             "value": "",
-            "description": ""
+            "description": "",
         },
-        {
-            "folio_field": "vendor",
-            "legacy_field": "vendor",
-            "value": "",
-            "description": ""
-        },
-        {
-            "folio_field": "orderType",
-            "legacy_field": "type",
-            "value": "",
-            "description": ""
-        }
+        {"folio_field": "vendor", "legacy_field": "vendor", "value": "", "description": ""},
+        {"folio_field": "orderType", "legacy_field": "type", "value": "", "description": ""},
     ]
 }
 
 
-@pytest.mark.skip(
-    reason="Not sure how POLs work. Is it best to handle them as an array of objects, or extradata?"
-)
+@pytest.mark.skip(reason="Not sure how POLs work. Best as array of objects, or extradata?")
 def test_composite_order_with_one_pol_mapping(mapper):
-    composite_order_with_pol, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
-    
+    composite_order_with_pol, idx = mapper.do_map(
+        data, data["order_number"], FOLIONamespaces.orders
+    )
+
     assert composite_order_with_pol["poNumber"] == "o123"
     assert composite_order_with_pol["compositePoLines[0].titleOrPackage"] == "Once upon a time..."
 
@@ -150,49 +126,39 @@ po_with_pol_map = {
             "folio_field": "poNumber",
             "legacy_field": "order_number",
             "value": "",
-            "description": ""
+            "description": "",
         },
-        {
-            "folio_field": "vendor",
-            "legacy_field": "vendor",
-            "value": "",
-            "description": ""
-        },
-        {
-            "folio_field": "orderType",
-            "legacy_field": "type",
-            "value": "",
-            "description": ""
-        },
+        {"folio_field": "vendor", "legacy_field": "vendor", "value": "", "description": ""},
+        {"folio_field": "orderType", "legacy_field": "type", "value": "", "description": ""},
         {
             "folio_field": "compositePoLines[0].titleOrPackage",
             "legacy_field": "title",
             "value": "",
-            "description": ""
+            "description": "",
         },
         {
             "folio_field": "compositePoLines[0].source",
             "legacy_field": "",
             "value": "API",
-            "description": ""
+            "description": "",
         },
         {
             "folio_field": "compositePoLines[0].orderFormat",
             "legacy_field": "format",
             "value": "",
-            "description": ""
+            "description": "",
         },
         {
             "folio_field": "compositePoLines[0].acquisitionMethod",
             "legacy_field": "acqmethod",
             "value": "",
-            "description": ""
+            "description": "",
         },
         {
             "folio_field": "compositePoLines[0].cost",
             "legacy_field": "price",
             "value": "",
-            "description": ""
-        }
+            "description": "",
+        },
     ]
 }
