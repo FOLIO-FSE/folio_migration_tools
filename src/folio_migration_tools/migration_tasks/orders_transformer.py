@@ -6,7 +6,6 @@ import sys
 import time
 from os.path import isfile
 from typing import List
-from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic.main import BaseModel
