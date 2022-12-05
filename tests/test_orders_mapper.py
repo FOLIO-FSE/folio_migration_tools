@@ -78,14 +78,14 @@ def test_composite_order_mapping(mapper):
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
 
     assert composite_order["poNumber"] == "o123"
+    assert composite_order["vendor"] == "EBSCO"
+    assert composite_order["orderType"] == "One-Time"
 
-
-# Shared data and maps
 
 data = {
     "order_number": "o123",
     "vendor": "EBSCO",
-    "type": "one-time"
+    "type": "One-Time"
 }
 
 composite_order_map = {
@@ -111,6 +111,86 @@ composite_order_map = {
         {
             "folio_field": "orderType",
             "legacy_field": "type",
+            "value": "",
+            "description": ""
+        }
+    ]
+}
+
+
+@pytest.mark.skip(
+    reason="Not sure how POLs work. Is it best to handle them as an array of objects, or extradata?"
+)
+def test_composite_order_with_one_pol_mapping(mapper):
+    composite_order_with_pol, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+    
+    assert composite_order_with_pol["poNumber"] == "o123"
+    assert composite_order_with_pol["compositePoLines[0].titleOrPackage"] == "Once upon a time..."
+
+
+po_with_pol_data = {
+    "order_number": "o123",
+    "vendor": "EBSCO",
+    "type": "One-Time",
+    "title": "Once upon a time...",
+    "acqmethod": "Purchase",
+    "price": "0",
+    "format": "Physical",
+}
+
+po_with_pol_map = {
+    "data": [
+        {
+            "folio_field": "legacyIdentifier",
+            "legacy_field": "order_number",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "poNumber",
+            "legacy_field": "order_number",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "vendor",
+            "legacy_field": "vendor",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "orderType",
+            "legacy_field": "type",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "compositePoLines[0].titleOrPackage",
+            "legacy_field": "title",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "compositePoLines[0].source",
+            "legacy_field": "",
+            "value": "API",
+            "description": ""
+        },
+        {
+            "folio_field": "compositePoLines[0].orderFormat",
+            "legacy_field": "format",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "compositePoLines[0].acquisitionMethod",
+            "legacy_field": "acqmethod",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "compositePoLines[0].cost",
+            "legacy_field": "price",
             "value": "",
             "description": ""
         }
