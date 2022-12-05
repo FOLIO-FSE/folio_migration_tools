@@ -295,9 +295,7 @@ class Conditions:
                 "Use set_holdings_note_type_id instead"
             ),
         )
-        return self.condition_set_holding_note_type_id_by_name(
-            legacy_id, value, parameter, marc_field
-        )
+        return self.condition_set_holdings_note_type_id(legacy_id, value, parameter, marc_field)
 
     def condition_set_holdings_note_type_id(
         self, legacy_id, value, parameter, marc_field: field.Field
