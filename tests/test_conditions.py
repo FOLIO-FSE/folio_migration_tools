@@ -12,7 +12,6 @@ def test_condition_trim_period():
 
 
 def test_condition():
-
     mock = Mock(spec=Conditions)
     parameter = {"subfieldsToConcat": ["q"]}
     legacy_id = "legacy_id"

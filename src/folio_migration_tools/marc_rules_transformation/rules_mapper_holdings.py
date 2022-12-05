@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import List
 
@@ -28,7 +29,6 @@ class RulesMapperHoldings(RulesMapperBase):
     def __init__(
         self,
         folio,
-        instance_id_map,
         location_map,
         task_configuration,
         library_configuration: LibraryConfiguration,
@@ -56,11 +56,34 @@ class RulesMapperHoldings(RulesMapperBase):
         self.ref_data_dicts: dict = {}
         self.fallback_holdings_type_id = self.task_configuration.fallback_holdings_type_id
         self.setup_holdings_sources()
+        logging.info("Fetching mapping rules from the tenant")
+        rules_endpoint = "/mapping-rules/marc-holdings"
+        self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
+        self.fix_853_bug_in_rules()
+
+    def fix_853_bug_in_rules(self):
+        f852_mappings = self.mappings["852"]
+        new_852_mapping = []
+        for mapping in f852_mappings:
+            if "entity" in mapping:
+                for entity_mapping in mapping["entity"]:
+                    if "." not in entity_mapping["target"]:
+                        new_852_mapping.append(entity_mapping)
+                    else:
+                        raise TransformationProcessError(
+                            "",
+                            (
+                                "Actual entity mapping found in 852 mappings. "
+                                "Report this to the maintainers of this codebase"
+                            ),
+                            json.dumps(entity_mapping),
+                        )
+        self.mappings["852"] = new_852_mapping
 
     def parse_record(
         self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
     ) -> dict:
-        """Parses a mfhd recod into a FOLIO Inventory instance object
+        """Parses a mfhd recod into a FOLIO Inventory holdings object
         Community mapping suggestion: https://tinyurl.com/3rh52e2x
          This is the main function
 
@@ -77,9 +100,8 @@ class RulesMapperHoldings(RulesMapperBase):
         """
 
         self.print_progress()
-        folio_holding: dict = {
-            "metadata": self.folio_client.get_metadata_construct(),
-        }
+        folio_holding = self.perform_initial_preparation(marc_record, legacy_ids)
+
         self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
         ignored_subsequent_fields: set = set()
         num_852s = 0
@@ -98,20 +120,6 @@ class RulesMapperHoldings(RulesMapperBase):
         if num_852s > 1:
             Helper.log_data_issue(legacy_ids, "More than 1 852 found", "")
 
-        folio_holding["id"] = str(
-            FolioUUID(
-                self.folio_client.okapi_url,
-                FOLIONamespaces.holdings,
-                legacy_ids,
-            )
-        )
-
-        if not folio_holding.get("instanceId", ""):
-            raise TransformationRecordFailedError(
-                legacy_ids,
-                "No Instance id mapped. ",
-                folio_holding["formerIds"],
-            )
         self.perform_additional_mapping(marc_record, folio_holding, legacy_ids, file_def)
         cleaned_folio_holding = self.validate_required_properties(
             "-".join(folio_holding.get("formerIds")),
@@ -119,6 +127,12 @@ class RulesMapperHoldings(RulesMapperBase):
             self.schema,
             FOLIONamespaces.holdings,
         )
+        if not folio_holding.get("instanceId", ""):
+            raise TransformationRecordFailedError(
+                legacy_ids,
+                "No Instance id mapped. ",
+                folio_holding.get("formerIds", ["No former ids"]),
+            )
         props_to_not_dedupe = (
             []
             if self.task_configuration.deduplicate_holdings_statements
@@ -131,6 +145,41 @@ class RulesMapperHoldings(RulesMapperBase):
         self.dedupe_rec(cleaned_folio_holding, props_to_not_dedupe)
         self.report_folio_mapping(cleaned_folio_holding, self.schema)
         return cleaned_folio_holding
+
+    def set_instance_id_by_map(self, legacy_ids: list, folio_holding: dict, marc_record: Record):
+        if "004" not in marc_record:
+            raise TransformationProcessError(
+                "",
+                ("No 004 in record. The tools only support bib-mfhd linking throuh 004"),
+                legacy_ids,
+            )
+        legacy_instance_id = marc_record["004"].data
+        folio_holding["formerIds"].append(f"Bib id: {legacy_instance_id}")
+        if legacy_instance_id in self.parent_id_map:
+            folio_holding["instanceId"] = self.parent_id_map[legacy_instance_id]["folio_id"]
+        else:
+            raise TransformationRecordFailedError(
+                legacy_ids,
+                "Old instance id not in map",
+                marc_record["004"],
+            )
+
+    def perform_initial_preparation(self, marc_record: Record, legacy_ids):
+        folio_holding: dict = {
+            "metadata": self.folio_client.get_metadata_construct(),
+        }
+        folio_holding["id"] = str(
+            FolioUUID(
+                str(self.folio_client.okapi_url),
+                FOLIONamespaces.holdings,
+                str(legacy_ids[-1]),
+            )
+        )
+        for legacy_id in legacy_ids:
+            self.add_legacy_id_to_admin_note(folio_holding, legacy_id)
+        folio_holding["formerIds"] = legacy_ids
+        self.set_instance_id_by_map(legacy_ids, folio_holding, marc_record)
+        return folio_holding
 
     def setup_holdings_sources(self):
         holdings_sources = list(

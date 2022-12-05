@@ -35,7 +35,6 @@ class BibsTransformer(MigrationTaskBase):
             ),
         ] = True
         migration_task_type: str
-        use_tenant_mapping_rules: Optional[bool] = True
         hrid_handling: Optional[HridHandling] = HridHandling.default
         deactivate035_from001: Optional[bool] = False
         files: List[FileDefinition]

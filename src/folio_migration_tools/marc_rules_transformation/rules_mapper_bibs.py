@@ -449,10 +449,8 @@ class BibsRulesMapper(RulesMapperBase):
         for lang_tag in lang_fields:
             if "2" in lang_tag:
                 self.migration_report.add(Blurbs.LanguageCodeSources, lang_tag["2"])
-                logging.info(
-                    "Field with other Language code\t%s\t%s",
-                    marc_record["001"],
-                    lang_tag.value(),
+                Helper.log_data_issue(
+                    legacy_id, "Field with other Language code", lang_tag.value()
                 )
             lang_codes = lang_tag.get_subfields(*list(subfields))
             for lang_code in lang_codes:

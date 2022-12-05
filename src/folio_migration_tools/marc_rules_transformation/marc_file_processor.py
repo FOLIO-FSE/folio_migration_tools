@@ -36,8 +36,8 @@ class MarcFileProcessor:
         self.start: float = time.time()
         self.legacy_ids: set = set()
         if self.object_type == FOLIONamespaces.holdings:
-            logging.info("Loading Instance HRID map for SRS creation")
-            self.instance_hrids = {
+            logging.info("Loading Parent HRID map for SRS creation")
+            self.parent_hrids = {
                 entity["folio_id"]: entity["hrid"] for entity in mapper.parent_id_map.values()
             }
 
@@ -85,6 +85,7 @@ class MarcFileProcessor:
             self.exit_on_too_many_exceptions()
         except TransformationRecordFailedError as error:
             success = False
+            error.index_or_id = f"{error.index_or_id} in {file_def.file_name}"
             error.log_it()
             self.mapper.migration_report.add_general_statistics(
                 "Records that failed transformation. Check log for details",
@@ -129,7 +130,7 @@ class MarcFileProcessor:
                     Blurbs.MarcValidation,
                     f"008 lenght invalid. '{rest}' was stripped out",
                 )
-            new_004 = Field(tag="004", data=self.instance_hrids[folio_rec["instanceId"]])
+            new_004 = Field(tag="004", data=self.parent_hrids[folio_rec["instanceId"]])
             marc_record.remove_fields("004")
             marc_record.add_ordered_field(new_004)
             for former_id in legacy_ids:
@@ -184,12 +185,9 @@ class MarcFileProcessor:
             if legacy_id not in folio_record_identifiers:
                 new_ids.add(legacy_id)
             else:
-                s = "Duplicate MARC record identifiers "
-                migration_report.add_general_statistics(s)
-                Helper.log_data_issue(legacy_id, s, "-".join(legacy_ids))
-                logging.error(s)
+                migration_report.add_general_statistics("Duplicate MARC record identifiers ")
         if not any(new_ids):
-            s = "Failed records. No unique MARC record identifiers in legacy record"
+            s = "Failed records. No unique record identifiers in legacy record"
             migration_report.add_general_statistics(s)
             raise TransformationRecordFailedError(
                 "-".join(legacy_ids),

@@ -161,15 +161,6 @@ class MigrationTaskBase:
 
     def setup_logging(self):
         debug = self.library_configuration.log_level_debug
-        DATA_OUTPUT_LVL_NUM = 25
-        logging.addLevelName(DATA_OUTPUT_LVL_NUM, "DATA_OUTPUT")
-
-        def data_output(self, message, *args, **kws):
-            if self.isEnabledFor(DATA_OUTPUT_LVL_NUM):
-                # Yes, logger takes its '*args' as 'args'.
-                self._log(DATA_OUTPUT_LVL_NUM, message, args, **kws)
-
-        logging.Logger.data_output = data_output
 
         DATA_ISSUE_LVL_NUM = 26
         logging.addLevelName(DATA_ISSUE_LVL_NUM, "DATA_ISSUES")
