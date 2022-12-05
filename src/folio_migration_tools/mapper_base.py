@@ -407,13 +407,11 @@ class MapperBase:
             None,
         ):
             if legacy_id not in id_string:
-                folio_record["administrativeNotes"] = list(
-                    [
-                        f
-                        for f in folio_record["administrativeNotes"]
-                        if MapperBase.legacy_id_template not in f
-                    ]
-                )
+                folio_record["administrativeNotes"] = [
+                    f
+                    for f in folio_record["administrativeNotes"]
+                    if MapperBase.legacy_id_template not in f
+                ]
 
                 folio_record["administrativeNotes"].append(f"{id_string}, {legacy_id}")
         else:

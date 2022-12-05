@@ -273,3 +273,4 @@ def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
         assert "[東京宝塚劇場公演パンフレット. ]" in res["alternativeTitles"][0]["alternativeTitle"]
         assert "1. 7月星組公演.  淀君, シャンソン・ダムール (1959)" in res["notes"][2]["note"]
         assert "宝塚" in res["publication"][1]["place"]
+        assert "Records without $6" in mapper.migration_report.report["880 mappings"]

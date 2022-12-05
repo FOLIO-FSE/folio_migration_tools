@@ -196,7 +196,7 @@ class RulesMapperBase(MapperBase):
         ignored_subsequent_fields,
         legacy_ids,
     ):
-        if marc_field.tag == "880" and "6" in marc_field:
+        if marc_field.tag == "880":
             mappings = self.perform_proxy_mapping(marc_field)
         else:
             tags_to_ignore = {"880", "001", "008"}
@@ -221,18 +221,25 @@ class RulesMapperBase(MapperBase):
 
     def perform_proxy_mapping(self, marc_field):
         proxy_mapping = next(iter(self.mappings.get("880", [])), [])
-        if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
-            return None
         if "6" not in marc_field:
             self.migration_report.add(Blurbs.Field880Mappings, "Records without $6")
             return None
+        if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
+            return None
+        if not marc_field["6"][:3] or len(marc_field["6"][:3]) != 3:
+            self.migration_report.add(
+                Blurbs.Field880Mappings, "Records with unexpected length in $6"
+            )
+            return None
+        first_three = marc_field["6"][:3]
+
         target_field = next(
             (
                 r.get("targetField", "")
                 for r in proxy_mapping.get("fieldReplacementRule", [])
-                if r["sourceDigits"] == marc_field["6"][:3]
+                if r["sourceDigits"] == first_three
             ),
-            marc_field["6"][:3],
+            first_three,
         )
         self.migration_report.add(
             Blurbs.Field880Mappings,
@@ -260,7 +267,7 @@ class RulesMapperBase(MapperBase):
     def report_source_and_links(self, marc_field: Field):
         for subfield_2 in marc_field.get_subfields("2"):
             self.migration_report.add(
-                Blurbs.AuthoritySources, f"Source of heading or term: {subfield_2.split()[0]}"
+                Blurbs.AuthoritySources, f"Source of heading or term: {subfield_2.split(' ')[0]}"
             )
         for subfield_0 in marc_field.get_subfields("0"):
             code = ""
@@ -400,7 +407,7 @@ class RulesMapperBase(MapperBase):
             raise TransformationProcessError(
                 "",
                 (
-                    f"Target string {target_string} not in Schema! "
+                    f"Target string '{target_string}' not in Schema! "
                     "Check mapping file against the schema. "
                     f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
                 ),

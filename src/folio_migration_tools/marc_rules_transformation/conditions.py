@@ -156,6 +156,10 @@ class Conditions:
     def condition_trim(self, legacy_id, value, parameter, marc_field: field.Field):
         return value.strip()
 
+    def condition_set_holdings_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
+        self.mapper.migration_report.add(Blurbs.HoldingsTypeMapping, "Condition in rules hit")
+        return ""
+
     def condition_concat_subfields_by_name(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
@@ -282,6 +286,20 @@ class Conditions:
         return my_id
 
     def condition_set_holding_note_type_id_by_name(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        self.mapper.migration_report.add(
+            Blurbs.Exceptions,
+            (
+                "Condition set_holding_note_type_id_by_name is deprecated. "
+                "Use set_holdings_note_type_id instead"
+            ),
+        )
+        return self.condition_set_holding_note_type_id_by_name(
+            legacy_id, value, parameter, marc_field
+        )
+
+    def condition_set_holdings_note_type_id(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
         try:
@@ -464,27 +482,22 @@ class Conditions:
                 return t[0]
         return self.default_contributor_type["id"]
 
-    def condition_set_instance_id_by_map(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
-        try:
-            if value:
-                if value.strip() not in self.mapper.parent_id_map:
-                    raise ValueError()
-                return self.mapper.parent_id_map[value.strip()]["folio_id"]
-            Helper.log_data_issue("", "No instance id provided", marc_field.format_field())
-            return ""
-        except Exception:
-            raise TransformationRecordFailedError(
-                legacy_id,
-                "Old instance id not in map",
-                f"{marc_field.format_field()}",
-            )
-
     def condition_set_url_relationship(self, legacy_id, value, parameter, marc_field: field.Field):
         return self._extracted_from_condition_set_electronic_access_relations_id_2("8", marc_field)
 
     def condition_set_call_number_type_by_indicator(
+        self, legacy_id, value, parameter, marc_field: pymarc.Field
+    ):
+        self.mapper.migration_report.add(
+            Blurbs.Exceptions,
+            (
+                "Condition set_call_number_type_by_indicator is deprecated. "
+                "Change to set_call_number_type_id"
+            ),
+        )
+        return self.condition_set_call_number_type_id(legacy_id, value, parameter, marc_field)
+
+    def condition_set_call_number_type_id(
         self, legacy_id, value, parameter, marc_field: pymarc.Field
     ):
         first_level_map = {
@@ -602,7 +615,8 @@ class Conditions:
                 if "folio_code" in str(ke):
                     raise TransformationProcessError(
                         legacy_id, "Your location map lacks the column folio_code"
-                    )
+                    ) from ke
+
                 if "legacy_code" in str(ke):
                     logging.info(
                         "legacy_code column not found. "

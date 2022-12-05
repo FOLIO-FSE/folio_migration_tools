@@ -1,6 +1,5 @@
 '''Main "script."'''
 import csv
-import json
 import logging
 from typing import List
 from typing import Optional
@@ -25,11 +24,9 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         legacy_id_marc_path: str
         deduplicate_holdings_statements: Optional[bool] = True
         migration_task_type: str
-        use_tenant_mapping_rules: bool
         hrid_handling: Optional[HridHandling] = HridHandling.default
         deactivate035_from001: Optional[bool] = False
         files: List[FileDefinition]
-        mfhd_mapping_file_name: str
         location_map_file_name: str
         default_call_number_type_name: str
         fallback_holdings_type_id: str
@@ -80,25 +77,17 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.location_map = list(csv.DictReader(location_map_file, dialect="tsv"))
             logging.info("Locations in map: %s", len(self.location_map))
 
-        map_path = (
-            self.folder_structure.mapping_files_folder / self.task_config.mfhd_mapping_file_name
-        )
-        with open(map_path) as map_f:
-            self.rules_file = json.load(map_f)
-
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_config.files
         )
         self.instance_id_map = self.load_id_map(self.folder_structure.instance_id_map_path, True)
         self.mapper = RulesMapperHoldings(
             self.folio_client,
-            self.instance_id_map,
             self.location_map,
             self.task_config,
             self.library_configuration,
             self.instance_id_map,
         )
-        self.mapper.mappings = self.rules_file["rules"]
         if (
             self.task_configuration.reset_hrid_settings
             and not self.task_configuration.never_update_hrid_settings

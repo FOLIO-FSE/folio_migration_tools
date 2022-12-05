@@ -1,9 +1,16 @@
 from unittest.mock import Mock
 
 import pymarc
+import pytest
 from pymarc import Field
+from pymarc import MARCReader
 from pymarc import Record
 
+from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import IlsFlavour
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -11,9 +18,71 @@ from folio_migration_tools.marc_rules_transformation.holdings_statementsparser i
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
+from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.holdings_marc_transformer import (
     HoldingsMarcTransformer,
 )
+from folio_migration_tools.test_infrastructure import mocked_classes
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mapper(pytestconfig) -> RulesMapperHoldings:
+    folio = mocked_classes.mocked_folio_client()
+    lib = LibraryConfiguration(
+        okapi_url=folio.okapi_url,
+        tenant_id=folio.tenant_id,
+        okapi_username=folio.username,
+        okapi_password=folio.password,
+        folio_release=FolioRelease.morning_glory,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="I have no clue",
+        base_folder="/",
+    )
+    conf = HoldingsMarcTransformer.TaskConfiguration(
+        name="test",
+        migration_task_type="HoldingsTransformer",
+        hrid_handling=HridHandling.default,
+        files=[],
+        ils_flavour=IlsFlavour.voyager,
+        legacy_id_marc_path="001",
+        location_map_file_name="",
+        default_call_number_type_name="Dewey Decimal classification",
+        fallback_holdings_type_id="03c9c400-b9e3-4a07-ac0e-05ab470233ed",
+    )
+    parent_id_map = {}
+    location_map = [{"legacy_code": "jnlDesk", "folio_code": "JOURN"}]
+    mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map)
+    mapper.folio_client = folio
+    mapper.migration_report = MigrationReport()
+    return mapper
+
+
+def test_basic(mapper: RulesMapperHoldings, caplog):
+    path = "./tests/test_data/mfhd/holding.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record: Record = None
+        mapper.parent_id_map = {
+            "7611780": {
+                "legacy_id": "7611780",
+                "folio_id": "9d1673a3-a546-5afa-b0fb-5ab971f73eca",
+                "hrid": "in00000000005",
+            }
+        }
+        record = next(reader)
+        ids = RulesMapperHoldings.get_legacy_ids(mapper, record, 1)
+        res = mapper.parse_record(
+            record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False), ids
+        )
+        assert res
+        assert res["permanentLocationId"] == "5a05e31b-e9f2-4e03-8757-57239bb92750"
+        assert res["hrid"] == "pref00000000001"
+        assert len(res["administrativeNotes"]) > 0
+        assert res["callNumber"] == "QB611 .C44"
+        assert res["callNumberTypeId"] == "95467209-6d7b-468b-94df-0f5d7ad2747d"
 
 
 def test_get_legacy_ids_001():
@@ -99,9 +168,8 @@ def test_get_marc_textual_stmt_correct_order_and_not_deduped():
             "holdingsStatementsForSupplements",
         ]
         RulesMapperHoldings.dedupe_rec(rec, props_to_not_dedupe)
-        stmt = "1994-1998."
         all_stmts = [f["statement"] for f in rec["holdingsStatements"]]
-        all_94s = [f for f in all_stmts if stmt == f]
+        all_94s = [f for f in all_stmts if f == "1994-1998."]
         assert len(all_94s) == 2
 
 
