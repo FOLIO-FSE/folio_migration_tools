@@ -21,13 +21,23 @@ def test_get_object_type():
 
 
 def test_generate_boundwith_part(caplog):
-    caplog.set_level(25)
+    mock_mapper = mocked_classes.mocked_holdings_mapper()
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.mapper = mock_mapper
+
     mock_folio = mocked_classes.mocked_folio_client()
-    HoldingsCsvTransformer.generate_boundwith_part(mock_folio, "legacy_id", {"id": "holding_uuid"})
-    assert "Level 25" in caplog.text
-    assert "boundwithPart\t" in caplog.text
-    assert '"itemId": "02b904dc-b824-55ac-8e56-e50e395f18f8"}\n' in caplog.text
-    assert '"holdingsRecordId": "holding_uuid"' in caplog.text
+    HoldingsCsvTransformer.generate_boundwith_part(
+        mock_transformer, mock_folio, "legacy_id", {"id": "holding_uuid"}
+    )
+
+    assert any("boundwithPart\t" in ed for ed in mock_mapper.extradata_writer.cache)
+    assert any(
+        '"itemId": "02b904dc-b824-55ac-8e56-e50e395f18f8"}\n' in ed
+        for ed in mock_mapper.extradata_writer.cache
+    )
+    assert any(
+        '"holdingsRecordId": "holding_uuid"' in ed for ed in mock_mapper.extradata_writer.cache
+    )
 
 
 def test_merge_holding_in_first_boundwith(caplog):

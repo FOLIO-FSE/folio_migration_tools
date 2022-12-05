@@ -17,13 +17,6 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
-# Test inheritance and schema
-
-
-def test_subclass_inheritance():
-    assert issubclass(OrganizationMapper, MappingFileMapperBase)
-
-
 def test_fetch_acq_schemas_from_github_happy_path():
     organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
         "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
@@ -35,7 +28,7 @@ def test_fetch_acq_schemas_from_github_happy_path():
 # Mock mapper object
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session", autouse=True)
 def mapper(pytestconfig) -> OrganizationMapper:
     okapi_url = "okapi_url"
     tenant_id = "tenant_id"
@@ -138,6 +131,12 @@ def test_single_category_refdata_mapping(mapper):
     ]
 
 
+def test_tags_object_array(mapper):
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["tags"] == {"tagList": ["A", "B", "C"]}
+
+
 @pytest.mark.skip(
     reason="We would need a way of using the same ref data file for multiple values. See #411"
 )
@@ -191,7 +190,7 @@ data = {
     "address_city": "Victoria",
     "address_categories": "rt",
     "tp": "Consortium",
-    "tgs": "A, B, C",
+    "tgs": "A^-^B^-^C",
     "organization_types": "cst",
     "org_note": "Good stuff!",
 }

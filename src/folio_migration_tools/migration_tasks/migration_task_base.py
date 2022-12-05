@@ -15,6 +15,7 @@ from genericpath import isfile
 from folio_migration_tools import library_configuration
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
 
 
@@ -60,6 +61,9 @@ class MigrationTaskBase:
             logging.critical("Halting...")
             sys.exit(1)
         self.num_exeptions: int = 0
+        self.extradata_writer = ExtradataWriter(
+            self.folder_structure.transformation_extra_data_path
+        )
         if use_logging:
             self.setup_logging()
         self.folder_structure.log_folder_structure()
@@ -158,7 +162,6 @@ class MigrationTaskBase:
             "%(asctime)s\t%(levelname)s\t%(message)s\t%(task_configuration_name)s"
         )
         stream_handler = logging.StreamHandler()
-        stream_handler.addFilter(ExcludeLevelFilter(25))
         stream_handler.addFilter(ExcludeLevelFilter(26))
         stream_handler.addFilter(TaskNameFilter(self.task_configuration.name))
         if debug:
@@ -177,23 +180,12 @@ class MigrationTaskBase:
         file_handler = logging.FileHandler(
             filename=self.folder_structure.transformation_log_path, mode="w"
         )
-        file_handler.addFilter(ExcludeLevelFilter(25))
         file_handler.addFilter(ExcludeLevelFilter(26))
         file_handler.addFilter(TaskNameFilter(self.task_configuration.name))
         # file_handler.addFilter(LevelFilter(0, 20))
         file_handler.setFormatter(file_formatter)
         file_handler.setLevel(logging.INFO)
         logging.getLogger().addHandler(file_handler)
-
-        # Data file formatter
-        data_file_formatter = logging.Formatter("%(message)s")
-        data_file_handler = logging.FileHandler(
-            filename=str(self.folder_structure.transformation_extra_data_path), mode="w"
-        )
-        data_file_handler.addFilter(LevelFilter(25))
-        data_file_handler.setFormatter(data_file_formatter)
-        data_file_handler.setLevel(25)
-        logging.getLogger().addHandler(data_file_handler)
 
         # Data issue file formatter
         data_issue_file_formatter = logging.Formatter("%(message)s")

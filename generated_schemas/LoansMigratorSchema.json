@@ -6,36 +6,36 @@
             "title": "Name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "open_loans_files": {
-            "title": "Open Loans Files",
+        "openLoansFiles": {
+            "title": "Openloansfiles",
             "type": "array",
             "items": {
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "fallback_service_point_id": {
-            "title": "Fallback Service Point Id",
+        "fallbackServicePointId": {
+            "title": "Fallbackservicepointid",
             "type": "string"
         },
-        "starting_row": {
-            "title": "Starting Row",
+        "startingRow": {
+            "title": "Startingrow",
             "default": 1,
             "type": "integer"
         },
-        "item_files": {
-            "title": "Item Files",
+        "itemFiles": {
+            "title": "Itemfiles",
             "default": [],
             "type": "array",
             "items": {
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "patron_files": {
-            "title": "Patron Files",
+        "patronFiles": {
+            "title": "Patronfiles",
             "default": [],
             "type": "array",
             "items": {
@@ -45,9 +45,9 @@
     },
     "required": [
         "name",
-        "migration_task_type",
-        "open_loans_files",
-        "fallback_service_point_id"
+        "migrationTaskType",
+        "openLoansFiles",
+        "fallbackServicePointId"
     ],
     "definitions": {
         "FileDefinition": {

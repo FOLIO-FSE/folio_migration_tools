@@ -312,6 +312,17 @@ class OrganizationMapper(MappingFileMapperBase):
                 if "../../common/schemas/uuid.json" in property_level1.get("$ref", ""):
                     property_level1["type"] = "string"
 
+                # Preliminary implementation of tags
+                # https://github.com/folio-org/raml/blob/master/schemas/tags.schema
+                elif property_name_level1 == "tags":
+                    property_level1["properties"] = {
+                        "tagList": {
+                            "description": "List of tags",
+                            "type": "array",
+                            "items": {"type": "string"},
+                        }
+                    }
+
                 elif (
                     property_level1.get("type") == "array"
                     and property_level1.get("items").get("$ref")

@@ -6,12 +6,12 @@
             "title": "Name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "object_type": {
-            "title": "Object Type",
+        "objectType": {
+            "title": "Objecttype",
             "type": "string"
         },
         "files": {
@@ -21,22 +21,22 @@
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "batch_size": {
-            "title": "Batch Size",
+        "batchSize": {
+            "title": "Batchsize",
             "type": "integer"
         },
-        "rerun_failed_records": {
-            "title": "Rerun Failed Records",
+        "rerunFailedRecords": {
+            "title": "Rerunfailedrecords",
             "default": true,
             "type": "boolean"
         }
     },
     "required": [
         "name",
-        "migration_task_type",
-        "object_type",
+        "migrationTaskType",
+        "objectType",
         "files",
-        "batch_size"
+        "batchSize"
     ],
     "definitions": {
         "FileDefinition": {

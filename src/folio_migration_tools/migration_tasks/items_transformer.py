@@ -11,7 +11,6 @@ from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic.main import BaseModel
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -25,12 +24,13 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
 class ItemsTransformer(MigrationTaskBase):
-    class TaskConfiguration(BaseModel):
+    class TaskConfiguration(AbstractTaskConfiguration):
         name: str
         migration_task_type: str
         hrid_handling: HridHandling
@@ -279,6 +279,7 @@ class ItemsTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Work done. Wrapping up...")
+        self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
                 "Item transformation report", migration_report_file, self.mapper.start_datetime

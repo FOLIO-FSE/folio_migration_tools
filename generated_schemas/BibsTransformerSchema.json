@@ -6,32 +6,33 @@
             "title": "Name",
             "type": "string"
         },
-        "deactivate035_from001": {
-            "title": "Deactivate035 From001",
-            "default": false,
-            "type": "boolean"
-        },
-        "add_administrative_notes_with_legacy_ids": {
-            "title": "Add Administrative Notes With Legacy Ids",
+        "addAdministrativeNotesWithLegacyIds": {
+            "title": "Addadministrativenoteswithlegacyids",
+            "description": "If set to true, an Administrative note will be added to the records containing the legacy ID. Use this in order to protect the values from getting overwritten by overlays,",
             "default": true,
             "type": "boolean"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "use_tenant_mapping_rules": {
-            "title": "Use Tenant Mapping Rules",
+        "useTenantMappingRules": {
+            "title": "Usetenantmappingrules",
             "default": true,
             "type": "boolean"
         },
-        "hrid_handling": {
+        "hridHandling": {
             "default": "default",
             "allOf": [
                 {
                     "$ref": "#/definitions/HridHandling"
                 }
             ]
+        },
+        "deactivate035From001": {
+            "title": "Deactivate035From001",
+            "default": false,
+            "type": "boolean"
         },
         "files": {
             "title": "Files",
@@ -40,33 +41,33 @@
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "ils_flavour": {
+        "ilsFlavour": {
             "$ref": "#/definitions/IlsFlavour"
         },
-        "tags_to_delete": {
-            "title": "Tags To Delete",
+        "tagsToDelete": {
+            "title": "Tagstodelete",
             "default": [],
             "type": "array",
             "items": {
                 "type": "string"
             }
         },
-        "reset_hrid_settings": {
-            "title": "Reset Hrid Settings",
+        "resetHridSettings": {
+            "title": "Resethridsettings",
             "default": false,
             "type": "boolean"
         },
-        "never_update_hrid_settings": {
-            "title": "Never Update Hrid Settings",
+        "neverUpdateHridSettings": {
+            "title": "Neverupdatehridsettings",
             "default": false,
             "type": "boolean"
         }
     },
     "required": [
         "name",
-        "migration_task_type",
+        "migrationTaskType",
         "files",
-        "ils_flavour"
+        "ilsFlavour"
     ],
     "definitions": {
         "HridHandling": {

@@ -1,11 +1,12 @@
 import logging
 import sys
 from io import IOBase
+from typing import Annotated
 from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
+from pydantic import Field
 from pymarc import MARCReader
 from pymarc.record import Record
 
@@ -23,16 +24,26 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
 class BibsTransformer(MigrationTaskBase):
-    class TaskConfiguration(BaseModel):
+    class TaskConfiguration(AbstractTaskConfiguration):
         name: str
-        deactivate035_from001: Optional[bool] = False
-        add_administrative_notes_with_legacy_ids: Optional[bool] = True
+        add_administrative_notes_with_legacy_ids: Annotated[
+            bool,
+            Field(
+                description=(
+                    "If set to true, an Administrative note will be added to the records "
+                    "containing the legacy ID. Use this in order to protect the values from "
+                    "getting overwritten by overlays,"
+                ),
+            ),
+        ] = True
         migration_task_type: str
         use_tenant_mapping_rules: Optional[bool] = True
         hrid_handling: Optional[HridHandling] = HridHandling.default
+        deactivate035_from001: Optional[bool] = False
         files: List[FileDefinition]
         ils_flavour: IlsFlavour
         tags_to_delete: Optional[List[str]] = []
@@ -57,7 +68,7 @@ class BibsTransformer(MigrationTaskBase):
         )
         logging.info(self.task_configuration.json(indent=4))
         self.mapper = BibsRulesMapper(self.folio_client, library_config, self.task_configuration)
-        self.bib_ids = set()
+        self.bib_ids: set = set()
         logging.info("Init done")
         if (
             self.task_configuration.reset_hrid_settings
@@ -99,6 +110,7 @@ class BibsTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
+        self.extradata_writer.flush()
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(

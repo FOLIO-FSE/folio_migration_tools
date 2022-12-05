@@ -1,5 +1,62 @@
 # Changelog
 
+## 1_6_3 (23/11/2022)
+
+#### bug
+
+- [**bug**] Implement fieldReplacementBy3Digits  [#426](https://github.com/FOLIO-FSE/folio_migration_tools/issues/426)
+
+#### closed
+
+- [**closed**] Make sure schema properties are generated with snakeCase [#429](https://github.com/FOLIO-FSE/folio_migration_tools/issues/429)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**][**organizations**][**morning-glory**] Add reference data mapping for Organizations: Types (Morning Glory) [#358](https://github.com/FOLIO-FSE/folio_migration_tools/issues/358)
+
+#### organizations
+
+- [**organizations**][**morning-glory**] Add support for organizationType [#382](https://github.com/FOLIO-FSE/folio_migration_tools/issues/382)
+
+#### reporting
+
+- [**reporting**] Move suppression status in bib report to its own section [#333](https://github.com/FOLIO-FSE/folio_migration_tools/issues/333)
+- [**reporting**] Move Total number of tags to a "trivia" section (or similar) [#332](https://github.com/FOLIO-FSE/folio_migration_tools/issues/332)
+
+#### simplify_migration_process
+
+- [**simplify_migration_process**] Rewrite the extra data process to not rely on logging [#343](https://github.com/FOLIO-FSE/folio_migration_tools/issues/343)
+
+---
+
+## 1_6_2 (16/11/2022)
+
+#### bug
+
+- [**bug**] MARC Holdings transformer crashes silently when hridhandling is set to preserve001 [#425](https://github.com/FOLIO-FSE/folio_migration_tools/issues/425)
+- [**bug**] MappingFileMapperBase value mappings does not work unless the legacy field is populated [#423](https://github.com/FOLIO-FSE/folio_migration_tools/issues/423)
+
+#### closed
+
+- [**closed**] Implement preserve001 for MFHD transformations [#427](https://github.com/FOLIO-FSE/folio_migration_tools/issues/427)
+- [**closed**] Remove Kiwi references from the code base [#421](https://github.com/FOLIO-FSE/folio_migration_tools/issues/421)
+- [**closed**] Add documentation from migration_repo_template. In a course manner. [#416](https://github.com/FOLIO-FSE/folio_migration_tools/issues/416)
+- [**closed**] Create proper technical structure for documentation and publish it on Read The Docs [#410](https://github.com/FOLIO-FSE/folio_migration_tools/issues/410)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**][**organizations**] Add reference data mapping for Organizations: Categories [#359](https://github.com/FOLIO-FSE/folio_migration_tools/issues/359)
+
+#### morning-glory
+
+- [**morning-glory**]  Add FOLIO Release Enum for Morning Glory in configuration [#414](https://github.com/FOLIO-FSE/folio_migration_tools/issues/414)
+
+#### organizations
+
+- [**organizations**] Clean out organizationType if configured FOLIO version is "lotus" [#413](https://github.com/FOLIO-FSE/folio_migration_tools/issues/413)
+
+---
+
 ## 1_6_1 (21/10/2022)
 
 #### bug
@@ -465,6 +522,3 @@ Stepping stone release before Juniper support
 Release compliant with FOLIO Iris release. 
 
 It has not been tested with Hotfix #3 and #4 in Iris, but it should be compliant.
----
-
-## Honeysuckle v1 (16/03/2021)

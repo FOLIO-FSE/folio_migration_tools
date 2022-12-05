@@ -7,7 +7,6 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import BaseModel
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_dict import InsensitiveDictReader
@@ -17,11 +16,12 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
 
 
 class RequestsMigrator(MigrationTaskBase):
-    class TaskConfiguration(BaseModel):
+    class TaskConfiguration(AbstractTaskConfiguration):
         name: str
         migration_task_type: str
         open_requests_file: FileDefinition
@@ -150,10 +150,7 @@ class RequestsMigrator(MigrationTaskBase):
                 res, legacy_request = self.prepare_legacy_request(legacy_request)
                 if res:
                     if self.circulation_helper.create_request(
-                        self.folio_client,
-                        legacy_request,
-                        self.migration_report,
-                        self.library_configuration.folio_release,
+                        self.folio_client, legacy_request, self.migration_report
                     ):
                         self.migration_report.add_general_statistics(
                             "Successfully migrated requests"
@@ -175,8 +172,10 @@ class RequestsMigrator(MigrationTaskBase):
                 sys.exit(1)
             if num_requests % 10 == 0:
                 logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
+        logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
 
     def wrap_up(self):
+        self.extradata_writer.flush()
         self.write_failed_request_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:

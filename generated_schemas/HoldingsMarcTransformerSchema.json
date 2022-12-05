@@ -6,25 +6,35 @@
             "title": "Name",
             "type": "string"
         },
-        "legacy_id_marc_path": {
-            "title": "Legacy Id Marc Path",
+        "legacyIdMarcPath": {
+            "title": "Legacyidmarcpath",
             "type": "string"
         },
-        "deduplicate_holdings_statements": {
-            "title": "Deduplicate Holdings Statements",
+        "deduplicateHoldingsStatements": {
+            "title": "Deduplicateholdingsstatements",
             "default": true,
             "type": "boolean"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
-        "use_tenant_mapping_rules": {
-            "title": "Use Tenant Mapping Rules",
+        "useTenantMappingRules": {
+            "title": "Usetenantmappingrules",
             "type": "boolean"
         },
-        "hrid_handling": {
-            "$ref": "#/definitions/HridHandling"
+        "hridHandling": {
+            "default": "default",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/HridHandling"
+                }
+            ]
+        },
+        "deactivate035From001": {
+            "title": "Deactivate035From001",
+            "default": false,
+            "type": "boolean"
         },
         "files": {
             "title": "Files",
@@ -33,49 +43,48 @@
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "mfhd_mapping_file_name": {
-            "title": "Mfhd Mapping File Name",
+        "mfhdMappingFileName": {
+            "title": "Mfhdmappingfilename",
             "type": "string"
         },
-        "location_map_file_name": {
-            "title": "Location Map File Name",
+        "locationMapFileName": {
+            "title": "Locationmapfilename",
             "type": "string"
         },
-        "default_call_number_type_name": {
-            "title": "Default Call Number Type Name",
+        "defaultCallNumberTypeName": {
+            "title": "Defaultcallnumbertypename",
             "type": "string"
         },
-        "fallback_holdings_type_id": {
-            "title": "Fallback Holdings Type Id",
+        "fallbackHoldingsTypeId": {
+            "title": "Fallbackholdingstypeid",
             "type": "string"
         },
-        "create_source_records": {
-            "title": "Create Source Records",
+        "createSourceRecords": {
+            "title": "Createsourcerecords",
             "default": false,
             "type": "boolean"
         },
-        "reset_hrid_settings": {
-            "title": "Reset Hrid Settings",
+        "resetHridSettings": {
+            "title": "Resethridsettings",
             "default": false,
             "type": "boolean"
         },
-        "never_update_hrid_settings": {
-            "title": "Never Update Hrid Settings",
+        "neverUpdateHridSettings": {
+            "title": "Neverupdatehridsettings",
             "default": false,
             "type": "boolean"
         }
     },
     "required": [
         "name",
-        "legacy_id_marc_path",
-        "migration_task_type",
-        "use_tenant_mapping_rules",
-        "hrid_handling",
+        "legacyIdMarcPath",
+        "migrationTaskType",
+        "useTenantMappingRules",
         "files",
-        "mfhd_mapping_file_name",
-        "location_map_file_name",
-        "default_call_number_type_name",
-        "fallback_holdings_type_id"
+        "mfhdMappingFileName",
+        "locationMapFileName",
+        "defaultCallNumberTypeName",
+        "fallbackHoldingsTypeId"
     ],
     "definitions": {
         "HridHandling": {

@@ -14,7 +14,6 @@ from typing import Optional
 from folio_uuid import FolioUUID
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
-from pydantic.main import BaseModel
 from requests import HTTPError
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -31,13 +30,14 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
 
 
 class HoldingsCsvTransformer(MigrationTaskBase):
-    class TaskConfiguration(BaseModel):
+    class TaskConfiguration(AbstractTaskConfiguration):
         name: str
         migration_task_type: str
         hrid_handling: HridHandling
@@ -218,6 +218,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Work done. Wrapping up...")
+        self.extradata_writer.flush()
         if any(self.holdings):
             logging.info(
                 "Saving holdings created to %s",
@@ -380,9 +381,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.mapper.migration_report.add_general_statistics("Bound-with holdings created")
             yield bound_with_holding
 
-    @staticmethod
     def generate_boundwith_part(
-        folio_client: FolioClient, legacy_item_id: str, bound_with_holding: dict
+        self, folio_client: FolioClient, legacy_item_id: str, bound_with_holding: dict
     ):
         part = {
             "id": str(uuid.uuid4()),
@@ -395,7 +395,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 )
             ),
         }
-        logging.log(25, f"boundwithPart\t{json.dumps(part)}")
+        self.mapper.extradata_writer.write("boundwithPart", part)
 
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str

@@ -42,7 +42,6 @@ class IlsFlavour(str, Enum):
 
 
 class FolioRelease(str, Enum):
-    kiwi = "kiwi"
     lotus = "lotus"
     morning_glory = "morning-glory"
 

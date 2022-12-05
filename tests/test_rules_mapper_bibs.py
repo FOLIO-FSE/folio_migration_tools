@@ -41,40 +41,21 @@ xpath_245 = "//marc:datafield[@tag='245']"
 # flake8: noqa
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session", autouse=True)
 def mapper(pytestconfig) -> BibsRulesMapper:
     print("mapper was called")
-    if pytestconfig.getoption("okapi_url"):
-        folio = FolioClient(
-            pytestconfig.getoption("okapi_url"),
-            pytestconfig.getoption("tenant_id"),
-            pytestconfig.getoption("username"),
-            pytestconfig.getoption("password"),
-        )
-        lib = LibraryConfiguration(
-            okapi_url=pytestconfig.getoption("okapi_url"),
-            tenant_id=pytestconfig.getoption("tenant_id"),
-            okapi_username=pytestconfig.getoption("username"),
-            okapi_password=pytestconfig.getoption("password"),
-            folio_release=FolioRelease.kiwi,
-            library_name="Test Run Library",
-            log_level_debug=False,
-            iteration_identifier="test_iteration",
-            base_folder="/",
-        )
-    else:
-        folio = mocked_classes.mocked_folio_client()
-        lib = LibraryConfiguration(
-            okapi_url=folio.okapi_url,
-            tenant_id=folio.tenant_id,
-            okapi_username=folio.username,
-            okapi_password=folio.password,
-            folio_release=FolioRelease.kiwi,
-            library_name="Test Run Library",
-            log_level_debug=False,
-            iteration_identifier="I have no clue",
-            base_folder="/",
-        )
+    folio = mocked_classes.mocked_folio_client()
+    lib = LibraryConfiguration(
+        okapi_url=folio.okapi_url,
+        tenant_id=folio.tenant_id,
+        okapi_username=folio.username,
+        okapi_password=folio.password,
+        folio_release=FolioRelease.morning_glory,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="I have no clue",
+        base_folder="/",
+    )
     conf = BibsTransformer.TaskConfiguration(
         name="test",
         migration_task_type="BibsTransformer",
@@ -86,7 +67,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
     return BibsRulesMapper(folio, lib, conf)
 
 
-def default_map(file_name, xpath, the_mapper):
+def default_map(file_name, xpath, the_mapper: BibsRulesMapper):
     ns = {
         "marc": "https://www.loc.gov/MARC21/slim",
         "oai": "https://www.openarchives.org/OAI/2.0/",
@@ -95,6 +76,7 @@ def default_map(file_name, xpath, the_mapper):
     record = pymarc.parse_xml_to_array(file_path)[0]
     file_def = FileDefinition(file_name="", suppressed=False, staff_suppressed=False)
     result = the_mapper.parse_bib(["legacy_id"], record, file_def)
+    the_mapper.perform_additional_parsing(result, record, ["legacy_id"], file_def)
     root = etree.parse(file_path)
     data = ""
     for element in root.xpath(xpath, namespaces=ns):
@@ -179,7 +161,7 @@ def test_simple_title3(mapper):
 def test_multiple336s(mapper):
     xpath = "//marc:datafield[@tag='336']"
     record = default_map("test_multiple_336.xml", xpath, mapper)
-    assert "bd068f05-9de5-40c4-8f5e-e164a625b26f" in record[0]["instanceTypeId"]
+    assert "8105bd44-e7bd-487e-a8f2-b804a361d92f" in record[0]["instanceTypeId"]
 
 
 def test_strange_isbn(mapper):
@@ -305,7 +287,7 @@ def test_should_add_identifiers_010_019_020_022_024_028_035(mapper):
         "19049386",
         "PJC 222013 Paris Jazz Corner Productions",
         "1234-1231",
-        # "62874189", Add back with Kiwi
+        "62874189",
         "2008011507",
         "9780307264787",
         "9780071842013 (paperback) 200 SEK",
@@ -600,7 +582,7 @@ def test_should_parse_mode_of_issuance_correctly(mapper):
     record = default_map("test4.xml", xpath, mapper)
     moi = record[0]["modeOfIssuanceId"]
 
-    assert "363895f3-3c52-421e-8f78-9ec105ec15f1" == moi
+    assert "068b5344-e2a6-40df-9186-1829e13cd344" == moi
 
 
 def test_should_add_notes_561_567_to_notes_list(mapper):
@@ -652,10 +634,11 @@ def test_should_add_notes_590_599_to_notes_list(mapper):
     assert "Labels reversed on library's copy" in notes
 
 
-def test_should_parse_mode_of_issuance_correctly_2(mapper):
+def test_should_parse_mode_of_issuance_correctly_2(mapper: BibsRulesMapper):
     xpath = "//marc:datafield[@tag='337' or @tag='338']"
     # "2-character code in 338"):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)
+
     # print(json.dumps(record, sort_keys=True, indent=4))
     moi = record[0]["modeOfIssuanceId"]
 
@@ -665,7 +648,7 @@ def test_should_parse_mode_of_issuance_correctly_2(mapper):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)
     formats = record[0]["instanceFormatIds"]
 
-    assert "b1d001a3-57ae-4e7c-aa6e-066d764a5fe7" in formats
+    assert "8d511d33-5e85-4c5d-9bce-6e3c9cd0c324" in formats
 
     # "2 338$b"):
     record = default_map("test_carrier_and_format.xml", xpath, mapper)

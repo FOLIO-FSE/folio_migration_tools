@@ -6,8 +6,8 @@
             "title": "Name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
             "type": "string"
         },
         "files": {
@@ -17,16 +17,36 @@
                 "$ref": "#/definitions/FileDefinition"
             }
         },
-        "organizations_mapping_file_name": {
-            "title": "Organizations Mapping File Name",
+        "organizationMapPath": {
+            "title": "Organizationmappath",
+            "type": "string"
+        },
+        "organizationTypesMapPath": {
+            "title": "Organizationtypesmappath",
+            "default": "",
+            "type": "string"
+        },
+        "addressCategoriesMapPath": {
+            "title": "Addresscategoriesmappath",
+            "default": "",
+            "type": "string"
+        },
+        "emailCategoriesMapPath": {
+            "title": "Emailcategoriesmappath",
+            "default": "",
+            "type": "string"
+        },
+        "phoneCategoriesMapPath": {
+            "title": "Phonecategoriesmappath",
+            "default": "",
             "type": "string"
         }
     },
     "required": [
         "name",
-        "migration_task_type",
+        "migrationTaskType",
         "files",
-        "organizations_mapping_file_name"
+        "organizationMapPath"
     ],
     "definitions": {
         "FileDefinition": {

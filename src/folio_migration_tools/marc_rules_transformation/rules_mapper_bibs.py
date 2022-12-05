@@ -6,24 +6,21 @@ import sys
 import time
 import typing
 import uuid
+from pathlib import Path
 from typing import Generator
 from typing import List
-from typing import Set
 
 import pymarc
-import requests
 from defusedxml.ElementTree import fromstring
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
-from pymarc import Field
 from pymarc.record import Record
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
@@ -46,32 +43,31 @@ class BibsRulesMapper(RulesMapperBase):
         super().__init__(
             folio_client,
             library_configuration,
+            task_configuration,
             Conditions(folio_client, self, "bibs"),
         )
-        self.folio = folio_client
+        self.folio: FolioClient = folio_client
         self.task_configuration = task_configuration
-        self.record_status = {}
-        self.unique_001s: Set[str] = set()
-        self.holdings_map = {}
-        self.id_map = {}
-        self.srs_recs = []
+        self.record_status: dict = {}
+        self.holdings_map: dict = {}
+        self.id_map: dict = {}
+        self.srs_recs: list = []
         self.schema = self.instance_json_schema
-        self.contrib_name_types = {}
-        self.mapped_folio_fields = {}
-        self.unmapped_folio_fields = {}
-        self.alt_title_map = {}
-        logging.info(f"HRID handling is set to: '{self.task_configuration.hrid_handling}'")
-        self.hrid_handling: HridHandling = self.task_configuration.hrid_handling
+        self.contrib_name_types: dict = {}
+        self.mapped_folio_fields: dict = {}
+        self.unmapped_folio_fields: dict = {}
+        self.alt_title_map: dict = {}
         logging.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-bib"
         self.mappings = self.folio.folio_get_single_object(rules_endpoint)
         logging.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
-        self.unmapped_tags = {}
-        self.unmapped_conditions = {}
-        self.instance_relationships = {}
-        self.instance_relationship_types = {}
+        self.unmapped_tags: dict = {}
+        self.unmapped_conditions: dict = {}
+        self.instance_relationships: dict = {}
+        self.instance_relationship_types: dict = {}
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio)
+
         self.start = time.time()
 
     def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
@@ -85,7 +81,12 @@ class BibsRulesMapper(RulesMapperBase):
                 str(legacy_ids[-1]),
             )
         )
-        self.handle_hrid(folio_instance, marc_record, legacy_ids)
+        self.hrid_handler.handle_hrid(
+            FOLIONamespaces.instances,
+            folio_instance,
+            marc_record,
+            legacy_ids,
+        )
         self.handle_leader_05(marc_record, legacy_ids)
         if self.task_configuration.add_administrative_notes_with_legacy_ids:
             for legacy_id in legacy_ids:
@@ -116,7 +117,7 @@ class BibsRulesMapper(RulesMapperBase):
             _type_: _description_
         """
         self.print_progress()
-        ignored_subsequent_fields = set()
+        ignored_subsequent_fields: set = set()
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
         folio_instance = self.perform_initial_preparation(marc_record, legacy_ids)
         for marc_field in marc_record:
@@ -173,7 +174,7 @@ class BibsRulesMapper(RulesMapperBase):
                 raise ee
 
     def report_marc_stats(self, marc_field, bad_tags, legacy_ids, ignored_subsequent_fields):
-        self.migration_report.add_general_statistics("Total number of Tags processed")
+        self.migration_report.add(Blurbs.Trivia, "Total number of Tags processed")
         self.report_bad_tags(marc_field, bad_tags, legacy_ids)
         mapped = marc_field.tag in self.mappings
         if marc_field.tag in ignored_subsequent_fields:
@@ -182,23 +183,29 @@ class BibsRulesMapper(RulesMapperBase):
 
     def perform_proxy_mapping(self, marc_field):
         proxy_mapping = next(iter(self.mappings.get("880", [])), [])
-        if proxy_mapping and "fieldReplacementRule" in proxy_mapping:
-            target_field = next(
-                (
-                    r["targetField"]
-                    for r in proxy_mapping["fieldReplacementRule"]
-                    if r["sourceDigits"] == marc_field["6"][:3]
-                ),
-                "",
-            )
-            mappings = self.mappings.get(target_field, {})
-
+        if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
+            return None
+        if "6" not in marc_field:
+            self.migration_report.add(Blurbs.Field880Mappings, "Records without $6")
+            return None
+        target_field = next(
+            (
+                r.get("targetField", "")
+                for r in proxy_mapping.get("fieldReplacementRule", [])
+                if r["sourceDigits"] == marc_field["6"][:3]
+            ),
+            marc_field["6"][:3],
+        )
+        self.migration_report.add(
+            Blurbs.Field880Mappings,
+            f"Source digits: {marc_field['6']} Target field: {target_field}",
+        )
+        mappings = self.mappings.get(target_field, {})
+        if not mappings:
             self.migration_report.add(
                 Blurbs.Field880Mappings,
-                f"Source digits: {marc_field['6'][:3]} Target field: {target_field}",
+                f"Mapping not set up for target field: {target_field} ({marc_field['6']})",
             )
-        else:
-            raise TransformationProcessError("", "Mapping rules for 880 is missing. Halting")
         return mappings
 
     def perform_additional_parsing(
@@ -234,16 +241,6 @@ class BibsRulesMapper(RulesMapperBase):
             folio_instance["languages"] = self.get_languages(marc_record, legacy_ids)
         folio_instance["languages"] = list(
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
-        )
-
-    def handle_suppression(self, folio_instance, file_def: FileDefinition):
-        folio_instance["discoverySuppress"] = file_def.suppressed
-        self.migration_report.add_general_statistics(
-            f'Suppressed from discovery = {folio_instance["discoverySuppress"]}'
-        )
-        folio_instance["staffSuppress"] = file_def.staff_suppressed
-        self.migration_report.add_general_statistics(
-            f'Staff suppressed = {folio_instance["staffSuppress"]} '
         )
 
     def handle_holdings(self, marc_record: Record):
@@ -473,94 +470,6 @@ class BibsRulesMapper(RulesMapperBase):
                                         legacy_id, combined_code
                                     )
 
-    def handle_hrid(self, folio_instance, marc_record: Record, legacy_ids) -> None:
-        """Create HRID if not mapped. Add hrid as MARC record 001
-
-        Args:
-            folio_instance (_type_): _description_
-            marc_record (Record): _description_
-            legacy_ids (_type_): _description_
-
-        Raises:
-            TransformationProcessError: _description_
-        """
-        if self.enumerate_hrid(marc_record):
-            self.generate_enumerated_hrid(folio_instance, marc_record, legacy_ids)
-        elif self.hrid_handling == HridHandling.preserve001:
-            self.preserve_001_as_hrid(folio_instance, marc_record, legacy_ids)
-        else:
-            raise TransformationProcessError("", f"Unknown HRID handling: {self.hrid_handling}")
-
-    def generate_enumerated_hrid(self, folio_instance, marc_record, legacy_ids):
-        folio_instance["hrid"] = f"{self.instance_hrid_prefix}{self.generate_numeric_part()}"
-        new_001 = Field(tag="001", data=folio_instance["hrid"])
-        self.handle_035_generation(marc_record, legacy_ids)
-        marc_record.add_ordered_field(new_001)
-        self.migration_report.add(Blurbs.HridHandling, "Created HRID using default settings")
-        self.instance_hrid_counter += 1
-
-    def handle_035_generation(self, marc_record, legacy_ids):
-        try:
-            f_001 = marc_record["001"].value()
-            f_003 = marc_record["003"].value().strip() if "003" in marc_record else ""
-            self.migration_report.add(Blurbs.HridHandling, f'Values in 003: {f_003 or "Empty"}')
-
-            if self.task_configuration.deactivate035_from001:
-                self.migration_report.add(
-                    Blurbs.HridHandling, "035 generation from 001 turned off"
-                )
-            else:
-                str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
-                new_035 = Field(
-                    tag="035",
-                    indicators=[" ", " "],
-                    subfields=["a", str_035],
-                )
-                marc_record.add_ordered_field(new_035)
-                self.migration_report.add(Blurbs.HridHandling, "Added 035 from 001")
-            marc_record.remove_fields("001")
-
-        except Exception:
-            if "001" in marc_record:
-                s = "Failed to create 035 from 001"
-                self.migration_report.add(Blurbs.HridHandling, s)
-                Helper.log_data_issue(legacy_ids, s, marc_record["001"])
-            else:
-                self.migration_report.add(Blurbs.HridHandling, "Legacy bib records without 001")
-
-    def generate_numeric_part(self):
-        return (
-            str(self.instance_hrid_counter).zfill(11)
-            if self.common_retain_leading_zeroes
-            else str(self.instance_hrid_counter)
-        )
-
-    def preserve_001_as_hrid(self, folio_instance, marc_record, legacy_ids):
-        value = marc_record["001"].value()
-        if value in self.unique_001s:
-            self.migration_report.add(
-                Blurbs.HridHandling,
-                "Duplicate 001. Creating HRID instead. "
-                "Previous 001 will be stored in a new 035 field",
-            )
-            self.handle_035_generation(marc_record, legacy_ids)
-            Helper.log_data_issue(
-                legacy_ids,
-                "Duplicate 001 for record. HRID created for record",
-                value,
-            )
-            folio_instance["hrid"] = f"{self.instance_hrid_prefix}{self.generate_numeric_part()}"
-            new_001 = Field(tag="001", data=folio_instance["hrid"])
-            marc_record.add_ordered_field(new_001)
-            self.instance_hrid_counter += 1
-        else:
-            self.unique_001s.add(value)
-            folio_instance["hrid"] = value
-            self.migration_report.add(Blurbs.HridHandling, "Took HRID from 001")
-
-    def enumerate_hrid(self, marc_record):
-        return self.hrid_handling == HridHandling.default or "001" not in marc_record
-
     def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: List[str]) -> str:
         level = marc_record.leader[7]
         try:
@@ -651,13 +560,15 @@ class BibsRulesMapper(RulesMapperBase):
         return list(languages)
 
     def fetch_language_codes(self) -> Generator[str, None, None]:
-        """fetches the list of standardized language codes from LoC
+        """Loads the  list of standardized language codes from LoC
 
         Yields:
             Generator[str, None, None]: _description_
         """
-        url = "https://www.loc.gov/standards/codelists/languages.xml"
-        tree = fromstring(requests.get(url).content)
+        path = Path(__file__).parent / "loc_language_codes.xml"
+        with open(path) as f:
+            lines = "".join(f.readlines())
+        tree = fromstring(lines)
         name_space = "{info:lc/xmlns/codelist-v1}"
         xpath_expr = "{0}languages/{0}language/{0}code".format(name_space)
         for code in tree.findall(xpath_expr):
