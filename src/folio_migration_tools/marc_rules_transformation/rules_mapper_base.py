@@ -574,7 +574,7 @@ class RulesMapperBase(MapperBase):
         srs_types = {
             FOLIONamespaces.holdings: FOLIONamespaces.srs_records_holdingsrecord,
             FOLIONamespaces.instances: FOLIONamespaces.srs_records_bib,
-            FOLIONamespaces.athorities: FOLIONamespaces.srs_records_auth,
+            FOLIONamespaces.authorities: FOLIONamespaces.srs_records_auth,
             FOLIONamespaces.edifact: FOLIONamespaces.srs_records_edifact,
         }
 
@@ -598,7 +598,7 @@ class RulesMapperBase(MapperBase):
         record_types = {
             FOLIONamespaces.holdings: "MARC_HOLDING",
             FOLIONamespaces.instances: "MARC_BIB",
-            FOLIONamespaces.athorities: "MARC_AUTHORITY",
+            FOLIONamespaces.authorities: "MARC_AUTHORITY",
             FOLIONamespaces.edifact: "EDIFACT",
         }
 
@@ -611,7 +611,7 @@ class RulesMapperBase(MapperBase):
                 "holdingsId": folio_object["id"],
                 "holdingsHrid": folio_object["hrid"],
             },
-            FOLIONamespaces.athorities: {},
+            FOLIONamespaces.authorities: {},
             FOLIONamespaces.edifact: {},
         }
 
