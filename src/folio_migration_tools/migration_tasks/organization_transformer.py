@@ -255,15 +255,31 @@ class OrganizationTransformer(MigrationTaskBase):
     
     def create_extradata_objects(self, record):
         if "contacts" in record:
-            # for each contact
-                # Create a contact using contact schema
-                contact = {}
-                contact["name"] = "name"
-                contact["uuid"] = "generatedUUID"
+            mapped_contacts = record["contacts"]
+            record["contacts"] = []
 
+            for contact in mapped_contacts:
+                uuid = "generate_a_uuid"  # Find out how  to generate a UUID.
+                contact["id"] = uuid
+
+                clean_contact = self.clean_addresses(contact)
+
+                self.extradata_writer.write("contacts", clean_contact)  # Double check the ednpoint/poster syntax
+                self.migration_report.add_general_statistics("Created Contacts")
                 # Save contact to extradata file
 
-                record["contacts"].append("generatedUUID")
+                record["contacts"].append(uuid)
+
+                # There is probably some validation that needs to happen here.
+                # Does the regualr mapper check for "required" fields in subproperties?
+        
+        if "interfaces" in record:
+            # Do the same as for Contacts. Find out if extradata poster can post credentials.
+            pass
+
+        if "notes" in record:
+            # Do the same as for Contacts?
+            pass
 
         return record
 
