@@ -1865,6 +1865,11 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
         "my note 3",
     ]  # No mapping on third level yet...
 
+# TODO Make tests run.
+def test_say_hi():
+    hi = "hi but why is this not being recognized  as a test"
+    assert hi == "hi but why is this not being recognized  as a test"
+
 # TODO Make this run successfully.
 def test_map_array_object_array_object_string(mocked_folio_client):
     schema = {
@@ -1919,6 +1924,12 @@ def test_map_array_object_array_object_string(mocked_folio_client):
                 "legacy_field": "contact_address_types",
                 "value": "",
                 "description": ""
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
             }
         ]
     }
@@ -1982,6 +1993,12 @@ def test_map_array_object_array_object_array_string(mocked_folio_client):
             {
                 "folio_field": "contacts[0].addresses[0].categories",
                 "legacy_field": "contact_address_types",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
                 "value": "",
                 "description": "",
             }
