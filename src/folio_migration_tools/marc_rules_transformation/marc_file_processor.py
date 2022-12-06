@@ -113,7 +113,12 @@ class MarcFileProcessor:
                     self.mapper.remove_from_id_map(folio_rec.get("formerIds", []))
 
     def save_srs_record(
-        self, marc_record, file_def, folio_rec, legacy_ids: List[str], object_type: FOLIONamespaces
+        self,
+        marc_record: Record,
+        file_def,
+        folio_rec,
+        legacy_ids: List[str],
+        object_type: FOLIONamespaces,
     ):
         if not self.mapper.task_configuration.create_source_records:
             return
@@ -130,6 +135,7 @@ class MarcFileProcessor:
                     Blurbs.MarcValidation,
                     f"008 lenght invalid. '{rest}' was stripped out",
                 )
+            self.add_mapped_location_code_to_record(marc_record, folio_rec)
             new_004 = Field(tag="004", data=self.parent_hrids[folio_rec["instanceId"]])
             marc_record.remove_fields("004")
             marc_record.add_ordered_field(new_004)
@@ -151,6 +157,18 @@ class MarcFileProcessor:
             file_def.suppressed,
         )
         self.mapper.migration_report.add_general_statistics("SRS records written to disk")
+
+    def add_mapped_location_code_to_record(self, marc_record, folio_rec):
+        location_code = next(
+            (
+                location["code"]
+                for location in self.mapper.folio_client.locations
+                if location["id"] == folio_rec["permanentLocationId"]
+            ),
+            None,
+        )
+        marc_record["852"]["b"] = location_code
+        self.mapper.migration_report.add(Blurbs.LocationMapping, "Set 852 to FOLIO location code")
 
     def add_hrid_to_records(self, folio_record: dict, marc_record: Record):
         if (

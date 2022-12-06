@@ -85,6 +85,19 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
         assert res["callNumberTypeId"] == "95467209-6d7b-468b-94df-0f5d7ad2747d"
 
 
+def test_edit852(mapper: RulesMapperHoldings, caplog):
+    path = "./tests/test_data/mfhd/holding.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record: Record = None
+        record = next(reader)
+        new_code = "JOUR"
+        record["852"]["b"] = new_code
+        assert record["852"]["b"] == new_code
+
+
 def test_get_legacy_ids_001():
     record = Record()
     mock_mapper = Mock(spec=RulesMapperHoldings)

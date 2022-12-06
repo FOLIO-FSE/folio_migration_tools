@@ -313,7 +313,6 @@ class RulesMapperHoldings(RulesMapperBase):
         holdings_record_schema = FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
         )
-        logging.info("done")
         return holdings_record_schema
 
     def set_holdings_type(self, marc_record: Record, folio_holding, legacy_ids: List[str]):

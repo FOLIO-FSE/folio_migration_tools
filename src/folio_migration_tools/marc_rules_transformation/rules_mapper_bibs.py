@@ -175,7 +175,6 @@ class BibsRulesMapper(RulesMapperBase):
         instance_schema = FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "ramls/instance.json"
         )
-        logging.info("done")
         return instance_schema
 
     def handle_holdings(self, marc_record: Record):

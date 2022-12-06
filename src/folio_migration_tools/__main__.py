@@ -100,6 +100,9 @@ def main():
             # task_obj.wrap_up()
     except requests.exceptions.SSLError:
         print("\nSSL error. Are you connected to the Internet and the VPN?")
+    except Exception as ee:
+        logging.exception("Unhandled exception")
+        raise TransformationProcessError("", "unhandled exception", "") from ee
 
 
 def inheritors(base_class):
