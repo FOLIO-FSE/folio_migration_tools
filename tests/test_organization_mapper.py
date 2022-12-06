@@ -27,7 +27,7 @@ def test_fetch_org_schemas_from_github_happy_path():
 
 def test_fetch_contact_schemas_from_github_happy_path():
     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
-    
+
     assert contact_schema["$schema"]
 
 
@@ -178,7 +178,7 @@ def test_extra_data(mapper):
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
-
+    assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
 
 
 # Shared data and maps
@@ -202,7 +202,9 @@ data = {
     "tgs": "A^-^B^-^C",
     "organization_types": "cst",
     "org_note": "Good stuff!",
-    "contact_person": "Jane"
+    "contact_person": "Jane",
+    "contact_address_line1": "My Street",
+    "contact_address_town": "Gothenburg",
 }
 
 
@@ -272,6 +274,18 @@ organization_map = {
         {
             "folio_field": "contacts[0].firstName",
             "legacy_field": "contact_person",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "contacts[0].addresses[0].addressLine1",
+            "legacy_field": "contact_address_line1",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "contacts[0].addresses[0].city",
+            "legacy_field": "contact_address_town",
             "value": "",
             "description": "",
         },
