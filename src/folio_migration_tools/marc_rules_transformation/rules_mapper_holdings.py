@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 from typing import List
@@ -174,12 +175,12 @@ class RulesMapperHoldings(RulesMapperBase):
             FolioUUID(
                 str(self.folio_client.okapi_url),
                 FOLIONamespaces.holdings,
-                str(legacy_ids[-1]),
+                str(legacy_ids[0]),
             )
         )
         for legacy_id in legacy_ids:
             self.add_legacy_id_to_admin_note(folio_holding, legacy_id)
-        folio_holding["formerIds"] = legacy_ids
+        folio_holding["formerIds"] = copy.copy(legacy_ids)
         self.set_instance_id_by_map(legacy_ids, folio_holding, marc_record)
         return folio_holding
 
