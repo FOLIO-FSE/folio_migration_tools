@@ -184,8 +184,12 @@ def test_extra_data(mapper):
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
+<<<<<<< HEAD
 
 >>>>>>> add contacts to org schema
+=======
+    assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
+>>>>>>> add test for address
 
 
 # Shared data and maps
@@ -210,12 +214,18 @@ data = {
     "organization_types": "cst",
     "org_note": "Good stuff!",
 <<<<<<< HEAD
+<<<<<<< HEAD
     "contact_person": "Jane",
     "contact_address_line1": "My Street",
     "contact_address_town": "Gothenburg",
 =======
     "contact_person": "Jane"
 >>>>>>> add contacts to org schema
+=======
+    "contact_person": "Jane",
+    "contact_address_line1": "My Street",
+    "contact_address_town": "Gothenburg",
+>>>>>>> add test for address
 }
 
 
@@ -290,6 +300,9 @@ organization_map = {
         },
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> add test for address
             "folio_field": "contacts[0].addresses[0].addressLine1",
             "legacy_field": "contact_address_line1",
             "value": "",
@@ -302,8 +315,11 @@ organization_map = {
             "description": "",
         },
         {
+<<<<<<< HEAD
 =======
 >>>>>>> add contacts to org schema
+=======
+>>>>>>> add test for address
             "folio_field": "emails[0].categories[0]",
             "legacy_field": "email1_categories",
             "value": "",
