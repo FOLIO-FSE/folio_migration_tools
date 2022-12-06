@@ -111,10 +111,11 @@ class Conditions:
         logging.info("Default Callnumber type Name:\t%s", self.default_call_number_type["name"])
 
     def setup_reference_data_for_all(self):
+
+        logging.info(f"{len(self.folio.class_types)}\tclass_types")
         logging.info(
             f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships"
         )
-        logging.info(f"{len(self.folio.class_types)}\tclass_types")
         self.statistical_codes = self.folio.statistical_codes
         logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")
 

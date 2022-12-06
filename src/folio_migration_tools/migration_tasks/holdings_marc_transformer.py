@@ -1,10 +1,12 @@
 '''Main "script."'''
 import csv
 import logging
+from typing import Annotated
 from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
@@ -30,7 +32,9 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         location_map_file_name: str
         default_call_number_type_name: str
         fallback_holdings_type_id: str
-        create_source_records: Optional[bool] = False
+        create_source_records: Annotated[
+            bool, Field(description="Controls wheter or not to retain the MARC records in SRS.")
+        ] = True
         reset_hrid_settings: Optional[bool] = False
         never_update_hrid_settings: Optional[bool] = False
 
