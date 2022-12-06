@@ -27,7 +27,6 @@ def test_fetch_org_schemas_from_github_happy_path():
 
 def test_fetch_contact_schemas_from_github_happy_path():
     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
-
     assert contact_schema["$schema"]
 
 
@@ -174,11 +173,19 @@ def test_multiple_emails_array_objects(mapper):
     assert correct_email_objects == 2
 
 
+<<<<<<< HEAD
 def test_contacts_mapping(mapper):
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
     assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
+=======
+def test_extra_data(mapper):
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["contacts"][0]["firstName"] == "Jane"
+
+>>>>>>> add contacts to org schema
 
 
 # Shared data and maps
@@ -202,9 +209,13 @@ data = {
     "tgs": "A^-^B^-^C",
     "organization_types": "cst",
     "org_note": "Good stuff!",
+<<<<<<< HEAD
     "contact_person": "Jane",
     "contact_address_line1": "My Street",
     "contact_address_town": "Gothenburg",
+=======
+    "contact_person": "Jane"
+>>>>>>> add contacts to org schema
 }
 
 
@@ -278,6 +289,7 @@ organization_map = {
             "description": "",
         },
         {
+<<<<<<< HEAD
             "folio_field": "contacts[0].addresses[0].addressLine1",
             "legacy_field": "contact_address_line1",
             "value": "",
@@ -290,6 +302,8 @@ organization_map = {
             "description": "",
         },
         {
+=======
+>>>>>>> add contacts to org schema
             "folio_field": "emails[0].categories[0]",
             "legacy_field": "email1_categories",
             "value": "",
