@@ -404,7 +404,7 @@ class RulesMapperBase(MapperBase):
         sch = self.schema["properties"]
 
         if not target_string or target_string not in sch:
-            raise TransformationProcessError(
+            raise TransformationFieldMappingError(
                 "",
                 (
                     f"Target string '{target_string}' not in Schema! "
