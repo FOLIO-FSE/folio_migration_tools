@@ -17,12 +17,18 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
-def test_fetch_acq_schemas_from_github_happy_path():
+def test_fetch_org_schemas_from_github_happy_path():
     organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
         "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
     )
 
     assert organization_schema["$schema"]
+
+
+def test_fetch_contact_schemas_from_github_happy_path():
+    contact_schema = OrganizationMapper.fetch_additional_schema("contact")
+    
+    assert contact_schema["$schema"]
 
 
 # Mock mapper object
@@ -168,11 +174,11 @@ def test_multiple_emails_array_objects(mapper):
     assert correct_email_objects == 2
 
 
-@pytest.mark.skip(reason="Extra data has not been implemented in the mapper yet.")
-def test_extra_data(mapper, caplog):
+def test_extra_data(mapper):
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
-    # TODO Add tests for extradata. It should
+    assert organization["contacts"][0]["firstName"] == "Jane"
+
 
 
 # Shared data and maps
@@ -196,6 +202,7 @@ data = {
     "tgs": "A^-^B^-^C",
     "organization_types": "cst",
     "org_note": "Good stuff!",
+    "contact_person": "Jane"
 }
 
 
@@ -259,6 +266,12 @@ organization_map = {
         {
             "folio_field": "description",
             "legacy_field": "org_note",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "contacts[0].firstName",
+            "legacy_field": "contact_person",
             "value": "",
             "description": "",
         },
