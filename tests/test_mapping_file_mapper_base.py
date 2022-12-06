@@ -1865,6 +1865,134 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
         "my note 3",
     ]  # No mapping on third level yet...
 
+# TODO Make this run successfully.
+def test_map_array_object_array_object_string(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "contacts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "addresses": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "addressLine1": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    record = {
+        "id": "id1",
+        "contact_person": "Jane",
+        "contact_address_line1": "My Street",
+        "contact_address_town": "Gothenburg",
+        "contact_address_types": "support<delimiter>sales"
+    }
+    org_map = {
+        "data": [
+            {
+                "folio_field": "contacts[0].firstName",
+                "legacy_field": "contact_person",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].addressLine1",
+                "legacy_field": "contact_address_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].categories",
+                "legacy_field": "contact_address_types",
+                "value": "",
+                "description": ""
+            }
+        ]
+    }
+
+    contact = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert folio_rec["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
+
+# TODO Make this run successfully.
+def test_map_array_object_array_object_array_string(mocked_folio_client):
+    schema = {
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "The record of an organization",
+    "type": "object",
+    "properties": {
+        "contacts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "addresses": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "categories": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+    record = {
+        "id": "id1",
+        "contact_person": "Jane",
+        "contact_address_line1": "My Street",
+        "contact_address_types": "support<delimiter>sales",
+    }
+    org_map = {
+        "data": [
+            {
+                "folio_field": "contacts[0].firstName",
+                "legacy_field": "contact_person",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].addressLine1",
+                "legacy_field": "contact_address_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].categories",
+                "legacy_field": "contact_address_types",
+                "value": "",
+                "description": "",
+            }
+        ]
+    }
+
+    contact = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
+    
+    assert folio_rec["contacts"][0]["addresses"][0]["categories"] == ["support", "sales"]
+
 
 def test_set_default(mocked_folio_client):
     d1 = {"level1": {"level2": {}}}
