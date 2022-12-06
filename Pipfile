@@ -24,7 +24,7 @@ flake8-black = "==0.3.3"
 flake8-bugbear = "==22.9.23"
 flake8-docstrings = "==1.6.0"
 flake8-isort = "==5.0.0"
-folio-uuid = "==0.2.6"
+folio-uuid = "==0.2.7"
 folioclient = "==0.42.0"
 gitdb = "==4.0.9"
 gitpython = "==3.1.29"
@@ -78,6 +78,7 @@ tomli = "==2.0.1"
 typing-extensions = "==4.4.0"
 urllib3 = "==1.26.9"
 zipp = "==3.9.0"
+wheel = "*"
 
 [dev-packages]
 
