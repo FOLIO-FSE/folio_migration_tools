@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 import time
+import uuid
 from os.path import isfile
 from typing import List
 from typing import Optional
@@ -70,7 +71,7 @@ class OrganizationTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.organization_map
         )
-
+        
         self.mapper = OrganizationMapper(
             self.folio_client,
             self.library_configuration,
@@ -104,6 +105,11 @@ class OrganizationTransformer(MigrationTaskBase):
                 False,
             ),
         )
+
+        # TODO We should cache contacts and interfaces to ensure we don't add duplicates.
+        # See similar implementation for instructors in Courses mapper
+        self.contacts_cache: dict = {}
+        self.interfaces_cache: dict = {}
 
     def list_source_files(self):
         files = [
@@ -254,31 +260,44 @@ class OrganizationTransformer(MigrationTaskBase):
             return folio_rec
     
     def create_extradata_objects(self, record):
-        if "contacts" in record:
+        if record.get("contacts"):
             mapped_contacts = record["contacts"]
             record["contacts"] = []
 
             for contact in mapped_contacts:
-                uuid = "generate_a_uuid"  # Find out how  to generate a UUID.
-                contact["id"] = uuid
 
-                clean_contact = self.clean_addresses(contact)
+                # Check if this contact has already been created
+                if self.contacts_cache.values():
+                    matched_uuids = [
+                        key for key, value in self.contacts_cache.items() if value == contact][0]
 
-                self.extradata_writer.write("contacts", clean_contact)  # Double check the ednpoint/poster syntax
-                self.migration_report.add_general_statistics("Created Contacts")
-                # Save contact to extradata file
+                    if len(matched_uuids) >= 1:
+                        raise TransformationProcessError(
+                            f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
+                        )
 
-                record["contacts"].append(uuid)
-
-                # There is probably some validation that needs to happen here.
-                # Does the regualr mapper check for "required" fields in subproperties?
-        
+                    contact_uuid = matched_uuids[0]
+                    # Append the contact UUID to the organization record
+                    record["contacts"].append(contact_uuid)
+                    
+                else:
+                    # Generate a UUID and add to the contact
+                    contact_uuid = str(uuid.uuid4())
+                    contact["id"] = contact_uuid
+                    # TODO Validate.
+                    clean_contact = self.clean_addresses(contact)
+                    # self.extradata_writer.write("contacts", clean_contact)  # Double check the endpoint/poster syntax
+                    # self.migration_report.add_general_statistics("Created Contacts")
+                    # Save contact to extradata file
+                    # Append the contact UUID to the organization record
+                    record["contacts"].append(contact_uuid)
+                
+        # TODO Do the same as for Contacts. Find out if extradata poster can post credentials.
         if "interfaces" in record:
-            # Do the same as for Contacts. Find out if extradata poster can post credentials.
             pass
 
+        # TODO Do the same as for Contacts?
         if "notes" in record:
-            # Do the same as for Contacts?
             pass
 
         return record

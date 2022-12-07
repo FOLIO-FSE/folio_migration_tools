@@ -174,7 +174,7 @@ def test_multiple_emails_array_objects(mapper):
     assert correct_email_objects == 2
 
 
-def test_extra_data(mapper):
+def test_contacts_mapping(mapper):
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"

@@ -1,5 +1,9 @@
+import uuid
+from unittest.mock import Mock
+
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.migration_tasks.organization_transformer import (
     OrganizationTransformer,
@@ -46,11 +50,20 @@ def test_remove_organization_types_pre_morning_glory():
 
 
 def test_extra_data():
-    rec = {"contacts": ["Jane"]}
-    organization = OrganizationTransformer.create_extradata_objects(rec)
 
-    assert organization["contacts"] == ["uuid"]
-    
+    mocked_organization_transformer = Mock(spec=OrganizationTransformer)
+    mocked_organization_transformer.contacts_cache = {}
+    # mocked_organization_transformer.extradata_writer = ExtradataWriter("./myfile.json")
+
+    rec = {
+        "name": "EBSCO",
+        "contacts": [{"firstName": "Jane", "emailAddresses": [{"me(at)me.com"}]}, {"firstName": "John", "emailAddresses": [{"andme(at)me.com"}]}],
+    }
+
+    OrganizationTransformer.create_extradata_objects(mocked_organization_transformer, rec)
+
+    assert all(uuid.UUID(str(value), version=4) for value in rec["contacts"])
+
 
 def test_clean_up_one_address():
     rec = {
