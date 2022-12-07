@@ -174,6 +174,7 @@ def test_multiple_emails_array_objects(mapper):
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 def test_contacts_mapping(mapper):
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
@@ -181,6 +182,9 @@ def test_contacts_mapping(mapper):
     assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
 =======
 def test_extra_data(mapper):
+=======
+def test_contacts_mapping(mapper):
+>>>>>>> create and link contact object
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
