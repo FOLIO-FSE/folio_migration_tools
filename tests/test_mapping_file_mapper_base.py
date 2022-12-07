@@ -1865,10 +1865,6 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
         "my note 3",
     ]  # No mapping on third level yet...
 
-# TODO Make tests run.
-def test_say_hi():
-    hi = "hi but why is this not being recognized  as a test"
-    assert hi == "hi but why is this not being recognized  as a test"
 
 # TODO Make this run successfully.
 def test_map_array_object_array_object_string(mocked_folio_client):
