@@ -35,11 +35,12 @@ class MarcFileProcessor:
         self.records_count: int = 0
         self.start: float = time.time()
         self.legacy_ids: set = set()
-        if self.object_type == FOLIONamespaces.holdings:
+        if (
+            self.object_type == FOLIONamespaces.holdings
+            and self.mapper.task_configuration.create_source_records
+        ):
             logging.info("Loading Parent HRID map for SRS creation")
-            self.parent_hrids = {
-                entity["folio_id"]: entity["hrid"] for entity in mapper.parent_id_map.values()
-            }
+            self.parent_hrids = {entity[1]: entity[2] for entity in mapper.parent_id_map.values()}
 
     def process_record(self, idx: int, marc_record: Record, file_def: FileDefinition):
         """processes a marc holdings record and saves it
@@ -250,7 +251,7 @@ class MarcFileProcessor:
         for legacy_id in filtered_legacy_ids:
             self.legacy_ids.add(legacy_id)
             if legacy_id not in self.mapper.id_map:
-                self.mapper.id_map[legacy_id] = self.mapper.get_id_map_dict(
+                self.mapper.id_map[legacy_id] = self.mapper.get_id_map_tuple(
                     legacy_id, folio_rec, self.object_type
                 )
 

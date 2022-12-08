@@ -191,7 +191,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         with open(self.folder_structure.instance_id_map_path, "r") as instance_id_map_file:
             for index, json_string in enumerate(instance_id_map_file):
                 # Format:{"legacy_id", "folio_id","instanceLevelCallNumber"}
-                if index % 100000 == 0:
+                if index % 500000 == 0:
                     print(f"{index} instance ids loaded to map", end="\r")
                 map_object = json.loads(json_string)
                 res[map_object["legacy_id"]] = map_object
@@ -230,7 +230,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         # Prevent the first item in a boundwith to be overwritten
                         # TODO: Find out why not
                         # if legacy_id not in self.holdings_id_map:
-                        self.holdings_id_map[legacy_id] = self.mapper.get_id_map_dict(
+                        self.holdings_id_map[legacy_id] = self.mapper.get_id_map_tuple(
                             legacy_id, holding, self.object_type
                         )
                     Helper.write_to_file(holdings_file, holding)
@@ -425,7 +425,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.generate_boundwith_part(
                     self.folio_client, legacy_item_id, self.holdings[bw_key]
                 )
-                self.holdings_id_map[legacy_item_id] = self.mapper.get_id_map_dict(
+                self.holdings_id_map[legacy_item_id] = self.mapper.get_id_map_tuple(
                     legacy_item_id, self.holdings[bw_key], self.object_type
                 )
                 self.mapper.migration_report.add_general_statistics(

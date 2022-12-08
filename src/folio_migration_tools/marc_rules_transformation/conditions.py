@@ -43,7 +43,7 @@ class Conditions:
         else:
             self.setup_reference_data_for_all()
             self.setup_reference_data_for_items_and_holdings(default_call_number_type_name)
-        self.condition_cache = {}
+        self.condition_cache: dict = {}
 
     def setup_reference_data_for_bibs(self):
         logging.info("Setting up reference data for bib transformation")
@@ -573,23 +573,6 @@ class Conditions:
                 f"Alternative title type not found for {parameter['name']} {marc_field}",
             )
 
-    def setup_location_code_from_second_column(self):
-        try:
-            other_columns = [
-                f for f in self.mapper.location_map[0].keys() if f not in ["folio_code"]
-            ]
-            if len(other_columns) > 1:
-                raise TransformationProcessError(
-                    "",
-                    "Other location map columns could not be used since more than one",
-                    other_columns,
-                )
-            elif len(other_columns) == 1:
-                logging.info(f"{other_columns[0]} will be used for location mapping")
-                return {lm[other_columns[0]]: lm["folio_code"] for lm in self.mapper.location_map}
-        except Exception as ee:
-            raise TransformationProcessError("", f"{ee}", self.mapper.location_map)
-
     def condition_set_location_id_by_code(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
@@ -605,30 +588,46 @@ class Conditions:
     def condition_set_permanent_location_id(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
-        # Setup mapping if not already set up
+
         if "legacy_locations" not in self.ref_data_dicts:
             try:
                 d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}
                 self.ref_data_dicts["legacy_locations"] = d
+                for folio_code in d.values():
+                    t = self.get_ref_data_tuple_by_code(
+                        self.folio.locations, "locations", folio_code
+                    )
+                    if not t:
+                        raise TransformationProcessError(
+                            "", "No FOLIO location found for code", folio_code
+                        )
+                if "*" not in d:
+                    raise TransformationProcessError(
+                        "",
+                        (
+                            "Fallback location mapping missing. Add a row with a * in the "
+                            "legacy_code column and a location code to map unmapped locations to"
+                        ),
+                        "",
+                    )
             except KeyError as ke:
                 if "folio_code" in str(ke):
                     raise TransformationProcessError(
                         legacy_id, "Your location map lacks the column folio_code"
                     ) from ke
-
                 if "legacy_code" in str(ke):
-                    logging.info(
-                        "legacy_code column not found. "
-                        "Trying to use other columns from location map."
-                    )
-                    self.ref_data_dicts[
-                        "legacy_locations"
-                    ] = self.setup_location_code_from_second_column()
+                    raise TransformationProcessError(
+                        legacy_id, "Your location map lacks the column legacy_code"
+                    ) from ke
+
         # Get the right code from the location map
-        if self.mapper.location_map and any(self.mapper.location_map):
-            mapped_code = self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
-        else:  # IF there is no map, assume legacy code is the same as FOLIO code
-            mapped_code = value.strip()
+        mapped_code = self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
+        if not mapped_code:
+            mapped_code = self.ref_data_dicts["legacy_locations"].get("*", "").strip()
+            if mapped_code:
+                self.mapper.migration_report.add(
+                    Blurbs.LocationMapping, f"Fallback mapping: {value}->{mapped_code}"
+                )
         # Get the FOLIO UUID for the code and return it
         t = self.get_ref_data_tuple_by_code(self.folio.locations, "locations", mapped_code)
         if not t:

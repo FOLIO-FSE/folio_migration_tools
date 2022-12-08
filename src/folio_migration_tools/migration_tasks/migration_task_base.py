@@ -142,14 +142,14 @@ class MigrationTaskBase:
             for index, json_string in enumerate(id_map_file, start=1):
                 loaded_rows = index
                 # {"legacy_id", "folio_id","suppressed"}
-                map_object = json.loads(json_string)
-                if loaded_rows % 50000 == 0:
+                map_tuple = json.loads(json_string)
+                if loaded_rows % 500000 == 0:
                     print(
-                        f"{loaded_rows + 1} ids loaded to map {map_object['legacy_id']}",
+                        f"{loaded_rows + 1} ids loaded to map. Last Id: {map_tuple[0]}",
                         end="\r",
                     )
 
-                id_map[map_object["legacy_id"]] = map_object
+                id_map[map_tuple[0]] = map_tuple
         logging.info("Loaded %s migrated IDs", loaded_rows)
         if not any(id_map) and raise_if_empty:
             raise TransformationProcessError("", "Legacy id map is empty", map_path)
