@@ -19,6 +19,13 @@ from folio_migration_tools.report_blurbs import Blurbs
 
 
 class Conditions:
+    holdings_type_map = {
+        "u": "Unknown",
+        "v": "Multi-part monograph",
+        "x": "Monograph",
+        "y": "Serial",
+    }
+
     def __init__(
         self,
         folio: FolioClient,
@@ -75,17 +82,12 @@ class Conditions:
         self.default_call_number_type = {}
         logging.info("%s\tholding_note_types", len(self.folio.holding_note_types))
         logging.info("%s\tcall_number_types", len(self.folio.call_number_types))
-        self.holdings_types = list(
-            self.folio.folio_get_all("/holdings-types", "holdingsTypes", "", 1000)
-        )
-        logging.info("%s\tholdings types", len(self.holdings_types))
+        self.setup_and_validate_holdings_types()
         # Raise for empty settings
         if not self.folio.holding_note_types:
             raise TransformationProcessError("", "No holding_note_types in FOLIO")
         if not self.folio.call_number_types:
             raise TransformationProcessError("", "No call_number_types in FOLIO")
-        if not self.holdings_types:
-            raise TransformationProcessError("", "No holdings_types in FOLIO")
         if not self.folio.locations:
             raise TransformationProcessError("", "No locations in FOLIO")
 
@@ -109,6 +111,25 @@ class Conditions:
                 ),
             )
         logging.info("Default Callnumber type Name:\t%s", self.default_call_number_type["name"])
+
+    def setup_and_validate_holdings_types(self):
+        self.holdings_types = list(
+            self.folio.folio_get_all("/holdings-types", "holdingsTypes", "", 1000)
+        )
+        if not self.holdings_types:
+            raise TransformationProcessError("", "No holdings_types in FOLIO")
+        missing_holdings_types = [
+            ht
+            for ht in self.holdings_type_map.values()
+            if ht not in [ht_ref["name"] for ht_ref in self.holdings_types]
+        ]
+        if any(missing_holdings_types):
+            raise TransformationProcessError(
+                "",
+                "Holdings types are missing from the tenant. Please set them up",
+                missing_holdings_types,
+            )
+        logging.info("%s\tholdings types", len(self.holdings_types))
 
     def setup_reference_data_for_all(self):
 

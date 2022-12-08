@@ -327,13 +327,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 f"Already set to {folio_holding.get('holdingsTypeId')}. LDR[06] was {ldr06}",
             )
         else:
-            holdings_type_map = {
-                "u": "Unknown",
-                "v": "Multi-part monograph",
-                "x": "Monograph",
-                "y": "Serial",
-            }
-            holdings_type = holdings_type_map.get(ldr06, "")
+
+            holdings_type = self.conditions.holdings_type_map.get(ldr06, "")
             if t := self.conditions.get_ref_data_tuple_by_name(
                 self.conditions.holdings_types, "hold_types", holdings_type
             ):
