@@ -49,7 +49,7 @@ class HoldingsStatementsParser:
                 raise TransformationFieldMappingError(
                     legacy_ids,
                     f"{pattern_tag} subfield 8 not in field",
-                    pattern_field.format_field(),
+                    pattern_field,
                 )
             linked_value_fields = [
                 value_field
@@ -150,20 +150,20 @@ class HoldingsStatementsParser:
             TransformationFieldMappingError: _description_
         """
         for f in marc_record.get_fields(field_textual):
-            if "a" not in f and "z" not in f:
+            if "a" not in f and "z" not in f and "x" not in f:
                 raise TransformationFieldMappingError(
                     legacy_ids,
-                    f"{field_textual} subfield a or z not in field",
-                    f.format_field(),
+                    f"{field_textual} subfields a, x, and z missing from field",
+                    f,
                 )
-            if not (f["a"] or f["z"]):
+            if not (f["a"] or f["z"] or f["x"]):
                 raise TransformationFieldMappingError(
                     legacy_ids,
-                    f"{field_textual} Both a or z are empty",
-                    f.format_field(),
+                    f"{field_textual} a,x and z are all empty",
+                    f,
                 )
             return_dict["statements"].append(
-                {"statement": (f["a"] or ""), "note": (f["z"] or ""), "staffNote": ""}
+                {"statement": (f["a"] or ""), "note": (f["z"] or ""), "staffNote": (f["x"] or "")}
             )
             return_dict["migration_report"].append(
                 ("Holdings statements", f"From {field_textual}")
