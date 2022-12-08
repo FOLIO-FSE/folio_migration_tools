@@ -148,7 +148,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 entry = self.instance_id_map.get(new_legacy_value, "") or self.instance_id_map.get(
                     legacy_instance_id
                 )
-                return_ids.append(entry["folio_id"])
+                return_ids.append(entry[1])
         if any(return_ids):
             return return_ids
         else:

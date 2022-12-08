@@ -296,7 +296,7 @@ class BatchPoster(MigrationTaskBase):
             # Likely a json parsing error
             logging.error(response.text)
             raise TransformationProcessError("", "HTTP 400. Somehting is wrong. Quitting")
-        elif self.task_configuration.object_type == "SRS" and response.status_code == 500:
+        elif self.task_configuration.object_type == "SRS" and response.status_code >= 500:
             logging.info(
                 "Post failed. Size: %s Waiting 30s until reposting. Number of tries: %s of 5",
                 get_req_size(response),

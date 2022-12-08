@@ -24,15 +24,16 @@ from folio_migration_tools.report_blurbs import Blurbs
 class MapperBase:
 
     legacy_id_template = "Identifier(s) from previous system:"
+    bib_id_template = "Bib id: "
 
     def __init__(
         self,
         library_configuration: LibraryConfiguration,
         folio_client: FolioClient,
-        parent_id_map: dict = None,
+        parent_id_map: dict[str, tuple] = None,
     ):
         logging.info("MapperBase initiating")
-        self.parent_id_map: dict = parent_id_map
+        self.parent_id_map: dict[str, tuple] = parent_id_map
         self.extradata_writer: ExtradataWriter = ExtradataWriter(Path(""))
         self.start_datetime = datetime.now(timezone.utc)
         self.folio_client: FolioClient = folio_client
@@ -285,11 +286,10 @@ class MapperBase:
             )
             sys.exit(1)
 
-    def get_id_map_dict(self, legacy_id: str, folio_record: dict, object_type: FOLIONamespaces):
-        base_dict = {"legacy_id": legacy_id, "folio_id": folio_record["id"]}
+    def get_id_map_tuple(self, legacy_id: str, folio_record: dict, object_type: FOLIONamespaces):
         if object_type == FOLIONamespaces.instances:
-            base_dict["hrid"] = folio_record["hrid"]
-        return base_dict
+            return (legacy_id, folio_record["id"], folio_record["hrid"])
+        return (legacy_id, folio_record["id"])
 
     def handle_generic_exception(self, idx, excepion: Exception):
         self.num_exeptions += 1

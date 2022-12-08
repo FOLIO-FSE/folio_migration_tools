@@ -35,11 +35,11 @@ class RulesMapperBase(MapperBase):
         task_configuration,
         schema: dict,
         conditions=None,
-        parent_id_map: dict = None,
+        parent_id_map: dict[str, tuple] = None,
     ):
         super().__init__(library_configuration, folio_client, parent_id_map)
         self.parsed_records = 0
-        self.id_map: dict = {}
+        self.id_map: dict[str, tuple] = {}
         self.start = time.time()
         self.last_batch_time = time.time()
         self.folio_client: FolioClient = folio_client
@@ -210,6 +210,16 @@ class RulesMapperBase(MapperBase):
                 self.map_field_according_to_mapping(marc_field, mappings, folio_record, legacy_ids)
                 if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                     ignored_subsequent_fields.add(marc_field.tag)
+            except TransformationFieldMappingError as tre:
+                tre.log_it()
+                logging.error(
+                    "map_field_according_to_mapping %s %s %s %s %s",
+                    "-".join(legacy_ids),
+                    marc_field.tag,
+                    marc_field.format_field(),
+                    json.dumps(mappings),
+                    tre.message,
+                )
             except Exception as ee:
                 logging.error(
                     "map_field_according_to_mapping %s %s %s",

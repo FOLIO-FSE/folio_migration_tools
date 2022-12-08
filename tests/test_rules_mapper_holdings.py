@@ -50,8 +50,11 @@ def mapper(pytestconfig) -> RulesMapperHoldings:
         default_call_number_type_name="Dewey Decimal classification",
         fallback_holdings_type_id="03c9c400-b9e3-4a07-ac0e-05ab470233ed",
     )
-    parent_id_map = {}
-    location_map = [{"legacy_code": "jnlDesk", "folio_code": "JOURN"}]
+    parent_id_map: dict[str, tuple] = {}
+    location_map = [
+        {"legacy_code": "jnlDesk", "folio_code": "JOURN"},
+        {"legacy_code": "*", "folio_code": "JOURN"},
+    ]
     mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map)
     mapper.folio_client = folio
     mapper.migration_report = MigrationReport()
@@ -66,11 +69,11 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
         reader.force_utf8 = True
         record: Record = None
         mapper.parent_id_map = {
-            "7611780": {
-                "legacy_id": "7611780",
-                "folio_id": "9d1673a3-a546-5afa-b0fb-5ab971f73eca",
-                "hrid": "in00000000005",
-            }
+            "7611780": (
+                "7611780",
+                "9d1673a3-a546-5afa-b0fb-5ab971f73eca",
+                "in00000000005",
+            )
         }
         record = next(reader)
         ids = RulesMapperHoldings.get_legacy_ids(mapper, record, 1)

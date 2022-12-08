@@ -157,9 +157,9 @@ class RulesMapperHoldings(RulesMapperBase):
                 legacy_ids,
             )
         legacy_instance_id = marc_record["004"].data
-        folio_holding["formerIds"].append(f"Bib id: {legacy_instance_id}")
+        folio_holding["formerIds"].append(f"{self.bib_id_template}{legacy_instance_id}")
         if legacy_instance_id in self.parent_id_map:
-            folio_holding["instanceId"] = self.parent_id_map[legacy_instance_id]["folio_id"]
+            folio_holding["instanceId"] = self.parent_id_map[legacy_instance_id][1]
         else:
             raise TransformationRecordFailedError(
                 legacy_ids,
