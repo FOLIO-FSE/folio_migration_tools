@@ -45,7 +45,11 @@ def main():
         res = get_ref_data_from_github_folder(
             "folio-org", "mod-inventory-storage", f"/reference-data{entry}"
         )
-        print(f"fetched {entry}")
+        if not res:
+            res = get_ref_data_from_github_folder(
+                "folio-org", "mod-inventory-storage", f"/sample-data{entry}"
+            )
+        print(f"fetched {entry}: {any(res)}")
         if entry == "/holdings-types":
             res.append(
                 {

@@ -308,12 +308,12 @@ class MapperBase:
 
     def save_id_map_file(self, path, legacy_map: dict):
         with open(path, "w") as legacy_map_file:
-            for _idx, id_string in enumerate(legacy_map.values(), start=1):
+            for id_string in legacy_map.values():
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
-            logging.info("Wrote %s id:s to legacy map", _idx)
-            self.migration_report.set(
-                Blurbs.GeneralStatistics, "Unique ID:s written to legacy map", _idx
-            )
+                self.migration_report.add(
+                    Blurbs.GeneralStatistics, "Unique ID:s written to legacy map"
+                )
+        logging.info("Wrote legacy id map to %s", path)
 
     def store_hrid_settings(self):
         logging.info("Setting HRID counter to current")

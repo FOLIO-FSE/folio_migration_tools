@@ -71,6 +71,9 @@ class MARCReaderWrapper:
                     processor.process_record(idx, record, source_file)
             except TransformationRecordFailedError as error:
                 error.log_it()
+                processor.mapper.migration_report.add_general_statistics(
+                    "Records that failed transformation. Check log for details",
+                )
             except ValueError as error:
                 logging.error(error)
         logging.info("Done reading %s records from file", idx + 1)
