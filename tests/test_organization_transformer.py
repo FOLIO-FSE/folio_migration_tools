@@ -1,10 +1,15 @@
 import uuid
+from pathlib import Path
 from unittest.mock import Mock
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.extradata_writer import ExtradataWriter
+from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.migration_tasks.organization_transformer import (
+    OrganizationMapper,
+)
 from folio_migration_tools.migration_tasks.organization_transformer import (
     OrganizationTransformer,
 )
@@ -53,11 +58,13 @@ def test_extra_data():
 
     mocked_organization_transformer = Mock(spec=OrganizationTransformer)
     mocked_organization_transformer.contacts_cache = {}
-    # mocked_organization_transformer.extradata_writer = ExtradataWriter("./myfile.json")
+    mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
+    mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
+    mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
 
     rec = {
         "name": "EBSCO",
-        "contacts": [{"firstName": "Jane", "emailAddresses": [{"me(at)me.com"}]}, {"firstName": "John", "emailAddresses": [{"andme(at)me.com"}]}],
+        "contacts": [{"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]}, {"firstName": "John", "emailAddresses": [{"value": "andme(at)me.com"}]}],
     }
 
     OrganizationTransformer.create_extradata_objects(mocked_organization_transformer, rec)

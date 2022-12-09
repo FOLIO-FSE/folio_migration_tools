@@ -285,9 +285,10 @@ class OrganizationTransformer(MigrationTaskBase):
                     contact_uuid = str(uuid.uuid4())
                     contact["id"] = contact_uuid
                     # TODO Validate.
-                    clean_contact = self.clean_addresses(contact)
-                    # self.extradata_writer.write("contacts", clean_contact)  # Double check the endpoint/poster syntax
-                    # self.migration_report.add_general_statistics("Created Contacts")
+                    # TODO Add address cleanup backwhen the mapper is creating proper addresses
+                    # contact = self.clean_addresses(contact)
+                    self.extradata_writer.write("contacts", contact)  # Double check the endpoint/poster syntax
+                    self.mapper.migration_report.add_general_statistics("Created Contacts")
                     # Save contact to extradata file
                     # Append the contact UUID to the organization record
                     record["contacts"].append(contact_uuid)
