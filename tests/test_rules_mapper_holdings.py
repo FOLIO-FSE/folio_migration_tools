@@ -52,8 +52,8 @@ def mapper(pytestconfig) -> RulesMapperHoldings:
     )
     parent_id_map: dict[str, tuple] = {}
     location_map = [
-        {"legacy_code": "jnlDesk", "folio_code": "JOURN"},
-        {"legacy_code": "*", "folio_code": "JOURN"},
+        {"legacy_code": "jnlDesk", "folio_code": "KU/CC/DI/2"},
+        {"legacy_code": "*", "folio_code": "KU/CC/DI/2"},
     ]
     mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map)
     mapper.folio_client = folio
@@ -81,7 +81,7 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
             record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False), ids
         )
         assert res
-        assert res["permanentLocationId"] == "5a05e31b-e9f2-4e03-8757-57239bb92750"
+        assert res["permanentLocationId"] == "f34d27c6-a8eb-461b-acd6-5dea81771e70"
         assert res["hrid"] == "pref00000000001"
         assert len(res["administrativeNotes"]) > 0
         assert res["callNumber"] == "QB611 .C44"

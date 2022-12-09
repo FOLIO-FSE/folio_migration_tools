@@ -52,6 +52,7 @@ class MarcFileProcessor:
 
         Raises:
             TransformationProcessError: _description_
+            TransformationRecordFailedError: _description_
         """
         success = True
         folio_rec = {}
@@ -86,13 +87,13 @@ class MarcFileProcessor:
             self.exit_on_too_many_exceptions()
         except TransformationRecordFailedError as error:
             success = False
-            error.index_or_id = f"{error.index_or_id} in {file_def.file_name}"
-            error.log_it()
-            self.mapper.migration_report.add_general_statistics(
-                "Records that failed transformation. Check log for details",
-            )
+            raise TransformationRecordFailedError(
+                f"{error.index_or_id} in {file_def.file_name}", error.message, error.data_value
+            ) from error
         except TransformationProcessError as tpe:
-            raise TransformationProcessError(tpe.index_or_id, tpe.message, tpe.data_value) from tpe
+            raise TransformationProcessError(
+                f"{tpe.index_or_id} in {file_def.file_name}", tpe.message, tpe.data_value
+            ) from tpe
         except Exception as inst:
             success = False
             traceback.print_exc()
