@@ -1,17 +1,25 @@
 import uuid
 <<<<<<< HEAD
+<<<<<<< HEAD
 from pathlib import Path
 =======
 >>>>>>> create and link contact object
+=======
+from pathlib import Path
+>>>>>>> make test work all through
 from unittest.mock import Mock
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.extradata_writer import ExtradataWriter
 <<<<<<< HEAD
+<<<<<<< HEAD
 from folio_migration_tools.migration_report import MigrationReport
 =======
 >>>>>>> create and link contact object
+=======
+from folio_migration_tools.migration_report import MigrationReport
+>>>>>>> make test work all through
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.migration_tasks.organization_transformer import (
     OrganizationMapper,
