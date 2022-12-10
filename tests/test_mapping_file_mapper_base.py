@@ -1882,24 +1882,22 @@ def test_map_array_object_array_object_string(mocked_folio_client):
                             "type": "array",
                             "items": {
                                 "type": "object",
-                                "properties": {
-                                    "addressLine1": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
+                                "properties": {"addressLine1": {"type": "string"}},
+                            },
                         }
-                    }
-                }
+                    },
+                },
             }
-        }
+        },
     }
     record = {
         "id": "id1",
         "contact_person": "Jane",
         "contact_address_line1": "My Street",
+        "contact_address2_line1": "My other street",
+        "contact2_address_line1": "Yet another street",
         "contact_address_town": "Gothenburg",
-        "contact_address_types": "support<delimiter>sales"
+        "contact_address_types": "support<delimiter>sales",
     }
     org_map = {
         "data": [
@@ -1916,17 +1914,29 @@ def test_map_array_object_array_object_string(mocked_folio_client):
                 "description": "",
             },
             {
+                "folio_field": "contacts[0].addresses[1].addressLine1",
+                "legacy_field": "contact_address2_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[1].addresses[0].addressLine1",
+                "legacy_field": "contact2_address_line1",
+                "value": "",
+                "description": "",
+            },
+            {
                 "folio_field": "contacts[0].addresses[0].categories",
                 "legacy_field": "contact_address_types",
                 "value": "",
-                "description": ""
+                "description": "",
             },
             {
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
                 "value": "",
                 "description": "",
-            }
+            },
         ]
     }
 
@@ -1934,38 +1944,37 @@ def test_map_array_object_array_object_string(mocked_folio_client):
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
+    assert folio_rec["contacts"][0]["addresses"][1]["addressLine1"] == "My other street"
+    assert folio_rec["contacts"][1]["addresses"][0]["addressLine1"] == "Yet another street"
+
 
 # TODO Make this run successfully.
 def test_map_array_object_array_object_array_string(mocked_folio_client):
     schema = {
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "description": "The record of an organization",
-    "type": "object",
-    "properties": {
-        "contacts": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "addresses": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "categories": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "contacts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "addresses": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "categories": {"type": "array", "items": {"type": "string"}},
+                                    "addressLine1": {"type": "string"},
+                                },
+                            },
                         }
-                    }
-                }
+                    },
+                },
             }
-        }
+        },
     }
-}
     record = {
         "id": "id1",
         "contact_person": "Jane",
@@ -1987,7 +1996,7 @@ def test_map_array_object_array_object_array_string(mocked_folio_client):
                 "description": "",
             },
             {
-                "folio_field": "contacts[0].addresses[0].categories",
+                "folio_field": "contacts[0].addresses[0].categories[0]",
                 "legacy_field": "contact_address_types",
                 "value": "",
                 "description": "",
@@ -1997,13 +2006,13 @@ def test_map_array_object_array_object_array_string(mocked_folio_client):
                 "legacy_field": "id",
                 "value": "",
                 "description": "",
-            }
+            },
         ]
     }
 
     contact = MyTestableFileMapper(schema, org_map, mocked_folio_client)
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
-    
+
     assert folio_rec["contacts"][0]["addresses"][0]["categories"] == ["support", "sales"]
 
 
