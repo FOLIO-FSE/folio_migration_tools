@@ -79,6 +79,10 @@ def test_extra_data():
         "Jane" in contact for contact in mocked_organization_transformer.extradata_writer.cache
         )
 
+    assert any(
+        "John" in contact for contact in mocked_organization_transformer.extradata_writer.cache
+        )
+
     # Check that all the assigned uuids are in the cache
     assert all(str(id) in str(mocked_organization_transformer.extradata_writer.cache) for id in rec["contacts"])
 
