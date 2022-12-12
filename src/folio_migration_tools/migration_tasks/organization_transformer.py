@@ -269,29 +269,33 @@ class OrganizationTransformer(MigrationTaskBase):
                 # Check if this contact has already been created
                 if self.contacts_cache.values():
                     matched_uuids = [
-                        key for key, value in self.contacts_cache.items() if value == contact][0]
+                        key for key, value in self.contacts_cache.items() if value == contact]
 
-                    if len(matched_uuids) >= 1:
+                    if len(matched_uuids) == 1:
+                        contact_uuid = matched_uuids[0]
+                        # Append the contact UUID to the organization record
+                        record["contacts"].append(contact_uuid)
+
+                    elif len(matched_uuids) >= 1:
                         raise TransformationProcessError(
                             f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
                         )
-
-                    contact_uuid = matched_uuids[0]
-                    # Append the contact UUID to the organization record
-                    record["contacts"].append(contact_uuid)
                     
                 else:
+                    # Create the new contact as a new variable
+                    new_contact = contact
                     # Generate a UUID and add to the contact
                     contact_uuid = str(uuid.uuid4())
-                    contact["id"] = contact_uuid
+                    new_contact["id"] = contact_uuid
                     # TODO Validate.
                     # TODO Add address cleanup backwhen the mapper is creating proper addresses
-                    # contact = self.clean_addresses(contact)
-                    self.extradata_writer.write("contacts", contact)  # Double check the endpoint/poster syntax
+                    # new_contact = self.clean_addresses(contact)
+                    self.extradata_writer.write("contacts", new_contact)  # Double check the endpoint/poster syntax
                     self.mapper.migration_report.add_general_statistics("Created Contacts")
                     # Save contact to extradata file
                     # Append the contact UUID to the organization record
                     record["contacts"].append(contact_uuid)
+                    self.contacts_cache[contact_uuid] = contact
                 
         # TODO Do the same as for Contacts. Find out if extradata poster can post credentials.
         if "interfaces" in record:

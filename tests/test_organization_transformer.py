@@ -69,7 +69,21 @@ def test_extra_data():
 
     OrganizationTransformer.create_extradata_objects(mocked_organization_transformer, rec)
 
+    # Check that IDs have been added to the contact
     assert all(uuid.UUID(str(value), version=4) for value in rec["contacts"])
+
+    # Check that contacts have been added to the extra data cache
+    assert "contacts" in mocked_organization_transformer.extradata_writer.cache[0]
+
+    assert any(
+        "Jane" in contact for contact in mocked_organization_transformer.extradata_writer.cache
+        )
+
+    # Check that all the assigned uuids are in the cache
+    assert all(str(id) in str(mocked_organization_transformer.extradata_writer.cache) for id in rec["contacts"])
+
+    # Check that all the assigned uuids are in the cache
+    assert all(str(id) in mocked_organization_transformer.contacts_cache.keys() for id in rec["contacts"])
 
 
 def test_clean_up_one_address():
