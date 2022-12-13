@@ -1866,7 +1866,6 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
     ]  # No mapping on third level yet...
 
 
-# TODO Make this run successfully.
 def test_map_array_object_array_object_string(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
