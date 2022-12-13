@@ -703,7 +703,7 @@ def set_deep2(dictionary, key, value):
     number = 0
     for k in keys:
         if k == keys[0] and k.endswith("]"):
-            m = re.search(r"\[([0-9]+)\]", k)
+            m = re.search(r"\[([\d]+)\]", k)
             number = int(m[1])
             name = k.split("[")[0]
             dd = dd.setdefault(name, [{}])
