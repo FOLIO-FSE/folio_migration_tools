@@ -1,5 +1,44 @@
 # Changelog
 
+## v_1_7_0 (13/12/2022)
+
+#### closed
+
+- [**closed**] Map 86[6-8] $x to staff notes [#448](https://github.com/FOLIO-FSE/folio_migration_tools/issues/448)
+- [**closed**] Support token representing iteration identifier within config file parameters and filenames [#441](https://github.com/FOLIO-FSE/folio_migration_tools/issues/441)
+- [**closed**] Move documentation from migration_repo_template to this repo and improve it! [#248](https://github.com/FOLIO-FSE/folio_migration_tools/issues/248)
+- [**closed**] Reduce memory footprint for transformations scripts from the legacy id maps [#46](https://github.com/FOLIO-FSE/folio_migration_tools/issues/46)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**] Add same logic for mapping locations  for MARC Holdings mappings as for mapping-file-based ref-data-mappings [#319](https://github.com/FOLIO-FSE/folio_migration_tools/issues/319)
+- [**enhancement/new feature**] Check if HoldingsTypes are set to the expected values in FOLIO and fail the parsing if not [#318](https://github.com/FOLIO-FSE/folio_migration_tools/issues/318)
+- [**enhancement/new feature**] Create migration task for Courses [#200](https://github.com/FOLIO-FSE/folio_migration_tools/issues/200)
+
+#### new_folio_functionality
+
+- [**new_folio_functionality**][**Authorities**] Add support for Authority File configuration and mappings [#437](https://github.com/FOLIO-FSE/folio_migration_tools/issues/437)
+- [**new_folio_functionality**][**Authorities**] Create migration task for Authorities [#389](https://github.com/FOLIO-FSE/folio_migration_tools/issues/389)
+- [**new_folio_functionality**] Implement set_holdings_type_id for MFHD rules mapping [#376](https://github.com/FOLIO-FSE/folio_migration_tools/issues/376)
+- [**new_folio_functionality**] Implement set_holdings_note_type_id for MFHD rules mapping [#375](https://github.com/FOLIO-FSE/folio_migration_tools/issues/375)
+- [**new_folio_functionality**] Implement set_authority_note_type_id for Auth rules mapping [#374](https://github.com/FOLIO-FSE/folio_migration_tools/issues/374)
+- [**new_folio_functionality**] Implement set_call_number_type_id  for MFHD rules mapping [#373](https://github.com/FOLIO-FSE/folio_migration_tools/issues/373)
+- [**new_folio_functionality**] Use the Tenant-stored MFHD rules for MFHD transformations [#124](https://github.com/FOLIO-FSE/folio_migration_tools/issues/124)
+
+#### question/decision
+
+- [**question/decision**] Map callnumber type id on MFHDs [#56](https://github.com/FOLIO-FSE/folio_migration_tools/issues/56)
+
+#### simplify_migration_process
+
+- [**simplify_migration_process**] Report and discard bib records with same legacy ID as previously transformed records [#186](https://github.com/FOLIO-FSE/folio_migration_tools/issues/186)
+
+---
+
+## 1.6.4 (06/12/2022)
+
+---
+
 ## 1_6_3 (23/11/2022)
 
 #### bug
@@ -510,15 +549,3 @@ Stepping stone release before Juniper support
 #Bugfixes
 * Missing stat code mapping file make main_items.py crash
 * Clear exceptions get buried in nested exception output
-
----
-
-## Iris 1.1 (28/07/2021)
-# Bug fixes
-* Fixes  a bug where the former 001 of the MARC Bib record did not get added as an Identifier on the attached Instance. This is only relevant to libraries that uses the default HRID handling of the script.
----
-
-## Iris 1.0 (27/07/2021)
-Release compliant with FOLIO Iris release. 
-
-It has not been tested with Hotfix #3 and #4 in Iris, but it should be compliant.
