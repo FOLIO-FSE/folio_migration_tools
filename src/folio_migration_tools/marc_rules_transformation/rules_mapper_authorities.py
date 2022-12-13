@@ -57,7 +57,7 @@ class AuthorityMapper(RulesMapperBase):
             folio_client,
             library_configuration,
             task_configuration,
-            self.get_autority_json_schema(),
+            self.get_authority_json_schema(),
             Conditions(folio_client, self, "auth", library_configuration.folio_release),
         )
         self.srs_recs: list = []
@@ -150,8 +150,8 @@ class AuthorityMapper(RulesMapperBase):
         """
         folio_authority["source"] = "MARC"
 
-    def get_autority_json_schema(self):
-        """Fetches the JSON Schema for autorities"""
+    def get_authority_json_schema(self):
+        """Fetches the JSON Schema for authorities"""
         return FolioClient.get_latest_from_github(
             "folio-org", "mod-inventory-storage", "/ramls/authorities/authority.json"
         )
