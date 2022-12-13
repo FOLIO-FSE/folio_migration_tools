@@ -13,7 +13,7 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
 )
-from folio_migration_tools.marc_rules_transformation.rules_mapper_autorities import (
+from folio_migration_tools.marc_rules_transformation.rules_mapper_authorities import (
     AuthorityMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
@@ -66,7 +66,7 @@ class AuthorityTransformer(MigrationTaskBase):
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                "Autority records transformation report",
+                "Authority records transformation report",
                 report_file,
                 self.start_datetime,
             )

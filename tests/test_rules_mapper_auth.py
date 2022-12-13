@@ -9,7 +9,7 @@ from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
-from folio_migration_tools.marc_rules_transformation.rules_mapper_autorities import (
+from folio_migration_tools.marc_rules_transformation.rules_mapper_authorities import (
     AuthorityMapper,
 )
 from folio_migration_tools.migration_report import MigrationReport
