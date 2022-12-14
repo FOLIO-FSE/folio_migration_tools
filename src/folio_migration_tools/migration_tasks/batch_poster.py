@@ -99,8 +99,10 @@ class BatchPoster(MigrationTaskBase):
                                 try:
                                     if self.task_configuration.object_type == "Extradata":
                                         self.post_extra_data(row, self.processed, failed_recs_file)
-                                    elif self.task_configuration.object_type == "Authorities":
-                                        self.post_authorities(
+                                    elif not list_objects(self.task_configuration.object_type)[
+                                        "is_batch"
+                                    ]:
+                                        self.post_single_records(
                                             row, self.processed, failed_recs_file
                                         )
                                     else:
@@ -174,8 +176,12 @@ class BatchPoster(MigrationTaskBase):
                 self.num_failures,
             )
 
-    def post_authorities(self, row: str, num_records: int, failed_recs_file):
-        url = f"{self.folio_client.okapi_url}/authority-storage/authorities"
+    def post_single_records(self, row: str, num_records: int, failed_recs_file):
+        kind = list_objects(self.task_configuration.object_type)
+        if kind["is_batch"]:
+            raise Exception("This record type supports batch processing, use post_batch method")
+        api_endpoint = kind.get("api_endpoint")
+        url = f"{self.folio_client.okapi_url}{api_endpoint}"
         response = self.post_objects(url, row)
         if response.status_code == 201:
             self.num_posted += 1
@@ -464,36 +470,42 @@ def list_objects(object_type: str):
         "Items": {
             "object_name": "items",
             "api_endpoint": "/item-storage/batch/synchronous?upsert=true",
+            "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
         },
         "Holdings": {
             "object_name": "holdingsRecords",
             "api_endpoint": "/holdings-storage/batch/synchronous?upsert=true",
+            "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
         },
         "Instances": {
             "object_name": "instances",
             "api_endpoint": "/instance-storage/batch/synchronous?upsert=true",
+            "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
         },
         "Authorities": {
             "object_name": "",
             "api_endpoint": "/authority-storage/authorities",
+            "is_batch": False,
             "total_records": False,
             "addSnapshotId": False,
         },
         "SRS": {
             "object_name": "records",
             "api_endpoint": "/source-storage/batch/records",
+            "is_batch": True,
             "total_records": True,
             "addSnapshotId": True,
         },
         "Users": {
             "object_name": "users",
             "api_endpoint": "/user-import",
+            "is_batch": True,
             "total_records": True,
             "addSnapshotId": False,
         },
