@@ -76,12 +76,17 @@ def test_extra_data():
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
     mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
 
-    rec = {
-        "name": "EBSCO",
+    recs = [{
+        "name": "MyCompany",
         "contacts": [{"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]}, {"firstName": "John", "emailAddresses": [{"value": "andme(at)me.com"}]}],
-    }
+    },
+    {
+        "name": "YourCompany",
+        "contacts": [{"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]}]
+    }]
 
-    OrganizationTransformer.create_extradata_objects(mocked_organization_transformer, rec)
+    for rec in recs:
+        OrganizationTransformer.create_extradata_objects(mocked_organization_transformer, rec)
 
     # Check that IDs have been added to the contact
     assert all(uuid.UUID(str(value), version=4) for value in rec["contacts"])
@@ -102,6 +107,9 @@ def test_extra_data():
 
     # Check that all the assigned uuids are in the cache
     assert all(str(id) in mocked_organization_transformer.contacts_cache.keys() for id in rec["contacts"])
+
+    # Check that reoccuring contacts are deduplicated
+    assert mocked_organization_transformer.extradata_writer.cache.count("Jane") == 1
 
 def test_clean_up_one_address():
     rec = {

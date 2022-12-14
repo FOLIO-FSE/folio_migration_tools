@@ -267,23 +267,22 @@ class OrganizationTransformer(MigrationTaskBase):
             for contact in mapped_contacts:
 
                 # Check if this contact has already been created
-                if self.contacts_cache.values():
-                    matched_uuids = [
-                        key for key, value in self.contacts_cache.items() if value == contact]
+                matched_uuids = [
+                    key for key, value in self.contacts_cache.items() if value == contact]
 
-                    if len(matched_uuids) == 1:
-                        contact_uuid = matched_uuids[0]
-                        # Append the contact UUID to the organization record
-                        record["contacts"].append(contact_uuid)
+                if len(matched_uuids) == 1:
+                    contact_uuid = matched_uuids[0]
+                    # Append the contact UUID to the organization record
+                    record["contacts"].append(contact_uuid)
 
-                    elif len(matched_uuids) >= 1:
-                        raise TransformationProcessError(
-                            f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
-                        )
+                elif len(matched_uuids) >= 1:
+                    raise TransformationProcessError(
+                        f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
+                    )
                     
                 else:
                     # Create the new contact as a new variable
-                    new_contact = contact
+                    new_contact = contact.copy()
                     # Generate a UUID and add to the contact
                     contact_uuid = str(uuid.uuid4())
                     new_contact["id"] = contact_uuid
