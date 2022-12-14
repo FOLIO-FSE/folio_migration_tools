@@ -173,28 +173,14 @@ def test_multiple_emails_array_objects(mapper):
     assert correct_email_objects == 2
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-def test_contacts_mapping(mapper):
+def test_contacts_basic_mapping(mapper):
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
+
+def test_contacts_address_mapping(mapper):
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations) 
     assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
-=======
-def test_extra_data(mapper):
-=======
-def test_contacts_mapping(mapper):
->>>>>>> create and link contact object
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-
-    assert organization["contacts"][0]["firstName"] == "Jane"
-<<<<<<< HEAD
-
->>>>>>> add contacts to org schema
-=======
-    assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
->>>>>>> add test for address
-
 
 # Shared data and maps
 data = {
@@ -217,21 +203,10 @@ data = {
     "tgs": "A^-^B^-^C",
     "organization_types": "cst",
     "org_note": "Good stuff!",
-<<<<<<< HEAD
-<<<<<<< HEAD
     "contact_person": "Jane",
     "contact_address_line1": "My Street",
     "contact_address_town": "Gothenburg",
-=======
-    "contact_person": "Jane"
->>>>>>> add contacts to org schema
-=======
-    "contact_person": "Jane",
-    "contact_address_line1": "My Street",
-    "contact_address_town": "Gothenburg",
->>>>>>> add test for address
 }
-
 
 # A mocked mapping file
 organization_map = {
@@ -303,10 +278,6 @@ organization_map = {
             "description": "",
         },
         {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> add test for address
             "folio_field": "contacts[0].addresses[0].addressLine1",
             "legacy_field": "contact_address_line1",
             "value": "",
@@ -319,11 +290,6 @@ organization_map = {
             "description": "",
         },
         {
-<<<<<<< HEAD
-=======
->>>>>>> add contacts to org schema
-=======
->>>>>>> add test for address
             "folio_field": "emails[0].categories[0]",
             "legacy_field": "email1_categories",
             "value": "",
