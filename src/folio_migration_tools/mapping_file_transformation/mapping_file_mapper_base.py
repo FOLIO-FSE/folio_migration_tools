@@ -406,7 +406,7 @@ class MappingFileMapperBase(MapperBase):
         i = 0
         while True:
             keys_to_map = {
-                k.split(".")[0] for k in self.folio_keys if k.startswith(f"{prop_name}[{i}")
+                k.rsplit(".", 1)[0] for k in self.folio_keys if k.startswith(f"{prop_name}[{i}")
             }
             if not any(keys_to_map):
                 break
@@ -418,6 +418,7 @@ class MappingFileMapperBase(MapperBase):
                 ):
                     prop_path = f"{prop_name}[{i}].{prop}"
                     if prop_path in self.folio_keys:
+                        # We have reached the end of the prop path?
                         res = self.get_prop(legacy_object, prop_path, index_or_id)
                         self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
 
@@ -427,7 +428,26 @@ class MappingFileMapperBase(MapperBase):
                         ):
                             multi_field_props.append(prop)
                         temp_object[prop] = res
-                    else:
+
+                    elif (
+                        prop in sub_properties
+                        and sub_properties[prop].get("type", "") == "array"
+                        and sub_properties[prop]["items"].get("type", "") == "object"
+                    ):
+                        self.map_objects_array_props(
+                            legacy_object,
+                            prop_path,
+                            sub_properties[prop]["items"]["properties"],
+                            folio_object,
+                            index_or_id,
+                            [],
+                        )
+                    elif (
+                        prop in sub_properties
+                        and sub_properties[prop].get("type", "") == "array"
+                        and sub_properties[prop]["items"].get("type", "") == "string"
+                    ):
+                        # We have not reached the end of the prop path
                         for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
                             res = self.get_prop(legacy_object, array_path, index_or_id)
                             self.add_values_to_string_array(
@@ -451,7 +471,7 @@ class MappingFileMapperBase(MapperBase):
                 else:
                     resulting_array.append(temp_object)
         if any(resulting_array):
-            set_deep(folio_object, prop_name, resulting_array)
+            set_deep2(folio_object, prop_name, resulting_array)
 
     @staticmethod
     def split_obj_by_delim(delimiter: str, folio_obj: dict, delimited_props: List[str]):
@@ -665,6 +685,36 @@ def set_deep(dictionary, key, value):
     for k in keys:
         dd = dd.setdefault(k, {})
     dd.setdefault(latest, value)
+
+
+def set_deep2(dictionary, key, value):
+    """sets a nested property in a dict given a dot notated address
+
+    Args:
+        dictionary (_type_): a python dictionary ({"a":{"b":{"c":"value"}}})
+        key (_type_): A string of dot notated address (a.b.c)
+        value (_type_): the value to set
+
+    """
+    dd = dictionary
+    keys = key.split(".")
+    latest = keys.pop()
+    name = ""
+    number = 0
+    for k in keys:
+        if k == keys[0] and k.endswith("]"):
+            m = re.search(r"\[([\d]+)\]", k)
+            number = int(m[1])
+            name = k.split("[")[0]
+            dd = dd.setdefault(name, [{}])
+        else:
+            dd = dd.setdefault(k, {})
+    if name and keys and keys[0].startswith(name):
+        if len(dd) <= number:
+            dd.append({})
+        dd[number][latest] = value
+    else:
+        dd[latest] = value
 
 
 def get_deep(dictionary, keys, default=None):
