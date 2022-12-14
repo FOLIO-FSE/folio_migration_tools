@@ -179,7 +179,7 @@ class BatchPoster(MigrationTaskBase):
     def post_single_records(self, row: str, num_records: int, failed_recs_file):
         kind = list_objects(self.task_configuration.object_type)
         if kind["is_batch"]:
-            raise Exception("This record type supports batch processing, use post_batch method")
+            raise TypeError("This record type supports batch processing, use post_batch method")
         api_endpoint = kind.get("api_endpoint")
         url = f"{self.folio_client.okapi_url}{api_endpoint}"
         response = self.post_objects(url, row)
