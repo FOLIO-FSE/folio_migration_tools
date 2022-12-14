@@ -75,15 +75,25 @@ def test_extra_data():
     mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
     mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
+    mocked_organization_transformer.clean_addresses = OrganizationTransformer.clean_addresses
 
-    recs = [{
-        "name": "MyCompany",
-        "contacts": [{"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]}, {"firstName": "John", "emailAddresses": [{"value": "andme(at)me.com"}]}],
-    },
-    {
-        "name": "YourCompany",
-        "contacts": [{"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]}]
-    }]
+    recs = [
+        {
+            "name": "MyCompany",
+            "contacts": [
+                {"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]},
+                {
+                    "firstName": "John",
+                    "addresses": [{"addressLine1": "MyStreet"}, {"city": "Bogotá"}],
+                    "emailAddresses": [{"value": "andme(at)me.com"}],
+                },
+            ],
+        },
+        {
+            "name": "YourCompany",
+            "contacts": [{"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]}],
+        },
+    ]
 
     for rec in recs:
         OrganizationTransformer.create_extradata_objects(mocked_organization_transformer, rec)
@@ -93,23 +103,27 @@ def test_extra_data():
 
     # Check that contacts have been added to the extra data cache
     assert "contacts" in mocked_organization_transformer.extradata_writer.cache[0]
-
     assert any(
         "Jane" in contact for contact in mocked_organization_transformer.extradata_writer.cache
-        )
-
+    )
     assert any(
         "John" in contact for contact in mocked_organization_transformer.extradata_writer.cache
-        )
-
-    # Check that all the assigned uuids are in the cache
-    assert all(str(id) in str(mocked_organization_transformer.extradata_writer.cache) for id in rec["contacts"])
-
-    # Check that all the assigned uuids are in the cache
-    assert all(str(id) in mocked_organization_transformer.contacts_cache.keys() for id in rec["contacts"])
+    )
 
     # Check that reoccuring contacts are deduplicated
-    assert mocked_organization_transformer.extradata_writer.cache.count("Jane") == 1
+    assert str(mocked_organization_transformer.extradata_writer.cache).count("Jane") == 1
+
+    # Check that all the assigned uuids are in the extradata writer cache
+    assert all(
+        str(id) in str(mocked_organization_transformer.extradata_writer.cache)
+        for id in rec["contacts"]
+    )
+
+    # Check that all the assigned uuids are in the cache
+    assert all(
+        str(id) in mocked_organization_transformer.contacts_cache.keys() for id in rec["contacts"]
+    )
+
 
 def test_clean_up_one_address():
     rec = {

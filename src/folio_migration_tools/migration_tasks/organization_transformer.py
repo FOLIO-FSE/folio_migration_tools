@@ -247,7 +247,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     empty_addresses.append(address)
 
                 # Check if the address is primary
-                if address["isPrimary"] is True:
+                if address.get("isPrimary") is True:
                     primary_address_exists = True
 
             # If none of the existing addresses is pimrary
@@ -281,20 +281,20 @@ class OrganizationTransformer(MigrationTaskBase):
                     )
                     
                 else:
-                    # Create the new contact as a new variable
-                    new_contact = contact.copy()
+                    # Save away the contact info without a uuid for deduplication
+                    contact_info_to_cache = contact.copy()
                     # Generate a UUID and add to the contact
                     contact_uuid = str(uuid.uuid4())
-                    new_contact["id"] = contact_uuid
+                    contact["id"] = contact_uuid
                     # TODO Validate.
                     # TODO Add address cleanup backwhen the mapper is creating proper addresses
-                    # new_contact = self.clean_addresses(contact)
-                    self.extradata_writer.write("contacts", new_contact)  # Double check the endpoint/poster syntax
+                    # contact = self.clean_addresses(contact)
+                    self.extradata_writer.write("contacts", contact)  # Double check the endpoint/poster syntax
                     self.mapper.migration_report.add_general_statistics("Created Contacts")
                     # Save contact to extradata file
                     # Append the contact UUID to the organization record
                     record["contacts"].append(contact_uuid)
-                    self.contacts_cache[contact_uuid] = contact
+                    self.contacts_cache[contact_uuid] = contact_info_to_cache
                 
         # TODO Do the same as for Contacts. Find out if extradata poster can post credentials.
         if "interfaces" in record:
