@@ -103,7 +103,6 @@ def test_extra_data():
     # Check that all the assigned uuids are in the cache
     assert all(str(id) in mocked_organization_transformer.contacts_cache.keys() for id in rec["contacts"])
 
-
 def test_clean_up_one_address():
     rec = {
         "addresses": [
