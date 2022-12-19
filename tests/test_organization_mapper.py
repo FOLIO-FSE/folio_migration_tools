@@ -177,9 +177,11 @@ def test_contacts_basic_mapping(mapper):
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
+    assert organization["contacts"][0]["lastName"] == "Deer"
 
 def test_contacts_address_mapping(mapper):
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations) 
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    assert organization["contacts"][0]["firstName"] == "Jane"
     assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
 
 # Shared data and maps
@@ -203,7 +205,8 @@ data = {
     "tgs": "A^-^B^-^C",
     "organization_types": "cst",
     "org_note": "Good stuff!",
-    "contact_person": "Jane",
+    "contact_person_f": "Jane",
+    "contact_person_l": "Deer",
     "contact_address_line1": "My Street",
     "contact_address_town": "Gothenburg",
 }
@@ -273,7 +276,13 @@ organization_map = {
         },
         {
             "folio_field": "contacts[0].firstName",
-            "legacy_field": "contact_person",
+            "legacy_field": "contact_person_f",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "contacts[0].lastName",
+            "legacy_field": "contact_person_l",
             "value": "",
             "description": "",
         },

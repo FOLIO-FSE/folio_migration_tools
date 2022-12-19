@@ -1,16 +1,10 @@
 import uuid
-
-
-from pathlib import Path
 from pathlib import Path
 from unittest.mock import Mock
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.extradata_writer import ExtradataWriter
-
-
-from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.migration_tasks.organization_transformer import (
@@ -73,7 +67,7 @@ def test_extra_data():
         {
             "name": "MyCompany",
             "contacts": [
-                {"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]},
+                {"firstName": "Jane", "lastName": "Deer", "emailAddresses": [{"value": "me(at)me.com"}]},
                 {
                     "firstName": "John",
                     "addresses": [{"addressLine1": "MyStreet"}, {"city": "Bogotá"}],
@@ -83,7 +77,7 @@ def test_extra_data():
         },
         {
             "name": "YourCompany",
-            "contacts": [{"firstName": "Jane", "emailAddresses": [{"value": "me(at)me.com"}]}],
+            "contacts": [{"firstName": "Jane", "lastName": "Deer", "emailAddresses": [{"value": "me(at)me.com"}]}],
         },
     ]
 
@@ -97,6 +91,9 @@ def test_extra_data():
     assert "contacts" in mocked_organization_transformer.extradata_writer.cache[0]
     assert any(
         "Jane" in contact for contact in mocked_organization_transformer.extradata_writer.cache
+    )
+    assert any(
+        "Deer" in contact for contact in mocked_organization_transformer.extradata_writer.cache
     )
     assert any(
         "John" in contact for contact in mocked_organization_transformer.extradata_writer.cache
