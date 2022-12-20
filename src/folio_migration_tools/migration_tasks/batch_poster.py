@@ -550,7 +550,7 @@ def get_extradata_endpoint(object_name: str, string_object: str):
         "notes": "notes",
         "course": "coursereserves/courses",
         "courselisting": "coursereserves/courselistings",
-        "contacts": "organizations-storage/contacts"
+        "contacts": "organizations-storage/contacts",
     }
     if object_name == "instructor":
         instructor = json.loads(string_object)
