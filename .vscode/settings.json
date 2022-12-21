@@ -18,7 +18,7 @@
     "python.linting.flake8Args": [
         "--max-line-length=99",
         "--ignore=E203,W503 ",
-        "--select=B,B9,BLK,C,E,F,I,S,W"
+        "--select=B,B9,BLK,C,DAR,E,F,S,W"
     ],
     "python.linting.flake8Enabled": true,
     "python.linting.mypyEnabled": true,
