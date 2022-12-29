@@ -1949,7 +1949,10 @@ def test_map_array_object_array_object_string(mocked_folio_client):
     assert folio_rec["contacts"][0]["addresses"][1]["addressLine1"] == "My other street"
     assert folio_rec["contacts"][1]["addresses"][0]["addressLine1"] == "Yet another street"
 
-def test_do_not_overwrite_array_object_array_object_string_with_array_object_string(mocked_folio_client):
+
+def test_do_not_overwrite_array_object_array_object_string_with_array_object_string(
+    mocked_folio_client,
+):
     # TODO Make test succeed
 
     schema = {
@@ -2013,7 +2016,7 @@ def test_do_not_overwrite_array_object_array_object_string_with_array_object_str
                 "value": "",
                 "description": "",
             },
-                        {
+            {
                 "folio_field": "contacts[0].addresses[0].city",
                 "legacy_field": "contact_address_town",
                 "value": "",
@@ -2041,6 +2044,139 @@ def test_do_not_overwrite_array_object_array_object_string_with_array_object_str
     assert folio_rec["contacts"][0]["lastName"] == "Deer"
     assert folio_rec["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
     assert folio_rec["contacts"][0]["addresses"][0]["city"] == "Gothenburg"
+
+
+def test_do_not_overwrite_array_object_array_object_string_with_array_object_string2(
+    mocked_folio_client,
+):
+    # TODO Make test succeed
+
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "contacts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "firstName": {
+                            "type": "string",
+                        },
+                        "lastName": {
+                            "type": "string",
+                        },
+                        "addresses": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "city": {
+                                        "type": "string",
+                                    },
+                                    "addressLine1": {"type": "string"},
+                                },
+                            },
+                        },
+                    },
+                },
+            }
+        },
+    }
+    record = {
+        "id": "id1",
+        "contact_person_fn": "Jane",
+        "contact_person_ln": "Deer",
+        "contact_address_line1": "My Street",
+        "contact_address_town": "Gothenburg",
+        "contact_address_types": "support<delimiter>sales",
+        "contact_person_fn1": "John",
+        "contact_person_ln1": "Dear",
+        "contact_address2_line1": "My second Street",
+        "contact_address2_town": "Fritsla",
+        "contact_address2_types": "support<delimiter>sales",
+    }
+    org_map = {
+        "data": [
+            {
+                "folio_field": "contacts[0].firstName",
+                "legacy_field": "contact_person_fn",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].lastName",
+                "legacy_field": "contact_person_ln",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[1].firstName",
+                "legacy_field": "contact_person_fn1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[1].lastName",
+                "legacy_field": "contact_person_ln1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].addressLine1",
+                "legacy_field": "contact_address_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].city",
+                "legacy_field": "contact_address_town",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].categories",
+                "legacy_field": "contact_address_types",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[1].addressLine1",
+                "legacy_field": "contact_address2_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[1].city",
+                "legacy_field": "contact_address2_town",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[1].categories",
+                "legacy_field": "contact_address2_types",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    contact = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert folio_rec["contacts"][0]["firstName"] == "Jane"
+    assert folio_rec["contacts"][0]["lastName"] == "Deer"
+    assert folio_rec["contacts"][1]["firstName"] == "John"
+    assert folio_rec["contacts"][1]["lastName"] == "Dear"
+    assert folio_rec["contacts"][0]["addresses"][1]["addressLine1"] == "My second Street"
+    assert folio_rec["contacts"][0]["addresses"][1]["city"] == "Fritsla"
 
 
 def test_map_array_object_array_string_on_edge(mocked_folio_client):
