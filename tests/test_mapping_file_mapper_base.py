@@ -149,13 +149,13 @@ def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client):
         "title_": "actual value",
         "subtitle_": "object",
         "link_2": "",
-        "id": "11",
+        "id": "32",
     }
     tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert len(folio_rec["electronicAccess"]) == 1
-    assert folio_id == "11"
-    assert folio_rec["id"] == "f00d59ac-4cfc-56d6-9c62-dc9084c18003"
+    assert folio_id == "32"
+    assert folio_rec["id"] == "ddafc006-e8ce-5f12-b0eb-9bb543509b78"
 
 
 def test_validate_required_properties_sub_pro_missing_uri_and_more(mocked_folio_client):
@@ -281,7 +281,7 @@ def test_validate_required_properties_sub_pro_missing_uri_and_more(mocked_folio_
         "title_": "actual value",
         "subtitle_": "object",
         "link_2": "",
-        "id": "11",
+        "id": "33",
         "third_0": "",
         "third_1": "",
     }
@@ -475,7 +475,7 @@ def test_validate_required_properties_item_notes_unmapped(mocked_folio_client):
             },
         ]
     }
-    record = {"note_1": "my note", "id": "12"}
+    record = {"note_1": "my note", "id": "34"}
     tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     ItemsTransformer.handle_notes(folio_rec)
@@ -571,7 +571,7 @@ def test_validate_required_properties_item_notes_unmapped_2(mocked_folio_client)
             },
         ]
     }
-    record = {"note_1": "my note", "id": "12"}
+    record = {"note_1": "my note", "id": "35"}
     tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     ItemsTransformer.handle_notes(folio_rec)
@@ -678,7 +678,7 @@ def test_validate_required_properties_obj(mocked_folio_client):
         "formerIds_2": "id2",
         "title_": "actual value",
         "subtitle_": "object",
-        "id": "11",
+        "id": "36",
         "third_0": "",
     }
     tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
@@ -757,7 +757,7 @@ def test_validate_required_properties_item_notes_split_on_delimiter_notes(mocked
             },
         ]
     }
-    record = {"note_1": "my note<delimiter>my second note", "id": "12"}
+    record = {"note_1": "my note<delimiter>my second note", "id": "37"}
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     ItemsTransformer.handle_notes(folio_rec)
@@ -836,13 +836,13 @@ def test_multiple_repeated_split_on_delimiter_electronic_access(mocked_folio_cli
         "link_": "uri1<delimiter>uri2",
         "title_": "title1<delimiter>title2",
         "subtitle_": "object",
-        "id": "11",
+        "id": "38",
     }
     tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert len(folio_rec["electronicAccess"]) == 2
-    assert folio_id == "11"
-    assert folio_rec["id"] == "f00d59ac-4cfc-56d6-9c62-dc9084c18003"
+    assert folio_id == "38"
+    assert folio_rec["id"] == "02e198b2-ebc1-5d46-bf98-eaaba6aa0794"
 
     assert folio_rec["electronicAccess"][0]["uri"] == "uri1"
     assert folio_rec["electronicAccess"][0]["linkText"] == "title1"
@@ -906,7 +906,7 @@ def test_validate_required_properties_item_notes_split_on_delimiter_plain_object
             },
         ]
     }
-    record = {"note_1": "my note<delimiter>my second note", "id": "12"}
+    record = {"note_1": "my note<delimiter>my second note", "id": "39"}
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     ItemsTransformer.handle_notes(folio_rec)
@@ -955,10 +955,11 @@ def test_concatenate_fields_if_mapped_multiple_times(mocked_folio_client):
             },
         ]
     }
-    record = {"note_1": "my note", "note_2": "my second note", "id": "12"}
+    record = {"note_1": "my note", "note_2": "my second note", "id": "1493"}
     # Loop to make sure the right order occurs the first time.
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
-    for _ in range(2000):
+    for r in range(8000, 2000):
+        record["id"] = str(r)
         folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
         assert folio_rec["uber_prop"]["prop1"] == "my note my second note"
 
@@ -1006,10 +1007,11 @@ def test_concatenate_fields_if_mapped_multiple_times_and_data_is_in_random_order
             },
         ]
     }
-    record = {"note_2": "my second note", "id": "12", "note_1": "my note"}
+    record = {"note_2": "my second note", "id": "14", "note_1": "my note"}
     # Loop to make sure the right order occurs the first time.
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
-    for _ in range(2000):
+    for r in range(11000, 2000):
+        record["id"] = str(r)
         folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
         assert folio_rec["uber_prop"]["prop1"] == "my note my second note"
 
@@ -1054,7 +1056,7 @@ def test_do_not_split_string_prop(mocked_folio_client):
     }
     record = {
         "formerIds_1": "id2<delimiter>id3",
-        "id": "11",
+        "id": "15",
     }
     tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
@@ -1101,7 +1103,7 @@ def test_split_former_ids(mocked_folio_client):
     record = {
         "formerIds_1": "id1",
         "formerIds_2": "id2<delimiter>id3",
-        "id": "11",
+        "id": "16",
     }
     tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
@@ -1199,7 +1201,7 @@ def test_validate_no_leakage_between_properties(mocked_folio_client):
             },
         ]
     }
-    record = {"stmt_1": "stmt", "id": "12", "stmt_2": "suppl", "stmt_3": "idx"}
+    record = {"stmt_1": "stmt", "id": "17", "stmt_2": "suppl", "stmt_3": "idx"}
     tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert len(folio_rec["holdingsStatements"]) == 1
@@ -1350,10 +1352,11 @@ def test_map_string_second_level(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note"}
+    record = {"id": "488", "note_1": "my note"}
     # Loop to make sure the right order occurs the first time.
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
-    for _ in range(2000):
+    for r in range(10000, 2000):
+        record["id"] = str(r)
         folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
         assert folio_rec["firstLevel"]["secondLevel"] == "my note"
 
@@ -1395,7 +1398,7 @@ def test_map_string_array_second_level(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note"}
+    record = {"id": "19", "note_1": "my note"}
     # Loop to make sure the right order occurs the first time.
 
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
@@ -1446,7 +1449,7 @@ def test_map_string_array_second_level_multiple_values(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note", "note_2": "my note 2"}
+    record = {"id": "20", "note_1": "my note", "note_2": "my note 2"}
     # Loop to make sure the right order occurs the first time.
 
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
@@ -1497,7 +1500,7 @@ def test_map_string_array_second_level_multiple_additional_split_values(mocked_f
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note", "note_2": "my note 2<delimiter>my note 3"}
+    record = {"id": "21", "note_1": "my note", "note_2": "my note 2<delimiter>my note 3"}
     # Loop to make sure the right order occurs the first time.
 
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
@@ -1548,7 +1551,7 @@ def test_map_string_array_second_level_split_values(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_2": "my note 2<delimiter>my note 3"}
+    record = {"id": "22", "note_2": "my note 2<delimiter>my note 3"}
     # Loop to make sure the right order occurs the first time.
 
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
@@ -1598,7 +1601,7 @@ def test_map_array_of_objects_with_string_array(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note", "note_2": "my note 2"}
+    record = {"id": "23", "note_1": "my note", "note_2": "my note 2"}
     # Loop to make sure the right order occurs the first time.
 
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
@@ -1648,7 +1651,7 @@ def test_map_array_of_objects_with_string_array_delimiter(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note", "note_2": "my note 2<delimiter>my note 3"}
+    record = {"id": "24", "note_1": "my note", "note_2": "my note 2<delimiter>my note 3"}
     # Loop to make sure the right order occurs the first time.
 
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
@@ -1695,7 +1698,7 @@ def test_map_string_third_level(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note"}
+    record = {"id": "25", "note_1": "my note"}
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert (
@@ -1763,7 +1766,7 @@ def test_map_string_and_array_of_strings_fourth_level(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note", "note_2": "my note 2", "note_3": "my note 3"}
+    record = {"id": "26", "note_1": "my note", "note_2": "my note 2", "note_3": "my note 3"}
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert folio_rec["firstLevel"]["secondLevel"]["thirdLevel"]["fourthLevel"] == "my note"
@@ -1853,7 +1856,7 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
             },
         ]
     }
-    record = {"id": "12", "note_1": "my note", "note_2": "my note 2", "note_3": "my note 3"}
+    record = {"id": "27", "note_1": "my note", "note_2": "my note 2", "note_3": "my note 3"}
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert (
@@ -2222,10 +2225,10 @@ def test_get_prop_multiple_legacy_identifiers(mocked_folio_client):
             },
         },
     }
-    legacy_record = {"firstLevel": "user_name_1", "id": "1", "id2": "1"}
+    legacy_record = {"firstLevel": "user_name_1", "id": "44", "id2": "1"}
     tfm = MyTestableFileMapper(schema, record_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
-    assert folio_rec["id"] == "6ba39416-de70-591e-a45f-62c9ca4e2d98"
+    assert folio_rec["id"] == "d82d9010-6348-5225-a1e7-c3b52924e3e7"
 
 
 def test_value_mapped_enum_properties(mocked_folio_client):
@@ -2291,7 +2294,7 @@ def test_value_mapped_non_enum_properties(mocked_folio_client):
             },
         },
     }
-    legacy_record = {"id": "1"}
+    legacy_record = {"id": "29"}
     tfm = MyTestableFileMapper(schema, record_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
     assert folio_rec["my_enum"] == "014/EAN"
@@ -2325,7 +2328,7 @@ def test_value_not_mapped_mapped_non_enum_properties(mocked_folio_client):
             },
         },
     }
-    legacy_record = {"id": "1"}
+    legacy_record = {"id": "30"}
     tfm = MyTestableFileMapper(schema, record_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
     assert folio_rec["my_enum"] == "014/EAN"

@@ -113,6 +113,7 @@ def test_organization_mapping(mapper):
 
 def test_single_org_type_refdata_mapping(mapper):
 
+    data["vendor_code"] = "abe1"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test reference data mapping
@@ -121,6 +122,7 @@ def test_single_org_type_refdata_mapping(mapper):
 
 def test_single_category_refdata_mapping(mapper):
 
+    data["vendor_code"] = "abe2"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test arrays of contact information
@@ -132,6 +134,7 @@ def test_single_category_refdata_mapping(mapper):
 
 
 def test_tags_object_array(mapper):
+    data["vendor_code"] = "abe3"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["tags"] == {"tagList": ["A", "B", "C"]}
