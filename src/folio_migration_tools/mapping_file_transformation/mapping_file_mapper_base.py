@@ -9,6 +9,7 @@ from functools import reduce
 from pathlib import Path
 from typing import Dict
 from typing import List
+from typing import Set
 from uuid import UUID
 
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -44,6 +45,8 @@ class MappingFileMapperBase(MapperBase):
         self.uuid_namespace = uuid_namespace
         self.ignore_legacy_identifier = ignore_legacy_identifier
         self.schema = schema
+        self.unique_record_ids: Set[str] = set()
+
         self.total_records = 0
         self.use_map = True  # Legacy
         self.record_map = record_map
@@ -187,15 +190,23 @@ class MappingFileMapperBase(MapperBase):
         if legacy_id := " ".join(
             legacy_object.get(li, "") for li in self.legacy_id_property_names
         ).strip():
+            generated_id = str(
+                FolioUUID(
+                    self.folio_client.okapi_url,
+                    object_type,
+                    legacy_id,
+                )
+            )
+            if generated_id in self.unique_record_ids:
+                raise TransformationRecordFailedError(
+                    index_or_id,
+                    "Legacy id already generated.",
+                    f"UUID: {generated_id}, seed: {legacy_id}",
+                )
+            self.unique_record_ids.add(generated_id)
             return (
                 {
-                    "id": str(
-                        FolioUUID(
-                            self.folio_client.okapi_url,
-                            object_type,
-                            legacy_id,
-                        )
-                    ),
+                    "id": generated_id,
                     "metadata": self.folio_client.get_metadata_construct(),
                     "type": "object",
                 },
