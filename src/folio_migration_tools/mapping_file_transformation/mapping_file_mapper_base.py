@@ -713,6 +713,13 @@ def set_deep2(dictionary, key, value):
         if len(dd) <= number:
             dd.append({})
         dd[number][latest] = value
+    elif latest in dd:
+        for i in range(len(value)):
+            if len(dd[latest]) > i and dd[latest][i] and isinstance(dd[latest][i], dict):
+                dd[latest][i].update(value[i])
+            else:
+                dd[latest].insert(i, value[i])
+
     else:
         dd[latest] = value
 
