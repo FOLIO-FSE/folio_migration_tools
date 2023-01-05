@@ -204,7 +204,6 @@ def test_multiple_emails_array_objects(mapper):
     assert correct_email_objects == 2
 
 
-
 # Shared data and maps
 data = {
     "vendor_code": "AbeBooks",
@@ -355,7 +354,7 @@ organization_map = {
             "value": "",
             "description": "",
         },
-                {
+        {
             "folio_field": "emails[2].isPrimary",
             "legacy_field": "Not mapped",
             "value": False,

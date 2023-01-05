@@ -59,9 +59,7 @@ def generate_extended_folio_object_schema(args):
     organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
         "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
     )
-    with open(
-        os.path.join(args.results_path, "compositeOrganizationSchema.json"), "w"
-    ) as outfile:
+    with open(os.path.join(args.results_path, "compositeOrganizationSchema.json"), "w") as outfile:
         outfile.write(json.dumps(organization_schema, indent=4))
 
     courses_schema = CoursesMapper.get_composite_course_schema()
