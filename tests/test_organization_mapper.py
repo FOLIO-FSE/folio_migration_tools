@@ -146,6 +146,35 @@ def test_tags_object_array(mapper):
     assert organization["tags"] == {"tagList": ["A", "B", "C"]}
 
 
+def test_contacts_basic_mapping(mapper):
+    data["vendor_code"] = "v6"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["contacts"][0]["firstName"] == "Jane"
+    assert organization["contacts"][0]["lastName"] == "Deer"
+
+
+def test_contacts_address_mapping(mapper):
+    data["vendor_code"] = "v7"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    assert organization["contacts"][0]["firstName"] == "Jane"
+    assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
+
+
+def test_enforce_schema_required_properties_in_organization(mapper):
+    data["EMAIL2"] = ""
+    data["PHONE NUM"] = ""
+    data["vendor_code"] = "v8"
+
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    # There should only be one email, as the other one is empty
+    assert len(organization["emails"]) == 1
+
+    # There should be no phone numbers, as the data is empty
+    assert not organization.get("phoneNumbers")
+
+
 @pytest.mark.skip(
     reason="We would need a way of using the same ref data file for multiple values. See #411"
 )
@@ -175,27 +204,13 @@ def test_multiple_emails_array_objects(mapper):
     assert correct_email_objects == 2
 
 
-def test_contacts_basic_mapping(mapper):
-    data["vendor_code"] = "v6"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-
-    assert organization["contacts"][0]["firstName"] == "Jane"
-    assert organization["contacts"][0]["lastName"] == "Deer"
-
-
-def test_contacts_address_mapping(mapper):
-    data["vendor_code"] = "v7"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-    assert organization["contacts"][0]["firstName"] == "Jane"
-    assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
-
 
 # Shared data and maps
 data = {
     "vendor_code": "AbeBooks",
     "ACCTNUM": "aha112233",
     "VENNAME": "Abe Books",
-    "EMAIL": "email1@abebooks.com",
+    "EMAIL": "EMAIL",
     "email1_categories": "sls",
     "EMAIL2": "email2@abebooks.com",
     "email2_categories": "tspt",
@@ -337,6 +352,18 @@ organization_map = {
         {
             "folio_field": "emails[1].categories[0]",
             "legacy_field": "email2_categories",
+            "value": "",
+            "description": "",
+        },
+                {
+            "folio_field": "emails[2].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": False,
+            "description": "",
+        },
+        {
+            "folio_field": "emails[2].value",
+            "legacy_field": "EMAIL3",
             "value": "",
             "description": "",
         },
