@@ -30,7 +30,7 @@ class OrganizationMapper(MappingFileMapperBase):
         email_categories_map,
         phone_categories_map,
     ):
-        
+
         # Build composite organization schema
         organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
@@ -46,7 +46,6 @@ class OrganizationMapper(MappingFileMapperBase):
         )
 
         self.use_map = True
-
 
         # Set up reference data maps
         self.set_up_reference_data_mapping(
@@ -323,11 +322,11 @@ class OrganizationMapper(MappingFileMapperBase):
                             "items": {"type": "string"},
                         }
                     }
-                
+
                 elif property_name_level1 == "contacts":
                     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
                     property_level1["items"] = contact_schema
-                    
+
                     logging.info(f"{property_name_level1} will be handled separately.")
 
                 elif (
@@ -336,7 +335,6 @@ class OrganizationMapper(MappingFileMapperBase):
                     == "../../common/schemas/uuid.json"
                 ):
                     property_level1["items"]["type"] = "string"
-
 
                 # Report and discard unhandled properties
                 elif (
@@ -379,7 +377,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         except HTTPError as he:
             logging.error(he)
-    
+
     @staticmethod
     def fetch_additional_schema(folio_object):
         additional_schema = OrganizationMapper.get_latest_acq_schemas_from_github(

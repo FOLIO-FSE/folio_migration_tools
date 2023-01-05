@@ -105,12 +105,13 @@ def test_parse_record_mapping_file(mapper):
 
 
 def test_organization_mapping(mapper):
+    data["vendor_code"] = "v1"
 
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test string values mapping
     assert organization["name"] == "Abe Books"
-    assert organization["code"] == "AbeBooks"
+    assert organization["code"] == "v1"
     assert organization["description"] == "Good stuff!"
     assert organization["status"] == "Active"
     assert organization["accounts"][0]["accountNo"] == "aha112233"
@@ -118,7 +119,7 @@ def test_organization_mapping(mapper):
 
 def test_single_org_type_refdata_mapping(mapper):
 
-    data["vendor_code"] = "abe1"
+    data["vendor_code"] = "v2"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test reference data mapping
@@ -127,7 +128,7 @@ def test_single_org_type_refdata_mapping(mapper):
 
 def test_single_category_refdata_mapping(mapper):
 
-    data["vendor_code"] = "abe2"
+    data["vendor_code"] = "v3"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test arrays of contact information
@@ -139,7 +140,7 @@ def test_single_category_refdata_mapping(mapper):
 
 
 def test_tags_object_array(mapper):
-    data["vendor_code"] = "abe3"
+    data["vendor_code"] = "v4"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["tags"] == {"tagList": ["A", "B", "C"]}
@@ -149,6 +150,7 @@ def test_tags_object_array(mapper):
     reason="We would need a way of using the same ref data file for multiple values. See #411"
 )
 def test_multiple_emails_array_objects(mapper):
+    data["vendor_code"] = "v5"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     correct_email_objects = 0
@@ -174,15 +176,19 @@ def test_multiple_emails_array_objects(mapper):
 
 
 def test_contacts_basic_mapping(mapper):
+    data["vendor_code"] = "v6"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
     assert organization["contacts"][0]["lastName"] == "Deer"
 
+
 def test_contacts_address_mapping(mapper):
+    data["vendor_code"] = "v7"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
     assert organization["contacts"][0]["firstName"] == "Jane"
     assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
+
 
 # Shared data and maps
 data = {

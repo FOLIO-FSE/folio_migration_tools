@@ -71,7 +71,7 @@ class OrganizationTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.organization_map
         )
-        
+
         self.mapper = OrganizationMapper(
             self.folio_client,
             self.library_configuration,
@@ -148,7 +148,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     )
 
                     folio_rec = self.create_extradata_objects(folio_rec)
-                    
+
                     clean_folio_rec = self.clean_org(folio_rec)
 
                     if idx == 0:
@@ -258,7 +258,7 @@ class OrganizationTransformer(MigrationTaskBase):
             folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
 
             return folio_rec
-    
+
     def create_extradata_objects(self, record):
         if record.get("contacts"):
             mapped_contacts = record["contacts"]
@@ -268,7 +268,8 @@ class OrganizationTransformer(MigrationTaskBase):
 
                 # Check if this contact has already been created
                 matched_uuids = [
-                    key for key, value in self.contacts_cache.items() if value == contact]
+                    key for key, value in self.contacts_cache.items() if value == contact
+                ]
 
                 if len(matched_uuids) == 1:
                     contact_uuid = matched_uuids[0]
@@ -279,7 +280,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     raise TransformationProcessError(
                         f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
                     )
-                    
+
                 else:
                     # Save away the contact info without a uuid for deduplication
                     contact_info_to_cache = contact.copy()
@@ -289,13 +290,15 @@ class OrganizationTransformer(MigrationTaskBase):
                     # TODO Validate.
                     # TODO Add address cleanup backwhen the mapper is creating proper addresses
                     # contact = self.clean_addresses(contact)
-                    self.extradata_writer.write("contacts", contact)  # Double check the endpoint/poster syntax
+                    self.extradata_writer.write(
+                        "contacts", contact
+                    )  # Double check the endpoint/poster syntax
                     self.mapper.migration_report.add_general_statistics("Created Contacts")
                     # Save contact to extradata file
                     # Append the contact UUID to the organization record
                     record["contacts"].append(contact_uuid)
                     self.contacts_cache[contact_uuid] = contact_info_to_cache
-                
+
         # TODO Do the same as for Contacts. Find out if extradata poster can post credentials.
         if "interfaces" in record:
             pass
@@ -305,4 +308,3 @@ class OrganizationTransformer(MigrationTaskBase):
             pass
 
         return record
-
