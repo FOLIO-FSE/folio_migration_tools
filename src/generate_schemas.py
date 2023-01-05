@@ -60,7 +60,7 @@ def generate_extended_folio_object_schema(args):
         "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
     )
     with open(
-        os.path.join(args.results_path, "FOLIO_organization_extended_object_schema.json"), "w"
+        os.path.join(args.results_path, "compositeOrganizationSchema.json"), "w"
     ) as outfile:
         outfile.write(json.dumps(organization_schema, indent=4))
 

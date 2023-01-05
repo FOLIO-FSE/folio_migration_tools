@@ -303,9 +303,285 @@
             "description": "An array of contact record IDs",
             "type": "array",
             "items": {
-                "description": "UUID of a contact record",
-                "$ref": "../../common/schemas/uuid.json",
-                "type": "string"
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "description": "A contact record",
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "description": "The unique id of this contact",
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "string"
+                    },
+                    "prefix": {
+                        "description": "The prefix for this contact person",
+                        "type": "string"
+                    },
+                    "firstName": {
+                        "description": "The first name of this contact person",
+                        "type": "string"
+                    },
+                    "lastName": {
+                        "description": "The last name of this contact person",
+                        "type": "string"
+                    },
+                    "language": {
+                        "description": "The preferred language for this contact person",
+                        "type": "string"
+                    },
+                    "notes": {
+                        "description": "The notes for this contact person",
+                        "type": "string"
+                    },
+                    "phoneNumbers": {
+                        "id": "phoneNumbers",
+                        "description": "The list of phone numbers for this contact person",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "$ref": "phone_number.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "description": "A phone number record",
+                            "properties": {
+                                "id": {
+                                    "description": "UUID",
+                                    "$ref": "../../common/schemas/uuid.json"
+                                },
+                                "phoneNumber": {
+                                    "description": "The entire sequence of digits for this phone number",
+                                    "type": "string"
+                                },
+                                "categories": {
+                                    "id": "categories",
+                                    "description": "The list of categories for this organization phone",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": {
+                                    "description": "The type of this phone number",
+                                    "type": "string",
+                                    "enum": [
+                                        "Office",
+                                        "Mobile",
+                                        "Fax",
+                                        "Other"
+                                    ]
+                                },
+                                "isPrimary": {
+                                    "description": "Used to set this phone number as primary for the contact",
+                                    "type": "boolean"
+                                },
+                                "language": {
+                                    "description": "The language for this organization phone",
+                                    "type": "string"
+                                },
+                                "metadata": {
+                                    "type": "object",
+                                    "$ref": "../../../raml-util/schemas/metadata.schema",
+                                    "readonly": true
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "phoneNumber"
+                            ]
+                        }
+                    },
+                    "emails": {
+                        "id": "emailAddresses",
+                        "description": "The list of emails for this contact person",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "$ref": "email.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "description": "An email record",
+                            "properties": {
+                                "id": {
+                                    "description": "The unique id of this email",
+                                    "$ref": "../../common/schemas/uuid.json"
+                                },
+                                "value": {
+                                    "description": "The value for this email",
+                                    "type": "string"
+                                },
+                                "description": {
+                                    "description": "The description for this email",
+                                    "type": "string"
+                                },
+                                "isPrimary": {
+                                    "description": "Used to set this email as primary for the contact",
+                                    "type": "boolean"
+                                },
+                                "categories": {
+                                    "id": "categories",
+                                    "description": "The list of categories for this organization email",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "language": {
+                                    "description": "The language for this organization email",
+                                    "type": "string"
+                                },
+                                "metadata": {
+                                    "type": "object",
+                                    "$ref": "../../../raml-util/schemas/metadata.schema",
+                                    "readonly": true
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "value"
+                            ]
+                        }
+                    },
+                    "addresses": {
+                        "id": "addresses",
+                        "description": "The list of addresses for this contact person",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "$ref": "address.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "description": "An address record",
+                            "properties": {
+                                "id": {
+                                    "description": "UUID",
+                                    "$ref": "../../common/schemas/uuid.json"
+                                },
+                                "addressLine1": {
+                                    "description": "The first line of this address",
+                                    "type": "string"
+                                },
+                                "addressLine2": {
+                                    "description": "The second line of this address",
+                                    "type": "string"
+                                },
+                                "city": {
+                                    "description": "The city for this address",
+                                    "type": "string"
+                                },
+                                "stateRegion": {
+                                    "description": "The state or region for this address",
+                                    "type": "string"
+                                },
+                                "zipCode": {
+                                    "description": "The zip code for this address",
+                                    "type": "string"
+                                },
+                                "country": {
+                                    "description": "The country for this address",
+                                    "type": "string"
+                                },
+                                "isPrimary": {
+                                    "description": "Used to set this address as primary for the contact",
+                                    "type": "boolean"
+                                },
+                                "categories": {
+                                    "id": "categories",
+                                    "description": "The list of categories for this organization address",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "language": {
+                                    "description": "The language for this organization address",
+                                    "type": "string"
+                                },
+                                "metadata": {
+                                    "type": "object",
+                                    "$ref": "../../../raml-util/schemas/metadata.schema",
+                                    "readonly": true
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    },
+                    "urls": {
+                        "id": "urls",
+                        "description": "The list of URLs for this contact person",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "$ref": "url.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "description": "A URL record",
+                            "properties": {
+                                "id": {
+                                    "description": "The unique id of this url",
+                                    "$ref": "../../common/schemas/uuid.json"
+                                },
+                                "value": {
+                                    "description": "The value for this URL",
+                                    "type": "string",
+                                    "pattern": "^$|(([Hh][Tt][Tt][Pp]|[Ff][Tt][Pp])([Ss])?://.+$)"
+                                },
+                                "description": {
+                                    "description": "The description for this URL",
+                                    "type": "string"
+                                },
+                                "language": {
+                                    "description": "The language for this organization URL",
+                                    "type": "string"
+                                },
+                                "isPrimary": {
+                                    "description": "Used to set this url as primary for the contact",
+                                    "type": "boolean"
+                                },
+                                "categories": {
+                                    "id": "categories",
+                                    "description": "The list of categories for this organization URL",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "notes": {
+                                    "description": "The notes for this organization URL",
+                                    "type": "string"
+                                },
+                                "metadata": {
+                                    "type": "object",
+                                    "$ref": "../../../raml-util/schemas/metadata.schema",
+                                    "readonly": true
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "value"
+                            ]
+                        }
+                    },
+                    "categories": {
+                        "id": "contactCategory",
+                        "description": "The list of contact categories associated with this organization contact person",
+                        "type": "array",
+                        "items": {
+                            "description": "UUID of the contact category",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string"
+                        }
+                    },
+                    "inactive": {
+                        "description": "Used to indicate that a contact is no longer active",
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "metadata": {
+                        "type": "Deprecated",
+                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "readonly": true
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "firstName",
+                    "lastName"
+                ]
             }
         },
         "agreements": {
@@ -743,9 +1019,18 @@
             }
         },
         "tags": {
-            "type": "Deprecated",
+            "type": "object",
             "description": "arbitrary tags associated with this organization",
-            "$ref": "../../../raml-util/schemas/tags.schema"
+            "$ref": "../../../raml-util/schemas/tags.schema",
+            "properties": {
+                "tagList": {
+                    "description": "List of tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
         },
         "metadata": {
             "type": "Deprecated",
