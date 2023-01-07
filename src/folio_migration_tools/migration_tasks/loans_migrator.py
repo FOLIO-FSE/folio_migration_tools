@@ -16,10 +16,12 @@ from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.circulation_helper import CirculationHelper
-from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+    MappingFileMapperBase,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
@@ -50,13 +52,13 @@ class LoansMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        self.patron_item_combos = set()
+        self.patron_item_combos: set = set()
         self.t0 = time.time()
         self.num_duplicate_loans = 0
         self.skipped_since_already_added = 0
-        self.processed_items = set()
-        self.failed = {}
-        self.failed_and_not_dupe = {}
+        self.processed_items: set = set()
+        self.failed: dict = {}
+        self.failed_and_not_dupe: dict = {}
         self.migration_report = MigrationReport()
         self.valid_legacy_loans = []
         super().__init__(library_config, task_configuration)
@@ -81,15 +83,26 @@ class LoansMigrator(MigrationTaskBase):
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         self.semi_valid_legacy_loans = []
         for file_def in task_configuration.open_loans_files:
-            with open(
-                self.folder_structure.legacy_records_folder / file_def.file_name,
-                "r",
-                encoding="utf-8",
-            ) as loans_file:
-
+            loans_file_path = self.folder_structure.legacy_records_folder / file_def.file_name
+            with open(loans_file_path, "r", encoding="utf-8") as loans_file:
+                total_rows, empty_rows, reader = MappingFileMapperBase._get_delimited_file_reader(
+                    loans_file, loans_file_path
+                )
+                logging.info("Source data file contains %d rows", total_rows)
+                logging.info("Source data file contains %d empty lines", empty_rows)
+                self.migration_report.set(
+                    Blurbs.GeneralStatistics,
+                    f"Total lines in {loans_file_path.name}",
+                    total_rows,
+                )
+                self.migration_report.set(
+                    Blurbs.GeneralStatistics,
+                    f"Empty lines in {loans_file_path.name}",
+                    empty_rows,
+                )
                 self.semi_valid_legacy_loans.extend(
                     self.load_and_validate_legacy_loans(
-                        InsensitiveDictReader(loans_file, dialect="tsv"),
+                        reader,
                         file_def.service_point_id or task_configuration.fallback_service_point_id,
                     )
                 )
@@ -170,17 +183,23 @@ class LoansMigrator(MigrationTaskBase):
 
         if res_checkout.was_successful:
             self.migration_report.add(Blurbs.Details, "Checked out on first try")
+            self.migration_report.add_general_statistics("Successfully checked out")
             self.set_renewal_count(legacy_loan, res_checkout)
             self.set_new_status(legacy_loan, res_checkout)
         elif res_checkout.should_be_retried:
             res_checkout2 = self.handle_checkout_failure(legacy_loan, res_checkout)
             if res_checkout2.was_successful and res_checkout2.folio_loan:
                 self.migration_report.add(Blurbs.Details, "Checked out on second try")
+                self.migration_report.add_general_statistics("Successfully checked out")
                 logging.info("Checked out on second try")
                 self.set_renewal_count(legacy_loan, res_checkout2)
                 self.set_new_status(legacy_loan, res_checkout2)
             elif legacy_loan.item_barcode not in self.failed:
                 self.failed[legacy_loan.item_barcode] = legacy_loan
+                self.migration_report.add_general_statistics("Failed loans")
+                Helper.log_data_issue(
+                    "", "Loans failing during checkout", json.dumps(legacy_loan.to_dict())
+                )
                 logging.error("Failed on second try: %s", res_checkout2.error_message)
                 self.migration_report.add(
                     Blurbs.Details,
@@ -188,9 +207,13 @@ class LoansMigrator(MigrationTaskBase):
                 )
         elif not res_checkout.should_be_retried:
             logging.error("Failed first time. No retries: %s", res_checkout.error_message)
+            self.migration_report.add_general_statistics("Failed loans")
             self.migration_report.add(
                 Blurbs.Details,
                 f"Failed 1st time. No retries: {res_checkout.migration_report_message}",
+            )
+            Helper.log_data_issue(
+                "", "Loans failing during checkout", json.dumps(legacy_loan.to_dict())
             )
 
     def set_new_status(self, legacy_loan: LegacyLoan, res_checkout: TransactionResult):
@@ -216,9 +239,7 @@ class LoansMigrator(MigrationTaskBase):
     def wrap_up(self):
         for k, v in self.failed.items():
             self.failed_and_not_dupe[k] = [v.to_dict()]
-        self.migration_report.set(
-            Blurbs.GeneralStatistics, "Failed loans", len(self.failed_and_not_dupe)
-        )
+        print(f"Wrapping up. Unique loans in failed:{len(self.failed_and_not_dupe)}")
 
         self.write_failed_loans_to_file()
 
@@ -263,6 +284,7 @@ class LoansMigrator(MigrationTaskBase):
             else:
                 # Add this loan to failed loans for later correction and re-run.
                 self.failed[loan.item_barcode] = loan
+                self.migration_report.add_general_statistics("Failed loans")
                 self.migration_report.add(
                     Blurbs.DiscardedLoans,
                     f"Loans discarded. Had migrated item barcode: {has_item_barcode}. "
@@ -294,7 +316,7 @@ class LoansMigrator(MigrationTaskBase):
                 )
                 if any(legacy_loan.errors):
                     num_bad += 1
-                    self.migration_report.add_general_statistics("Discarded Loans")
+                    self.migration_report.add_general_statistics("Failed loans")
                     for error in legacy_loan.errors:
                         self.migration_report.add(
                             Blurbs.DiscardedLoans, f"{error[0]} - {error[1]}"
@@ -308,7 +330,8 @@ class LoansMigrator(MigrationTaskBase):
             except ValueError as ve:
                 logging.exception(ve)
         logging.info(
-            f"Done validating {legacy_loan_count + 1} legacy loans with {num_bad} rotten apples"
+            f"Done validating {legacy_loan_count + 1} legacy loans out of which "
+            f"{num_bad} where discarded."
         )
         if num_bad / (legacy_loan_count + 1) > 0.5:
             q = num_bad / (legacy_loan_count + 1)
@@ -359,7 +382,7 @@ class LoansMigrator(MigrationTaskBase):
             if legacy_loan.item_barcode not in self.failed:
                 self.failed[legacy_loan.item_barcode] = legacy_loan
             else:
-                logging.debug(
+                logging.info(
                     f"Loan already in failed. item barcode {legacy_loan.item_barcode} "
                     f"Patron barcode: {legacy_loan.patron_barcode}"
                 )
