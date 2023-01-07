@@ -51,7 +51,7 @@ class ItemMapper(MappingFileMapperBase):
         self.holdings_id_map = holdings_id_map
         self.unique_barcodes: Set[str] = set()
         self.use_map = True
-        self.status_mapping = {}
+        self.status_mapping: dict = {}
         if temporary_loan_type_mapping:
             self.temp_loan_type_mapping = RefDataMapping(
                 self.folio_client,
