@@ -162,7 +162,7 @@ class LoansMigrator(MigrationTaskBase):
             logging.info(f"Skipping {(starting_index)} records")
         for num_loans, legacy_loan in enumerate(self.valid_legacy_loans[starting_index:], start=1):
             t0_migration = time.time()
-            self.migration_report.add_general_statistics("Processed loans")
+            self.migration_report.add_general_statistics("Processed pre-validated loans")
             try:
                 self.checkout_single_loan(legacy_loan)
             except Exception as ee:
@@ -212,6 +212,7 @@ class LoansMigrator(MigrationTaskBase):
                 Blurbs.Details,
                 f"Failed 1st time. No retries: {res_checkout.migration_report_message}",
             )
+            self.failed[legacy_loan.item_barcode] = legacy_loan
             Helper.log_data_issue(
                 "", "Loans failing during checkout", json.dumps(legacy_loan.to_dict())
             )
@@ -316,6 +317,7 @@ class LoansMigrator(MigrationTaskBase):
                 )
                 if any(legacy_loan.errors):
                     num_bad += 1
+                    self.migration_report.add_general_statistics("Loans failed pre-validation")
                     self.migration_report.add_general_statistics("Failed loans")
                     for error in legacy_loan.errors:
                         self.migration_report.add(
