@@ -22,7 +22,7 @@ def test_get_object_type():
 def test_subclass_inheritance():
     assert issubclass(OrganizationTransformer, MigrationTaskBase)
 
-
+# Organizations -- Post-transformation cleanup
 def test_remove_organization_types_pre_morning_glory():
     rec = {
         "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
@@ -318,3 +318,7 @@ def test_clean_up_two_addresses_both_empty():
     clean_address = OrganizationTransformer.clean_addresses(OrganizationTransformer, rec)
 
     assert clean_address == {"addresses": []}
+
+# Contacts
+
+# Interfaces
