@@ -24,6 +24,7 @@ def test_fetch_org_schemas_from_github_happy_path():
 
     assert organization_schema["$schema"]
 
+# Building contact schema from github
 
 # Building contact schema from github
 
@@ -33,6 +34,7 @@ def test_fetch_contact_schemas_from_github_happy_path():
     assert contact_schema["$schema"]
 
 
+# Mock mapper object
 # Building interface schema from github
 def test_fetch_interfaces_schemas_from_github_happy_path():
     contact_schema = OrganizationMapper.fetch_additional_schema("interface")
@@ -636,3 +638,21 @@ organization_map = {
         },
     ]
 }
+
+# Contacts
+
+# Interfaces
+
+def test_interfaces_basic_mapping(mapper):
+    data["vendor_code"] = "v6"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["interfaces"][0]["name"] == "FOLIO"
+    assert organization["interfaces"][0]["uri"] == "https://www.folio.org/"
+
+
+def test_interfaces_types_mapping(mapper):
+    data["vendor_code"] = "v7"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    assert organization["contacts"][0]["firstName"] == "Jane"
+    assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"

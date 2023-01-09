@@ -22,7 +22,6 @@ def test_get_object_type():
 def test_subclass_inheritance():
     assert issubclass(OrganizationTransformer, MigrationTaskBase)
 
-
 # Organizations -- Post-transformation cleanup
 def test_remove_organization_types_pre_morning_glory():
     rec = {
