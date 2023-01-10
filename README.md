@@ -70,6 +70,6 @@ In order to perform migrations according to this process, you need the following
 
 
 # Running the scripts
-For information on syntax, what files are needed and produced by the toolkit, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template). We are building out the docs section in this repository as well: [Documentation](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/docs)
+For information on syntax, what files are needed and produced by the toolkit, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template). We are building out the docs section in this repository as well:[Documentation](https://folio-migration-tools.readthedocs.io/en/latest/)
 ¨
 
