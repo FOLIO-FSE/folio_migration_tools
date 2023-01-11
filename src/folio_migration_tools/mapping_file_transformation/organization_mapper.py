@@ -323,6 +323,12 @@ class OrganizationMapper(MappingFileMapperBase):
                         }
                     }
 
+                elif property_name_level1 == "contacts":
+                    contact_schema = OrganizationMapper.fetch_additional_schema("contact")
+                    property_level1["items"] = contact_schema
+
+                    logging.info(f"{property_name_level1} will be handled separately.")
+
                 elif (
                     property_level1.get("type") == "array"
                     and property_level1.get("items").get("$ref")
@@ -371,3 +377,10 @@ class OrganizationMapper(MappingFileMapperBase):
 
         except HTTPError as he:
             logging.error(he)
+
+    @staticmethod
+    def fetch_additional_schema(folio_object):
+        additional_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
+            "folio-org", "mod-organizations-storage", "mod-orgs", folio_object
+        )
+        return additional_schema

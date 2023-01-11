@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 import time
+import uuid
 from os.path import isfile
 from typing import List
 from typing import Optional
@@ -105,6 +106,11 @@ class OrganizationTransformer(MigrationTaskBase):
             ),
         )
 
+        # TODO We should cache contacts and interfaces to ensure we don't add duplicates.
+        # See similar implementation for instructors in Courses mapper
+        self.contacts_cache: dict = {}
+        self.interfaces_cache: dict = {}
+
     def list_source_files(self):
         files = [
             self.folder_structure.data_folder / self.object_type_name / f.file_name
@@ -140,6 +146,8 @@ class OrganizationTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.organizations
                     )
+
+                    folio_rec = self.create_extradata_objects(folio_rec)
 
                     clean_folio_rec = self.clean_org(folio_rec)
 
@@ -239,7 +247,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     empty_addresses.append(address)
 
                 # Check if the address is primary
-                if address["isPrimary"] is True:
+                if address.get("isPrimary") is True:
                     primary_address_exists = True
 
             # If none of the existing addresses is pimrary
@@ -250,3 +258,53 @@ class OrganizationTransformer(MigrationTaskBase):
             folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
 
             return folio_rec
+
+    def create_extradata_objects(self, record):
+        if record.get("contacts"):
+            mapped_contacts = record["contacts"]
+            record["contacts"] = []
+
+            for contact in mapped_contacts:
+
+                # Check if this contact has already been created
+                matched_uuids = [
+                    key for key, value in self.contacts_cache.items() if value == contact
+                ]
+
+                if len(matched_uuids) == 1:
+                    contact_uuid = matched_uuids[0]
+                    # Append the contact UUID to the organization record
+                    record["contacts"].append(contact_uuid)
+
+                elif len(matched_uuids) >= 1:
+                    raise TransformationProcessError(
+                        f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
+                    )
+
+                else:
+                    # Save away the contact info without a uuid for deduplication
+                    contact_info_to_cache = contact.copy()
+                    # Generate a UUID and add to the contact
+                    contact_uuid = str(uuid.uuid4())
+                    contact["id"] = contact_uuid
+                    # TODO Validate.
+                    # TODO Add address cleanup backwhen the mapper is creating proper addresses
+                    # contact = self.clean_addresses(contact)
+                    self.extradata_writer.write(
+                        "contacts", contact
+                    )  # Double check the endpoint/poster syntax
+                    self.mapper.migration_report.add_general_statistics("Created Contacts")
+                    # Save contact to extradata file
+                    # Append the contact UUID to the organization record
+                    record["contacts"].append(contact_uuid)
+                    self.contacts_cache[contact_uuid] = contact_info_to_cache
+
+        # TODO Do the same as for Contacts. Find out if extradata poster can post credentials.
+        if "interfaces" in record:
+            pass
+
+        # TODO Do the same as for Contacts?
+        if "notes" in record:
+            pass
+
+        return record

@@ -17,12 +17,17 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
-def test_fetch_acq_schemas_from_github_happy_path():
+def test_fetch_org_schemas_from_github_happy_path():
     organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
         "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
     )
 
     assert organization_schema["$schema"]
+
+
+def test_fetch_contact_schemas_from_github_happy_path():
+    contact_schema = OrganizationMapper.fetch_additional_schema("contact")
+    assert contact_schema["$schema"]
 
 
 # Mock mapper object
@@ -100,12 +105,13 @@ def test_parse_record_mapping_file(mapper):
 
 
 def test_organization_mapping(mapper):
+    data["vendor_code"] = "v1"
 
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test string values mapping
     assert organization["name"] == "Abe Books"
-    assert organization["code"] == "AbeBooks"
+    assert organization["code"] == "v1"
     assert organization["description"] == "Good stuff!"
     assert organization["status"] == "Active"
     assert organization["accounts"][0]["accountNo"] == "aha112233"
@@ -113,7 +119,7 @@ def test_organization_mapping(mapper):
 
 def test_single_org_type_refdata_mapping(mapper):
 
-    data["vendor_code"] = "abe1"
+    data["vendor_code"] = "v2"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test reference data mapping
@@ -122,7 +128,7 @@ def test_single_org_type_refdata_mapping(mapper):
 
 def test_single_category_refdata_mapping(mapper):
 
-    data["vendor_code"] = "abe2"
+    data["vendor_code"] = "v3"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test arrays of contact information
@@ -134,16 +140,46 @@ def test_single_category_refdata_mapping(mapper):
 
 
 def test_tags_object_array(mapper):
-    data["vendor_code"] = "abe3"
+    data["vendor_code"] = "v4"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["tags"] == {"tagList": ["A", "B", "C"]}
+
+
+def test_contacts_basic_mapping(mapper):
+    data["vendor_code"] = "v6"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["contacts"][0]["firstName"] == "Jane"
+    assert organization["contacts"][0]["lastName"] == "Deer"
+
+
+def test_contacts_address_mapping(mapper):
+    data["vendor_code"] = "v7"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    assert organization["contacts"][0]["firstName"] == "Jane"
+    assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
+
+
+def test_enforce_schema_required_properties_in_organization(mapper):
+    data["EMAIL2"] = ""
+    data["PHONE NUM"] = ""
+    data["vendor_code"] = "v8"
+
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    # There should only be one email, as the other one is empty
+    assert len(organization["emails"]) == 1
+
+    # There should be no phone numbers, as the data is empty
+    assert not organization.get("phoneNumbers")
 
 
 @pytest.mark.skip(
     reason="We would need a way of using the same ref data file for multiple values. See #411"
 )
 def test_multiple_emails_array_objects(mapper):
+    data["vendor_code"] = "v5"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     correct_email_objects = 0
@@ -168,19 +204,12 @@ def test_multiple_emails_array_objects(mapper):
     assert correct_email_objects == 2
 
 
-@pytest.mark.skip(reason="Extra data has not been implemented in the mapper yet.")
-def test_extra_data(mapper, caplog):
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-
-    # TODO Add tests for extradata. It should
-
-
 # Shared data and maps
 data = {
     "vendor_code": "AbeBooks",
     "ACCTNUM": "aha112233",
     "VENNAME": "Abe Books",
-    "EMAIL": "email1@abebooks.com",
+    "EMAIL": "EMAIL",
     "email1_categories": "sls",
     "EMAIL2": "email2@abebooks.com",
     "email2_categories": "tspt",
@@ -196,8 +225,11 @@ data = {
     "tgs": "A^-^B^-^C",
     "organization_types": "cst",
     "org_note": "Good stuff!",
+    "contact_person_f": "Jane",
+    "contact_person_l": "Deer",
+    "contact_address_line1": "My Street",
+    "contact_address_town": "Gothenburg",
 }
-
 
 # A mocked mapping file
 organization_map = {
@@ -263,6 +295,30 @@ organization_map = {
             "description": "",
         },
         {
+            "folio_field": "contacts[0].firstName",
+            "legacy_field": "contact_person_f",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "contacts[0].lastName",
+            "legacy_field": "contact_person_l",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "contacts[0].addresses[0].addressLine1",
+            "legacy_field": "contact_address_line1",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "contacts[0].addresses[0].city",
+            "legacy_field": "contact_address_town",
+            "value": "",
+            "description": "",
+        },
+        {
             "folio_field": "emails[0].categories[0]",
             "legacy_field": "email1_categories",
             "value": "",
@@ -295,6 +351,18 @@ organization_map = {
         {
             "folio_field": "emails[1].categories[0]",
             "legacy_field": "email2_categories",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "emails[2].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": False,
+            "description": "",
+        },
+        {
+            "folio_field": "emails[2].value",
+            "legacy_field": "EMAIL3",
             "value": "",
             "description": "",
         },
