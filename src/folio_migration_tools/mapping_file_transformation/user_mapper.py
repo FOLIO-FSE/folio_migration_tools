@@ -78,10 +78,8 @@ class UserMapper(MappingFileMapperBase):
         folio_user["personal"]["preferredContactTypeId"] = "Email"
         folio_user["active"] = True
         folio_user["requestPreference"] = {
-            "userId": folio_user["id"],
             "holdShelf": True,
             "delivery": False,
-            "metadata": self.folio_client.get_metadata_construct(),
         }
         clean_folio_object = self.validate_required_properties(
             index_or_id, folio_user, self.schema, FOLIONamespaces.users
