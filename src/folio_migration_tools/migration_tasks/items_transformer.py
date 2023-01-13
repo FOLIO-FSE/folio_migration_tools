@@ -172,7 +172,7 @@ class ItemsTransformer(MigrationTaskBase):
                 except Exception as exception:
                     error_str = f"\n\nProcessing of {file_def.file_name} failed:\n{exception}."
                     logging.exception(error_str, stack_info=True)
-                    logging.fatal("Check source files for empty lines or missing reference data.")
+                    logging.fatal("Check source files for empty rows or missing reference data.")
                     self.mapper.migration_report.add(
                         Blurbs.FailedFiles, f"{file_def.file_name} - {exception}"
                     )

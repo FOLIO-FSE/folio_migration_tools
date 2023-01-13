@@ -89,15 +89,15 @@ class LoansMigrator(MigrationTaskBase):
                     loans_file, loans_file_path
                 )
                 logging.info("Source data file contains %d rows", total_rows)
-                logging.info("Source data file contains %d empty lines", empty_rows)
+                logging.info("Source data file contains %d empty rows", empty_rows)
                 self.migration_report.set(
                     Blurbs.GeneralStatistics,
-                    f"Total lines in {loans_file_path.name}",
+                    f"Total rows in {loans_file_path.name}",
                     total_rows,
                 )
                 self.migration_report.set(
                     Blurbs.GeneralStatistics,
-                    f"Empty lines in {loans_file_path.name}",
+                    f"Empty rows in {loans_file_path.name}",
                     empty_rows,
                 )
                 self.semi_valid_legacy_loans.extend(

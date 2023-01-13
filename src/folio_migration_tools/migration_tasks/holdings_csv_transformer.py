@@ -207,7 +207,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             except Exception as ee:
                 error_str = (
                     f"Processing of {file_def.file_name} failed:\n{ee}."
-                    "\nCheck source files for empty lines or missing reference data"
+                    "\nCheck source files for empty rows or missing reference data"
                 )
                 logging.critical(error_str)
                 print(f"\n{error_str}\nHalting")
