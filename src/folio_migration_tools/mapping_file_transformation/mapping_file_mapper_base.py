@@ -543,8 +543,8 @@ class MappingFileMapperBase(MapperBase):
     def _get_delimited_file_reader(source_file, file_name: Path):
         """
             First, let's count:
-            * The total number of lines in the source file
-            * The total number of empty lines in the source file
+            * The total number of rows in the source file
+            * The total number of empty rows in the source file
 
             Then, we'll return those counts and a csv.DictReader
 
@@ -562,7 +562,7 @@ class MappingFileMapperBase(MapperBase):
         else:
             delimiter = ","
         for line in source_file:
-            if not "".join(line.strip().split(delimiter)):  # check for empty lines
+            if not "".join(line.strip().split(delimiter)):  # check for empty rows
                 empty_rows += 1
             total_rows += 1
         source_file.seek(0)  # Set file position back to start
@@ -575,12 +575,12 @@ class MappingFileMapperBase(MapperBase):
     def get_objects(self, source_file, file_name: Path):
         total_rows, empty_rows, reader = self._get_delimited_file_reader(source_file, file_name)
         logging.info("Source data file contains %d rows", total_rows)
-        logging.info("Source data file contains %d empty lines", empty_rows)
+        logging.info("Source data file contains %d empty rows", empty_rows)
         self.migration_report.set(
-            Blurbs.GeneralStatistics, "Total lines in {}".format(file_name.name), total_rows
+            Blurbs.GeneralStatistics, "Total rows in {}".format(file_name.name), total_rows
         )
         self.migration_report.set(
-            Blurbs.GeneralStatistics, "Empty lines in {}".format(file_name.name), empty_rows
+            Blurbs.GeneralStatistics, "Empty rows in {}".format(file_name.name), empty_rows
         )
         try:
             yield from reader

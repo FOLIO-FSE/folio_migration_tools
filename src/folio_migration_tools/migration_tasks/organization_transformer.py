@@ -193,7 +193,7 @@ class OrganizationTransformer(MigrationTaskBase):
             except Exception as ee:
                 error_str = (
                     f"Processing of {file} failed:\n{ee}."
-                    "Check source files for empty lines or missing reference data"
+                    "Check source files for empty rows or missing reference data"
                 )
                 logging.exception(error_str)
                 self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
