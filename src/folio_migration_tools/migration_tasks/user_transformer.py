@@ -189,6 +189,9 @@ class UserTransformer(MigrationTaskBase):
             else:
                 # No primary address
                 addresses[0]["primaryAddress"] = True
+        # TODO: Consider removing the object metadata construct globally in MappingFileMapperBase
+        if folio_user.get("metadata", {}):
+            del folio_user["metadata"]
 
 
 def print_email_warning():
