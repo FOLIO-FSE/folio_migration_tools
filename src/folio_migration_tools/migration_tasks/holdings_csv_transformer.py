@@ -332,9 +332,19 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
         if not self.task_config.holdings_type_uuid_for_boundwiths:
             raise TransformationProcessError(
+                legacy_id,
                 "Missing task setting holdingsTypeUuidForBoundwiths. Add a "
                 "holdingstype specifically for boundwith holdings and reference "
-                "the UUID in this parameter."
+                "the UUID in this parameter.",
+                "",
+            )
+        if self.task_config.holdings_type_uuid_for_boundwiths not in [
+            f["id"] for f in self.folio_client.holdings_types
+        ]:
+            raise TransformationProcessError(
+                legacy_id,
+                "Holdings type for Bound with holdings with UUID missing from the FOLIO tenant.",
+                self.task_config.holdings_type_uuid_for_boundwiths,
             )
 
         # Add former ids
@@ -349,26 +359,16 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 temp_ids.append(former_id)
         folio_holding["formerIds"] = temp_ids
         for bwidx, instance_id in enumerate(folio_holding["instanceId"]):
-            if not instance_id:
+            if not instance_id:  # Unsure of the purpose of this check. Test before loop?
                 raise ValueError(f"No ID for record {folio_holding}")
 
             bound_with_holding = copy.deepcopy(folio_holding)
             bound_with_holding["instanceId"] = instance_id
-            if folio_holding.get("callNumber", None):
+            if folio_holding.get("callNumber", None) and "[" in folio_holding["callNumber"]:
                 call_numbers = ast.literal_eval(folio_holding["callNumber"])
                 if isinstance(call_numbers, str):
                     call_numbers = [call_numbers]
                 bound_with_holding["callNumber"] = call_numbers[bwidx]
-            if not self.task_config.holdings_type_uuid_for_boundwiths:
-                raise TransformationProcessError(
-                    "",
-                    (
-                        "Boundwith UUID not added to task configuration."
-                        "Add a property to holdingsTypeUuidForBoundwiths to "
-                        "the task configuration"
-                    ),
-                    "",
-                )
             bound_with_holding[
                 "holdingsTypeId"
             ] = self.task_config.holdings_type_uuid_for_boundwiths

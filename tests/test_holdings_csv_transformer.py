@@ -1,8 +1,11 @@
 import logging
 from unittest.mock import Mock
 
+import pytest
+from folio_uuid import FolioUUID
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
 )
@@ -18,6 +21,147 @@ LOGGER.propagate = True
 
 def test_get_object_type():
     assert HoldingsCsvTransformer.get_object_type() == FOLIONamespaces.holdings
+
+
+def test_create_bound_with_holdings_test_raise(caplog):
+    mock_mapper = mocked_classes.mocked_holdings_mapper()
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.mapper = mock_mapper
+    mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mocked_config.holdings_type_uuid_for_boundwiths = ""
+    mock_transformer.task_config = mocked_config
+    # mock_folio = mocked_classes.mocked_folio_client()
+    with pytest.raises(TransformationProcessError):
+        list(HoldingsCsvTransformer.create_bound_with_holdings(mock_transformer, {}, ""))
+
+
+def test_create_bound_with_holdings_success(caplog):
+    mock_mapper = mocked_classes.mocked_holdings_mapper()
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.mapper = mock_mapper
+    mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mocked_config.holdings_type_uuid_for_boundwiths = "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    mock_transformer.task_config = mocked_config
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    folio_holding = {
+        "id": FolioUUID(
+            mock_folio.okapi_url,
+            FOLIONamespaces.holdings,
+            1,
+        ),
+        "formerIds": ["[b1,b2]"],
+        "instanceId": ["i1", "i2"],
+    }
+    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio.holdings_types.append(
+        {
+            "id": "c92480eb-210d-442e-a6f7-4043fe7f0f25",
+            "name": "Bound-with",
+            "source": "local",
+        }
+    )
+    mock_transformer.folio_client = mock_folio
+    # mock_folio = mocked_classes.mocked_folio_client()
+    bws = list(
+        HoldingsCsvTransformer.create_bound_with_holdings(mock_transformer, folio_holding, "")
+    )
+    assert len(bws) == 2
+    assert bws[0]["holdingsTypeId"] == "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    assert bws[0]["id"] == "e84e41cd-141e-503b-94fa-d55196446a05"
+    assert bws[0]["instanceId"] == "i1"
+
+    assert bws[1]["holdingsTypeId"] == "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    assert bws[1]["id"] == "0ecaa02d-4fe4-5cc1-bb86-c44a5eceaa49"
+    assert bws[1]["instanceId"] == "i2"
+
+
+def test_create_bound_with_holdings_same_call_number(caplog):
+    mock_mapper = mocked_classes.mocked_holdings_mapper()
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.mapper = mock_mapper
+    mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mocked_config.holdings_type_uuid_for_boundwiths = "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    mock_transformer.task_config = mocked_config
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    folio_holding = {
+        "id": FolioUUID(
+            mock_folio.okapi_url,
+            FOLIONamespaces.holdings,
+            1,
+        ),
+        "formerIds": ["[b1,b2]"],
+        "instanceId": ["i1", "i2"],
+        "callNumber": "Single callnumber",
+    }
+    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio.holdings_types.append(
+        {
+            "id": "c92480eb-210d-442e-a6f7-4043fe7f0f25",
+            "name": "Bound-with",
+            "source": "local",
+        }
+    )
+    mock_transformer.folio_client = mock_folio
+    # mock_folio = mocked_classes.mocked_folio_client()
+    bws = list(
+        HoldingsCsvTransformer.create_bound_with_holdings(mock_transformer, folio_holding, "")
+    )
+    assert len(bws) == 2
+    assert bws[0]["holdingsTypeId"] == "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    assert bws[0]["id"] == "e84e41cd-141e-503b-94fa-d55196446a05"
+    assert bws[0]["instanceId"] == "i1"
+    assert bws[0]["callNumber"] == bws[1]["callNumber"]
+    assert bws[0]["callNumber"] == "Single callnumber"
+
+    assert bws[1]["holdingsTypeId"] == "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    assert bws[1]["id"] == "0ecaa02d-4fe4-5cc1-bb86-c44a5eceaa49"
+    assert bws[1]["instanceId"] == "i2"
+
+
+def test_create_bound_with_holdings_different_call_number(caplog):
+    mock_mapper = mocked_classes.mocked_holdings_mapper()
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.mapper = mock_mapper
+    mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mocked_config.holdings_type_uuid_for_boundwiths = "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    mock_transformer.task_config = mocked_config
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    folio_holding = {
+        "id": FolioUUID(
+            mock_folio.okapi_url,
+            FOLIONamespaces.holdings,
+            1,
+        ),
+        "formerIds": ["['b1','b2']"],
+        "instanceId": ["i1", "i2"],
+        "callNumber": "['first', 'second']",
+    }
+    mock_folio = mocked_classes.mocked_folio_client()
+    mock_folio.holdings_types.append(
+        {
+            "id": "c92480eb-210d-442e-a6f7-4043fe7f0f25",
+            "name": "Bound-with",
+            "source": "local",
+        }
+    )
+    mock_transformer.folio_client = mock_folio
+    # mock_folio = mocked_classes.mocked_folio_client()
+    bws = list(
+        HoldingsCsvTransformer.create_bound_with_holdings(mock_transformer, folio_holding, "")
+    )
+    assert len(bws) == 2
+    assert bws[0]["holdingsTypeId"] == "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    assert bws[0]["id"] == "e84e41cd-141e-503b-94fa-d55196446a05"
+    assert bws[0]["instanceId"] == "i1"
+    assert bws[0]["callNumber"] == "first"
+
+    assert bws[1]["holdingsTypeId"] == "c92480eb-210d-442e-a6f7-4043fe7f0f25"
+    assert bws[1]["id"] == "0ecaa02d-4fe4-5cc1-bb86-c44a5eceaa49"
+    assert bws[1]["instanceId"] == "i2"
+    assert bws[1]["callNumber"] == "second"
 
 
 def test_generate_boundwith_part(caplog):
