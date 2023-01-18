@@ -139,6 +139,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             logging.critical(process_error)
             logging.critical("Halting.")
             sys.exit(1)
+        except json.JSONDecodeError as jde:
+            raise jde
         except Exception as exception:
             logging.info("\n=======ERROR===========")
             logging.info(exception)
