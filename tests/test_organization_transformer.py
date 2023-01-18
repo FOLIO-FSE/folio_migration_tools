@@ -75,6 +75,7 @@ def test_create_and_link_contacts():
                 },
                 {
                     "firstName": "John",
+                    "lastName": "Doe",
                     "addresses": [{"addressLine1": "MyStreet"}, {"city": "Bogotá"}],
                     "emailAddresses": [{"value": "andme(at)me.com"}],
                 },
