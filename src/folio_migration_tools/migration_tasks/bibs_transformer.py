@@ -68,7 +68,7 @@ class BibsTransformer(MigrationTaskBase):
             self.task_configuration.reset_hrid_settings
             and not self.task_configuration.never_update_hrid_settings
         ):
-            self.mapper.reset_instance_hrid_counter()
+            self.mapper.hrid_handler.reset_instance_hrid_counter()
         logging.info("Init done")
 
     def do_work(self):

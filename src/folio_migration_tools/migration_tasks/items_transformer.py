@@ -22,6 +22,7 @@ from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMa
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
@@ -159,7 +160,10 @@ class ItemsTransformer(MigrationTaskBase):
             self.task_configuration.reset_hrid_settings
             and not self.task_configuration.never_update_hrid_settings
         ):
-            self.mapper.reset_item_hrid_counter()
+            hrid_handler = HRIDHandler(
+                self.folio_client, HridHandling.default, self.mapper.migration_report, True
+            )
+            hrid_handler.reset_item_hrid_counter()
 
         logging.info("Init done")
 

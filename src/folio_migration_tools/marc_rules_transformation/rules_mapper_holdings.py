@@ -304,7 +304,7 @@ class RulesMapperHoldings(RulesMapperBase):
         logging.info("Mapper wrapping up")
         if not self.task_configuration.never_update_hrid_settings:
             if self.task_configuration.create_source_records:
-                self.store_hrid_settings()
+                self.hrid_handler.store_hrid_settings()
             else:
                 logging.info("NOT storing HRID settings since that is managed by FOLIO")
 

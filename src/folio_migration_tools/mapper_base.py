@@ -5,7 +5,6 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 
-import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
@@ -90,30 +89,6 @@ class MapperBase:
             else:
                 self.mapped_folio_fields[field_name][0] += 1
                 self.mapped_folio_fields[field_name][1] += 1
-
-    def reset_instance_hrid_counter(self):
-        logging.info("Resetting Instances HRID settings to 1")
-        self.instance_hrid_counter = 1
-        self.migration_report.set(
-            Blurbs.GeneralStatistics, "Instances HRID starting number", self.instance_hrid_counter
-        )
-        self.store_hrid_settings()
-
-    def reset_holdings_hrid_counter(self):
-        logging.info("Resetting Holdings HRID settings to 1")
-        self.holdings_hrid_counter = 1
-        self.migration_report.set(
-            Blurbs.GeneralStatistics, "Holdings HRID starting number", self.holdings_hrid_counter
-        )
-        self.store_hrid_settings()
-
-    def reset_item_hrid_counter(self):
-        logging.info("Resetting Items HRID settings to 1")
-        self.items_hrid_counter = 1
-        self.migration_report.set(
-            Blurbs.GeneralStatistics, "Items HRID starting number", self.items_hrid_counter
-        )
-        self.store_hrid_settings()
 
     def get_mapped_name(
         self,
@@ -314,40 +289,6 @@ class MapperBase:
                     Blurbs.GeneralStatistics, "Unique ID:s written to legacy map"
                 )
         logging.info("Wrote legacy id map to %s", path)
-
-    def store_hrid_settings(self):
-        logging.info("Setting HRID counter to current")
-        try:
-
-            if self.hrids_not_updated():
-                logging.info("NOT POSTing HRID settings, since did not change.")
-                return
-
-            self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter
-            self.hrid_settings["holdings"]["startNumber"] = self.holdings_hrid_counter
-            self.hrid_settings["items"]["startNumber"] = self.items_hrid_counter
-            url = self.folio_client.okapi_url + self.hrid_path
-            resp = requests.put(
-                url,
-                data=json.dumps(self.hrid_settings),
-                headers=self.folio_client.okapi_headers,
-            )
-            resp.raise_for_status()
-            logging.info("%s Successfully set HRID settings.", resp.status_code)
-            a = self.folio_client.folio_get_single_object(self.hrid_path)
-            logging.info("Current hrid settings: %s", json.dumps(a, indent=4))
-        except Exception:
-            logging.exception(
-                f"Something went wrong when setting the HRID settings. "
-                f"Update them manually. {json.dumps(self.hrid_settings)}"
-            )
-
-    def hrids_not_updated(self):
-        return (
-            self.hrid_settings["instances"]["startNumber"] == self.instance_hrid_counter
-            and self.hrid_settings["holdings"]["startNumber"] == self.holdings_hrid_counter
-            and self.hrid_settings["items"]["startNumber"] == self.items_hrid_counter
-        )
 
     @staticmethod
     def validate_required_properties(
