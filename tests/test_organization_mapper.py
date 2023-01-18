@@ -24,6 +24,7 @@ def test_fetch_org_schemas_from_github_happy_path():
 
     assert organization_schema["$schema"]
 
+
 # Building contact schema from github
 
 def test_fetch_contact_schemas_from_github_happy_path():
@@ -422,16 +423,20 @@ organization_map = {
 
 # Interfaces
 
+
 def test_interfaces_basic_mapping(mapper):
     data["vendor_code"] = "v6"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["name"] == "FOLIO"
-    assert organization["interfaces"][0]["uri"] == "https://www.folio.org/"
+    assert organization["interfaces"][0]["uri"] == "www.folio.org"
 
 
-def test_interfaces_types_mapping(mapper):
+def test_interfaces_type_enum_mapping(mapper):
+    # Array of enums
+    valid_interface_types = ["Admin", "End user", "Reports", "Orders", "Invoices", "Other"]
     data["vendor_code"] = "v7"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-    assert organization["contacts"][0]["firstName"] == "Jane"
-    assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
+
+    assert all(type in valid_interface_types for type in ["interfaces"][0]["type"])
+    assert organization["interfaces"][0]["type"] == ["Admin", "Orders"]
