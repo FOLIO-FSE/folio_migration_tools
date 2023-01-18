@@ -124,8 +124,6 @@ class MarcFileProcessor:
     ):
         if not self.mapper.task_configuration.create_source_records:
             return
-        if object_type in [FOLIONamespaces.holdings, FOLIONamespaces.instances]:
-            self.add_hrid_to_records(folio_rec, marc_record)
         if object_type in [FOLIONamespaces.holdings]:
             if "008" in marc_record and len(marc_record["008"].data) > 32:
                 remain, rest = (
@@ -172,20 +170,6 @@ class MarcFileProcessor:
         marc_record["852"]["b"] = location_code
         self.mapper.migration_report.add(Blurbs.LocationMapping, "Set 852 to FOLIO location code")
 
-    def add_hrid_to_records(self, folio_record: dict, marc_record: Record):
-        if (
-            "hrid" in folio_record
-            and "001" in marc_record
-            and marc_record["001"].value() == folio_record["hrid"]
-        ):
-            return
-        num_part = self.generate_num_part()
-        folio_record["hrid"] = f"{self.mapper.holdings_hrid_prefix}{num_part}"
-        new_001 = Field(tag="001", data=folio_record["hrid"])
-        marc_record.remove_fields("001")
-        marc_record.add_ordered_field(new_001)
-        self.mapper.holdings_hrid_counter += 1
-
     def exit_on_too_many_exceptions(self):
         if (
             self.failed_records_count / (self.records_count + 1)
@@ -215,13 +199,6 @@ class MarcFileProcessor:
                 "-".join(legacy_ids),
             )
         return list(new_ids)
-
-    def generate_num_part(self):
-        return (
-            str(self.mapper.holdings_hrid_counter).zfill(11)
-            if self.mapper.common_retain_leading_zeroes
-            else str(self.mapper.holdings_hrid_counter)
-        )
 
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""

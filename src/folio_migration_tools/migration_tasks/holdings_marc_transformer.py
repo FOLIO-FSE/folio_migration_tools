@@ -96,7 +96,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.task_configuration.reset_hrid_settings
             and not self.task_configuration.never_update_hrid_settings
         ):
-            self.mapper.reset_holdings_hrid_counter()
+            self.mapper.hrid_handler.reset_holdings_hrid_counter()
         logging.info("%s Instance ids in map", len(self.instance_id_map))
         logging.info("Init done")
 

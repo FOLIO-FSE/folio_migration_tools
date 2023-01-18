@@ -206,7 +206,7 @@ class BibsRulesMapper(RulesMapperBase):
     def wrap_up(self):
         logging.info("Mapper wrapping up")
         if not self.task_configuration.never_update_hrid_settings:
-            self.store_hrid_settings()
+            self.hrid_handler.store_hrid_settings()
 
     def get_instance_type_id(self, marc_record, legacy_id):
         return_id = ""
