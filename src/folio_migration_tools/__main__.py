@@ -80,7 +80,11 @@ def main():
                     sys.exit(1)
             except json.decoder.JSONDecodeError as json_error:
                 logging.critical(json_error)
-                print(f"\nError parsing configuration file {config_file_path.name}. Halting. ")
+                print(json_error.doc)
+                print(
+                    f"\n{json_error}"
+                    f"\nError parsing the above JSON mapping or configruation file. Halting."
+                )
                 sys.exit(2)
             except ValidationError as e:
                 print(e.json())
