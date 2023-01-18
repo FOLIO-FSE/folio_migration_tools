@@ -1,5 +1,44 @@
 # Changelog
 
+## v_1_7_1 (18/01/2023)
+
+#### Authorities
+
+- [**Authorities**] Correct spelling of type enum in FOLIO UUIDs for authorities [#438](https://github.com/FOLIO-FSE/folio_migration_tools/issues/438)
+
+#### bug
+
+- [**bug**] Mapper overwrites existing object properties when adding new object properties [#455](https://github.com/FOLIO-FSE/folio_migration_tools/issues/455)
+
+#### closed
+
+- [**closed**] Do not create Organization Contacts without required property name -- quick fix [#474](https://github.com/FOLIO-FSE/folio_migration_tools/issues/474)
+- [**closed**] Typo in mapping file confusingly reported as error parsing configuration file [#470](https://github.com/FOLIO-FSE/folio_migration_tools/issues/470)
+- [**closed**] Remove extraneous fields from User objects created by UserMapper [#469](https://github.com/FOLIO-FSE/folio_migration_tools/issues/469)
+- [**closed**] Missing hrid_settings attribute causing Errors in BibsRulesMapper [#462](https://github.com/FOLIO-FSE/folio_migration_tools/issues/462)
+- [**closed**] Update BatchPoster to generalize handling of record types without batch APIs [#454](https://github.com/FOLIO-FSE/folio_migration_tools/issues/454)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**][**organizations**] Add Batchposter support for organizations [#312](https://github.com/FOLIO-FSE/folio_migration_tools/issues/312)
+- [**enhancement/new feature**][**organizations**] When creating Organizations, create Contacts as extradata [#294](https://github.com/FOLIO-FSE/folio_migration_tools/issues/294)
+- [**enhancement/new feature**][**reporting**] Keep track of minted UUID:s within the same run and warn for duplicates [#235](https://github.com/FOLIO-FSE/folio_migration_tools/issues/235)
+
+#### orders
+
+- [**orders**] Create basic tests for Composite Orders migration task [#442](https://github.com/FOLIO-FSE/folio_migration_tools/issues/442)
+
+#### organizations
+
+- [**organizations**] Add Organizations and Contacts to BatchPoster [#457](https://github.com/FOLIO-FSE/folio_migration_tools/issues/457)
+- [**organizations**] Add mapping depth tests for organization contacts [#446](https://github.com/FOLIO-FSE/folio_migration_tools/issues/446)
+
+#### reporting
+
+- [**reporting**] Improve reporting on legacy loans migration [#263](https://github.com/FOLIO-FSE/folio_migration_tools/issues/263)
+
+---
+
 ## v_1_7_0 (13/12/2022)
 
 #### closed
@@ -543,9 +582,3 @@ There is a small breaking change between Juniper and Iris. In order for the scri
 
 ## Iris 1.3 (15/10/2021)
 Stepping stone release before Juniper support
----
-
-## Iris 1.2 (30/07/2021)
-#Bugfixes
-* Missing stat code mapping file make main_items.py crash
-* Clear exceptions get buried in nested exception output
