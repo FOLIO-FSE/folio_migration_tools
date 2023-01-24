@@ -5,12 +5,14 @@ import sys
 import time
 import traceback
 from datetime import datetime
+from typing import Annotated
 from typing import List
 from typing import Optional
 from uuid import uuid4
 
 import requests
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -52,6 +54,16 @@ class BatchPoster(MigrationTaskBase):
         files: List[FileDefinition]
         batch_size: int
         rerun_failed_records: Optional[bool] = True
+        use_safe_inventory_endpoints: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Toggles the use of the safe/unsafe Inventory storage endpoints. "
+                    "Unsafe circumvents the Optimistic locking in FOLIO. Defaults to "
+                    "False (using the 'unsafe')"
+                )
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -128,6 +140,8 @@ class BatchPoster(MigrationTaskBase):
                                         failed_recs_file,
                                     )
                                     logging.critical("Halting %s", tpe)
+                                    print(f"\n\t{tpe.message}")
+                                    sys.exit(1)
                                 except TransformationRecordFailedError as exception:
                                     self.handle_generic_exception(
                                         exception,
@@ -320,6 +334,12 @@ class BatchPoster(MigrationTaskBase):
                 )
             else:
                 self.post_batch(batch, failed_recs_file, num_records, recursion_depth + 1)
+        elif (
+            response.status_code == 413 and "DB_ALLOW_SUPPRESS_OPTIMISTIC_LOCKING" in response.text
+        ):
+            logging.error(response.text)
+            raise TransformationProcessError("", response.text, "")
+
         else:
             try:
                 logging.info(response.text)
@@ -459,7 +479,7 @@ class BatchPoster(MigrationTaskBase):
             sys.exit(1)
 
 
-def list_objects(object_type: str):
+def list_objects(object_type: str, use_unsafe: bool = True):
     choices = {
         "Extradata": {
             "object_name": "",
@@ -469,21 +489,33 @@ def list_objects(object_type: str):
         },
         "Items": {
             "object_name": "items",
-            "api_endpoint": "/item-storage/batch/synchronous?upsert=true",
+            "api_endpoint": (
+                "/item-storage/batch/synchronous-unsafe"
+                if use_unsafe
+                else "/item-storage/batch/synchronous"
+            ),
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
         },
         "Holdings": {
             "object_name": "holdingsRecords",
-            "api_endpoint": "/holdings-storage/batch/synchronous?upsert=true",
+            "api_endpoint": (
+                "/holdings-storage/batch/synchronous-unsafe"
+                if use_unsafe
+                else "/holdings-storage/batch/synchronous"
+            ),
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
         },
         "Instances": {
             "object_name": "instances",
-            "api_endpoint": "/instance-storage/batch/synchronous?upsert=true",
+            "api_endpoint": (
+                "/instance-storage/batch/synchronous-unsafe"
+                if use_unsafe
+                else "/instance-storage/batch/synchronous"
+            ),
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
