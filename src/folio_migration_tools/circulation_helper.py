@@ -66,6 +66,39 @@ class CirculationHelper:
             logging.error(f"{ee} {item_path}")
             return {}
 
+    def is_checked_out(self, legacy_loan: LegacyLoan) -> bool:
+        """Makes a deeper check to find out if the loan is already processed.
+        Looks up the item id, and then searches Loan Storage for any open loans.
+        If there are open loans, returns True. Else False.
+
+        Args:
+            legacy_loan (LegacyLoan): _description_
+
+        Returns:
+            bool: _description_
+        """
+        if item := self.get_item_by_barcode(legacy_loan.item_barcode):
+            if self.get_active_loan_by_item_id(item["id"]):
+                return True
+        return False
+
+    def get_active_loan_by_item_id(self, item_id: str) -> dict:
+        """Queries FOLIO for the first open loan.
+
+        Args:
+            item_id (str): the item ID. A uuid string.
+
+        Returns:
+            dict: The open loan, if found. Else an empty dictionary
+        """
+        loan_path = f'/loan-storage/loans?query=(itemId=="{item_id}")'
+        try:
+            loans = self.folio_client.folio_get(loan_path, "loans")
+            return next((loan for loan in loans if loan["status"]["name"] == "Open"), {})
+        except Exception as ee:
+            logging.error(f"{ee} {loan_path}")
+            return {}
+
     def get_holding_by_uuid(self, holdings_uuid):
         holdings_path = f"/holdings-storage/holdings/{holdings_uuid}"
         try:

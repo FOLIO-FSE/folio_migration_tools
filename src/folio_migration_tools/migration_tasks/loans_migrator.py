@@ -195,16 +195,25 @@ class LoansMigrator(MigrationTaskBase):
                 self.set_renewal_count(legacy_loan, res_checkout2)
                 self.set_new_status(legacy_loan, res_checkout2)
             elif legacy_loan.item_barcode not in self.failed:
-                self.failed[legacy_loan.item_barcode] = legacy_loan
-                self.migration_report.add_general_statistics("Failed loans")
-                Helper.log_data_issue(
-                    "", "Loans failing during checkout", json.dumps(legacy_loan.to_dict())
-                )
-                logging.error("Failed on second try: %s", res_checkout2.error_message)
-                self.migration_report.add(
-                    Blurbs.Details,
-                    f"Second failure: {res_checkout2.migration_report_message}",
-                )
+                if res_checkout2.error_message == "Aged to lost and checked out":
+                    self.migration_report.add(
+                        Blurbs.Details,
+                        f"Second failure: {res_checkout2.migration_report_message}",
+                    )
+                    logging.error(
+                        f"{res_checkout2.error_message}. Item barcode: {legacy_loan.item_barcode}"
+                    )
+                else:
+                    self.failed[legacy_loan.item_barcode] = legacy_loan
+                    self.migration_report.add_general_statistics("Failed loans")
+                    Helper.log_data_issue(
+                        "", "Loans failing during checkout", json.dumps(legacy_loan.to_dict())
+                    )
+                    logging.error("Failed on second try: %s", res_checkout2.error_message)
+                    self.migration_report.add(
+                        Blurbs.Details,
+                        f"Second failure: {res_checkout2.migration_report_message}",
+                    )
         elif not res_checkout.should_be_retried:
             logging.error("Failed first time. No retries: %s", res_checkout.error_message)
             self.migration_report.add_general_statistics("Failed loans")
@@ -369,7 +378,7 @@ class LoansMigrator(MigrationTaskBase):
             "Cannot check out item that already has an open loan"
         ):
             return folio_checkout
-        elif folio_checkout.error_message.startswith("Aged to lost for item"):
+        elif "Aged to lost" in folio_checkout.error_message:
             return self.handle_aged_to_lost_item(legacy_loan)
         elif folio_checkout.error_message == "Declared lost":
             return folio_checkout
@@ -414,17 +423,27 @@ class LoansMigrator(MigrationTaskBase):
         self.migration_report.add(Blurbs.Details, "Handled inactive users")
         return res
 
-    def handle_aged_to_lost_item(self, legacy_loan) -> TransactionResult:
-        logging.debug("Setting Available")
-        legacy_loan.next_item_status = "Available"
-        self.set_item_status(legacy_loan)
-        res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
-        legacy_loan.next_item_status = "Aged to lost"
-        self.set_item_status(legacy_loan)
-        s = "Successfully Checked out Aged to lost item and put the status back"
-        logging.info(s)
-        self.migration_report.add(Blurbs.Details, s)
-        return res_checkout
+    def handle_aged_to_lost_item(self, legacy_loan: LegacyLoan) -> TransactionResult:
+        if self.circulation_helper.is_checked_out(legacy_loan):
+            return TransactionResult(
+                False,
+                False,
+                legacy_loan,
+                "Aged to lost and checked out",
+                "Aged to lost and checked out",
+            )
+
+        else:
+            logging.debug("Setting Available")
+            legacy_loan.next_item_status = "Available"
+            self.set_item_status(legacy_loan)
+            res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
+            legacy_loan.next_item_status = "Aged to lost"
+            self.set_item_status(legacy_loan)
+            s = "Successfully Checked out Aged to lost item and put the status back"
+            logging.info(s)
+            self.migration_report.add(Blurbs.Details, s)
+            return res_checkout
 
     def update_open_loan(self, folio_loan: dict, legacy_loan: LegacyLoan):
         due_date = du_parser.isoparse(str(legacy_loan.due_date))
