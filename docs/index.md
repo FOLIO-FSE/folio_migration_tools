@@ -2,6 +2,7 @@
 :maxdepth: 1
 :hidden:
 Installing <installing.md>
+Quick tutorial
 The migration process <migration_process.md>
 Migration Tasks <migration_tasks.md>
 Mapping-file based mapping <mapping_file_based_mapping.md>
@@ -14,15 +15,9 @@ Q&A <q_and_a.md>
 :depth: 2
 ```
 
-```{admonition} This documentation is currently under development.
-:class: warning
-
-Please bear with us. If you have come across an issue, reach out on our slack channel or create an issue in the [GitHub Issue tracker](https://github.com/FOLIO-FSE/folio_migration_tools/issues)
-```
 
 # About the tools
 FOLIO Migration tools enable you to migrate libraries with the most common ILS:s over to FOLIO without data losses or any major data transformation tasks. The tools transform and load the data providing you and the library with good actionable logs and data-cleaning task lists together with the migrated data.
-
 
 ## What data does it cover?
 FOLIO Migration Tools currently covers the following data sets:
@@ -30,10 +25,10 @@ FOLIO Migration Tools currently covers the following data sets:
 * Circulation transactions (Open loans and requests)
 * Users/Patrons (In FOLIO, these share the same app/database)
 * Courses and Reserves (Course reserves)
+* Organizations (Used in ERM and Aquisitions)
 
 ## What additional functionality is on the roadmap?
 This is the loose roadmap, in order of most likely implementations first
-* Organizations (Vendor records, In development)
 * Orders (In development)
 * Invoices
 * ERM-related objects (In the planning)
@@ -48,8 +43,8 @@ In theory, these tools can be used for ongoing patron loads from systems like Ba
 Want to contribute? Read the [CONTRIBUTING.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CONTRIBUTING.md)
 
 # Found an issue?
-Report it on the GitHub Issue tracker](https://github.com/FOLIO-FSE/folio_migration_tools/issues)
-The scripts require a FOLIO tenant with reference data properly set up. The script will throw messages telling what reference data is missing.
+If you have come across an issue, reach out on our #fse_folio_migration_tools on the [FOLIO Slack](https://folio-project.slack.com), or create an issue in the [GitHub Issue tracker](https://github.com/FOLIO-FSE/folio_migration_tools/issues)
+```
 
 
 # Tests
