@@ -2,7 +2,7 @@
 :maxdepth: 1
 :hidden:
 Installing <installing.md>
-Quick tutorial
+Quick tutorial <quick_tutorial.md>
 The migration process <migration_process.md>
 Migration Tasks <migration_tasks.md>
 Mapping-file based mapping <mapping_file_based_mapping.md>
