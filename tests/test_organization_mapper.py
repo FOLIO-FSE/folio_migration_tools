@@ -32,7 +32,6 @@ def test_fetch_contact_schemas_from_github_happy_path():
     assert contact_schema["$schema"]
 
 
-# Mock mapper object
 # Building interface schema from github
 def test_fetch_interfaces_schemas_from_github_happy_path():
     contact_schema = OrganizationMapper.fetch_additional_schema("interface")
@@ -149,19 +148,6 @@ def test_tags_object_array(mapper):
 
     assert organization["tags"] == {"tagList": ["A", "B", "C"]}
 
-
-def test_contacts_basic_mapping(mapper):
-    data["vendor_code"] = "v6"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-
-    assert organization["contacts"][0]["firstName"] == "Jane"
-    assert organization["contacts"][0]["lastName"] == "Deer"
-
-
-def test_contacts_address_mapping(mapper):
-    data["vendor_code"] = "v7"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-    assert organization["contacts"][0]["firstName"] == "Jane"
     assert organization["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
 
 
@@ -208,31 +194,81 @@ def test_multiple_emails_array_objects(mapper):
     assert correct_email_objects == 2
 
 
+# Test "contacts" array
+
+def test_contacts_basic_mapping(mapper):
+    data["vendor_code"] = "v6"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["contacts"][0]["firstName"] == "Jane"
+    assert organization["contacts"][0]["lastName"] == "Deer"
+
+
+def test_contacts_address_mapping(mapper):
+    data["vendor_code"] = "v7"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    assert organization["contacts"][0]["firstName"] == "Jane"
+
+
+# Test "interfaces" array
+
+def test_interfaces_basic_mapping(mapper):
+    data["vendor_code"] = "v8"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["interfaces"][0]["name"] == "FOLIO"
+    assert organization["interfaces"][0]["uri"] == "https://www.folio.org"
+
+
+def test_interfaces_type_enum_mapping(mapper):
+    # Array of enums
+    valid_interface_types = ["Admin", "End user", "Reports", "Orders", "Invoices", "Other"]
+    data["vendor_code"] = "v9"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["interfaces"][0]["type"] in valid_interface_types
+
+    # TODO Rewrite this to reflect what the mapper does when something is not a valid enum.
+    # Current behaviour creates invalid records.
+    assert organization["interfaces"][1]["type"]
+
+
 # Shared data and maps
 data = {
-    "vendor_code": "AbeBooks",
-    "ACCTNUM": "aha112233",
-    "VENNAME": "Abe Books",
-    "EMAIL": "EMAIL",
-    "email1_categories": "sls",
-    "EMAIL2": "email2@abebooks.com",
-    "email2_categories": "tspt",
-    "PHONE NUM": "123-456",
-    "phone_categories": "mspt",
-    "Alt name type": "Nickname",
-    "Alternative Names": "Abby",
-    "status": "Active",
-    "address_line_1": "Suite 500 - 655 Typee Rd",
-    "address_city": "Victoria",
-    "address_categories": "rt",
+    "vendor_code": "AbeBooks",  # String
+    "ACCTNUM": "aha112233",  # String, required
+    "VENNAME": "Abe Books",  # String, required
+    "EMAIL": "EMAIL",  # String
+    "email1_categories": "sls",  # -> UUID of ref data
+    "EMAIL2": "email2@abebooks.com",  # String
+    "email2_categories": "tspt",  # -> UUID of ref data
+    "PHONE NUM": "123-456",  # String
+    "phone_categories": "mspt",  # -> UUID of ref data
+    "Alt name type": "Nickname",  # String
+    "Alternative Names": "Abby",  # String
+    "status": "Active",  # Enum, required
+    "address_line_1": "Suite 500 - 655 Typee Rd",  # String
+    "address_city": "Victoria",  # String
+    "address_categories": "rt", 
     "tp": "Consortium",
-    "tgs": "A^-^B^-^C",
-    "organization_types": "cst",
-    "org_note": "Good stuff!",
-    "contact_person_f": "Jane",
-    "contact_person_l": "Deer",
-    "contact_address_line1": "My Street",
-    "contact_address_town": "Gothenburg",
+    "tgs": "A^-^B^-^C",  # String (must match tags in tenant))
+    "organization_types": "cst",  # -> UUID of ref data
+    "org_note": "Good stuff!",  # String
+    "contact_person_f": "Jane",  # String
+    "contact_person_l": "Deer",  # String
+    "contact_address_line1": "My Street",  # String
+    "contact_address_town": "Gothenburg",  # String
+    "interface_1_uri": "https://www.folio.org",  # String
+    "interface_1_name": "FOLIO",  # String
+    "interface_1_type": "Admin",  # String
+    "interface_1_notes": "A good starting point for FOLIO info/links.",  # String
+    "interface_1_delivery": "Online",  # Enum
+    "interface_1_statFormat": "Interpretative dance",  # String
+    "interface_1_statNotes": "May be performed anytime, anywhere.",  # String
+    "interface_1_localLocation": "The shelf behind the houseplant",  # String
+    "interface_1_onlineLocation": "How does this differ from URI?",  # String
+    "interface_2_uri": "https://www.wiki.folio.org",
+    "interface_2_type": "Community wiki"
 }
 
 # A mocked mapping file
@@ -371,6 +407,78 @@ organization_map = {
             "description": "",
         },
         {
+            "folio_field": "interfaces[0].name",
+            "legacy_field": "interface_1_name",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].uri",
+            "legacy_field": "interface_1_uri",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].type",
+            "legacy_field": "interface_1_type",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].notes",
+            "legacy_field": "interface_1_notes",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].available",
+            "legacy_field": "",
+            "value": True,
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].deliveryMethod",
+            "legacy_field": "interface_1_delivery",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].statisticsFormat",
+            "legacy_field": "interface_1_statFormat",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].statisticsNotes",
+            "legacy_field": "interface_1_statNotes",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].locallyStored",
+            "legacy_field": "interface_1_localLocation",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].onlineLocation",
+            "legacy_field": "interface_1_onlineLocation",
+            "value": "",
+            "description": "",
+        },     
+        {
+            "folio_field": "interfaces[1].uri",
+            "legacy_field": "interface_2_uri",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[1].type",
+            "legacy_field": "interface_2_type",
+            "value": "",
+            "description": "",
+        },
+        {
             "folio_field": "isVendor",
             "legacy_field": "Not mapped",
             "value": True,
@@ -418,25 +526,3 @@ organization_map = {
         },
     ]
 }
-
-# Contacts
-
-# Interfaces
-
-
-def test_interfaces_basic_mapping(mapper):
-    data["vendor_code"] = "v6"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-
-    assert organization["interfaces"][0]["name"] == "FOLIO"
-    assert organization["interfaces"][0]["uri"] == "www.folio.org"
-
-
-def test_interfaces_type_enum_mapping(mapper):
-    # Array of enums
-    valid_interface_types = ["Admin", "End user", "Reports", "Orders", "Invoices", "Other"]
-    data["vendor_code"] = "v7"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
-
-    assert all(type in valid_interface_types for type in ["interfaces"][0]["type"])
-    assert organization["interfaces"][0]["type"] == ["Admin", "Orders"]

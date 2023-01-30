@@ -318,7 +318,9 @@ class OrganizationMapper(MappingFileMapperBase):
                     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
                     property_level1["items"] = contact_schema
 
-                    logging.info(f"{property_name_level1} will be handled separately.")
+                elif property_name_level1 == "interfaces":
+                    interface_schema = OrganizationMapper.fetch_additional_schema("interface")
+                    property_level1["items"] = interface_schema
 
                 elif (
                     property_level1.get("type") == "array"

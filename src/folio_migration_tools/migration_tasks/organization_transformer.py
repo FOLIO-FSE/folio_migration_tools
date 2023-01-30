@@ -108,7 +108,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         # TODO We should cache contacts and interfaces to ensure we don't add duplicates.
         # See similar implementation for instructors in Courses mapper
-        self.contacts_cache: dict = {}
+        self.embedded_extradata_object_cache: dict = {}
         self.interfaces_cache: dict = {}
 
     def list_source_files(self):
@@ -258,52 +258,85 @@ class OrganizationTransformer(MigrationTaskBase):
 
             return folio_rec
 
-    def create_extradata_objects(self, record):
+    def handle_embedded_extradata_objects(self, record):
+        if record.get("interfaces"):
+            extradata_object_type = "interfaces"
+            embedded_extradata_object = record["interfaces"]
+            minimum_required_fields = ["name"]
+            record["interfaces"] = []
+
+            # Only if the object contains minimum data will it be created and linked
+            for nested_object in embedded_extradata_object:
+                if all(f in nested_object for f in minimum_required_fields):
+                    self.create_linked_extradata_objects(
+                        record, nested_object, extradata_object_type
+                    )
+
         if record.get("contacts"):
-            mapped_contacts = record["contacts"]
+            extradata_object_type = "contacts"
+            minimum_required_fields = ["firstName", "firstName"]
+            embedded_extradata_object = record["contacts"]
             record["contacts"] = []
 
-            for contact in mapped_contacts:
-                if contact.get("firstName") and contact.get("lastName"):
-                    # Check if this contact has already been created
-                    matched_uuids = [
-                        key for key, value in self.contacts_cache.items() if value == contact
-                    ]
+            # Only if the object contains minimum data will it be created and linked
+            for nested_object in embedded_extradata_object:
+                if all(f in nested_object for f in minimum_required_fields):
+                    self.create_linked_extradata_objects(
+                        record, nested_object, extradata_object_type
+                    )
 
-                    if len(matched_uuids) == 1:
-                        contact_uuid = matched_uuids[0]
-                        # Append the contact UUID to the organization record
-                        record["contacts"].append(contact_uuid)
-
-                    elif len(matched_uuids) >= 1:
-                        raise TransformationProcessError(
-                            f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
-                        )
-
-                    else:
-                        # Save away the contact info without a uuid for deduplication
-                        contact_info_to_cache = contact.copy()
-                        # Generate a UUID and add to the contact
-                        contact_uuid = str(uuid.uuid4())
-                        contact["id"] = contact_uuid
-                        # TODO Validate.
-                        # TODO Add address cleanup backwhen the mapper is creating proper addresses
-                        # contact = self.clean_addresses(contact)
-                        self.extradata_writer.write(
-                            "contacts", contact
-                        )  # Double check the endpoint/poster syntax
-                        self.mapper.migration_report.add_general_statistics("Created Contacts")
-                        # Save contact to extradata file
-                        # Append the contact UUID to the organization record
-                        record["contacts"].append(contact_uuid)
-                        self.contacts_cache[contact_uuid] = contact_info_to_cache
-
-        # TODO Do the same as for Contacts. Find out if extradata poster can post credentials.
-        if "interfaces" in record:
-            pass
-
-        # TODO Do the same as for Contacts?
+        # TODO Do the same as for Contacts? Check implementation for Users.
         if "notes" in record:
             pass
+
+    def create_linked_extradata_objects(self, record, nested_object, extradata_object_type):
+        """Creates extradata objects from embedded extradata objects,
+        and replaces the embedde dobjects with UUIDs.
+
+        Args:
+            record (_type_): _description_
+            nested_object (_type_): _description_
+            extradata_object_type (_type_): _description_
+
+        Raises:
+            TransformationProcessError: _description_
+
+        Returns:
+            _type_: The organization record with linked extradata UUIDs.
+        """
+
+        # Check if this object has already been created
+        matched_uuids = [
+            key
+            for key, value in self.embedded_extradata_object_cache.items()
+            if value == nested_object
+        ]
+
+        if len(matched_uuids) == 1:
+            self.mapper.migration_report.add_general_statistics(
+                f"Identical {extradata_object_type}:"
+            )
+            logging.info("Identical {extradata_object_type} object: {nested_object}")
+
+        elif len(matched_uuids) >= 1:
+            raise TransformationProcessError(
+                f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
+            )
+
+        # Save away the contact info without a uuid for deduplication
+        embedded_object_to_cache = nested_object.copy()
+        # Generate a UUID and add to the contact
+        extradata_object_uuid = str(uuid.uuid4())
+        nested_object["id"] = extradata_object_uuid
+        self.extradata_writer.write(
+            extradata_object_type, nested_object
+        )  # Double check the endpoint/poster syntax
+        self.mapper.migration_report.add_general_statistics(
+            f"Created extradata objects: {extradata_object_type}"
+        )
+        # Save contact to extradata file
+        # Append the contact UUID to the organization record
+        record[extradata_object_type].append(extradata_object_uuid)
+        self.embedded_extradata_object_cache[extradata_object_uuid] = embedded_object_to_cache
 
         return record
