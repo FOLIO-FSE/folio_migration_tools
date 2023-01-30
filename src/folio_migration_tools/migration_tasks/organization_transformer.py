@@ -146,7 +146,7 @@ class OrganizationTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.organizations
                     )
 
-                    folio_rec = self.create_extradata_objects(folio_rec)
+                    folio_rec = self.handle_embedded_extradata_objects(folio_rec)
 
                     clean_folio_rec = self.clean_org(folio_rec)
 
@@ -288,6 +288,8 @@ class OrganizationTransformer(MigrationTaskBase):
         if "notes" in record:
             pass
 
+        return record
+
     def create_linked_extradata_objects(self, record, embedded_object, extradata_object_type):
         """Creates extradata objects from embedded extradata objects,
         and replaces the embedde dobjects with UUIDs.
@@ -311,8 +313,8 @@ class OrganizationTransformer(MigrationTaskBase):
 
         # Check if this object has already been created
         matched_uuids = [
-            key
-            for key, value in self.embedded_extradata_object_cache.items()
+            value
+            for value in self.embedded_extradata_object_cache
             if value == embedded_object_to_cache
         ]
 
@@ -334,6 +336,6 @@ class OrganizationTransformer(MigrationTaskBase):
         # Append the contact UUID to the organization record
         record[extradata_object_type].append(extradata_object_uuid)
 
-        self.embedded_extradata_object_cache[extradata_object_uuid] = embedded_object_to_cache
+        self.embedded_extradata_object_cache.add(embedded_object_to_cache)
 
         return record
