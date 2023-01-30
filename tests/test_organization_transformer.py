@@ -216,7 +216,7 @@ def test_clean_up_two_addresses_both_empty():
 # Test extradata creation
 def test_create_linked_extradata_objects():
     mocked_organization_transformer = Mock(spec=OrganizationTransformer)
-    mocked_organization_transformer.embedded_extradata_object_cache = {}
+    mocked_organization_transformer.embedded_extradata_object_cache = set()
     mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
     mocked_organization_transformer.extradata_writer.cache = []
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
@@ -272,16 +272,6 @@ def test_create_linked_extradata_objects():
         for id in organization["contacts"]
     )
 
-    # Check that all the assigned uuids are in the cache (for deduplication)
-    assert all(
-        str(id) in mocked_organization_transformer.embedded_extradata_object_cache.keys()
-        for id in organization["interfaces"]
-    )
-    assert all(
-        str(id) in mocked_organization_transformer.embedded_extradata_object_cache.keys()
-        for id in organization["contacts"]
-    )
-
     # Check that there are contacts in the extradata writer
     assert "contacts" in str(mocked_organization_transformer.extradata_writer.cache)
     # Check that there are contacts in the extradata writer
@@ -294,7 +284,7 @@ def test_create_linked_extradata_objects():
 def test_contact_formatting_and_content():
     # Check that contacts in the extradata writer contain the right information
     mocked_organization_transformer = Mock(spec=OrganizationTransformer)
-    mocked_organization_transformer.embedded_extradata_object_cache = {}
+    mocked_organization_transformer.embedded_extradata_object_cache = set()
     mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
     mocked_organization_transformer.extradata_writer.cache = []
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
@@ -326,9 +316,9 @@ def test_contact_formatting_and_content():
 
 
 # Tests for interfaces array
-def handle_embedded_extradata_objects():
+def test_handle_embedded_extradata_objects():
     mocked_organization_transformer = Mock(spec=OrganizationTransformer)
-    mocked_organization_transformer.embedded_extradata_object_cache = {}
+    mocked_organization_transformer.embedded_extradata_object_cache = set()
     mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
     mocked_organization_transformer.extradata_writer.cache = []
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
@@ -347,3 +337,4 @@ def handle_embedded_extradata_objects():
     )
 
     assert organization["interfaces"] == []
+    assert organization["name"] == "FOLIO"

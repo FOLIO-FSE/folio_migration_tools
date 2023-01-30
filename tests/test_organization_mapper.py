@@ -154,7 +154,7 @@ def test_tags_object_array(mapper):
 def test_enforce_schema_required_properties_in_organization(mapper):
     data["EMAIL2"] = ""
     data["PHONE NUM"] = ""
-    data["vendor_code"] = "v8"
+    data["vendor_code"] = "v9"
 
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
@@ -228,9 +228,9 @@ def test_interfaces_type_enum_mapping(mapper):
 
     assert organization["interfaces"][0]["type"] in valid_interface_types
 
-    # TODO Rewrite this to reflect what the mapper does when something is not a valid enum.
-    # Current behaviour creates invalid records.
-    assert organization["interfaces"][1]["type"]
+    for interface in organization["interfaces"]:
+        if interface["name"] == "FOLIO":
+            assert interface["type"] == ["Admin"]
 
 
 # Shared data and maps

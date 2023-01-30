@@ -261,25 +261,25 @@ class OrganizationTransformer(MigrationTaskBase):
         if record.get("interfaces"):
             extradata_object_type = "interfaces"
             embedded_extradata_object = record["interfaces"]
-            minimum_required_fields = ["name"]
+            minimum_required_props = ["name"]
             record["interfaces"] = []
 
             # Only if the object contains minimum data will it be created and linked
             for nested_object in embedded_extradata_object:
-                if all(f in nested_object for f in minimum_required_fields):
+                if all(nested_object.get(prop, "") != "" for prop in minimum_required_props):
                     self.create_linked_extradata_objects(
                         record, nested_object, extradata_object_type
                     )
 
         if record.get("contacts"):
             extradata_object_type = "contacts"
-            minimum_required_fields = ["firstName", "firstName"]
+            minimum_required_props = ["firstName", "firstName"]
             embedded_extradata_object = record["contacts"]
             record["contacts"] = []
 
             # Only if the object contains minimum data will it be created and linked
             for nested_object in embedded_extradata_object:
-                if all(f in nested_object for f in minimum_required_fields):
+                if all(nested_object.get(prop, "") != "" for prop in minimum_required_props):
                     self.create_linked_extradata_objects(
                         record, nested_object, extradata_object_type
                     )
