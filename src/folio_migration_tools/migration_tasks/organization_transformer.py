@@ -282,6 +282,56 @@ class OrganizationTransformer(MigrationTaskBase):
         if "notes" in record:
             pass
 
+    def create_linked_extradata_objects(self, record, nested_object, extradata_object_type):
+        """Creates extradata objects from embedded extradata objects,
+        and replaces the embedde dobjects with UUIDs.
+
+        Args:
+            record (_type_): _description_
+            nested_object (_type_): _description_
+            extradata_object_type (_type_): _description_
+
+        Raises:
+            TransformationProcessError: _description_
+
+        Returns:
+            _type_: The organization record with linked extradata UUIDs.
+        """
+
+        # Check if this object has already been created
+        matched_uuids = [
+            key
+            for key, value in self.embedded_extradata_object_cache.items()
+            if value == nested_object
+        ]
+
+        if len(matched_uuids) == 1:
+            self.mapper.migration_report.add_general_statistics(
+                f"Identical {extradata_object_type}:"
+            )
+            logging.info("Identical {extradata_object_type} object: {nested_object}")
+
+        elif len(matched_uuids) >= 1:
+            raise TransformationProcessError(
+                f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
+            )
+
+        # Save away the contact info without a uuid for deduplication
+        embedded_object_to_cache = nested_object.copy()
+        # Generate a UUID and add to the contact
+        extradata_object_uuid = str(uuid.uuid4())
+        nested_object["id"] = extradata_object_uuid
+        self.extradata_writer.write(
+            extradata_object_type, nested_object
+        )  # Double check the endpoint/poster syntax
+        self.mapper.migration_report.add_general_statistics(
+            f"Created extradata objects: {extradata_object_type}"
+        )
+        # Save contact to extradata file
+        # Append the contact UUID to the organization record
+        record[extradata_object_type].append(extradata_object_uuid)
+        self.embedded_extradata_object_cache[extradata_object_uuid] = embedded_object_to_cache
+
         return record
 
     def create_linked_extradata_objects(self, record, embedded_object, extradata_object_type):
