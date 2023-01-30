@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 import uuid
+from hashlib import sha1
 from os.path import isfile
 from typing import List
 from typing import Optional
@@ -106,9 +107,7 @@ class OrganizationTransformer(MigrationTaskBase):
             ),
         )
 
-        # TODO We should cache contacts and interfaces to ensure we don't add duplicates.
-        # See similar implementation for instructors in Courses mapper
-        self.embedded_extradata_object_cache: dict = {}
+        self.embedded_extradata_object_cache: set = set()
         self.interfaces_cache: dict = {}
 
     def list_source_files(self):
@@ -289,7 +288,7 @@ class OrganizationTransformer(MigrationTaskBase):
         if "notes" in record:
             pass
 
-    def create_linked_extradata_objects(self, record, nested_object, extradata_object_type):
+    def create_linked_extradata_objects(self, record, embedded_object, extradata_object_type):
         """Creates extradata objects from embedded extradata objects,
         and replaces the embedde dobjects with UUIDs.
 
@@ -305,38 +304,36 @@ class OrganizationTransformer(MigrationTaskBase):
             _type_: The organization record with linked extradata UUIDs.
         """
 
+        # Save away the contact info without a uuid for deduplication
+        embedded_object_to_cache = sha1(
+            json.dumps(embedded_object, sort_keys=True).encode('utf-8')
+        ).hexdigest()
+
         # Check if this object has already been created
         matched_uuids = [
             key
             for key, value in self.embedded_extradata_object_cache.items()
-            if value == nested_object
+            if value == embedded_object_to_cache
         ]
 
-        if len(matched_uuids) == 1:
+        if len(matched_uuids) > 0:
             self.mapper.migration_report.add_general_statistics(
                 f"Identical {extradata_object_type}:"
             )
             logging.info("Identical {extradata_object_type} object: {nested_object}")
 
-        elif len(matched_uuids) >= 1:
-            raise TransformationProcessError(
-                f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
-            )
-
-        # Save away the contact info without a uuid for deduplication
-        embedded_object_to_cache = nested_object.copy()
         # Generate a UUID and add to the contact
         extradata_object_uuid = str(uuid.uuid4())
-        nested_object["id"] = extradata_object_uuid
-        self.extradata_writer.write(
-            extradata_object_type, nested_object
-        )  # Double check the endpoint/poster syntax
+        embedded_object["id"] = extradata_object_uuid
+        self.extradata_writer.write(extradata_object_type, embedded_object)
+
         self.mapper.migration_report.add_general_statistics(
             f"Created extradata objects: {extradata_object_type}"
         )
         # Save contact to extradata file
         # Append the contact UUID to the organization record
         record[extradata_object_type].append(extradata_object_uuid)
+
         self.embedded_extradata_object_cache[extradata_object_uuid] = embedded_object_to_cache
 
         return record
