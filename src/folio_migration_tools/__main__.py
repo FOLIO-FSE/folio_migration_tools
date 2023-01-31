@@ -104,6 +104,8 @@ def main():
             # task_obj.wrap_up()
     except requests.exceptions.SSLError:
         print("\nSSL error. Are you connected to the Internet and the VPN?")
+    except requests.exceptions.ConnectionError:
+        print("\nNetwork error. Are you connected to the Internet and the VPN in the right way?")
     except Exception as ee:
         logging.exception("Unhandled exception")
         raise TransformationProcessError("", "unhandled exception", "") from ee

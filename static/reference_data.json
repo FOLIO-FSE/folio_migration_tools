@@ -3000,7 +3000,41 @@
             "name": "Selected"
         }
     ],
-    "/location-units": [],
+    "/location-units/campuses": [
+        {
+            "code": "CC",
+            "id": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
+            "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+            "name": "City Campus"
+        },
+        {
+            "code": "E",
+            "id": "470ff1dd-937a-4195-bf9e-06bcfcd135df",
+            "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+            "name": "Online"
+        }
+    ],
+    "/location-units/institutions": [
+        {
+            "code": "KU",
+            "id": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+            "name": "K\u00f8benhavns Universitet"
+        }
+    ],
+    "/location-units/libraries": [
+        {
+            "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
+            "code": "DI",
+            "id": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
+            "name": "Datalogisk Institut"
+        },
+        {
+            "campusId": "470ff1dd-937a-4195-bf9e-06bcfcd135df",
+            "code": "E",
+            "id": "c2549bb4-19c7-4fcc-8b52-39e612fb7dbe",
+            "name": "Online"
+        }
+    ],
     "/locations": [
         {
             "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
@@ -3170,8 +3204,7 @@
                         "target": "identifiers.value"
                     }
                 ],
-                "entityPerRepeatedSubfield": true,
-                "keepTrailingBackslash": true
+                "entityPerRepeatedSubfield": true
             }
         ],
         "024": [
@@ -5030,14 +5063,6 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
-                        "description": "Authority ID that controlling the contributor",
-                        "subfield": [
-                            "9"
-                        ],
-                        "target": "contributors.authorityId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Personal Name",
                         "rules": [
                             {
@@ -5138,14 +5163,6 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
-                        "description": "Authority ID that controlling the contributor",
-                        "subfield": [
-                            "9"
-                        ],
-                        "target": "contributors.authorityId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Corporate Name",
                         "rules": [
                             {
@@ -5242,14 +5259,6 @@
         "111": [
             {
                 "entity": [
-                    {
-                        "applyRulesOnConcatenatedData": true,
-                        "description": "Authority ID that controlling the contributor",
-                        "subfield": [
-                            "9"
-                        ],
-                        "target": "contributors.authorityId"
-                    },
                     {
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type for Meeting Name",
@@ -9593,14 +9602,11 @@
                         "target": "notes.note"
                     },
                     {
-                        "description": "If the 1st indicator equals 0, determines that the note should not be visible for others than staff",
+                        "description": "If true, determines that the note should not be visible for others than staff",
                         "rules": [
                             {
-                                "conditions": [
-                                    {
-                                        "type": "set_note_staff_only_via_indicator"
-                                    }
-                                ]
+                                "conditions": [],
+                                "value": "false"
                             }
                         ],
                         "subfield": [
@@ -10115,14 +10121,6 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
-                        "description": "Authority ID that controlling the contributor",
-                        "subfield": [
-                            "9"
-                        ],
-                        "target": "contributors.authorityId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Personal Name",
                         "rules": [
                             {
@@ -10223,14 +10221,6 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
-                        "description": "Authority ID that controlling the contributor",
-                        "subfield": [
-                            "9"
-                        ],
-                        "target": "contributors.authorityId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Corporate Name",
                         "rules": [
                             {
@@ -10327,14 +10317,6 @@
         "711": [
             {
                 "entity": [
-                    {
-                        "applyRulesOnConcatenatedData": true,
-                        "description": "Authority ID that controlling the contributor",
-                        "subfield": [
-                            "9"
-                        ],
-                        "target": "contributors.authorityId"
-                    },
                     {
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type for Meeting Name",

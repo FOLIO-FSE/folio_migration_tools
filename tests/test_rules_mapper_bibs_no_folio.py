@@ -1,39 +1,22 @@
-import json
 import logging
-import re
-import unittest
-from unittest.mock import MagicMock
 from unittest.mock import Mock
-from unittest.mock import patch
-from uuid import uuid4
 
 import pymarc
 import pytest
-from folioclient import FolioClient
-from lxml import etree
+from pymarc import Field
 from pymarc import MARCReader
 from pymarc import Record
 
-from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.report_blurbs import Blurbs
-from folio_migration_tools.test_infrastructure.mocked_classes import mocked_folio_client
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
-from folio_migration_tools.mapper_base import MapperBase
-from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
-    MarcFileProcessor,
-)
-from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
-    RulesMapperBase,
-)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
@@ -110,6 +93,84 @@ def test_get_folio_id_by_code_except(mapper, caplog):
     assert "test_code_999" in caplog.text
     assert "legacy_id_99" in caplog.text
     assert res == ""
+
+
+def test_create_entity_empty_props(mapper: BibsRulesMapper):
+
+    entity_mappings = [
+        {
+            "target": "contributors.authorityId",
+            "subfield": ["9"],
+            "description": "Authority ID that controlling the contributor",
+            "applyRulesOnConcatenatedData": True,
+        },
+        {
+            "rules": [
+                {
+                    "conditions": [
+                        {
+                            "type": "set_contributor_name_type_id",
+                            "parameter": {"name": "Personal name"},
+                        }
+                    ]
+                }
+            ],
+            "target": "contributors.contributorNameTypeId",
+            "subfield": [],
+            "description": "Type for Personal Name",
+            "applyRulesOnConcatenatedData": True,
+        },
+        {
+            "rules": [{"conditions": [{"type": "set_contributor_type_id"}]}],
+            "target": "contributors.contributorTypeId",
+            "subfield": ["4"],
+            "description": "Type of contributor",
+            "applyRulesOnConcatenatedData": True,
+        },
+        {
+            "rules": [{"conditions": [{"type": "set_contributor_type_text"}]}],
+            "target": "contributors.contributorTypeText",
+            "subfield": ["e"],
+            "description": "Contributor type free text",
+            "applyRulesOnConcatenatedData": True,
+        },
+        {
+            "rules": [{"value": "true", "conditions": []}],
+            "target": "contributors.primary",
+            "subfield": [],
+            "description": "Primary contributor",
+            "applyRulesOnConcatenatedData": True,
+        },
+        {
+            "rules": [{"conditions": [{"type": "trim_period, trim"}]}],
+            "target": "contributors.name",
+            "subfield": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "f",
+                "g",
+                "j",
+                "k",
+                "l",
+                "n",
+                "p",
+                "q",
+                "t",
+                "u",
+            ],
+            "description": "Personal Name",
+            "applyRulesOnConcatenatedData": True,
+        },
+    ]
+    marc_field = Field(
+        tag="100",
+        indicators=["1", " "],
+        subfields=["a", "De Geer, Jan,", "d", "1918-2007", "0", "280552"],
+    )
+    entity = mapper.create_entity(entity_mappings, marc_field, "contributors", "apa")
+    assert "authorityId" not in entity
 
 
 def test_get_instance_format_ids_no_rda(mapper, caplog):

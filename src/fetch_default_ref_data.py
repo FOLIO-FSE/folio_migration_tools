@@ -5,8 +5,10 @@ import sys
 
 import requests
 
-super_schema = {
-    "/location-units": {},
+super_schema: dict = {
+    "/location-units/campuses": {},
+    "/location-units/institutions": {},
+    "/location-units/libraries": {},
     "/locations": {},
     "/alternative-title-types": {},
     "/authority-note-types": {},
@@ -74,7 +76,7 @@ def main():
     super_schema["/mapping-rules/marc-authority"] = rules[0]
     super_schema["/mapping-rules/marc-bib"] = rules[1]
     super_schema["/mapping-rules/marc-holdings"] = rules[2]
-    print(json.dumps(super_schema, indent=4))
+    # print(json.dumps(super_schema, indent=4))
     with open("./static/reference_data.json", "w") as write_file:
         json.dump(super_schema, write_file, indent=4, sort_keys=True)
     print("done fetching ref data")
@@ -113,8 +115,8 @@ def get_ref_data_from_github_folder(owner, repo, folder_path: str):
             resp.raise_for_status()
             ret_arr.append(json.loads(resp.text))
         logging.debug(folder_path)
-    except Exception:
-        logging.error("Something went wrong")
+    except Exception as ee:
+        logging.error("Something went wrong: %s", ee)
     return ret_arr
 
 
