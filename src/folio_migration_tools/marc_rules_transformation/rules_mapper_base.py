@@ -461,11 +461,15 @@ class RulesMapperBase(MapperBase):
         entity = {}
         for entity_mapping in entity_mappings:
             k = entity_mapping["target"].split(".")[-1]
-            if values := self.apply_rules(marc_field, entity_mapping, index_or_legacy_id):
-                if entity_parent_key == k:
-                    entity = values[0]
+            if my_values := [
+                v
+                for v in self.apply_rules(marc_field, entity_mapping, index_or_legacy_id)
+                if v != ""
+            ]:
+                if entity_parent_key != k:
+                    entity[k] = my_values[0]
                 else:
-                    entity[k] = values[0]
+                    entity = my_values[0]
         return entity
 
     def handle_entity_mapping(
@@ -494,14 +498,7 @@ class RulesMapperBase(MapperBase):
                 all(
                     v
                     for k, v in entity.items()
-                    if k
-                    not in [
-                        "staffOnly",
-                        "primary",
-                        "isbnValue",
-                        "issnValue",
-                        "authorityId",
-                    ]
+                    if k not in ["staffOnly", "primary", "isbnValue", "issnValue"]
                 )
                 or e_parent in ["electronicAccess", "publication"]
                 or (

@@ -1,12 +1,10 @@
 import datetime
 import json
-from unittest.mock import Mock
 from uuid import uuid4
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc.reader import MARCReader
 from pymarc.record import Field
-from pymarc.record import Leader
 from pymarc.record import Record
 
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
