@@ -60,10 +60,10 @@ class BatchPoster(MigrationTaskBase):
                 description=(
                     "Toggles the use of the safe/unsafe Inventory storage endpoints. "
                     "Unsafe circumvents the Optimistic locking in FOLIO. Defaults to "
-                    "False (using the 'unsafe')"
+                    "True (using the 'safe' options)"
                 )
             ),
-        ] = False
+        ] = True
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -78,19 +78,22 @@ class BatchPoster(MigrationTaskBase):
         super().__init__(library_config, task_config, use_logging)
         self.migration_report = MigrationReport()
         self.performing_rerun = False
-        self.failed_ids = []
+        self.failed_ids: list = []
         self.first_batch = True
-        self.api_path = list_objects(self.task_configuration.object_type)
+        self.api_info = get_api_info(
+            self.task_configuration.object_type,
+            self.task_configuration.use_safe_inventory_endpoints,
+        )
         self.snapshot_id = str(uuid4())
-        self.failed_objects = []
+        self.failed_objects: list = []
         self.batch_size = self.task_configuration.batch_size
         logging.info("Batch size is %s", self.batch_size)
         self.processed = 0
         self.failed_batches = 0
         self.users_created = 0
         self.users_updated = 0
-        self.users_per_group = {}
-        self.failed_fields = set()
+        self.users_per_group: dict = {}
+        self.failed_fields: set = set()
         self.num_failures = 0
         self.num_posted = 0
 
@@ -111,24 +114,14 @@ class BatchPoster(MigrationTaskBase):
                                 try:
                                     if self.task_configuration.object_type == "Extradata":
                                         self.post_extra_data(row, self.processed, failed_recs_file)
-                                    elif not list_objects(self.task_configuration.object_type)[
-                                        "is_batch"
-                                    ]:
+                                    elif not self.api_info["is_batch"]:
                                         self.post_single_records(
                                             row, self.processed, failed_recs_file
                                         )
                                     else:
-                                        json_rec = json.loads(row.split("\t")[-1])
-                                        if self.task_configuration.object_type == "SRS":
-                                            json_rec["snapshotId"] = self.snapshot_id
-                                        if self.processed == 1:
-                                            logging.info(json.dumps(json_rec, indent=True))
-                                        batch.append(json_rec)
-                                        if len(batch) == int(self.batch_size):
-                                            self.post_batch(
-                                                batch, failed_recs_file, self.processed
-                                            )
-                                            batch = []
+                                        batch = self.post_record_batch(
+                                            batch, failed_recs_file, row
+                                        )
                                 except UnicodeDecodeError as unicode_error:
                                     self.handle_unicode_error(unicode_error, last_row)
                                 except TransformationProcessError as tpe:
@@ -165,6 +158,24 @@ class BatchPoster(MigrationTaskBase):
                 self.commit_snapshot()
             raise ee
 
+    def post_record_batch(self, batch, failed_recs_file, row):
+        json_rec = json.loads(row.split("\t")[-1])
+        if (
+            self.task_configuration.object_type in ["Instances", "Holdings", "Items"]
+            and not self.task_configuration.use_safe_inventory_endpoints
+        ):
+            self.migration_report.add_general_statistics("Set _version to -1 to enable upsert")
+            json_rec["_version"] = -1
+        if self.task_configuration.object_type == "SRS":
+            json_rec["snapshotId"] = self.snapshot_id
+        if self.processed == 1:
+            logging.info(json.dumps(json_rec, indent=True))
+        batch.append(json_rec)
+        if len(batch) == int(self.batch_size):
+            self.post_batch(batch, failed_recs_file, self.processed)
+            batch = []
+        return batch
+
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
         (object_name, data) = row.split("\t")
         endpoint = get_extradata_endpoint(object_name, data)
@@ -191,10 +202,9 @@ class BatchPoster(MigrationTaskBase):
             )
 
     def post_single_records(self, row: str, num_records: int, failed_recs_file):
-        kind = list_objects(self.task_configuration.object_type)
-        if kind["is_batch"]:
+        if self.api_info["is_batch"]:
             raise TypeError("This record type supports batch processing, use post_batch method")
-        api_endpoint = kind.get("api_endpoint")
+        api_endpoint = self.api_info.get("api_endpoint")
         url = f"{self.folio_client.okapi_url}{api_endpoint}"
         response = self.post_objects(url, row)
         if response.status_code == 201:
@@ -358,15 +368,14 @@ class BatchPoster(MigrationTaskBase):
             )
 
     def do_post(self, batch):
-        kind = list_objects(self.task_configuration.object_type)
-        path = kind["api_endpoint"]
+        path = self.api_info["api_endpoint"]
         url = self.folio_client.okapi_url + path
-        if kind["object_name"] == "users":
-            payload = {kind["object_name"]: list(batch), "totalRecords": len(batch)}
-        elif kind["total_records"]:
+        if self.api_info["object_name"] == "users":
+            payload = {self.api_info["object_name"]: list(batch), "totalRecords": len(batch)}
+        elif self.api_info["total_records"]:
             payload = {"records": list(batch), "totalRecords": len(batch)}
         else:
-            payload = {kind["object_name"]: batch}
+            payload = {self.api_info["object_name"]: batch}
         return requests.post(
             url, data=json.dumps(payload), headers=self.folio_client.okapi_headers
         )
@@ -479,7 +488,7 @@ class BatchPoster(MigrationTaskBase):
             sys.exit(1)
 
 
-def list_objects(object_type: str, use_unsafe: bool = True):
+def get_api_info(object_type: str, use_safe: bool = True):
     choices = {
         "Extradata": {
             "object_name": "",
@@ -490,9 +499,9 @@ def list_objects(object_type: str, use_unsafe: bool = True):
         "Items": {
             "object_name": "items",
             "api_endpoint": (
-                "/item-storage/batch/synchronous-unsafe"
-                if use_unsafe
-                else "/item-storage/batch/synchronous"
+                "/item-storage/batch/synchronous"
+                if use_safe
+                else "/item-storage/batch/synchronous-unsafe"
             ),
             "is_batch": True,
             "total_records": False,
@@ -501,9 +510,9 @@ def list_objects(object_type: str, use_unsafe: bool = True):
         "Holdings": {
             "object_name": "holdingsRecords",
             "api_endpoint": (
-                "/holdings-storage/batch/synchronous-unsafe"
-                if use_unsafe
-                else "/holdings-storage/batch/synchronous"
+                "/holdings-storage/batch/synchronous"
+                if use_safe
+                else "/holdings-storage/batch/synchronous-unsafe"
             ),
             "is_batch": True,
             "total_records": False,
@@ -512,9 +521,9 @@ def list_objects(object_type: str, use_unsafe: bool = True):
         "Instances": {
             "object_name": "instances",
             "api_endpoint": (
-                "/instance-storage/batch/synchronous-unsafe"
-                if use_unsafe
-                else "/instance-storage/batch/synchronous"
+                "/instance-storage/batch/synchronous"
+                if use_safe
+                else "/instance-storage/batch/synchronous-unsafe"
             ),
             "is_batch": True,
             "total_records": False,
