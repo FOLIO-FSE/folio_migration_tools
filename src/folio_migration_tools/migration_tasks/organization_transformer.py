@@ -257,6 +257,18 @@ class OrganizationTransformer(MigrationTaskBase):
 
             return folio_rec
 
+    def validate_enums(self, object_schema, embedded_extradata_object, extradata_object_type):
+        extradata_schema = object_schema.get(extradata_object_type)
+        for prop_name, prop in extradata_schema:
+            if "enum" in prop:
+                enum_values = prop["enum"]
+                embedded_extradata_object[extradata_object_type].get(prop_name)
+
+            elif "enum" in prop.get("items"):
+                enum_values = prop["items"]["enum"]
+
+
+
     def handle_embedded_extradata_objects(self, record):
         if record.get("interfaces"):
             extradata_object_type = "interfaces"
@@ -300,23 +312,27 @@ class OrganizationTransformer(MigrationTaskBase):
             _type_: The organization record with linked extradata UUIDs.
         """
 
-        # Save away the contact info without a uuid for deduplication
-        embedded_object_to_cache = sha1(
-            json.dumps(embedded_object, sort_keys=True).encode('utf-8')
+        # Save away a hash of the embedded extradata to identify duplicates
+        embedded_object_hash = sha1(
+            json.dumps(embedded_object, sort_keys=True).encode("utf-8")
         ).hexdigest()
 
         # Check if this object has already been created
         matched_uuids = [
             value
             for value in self.embedded_extradata_object_cache
-            if value == embedded_object_to_cache
+            if value == embedded_object_hash
         ]
 
         if len(matched_uuids) > 0:
             self.mapper.migration_report.add_general_statistics(
-                f"Identical {extradata_object_type}:"
+                f"Number of reoccuring identical {extradata_object_type}:"
             )
-            logging.info("Identical {extradata_object_type} object: {nested_object}")
+            Helper.log_data_issue(
+                embedded_object["name"],
+                f"Identical {extradata_object_type} object occur in multiple orgnaizaitons:",
+                embedded_object,
+            )
 
         # Generate a UUID and add to the contact
         extradata_object_uuid = str(uuid.uuid4())
@@ -324,13 +340,13 @@ class OrganizationTransformer(MigrationTaskBase):
         self.extradata_writer.write(extradata_object_type, embedded_object)
 
         self.mapper.migration_report.add_general_statistics(
-            f"Created extradata objects: {extradata_object_type}"
+            f"Number of {extradata_object_type} created:"
         )
         # Save contact to extradata file
         # Append the contact UUID to the organization record
         record[extradata_object_type].append(extradata_object_uuid)
 
-        self.embedded_extradata_object_cache.add(embedded_object_to_cache)
+        self.embedded_extradata_object_cache.add(embedded_object_hash)
 
         return record
 
