@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.2 (31/01/2023)
+
+---
+
 ## v_1_7_1 (18/01/2023)
 
 #### Authorities
@@ -578,7 +582,3 @@ There is a small breaking change between Juniper and Iris. In order for the scri
 
 
 **Full Changelog**: https://github.com/FOLIO-FSE/MARC21-To-FOLIO/compare/iris_1_2...juniper_1_0
----
-
-## Iris 1.3 (15/10/2021)
-Stepping stone release before Juniper support
