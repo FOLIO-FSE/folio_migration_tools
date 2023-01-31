@@ -1,6 +1,14 @@
 # Changelog
 
-## 1.7.2 (31/01/2023)
+## v_1_7_2 (31/01/2023)
+
+#### bug
+
+- [**bug**] Instance loading fails in Nolana due to empty authorityId:s [#487](https://github.com/FOLIO-FSE/folio_migration_tools/issues/487)
+
+#### closed
+
+- [**closed**] Handle new error messages for Aged to lost loans  [#480](https://github.com/FOLIO-FSE/folio_migration_tools/issues/480)
 
 ---
 
