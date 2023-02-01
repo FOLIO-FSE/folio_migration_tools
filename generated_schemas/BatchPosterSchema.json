@@ -32,8 +32,8 @@
         },
         "useSafeInventoryEndpoints": {
             "title": "Usesafeinventoryendpoints",
-            "description": "Toggles the use of the safe/unsafe Inventory storage endpoints. Unsafe circumvents the Optimistic locking in FOLIO. Defaults to False (using the 'unsafe')",
-            "default": false,
+            "description": "Toggles the use of the safe/unsafe Inventory storage endpoints. Unsafe circumvents the Optimistic locking in FOLIO. Defaults to True (using the 'safe' options)",
+            "default": true,
             "type": "boolean"
         }
     },
