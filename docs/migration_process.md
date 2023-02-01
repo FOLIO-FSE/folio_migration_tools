@@ -1,3 +1,7 @@
+```{contents} 
+:depth: 2
+```
+
 # The migration process
 
 In order to perform migrations according to this process, you need the following:
@@ -181,7 +185,7 @@ This configuration piece in the configuration file determines the behaviour
 | useTenantMappingRules  | false | boolean (true/false) NOT YET IMPLEMENTED.  |
 | hridHandling  | "default" or "preserve001"  | If default, HRIDs will be generated according to the FOLIO settings. If preserve001, the 001s will be used as hrids if possible or fallback to default settings  |
 | createSourceRecords  | boolean (true/false)  |   |
-| files  | Objects with filename and boolean  | Filename of the MARC21 file in the data/instances folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
+| files  | Objects with filename and boolean  | Filename of the MARC21 file in the data/holdings folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
 
 ### Syntax to run
 ``` 
@@ -269,11 +273,11 @@ These configuration pieces in the configuration file determines the behaviour
 | holdingsMergeCriteria  | A list of strings with the names of [holdingsrecord](https://github.com/folio-org/mod-inventory-storage/blob/master/ramls/holdingsrecord.json) properties (on the same level) | Used to group indivitual rows into Holdings records. Proposed setting is ["instanceId", "permanentLocationId", "callNumber"] |
 |  fallbackHoldingsTypeId | uuid string  | The fallback/default holdingstype UUID |
 | createSourceRecords  | boolean (true/false)  |   |
-| files  | Objects with filename and boolean  | Filename of the MARC21 file in the data/instances folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
+| files  | Objects with filename and boolean  | Filename of the tab-delimited source file in the source_data/items folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
 
 ### Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_mfhd --base_folder PATH_TO_migration_repo_template/
+python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_csv_holdings --base_folder PATH_TO_migration_repo_template/
 ```
 ## Post trasformed Holdingsrecords to FOLIO
 See documentation for posting above
@@ -309,7 +313,7 @@ These configuration pieces in the configuration file determines the behaviour
 | materialTypesMapFileName  | Any string   | location of the mapping file in the mapping_files folder  |
 | loanTypesMapFileName  | Any string   | location of the mapping file in the mapping_files folder  |
 | itemStatusesMapFileName  | Any string   | location of the mapping file in the mapping_files folder  |
-| files  | Objects with filename and boolean  | Filename of the MARC21 file in the data/instances folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
+| files  | Objects with filename and boolean  | Filename tab-delimited source file in the source_data/items folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
 
 ### Syntax to run
 ``` 
@@ -353,3 +357,40 @@ python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/ex
 ## Post transformed users to FOLIO
 See documentation for posting above
 ¨
+
+## Transform CSV/TSV files into FOLIO Organizations
+### Configuration
+These configuration pieces in the configuration file determines the behaviour
+```
+{
+    "name": "transform_organizations",
+    "migrationTaskType": "OrganizationTransformer",
+    "organizationMapPath": "organizations_map.json",
+    "organizationTypesMapPath": "organizations_types_mapping.tsv",
+    "addressCategoriesMapPath": "address_categories_map.tsv",
+    "emailCategoriesMapPath": "email_categories_map.tsv",
+    "phoneCategoriesMapPath": "phone_categories_map.tsv",
+    "files": [
+        {
+            "file_name": "organizations_export.tsv"
+        }
+    ]
+}
+
+```
+### Explanation of parameters
+| Parameter  | Possible values  | Explanation  | 
+| ------------- | ------------- | ------------- |
+| Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
+| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| organizationMapPath  | Any string  | location of the Organizations mapping file in the mapping_files folder  |
+| organizationTypesMapPath  | Any string   | Location of the Location mapping file in the mapping_files folder  |
+| addressCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
+| emailCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
+| phoneCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
+| files  | Objects with filename and boolean  | List of filenames containing the organization source data  |
+
+### Syntax to run
+``` 
+python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
+```
