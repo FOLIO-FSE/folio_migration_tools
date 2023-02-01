@@ -1,5 +1,5 @@
 ```{contents} 
-:depth: 2
+:depth: 1
 ```
 # The migration tasks
 The folio_migration_tools are all build on the concept of a set type of migration tasks, that either 
