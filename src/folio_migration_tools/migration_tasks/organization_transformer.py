@@ -257,18 +257,6 @@ class OrganizationTransformer(MigrationTaskBase):
 
             return folio_rec
 
-    def validate_enums(self, object_schema, embedded_extradata_object, extradata_object_type):
-        extradata_schema = object_schema.get(extradata_object_type)
-        for prop_name, prop in extradata_schema:
-            if "enum" in prop:
-                enum_values = prop["enum"]
-                embedded_extradata_object[extradata_object_type].get(prop_name)
-
-            elif "enum" in prop.get("items"):
-                enum_values = prop["items"]["enum"]
-
-
-
     def handle_embedded_extradata_objects(self, record):
         if record.get("interfaces"):
             extradata_object_type = "interfaces"
