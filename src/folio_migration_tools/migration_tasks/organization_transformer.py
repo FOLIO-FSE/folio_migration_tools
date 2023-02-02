@@ -257,18 +257,6 @@ class OrganizationTransformer(MigrationTaskBase):
 
             return folio_rec
 
-    def validate_enums(self, object_schema, embedded_extradata_object, extradata_object_type):
-        extradata_schema = object_schema.get(extradata_object_type)
-        for prop_name, prop in extradata_schema:
-            if "enum" in prop:
-                enum_values = prop["enum"]
-                embedded_extradata_object[extradata_object_type].get(prop_name)
-
-            elif "enum" in prop.get("items"):
-                enum_values = prop["items"]["enum"]
-
-
-
     def handle_embedded_extradata_objects(self, record):
         if record.get("interfaces"):
             extradata_object_type = "interfaces"
@@ -277,15 +265,10 @@ class OrganizationTransformer(MigrationTaskBase):
             record["interfaces"] = []
 
             # Only if the object contains minimum data will it be created and linked
-            for embedded_object in embedded_extradata_object:
-                if all(embedded_object.get(prop, "") != "" for prop in minimum_required_props):
-                    self.validate_enums(
-                        OrganizationMapper.organization_schema,
-                        embedded_extradata_object,
-                        extradata_object_type,
-                    )
+            for nested_object in embedded_extradata_object:
+                if all(nested_object.get(prop, "") != "" for prop in minimum_required_props):
                     self.create_linked_extradata_objects(
-                        record, embedded_object, extradata_object_type
+                        record, nested_object, extradata_object_type
                     )
 
         if record.get("contacts"):
@@ -295,10 +278,10 @@ class OrganizationTransformer(MigrationTaskBase):
             record["contacts"] = []
 
             # Only if the object contains minimum data will it be created and linked
-            for embedded_object in embedded_extradata_object:
-                if all(embedded_object.get(prop, "") != "" for prop in minimum_required_props):
+            for nested_object in embedded_extradata_object:
+                if all(nested_object.get(prop, "") != "" for prop in minimum_required_props):
                     self.create_linked_extradata_objects(
-                        record, embedded_object, extradata_object_type
+                        record, nested_object, extradata_object_type
                     )
 
         # TODO Do the same as for Contacts? Check implementation for Users.
