@@ -111,13 +111,13 @@ def test_parse_record_mapping_file(mapper):
 
 
 def test_organization_mapping(mapper):
-    data["vendor_code"] = "v1"
+    data["vendor_code"] = "o1"
 
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test string values mapping
     assert organization["name"] == "Abe Books"
-    assert organization["code"] == "v1"
+    assert organization["code"] == "o1"
     assert organization["description"] == "Good stuff!"
     assert organization["status"] == "Active"
 
@@ -143,7 +143,7 @@ def test_single_category_refdata_mapping(mapper):
 
 
 def test_tags_object_array(mapper):
-    data["vendor_code"] = "v4"
+    data["vendor_code"] = "o4"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["tags"] == {"tagList": ["A", "B", "C"]}
@@ -154,7 +154,7 @@ def test_tags_object_array(mapper):
 def test_enforce_schema_required_properties_in_organization(mapper):
     data["EMAIL2"] = ""
     data["PHONE NUM"] = ""
-    data["vendor_code"] = "v9"
+    data["vendor_code"] = "o4b"
 
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
@@ -169,7 +169,7 @@ def test_enforce_schema_required_properties_in_organization(mapper):
     reason="We would need a way of using the same ref data file for multiple values. See #411"
 )
 def test_multiple_emails_array_objects(mapper):
-    data["vendor_code"] = "v5"
+    data["vendor_code"] = "o5"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     correct_email_objects = 0
@@ -197,7 +197,7 @@ def test_multiple_emails_array_objects(mapper):
 # Test "contacts" array
 
 def test_contacts_basic_mapping(mapper):
-    data["vendor_code"] = "v6"
+    data["vendor_code"] = "o6"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
@@ -205,7 +205,7 @@ def test_contacts_basic_mapping(mapper):
 
 
 def test_contacts_address_mapping(mapper):
-    data["vendor_code"] = "v7"
+    data["vendor_code"] = "o7"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
     assert organization["contacts"][0]["firstName"] == "Jane"
 
@@ -213,7 +213,7 @@ def test_contacts_address_mapping(mapper):
 # Test "interfaces" array
 
 def test_interfaces_basic_mapping(mapper):
-    data["vendor_code"] = "v8"
+    data["vendor_code"] = "o8"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["name"] == "FOLIO"
@@ -223,7 +223,7 @@ def test_interfaces_basic_mapping(mapper):
 def test_interfaces_type_enum_mapping(mapper):
     # Array of enums
     valid_interface_types = ["Admin", "End user", "Reports", "Orders", "Invoices", "Other"]
-    data["vendor_code"] = "v9"
+    data["vendor_code"] = "o9"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["type"] in valid_interface_types
