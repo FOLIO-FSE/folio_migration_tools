@@ -1868,6 +1868,7 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
         "my note 3",
     ]  # No mapping on third level yet...
 
+
 def test_map_array_object_array_string(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -1881,9 +1882,7 @@ def test_map_array_object_array_string(mocked_folio_client):
                     "properties": {
                         "type": {
                             "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
+                            "items": {"type": "string"},
                         }
                     },
                 },
@@ -1891,11 +1890,7 @@ def test_map_array_object_array_string(mocked_folio_client):
         },
     }
 
-    record = {
-        "id": "id7",
-        "interface_name": "FOLIO",
-        "interface_type": "Admin"
-    }
+    record = {"id": "id7", "interface_name": "FOLIO", "interface_type": "Admin"}
     org_map = {
         "data": [
             {
@@ -1905,7 +1900,7 @@ def test_map_array_object_array_string(mocked_folio_client):
                 "description": "",
             },
             {
-                "folio_field": "interfaces[0].type",
+                "folio_field": "interfaces[0].type[0]",
                 "legacy_field": "interface_type",
                 "value": "",
                 "description": "",
@@ -1915,7 +1910,7 @@ def test_map_array_object_array_string(mocked_folio_client):
                 "legacy_field": "id",
                 "value": "",
                 "description": "",
-            }
+            },
         ]
     }
 
@@ -1923,6 +1918,7 @@ def test_map_array_object_array_string(mocked_folio_client):
     folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["interfaces"][0]["type"] == ["Admin"]
+
 
 def test_map_array_object_array_object_string(mocked_folio_client):
     schema = {
