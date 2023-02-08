@@ -299,7 +299,7 @@ def test_contact_formatting_and_content():
                 "phoneNumbers": [{"phoneNumber": "123"}],
                 "emailAddresses": [{"value": "andme(at)me.com"}],
             }
-        ]
+        ],
     }
 
     OrganizationTransformer.create_linked_extradata_objects(
