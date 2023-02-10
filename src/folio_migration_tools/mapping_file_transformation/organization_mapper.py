@@ -332,6 +332,7 @@ class OrganizationMapper(MappingFileMapperBase):
                     
                     property_level1["items"] = interface_schema
 
+
                 elif (
                     property_level1.get("type") == "array"
                     and property_level1.get("items").get("$ref")
