@@ -2309,7 +2309,71 @@ def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client):
     assert folio_rec["streets"][2] == "Yet another street"
 
 
-# TODO Make this run successfully.
+def test_map_array_object_object_string(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "interfaces": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "interfaceCredential": {
+                            "type": "object",
+                            "properties": {
+                                "username": { "type": "string"},
+                                "pssword": { "type": "string"}
+                            },
+                        }
+                    },
+                },
+            }
+        },
+    }
+    record = {
+        "id": "ic1",
+        "interface_name": "FOLIO",
+        "interface_uri": "www",
+        "interface_username": "username",
+    }
+    org_map = {
+        "data": [
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "interface_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].uri",
+                "legacy_field": "interface_uri",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].interfaceCredential.username",
+                "legacy_field": "interface_username",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    interface = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert folio_rec["interfaces"][0]["interfaceCredential"]["username"] == "MyUsername"
+
+
 def test_map_array_object_array_object_array_string(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",

@@ -467,6 +467,9 @@ class MappingFileMapperBase(MapperBase):
                                 res,
                                 self.library_configuration.multi_field_delimiter,
                             )
+                    else:
+                        outcome = f"This is what happens to prop {prop}."
+                        print(outcome)
             i = i + 1
             if temp_object != {} and all(
                 (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
