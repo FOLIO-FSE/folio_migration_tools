@@ -327,7 +327,20 @@ class OrganizationMapper(MappingFileMapperBase):
                     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
                     property_level1["items"] = contact_schema
 
-                    logging.info(f"{property_name_level1} will be handled separately.")
+                elif property_name_level1 == "interfaces":
+                    interface_schema = OrganizationMapper.fetch_additional_schema("interface")
+                    interface_credential_schema = OrganizationMapper.fetch_additional_schema(
+                        "interface_credential"
+                    )
+                    
+                    # Temporarily add the credential object as a subproperty 
+                    interface_credential_schema["required"] = ["username", "password"]
+                    interface_schema["properties"][
+                        "interfaceCredential"
+                    ] = interface_credential_schema
+                    
+                    property_level1["items"] = interface_schema
+
 
                 elif (
                     property_level1.get("type") == "array"

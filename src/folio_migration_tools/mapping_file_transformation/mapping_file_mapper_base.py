@@ -467,9 +467,19 @@ class MappingFileMapperBase(MapperBase):
                                 res,
                                 self.library_configuration.multi_field_delimiter,
                             )
-                    else:
-                        outcome = f"This is what happens to prop {prop}."
-                        print(outcome)
+
+                    elif (
+                        prop in sub_properties and sub_properties[prop].get("type", "") == "object"
+                    ):
+                        sub_object = {}
+                        for sub_prop in sub_properties[prop]["properties"].keys():
+                            prop_path = f"{prop_name}[{i}].{prop}.{sub_prop}"
+                            if prop_path in self.folio_keys:
+                                res = self.get_prop(legacy_object, prop_path, index_or_id)
+                                self.report_legacy_mapping(self.legacy_basic_property(sub_prop), True, True)
+                                sub_object[sub_prop] = res 
+                        temp_object[prop] = sub_object
+
             i = i + 1
             if temp_object != {} and all(
                 (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)

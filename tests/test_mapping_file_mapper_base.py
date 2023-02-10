@@ -2325,7 +2325,7 @@ def test_map_array_object_object_string(mocked_folio_client):
                             "type": "object",
                             "properties": {
                                 "username": { "type": "string"},
-                                "pssword": { "type": "string"}
+                                "password": { "type": "string"}
                             },
                         }
                     },
@@ -2337,7 +2337,8 @@ def test_map_array_object_object_string(mocked_folio_client):
         "id": "ic1",
         "interface_name": "FOLIO",
         "interface_uri": "www",
-        "interface_username": "username",
+        "interface_username": "MyUsername",
+        "interface_password": "MyPassword",
     }
     org_map = {
         "data": [
@@ -2359,6 +2360,12 @@ def test_map_array_object_object_string(mocked_folio_client):
                 "value": "",
                 "description": "",
             },
+                        {
+                "folio_field": "interfaces[0].interfaceCredential.password",
+                "legacy_field": "interface_password",
+                "value": "",
+                "description": "",
+            },
             {
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
@@ -2372,6 +2379,7 @@ def test_map_array_object_object_string(mocked_folio_client):
     folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["interfaces"][0]["interfaceCredential"]["username"] == "MyUsername"
+    assert folio_rec["interfaces"][0]["interfaceCredential"]["password"] == "MyPassword"
 
 
 def test_map_array_object_array_object_array_string(mocked_folio_client):
