@@ -213,8 +213,6 @@ def test_contacts_address_mapping(mapper):
 
 
 # Test "interfaces" array
-
-
 def test_interfaces_basic_mapping(mapper):
     data["vendor_code"] = "o8"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
@@ -229,11 +227,19 @@ def test_interfaces_type_enum_mapping(mapper):
     data["vendor_code"] = "o9"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
-    # assert organization["interfaces"][0]["type"] in valid_interface_types
+    assert organization["interfaces"][0]["type"][0] in valid_interface_types
 
-    for interface in organization["interfaces"]:
-        if interface["name"] == "FOLIO":
-            assert interface["type"] == ["Admin"]
+def test_interface_credentials(mapper):
+    data["vendor_code"] = "ic1"
+    data["interface_1_username"] = "myUsername"
+    data["interface_1_password"] = "myPassword"
+    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+
+    assert organization["interfaces"][0]["interfaceCredential"]["username"] == "myUsername"
+
+
+
+
 
 
 # Shared data and maps
@@ -241,6 +247,7 @@ data = {
     "vendor_code": "AbeBooks",  # String
     "ACCTNUM": "aha112233",  # String, required
     "VENNAME": "Abe Books",  # String, required
+    "status": "Active",  # Enum, required
     "EMAIL": "EMAIL",  # String
     "email1_categories": "sls",  # -> UUID of ref data
     "EMAIL2": "email2@abebooks.com",  # String
@@ -249,7 +256,6 @@ data = {
     "phone_categories": "mspt",  # -> UUID of ref data
     "Alt name type": "Nickname",  # String
     "Alternative Names": "Abby",  # String
-    "status": "Active",  # Enum, required
     "address_line_1": "Suite 500 - 655 Typee Rd",  # String
     "address_city": "Victoria",  # String
     "address_categories": "rt",
@@ -437,6 +443,18 @@ organization_map = {
             "folio_field": "interfaces[0].available",
             "legacy_field": "",
             "value": True,
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].interfaceCredential.username",
+            "legacy_field": "interface_1_username",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].interfaceCredential.password",
+            "legacy_field": "interface_1_password",
+            "value": "",
             "description": "",
         },
         {
