@@ -1869,6 +1869,57 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
     ]  # No mapping on third level yet...
 
 
+def test_map_array_object_array_string(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "interfaces": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        }
+                    },
+                },
+            }
+        },
+    }
+
+    record = {"id": "id7", "interface_name": "FOLIO", "interface_type": "Admin"}
+    org_map = {
+        "data": [
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "interface_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].type[0]",
+                "legacy_field": "interface_type",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    interface = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert folio_rec["interfaces"][0]["type"] == ["Admin"]
+
+
 def test_map_array_object_array_object_string(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
