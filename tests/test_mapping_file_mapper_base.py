@@ -40,6 +40,8 @@ class MyTestableFileMapper(MappingFileMapperBase):
         if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
             return self.mapped_from_values.get(folio_prop_name, "")
         legacy_values = MappingFileMapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
+        if len(legacy_values) > 0 and all(isinstance(v, bool) for v in legacy_values):
+            return legacy_values[0]
         return " ".join(legacy_values).strip()
 
 
@@ -2337,6 +2339,88 @@ def test_default_false(mocked_folio_client):
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert folio_rec["isVendor"] is False
+
+
+def test_default_false_and_mapped_to_true(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "isVendor": {
+                "id": "isVendor",
+                "description": "Used to indicate that this organization is also a vendor",
+                "type": "boolean",
+                "default": False,
+            },
+        },
+    }
+    record = {"id": "id1", "is_vendor": True}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "isVendor",
+                "legacy_field": "is_vendor",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert folio_rec["isVendor"] is True
+
+
+def test_default_false_and_value_set_to_true(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "isVendor": {
+                "id": "isVendor",
+                "description": "Used to indicate that this organization is also a vendor",
+                "type": "boolean",
+                "default": False,
+            },
+        },
+    }
+    record = {"id": "id1"}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "isVendor",
+                "legacy_field": "",
+                "value": True,
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert folio_rec["isVendor"] is True
 
 
 def test_default_no_defaults_on_subprops(mocked_folio_client):
