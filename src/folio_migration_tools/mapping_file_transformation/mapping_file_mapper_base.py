@@ -297,7 +297,9 @@ class MappingFileMapperBase(MapperBase):
                 )
 
         else:  # Basic property
-            self.map_basic_props(legacy_object, schema_property_name, folio_object, index_or_id)
+            self.map_basic_props(
+                legacy_object, schema_property_name, folio_object, index_or_id, schema_property
+            )
 
     @staticmethod
     def get_legacy_value(
@@ -424,45 +426,63 @@ class MappingFileMapperBase(MapperBase):
             for _ in keys_to_map:
                 temp_object = {}
                 multi_field_props: List[str] = []
-                for prop in (
-                    k for k, p in sub_properties.items() if not p.get("folio:isVirtual", False)
+                for sub_prop_name, sub_prop in (
+                    (k, p)
+                    for k, p in sub_properties.items()
+                    if not p.get("folio:isVirtual", False)
                 ):
-                    prop_path = f"{prop_name}[{i}].{prop}"
+                    prop_path = f"{prop_name}[{i}].{sub_prop_name}"
                     if prop_path in self.folio_keys:
                         # We have reached the end of the prop path?
                         res = self.get_prop(legacy_object, prop_path, index_or_id)
-                        self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
+                        self.report_legacy_mapping(
+                            self.legacy_basic_property(sub_prop_name), True, True
+                        )
 
                         if (
                             isinstance(res, str)
                             and self.library_configuration.multi_field_delimiter in res
                         ):
-                            multi_field_props.append(prop)
-                        temp_object[prop] = res
-
+                            multi_field_props.append(sub_prop_name)
+                        if res and "enum" in sub_prop and res not in sub_prop["enum"]:
+                            raise TransformationRecordFailedError(
+                                index_or_id,
+                                f"Mapped enum value was not in list of enums: {sub_prop['enum']}",
+                                res,
+                            )
+                        elif "enum" in sub_prop and not res:
+                            raise TransformationRecordFailedError(
+                                index_or_id,
+                                (
+                                    f"Empty string for Enum value in {prop_path}. "
+                                    f"Allowed values are {sub_prop['enum']}"
+                                ),
+                                res,
+                            )
+                        temp_object[sub_prop_name] = res
                     elif (
-                        prop in sub_properties
-                        and sub_properties[prop].get("type", "") == "array"
-                        and sub_properties[prop]["items"].get("type", "") == "object"
+                        sub_prop_name in sub_properties
+                        and sub_properties[sub_prop_name].get("type", "") == "array"
+                        and sub_properties[sub_prop_name]["items"].get("type", "") == "object"
                     ):
                         self.map_objects_array_props(
                             legacy_object,
                             prop_path,
-                            sub_properties[prop]["items"]["properties"],
+                            sub_properties[sub_prop_name]["items"]["properties"],
                             folio_object,
                             index_or_id,
                             [],
                         )
                     elif (
-                        prop in sub_properties
-                        and sub_properties[prop].get("type", "") == "array"
-                        and sub_properties[prop]["items"].get("type", "") == "string"
+                        sub_prop_name in sub_properties
+                        and sub_properties[sub_prop_name].get("type", "") == "array"
+                        and sub_properties[sub_prop_name]["items"].get("type", "") == "string"
                     ):
                         # We have not reached the end of the prop path
                         for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
                             res = self.get_prop(legacy_object, array_path, index_or_id)
                             self.add_values_to_string_array(
-                                prop,
+                                sub_prop_name,
                                 temp_object,
                                 res,
                                 self.library_configuration.multi_field_delimiter,
@@ -533,11 +553,19 @@ class MappingFileMapperBase(MapperBase):
             # No values in array previously
             set_deep(folio_object, prop, [mapped_prop_value])
 
-    def map_basic_props(self, legacy_object, prop, folio_object, index_or_id):
-        if self.has_basic_property(legacy_object, prop):  # is there a match in the csv?
-            if mapped_prop := self.get_prop(legacy_object, prop, index_or_id):
-                folio_object[prop] = mapped_prop
-            self.report_legacy_mapping(self.legacy_basic_property(prop), True, True)
+    def map_basic_props(
+        self, legacy_object, property_name, folio_object, index_or_id, schema_property
+    ):
+        if self.has_basic_property(legacy_object, property_name):  # is there a match in the csv?
+            if mapped_prop := self.get_prop(legacy_object, property_name, index_or_id):
+                folio_object[property_name] = mapped_prop
+            self.report_legacy_mapping(self.legacy_basic_property(property_name), True, True)
+        elif "default" in schema_property:
+            folio_object[property_name] = schema_property["default"]
+            self.migration_report.add(
+                Blurbs.DefaultValuesAdded,
+                f"From Schema: {property_name} -> {schema_property['default']}",
+            )
 
     @staticmethod
     def _get_delimited_file_reader(source_file, file_name: Path):
