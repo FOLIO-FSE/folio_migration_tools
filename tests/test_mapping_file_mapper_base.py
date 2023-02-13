@@ -7,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -1869,42 +1870,462 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
     ]  # No mapping on third level yet...
 
 
-def test_map_array_object_array_string(mocked_folio_client):
+def test_map_enums(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
         "type": "object",
         "properties": {
-            "interfaces": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "status": {
+                "description": "The status of this organization",
+                "type": "string",
+                "enum": ["Active", "Inactive", "Pending"],
+            },
+            "organizationTypes": {
+                "description": "A list of organization types assigned to this organization",
                 "type": "array",
                 "items": {
+                    "description": "UUID of an organization type record",
+                    "$ref": "../../common/schemas/uuid.json",
+                    "type": "string",
+                },
+                "uniqueItems": True,
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
                     "type": "object",
                     "properties": {
+                        "id": {
+                            "description": "The unique id of this interface",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "name": {"description": "The name of this interface", "type": "string"},
+                        "uri": {"description": "The URI of this interface", "type": "string"},
+                        "notes": {"description": "The notes for this interface", "type": "string"},
+                        "available": {
+                            "description": "The availability setting for this interface",
+                            "type": "boolean",
+                        },
+                        "deliveryMethod": {
+                            "description": "The delivery method for this interface",
+                            "type": "string",
+                            "enum": ["Online", "FTP", "Email", "Other"],
+                        },
+                        "statisticsFormat": {
+                            "description": "The format of the statistics for this interface",
+                            "type": "string",
+                        },
+                        "locallyStored": {
+                            "description": "The locally stored location of this interface",
+                            "type": "string",
+                        },
+                        "onlineLocation": {
+                            "description": "The online location for this interface",
+                            "type": "string",
+                        },
+                        "statisticsNotes": {
+                            "description": "The notes regarding the statistics for this interface",
+                            "type": "string",
+                        },
                         "type": {
+                            "description": "Interface types",
                             "type": "array",
-                            "items": {"type": "string"},
-                        }
+                            "items": {
+                                "type": "string",
+                                "$ref": "interface_type.json",
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "description": "the type of interface",
+                                "enum": [
+                                    "Admin",
+                                    "End user",
+                                    "Reports",
+                                    "Orders",
+                                    "Invoices",
+                                    "Other",
+                                ],
+                            },
+                        },
+                        "metadata": {
+                            "type": "Deprecated",
+                            "$ref": "../../../raml-util/schemas/metadata.schema",
+                            "readonly": True,
+                        },
                     },
+                    "additionalProperties": True,
                 },
-            }
+            },
         },
+        "additionalProperties": False,
+        "required": ["status"],
     }
-
-    record = {"id": "id7", "interface_name": "FOLIO", "interface_type": "Admin"}
-    org_map = {
+    record = {"id": "id1", "status": "Pending"}
+    the_map = {
         "data": [
             {
-                "folio_field": "interfaces[0].name",
-                "legacy_field": "interface_name",
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert folio_rec["status"] == "Pending"
+
+
+def test_map_empty_required_enums(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "status": {
+                "description": "The status of this organization",
+                "type": "string",
+                "enum": ["Active", "Inactive", "Pending"],
+            },
+            "organizationTypes": {
+                "description": "A list of organization types assigned to this organization",
+                "type": "array",
+                "items": {
+                    "description": "UUID of an organization type record",
+                    "$ref": "../../common/schemas/uuid.json",
+                    "type": "string",
+                },
+                "uniqueItems": True,
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "description": "The unique id of this interface",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "name": {"description": "The name of this interface", "type": "string"},
+                        "uri": {"description": "The URI of this interface", "type": "string"},
+                        "notes": {"description": "The notes for this interface", "type": "string"},
+                        "available": {
+                            "description": "The availability setting for this interface",
+                            "type": "boolean",
+                        },
+                        "deliveryMethod": {
+                            "description": "The delivery method for this interface",
+                            "type": "string",
+                            "enum": ["Online", "FTP", "Email", "Other"],
+                        },
+                        "statisticsFormat": {
+                            "description": "The format of the statistics for this interface",
+                            "type": "string",
+                        },
+                        "locallyStored": {
+                            "description": "The locally stored location of this interface",
+                            "type": "string",
+                        },
+                        "onlineLocation": {
+                            "description": "The online location for this interface",
+                            "type": "string",
+                        },
+                        "statisticsNotes": {
+                            "description": "The notes regarding the statistics for this interface",
+                            "type": "string",
+                        },
+                        "type": {
+                            "description": "Interface types",
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "$ref": "interface_type.json",
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "description": "the type of interface",
+                                "enum": [
+                                    "Admin",
+                                    "End user",
+                                    "Reports",
+                                    "Orders",
+                                    "Invoices",
+                                    "Other",
+                                ],
+                            },
+                        },
+                        "metadata": {
+                            "type": "Deprecated",
+                            "$ref": "../../../raml-util/schemas/metadata.schema",
+                            "readonly": True,
+                        },
+                    },
+                    "additionalProperties": True,
+                },
+            },
+        },
+        "additionalProperties": False,
+        "required": ["status"],
+    }
+    record = {"id": "id1", "status": ""}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
+        ]
+    }
+    with pytest.raises(TransformationRecordFailedError):
+        mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+
+def test_map_empty_not_required_enums(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "status": {
+                "description": "The status of this organization",
+                "type": "string",
+                "enum": ["Active", "Inactive", "Pending"],
+            },
+            "organizationTypes": {
+                "description": "A list of organization types assigned to this organization",
+                "type": "array",
+                "items": {
+                    "description": "UUID of an organization type record",
+                    "$ref": "../../common/schemas/uuid.json",
+                    "type": "string",
+                },
+                "uniqueItems": True,
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "description": "The unique id of this interface",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "name": {"description": "The name of this interface", "type": "string"},
+                        "uri": {"description": "The URI of this interface", "type": "string"},
+                        "notes": {"description": "The notes for this interface", "type": "string"},
+                        "available": {
+                            "description": "The availability setting for this interface",
+                            "type": "boolean",
+                        },
+                        "deliveryMethod": {
+                            "description": "The delivery method for this interface",
+                            "type": "string",
+                            "enum": ["Online", "FTP", "Email", "Other"],
+                        },
+                        "statisticsFormat": {
+                            "description": "The format of the statistics for this interface",
+                            "type": "string",
+                        },
+                        "locallyStored": {
+                            "description": "The locally stored location of this interface",
+                            "type": "string",
+                        },
+                        "onlineLocation": {
+                            "description": "The online location for this interface",
+                            "type": "string",
+                        },
+                        "statisticsNotes": {
+                            "description": "The notes regarding the statistics for this interface",
+                            "type": "string",
+                        },
+                        "type": {
+                            "description": "Interface types",
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "$ref": "interface_type.json",
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "description": "the type of interface",
+                                "enum": [
+                                    "Admin",
+                                    "End user",
+                                    "Reports",
+                                    "Orders",
+                                    "Invoices",
+                                    "Other",
+                                ],
+                            },
+                        },
+                        "metadata": {
+                            "type": "Deprecated",
+                            "$ref": "../../../raml-util/schemas/metadata.schema",
+                            "readonly": True,
+                        },
+                    },
+                    "additionalProperties": True,
+                },
+            },
+        },
+        "additionalProperties": False,
+        "required": [],
+    }
+    record = {"id": "id1", "status": ""}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert "status" not in folio_rec
+
+
+def test_map_empty_not_required_deeper_level_enums(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "status": {
+                "description": "The status of this organization",
+                "type": "string",
+                "enum": ["Active", "Inactive", "Pending"],
+            },
+            "organizationTypes": {
+                "description": "A list of organization types assigned to this organization",
+                "type": "array",
+                "items": {
+                    "description": "UUID of an organization type record",
+                    "$ref": "../../common/schemas/uuid.json",
+                    "type": "string",
+                },
+                "uniqueItems": True,
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "description": "The unique id of this interface",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "name": {"description": "The name of this interface", "type": "string"},
+                        "deliveryMethod": {
+                            "description": "The delivery method for this interface",
+                            "type": "string",
+                            "enum": ["Online", "FTP", "Email", "Other"],
+                        },
+                    },
+                    "additionalProperties": True,
+                },
+            },
+        },
+        "additionalProperties": False,
+        "required": [],
+    }
+    record = {"id": "id1", "delivery_method": ""}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
                 "value": "",
                 "description": "",
             },
             {
-                "folio_field": "interfaces[0].type[0]",
-                "legacy_field": "interface_type",
+                "folio_field": "interfaces[0].deliveryMethod",
+                "legacy_field": "delivery_method",
                 "value": "",
                 "description": "",
             },
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "",
+                "value": "apa",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    with pytest.raises(
+        TransformationRecordFailedError,
+        match=".*Empty string for Enum value in interfaces.*.deliveryMethod.*",
+    ):
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+        assert "deliveryMethod" not in folio_rec["interfaces"][0]
+
+
+def test_default_false(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "isVendor": {
+                "id": "isVendor",
+                "description": "Used to indicate that this organization is also a vendor",
+                "type": "boolean",
+                "default": False,
+            },
+        },
+    }
+    record = {"id": "id1", "delivery_method": "Offline"}
+    the_map = {
+        "data": [
             {
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
@@ -1913,11 +2334,169 @@ def test_map_array_object_array_string(mocked_folio_client):
             },
         ]
     }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert folio_rec["isVendor"] is False
 
-    interface = MyTestableFileMapper(schema, org_map, mocked_folio_client)
-    folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
 
-    assert folio_rec["interfaces"][0]["type"] == ["Admin"]
+def test_default_no_defaults_on_subprops(mocked_folio_client):
+    """Test that verifies that we do not add default values to sub-properties (yet), since this
+    could trigger half-baked sub-objects with no actual content.
+
+    Args:
+        mocked_folio_client (_type_): _description_
+    """
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
+                    "type": "object",
+                    "properties": {
+                        "isVendor": {
+                            "id": "isVendor",
+                            "description": "Used to indicate that this organization is also a vendor",
+                            "type": "boolean",
+                            "default": True,
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "additionalProperties": False,
+        "required": [],
+    }
+    record = {"id": "id1", "delivery_method": "Offline"}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert "interfaces" not in folio_rec
+
+
+def test_default_true(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "isVendor": {
+                "id": "isVendor",
+                "description": "Used to indicate that this organization is also a vendor",
+                "type": "boolean",
+                "default": True,
+            },
+        },
+    }
+    record = {"id": "id1", "delivery_method": "Offline"}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert folio_rec["isVendor"] is True
+
+
+def test_map_wrong_not_required_deeper_level_enums(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "description": "The unique id of this interface",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "name": {"description": "The name of this interface", "type": "string"},
+                        "deliveryMethod": {
+                            "description": "The delivery method for this interface",
+                            "type": "string",
+                            "enum": ["Online", "FTP", "Email", "Other"],
+                        },
+                    },
+                    "additionalProperties": True,
+                },
+            },
+        },
+        "additionalProperties": False,
+        "required": [],
+    }
+    record = {"id": "id1", "delivery_method": "Offline"}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].deliveryMethod",
+                "legacy_field": "delivery_method",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "",
+                "value": "apa",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    with pytest.raises(
+        TransformationRecordFailedError, match=r".*Mapped enum value was not in list of enums.*"
+    ):
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
 def test_map_array_object_array_object_string(mocked_folio_client):
@@ -2612,3 +3191,54 @@ def test_value_not_mapped_mapped_non_enum_properties(mocked_folio_client):
     tfm = MyTestableFileMapper(schema, record_map, mocked_folio_client)
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
     assert folio_rec["my_enum"] == "014/EAN"
+
+
+def test_map_array_object_array_string(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "interfaces": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        }
+                    },
+                },
+            }
+        },
+    }
+
+    record = {"id": "id7", "interface_name": "FOLIO", "interface_type": "Admin"}
+    org_map = {
+        "data": [
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "interface_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].type[0]",
+                "legacy_field": "interface_type",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    interface = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert folio_rec["interfaces"][0]["type"] == ["Admin"]
