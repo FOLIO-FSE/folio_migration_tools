@@ -106,9 +106,14 @@ def main():
         print("\nSSL error. Are you connected to the Internet and the VPN?")
     except requests.exceptions.ConnectionError:
         print("\nNetwork error. Are you connected to the Internet and the VPN in the right way?")
+        sys.exit(1)
+    except FileNotFoundError as fnf_error:
+        print(f"\n{fnf_error.strerror}: {fnf_error.filename}")
+        sys.exit(1)
     except Exception as ee:
         logging.exception("Unhandled exception")
-        raise TransformationProcessError("", "unhandled exception", "") from ee
+        print(f"\n{ee}")
+        sys.exit(1)
 
 
 def inheritors(base_class):
