@@ -12082,20 +12082,6 @@
             "name": "Visual materials, DVDs, etc. (visual)",
             "source": "UC",
             "statisticalCodeTypeId": "3abd6fc2-b3e4-4879-b1e1-78be41769fe3"
-        },
-        {
-            "code": "withdrawn",
-            "id": "c4073462-6144-4b69-a543-dd131e241799",
-            "name": "Withdrawn (withdrawn)",
-            "source": "UC",
-            "statisticalCodeTypeId": "0d3ec58e-dc3c-4aa1-9eba-180fca95c544"
-        },
-        {
-            "code": "XOCLC",
-            "id": "264c4f94-1538-43a3-8b40-bed68384b31b",
-            "name": "Do not share with OCLC",
-            "source": "folio",
-            "statisticalCodeTypeId": "0d3ec58e-dc3c-4aa1-9eba-180fca95c544"
         }
     ],
     "/templates": [
