@@ -191,6 +191,12 @@ basic_course_map = {
             "description": "",
         },
         {
+            "folio_field": "instructors[0].courseListingId",
+            "legacy_field": "RECORD #(COURSE)",
+            "value": "",
+            "description": "",
+        },
+        {
             "folio_field": "notes[0].domain",
             "legacy_field": "Not mapped",
             "value": "courses",
