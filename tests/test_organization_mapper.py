@@ -112,9 +112,9 @@ def test_parse_record_mapping_file(mapper):
 
 
 def test_organization_mapping(mapper):
-    data["vendor_code"] = "o1"
+    data["code"] = "o1"
 
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # Test string values mapping
     assert organization["name"] == "Abe Books"
@@ -144,8 +144,8 @@ def test_single_category_refdata_mapping(mapper):
 
 
 def test_tags_object_array(mapper):
-    data["vendor_code"] = "o4"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    data["code"] = "o4"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["tags"] == {"tagList": ["A", "B", "C"]}
 
@@ -155,9 +155,9 @@ def test_tags_object_array(mapper):
 def test_enforce_schema_required_properties_in_organization(mapper):
     data["EMAIL2"] = ""
     data["PHONE NUM"] = ""
-    data["vendor_code"] = "o4b"
+    data["code"] = "o4b"
 
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # There should only be one email, as the other one is empty
     assert len(organization["emails"]) == 1
@@ -170,8 +170,8 @@ def test_enforce_schema_required_properties_in_organization(mapper):
     reason="We would need a way of using the same ref data file for multiple values. See #411"
 )
 def test_multiple_emails_array_objects(mapper):
-    data["vendor_code"] = "o5"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    data["code"] = "o5"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     correct_email_objects = 0
 
@@ -199,23 +199,23 @@ def test_multiple_emails_array_objects(mapper):
 
 
 def test_contacts_basic_mapping(mapper):
-    data["vendor_code"] = "o6"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    data["code"] = "o6"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
     assert organization["contacts"][0]["lastName"] == "Deer"
 
 
 def test_contacts_address_mapping(mapper):
-    data["vendor_code"] = "o7"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    data["code"] = "o7"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
     assert organization["contacts"][0]["firstName"] == "Jane"
 
 
 # Test "interfaces" array
 def test_interfaces_basic_mapping(mapper):
-    data["vendor_code"] = "o8"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    data["code"] = "o8"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["name"] == "FOLIO"
     assert organization["interfaces"][0]["uri"] == "https://www.folio.org"
@@ -224,29 +224,111 @@ def test_interfaces_basic_mapping(mapper):
 def test_interfaces_type_enum_mapping(mapper):
     # Array of enums
     valid_interface_types = ["Admin", "End user", "Reports", "Orders", "Invoices", "Other"]
-    data["vendor_code"] = "o9"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    data["code"] = "o9"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["type"][0] in valid_interface_types
 
+
+def test_enum_in_non_required_sub_object_mapping(mapper):
+    accounts_map = [
+        {
+            "folio_field": "accounts[0].accountNo",
+            "legacy_field": "account_number",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "accounts[0].name",
+            "legacy_field": "account_name",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "accounts[0].status",
+            "legacy_field": "account_status",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "accounts[0].paymentMethod",
+            "legacy_field": "paymentMethod",
+            "value": "",
+            "description": "",
+        },
+    ]
+
+    records = [
+        data
+        | {
+            "name": "Vendor With Account 1",  # String, required
+            "code": "eo1",  # String, required
+            "status": "Active",  # Enum, required
+            "account_number": "ac1",  # String, required for Account
+            "account_name": "MyAccount",  # String, required for Account
+            "account_status": "Active",  # String, required for Account
+            "account_paymentMethod": "Cash",  # Enum
+        },
+        data
+        | {
+            "name": "Vendor With Account 2",  # String, required
+            "code": "eo2",  # String, required
+            "status": "Active",  # Enum, required
+            "account_number": "ac2",  # String, required for Account
+            "account_name": "MyAccount",  # String, required for Account
+            "account_status": "Active",  # String, required for Account
+            "account_paymentMethod": "Invalid Value",  # Enum,
+        },
+        data
+        | {
+            "name": "Vendor With Account 3",  # String, required
+            "code": "eo3",  # String, required
+            "status": "Active",  # Enum, required
+            "account_number": "ac3",  # String, required for Account
+            "account_name": "MyAccount",  # String, required for Account
+            "account_status": "Active",  # String, required for Account
+            "account_paymentMethod": "",  # Enum
+        },
+        data
+        | {
+            "name": "Vendor Without Account 1",  # String, required
+            "code": "eo4",  # String, required
+            "status": "Active",  # Enum, required
+            "account_number": "",  # String, required for Account
+            "account_name": "",  # String, required for Account
+            "account_status": "",  # String, required for Account
+            "account_paymentMethod": "",  # Enum,
+        },
+    ]
+
+    organization_map["data"].extend(accounts_map)
+
+    organization, idx = mapper.do_map(records[0], records[0]["code"], FOLIONamespaces.organizations)
+    assert organization["accounts"]
+    
+    organization, idx = mapper.do_map(records[1], records[1]["code"], FOLIONamespaces.organizations)
+    assert organization["accounts"]
+
+    organization, idx = mapper.do_map(records[2], records[2]["code"], FOLIONamespaces.organizations)
+    assert organization["accounts"]
+
+    organization, idx = mapper.do_map(records[3], records[3]["code"], FOLIONamespaces.organizations)
+    assert not organization.get(["accounts"])
+
+
 def test_interface_credentials(mapper):
-    data["vendor_code"] = "ic1"
+    data["code"] = "ic1"
     data["interface_1_username"] = "myUsername"
     data["interface_1_password"] = "myPassword"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["interfaceCredential"]["username"] == "myUsername"
 
 
-
-
-
-
 # Shared data and maps
 data = {
-    "vendor_code": "AbeBooks",  # String
-    "ACCTNUM": "aha112233",  # String, required
-    "VENNAME": "Abe Books",  # String, required
+    "name": "Abe Books",  # String
+    "code": "AbeBooks",  # String
     "status": "Active",  # Enum, required
     "EMAIL": "EMAIL",  # String
     "email1_categories": "sls",  # -> UUID of ref data
@@ -283,12 +365,9 @@ data = {
 # A mocked mapping file
 organization_map = {
     "data": [
-        {
-            "folio_field": "accounts[0].accountNo",
-            "legacy_field": "ACCTNUM",
-            "value": "",
-            "description": "",
-        },
+        {"folio_field": "name", "legacy_field": "name", "value": "", "description": ""},
+        {"folio_field": "code", "legacy_field": "code", "value": "", "description": ""},
+        {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
         {
             "folio_field": "addresses[0].addressLine1",
             "legacy_field": "address_line_1",
@@ -507,12 +586,10 @@ organization_map = {
         },
         {
             "folio_field": "legacyIdentifier",
-            "legacy_field": "vendor_code",
+            "legacy_field": "code",
             "value": "",
             "description": "",
         },
-        {"folio_field": "name", "legacy_field": "VENNAME", "value": "", "description": ""},
-        {"folio_field": "code", "legacy_field": "vendor_code", "value": "", "description": ""},
         {
             "folio_field": "phoneNumbers[0].categories[0]",
             "legacy_field": "phone_categories_map",
@@ -537,7 +614,6 @@ organization_map = {
             "value": "Mobile",
             "description": "",
         },
-        {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
         {"folio_field": "tags.tagList[0]", "legacy_field": "tgs", "value": "", "description": ""},
         {
             "folio_field": "organizationTypes",
