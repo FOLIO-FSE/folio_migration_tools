@@ -444,11 +444,11 @@ class MappingFileMapperBase(MapperBase):
                             and self.library_configuration.multi_field_delimiter in res
                         ):
                             multi_field_props.append(sub_prop_name)
-                        
-                        self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
 
-                        if res:
+                        self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
+                        if res or isinstance(res, bool):
                             temp_object[sub_prop_name] = res
+
                     elif (
                         sub_prop_name in sub_properties
                         and sub_properties[sub_prop_name].get("type", "") == "array"
@@ -477,8 +477,12 @@ class MappingFileMapperBase(MapperBase):
                                 self.library_configuration.multi_field_delimiter,
                             )
             i = i + 1
-            if temp_object != {} and all(
-                (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
+            if (
+                temp_object != {}
+                and all(
+                    (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
+                )
+                and all(r in temp_object for r in required)
             ):
                 if any(multi_field_props):
                     resulting_array.extend(
@@ -693,7 +697,12 @@ class MappingFileMapperBase(MapperBase):
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ())
 
     def validate_enums(
-        self, mapped_value, mapped_schema_property, mapped_schema_property_name, index_or_id, required
+        self,
+        mapped_value,
+        mapped_schema_property,
+        mapped_schema_property_name,
+        index_or_id,
+        required,
     ):
         if (
             "enum" in mapped_schema_property

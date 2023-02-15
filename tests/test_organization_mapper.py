@@ -114,7 +114,6 @@ def test_organization_mapping(mapper):
     assert organization["code"] == "v1"
     assert organization["description"] == "Good stuff!"
     assert organization["status"] == "Active"
-    assert organization["accounts"][0]["accountNo"] == "aha112233"
 
 
 def test_single_org_type_refdata_mapping(mapper):
