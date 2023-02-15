@@ -302,6 +302,8 @@ def test_empty_non_required_enum_in_sub_object_mapping(mapper):
     )
     assert not organization.get("accounts")
 
+    organization, idx = mapper.do_map(records[2], records[2]["code"], FOLIONamespaces.organizations)
+    assert organization["accounts"]
 
 def test_interface_credentials(mapper):
     data["code"] = "ic1"
