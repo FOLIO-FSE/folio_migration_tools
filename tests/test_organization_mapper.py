@@ -228,35 +228,10 @@ def test_interfaces_type_enum_mapping(mapper):
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["type"][0] in valid_interface_types
+    assert organization["interfaces"][0]["code"]
 
 
-def test_enum_in_non_required_sub_object_mapping(mapper):
-    accounts_map = [
-        {
-            "folio_field": "accounts[0].accountNo",
-            "legacy_field": "account_number",
-            "value": "",
-            "description": "",
-        },
-        {
-            "folio_field": "accounts[0].name",
-            "legacy_field": "account_name",
-            "value": "",
-            "description": "",
-        },
-        {
-            "folio_field": "accounts[0].status",
-            "legacy_field": "account_status",
-            "value": "",
-            "description": "",
-        },
-        {
-            "folio_field": "accounts[0].paymentMethod",
-            "legacy_field": "paymentMethod",
-            "value": "",
-            "description": "",
-        },
-    ]
+def test_invalid_non_required_enum_in_sub_object_mapping(mapper):
 
     records = [
         data
@@ -278,7 +253,22 @@ def test_enum_in_non_required_sub_object_mapping(mapper):
             "account_name": "MyAccount",  # String, required for Account
             "account_status": "Active",  # String, required for Account
             "account_paymentMethod": "Invalid Value",  # Enum,
-        },
+        }
+    ]
+
+    organization, idx = mapper.do_map(
+        records[0], records[0]["code"], FOLIONamespaces.organizations
+    )
+    assert organization["accounts"][0]["code"]
+
+    organization, idx = mapper.do_map(
+        records[1], records[1]["code"], FOLIONamespaces.organizations
+    )
+    assert not organization
+
+
+def test_empty_non_required_enum_in_sub_object_mapping(mapper):
+    records = [
         data
         | {
             "name": "Vendor With Account 3",  # String, required
@@ -298,22 +288,18 @@ def test_enum_in_non_required_sub_object_mapping(mapper):
             "account_name": "",  # String, required for Account
             "account_status": "",  # String, required for Account
             "account_paymentMethod": "",  # Enum,
-        },
+        }
     ]
 
-    organization_map["data"].extend(accounts_map)
+    organization, idx = mapper.do_map(
+        records[0], records[0]["code"], FOLIONamespaces.organizations
+    )
+    assert "paymentMethod" not in organization["accounts"][0].keys()
 
-    organization, idx = mapper.do_map(records[0], records[0]["code"], FOLIONamespaces.organizations)
-    assert organization["accounts"]
-    
-    organization, idx = mapper.do_map(records[1], records[1]["code"], FOLIONamespaces.organizations)
-    assert organization["accounts"]
-
-    organization, idx = mapper.do_map(records[2], records[2]["code"], FOLIONamespaces.organizations)
-    assert organization["accounts"]
-
-    organization, idx = mapper.do_map(records[3], records[3]["code"], FOLIONamespaces.organizations)
-    assert not organization.get(["accounts"])
+    organization, idx = mapper.do_map(
+        records[1], records[1]["code"], FOLIONamespaces.organizations
+    )
+    assert not organization.get("accounts")
 
 
 def test_interface_credentials(mapper):
@@ -329,7 +315,11 @@ def test_interface_credentials(mapper):
 data = {
     "name": "Abe Books",  # String
     "code": "AbeBooks",  # String
-    "status": "Active",  # Enum, required
+    "status": "Active",  # Enum, required,
+    "account_number": "mac",  # String, required for Account
+    "account_name": "MyAccount",  # String, required for Account
+    "account_status": "Active",  # String, required for Account
+    "account_paymentMethod": "Cash",  # Enum
     "EMAIL": "EMAIL",  # String
     "email1_categories": "sls",  # -> UUID of ref data
     "EMAIL2": "email2@abebooks.com",  # String
@@ -368,6 +358,30 @@ organization_map = {
         {"folio_field": "name", "legacy_field": "name", "value": "", "description": ""},
         {"folio_field": "code", "legacy_field": "code", "value": "", "description": ""},
         {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
+        {
+            "folio_field": "accounts[0].accountNo",
+            "legacy_field": "account_number",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "accounts[0].name",
+            "legacy_field": "account_name",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "accounts[0].status",
+            "legacy_field": "account_status",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "accounts[0].paymentMethod",
+            "legacy_field": "account_paymentMethod",
+            "value": "",
+            "description": "",
+        },
         {
             "folio_field": "addresses[0].addressLine1",
             "legacy_field": "address_line_1",
