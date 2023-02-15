@@ -18,7 +18,6 @@ class MappingFileMappingBaseImpl(MappingFileMapperBase):
         object_type: FOLIONamespaces,
         ignore_legacy_identifier: bool = False,
     ):
-
         super().__init__(
             folio_client,
             schema,

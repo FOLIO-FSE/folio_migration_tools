@@ -117,7 +117,6 @@ def test_organization_mapping(mapper):
 
 
 def test_single_org_type_refdata_mapping(mapper):
-
     data["vendor_code"] = "v2"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
@@ -126,7 +125,6 @@ def test_single_org_type_refdata_mapping(mapper):
 
 
 def test_single_category_refdata_mapping(mapper):
-
     data["vendor_code"] = "v3"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 

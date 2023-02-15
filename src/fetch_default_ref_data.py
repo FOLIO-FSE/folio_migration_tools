@@ -87,7 +87,6 @@ def main():
 def get_ref_data_from_github_folder(owner, repo, folder_path: str):
     ret_arr = []
     try:
-
         logging.info("Using GITHB_TOKEN environment variable for Gihub API Access")
         github_headers = {
             "content-type": "application/json",

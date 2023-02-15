@@ -47,7 +47,6 @@ class NotesMapper(MappingFileMappingBaseImpl):
 
     def map_notes(self, legacy_object, legacy_id, object_uuid: str, record_type: FOLIONamespaces):
         if any(self.noteprops["data"]):
-
             for note in self.do_map(legacy_object, legacy_id, FOLIONamespaces.note)[0].get(
                 "notes", []
             ):

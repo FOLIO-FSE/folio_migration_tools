@@ -9,7 +9,6 @@ def test_get_object_type():
 
 
 def test_get_unsafe_and_safe_endpoints():
-
     assert (
         batch_poster.get_api_info("Instances", False)["api_endpoint"]
         == "/instance-storage/batch/synchronous-unsafe"

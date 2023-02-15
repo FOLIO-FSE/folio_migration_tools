@@ -2219,6 +2219,7 @@ def test_map_enums_empty_not_required(mocked_folio_client):
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert "status" not in folio_rec
 
+
 def test_map_enums_invalid_required(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -2377,6 +2378,7 @@ def test_map_enums_empty_not_required_deeper_level(mocked_folio_client):
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert "deliveryMethod" not in folio_rec["interfaces"][0]
+
 
 def test_map_enums_invalid_not_required_deeper_level(mocked_folio_client):
     schema = {

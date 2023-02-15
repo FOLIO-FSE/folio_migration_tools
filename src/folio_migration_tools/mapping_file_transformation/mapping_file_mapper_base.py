@@ -183,7 +183,6 @@ class MappingFileMapperBase(MapperBase):
         ]
 
     def instantiate_record(self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces):
-
         if self.ignore_legacy_identifier:
             return ({}, str(uuid.uuid4()))
 
@@ -241,7 +240,6 @@ class MappingFileMapperBase(MapperBase):
     def do_map(
         self, legacy_object, index_or_id: str, object_type: FOLIONamespaces
     ) -> tuple[dict, str]:
-
         folio_object, legacy_id = self.instantiate_record(legacy_object, index_or_id, object_type)
         for property_name, property in self.schema["properties"].items():
             try:
@@ -551,7 +549,6 @@ class MappingFileMapperBase(MapperBase):
     ):
         if self.has_basic_property(legacy_object, property_name):  # is there a match in the csv?
             if mapped_prop := self.get_prop(legacy_object, property_name, index_or_id):
-
                 self.validate_enums(
                     mapped_prop,
                     schema_property,

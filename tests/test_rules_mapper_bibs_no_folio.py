@@ -92,7 +92,6 @@ def test_get_folio_id_by_code_except(mapper, caplog):
 
 
 def test_create_entity_empty_props(mapper: BibsRulesMapper):
-
     entity_mappings = [
         {
             "target": "contributors.authorityId",

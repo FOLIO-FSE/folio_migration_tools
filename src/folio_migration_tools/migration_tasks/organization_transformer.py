@@ -222,7 +222,6 @@ class OrganizationTransformer(MigrationTaskBase):
         logging.info("All done!")
 
     def clean_org(self, folio_rec):
-
         self.clean_org_type_pre_morning_glory(folio_rec, self.library_configuration.folio_release)
         self.clean_addresses(folio_rec)
 

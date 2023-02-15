@@ -76,7 +76,6 @@ class ReservesMigrator(MigrationTaskBase):
                 logging.info(f"{timings(self.t0, t0_migration, num_reserves)} {num_reserves}")
 
     def post_single_reserve(self, legacy_reserve: LegacyReserve):
-
         try:
             path = f"/coursereserves/courselistings/{legacy_reserve.course_listing_id}/reserves"
             if self.folio_put_post(path, legacy_reserve.to_dict(), "POST", "Posted reserves"):

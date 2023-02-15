@@ -8,7 +8,6 @@ from folio_migration_tools.mapper_base import MapperBase
 
 
 def test_validate_required_properties():
-
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "",
