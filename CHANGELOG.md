@@ -1,5 +1,28 @@
 # Changelog
 
+## v_1_7_3 (15/02/2023)
+
+#### Inventory
+
+- [**Inventory**] Add ILS flavour for Koha 999c [#493](https://github.com/FOLIO-FSE/folio_migration_tools/issues/493)
+
+#### bug
+
+- [**bug**][**organizations**] Mapper is mapping array_object_array_string as array_object_string [#485](https://github.com/FOLIO-FSE/folio_migration_tools/issues/485)
+
+#### closed
+
+- [**closed**] Make batchposter use the "-unsafe" endpoints [#478](https://github.com/FOLIO-FSE/folio_migration_tools/issues/478)
+
+#### enhancement/new feature
+
+- [**enhancement/new feature**][**simplify_migration_process**] Treat map file values as regex  [#199](https://github.com/FOLIO-FSE/folio_migration_tools/issues/199)
+
+#### organizations
+
+- [**organizations**] The mapping process should validate enums-type properties according to schemas [#486](https://github.com/FOLIO-FSE/folio_migration_tools/issues/486)
+
+
 ## v_1_7_2 (31/01/2023)
 
 #### bug
@@ -515,78 +538,3 @@ As part of the work with deterministic UUIDs, we now need a legacyIdentifer prop
 main_items.py and main_holdings_csv.py will halt if the property is missing:
 
 ![image](https://user-images.githubusercontent.com/1894384/141300583-e39c460f-efa1-4a7e-977c-7a665a33b812.png)
-
----
-
-## Juniper 1.0.1 (27/10/2021)
-# Juniper 1.0.1
-## What is new?
-### Introducing the Data Issues Log file
-![image](https://user-images.githubusercontent.com/1894384/136540471-a471fb6f-d195-4eeb-996e-37be5797212b.png)
-As part of every transformation, there is now a logfile named according to 
-
-> folio_OBJECTTYPE_data_issues_TIMESTAMP.tsv
-
-There are four columns: 	
-* Severity of issue	
-* Legacy Identifier or filename+index in file
-* Description of the issue
-* The data causing the issue
-
-This report should - in conjunction with the transformation reports be sent to the libraries allowing them to sort and filter on the report and then fix the issues surfaced.
-
-### Parsing for 853/863, 854/864, 855/865 pairs and other Holdings statements-related fields for MFHS (main_holdings_marc.py)
-When running MFHD files, Holdings statements will now be parsed into human-readable strings out-of-the-box. For some time, the transformation logs will contain the following output in order to help identify issues with the parsed strings.
-
-```
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)$k(day)	=863  \\$81.1$a253$b2$i2006$j01$k09	STATEMENT: v.253:no.2 (Jan 2006 09)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.1$a34$b48$i2005$j11	STATEMENT: v.34:no.48 (Nov 2005)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.2$a35$b2$i2006$j01	STATEMENT: v.35:no.2 (Jan 2006)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$b $i(year)$j(month)	=863  \\$81.1$a110-111$b3-3$i2003-2004$j05/06$wn	STATEMENT: v.110: 3 (05/06 2003)-v.111: 3 (2004)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$b $i(year)$j(month)	=863  \\$81.2$a111-111$b5-6$i2004$j09/10-11/12	STATEMENT: v.111: 5 (09/10 2004)-v.111: 6 (11/12)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)	=863  \\$81.1$a16-29$b1-7$i1990-2003	STATEMENT: v.16:no.1 (1990)-v.29:no.7 (2003)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.1$a1-60$b1-2$i1955-2014$j01-04$zPrint copy canceled in 2014.	STATEMENT: v.1:no.1 (Jan 1955)-v.60:no.2 (Apr 2014)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)	=863  \\$81.1$a3-58$b1-4$i1959-2014$zPrint copy canceled in 2014.	STATEMENT: v.3:no.1 (1959)-v.58:no.4 (2014)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)	=863  \\$81.1$a25-42$b1-4$i1997-2014$zPrint copy canceled in 2014.	STATEMENT: v.25:no.1 (1997)-v.42:no.4 (2014)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$i(year)	=863  \\$81.1$a1-43$i1970-2012$zCanceled in 2013.	STATEMENT: v.1 (1970)-v.43 (2012)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)	=863  \\$81.1$a1-26$b1-10$i1973-1999	STATEMENT: v.1:no.1 (1973)-v.26:no.10 (1999)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(season)	=863  \\$81.1$a22-41$b1-4$i1992-2011$j21-23$zPrint copy cancelled in 2011.	STATEMENT: v.22:no.1 (1992 Spring)-v.41:no.4 (2011 23)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.1$a1-48$b1-4$i1966-2014$j11$zPrint copy canceled in 2014.	STATEMENT: v.1:no.1 (Nov 1966)-v.48:no.4 (2014)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(season)	=863  \\$81.1$a1-24$b1-3$i1985-2009$j24-24	STATEMENT: v.1:no.1 (1985 Winter)-v.24:no.3 (2009 24)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$i(year)	=863  \\$81.1$a1-$i1980-	STATEMENT: v.1 (1980)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.1$a1-$b1-$i1972-$j09-	STATEMENT: v.1:no.1 (Sep 1972)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)	=863  \\$81.1$a11-27$b23-50$i1994-2010	STATEMENT: v.11:no.23 (1994)-v.27:no.50 (2010)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(season)	=863  \\$81.1$a1-25$b1-3$i1979-2003	STATEMENT: v.1:no.1 (1979)-v.25:no.3 (2003)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.1$a1-68$b1-1$i1948-2015$j03$zPrint copy canceled in 2014.	STATEMENT: v.1:no.1 (Mar 1948)-v.68:no.1 (2015)
-HOLDINGS STATEMENT PATTERN	=853  \\$81$av.$bno.$i(year)$j(month)	=863  \\$81.1$a67-89$b1-12$i1985-2007$j01-12	STATEMENT: v.67:no.1 (Jan 1985)-v.89:no.12 (Dec 2007)
-
-```
-### Allowing for wildcard matching in individual cells in Reference data mapping-files
-![image](https://user-images.githubusercontent.com/1894384/136540274-c89b827d-1079-47f4-b38b-2242f6f53fba.png)
-
-### Enable mapping of temporary loan types and temporary locations from separate mapping files.
-In the migration_repo_template there are now two mapping files with the file ending .optional. Remove that file ending if you want these mappings enabled for FOLIO. Syntax and mapping are the same as their siblings (permanent location and loan type). 
-
-### Ability to specify FOLIO Release
-There is a small breaking change between Juniper and Iris. In order for the script to handle both cases, there is a new parameter in main_bibs.py allowing you to specify FOLIO release name
-
-## Breaking changes
-* main_holdings.py is renamed to main_holdings_marc.py
-*
-## Bugfixes and maintenance
-* Alignment with new Juniper srs record structure
-* Improve HRID mapping reporting
-* Rename main_holdings.py to main_holdings_marc.py
-* Refinement in reporting
-* Removed bib migration report "Unspecified Mode of Issuance code" since it contained redundant information
-* Restructure blurbs in order to get fewer warnings and have an easier way of referencing them
-* Removed duplicated code and aligned code that did the same things in various places
-* Field mapping reports (the last to sections in the transformation reports) all use the same algorithm
-* Introduced thousand separators in the reports.
-* Log failed reference data mappings along with file index of record ID
-* Improved performance after some profiling.
-* Fix crashes caused in Aleph Legacy ID handling
-* Removed the annoying required extra column in the locations.tsv ref data mapping file when running main_holdings_marc.py. If there is one (legacy_code), it will be used, if not, the preset column not named folio_code will be used.
-
-
-**Full Changelog**: https://github.com/FOLIO-FSE/MARC21-To-FOLIO/compare/iris_1_2...juniper_1_0
