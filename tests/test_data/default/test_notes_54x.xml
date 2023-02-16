@@ -183,18 +183,7 @@
                         <subfield code="b">Fraktur.</subfield>
                     </datafield>
 
-                    <datafield ind1=" " ind2="0" tag="650">
-                        <subfield code="a">Raspberry Pi (Computer)</subfield>
-                    </datafield>
-                    <datafield ind1=" " ind2="0" tag="650">
-                        <subfield code="a">Java (Computer program language)</subfield>
-                    </datafield>
-                    <datafield ind1=" " ind2="0" tag="650">
-                        <subfield code="a">Internet of things.</subfield>
-                    </datafield>
-                    <datafield ind1=" " ind2="0" tag="650">
-                        <subfield code="a">Computer programming.</subfield>
-                    </datafield>
+                   
                     <datafield ind1="1" ind2=" " tag="700">
                         <subfield code="a">Weaver, James L.</subfield>
                         <subfield code="e">contributor.</subfield>
@@ -202,9 +191,7 @@
                     <datafield ind1="0" ind2=" " tag="730">
                         <subfield code="a">Oracle Press book.</subfield>
                     </datafield>
-                    <datafield ind1=" " ind2="0" tag="830">
-                        <subfield code="a">McGraw-Hill technical education series</subfield>
-                    </datafield>
+
                     <datafield ind1="4" ind2="2" tag="856">
                         <subfield code="u">http://www.MHProfessional.com</subfield>
                         <subfield code="z">Code examples in the book are available for download.</subfield>

@@ -64,78 +64,10 @@
         <marc:datafield tag="504" ind1=" " ind2=" ">
             <marc:subfield code="a">Bibliography: p. 583-584.</marc:subfield>
         </marc:datafield>
-        <marc:datafield tag="650" ind1=" " ind2="0">
-            <marc:subfield code="a">Historic buildings</marc:subfield>
-            <marc:subfield code="z">New Jersey.</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="650" ind1=" " ind2="0">
-            <marc:subfield code="a">Historic buildings</marc:subfield>
-            <marc:subfield code="z">New York (N.Y.)</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="650" ind1=" " ind2="0">
-            <marc:subfield code="a">Dutch</marc:subfield>
-            <marc:subfield code="z">New Jersey</marc:subfield>
-            <marc:subfield code="x">History.</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="650" ind1=" " ind2="0">
-            <marc:subfield code="a">Dutch</marc:subfield>
-            <marc:subfield code="z">New York (State)</marc:subfield>
-            <marc:subfield code="x">History.</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="651" ind1=" " ind2="0">
-            <marc:subfield code="a">New Jersey</marc:subfield>
-            <marc:subfield code="x">History</marc:subfield>
-            <marc:subfield code="y">Colonial period, ca. 1600-1775</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="651" ind1=" " ind2="0">
-            <marc:subfield code="a">New York (State)</marc:subfield>
-            <marc:subfield code="x">History</marc:subfield>
-            <marc:subfield code="y">Colonial period, ca. 1600-1775</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="650" ind1=" " ind2="7">
-            <marc:subfield code="a">Architecture, Dutch.</marc:subfield>
-            <marc:subfield code="2">fast</marc:subfield>
-            <marc:subfield code="0">(OCoLC)fst00813725</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="650" ind1=" " ind2="7">
-            <marc:subfield code="a">Dutch.</marc:subfield>
-            <marc:subfield code="2">fast</marc:subfield>
-            <marc:subfield code="0">(OCoLC)fst00899678</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="650" ind1=" " ind2="7">
-            <marc:subfield code="a">Historic buildings.</marc:subfield>
-            <marc:subfield code="2">fast</marc:subfield>
-            <marc:subfield code="0">(OCoLC)fst00957723</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="651" ind1=" " ind2="7">
-            <marc:subfield code="a">New Jersey.</marc:subfield>
-            <marc:subfield code="2">fast</marc:subfield>
-            <marc:subfield code="0">(OCoLC)fst01208379</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="651" ind1=" " ind2="7">
-            <marc:subfield code="a">New York (State)</marc:subfield>
-            <marc:subfield code="2">fast</marc:subfield>
-            <marc:subfield code="0">(OCoLC)fst01210280</marc:subfield>
-        </marc:datafield>
         <marc:datafield tag="856" ind1=" " ind2="7">
             <marc:subfield code="a">New York (State)</marc:subfield>
             <marc:subfield code="u">fast</marc:subfield>
             <marc:subfield code="z">(OCoLC)fst01210280</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="651" ind1=" " ind2="7">
-            <marc:subfield code="a">New York (State)</marc:subfield>
-            <marc:subfield code="z">New York.</marc:subfield>
-            <marc:subfield code="2">fast</marc:subfield>
-            <marc:subfield code="0">(OCoLC)fst01204333</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="648" ind1=" " ind2="7">
-            <marc:subfield code="a">1600 - 1775</marc:subfield>
-            <marc:subfield code="2">fast</marc:subfield>
-        </marc:datafield>
-        <marc:datafield tag="655" ind1=" " ind2="7">
-            <marc:subfield code="a">History.</marc:subfield>
-            <marc:subfield code="2">fast</marc:subfield>
-            <marc:subfield code="0">(OCoLC)fst01411628</marc:subfield>
         </marc:datafield>
         <marc:datafield tag="710" ind1="2" ind2=" ">
             <marc:subfield code="a">Holland Society of New York.</marc:subfield>

@@ -120,19 +120,6 @@
                     <datafield ind1=" " ind2=" " tag="599">
                         <subfield code="a">Imported from: zcat.oclc.org:210/OLUCWorldCat (Do not remove)</subfield>
                     </datafield>
-                    <datafield ind1=" " ind2="0" tag="650">
-                        <subfield code="a">Engineering</subfield>
-                        <subfield code="x">Philosophy.</subfield>
-                    </datafield>
-                    <datafield ind1=" " ind2="0" tag="650">
-                        <subfield code="a">Engineering</subfield>
-                        <subfield code="x">Study and teaching.</subfield>
-                    </datafield>
-                    <datafield ind1=" " ind2="7" tag="650">
-                        <subfield code="a">Engineering</subfield>
-                        <subfield code="x">Philosophy.</subfield>
-                        <subfield code="2">fast</subfield>
-                    </datafield>
                     <datafield ind1="1" ind2=" " tag="700">
                         <subfield code="a">Hyldgaard Christensen, Steen</subfield>
                         <subfield code="e">editor.</subfield>
@@ -157,10 +144,6 @@
                     <datafield ind1="1" ind2=" " tag="700">
                         <subfield code="a">Newberry, Byron</subfield>
                         <subfield code="e">editor.</subfield>
-                    </datafield>
-                    <datafield ind1=" " ind2="0" tag="830">
-                        <subfield code="a">Philosophy of engineering and technology ;</subfield>
-                        <subfield code="v">v. 21.</subfield>
                     </datafield>
                     <datafield ind1=" " ind2=" " tag="887">
                         <subfield code="a">{"@id":"8sl08b9l54wxk4m","modified":"2017-08-11T11:17:19+02:00","checksum":"86550674522"}</subfield>
