@@ -43,7 +43,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
     )
 
     return CompositeOrderMapper(
-        mock_folio_client, composite_order_map, "", "", "", "", "", "", "", lib_config, ""
+        mock_folio_client, composite_order_map, {}, "", "", "", "", "", "", "", lib_config, ""
     )
 
 
@@ -64,6 +64,17 @@ def test_fetch_acq_schemas_from_github_happy_path():
         "Partially Received",
         "Pending",
         "Receipt Not Required",
+        "Ongoing",
+    ]
+    assert composite_order_schema["properties"]["compositePoLines"]["items"]["properties"][
+        "paymentStatus"
+    ]["enum"] == [
+        "Awaiting Payment",
+        "Cancelled",
+        "Fully Paid",
+        "Partially Paid",
+        "Payment Not Required",
+        "Pending",
         "Ongoing",
     ]
 

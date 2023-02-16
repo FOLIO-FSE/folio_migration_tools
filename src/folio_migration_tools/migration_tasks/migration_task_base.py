@@ -276,11 +276,22 @@ class MigrationTaskBase:
             try:
                 with open(map_file_path) as map_file:
                     ref_data_map = list(csv.DictReader(map_file, dialect="tsv"))
+                    if not ref_data_map:
+                        raise TransformationProcessError("", f"Map has no rows: {map_file_path}")
                     logging.info(
                         "Found %s rows in %s map",
                         len(ref_data_map),
                         folio_property_name,
                     )
+                    if not any(ref_data_map[0].keys()):
+                        raise TransformationProcessError(
+                            "",
+                            (
+                                f"{folio_property_name} not mapped in legacy->folio mapping file "
+                                f"({map_file_path}). Did you map this field, "
+                                "but forgot to add a mapping file?"
+                            ),
+                        )
                     logging.info(
                         "%s will be used for determinig %s",
                         ",".join(ref_data_map[0].keys()),
@@ -288,14 +299,8 @@ class MigrationTaskBase:
                     )
                     return ref_data_map
             except Exception as exception:
-                raise TransformationProcessError(
-                    "",
-                    (
-                        f"{folio_property_name} not mapped in legacy->folio mapping file "
-                        f"({map_file_path}) ({exception}). Did you map this field, "
-                        "but forgot to add a mapping file?"
-                    ),
-                ) from exception
+                raise exception
+
         else:
             logging.info("No mapping setup for %s", folio_property_name)
             logging.info("%s will have default mapping if any ", folio_property_name)
