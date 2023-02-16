@@ -3,6 +3,7 @@ import json
 from uuid import uuid4
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioClient
 from pymarc.reader import MARCReader
 from pymarc.record import Field
 from pymarc.record import Record
@@ -91,9 +92,10 @@ def test_date_from_008_holding():
 def test_add_entity_to_record():
     entity = {"id": "id", "type": "type"}
     rec = {}
-    RulesMapperBase.add_entity_to_record(
-        entity, "identifiers", rec, BibsRulesMapper.get_instance_schema()
+    latest_schema = FolioClient.get_latest_from_github(
+        "folio-org", "mod-inventory-storage", "ramls/instance.json"
     )
+    RulesMapperBase.add_entity_to_record(entity, "identifiers", rec, latest_schema)
     assert rec == {"identifiers": [{"id": "id", "type": "type"}]}
 
 

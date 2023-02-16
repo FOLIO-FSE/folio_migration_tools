@@ -27,7 +27,7 @@ class CoursesMapper(MappingFileMapperBase):
         library_configuration: LibraryConfiguration,
         task_configuration,
     ):
-        self.folio_client = folio_client
+        self.folio_client: FolioClient = folio_client
         self.user_cache: dict = {}
         self.notes_mapper: NotesMapper = NotesMapper(
             library_configuration,
@@ -183,19 +183,18 @@ class CoursesMapper(MappingFileMapperBase):
             )
             return ""
 
-    @staticmethod
-    def get_composite_course_schema() -> Dict[str, Any]:
+    def get_composite_course_schema(self) -> Dict[str, Any]:
         return {
             "properties": {
-                "course": FolioClient.get_latest_from_github(
+                "course": self.folio_client.get_from_github(
                     "folio-org", "mod-courses", "/ramls/course.json"
                 ),
-                "courselisting": FolioClient.get_latest_from_github(
+                "courselisting": self.folio_client.get_from_github(
                     "folio-org", "mod-courses", "/ramls/courselisting.json"
                 ),
                 "instructors": {
                     "type": "array",
-                    "items": FolioClient.get_latest_from_github(
+                    "items": self.folio_client.get_from_github(
                         "folio-org", "mod-courses", "/ramls/instructor.json"
                     ),
                 },

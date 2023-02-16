@@ -154,38 +154,6 @@ def test_multiple336s(mapper):
     assert "8105bd44-e7bd-487e-a8f2-b804a361d92f" in record[0]["instanceTypeId"]
 
 
-def test_get_instance_schema():
-    path = "./tests/test_data/two020a.mrc"
-    with open(path, "rb") as marc_file:
-        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
-        reader.hide_utf8_warnings = True
-        reader.force_utf8 = True
-        record1 = None
-        for record in reader:
-            record1 = record
-        entity_mapping = json.loads(
-            '[ { "rules": [ { "conditions": [ { "type": "set_identifier_type_id_by_name", "parameter": { "name": "ISBN" } } ] } ], "target": "identifiers.identifierTypeId", "subfield": [ "a" ], "requiredSubfield": [ "a" ], "description": "Type for Valid ISBN" }, { "rules": [ { "conditions": [ { "type": "remove_ending_punc, trim" } ] } ], "target": "identifiers.value", "subfield": [ "a", "c", "q" ], "description": "Valid ISBN", "requiredSubfield": [ "a" ], "applyRulesOnConcatenatedData": true } ]'
-        )
-        marc_field = record1["020"]
-        folio_record = {}
-        # mock = Mock(spec=RulesMapperBase)
-        schema = BibsRulesMapper.get_instance_schema()
-        assert record1["020"]["a"] == "0870990004 (v. 1)"
-        assert schema["required"]
-        # mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
-        # RulesMapperBase.handle_entity_mapping(
-        #    mock,
-        #    marc_field,
-        #    entity_mapping,
-        #    folio_record,
-        #    False,
-        #    [],
-        # )
-        # print("!")
-        # print(folio_record)
-        # assert folio_record != {}
-
-
 def test_strange_isbn(mapper):
     xpath = "//marc:datafield[@tag='020']"
     record = default_map("isbn_c.xml", xpath, mapper)

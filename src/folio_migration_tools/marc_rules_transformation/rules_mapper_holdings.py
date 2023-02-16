@@ -29,7 +29,7 @@ from folio_migration_tools.report_blurbs import Blurbs
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(
         self,
-        folio,
+        folio_client,
         location_map,
         task_configuration,
         library_configuration: LibraryConfiguration,
@@ -37,18 +37,18 @@ class RulesMapperHoldings(RulesMapperBase):
     ):
         self.task_configuration = task_configuration
         self.conditions = Conditions(
-            folio,
+            folio_client,
             self,
             "holdings",
             library_configuration.folio_release,
             self.task_configuration.default_call_number_type_name,
         )
-        self.folio = folio
+        self.folio = folio_client
         super().__init__(
-            folio,
+            folio_client,
             library_configuration,
             task_configuration,
-            self.fetch_holdings_schema(),
+            self.fetch_holdings_schema(folio_client),
             self.conditions,
             parent_id_map,
         )
@@ -308,13 +308,11 @@ class RulesMapperHoldings(RulesMapperBase):
             else:
                 logging.info("NOT storing HRID settings since that is managed by FOLIO")
 
-    @staticmethod
-    def fetch_holdings_schema():
+    def fetch_holdings_schema(self, folio_client: FolioClient):
         logging.info("Fetching HoldingsRecord schema...")
-        holdings_record_schema = FolioClient.get_latest_from_github(
+        return folio_client.get_from_github(
             "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
         )
-        return holdings_record_schema
 
     def set_holdings_type(self, marc_record: Record, folio_holding, legacy_ids: List[str]):
         # Holdings type mapping

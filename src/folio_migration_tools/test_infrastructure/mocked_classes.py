@@ -29,6 +29,7 @@ def mocked_folio_client() -> FolioClient:
 
         mocked_folio.folio_get_single_object = folio_get_single_object_mocked
         mocked_folio.folio_get_all = folio_get_all_mocked
+        mocked_folio.get_from_github = folio_get_from_github
         return mocked_folio
     except Exception as ee:
         logging.error(ee)
@@ -118,5 +119,5 @@ def folio_get_single_object_mocked(*args, **kwargs):
         return super_schema.get(args[0])
 
 
-def get_latest_from_github(owner, repo, file_path):
+def folio_get_from_github(owner, repo, file_path):
     return FolioClient.get_latest_from_github(owner, repo, file_path, "")

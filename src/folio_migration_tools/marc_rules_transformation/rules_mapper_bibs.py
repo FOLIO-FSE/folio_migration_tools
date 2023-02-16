@@ -43,7 +43,7 @@ class BibsRulesMapper(RulesMapperBase):
             folio_client,
             library_configuration,
             task_configuration,
-            self.get_instance_schema(),
+            self.get_instance_schema(folio_client),
             Conditions(folio_client, self, "bibs", library_configuration.folio_release),
         )
         logging.info("Fetching mapping rules from the tenant")
@@ -169,13 +169,11 @@ class BibsRulesMapper(RulesMapperBase):
             self.filter_langs(folio_instance["languages"], marc_record, legacy_ids)
         )
 
-    @staticmethod
-    def get_instance_schema():
+    def get_instance_schema(self, folio_client: FolioClient):
         logging.info("Fetching Instance schema...")
-        instance_schema = FolioClient.get_latest_from_github(
+        return folio_client.get_from_github(
             "folio-org", "mod-inventory-storage", "ramls/instance.json"
         )
-        return instance_schema
 
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:

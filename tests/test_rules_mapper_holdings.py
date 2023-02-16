@@ -163,7 +163,9 @@ def test_get_legacy_id_001_right_order():
 
 
 def test_get_holdings_schema():
-    schema = RulesMapperHoldings.fetch_holdings_schema()
+    folio = mocked_classes.mocked_folio_client()
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    schema = RulesMapperHoldings.fetch_holdings_schema(mock_mapper, folio)
     assert schema["required"]
 
 

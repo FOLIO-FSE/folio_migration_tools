@@ -43,10 +43,6 @@ def mapper(pytestconfig) -> AuthorityMapper:
         files=[],
         ils_flavour=IlsFlavour.tag001,
     )
-    # BibsRulesMapper.__init__ = MagicMock(name="__init__", return_value=None)
-    # BibsRulesMapper.get_instance_schema = MagicMock(name="get_instance_schema")
-    # Conditions.setup_reference_data_for_all = MagicMock(name="setup_reference_data_for_all")
-    # Conditions.setup_reference_data_for_bibs = MagicMock(name="setup_reference_data_for_bibs")
     mapper = AuthorityMapper(folio, lib, conf)
     mapper.folio_client = folio
     mapper.migration_report = MigrationReport()
