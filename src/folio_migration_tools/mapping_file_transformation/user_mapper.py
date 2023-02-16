@@ -31,7 +31,7 @@ class UserMapper(MappingFileMapperBase):
         groups_map,
     ):
         try:
-            user_schema = FolioClient.get_latest_from_github(
+            user_schema = folio_client.get_from_github(
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
             )
             super().__init__(

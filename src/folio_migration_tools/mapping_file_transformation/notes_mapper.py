@@ -22,7 +22,7 @@ class NotesMapper(MappingFileMappingBaseImpl):
         object_type: FOLIONamespaces,
         ignore_legacy_identifier: bool = False,
     ) -> None:
-        self.folio_client = folio_client
+        self.folio_client: FolioClient = folio_client
         self.setup_notes_schema()
         super().__init__(
             library_configuration,
@@ -85,14 +85,13 @@ class NotesMapper(MappingFileMappingBaseImpl):
             for map_entry in map_entries
         ).strip()
 
-    @staticmethod
-    def get_notes_schema():
-        notes_schema = FolioClient.get_latest_from_github(
+    def get_notes_schema(self):
+        notes_schema = self.folio_client.get_from_github(
             "folio-org",
             "mod-notes",
             "src/main/resources/swagger.api/schemas/note.yaml",
         )
-        notes_common = FolioClient.get_latest_from_github(
+        notes_common = self.folio_client.get_from_github(
             "folio-org",
             "mod-notes",
             "src/main/resources/swagger.api/schemas/common.yaml",

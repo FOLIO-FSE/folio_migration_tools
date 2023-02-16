@@ -53,8 +53,8 @@ def mapper(pytestconfig) -> CoursesMapper:
     )
 
 
-def test_schema():
-    schema = CoursesMapper.get_composite_course_schema()
+def test_schema(mapper: CoursesMapper, caplog):
+    schema = mapper.get_composite_course_schema()
     assert schema
 
 
