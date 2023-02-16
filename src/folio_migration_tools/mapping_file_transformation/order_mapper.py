@@ -2,16 +2,17 @@ import json
 import logging
 import os
 import sys
+import urllib.parse
+
 import requests
+from folio_uuid.folio_uuid import FOLIONamespaces
+from folioclient import FolioClient
 from requests.exceptions import HTTPError
 
-from folioclient import FolioClient
-from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-
 from folio_migration_tools.report_blurbs import Blurbs
 
 
@@ -113,7 +114,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
             # raml_utils_sha = next((item["sha"] for item in submodules
             # if item["path"] == "raml-utils"))
 
-            acq_models_path = f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas"
+            acq_models_path = (
+                f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas/"
+            )
 
             req = requests.get(f"{acq_models_path}/{object}.json", headers=github_headers)
             req.raise_for_status()
@@ -149,6 +152,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         Returns:
             _type_: _description_
+
+
         """
 
         github_path = "https://api.github.com/repos"
@@ -203,30 +208,46 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         try:
 
-            for property_name_level1, property_level1 in object_schema["properties"].items():
+            if (
+                "properties" not in object_schema
+                and "$ref" in object_schema
+                and object_schema["type"] == "object"
+            ):
+                submodule_path["properties"] = CompositeOrderMapper.inject_schema_by_ref(
+                    submodule_path, github_headers, object_schema
+                ).get("properties")
+
+            for property_name_level1, property_level1 in object_schema.get(
+                "properties", {}
+            ).items():
 
                 # Report and discard unhandled properties
-                if (
-                    property_level1.get("type") not in supported_types
-                    or "../" in property_level1.get("$ref", "")
-                    or "../" in property_level1.get("items", {}).get("$ref", "")
-                ):
+                if property_level1.get("type") not in supported_types:
 
                     logging.info(f"Property not yet supported: {property_name_level1}")
                     property_level1["type"] = "Deprecated"
 
                 # Handle object properties
                 elif property_level1.get("type") == "object" and property_level1.get("$ref"):
+                    try:
+                        logging.info(
+                            "Fecthing referenced schema for object %s", property_name_level1
+                        )
+                        actual_path = urllib.parse.urljoin(
+                            f"{submodule_path}", object_schema.get("$ref", "")
+                        )
 
-                    logging.info("Fecthing referenced schema for object %s", property_name_level1)
+                        p1 = CompositeOrderMapper.inject_schema_by_ref(
+                            actual_path, github_headers, property_level1
+                        )
 
-                    ref_object = property_level1["$ref"]
-                    schema_url = f"{submodule_path}/{ref_object}"
+                        p2 = CompositeOrderMapper.build_extended_object(
+                            p1, actual_path, github_headers
+                        )
+                        object_schema["properties"][property_name_level1] = p2
 
-                    req = requests.get(schema_url, headers=github_headers)
-                    req.raise_for_status()
-
-                    property_level1 = dict(property_level1, **json.loads(req.text))
+                    except Exception as ee:
+                        logging.exception(ee)
 
                 # Handle arrays of items properties
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
@@ -236,18 +257,48 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     logging.info(
                         "Fetching referenced schema for array object %s", property_name_level1
                     )
-
-                    ref_object = property_level1["items"]["$ref"]
-                    schema_url = f"{submodule_path}/{ref_object}"
-
-                    req = requests.get(schema_url, headers=github_headers)
-                    req.raise_for_status()
-
-                    property_level1["items"] = dict(
-                        property_level1["items"], **json.loads(req.text)
+                    actual_path = urllib.parse.urljoin(
+                        f"{submodule_path}", object_schema.get("$ref", "")
                     )
 
+                    p1 = CompositeOrderMapper.inject_items_schema_by_ref(
+                        actual_path, github_headers, property_level1
+                    )
+                    p2 = CompositeOrderMapper.build_extended_object(
+                        p1, actual_path, github_headers
+                    )
+                    property_level1["items"] = p2
             return object_schema
 
         except HTTPError as he:
             logging.error(he)
+
+    @staticmethod
+    def inject_schema_by_ref(submodule_path, github_headers, property: dict):
+        base_raml = "https://raw.githubusercontent.com/folio-org/raml/master/"
+        try:
+            u1 = urllib.parse.urlparse(submodule_path)
+            schema_url = urllib.parse.urljoin(u1.geturl(), property["$ref"])
+            if schema_url.endswith("tags.schema"):
+                schema_url = f"{base_raml}schemas/tags.schema"
+            if schema_url.endswith("metadata.schema"):
+                schema_url = f"{base_raml}schemas/metadata.schema"
+
+            req = requests.get(schema_url, headers=github_headers)
+            req.raise_for_status()
+            return dict(property, **json.loads(req.text))
+        except Exception as ee:
+            logging.error(ee)
+            return {}
+
+    @staticmethod
+    def inject_items_schema_by_ref(submodule_path, github_headers, property: dict):
+        try:
+            u1 = urllib.parse.urlparse(submodule_path)
+            schema_url = urllib.parse.urljoin(u1.geturl(), property["items"]["$ref"])
+            req = requests.get(schema_url, headers=github_headers)
+            req.raise_for_status()
+            return dict(property["items"], **json.loads(req.text))
+        except Exception as ee:
+            logging.error(ee)
+            return {}

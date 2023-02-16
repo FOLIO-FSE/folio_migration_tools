@@ -54,6 +54,18 @@ def test_fetch_acq_schemas_from_github_happy_path():
     )
 
     assert composite_order_schema["$schema"]
+    assert composite_order_schema["properties"]["orderType"]["enum"] == ["One-Time", "Ongoing"]
+    assert composite_order_schema["properties"]["compositePoLines"]["items"]["properties"][
+        "receiptStatus"
+    ]["enum"] == [
+        "Awaiting Receipt",
+        "Cancelled",
+        "Fully Received",
+        "Partially Received",
+        "Pending",
+        "Receipt Not Required",
+        "Ongoing",
+    ]
 
 
 def test_parse_record_mapping_file(mapper):
