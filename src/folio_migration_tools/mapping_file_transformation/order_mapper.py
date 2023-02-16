@@ -21,6 +21,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         self,
         folio_client: FolioClient,
         composite_order_map: dict,
+        organizations_id_map: dict,
         order_type_map,
         acquisition_method_map,
         order_format_map,
@@ -46,6 +47,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             FOLIONamespaces.orders,
             library_configuration,
         )
+        self.organizations_id_map: dict = organizations_id_map
 
     def get_prop(self, legacy_order, folio_prop_name, index_or_id):
         if not self.use_map:
@@ -204,7 +206,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
             _type_: _description_
         """
 
-        supported_types = ["string", "boolean", "number", "integer", "text", "object", "array"]
+        supported_types = [
+            "string",
+            "boolean",
+            "number",
+            "integer",
+            "text",
+            "object",
+            "array",
+        ]
 
         try:
 
@@ -229,25 +239,20 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
                 # Handle object properties
                 elif property_level1.get("type") == "object" and property_level1.get("$ref"):
-                    try:
-                        logging.info(
-                            "Fecthing referenced schema for object %s", property_name_level1
-                        )
-                        actual_path = urllib.parse.urljoin(
-                            f"{submodule_path}", object_schema.get("$ref", "")
-                        )
 
-                        p1 = CompositeOrderMapper.inject_schema_by_ref(
-                            actual_path, github_headers, property_level1
-                        )
+                    logging.info("Fecthing referenced schema for object %s", property_name_level1)
+                    actual_path = urllib.parse.urljoin(
+                        f"{submodule_path}", object_schema.get("$ref", "")
+                    )
 
-                        p2 = CompositeOrderMapper.build_extended_object(
-                            p1, actual_path, github_headers
-                        )
-                        object_schema["properties"][property_name_level1] = p2
+                    p1 = CompositeOrderMapper.inject_schema_by_ref(
+                        actual_path, github_headers, property_level1
+                    )
 
-                    except Exception as ee:
-                        logging.exception(ee)
+                    p2 = CompositeOrderMapper.build_extended_object(
+                        p1, actual_path, github_headers
+                    )
+                    object_schema["properties"][property_name_level1] = p2
 
                 # Handle arrays of items properties
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
@@ -268,6 +273,16 @@ class CompositeOrderMapper(MappingFileMapperBase):
                         p1, actual_path, github_headers
                     )
                     property_level1["items"] = p2
+                elif property_level1.get("type") == "string" and property_level1.get("$ref"):
+                    logging.info("Fecthing referenced schema for object %s", property_name_level1)
+                    actual_path = urllib.parse.urljoin(
+                        f"{submodule_path}", object_schema.get("$ref", "")
+                    )
+                    p1 = CompositeOrderMapper.inject_schema_by_ref(
+                        actual_path, github_headers, property_level1
+                    )
+                    object_schema["properties"][property_name_level1] = p1
+
             return object_schema
 
         except HTTPError as he:

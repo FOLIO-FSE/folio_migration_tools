@@ -101,7 +101,9 @@ class FolderStructure:
         self.srs_records_path = (
             self.results_folder / f"folio_srs_{object_type_string}{self.file_template}.json"
         )
-
+        self.organizations_id_map_path = (
+            self.results_folder / f"{str(FOLIONamespaces.organizations.name).lower()}_id_map.json"
+        )
         self.instance_id_map_path = (
             self.results_folder / f"{str(FOLIONamespaces.instances.name).lower()}_id_map.json"
         )

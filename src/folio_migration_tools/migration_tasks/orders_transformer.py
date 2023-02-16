@@ -6,6 +6,7 @@ import sys
 import time
 from os.path import isfile
 from typing import List
+from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic.main import BaseModel
@@ -37,13 +38,12 @@ class OrdersTransformer(MigrationTaskBase):
         order_type_map_file_name: str
         acquisition_method_map_file_name: str
         order_format_map_file_name: str
-        payment_status_map_file_name: str
-        receipt_status_map_file_name: str
-        workflow_status_map_file_name: str
-        location_map_file_name: str
-        funds_expense_class_map_file_name: str
-        funds_map_file_name: str
-        organization_map_file_name: str
+        payment_status_map_file_name: Optional[str] = ""
+        receipt_status_map_file_name: Optional[str] = ""
+        workflow_status_map_file_name: Optional[str] = ""
+        location_map_file_name: Optional[str] = ""
+        funds_map_file_name: Optional[str] = ""
+        funds_expense_class_map_file_name: Optional[str] = ""
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -73,10 +73,12 @@ class OrdersTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.orders_map
         )
+        organizations_id_map = self.load_id_map(self.folder_structure.organizations_id_map_path)
 
         self.mapper = CompositeOrderMapper(
             self.folio_client,
             self.orders_map,
+            organizations_id_map,
             self.load_ref_data_mapping_file(
                 "orderType",
                 self.folder_structure.mapping_files_folder
@@ -95,45 +97,47 @@ class OrdersTransformer(MigrationTaskBase):
                 / self.task_config.order_format_map_file_name,
                 self.folio_keys,
             ),
-            self.load_ref_data_mapping_file(
+            self.load_ref_data_mapping_file(  # Not required, on POL
                 "paymentStatus",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.payment_status_map_file_name,
                 self.folio_keys,
+                False,
             ),
-            self.load_ref_data_mapping_file(
+            self.load_ref_data_mapping_file(  # Not required, on POL
                 "receiptStatus",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.receipt_status_map_file_name,
                 self.folio_keys,
+                False,
             ),
-            self.load_ref_data_mapping_file(
+            self.load_ref_data_mapping_file(  # Not required
                 "workflowStatus",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.workflow_status_map_file_name,
                 self.folio_keys,
+                False,
             ),
             self.load_ref_data_mapping_file(
                 "locationMap",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.location_map_file_name,
                 self.folio_keys,
+                False,
             ),
-            self.load_ref_data_mapping_file(
+            self.load_ref_data_mapping_file(  # Required if there was is a fund.
                 "fundsMap",
                 self.folder_structure.mapping_files_folder / self.task_config.funds_map_file_name,
                 self.folio_keys,
+                False,
             ),
-            self.load_ref_data_mapping_file(
+            self.load_ref_data_mapping_file(  # Todo: The property in the schema has no type
                 "fundsExpenseClassMap",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.funds_expense_class_map_file_name,
                 self.folio_keys,
+                False,
             ),
-            # self.load_ref_data_mapping_file(
-            #     self.folder_structure.mapping_files_folder,
-            #     self.folio_keys,
-            #     ),
             self.library_configuration,
         )
 

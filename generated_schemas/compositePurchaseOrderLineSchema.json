@@ -4,9 +4,11 @@
     "type": "object",
     "properties": {
         "id": {
-            "description": "UUID of this purchase order",
+            "description": "The UUID format string",
             "type": "string",
-            "$ref": "../../common/schemas/uuid.json"
+            "$ref": "../../common/schemas/uuid.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         },
         "approved": {
             "description": "whether or not the purchase order has been approved",
@@ -26,14 +28,18 @@
             "format": "date-time"
         },
         "assignedTo": {
-            "description": "UUID of the user this purchase order his assigned to",
+            "description": "The UUID format string",
             "type": "string",
-            "$ref": "../../common/schemas/uuid.json"
+            "$ref": "../../common/schemas/uuid.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         },
         "billTo": {
-            "description": "UUID of the billing address",
+            "description": "The UUID format string",
             "type": "string",
-            "$ref": "../../common/schemas/uuid.json"
+            "$ref": "../../common/schemas/uuid.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         },
         "closeReason": {
             "description": "purchase order closing reason record",
@@ -138,14 +144,18 @@
             "additionalProperties": false
         },
         "shipTo": {
-            "description": "UUID of the shipping address",
+            "description": "The UUID format string",
             "type": "string",
-            "$ref": "../../common/schemas/uuid.json"
+            "$ref": "../../common/schemas/uuid.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         },
         "template": {
-            "description": "The ID of the order template used for this order. Applies to both PO and POL",
+            "description": "The UUID format string",
             "type": "string",
-            "$ref": "../../common/schemas/uuid.json"
+            "$ref": "../../common/schemas/uuid.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         },
         "totalEstimatedPrice": {
             "description": "total estimated price of this purchase order",
@@ -166,14 +176,23 @@
             "type": "integer"
         },
         "vendor": {
-            "description": "UUID of the vendorDetails record",
+            "description": "The UUID format string",
             "type": "string",
-            "$ref": "../../common/schemas/uuid.json"
+            "$ref": "../../common/schemas/uuid.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         },
         "workflowStatus": {
-            "description": "the workflow status for this purchase order",
+            "description": "Composite workflow status",
             "type": "string",
-            "$ref": "../../mod-orders-storage/schemas/workflow_status.json"
+            "$ref": "../../mod-orders-storage/schemas/workflow_status.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "enum": [
+                "Pending",
+                "Open",
+                "Closed"
+            ],
+            "default": "Pending"
         },
         "compositePoLines": {
             "description": "a list of completely de-referenced purchase order lines",
@@ -210,9 +229,11 @@
                         "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "acquisitionMethod": {
-                        "description": "UUID of the acquisition method for this purchase order line",
+                        "description": "The UUID format string",
                         "type": "string",
-                        "$ref": "../../common/schemas/uuid.json"
+                        "$ref": "../../common/schemas/uuid.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "automaticExport": {
                         "description": "if true then line will be marked as available to export in the EDIFACT format or other format",
@@ -402,8 +423,7 @@
                                         },
                                         "productIdType": {
                                             "description": "The type of product identifier",
-                                            "$ref": "../../common/schemas/product_id_type.json",
-                                            "type": "Deprecated"
+                                            "$ref": "../../common/schemas/product_id_type.json"
                                         },
                                         "qualifier": {
                                             "description": "Information about the binding, format, volume numbers, part of a set, publisher, distributor, etc. which might be enclosed in parenthesis",
@@ -524,23 +544,19 @@
                             "properties": {
                                 "code": {
                                     "description": "the fund code",
-                                    "$ref": "../../common/schemas/fund_code.json",
-                                    "type": "Deprecated"
+                                    "$ref": "../../common/schemas/fund_code.json"
                                 },
                                 "encumbrance": {
                                     "description": "UUID of encumbrance record associated with this fund distribution",
-                                    "$ref": "../../common/schemas/uuid.json",
-                                    "type": "Deprecated"
+                                    "$ref": "../../common/schemas/uuid.json"
                                 },
                                 "fundId": {
                                     "description": "UUID of the fund associated with this fund distribution",
-                                    "$ref": "../../common/schemas/uuid.json",
-                                    "type": "Deprecated"
+                                    "$ref": "../../common/schemas/uuid.json"
                                 },
                                 "expenseClassId": {
                                     "description": "UUID of the expense class associated with this fund distribution",
-                                    "$ref": "../../common/schemas/uuid.json",
-                                    "type": "Deprecated"
+                                    "$ref": "../../common/schemas/uuid.json"
                                 },
                                 "distributionType": {
                                     "description": "Percentage or amount type of the value property",
@@ -585,9 +601,11 @@
                                     "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                 },
                                 "holdingId": {
-                                    "description": "Holding UUID associated with order line",
+                                    "description": "The UUID format string",
                                     "type": "string",
-                                    "$ref": "../../common/schemas/uuid.json"
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                 },
                                 "quantity": {
                                     "description": "combined/total quanitity of physical and electronic items",
@@ -624,13 +642,23 @@
                     },
                     "packagePoLineId": {
                         "description": "UUID referencing the poLine that represents the package that this POLs title belongs to",
-                        "$ref": "../../common/schemas/uuid.json",
-                        "type": "Deprecated"
+                        "$ref": "../../common/schemas/uuid.json"
                     },
                     "paymentStatus": {
-                        "description": "The purchase order line payment status",
+                        "description": "Payment/Receipt status",
                         "type": "string",
-                        "$ref": "../../mod-orders-storage/schemas/payment_status.json"
+                        "$ref": "../../mod-orders-storage/schemas/payment_status.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "enum": [
+                            "Awaiting Payment",
+                            "Cancelled",
+                            "Fully Paid",
+                            "Partially Paid",
+                            "Payment Not Required",
+                            "Pending",
+                            "Ongoing"
+                        ],
+                        "default": "Pending"
                     },
                     "physical": {
                         "description": "purchase order line physical material details",
@@ -828,8 +856,7 @@
                             },
                             "referenceNumbers": {
                                 "description": "Collection of reference number items",
-                                "$ref": "../../common/schemas/reference_numbers.json",
-                                "type": "Deprecated"
+                                "$ref": "../../common/schemas/reference_numbers.json"
                             }
                         },
                         "additionalProperties": false
