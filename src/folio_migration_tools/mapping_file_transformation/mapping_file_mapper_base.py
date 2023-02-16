@@ -19,6 +19,7 @@ from folioclient import FolioClient
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
@@ -492,6 +493,15 @@ class MappingFileMapperBase(MapperBase):
                     )
                 else:
                     resulting_array.append(temp_object)
+
+            elif any((v for k, v in temp_object.items() if not self.uuid_check(v))):
+                Helper.log_data_issue(
+                    f"{prop_name}",
+                    f"Sub-property {sub_prop} removed as it is missing required fields:"
+                    f"{required}",
+                    temp_object,
+                )
+
         if any(resulting_array):
             set_deep2(folio_object, prop_name, resulting_array)
 
@@ -716,6 +726,13 @@ class MappingFileMapperBase(MapperBase):
                 f"Allowed values are: {mapped_schema_property['enum']}",
                 mapped_value,
             )
+
+    def uuid_check(self, value):
+        try:
+            uuid.UUID(str(value))
+        except ValueError:
+            return False
+        return True
 
 
 def skip_property(property_name, property):
