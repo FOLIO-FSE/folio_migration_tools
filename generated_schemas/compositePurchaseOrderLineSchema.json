@@ -1,0 +1,971 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "composite purchase order with dereferenced/expanded orders fields",
+    "type": "object",
+    "properties": {
+        "id": {
+            "description": "UUID of this purchase order",
+            "type": "string",
+            "$ref": "../../common/schemas/uuid.json"
+        },
+        "approved": {
+            "description": "whether or not the purchase order has been approved",
+            "type": "boolean",
+            "default": false
+        },
+        "approvedById": {
+            "description": "The UUID format string",
+            "type": "string",
+            "$ref": "../../common/schemas/uuid.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        },
+        "approvalDate": {
+            "description": "Date and time when purchase order was approved",
+            "type": "string",
+            "format": "date-time"
+        },
+        "assignedTo": {
+            "description": "UUID of the user this purchase order his assigned to",
+            "type": "string",
+            "$ref": "../../common/schemas/uuid.json"
+        },
+        "billTo": {
+            "description": "UUID of the billing address",
+            "type": "string",
+            "$ref": "../../common/schemas/uuid.json"
+        },
+        "closeReason": {
+            "description": "purchase order closing reason record",
+            "type": "object",
+            "$ref": "../../mod-orders-storage/schemas/close_reason.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "properties": {
+                "reason": {
+                    "description": "close reason description",
+                    "type": "string"
+                },
+                "note": {
+                    "description": "free-form notes related to closing reason",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "dateOrdered": {
+            "description": "Date and time when purchase order was opened",
+            "type": "string",
+            "format": "date-time",
+            "readonly": true
+        },
+        "manualPo": {
+            "description": "if true, order cannot be sent automatically, e.g. via EDI",
+            "type": "boolean"
+        },
+        "notes": {
+            "description": "free-form notes associated with this purchase order",
+            "id": "notes",
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "poNumber": {
+            "description": "A human readable ID assigned to this purchase order",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]{1,22}$"
+        },
+        "poNumberPrefix": {
+            "description": "Purchase order number prefix",
+            "type": "string"
+        },
+        "poNumberSuffix": {
+            "description": "Purchase order number suffix",
+            "type": "string"
+        },
+        "orderType": {
+            "description": "the purchase order type",
+            "type": "string",
+            "enum": [
+                "One-Time",
+                "Ongoing"
+            ]
+        },
+        "reEncumber": {
+            "description": "indicates this purchase order should be re-encumbered each fiscal year. Only applies to ongoing orders",
+            "type": "boolean",
+            "default": false
+        },
+        "ongoing": {
+            "description": "Ongoing details for Purchase Order",
+            "type": "object",
+            "$ref": "../../mod-orders-storage/schemas/ongoing.json",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "properties": {
+                "interval": {
+                    "description": "Renewal interval (in days)",
+                    "type": "integer"
+                },
+                "isSubscription": {
+                    "description": "Whether or not this is a subscription",
+                    "type": "boolean",
+                    "default": false
+                },
+                "manualRenewal": {
+                    "description": "Whether or not this is a manual renewal",
+                    "type": "boolean",
+                    "default": false
+                },
+                "notes": {
+                    "description": "Notes associated with the Ongoing order",
+                    "type": "string"
+                },
+                "reviewPeriod": {
+                    "description": "Time prior to renewal where changes can be made to subscription",
+                    "type": "integer"
+                },
+                "renewalDate": {
+                    "description": "The date this Ongoing PO's order lines were renewed",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "reviewDate": {
+                    "description": "Date when Order has to be reviewed",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            },
+            "additionalProperties": false
+        },
+        "shipTo": {
+            "description": "UUID of the shipping address",
+            "type": "string",
+            "$ref": "../../common/schemas/uuid.json"
+        },
+        "template": {
+            "description": "The ID of the order template used for this order. Applies to both PO and POL",
+            "type": "string",
+            "$ref": "../../common/schemas/uuid.json"
+        },
+        "totalEstimatedPrice": {
+            "description": "total estimated price of this purchase order",
+            "type": "number"
+        },
+        "totalEncumbered": {
+            "description": "Total encumbered for the order",
+            "type": "number",
+            "readonly": true
+        },
+        "totalExpended": {
+            "description": "Total expended for the order",
+            "type": "number",
+            "readonly": true
+        },
+        "totalItems": {
+            "description": "total number of items included in the purchase order",
+            "type": "integer"
+        },
+        "vendor": {
+            "description": "UUID of the vendorDetails record",
+            "type": "string",
+            "$ref": "../../common/schemas/uuid.json"
+        },
+        "workflowStatus": {
+            "description": "the workflow status for this purchase order",
+            "type": "string",
+            "$ref": "../../mod-orders-storage/schemas/workflow_status.json"
+        },
+        "compositePoLines": {
+            "description": "a list of completely de-referenced purchase order lines",
+            "id": "compositePoLines",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "$ref": "composite_po_line.json",
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "description": "composite purchase order line with dereferenced/expanded orders fields",
+                "properties": {
+                    "id": {
+                        "description": "UUID identifying this purchase order line",
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                    },
+                    "edition": {
+                        "description": "edition of the material",
+                        "type": "string"
+                    },
+                    "checkinItems": {
+                        "description": "if true this will toggle the Check-in workflow for details associated with this PO line",
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "instanceId": {
+                        "description": "UUID of the instance record this purchase order line is related to",
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                    },
+                    "agreementId": {
+                        "description": "UUID of the agreement this purchase order line is related to",
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                    },
+                    "acquisitionMethod": {
+                        "description": "UUID of the acquisition method for this purchase order line",
+                        "type": "string",
+                        "$ref": "../../common/schemas/uuid.json"
+                    },
+                    "automaticExport": {
+                        "description": "if true then line will be marked as available to export in the EDIFACT format or other format",
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "alerts": {
+                        "description": "alerts associated with this purchase order line",
+                        "id": "alerts",
+                        "type": "array",
+                        "items": {
+                            "description": "purchase order alert",
+                            "type": "object",
+                            "$ref": "../../mod-orders-storage/schemas/alert.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "properties": {
+                                "id": {
+                                    "description": "UUID of this alert record",
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                },
+                                "alert": {
+                                    "description": "the alert text",
+                                    "type": "string"
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "alert"
+                            ]
+                        }
+                    },
+                    "cancellationRestriction": {
+                        "description": "whether or not there are cancellation restrictions for this purchase order line",
+                        "type": "boolean"
+                    },
+                    "cancellationRestrictionNote": {
+                        "description": "free-form notes related to cancellation restrictions",
+                        "type": "string"
+                    },
+                    "claims": {
+                        "description": "claims associated with this purchase order line",
+                        "id": "claims",
+                        "type": "array",
+                        "items": {
+                            "description": "details about an order claim",
+                            "type": "object",
+                            "$ref": "../../mod-orders-storage/schemas/claim.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "properties": {
+                                "claimed": {
+                                    "description": "whether or not this purchase order line has been claimed",
+                                    "type": "boolean",
+                                    "default": false
+                                },
+                                "sent": {
+                                    "description": "date a claim was sent",
+                                    "type": "string",
+                                    "format": "date-time"
+                                },
+                                "grace": {
+                                    "description": "the number of days after the expected receipt date during which claims should not be processed",
+                                    "type": "integer"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    },
+                    "collection": {
+                        "description": "whether or not this purchase order line is for a collection",
+                        "type": "boolean"
+                    },
+                    "contributors": {
+                        "description": "list of contributors to the material",
+                        "id": "contributors",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "$ref": "../../mod-orders-storage/schemas/contributor.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "description": "contributor to the material",
+                            "properties": {
+                                "contributor": {
+                                    "description": "the name of a contributor to the material",
+                                    "type": "string"
+                                },
+                                "contributorNameTypeId": {
+                                    "description": "UUID of the contributor type",
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "contributorNameTypeId"
+                            ]
+                        }
+                    },
+                    "cost": {
+                        "description": "purchase order line cost record",
+                        "type": "object",
+                        "$ref": "../../mod-orders-storage/schemas/cost.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "properties": {
+                            "listUnitPrice": {
+                                "description": "The per-item list price for physical or resources of 'Other' order format",
+                                "type": "number"
+                            },
+                            "listUnitPriceElectronic": {
+                                "description": "The e-resource per-item list price",
+                                "type": "number"
+                            },
+                            "currency": {
+                                "description": "An ISO currency code",
+                                "type": "string"
+                            },
+                            "additionalCost": {
+                                "description": "Lump sum that is added to the total estimated price - not affected by discount",
+                                "type": "number"
+                            },
+                            "discount": {
+                                "description": "Percentage (0 to 100) or amount (positive number) that is subtracted from the list price time quantities calculation before additional cost",
+                                "type": "number"
+                            },
+                            "discountType": {
+                                "description": "Percentage or amount discount type",
+                                "type": "string",
+                                "enum": [
+                                    "amount",
+                                    "percentage"
+                                ],
+                                "default": "percentage"
+                            },
+                            "exchangeRate": {
+                                "description": "Exchange rate",
+                                "type": "number"
+                            },
+                            "quantityPhysical": {
+                                "description": "Quantity of physical items or resources of 'Other' order format in this purchase order line",
+                                "type": "integer"
+                            },
+                            "quantityElectronic": {
+                                "description": "Quantity of electronic items in this purchase order line",
+                                "type": "integer"
+                            },
+                            "poLineEstimatedPrice": {
+                                "description": "The calculated total estimated price for this purchase order line: list price time quantities minus discount amount plus additional cost",
+                                "type": "number"
+                            },
+                            "fyroAdjustmentAmount": {
+                                "description": "Adjustment amount if rollover was happen",
+                                "type": "number"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "currency"
+                        ]
+                    },
+                    "description": {
+                        "description": "description of the material",
+                        "type": "string"
+                    },
+                    "details": {
+                        "description": "purchase order line details",
+                        "type": "object",
+                        "$ref": "../../mod-orders-storage/schemas/details.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "properties": {
+                            "receivingNote": {
+                                "description": "notes regarding receiving instructions",
+                                "type": "string"
+                            },
+                            "productIds": {
+                                "description": "a list of product identifiers",
+                                "id": "productIds",
+                                "type": "array",
+                                "items": {
+                                    "$ref": "product_identifier.json",
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "description": "Product identifier",
+                                    "type": "object",
+                                    "properties": {
+                                        "productId": {
+                                            "description": "The actual product identifier",
+                                            "type": "string"
+                                        },
+                                        "productIdType": {
+                                            "description": "The type of product identifier",
+                                            "$ref": "../../common/schemas/product_id_type.json",
+                                            "type": "Deprecated"
+                                        },
+                                        "qualifier": {
+                                            "description": "Information about the binding, format, volume numbers, part of a set, publisher, distributor, etc. which might be enclosed in parenthesis",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            },
+                            "subscriptionFrom": {
+                                "description": "the start date of the subscription",
+                                "type": "Deprecated",
+                                "format": "date-time"
+                            },
+                            "subscriptionInterval": {
+                                "description": "the subscription interval in days",
+                                "type": "integer"
+                            },
+                            "subscriptionTo": {
+                                "description": "the end date of the subscription",
+                                "type": "Deprecated",
+                                "format": "date-time"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "donor": {
+                        "description": "the donor contributing to this purchase order line",
+                        "type": "string"
+                    },
+                    "eresource": {
+                        "description": "purchase order line e-resource details",
+                        "type": "object",
+                        "$ref": "../../mod-orders-storage/schemas/eresource.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "properties": {
+                            "activated": {
+                                "description": "whether or not this resource is activated",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "activationDue": {
+                                "description": "number of days until activation, from date of order placement",
+                                "type": "integer"
+                            },
+                            "createInventory": {
+                                "description": "Shows what inventory objects need to be created for electronic resource",
+                                "type": "string",
+                                "enum": [
+                                    "Instance, Holding, Item",
+                                    "Instance, Holding",
+                                    "Instance",
+                                    "None"
+                                ]
+                            },
+                            "trial": {
+                                "description": "whether or not this is a trial",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "expectedActivation": {
+                                "description": "expected date the resource will be activated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "userLimit": {
+                                "description": "the concurrent user-limit",
+                                "type": "integer"
+                            },
+                            "accessProvider": {
+                                "description": "UUID of the access provider",
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                            },
+                            "license": {
+                                "description": "purchase order line license record",
+                                "type": "object",
+                                "$ref": "license.json",
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "properties": {
+                                    "code": {
+                                        "description": "license code",
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "description": "license description",
+                                        "type": "string"
+                                    },
+                                    "reference": {
+                                        "description": "license reference",
+                                        "type": "string"
+                                    }
+                                },
+                                "additionalProperties": false
+                            },
+                            "materialType": {
+                                "description": "UUID of the material Type",
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                            },
+                            "resourceUrl": {
+                                "description": "Electronic resource can be access via this URL",
+                                "type": "string",
+                                "pattern": "\\b((?:[a-z][\\w-]+:(?:/{1,3}|[a-z0-9%])|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?]))"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "fundDistribution": {
+                        "description": "the UUIDs of the fund distribution records for this purchase order line",
+                        "id": "fundDistribution",
+                        "type": "array",
+                        "items": {
+                            "description": "purchase order fund distribution",
+                            "type": "object",
+                            "$ref": "../../mod-orders-storage/schemas/fund_distribution.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "properties": {
+                                "code": {
+                                    "description": "the fund code",
+                                    "$ref": "../../common/schemas/fund_code.json",
+                                    "type": "Deprecated"
+                                },
+                                "encumbrance": {
+                                    "description": "UUID of encumbrance record associated with this fund distribution",
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "Deprecated"
+                                },
+                                "fundId": {
+                                    "description": "UUID of the fund associated with this fund distribution",
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "Deprecated"
+                                },
+                                "expenseClassId": {
+                                    "description": "UUID of the expense class associated with this fund distribution",
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "Deprecated"
+                                },
+                                "distributionType": {
+                                    "description": "Percentage or amount type of the value property",
+                                    "type": "string",
+                                    "enum": [
+                                        "amount",
+                                        "percentage"
+                                    ],
+                                    "default": "percentage"
+                                },
+                                "value": {
+                                    "description": "The value of the cost to be applied to this fund",
+                                    "type": "number"
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "fundId",
+                                "distributionType",
+                                "value"
+                            ]
+                        }
+                    },
+                    "isPackage": {
+                        "description": "Indicates that this POL is for a package",
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "locations": {
+                        "description": "a list of the location records for this purchase order line",
+                        "id": "locations",
+                        "type": "array",
+                        "items": {
+                            "description": "purchase order line location record",
+                            "type": "object",
+                            "$ref": "../../mod-orders-storage/schemas/location.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "properties": {
+                                "locationId": {
+                                    "description": "UUID of the (inventory) location record",
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                },
+                                "holdingId": {
+                                    "description": "Holding UUID associated with order line",
+                                    "type": "string",
+                                    "$ref": "../../common/schemas/uuid.json"
+                                },
+                                "quantity": {
+                                    "description": "combined/total quanitity of physical and electronic items",
+                                    "type": "integer"
+                                },
+                                "quantityElectronic": {
+                                    "description": "quantity of electronic items",
+                                    "type": "integer"
+                                },
+                                "quantityPhysical": {
+                                    "description": "quantity of physical items",
+                                    "type": "integer"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    },
+                    "lastEDIExportDate": {
+                        "description": "The last date when line was exported in the EDIFACT file",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "orderFormat": {
+                        "description": "The purchase order line format",
+                        "type": "string",
+                        "$ref": "../../mod-orders-storage/schemas/order_format.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "enum": [
+                            "Electronic Resource",
+                            "P/E Mix",
+                            "Physical Resource",
+                            "Other"
+                        ]
+                    },
+                    "packagePoLineId": {
+                        "description": "UUID referencing the poLine that represents the package that this POLs title belongs to",
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "Deprecated"
+                    },
+                    "paymentStatus": {
+                        "description": "The purchase order line payment status",
+                        "type": "string",
+                        "$ref": "../../mod-orders-storage/schemas/payment_status.json"
+                    },
+                    "physical": {
+                        "description": "purchase order line physical material details",
+                        "type": "object",
+                        "$ref": "../../mod-orders-storage/schemas/physical.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "properties": {
+                            "createInventory": {
+                                "description": "Shows what inventory objects need to be created for physical resource",
+                                "type": "string",
+                                "enum": [
+                                    "Instance, Holding, Item",
+                                    "Instance, Holding",
+                                    "Instance",
+                                    "None"
+                                ]
+                            },
+                            "materialType": {
+                                "description": "UUID of the material Type",
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                            },
+                            "materialSupplier": {
+                                "description": "UUID of the material supplier record",
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                            },
+                            "expectedReceiptDate": {
+                                "description": "vendor agreed date prior to the Receipt Due date item is expected to be received by",
+                                "type": "Deprecated",
+                                "format": "date-time"
+                            },
+                            "receiptDue": {
+                                "description": "date item should be received by",
+                                "type": "Deprecated",
+                                "format": "date-time"
+                            },
+                            "volumes": {
+                                "description": "list of volumes included to the physical material",
+                                "type": "array",
+                                "items": {
+                                    "description": "the identifier of volume",
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "volumes"
+                        ]
+                    },
+                    "poLineDescription": {
+                        "description": "purchase order line description",
+                        "type": "string"
+                    },
+                    "poLineNumber": {
+                        "description": "A human readable number assigned to this PO line",
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9]{1,22}-[0-9]{1,3}$",
+                        "readonly": true
+                    },
+                    "publicationDate": {
+                        "description": "date (year) of the material's publication",
+                        "type": "string"
+                    },
+                    "publisher": {
+                        "description": "publisher of the material",
+                        "type": "string"
+                    },
+                    "purchaseOrderId": {
+                        "description": "UUID of this parent purchase order",
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                    },
+                    "receiptDate": {
+                        "description": "date the purchase order line was received",
+                        "type": "Deprecated",
+                        "format": "date-time"
+                    },
+                    "receiptStatus": {
+                        "description": "The purchase order line receipt status",
+                        "type": "string",
+                        "$ref": "../../mod-orders-storage/schemas/receipt_status.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "enum": [
+                            "Awaiting Receipt",
+                            "Cancelled",
+                            "Fully Received",
+                            "Partially Received",
+                            "Pending",
+                            "Receipt Not Required",
+                            "Ongoing"
+                        ],
+                        "default": "Pending"
+                    },
+                    "renewalNote": {
+                        "description": "Renewal note for this purchase order line",
+                        "type": "string"
+                    },
+                    "reportingCodes": {
+                        "description": "a list of reporting codes associated with this purchase order line",
+                        "id": "reportingCodes",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "$ref": "../../mod-orders-storage/schemas/reporting_code.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "description": "purchase order line reporting code",
+                            "properties": {
+                                "id": {
+                                    "description": "UUID of this reporting code record",
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                },
+                                "code": {
+                                    "description": "a reporting code",
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9]{4}[a-zA-Z0-9]*$"
+                                },
+                                "description": {
+                                    "description": "description of this reporting code",
+                                    "type": "string"
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "code"
+                            ]
+                        }
+                    },
+                    "requester": {
+                        "description": "who requested this purchase order line",
+                        "type": "string"
+                    },
+                    "rush": {
+                        "description": "whether or not this is a rush order",
+                        "type": "boolean"
+                    },
+                    "selector": {
+                        "description": "who selected this material",
+                        "type": "string"
+                    },
+                    "source": {
+                        "description": "The source of the Order",
+                        "type": "string",
+                        "$ref": "../../mod-orders-storage/schemas/source.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "enum": [
+                            "User",
+                            "API",
+                            "EDI",
+                            "MARC",
+                            "EBSCONET"
+                        ]
+                    },
+                    "tags": {
+                        "description": "List of simple tags that can be added to an object",
+                        "id": "tags",
+                        "type": "object",
+                        "$ref": "../../../raml-util/schemas/tags.schema",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "title": "tags",
+                        "properties": {
+                            "tagList": {
+                                "description": "List of tags",
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "titleOrPackage": {
+                        "description": "title of the material",
+                        "type": "string"
+                    },
+                    "vendorDetail": {
+                        "description": "purchase order line vendor details",
+                        "type": "object",
+                        "$ref": "../../mod-orders-storage/schemas/vendor_detail.json",
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "properties": {
+                            "instructions": {
+                                "description": "special instructions for the vendor",
+                                "type": "string"
+                            },
+                            "noteFromVendor": {
+                                "description": "free-form notes from the vendor",
+                                "type": "string"
+                            },
+                            "vendorAccount": {
+                                "description": "the accound number on the vendor's end associated with this purchase order line",
+                                "type": "string"
+                            },
+                            "referenceNumbers": {
+                                "description": "Collection of reference number items",
+                                "$ref": "../../common/schemas/reference_numbers.json",
+                                "type": "Deprecated"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "readonly": true,
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "title": "Metadata Schema",
+                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                        "properties": {
+                            "createdDate": {
+                                "description": "Date and time when the record was created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "createdByUserId": {
+                                "description": "ID of the user who created the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "createdByUsername": {
+                                "description": "Username of the user who created the record (when available)",
+                                "type": "string"
+                            },
+                            "updatedDate": {
+                                "description": "Date and time when the record was last updated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedByUserId": {
+                                "description": "ID of the user who last updated the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "updatedByUsername": {
+                                "description": "Username of the user who last updated the record (when available)",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "createdDate"
+                        ]
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "acquisitionMethod",
+                    "cost",
+                    "orderFormat",
+                    "source",
+                    "titleOrPackage"
+                ]
+            }
+        },
+        "acqUnitIds": {
+            "description": "acquisition unit ids associated with this purchase order",
+            "type": "array",
+            "items": {
+                "$ref": "../../common/schemas/uuid.json",
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "description": "The UUID format string",
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            }
+        },
+        "tags": {
+            "type": "object",
+            "description": "List of simple tags that can be added to an object",
+            "$ref": "../../../raml-util/schemas/tags.schema",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "title": "tags",
+            "properties": {
+                "tagList": {
+                    "description": "List of tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "metadata": {
+            "type": "object",
+            "$ref": "../../../raml-util/schemas/metadata.schema",
+            "readonly": true,
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "title": "Metadata Schema",
+            "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+            "properties": {
+                "createdDate": {
+                    "description": "Date and time when the record was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "createdByUserId": {
+                    "description": "ID of the user who created the record (when available)",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                },
+                "createdByUsername": {
+                    "description": "Username of the user who created the record (when available)",
+                    "type": "string"
+                },
+                "updatedDate": {
+                    "description": "Date and time when the record was last updated",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "updatedByUserId": {
+                    "description": "ID of the user who last updated the record (when available)",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                },
+                "updatedByUsername": {
+                    "description": "Username of the user who last updated the record (when available)",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "createdDate"
+            ]
+        },
+        "needReEncumber": {
+            "description": "Indicates that order needs to be re-encumbered",
+            "type": "boolean",
+            "readonly": true
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "vendor",
+        "orderType"
+    ]
+}
