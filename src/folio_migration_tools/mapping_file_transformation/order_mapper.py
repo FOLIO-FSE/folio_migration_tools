@@ -20,17 +20,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
     def __init__(
         self,
         folio_client: FolioClient,
+        library_configuration: LibraryConfiguration,
         composite_order_map: dict,
         organizations_id_map: dict,
-        order_type_map,
         acquisition_method_map,
-        order_format_map,
         payment_status_map,
         receipt_status_map,
         workflow_status_map,
         location_map,
         funds_map,
-        library_configuration: LibraryConfiguration,
         funds_expense_class_map=None,
     ):
 

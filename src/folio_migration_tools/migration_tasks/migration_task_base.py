@@ -294,7 +294,7 @@ class MigrationTaskBase:
                         )
                     logging.info(
                         "%s will be used for determinig %s",
-                        ",".join(ref_data_map[0].keys()),
+                        ", ".join(ref_data_map[0].keys()),
                         folio_property_name,
                     )
                     return ref_data_map
