@@ -41,9 +41,33 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         base_folder="/",
         multi_field_delimiter="^-^",
     )
+    composite_order_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "order_number",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "poNumber",
+                "legacy_field": "order_number",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "vendor", "legacy_field": "vendor", "value": "", "description": ""},
+            {"folio_field": "orderType", "legacy_field": "type", "value": "", "description": ""},
+            {
+                "folio_field": "compositePoLines[0].titleOrPackage",
+                "legacy_field": "TITLE",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
 
     return CompositeOrderMapper(
-        mock_folio_client, composite_order_map, {}, "", "", "", "", "", "", "", lib_config, ""
+        mock_folio_client, lib_config, composite_order_map, {}, "", "", "", "", "", ""
     )
 
 
@@ -80,51 +104,60 @@ def test_fetch_acq_schemas_from_github_happy_path():
 
 
 def test_parse_record_mapping_file(mapper):
-
+    composite_order_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "order_number",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "poNumber",
+                "legacy_field": "order_number",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "vendor", "legacy_field": "vendor", "value": "", "description": ""},
+            {"folio_field": "orderType", "legacy_field": "type", "value": "", "description": ""},
+            {
+                "folio_field": "compositePoLines[0].titleOrPackage",
+                "legacy_field": "TITLE",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
     folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(composite_order_map)
 
     assert folio_keys
 
 
 def test_composite_order_mapping(mapper):
+    data = {"order_number": "o123", "vendor": "EBSCO", "type": "One-Time"}
 
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
-
+    assert composite_order["id"] == "6bf8d907-054d-53ad-9031-7a45887fcafa"
     assert composite_order["poNumber"] == "o123"
     assert composite_order["vendor"] == "EBSCO"
     assert composite_order["orderType"] == "One-Time"
 
 
-data = {"order_number": "o123", "vendor": "EBSCO", "type": "One-Time"}
-
-composite_order_map = {
-    "data": [
-        {
-            "folio_field": "legacyIdentifier",
-            "legacy_field": "order_number",
-            "value": "",
-            "description": "",
-        },
-        {
-            "folio_field": "poNumber",
-            "legacy_field": "order_number",
-            "value": "",
-            "description": "",
-        },
-        {"folio_field": "vendor", "legacy_field": "vendor", "value": "", "description": ""},
-        {"folio_field": "orderType", "legacy_field": "type", "value": "", "description": ""},
-    ]
-}
-
-
-@pytest.mark.skip(reason="Not sure how POLs work. Best as array of objects, or extradata?")
 def test_composite_order_with_one_pol_mapping(mapper):
+    data = {
+        "order_number": "o123",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Once upon a time...",
+    }
     composite_order_with_pol, idx = mapper.do_map(
         data, data["order_number"], FOLIONamespaces.orders
     )
 
     assert composite_order_with_pol["poNumber"] == "o123"
-    assert composite_order_with_pol["compositePoLines[0].titleOrPackage"] == "Once upon a time..."
+    assert (
+        composite_order_with_pol["compositePoLines"][0]["titleOrPackage"] == "Once upon a time..."
+    )
 
 
 po_with_pol_data = {
