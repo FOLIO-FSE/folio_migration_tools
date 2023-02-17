@@ -13,6 +13,10 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class CompositeOrderMapper(MappingFileMapperBase):
@@ -45,10 +49,23 @@ class CompositeOrderMapper(MappingFileMapperBase):
             library_configuration,
         )
         self.organizations_id_map: dict = organizations_id_map
+        self.acquisitions_methods_mapping = RefDataMapping(
+            self.folio_client,
+            "/orders/acquisition-methods",
+            "acquisitionMethods",
+            acquisition_method_map,
+            "value",
+            Blurbs.AcquisitionMethodMapping,
+        )
+        logging.info("Init done")
 
-    def get_prop(self, legacy_order, folio_prop_name, index_or_id):
+    def get_prop(self, legacy_order, folio_prop_name: str, index_or_id):
         mapped_value = self.get_value_from_map(folio_prop_name, legacy_order, index_or_id)
-        logging.info("No refdata mapping. just returning the value for %s", folio_prop_name)
+        if folio_prop_name.endswith(".acquisitionMethod"):
+            mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
+            return mapped_val["folio_id"]
+        else:
+            logging.info("No refdata mapping. just returning the value for %s", folio_prop_name)
         return mapped_value
 
     @staticmethod
