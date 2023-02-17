@@ -47,7 +47,6 @@ class CoursesMapper(MappingFileMapperBase):
             library_configuration,
         )
         self.course_map = course_map
-        self.use_map = True
         if terms_map:
             self.terms_map = RefDataMapping(
                 self.folio_client,
@@ -143,10 +142,6 @@ class CoursesMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         value_tuple = (legacy_item, folio_prop_name, index_or_id)
-
-        # Legacy contstruct
-        if not self.use_map:
-            return legacy_item[folio_prop_name]
 
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
 

@@ -50,7 +50,6 @@ class ItemMapper(MappingFileMapperBase):
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
         self.unique_barcodes: Set[str] = set()
-        self.use_map = True
         self.status_mapping: dict = {}
         if temporary_loan_type_mapping:
             self.temp_loan_type_mapping = RefDataMapping(
@@ -146,10 +145,6 @@ class ItemMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
         value_tuple = (legacy_item, folio_prop_name, index_or_id)
-
-        # Legacy contstruct
-        if not self.use_map:
-            return legacy_item[folio_prop_name]
 
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
 
