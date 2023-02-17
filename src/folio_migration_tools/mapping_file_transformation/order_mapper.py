@@ -13,7 +13,6 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class CompositeOrderMapper(MappingFileMapperBase):
@@ -48,32 +47,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
         self.organizations_id_map: dict = organizations_id_map
 
     def get_prop(self, legacy_order, folio_prop_name, index_or_id):
-        map_entries = list(
-            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
-                folio_prop_name, self.record_map["data"]
-            )
-        )
-        legacy_order_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        return MappingFileMapperBase.get_legacy_value(
-            legacy_order, map_entries[0], self.migration_report
-        )
-        # If there is a value mapped, return that one
-        if len(legacy_order_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            self.migration_report.add(
-                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
-            )
-            return value
-
-        legacy_values = MappingFileMapperBase.get_legacy_vals(legacy_order, legacy_order_keys)
-
-        legacy_value = " ".join(legacy_values).strip()
-
-        if any(legacy_order_keys):
-            return legacy_value
-        else:
-            # edge case
-            return ""
+        mapped_value = self.get_value_from_map(folio_prop_name, legacy_order, index_or_id)
+        logging.info("No refdata mapping. just returning the value for %s", folio_prop_name)
+        return mapped_value
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
