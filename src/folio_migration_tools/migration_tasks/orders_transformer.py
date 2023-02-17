@@ -79,6 +79,7 @@ class OrdersTransformer(MigrationTaskBase):
             self.folio_client,
             self.library_configuration,
             self.orders_map,
+            self.load_id_map(self.folder_structure.instance_id_map_path, True),
             self.load_ref_data_mapping_file(
                 "vendor",
                 self.folder_structure.mapping_files_folder
@@ -166,6 +167,7 @@ class OrdersTransformer(MigrationTaskBase):
                     if idx == 0:
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
+
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.orders
                     )

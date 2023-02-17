@@ -41,6 +41,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         base_folder="/",
         multi_field_delimiter="^-^",
     )
+    instance_id_map = {"1": ["1", "ljdlsakjdlakjsdlkas", "1"]}
     composite_order_map = {
         "data": [
             {
@@ -60,6 +61,12 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
             {
                 "folio_field": "compositePoLines[0].titleOrPackage",
                 "legacy_field": "TITLE",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].instanceId",
+                "legacy_field": "bibnumber",
                 "value": "",
                 "description": "",
             },
@@ -84,6 +91,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         mock_folio_client,
         lib_config,
         composite_order_map,
+        instance_id_map,
         vendor_code_map,
         acg_method_map,
         "",
@@ -127,6 +135,7 @@ def test_fetch_acq_schemas_from_github_happy_path():
 
 
 def test_parse_record_mapping_file(mapper):
+
     composite_order_map = {
         "data": [
             {
@@ -162,7 +171,7 @@ def test_composite_order_mapping(mapper):
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
     assert composite_order["id"] == "6bf8d907-054d-53ad-9031-7a45887fcafa"
     assert composite_order["poNumber"] == "o123"
-    assert composite_order["vendor"] == "837d04b6-d81c-4c49-9efd-2f62515999b3"
+    assert composite_order["vendor"] == "fc54327d-fd60-4f6a-ba37-a4375511b91b"
     assert composite_order["orderType"] == "One-Time"
 
 
@@ -172,6 +181,7 @@ def test_composite_order_with_one_pol_mapping(mapper):
         "vendor": "ebsco",
         "type": "One-Time",
         "TITLE": "Once upon a time...",
+        "bibnumber": "1",
     }
     composite_order_with_pol, idx = mapper.do_map(
         data, data["order_number"], FOLIONamespaces.orders
@@ -182,4 +192,5 @@ def test_composite_order_with_one_pol_mapping(mapper):
     assert (
         composite_order_with_pol["compositePoLines"][0]["titleOrPackage"] == "Once upon a time..."
     )
+    assert composite_order_with_pol["compositePoLines"][0]["instanceId"] == "ljdlsakjdlakjsdlkas"
     assert composite_order_with_pol["compositePoLines"][0]["cost"]["currency"] == "USD"

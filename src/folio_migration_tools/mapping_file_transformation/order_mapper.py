@@ -25,6 +25,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         composite_order_map: dict,
+        instance_id_map: dict,
         vendor_code_map: dict,
         acquisition_method_map,
         payment_status_map,
@@ -48,6 +49,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             FOLIONamespaces.orders,
             library_configuration,
         )
+        self.instance_id_map = instance_id_map
         self.vendor_code_mapping = RefDataMapping(
             self.folio_client,
             "/organizations-storage/organizations",
@@ -72,10 +74,18 @@ class CompositeOrderMapper(MappingFileMapperBase):
             mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
             return mapped_val["folio_id"]
         elif folio_prop_name == "vendor":
-            mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
+            mapped_val = self.vendor_code_mapping.get_ref_data_mapping(legacy_order)
             return mapped_val["folio_id"]
-        else:
-            logging.info("No refdata mapping. just returning the value for %s", folio_prop_name)
+        if folio_prop_name.endswith(".instanceId"):
+            if mapped_value in self.instance_id_map:
+                self.migration_report.add_general_statistics(
+                    "Instance ID mapped from previously migrated bib records"
+                )
+                return self.instance_id_map.get(mapped_value)[1]
+            else:
+                self.migration_report.add_general_statistics(
+                    "Bib id not found in list over migrated bibs."
+                )
         return mapped_value
 
     @staticmethod
@@ -130,13 +140,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
             object_schema = json.loads(req.text)
 
-            # Fetch referenced schemas
-            extended_object_schema = CompositeOrderMapper.build_extended_object(
+            return CompositeOrderMapper.build_extended_object(
                 object_schema, acq_models_path, github_headers
             )
-
-            return extended_object_schema
-
         except requests.exceptions.HTTPError as http_error:
             logging.critical(f"Halting! \t{http_error}")
             sys.exit(2)
