@@ -77,24 +77,13 @@ class OrdersTransformer(MigrationTaskBase):
 
         self.mapper = CompositeOrderMapper(
             self.folio_client,
+            self.library_configuration,
             self.orders_map,
             organizations_id_map,
-            self.load_ref_data_mapping_file(
-                "orderType",
-                self.folder_structure.mapping_files_folder
-                / self.task_config.order_type_map_file_name,
-                self.folio_keys,
-            ),
             self.load_ref_data_mapping_file(
                 "acquisitionMethod",
                 self.folder_structure.mapping_files_folder
                 / self.task_config.acquisition_method_map_file_name,
-                self.folio_keys,
-            ),
-            self.load_ref_data_mapping_file(
-                "orderFormat",
-                self.folder_structure.mapping_files_folder
-                / self.task_config.order_format_map_file_name,
                 self.folio_keys,
             ),
             self.load_ref_data_mapping_file(  # Not required, on POL
@@ -138,7 +127,6 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folio_keys,
                 False,
             ),
-            self.library_configuration,
         )
 
     def list_source_files(self):
@@ -233,7 +221,9 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                migration_report_file, self.mapper.start_datetime
+                "Orders and Orderlines Transformation Report",
+                migration_report_file,
+                self.start_datetime,
             )
 
             Helper.print_mapping_report(
