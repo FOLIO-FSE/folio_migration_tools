@@ -107,6 +107,12 @@ def main():
     except requests.exceptions.ConnectionError:
         print("\nNetwork error. Are you connected to the Internet and the VPN in the right way?")
         sys.exit(1)
+    except requests.exceptions.ConnectionError as connection_error:
+        print(
+            f"\nConnection Error when connecting to {connection_error.request.url}. "
+            "Are you connectet to the Internet? Do you need to update DNS settings?"
+        )
+        sys.exit(1)
     except FileNotFoundError as fnf_error:
         print(f"\n{fnf_error.strerror}: {fnf_error.filename}")
         sys.exit(1)
