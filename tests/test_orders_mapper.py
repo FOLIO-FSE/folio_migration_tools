@@ -63,11 +63,34 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
                 "value": "",
                 "description": "",
             },
+            {
+                "folio_field": "compositePoLines[0].cost.currency",
+                "legacy_field": "",
+                "value": "USD",
+                "description": "",
+            },
         ]
     }
-
+    vendor_code_map = [
+        {"vendor": "ebsco", "folio_code": "EBSCO"},
+        {"vendor": "*", "folio_code": "EBSCO"},
+        {"vendor": "yankee", "folio_code": "GOBI"},
+    ]
+    acg_method_map = [
+        {"vendor": "ebsco", "folio_value": "Purchase"},
+        {"vendor": "*", "folio_value": "Purchase"},
+    ]
     return CompositeOrderMapper(
-        mock_folio_client, lib_config, composite_order_map, {}, "", "", "", "", "", ""
+        mock_folio_client,
+        lib_config,
+        composite_order_map,
+        vendor_code_map,
+        acg_method_map,
+        "",
+        "",
+        "",
+        "",
+        "",
     )
 
 
@@ -134,19 +157,19 @@ def test_parse_record_mapping_file(mapper):
 
 
 def test_composite_order_mapping(mapper):
-    data = {"order_number": "o123", "vendor": "EBSCO", "type": "One-Time"}
+    data = {"order_number": "o123", "vendor": "ebsco", "type": "One-Time"}
 
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
     assert composite_order["id"] == "6bf8d907-054d-53ad-9031-7a45887fcafa"
     assert composite_order["poNumber"] == "o123"
-    assert composite_order["vendor"] == "EBSCO"
+    assert composite_order["vendor"] == "837d04b6-d81c-4c49-9efd-2f62515999b3"
     assert composite_order["orderType"] == "One-Time"
 
 
 def test_composite_order_with_one_pol_mapping(mapper):
     data = {
-        "order_number": "o123",
-        "vendor": "EBSCO",
+        "order_number": "o124",
+        "vendor": "ebsco",
         "type": "One-Time",
         "TITLE": "Once upon a time...",
     }
@@ -154,67 +177,9 @@ def test_composite_order_with_one_pol_mapping(mapper):
         data, data["order_number"], FOLIONamespaces.orders
     )
 
-    assert composite_order_with_pol["poNumber"] == "o123"
+    assert composite_order_with_pol["poNumber"] == "o124"
+
     assert (
         composite_order_with_pol["compositePoLines"][0]["titleOrPackage"] == "Once upon a time..."
     )
-
-
-po_with_pol_data = {
-    "order_number": "o123",
-    "vendor": "EBSCO",
-    "type": "One-Time",
-    "title": "Once upon a time...",
-    "acqmethod": "Purchase",
-    "price": "0",
-    "format": "Physical",
-}
-
-po_with_pol_map = {
-    "data": [
-        {
-            "folio_field": "legacyIdentifier",
-            "legacy_field": "order_number",
-            "value": "",
-            "description": "",
-        },
-        {
-            "folio_field": "poNumber",
-            "legacy_field": "order_number",
-            "value": "",
-            "description": "",
-        },
-        {"folio_field": "vendor", "legacy_field": "vendor", "value": "", "description": ""},
-        {"folio_field": "orderType", "legacy_field": "type", "value": "", "description": ""},
-        {
-            "folio_field": "compositePoLines[0].titleOrPackage",
-            "legacy_field": "title",
-            "value": "",
-            "description": "",
-        },
-        {
-            "folio_field": "compositePoLines[0].source",
-            "legacy_field": "",
-            "value": "API",
-            "description": "",
-        },
-        {
-            "folio_field": "compositePoLines[0].orderFormat",
-            "legacy_field": "format",
-            "value": "",
-            "description": "",
-        },
-        {
-            "folio_field": "compositePoLines[0].acquisitionMethod",
-            "legacy_field": "acqmethod",
-            "value": "",
-            "description": "",
-        },
-        {
-            "folio_field": "compositePoLines[0].cost",
-            "legacy_field": "price",
-            "value": "",
-            "description": "",
-        },
-    ]
-}
+    assert composite_order_with_pol["compositePoLines"][0]["cost"]["currency"] == "USD"

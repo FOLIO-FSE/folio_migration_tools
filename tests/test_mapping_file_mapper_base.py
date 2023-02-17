@@ -3736,3 +3736,128 @@ def test_get_legacy_value_from_map_one_value(mocked_folio_client):
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
     res = mapper.get_value_from_map("title", legacy_object, "")
     assert res == "Alpha Beta"
+
+
+def test_map_array_object_object_string(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "interfaces": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "interfaceCredential": {
+                            "type": "object",
+                            "properties": {
+                                "username": {"type": "string"},
+                                "password": {"type": "string"},
+                            },
+                        },
+                    },
+                },
+            }
+        },
+    }
+    record = {
+        "id": "ic1",
+        "interface_name": "FOLIO",
+        "interface_uri": "www",
+        "interface_username": "MyUsername",
+        "interface_password": "MyPassword",
+    }
+    org_map = {
+        "data": [
+            {
+                "folio_field": "interfaces[0].interfaceCredential.password",
+                "legacy_field": "interface_password",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "interface_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].uri",
+                "legacy_field": "interface_uri",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].interfaceCredential.username",
+                "legacy_field": "interface_username",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    interface = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert folio_rec["interfaces"][0]["interfaceCredential"]["username"] == "MyUsername"
+
+
+def test_map_array_object_subproperty_string(mocked_folio_client: FolioClient):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "interfaces": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "cost": {
+                            "type": "object",
+                            "properties": {"currency": {"type": "string"}},
+                        },
+                    },
+                },
+            }
+        },
+    }
+
+    record = {"id": "id7", "interface_name": "FOLIO", "interface_type": "Admin", "curr": "USD"}
+    org_map = {
+        "data": [
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "interface_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].cost.currency",
+                "legacy_field": "curr",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    interface = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert folio_rec["interfaces"][0]["name"] == "FOLIO"
+    assert folio_rec["interfaces"][0]["cost"]["currency"] == "USD"

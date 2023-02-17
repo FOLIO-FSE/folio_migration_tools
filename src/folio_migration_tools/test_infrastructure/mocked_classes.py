@@ -71,6 +71,18 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
             {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "name": "Consortium"},
             {"id": "fc54327d-fd60-4f6a-ba37-a4375511b91b", "name": "Unspecified"},
         ]
+    elif ref_data_path == "/organizations-storage/organizations":
+        yield from [
+            {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "code": "GOBI"},
+            {"id": "fc54327d-fd60-4f6a-ba37-a4375511b91b", "code": "EBSCO"},
+        ]
+
+    elif ref_data_path == "/orders/acquisition-methods":
+        yield from [
+            {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "value": "Purchase"},
+            {"id": "fc54327d-fd60-4f6a-ba37-a4375511b91b", "value": "Theft"},
+        ]
+
     elif ref_data_path == "/groups":
         yield from [
             {

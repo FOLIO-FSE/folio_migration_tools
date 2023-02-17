@@ -255,7 +255,7 @@ class MappingFileMapperBase(MapperBase):
     ):
         if skip_property(schema_property_name, schema_property):
             pass
-        elif schema_property["type"] == "object":
+        elif schema_property.get("type", "") == "object":
             if "properties" in schema_property:
                 self.map_object_props(
                     legacy_object,
@@ -265,9 +265,9 @@ class MappingFileMapperBase(MapperBase):
                     index_or_id,
                     1,
                 )
-        elif schema_property["type"] == "array":
+        elif schema_property.get("type", "") == "array":
             try:
-                if schema_property["items"]["type"] == "object":
+                if schema_property["items"].get("type", "") == "object":
                     self.map_objects_array_props(
                         legacy_object,
                         schema_property_name,
@@ -276,7 +276,7 @@ class MappingFileMapperBase(MapperBase):
                         index_or_id,
                         schema_property["items"].get("required", []),
                     )
-                elif schema_property["items"]["type"] == "string":
+                elif schema_property["items"].get("type", "") == "string":
                     self.map_string_array_props(
                         legacy_object,
                         schema_property_name,
@@ -399,7 +399,7 @@ class MappingFileMapperBase(MapperBase):
                     level + 1,
                 )
             elif (
-                child_property["type"] == "array"
+                child_property.get("type", "") == "array"
                 and child_property.get("items", {}).get("type", "") == "object"
                 and child_property.get("items", {}).get("properties", "")
             ):
@@ -412,7 +412,7 @@ class MappingFileMapperBase(MapperBase):
                     [],
                 )
             elif (
-                child_property["type"] == "array"
+                child_property.get("type", "") == "array"
                 and child_property.get("items", {}).get("type", "") == "string"
             ):
                 self.map_string_array_props(
@@ -421,9 +421,16 @@ class MappingFileMapperBase(MapperBase):
                     folio_object,
                     index_or_id,
                 )
+            elif child_property.get("type", "") == "string":
+
+                path = sub_prop_path.split("].")[-1]
+                if p := self.get_prop(legacy_object, sub_prop_path, index_or_id):
+                    set_deep(folio_object, f"{path}", p)
+                # temp_object[child_property_name] = p
             elif p := self.get_prop(legacy_object, sub_prop_path, index_or_id):
                 set_deep(folio_object, sub_prop_path, p)
-                # temp_object[child_property_name] = p
+            else:
+                logging.info("Edge")
         if temp_object:
             set_deep(folio_object, schema_property_name, temp_object)
             # folio_object[schema_property_name] = temp_object
@@ -498,6 +505,12 @@ class MappingFileMapperBase(MapperBase):
                                 res,
                                 self.library_configuration.multi_field_delimiter,
                             )
+
+                    elif sub_prop.get("type", "") == "object" and "properties" in sub_prop:
+                        logging.info("Weird")
+                        self.map_object_props(
+                            legacy_object, prop_path, sub_prop, temp_object, index_or_id, 0
+                        )
             i = i + 1
 
             if temp_object != {} and all(
