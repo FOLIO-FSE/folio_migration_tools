@@ -6,12 +6,14 @@ from unittest.mock import Mock
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
 
@@ -45,7 +47,7 @@ class MyTestableFileMapper(MappingFileMapperBase):
         return " ".join(legacy_values).strip()
 
 
-def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client):
+def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -161,7 +163,9 @@ def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client):
     assert folio_rec["id"] == "ddafc006-e8ce-5f12-b0eb-9bb543509b78"
 
 
-def test_validate_required_properties_sub_pro_missing_uri_and_more(mocked_folio_client):
+def test_validate_required_properties_sub_pro_missing_uri_and_more(
+    mocked_folio_client: FolioClient,
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -293,7 +297,7 @@ def test_validate_required_properties_sub_pro_missing_uri_and_more(mocked_folio_
     assert len(folio_rec["electronicAccess"]) == 1
 
 
-def test_validate_required_properties_item_notes(mocked_folio_client):
+def test_validate_required_properties_item_notes(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -389,7 +393,7 @@ def test_validate_required_properties_item_notes(mocked_folio_client):
     assert len(folio_rec["notes"]) == 1
 
 
-def test_validate_required_properties_item_notes_unmapped(mocked_folio_client):
+def test_validate_required_properties_item_notes_unmapped(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -485,7 +489,7 @@ def test_validate_required_properties_item_notes_unmapped(mocked_folio_client):
     assert len(folio_rec["notes"]) == 1
 
 
-def test_validate_required_properties_item_notes_unmapped_2(mocked_folio_client):
+def test_validate_required_properties_item_notes_unmapped_2(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -581,7 +585,7 @@ def test_validate_required_properties_item_notes_unmapped_2(mocked_folio_client)
     assert len(folio_rec["notes"]) == 1
 
 
-def test_validate_required_properties_obj(mocked_folio_client):
+def test_validate_required_properties_obj(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -689,7 +693,9 @@ def test_validate_required_properties_obj(mocked_folio_client):
     assert folio_rec["electronicAccessObj"]["uri"] == "some_link"
 
 
-def test_validate_required_properties_item_notes_split_on_delimiter_notes(mocked_folio_client):
+def test_validate_required_properties_item_notes_split_on_delimiter_notes(
+    mocked_folio_client: FolioClient,
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -982,7 +988,7 @@ def test_multiple_repeated_split_on_delimiter_electronic_access(mocked_folio_cli
 
 
 def test_validate_required_properties_item_notes_split_on_delimiter_plain_object(
-    mocked_folio_client,
+    mocked_folio_client: FolioClient,
 ):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -1036,7 +1042,7 @@ def test_validate_required_properties_item_notes_split_on_delimiter_plain_object
     assert folio_rec["uber_prop"]["prop2"] == "Some value"
 
 
-def test_concatenate_fields_if_mapped_multiple_times(mocked_folio_client):
+def test_concatenate_fields_if_mapped_multiple_times(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1087,7 +1093,7 @@ def test_concatenate_fields_if_mapped_multiple_times(mocked_folio_client):
 
 
 def test_concatenate_fields_if_mapped_multiple_times_and_data_is_in_random_order(
-    mocked_folio_client,
+    mocked_folio_client: FolioClient,
 ):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -1138,7 +1144,7 @@ def test_concatenate_fields_if_mapped_multiple_times_and_data_is_in_random_order
         assert folio_rec["uber_prop"]["prop1"] == "my note my second note"
 
 
-def test_zip3(mocked_folio_client):
+def test_zip3(mocked_folio_client: FolioClient):
     o = {"p1": "a<delimiter>b", "p2": "c<delimiter>d<delimiter>e", "p3": "same for both"}
     d = "<delimiter>"
     l = ["p1", "p2"]
@@ -1148,7 +1154,7 @@ def test_zip3(mocked_folio_client):
     assert len(s) == 2
 
 
-def test_do_not_split_string_prop(mocked_folio_client):
+def test_do_not_split_string_prop(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1185,7 +1191,7 @@ def test_do_not_split_string_prop(mocked_folio_client):
     assert folio_rec["formerId"] == "id2<delimiter>id3"
 
 
-def test_split_former_ids(mocked_folio_client):
+def test_split_former_ids(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1235,7 +1241,7 @@ def test_split_former_ids(mocked_folio_client):
     assert "id3" in folio_rec["formerIds"]
 
 
-def test_validate_no_leakage_between_properties(mocked_folio_client):
+def test_validate_no_leakage_between_properties(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1367,7 +1373,7 @@ def test__get_delimited_file_reader():
                 )
 
 
-def test_map_string_first_level(mocked_folio_client):
+def test_map_string_first_level(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1402,7 +1408,7 @@ def test_map_string_first_level(mocked_folio_client):
     assert folio_rec["title"] == "actual value"
 
 
-def test_map_string_array_first_level(mocked_folio_client):
+def test_map_string_array_first_level(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1439,7 +1445,7 @@ def test_map_string_array_first_level(mocked_folio_client):
     assert folio_rec["stringArray"][0] == "actual value"
 
 
-def test_map_string_second_level(mocked_folio_client):
+def test_map_string_second_level(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1483,7 +1489,7 @@ def test_map_string_second_level(mocked_folio_client):
         assert folio_rec["firstLevel"]["secondLevel"] == "my note"
 
 
-def test_map_string_array_second_level(mocked_folio_client):
+def test_map_string_array_second_level(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1528,7 +1534,7 @@ def test_map_string_array_second_level(mocked_folio_client):
     assert folio_rec["firstLevel"]["stringArray"] == ["my note"]
 
 
-def test_map_string_array_second_level_multiple_values(mocked_folio_client):
+def test_map_string_array_second_level_multiple_values(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1579,7 +1585,9 @@ def test_map_string_array_second_level_multiple_values(mocked_folio_client):
     assert folio_rec["firstLevel"]["stringArray"] == ["my note", "my note 2"]
 
 
-def test_map_string_array_second_level_multiple_additional_split_values(mocked_folio_client):
+def test_map_string_array_second_level_multiple_additional_split_values(
+    mocked_folio_client: FolioClient,
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1630,7 +1638,7 @@ def test_map_string_array_second_level_multiple_additional_split_values(mocked_f
     assert folio_rec["firstLevel"]["stringArray"] == ["my note", "my note 2", "my note 3"]
 
 
-def test_map_string_array_second_level_split_values(mocked_folio_client):
+def test_map_string_array_second_level_split_values(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1681,7 +1689,7 @@ def test_map_string_array_second_level_split_values(mocked_folio_client):
     assert folio_rec["firstLevel"]["stringArray"] == ["my note 2", "my note 3"]
 
 
-def test_map_array_of_objects_with_string_array(mocked_folio_client):
+def test_map_array_of_objects_with_string_array(mocked_folio_client: FolioClient):
     schema = {
         "type": "object",
         "required": [],
@@ -1731,7 +1739,7 @@ def test_map_array_of_objects_with_string_array(mocked_folio_client):
     assert folio_rec["firstLevel"][0]["secondLevel"] == ["my note", "my note 2"]
 
 
-def test_map_array_of_objects_with_string_array_delimiter(mocked_folio_client):
+def test_map_array_of_objects_with_string_array_delimiter(mocked_folio_client: FolioClient):
     schema = {
         "type": "object",
         "required": [],
@@ -1781,7 +1789,7 @@ def test_map_array_of_objects_with_string_array_delimiter(mocked_folio_client):
     assert folio_rec["firstLevel"][0]["secondLevel"] == ["my note", "my note 2", "my note 3"]
 
 
-def test_map_string_third_level(mocked_folio_client):
+def test_map_string_third_level(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1828,7 +1836,7 @@ def test_map_string_third_level(mocked_folio_client):
     )  # No mapping on third level yet...
 
 
-def test_map_string_and_array_of_strings_fourth_level(mocked_folio_client):
+def test_map_string_and_array_of_strings_fourth_level(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1898,7 +1906,7 @@ def test_map_string_and_array_of_strings_fourth_level(mocked_folio_client):
     ]  # No mapping on third level yet...
 
 
-def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
+def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1991,7 +1999,7 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client):
     ]  # No mapping on third level yet...
 
 
-def test_map_enums(mocked_folio_client):
+def test_map_enums(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2223,7 +2231,7 @@ def test_map_enums_empty_required(mocked_folio_client):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
-def test_map_enums_empty_not_required(mocked_folio_client):
+def test_map_empty_not_required_enums(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2568,7 +2576,7 @@ def test_map_enums_invalid_not_required_deeper_level(mocked_folio_client):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
-def test_default_false(mocked_folio_client):
+def test_default_false(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2603,7 +2611,7 @@ def test_default_false(mocked_folio_client):
     assert folio_rec["isVendor"] is False
 
 
-def test_default_false_and_mapped_to_true(mocked_folio_client):
+def test_default_false_and_mapped_to_true(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2644,7 +2652,7 @@ def test_default_false_and_mapped_to_true(mocked_folio_client):
     assert folio_rec["isVendor"] is True
 
 
-def test_default_false_and_value_set_to_true(mocked_folio_client):
+def test_default_false_and_value_set_to_true(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2685,7 +2693,7 @@ def test_default_false_and_value_set_to_true(mocked_folio_client):
     assert folio_rec["isVendor"] is True
 
 
-def test_default_no_defaults_on_subprops(mocked_folio_client):
+def test_default_no_defaults_on_subprops(mocked_folio_client: FolioClient):
     """Test that verifies that we do not add default values to sub-properties (yet), since this
     could trigger half-baked sub-objects with no actual content.
 
@@ -2741,7 +2749,7 @@ def test_default_no_defaults_on_subprops(mocked_folio_client):
     assert "interfaces" not in folio_rec
 
 
-def test_default_true(mocked_folio_client):
+def test_default_true(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2776,7 +2784,76 @@ def test_default_true(mocked_folio_client):
     assert folio_rec["isVendor"] is True
 
 
-def test_map_array_object_array_object_string(mocked_folio_client):
+def test_map_wrong_not_required_deeper_level_enums(mocked_folio_client: FolioClient):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "description": "The unique id of this interface",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "name": {"description": "The name of this interface", "type": "string"},
+                        "deliveryMethod": {
+                            "description": "The delivery method for this interface",
+                            "type": "string",
+                            "enum": ["Online", "FTP", "Email", "Other"],
+                        },
+                    },
+                    "additionalProperties": True,
+                },
+            },
+        },
+        "additionalProperties": False,
+        "required": [],
+    }
+    record = {"id": "id1", "delivery_method": "Offline"}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].deliveryMethod",
+                "legacy_field": "delivery_method",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "",
+                "value": "apa",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    with pytest.raises(
+        TransformationRecordFailedError, match=r".*Forbidden value for enum property.*"
+    ):
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+
+def test_map_array_object_array_object_string(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2858,7 +2935,7 @@ def test_map_array_object_array_object_string(mocked_folio_client):
 
 
 def test_do_not_overwrite_array_object_array_object_string_with_array_object_string(
-    mocked_folio_client,
+    mocked_folio_client: FolioClient,
 ):
     # TODO Make test succeed
 
@@ -2954,7 +3031,7 @@ def test_do_not_overwrite_array_object_array_object_string_with_array_object_str
 
 
 def test_do_not_overwrite_array_object_array_object_string_with_array_object_string2(
-    mocked_folio_client,
+    mocked_folio_client: FolioClient,
 ):
     # TODO Make test succeed
 
@@ -3086,7 +3163,7 @@ def test_do_not_overwrite_array_object_array_object_string_with_array_object_str
     assert folio_rec["contacts"][0]["addresses"][1]["city"] == "Fritsla"
 
 
-def test_map_array_object_array_string_on_edge(mocked_folio_client):
+def test_map_array_object_array_string_on_edge(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3158,7 +3235,7 @@ def test_map_array_object_array_string_on_edge(mocked_folio_client):
     assert folio_rec["contacts"][1]["streets"][0] == "Yet another street"
 
 
-def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client):
+def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3217,7 +3294,7 @@ def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client):
 
 
 # TODO Make this run successfully.
-def test_map_array_object_array_object_array_string(mocked_folio_client):
+def test_map_array_object_array_object_array_string(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3284,14 +3361,14 @@ def test_map_array_object_array_object_array_string(mocked_folio_client):
     assert folio_rec["contacts"][0]["addresses"][0]["categories"] == ["support", "sales"]
 
 
-def test_set_default(mocked_folio_client):
+def test_set_default(mocked_folio_client: FolioClient):
     d1 = {"level1": {"level2": {}}}
     d1["level1"]["level2"] = {"apa": 1}
     d1["level1"]["level2"].setdefault("papa", 2)
     assert d1["level1"]["level2"] == {"apa": 1, "papa": 2}
 
 
-def test_get_prop_multiple_legacy_identifiers_only_one(mocked_folio_client):
+def test_get_prop_multiple_legacy_identifiers_only_one(mocked_folio_client: FolioClient):
     record_map = {
         "data": [
             {
@@ -3326,7 +3403,7 @@ def test_get_prop_multiple_legacy_identifiers_only_one(mocked_folio_client):
     assert folio_rec["id"] == "6ba39416-de70-591e-a45f-62c9ca4e2d98"
 
 
-def test_get_prop_multiple_legacy_identifiers(mocked_folio_client):
+def test_get_prop_multiple_legacy_identifiers(mocked_folio_client: FolioClient):
     record_map = {
         "data": [
             {
@@ -3367,7 +3444,7 @@ def test_get_prop_multiple_legacy_identifiers(mocked_folio_client):
     assert folio_rec["id"] == "d82d9010-6348-5225-a1e7-c3b52924e3e7"
 
 
-def test_value_mapped_enum_properties(mocked_folio_client):
+def test_value_mapped_enum_properties(mocked_folio_client: FolioClient):
     record_map = {
         "data": [
             {
@@ -3402,7 +3479,7 @@ def test_value_mapped_enum_properties(mocked_folio_client):
     assert folio_rec["my_enum"] == "014/EAN"
 
 
-def test_value_mapped_non_enum_properties(mocked_folio_client):
+def test_value_mapped_non_enum_properties(mocked_folio_client: FolioClient):
     record_map = {
         "data": [
             {
@@ -3436,7 +3513,7 @@ def test_value_mapped_non_enum_properties(mocked_folio_client):
     assert folio_rec["my_enum"] == "014/EAN"
 
 
-def test_value_not_mapped_mapped_non_enum_properties(mocked_folio_client):
+def test_value_not_mapped_mapped_non_enum_properties(mocked_folio_client: FolioClient):
     record_map = {
         "data": [
             {
@@ -3470,7 +3547,7 @@ def test_value_not_mapped_mapped_non_enum_properties(mocked_folio_client):
     assert folio_rec["my_enum"] == "014/EAN"
 
 
-def test_map_array_object_array_string(mocked_folio_client):
+def test_map_array_object_array_string(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3519,3 +3596,143 @@ def test_map_array_object_array_string(mocked_folio_client):
     folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["interfaces"][0]["type"] == ["Admin"]
+
+
+def test_get_legacy_value_mapped_value():
+    legacy_object = {"title": "Leif"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+    }
+
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "Leif"
+
+
+def test_get_legacy_value_value():
+    legacy_object = {"title": "Leif"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "Torsten",
+        "description": "",
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "Torsten"
+
+
+def test_get_legacy_value_replace_value():
+    legacy_object = {"title": "0"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "rules": {"replaceValues": {"0": "Graduate", "a": "Alumni"}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "Graduate"
+
+
+def test_get_legacy_value_regex():
+    legacy_object = {"title": "leif@leifochbilly.se"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "rules": {"regexGetFirstMatchOrEmpty": "(.*)@.*"},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "leif"
+
+
+def test_get_legacy_value_fallback_field():
+    legacy_object = {"title": "", "alternative_title": "billy@leifochbilly.se"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "fallback_legacy_field": "alternative_title",
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "billy@leifochbilly.se"
+
+
+def test_get_legacy_value_fallback_value():
+    legacy_object = {"title": "", "alternative_title": ""}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "fallback_legacy_field": "alternative_title",
+        "fallback_value": "info@leifochbilly.se",
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "info@leifochbilly.se"
+
+
+def test_get_legacy_value_from_map(mocked_folio_client):
+    legacy_object = {"id": "1", "title": "Alpha", "alternative_title": "Omega"}
+    schema = {}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "title", "legacy_field": "title", "value": "", "description": ""},
+            {
+                "folio_field": "title",
+                "legacy_field": "alternative_title",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    res = mapper.get_value_from_map("title", legacy_object, "")
+    assert res == "Alpha Omega"
+
+
+def test_get_legacy_value_from_map_one_value(mocked_folio_client):
+    legacy_object = {"id": "1", "title": "Alpha", "alternative_title": "Omega"}
+    schema = {}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "title", "legacy_field": "title", "value": "", "description": ""},
+            {
+                "folio_field": "title",
+                "legacy_field": "alternative_title",
+                "value": "Beta",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    res = mapper.get_value_from_map("title", legacy_object, "")
+    assert res == "Alpha Beta"

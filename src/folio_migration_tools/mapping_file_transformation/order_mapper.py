@@ -50,9 +50,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
     def get_prop(self, legacy_order, folio_prop_name, index_or_id):
         if not self.use_map:
             return legacy_order[folio_prop_name]
-
+        map_entries = list(
+            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
+                folio_prop_name, self.record_map["data"]
+            )
+        )
         legacy_order_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-
+        return MappingFileMapperBase.get_legacy_value(
+            legacy_order, map_entries[0], self.migration_report
+        )
         # If there is a value mapped, return that one
         if len(legacy_order_keys) == 1 and folio_prop_name in self.mapped_from_values:
             value = self.mapped_from_values.get(folio_prop_name, "")

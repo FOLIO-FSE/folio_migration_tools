@@ -299,6 +299,29 @@ class MappingFileMapperBase(MapperBase):
                 legacy_object, schema_property_name, folio_object, index_or_id, schema_property
             )
 
+    def get_value_from_map(
+        self,
+        folio_prop_name: str,
+        legacy_object: dict,
+        index_or_id: str = "",
+    ):
+        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+        map_entries = list(
+            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
+                folio_prop_name, self.record_map["data"]
+            )
+        )
+        if folio_prop_name in self.mapped_from_values and len(legacy_item_keys) == 1:
+            return self.mapped_from_values.get(folio_prop_name, "")
+        if len(map_entries) > 1:
+            self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
+        return " ".join(
+            MappingFileMapperBase.get_legacy_value(
+                legacy_object, map_entry, self.migration_report, index_or_id
+            )
+            for map_entry in map_entries
+        ).strip()
+
     @staticmethod
     def get_legacy_value(
         legacy_object: dict,
@@ -306,6 +329,8 @@ class MappingFileMapperBase(MapperBase):
         migration_report: MigrationReport,
         index_or_id: str = "",
     ):
+        if mapping_file_entry.get("value", ""):
+            return mapping_file_entry.get("value")
         value = legacy_object.get(mapping_file_entry["legacy_field"], "").strip()
         if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
             if replaced_val := mapping_file_entry["rules"]["replaceValues"].get(value, ""):
