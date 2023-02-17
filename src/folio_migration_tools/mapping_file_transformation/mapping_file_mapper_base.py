@@ -429,8 +429,6 @@ class MappingFileMapperBase(MapperBase):
                 # temp_object[child_property_name] = p
             elif p := self.get_prop(legacy_object, sub_prop_path, index_or_id):
                 set_deep(folio_object, sub_prop_path, p)
-            else:
-                logging.info("Edge")
         if temp_object:
             set_deep(folio_object, schema_property_name, temp_object)
             # folio_object[schema_property_name] = temp_object
@@ -507,7 +505,6 @@ class MappingFileMapperBase(MapperBase):
                             )
 
                     elif sub_prop.get("type", "") == "object" and "properties" in sub_prop:
-                        logging.info("Weird")
                         self.map_object_props(
                             legacy_object, prop_path, sub_prop, temp_object, index_or_id, 0
                         )
