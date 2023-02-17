@@ -36,6 +36,7 @@ class OrdersTransformer(MigrationTaskBase):
         files: List[FileDefinition]
         orders_mapping_file_name: str
         order_type_map_file_name: str
+        organizations_code_map_file_name: str
         acquisition_method_map_file_name: str
         order_format_map_file_name: str
         payment_status_map_file_name: Optional[str] = ""
@@ -67,19 +68,23 @@ class OrdersTransformer(MigrationTaskBase):
             self.folder_structure.mapping_files_folder / self.task_config.orders_mapping_file_name
         )
         self.results_path = self.folder_structure.created_objects_path
-        self.failed_files: List[str] = list()
+        self.failed_files: List[str] = []
 
         self.folio_keys = []
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.orders_map
         )
-        organizations_id_map = self.load_id_map(self.folder_structure.organizations_id_map_path)
 
         self.mapper = CompositeOrderMapper(
             self.folio_client,
             self.library_configuration,
             self.orders_map,
-            organizations_id_map,
+            self.load_ref_data_mapping_file(
+                "vendor",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.organizations_code_map_file_name,
+                self.folio_keys,
+            ),
             self.load_ref_data_mapping_file(
                 "acquisitionMethod",
                 self.folder_structure.mapping_files_folder

@@ -25,7 +25,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         composite_order_map: dict,
-        organizations_id_map: dict,
+        vendor_code_map: dict,
         acquisition_method_map,
         payment_status_map,
         receipt_status_map,
@@ -48,7 +48,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
             FOLIONamespaces.orders,
             library_configuration,
         )
-        self.organizations_id_map: dict = organizations_id_map
+        self.vendor_code_mapping = RefDataMapping(
+            self.folio_client,
+            "/organizations-storage/organizations",
+            "organizations",
+            vendor_code_map,
+            "code",
+            Blurbs.AcquisitionMethodMapping,
+        )
         self.acquisitions_methods_mapping = RefDataMapping(
             self.folio_client,
             "/orders/acquisition-methods",
@@ -62,6 +69,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id):
         mapped_value = self.get_value_from_map(folio_prop_name, legacy_order, index_or_id)
         if folio_prop_name.endswith(".acquisitionMethod"):
+            mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
+            return mapped_val["folio_id"]
+        elif folio_prop_name == "vendor":
             mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
             return mapped_val["folio_id"]
         else:
