@@ -48,8 +48,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
         self.organizations_id_map: dict = organizations_id_map
 
     def get_prop(self, legacy_order, folio_prop_name, index_or_id):
-        if not self.use_map:
-            return legacy_order[folio_prop_name]
         map_entries = list(
             MappingFileMapperBase.get_map_entries_by_folio_prop_name(
                 folio_prop_name, self.record_map["data"]

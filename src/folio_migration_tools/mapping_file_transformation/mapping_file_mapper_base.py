@@ -48,7 +48,6 @@ class MappingFileMapperBase(MapperBase):
         self.unique_record_ids: Set[str] = set()
 
         self.total_records = 0
-        self.use_map = True  # Legacy
         self.record_map = record_map
         self.ref_data_dicts: Dict = {}
         self.empty_vals = empty_vals
@@ -656,8 +655,6 @@ class MappingFileMapperBase(MapperBase):
             raise exception from exception
 
     def has_property(self, legacy_object, folio_prop_name: str):
-        if not self.use_map:
-            return folio_prop_name in legacy_object
 
         legacy_keys = self.field_map.get(folio_prop_name, [])
         return (
@@ -667,9 +664,6 @@ class MappingFileMapperBase(MapperBase):
         )
 
     def has_basic_property(self, legacy_object, folio_prop_name):
-        if not self.use_map:
-            return folio_prop_name in legacy_object
-
         if folio_prop_name not in self.folio_keys:
             return False
         if folio_prop_name in self.mapped_from_values:
@@ -695,8 +689,6 @@ class MappingFileMapperBase(MapperBase):
         )
 
     def legacy_basic_property(self, folio_prop):
-        if not self.use_map:
-            return folio_prop
         if folio_prop not in self.folio_keys:
             return ""
         return next(

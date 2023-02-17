@@ -44,8 +44,6 @@ class OrganizationMapper(MappingFileMapperBase):
             library_configuration,
         )
 
-        self.use_map = True
-
         # Set up reference data maps
         self.set_up_reference_data_mapping(
             organization_types_map,
@@ -61,9 +59,6 @@ class OrganizationMapper(MappingFileMapperBase):
             index_or_id,
             folio_prop_name,
         )
-
-        if not self.use_map:
-            return legacy_organization[folio_prop_name]
 
         legacy_organization_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
 

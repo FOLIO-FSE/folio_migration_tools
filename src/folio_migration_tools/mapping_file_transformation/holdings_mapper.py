@@ -56,10 +56,6 @@ class HoldingsMapper(MappingFileMapperBase):
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        # Legacy contstruct
-        if not self.use_map:
-            return legacy_item[folio_prop_name]
-
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
 
         # IF there is a value mapped, return that one
