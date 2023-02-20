@@ -19,7 +19,6 @@ from folioclient import FolioClient
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
@@ -476,7 +475,7 @@ class MappingFileMapperBase(MapperBase):
                                 self.library_configuration.multi_field_delimiter,
                             )
             i = i + 1
-            
+
             if temp_object != {} and all(
                 temp_object.get(r) or (isinstance(temp_object.get(r), bool)) for r in required
             ):
