@@ -490,7 +490,10 @@ class MappingFileMapperBase(MapperBase):
                 else:
                     resulting_array.append(temp_object)
 
-            elif any((v for k, v in temp_object.items() if not self.uuid_check(v))):
+            elif any(
+                (v for k, v in temp_object.items() if not self.is_uuid(v))
+                and not isinstance(v, bool)
+            ):
                 self.migration_report.add(
                     Blurbs.IncompleteSubPropertyRemoved,
                     f"{prop_name}.{sub_prop}",
@@ -727,7 +730,15 @@ class MappingFileMapperBase(MapperBase):
                 mapped_value,
             )
 
-    def uuid_check(self, value):
+    def is_uuid(self, value):
+        """ Returns True if the value is a UUID, and False if it is not.
+
+        Args:
+            value (_type_): a value that may or may not be a UUID
+
+        Returns:
+            bool: True/False
+        """
         try:
             uuid.UUID(str(value))
         except ValueError:
