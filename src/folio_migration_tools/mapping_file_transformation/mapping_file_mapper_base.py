@@ -476,6 +476,7 @@ class MappingFileMapperBase(MapperBase):
                                 self.library_configuration.multi_field_delimiter,
                             )
             i = i + 1
+            
             if temp_object != {} and all(
                 temp_object.get(r) or (isinstance(temp_object.get(r), bool)) for r in required
             ):
@@ -491,8 +492,11 @@ class MappingFileMapperBase(MapperBase):
                     resulting_array.append(temp_object)
 
             elif any(
-                (v for k, v in temp_object.items() if not self.is_uuid(v))
-                and not isinstance(v, bool)
+                (
+                    v
+                    for k, v in temp_object.items()
+                    if not self.is_uuid(v) and not isinstance(v, bool)
+                )
             ):
                 self.migration_report.add(
                     Blurbs.IncompleteSubPropertyRemoved,
@@ -731,7 +735,7 @@ class MappingFileMapperBase(MapperBase):
             )
 
     def is_uuid(self, value):
-        """ Returns True if the value is a UUID, and False if it is not.
+        """Returns True if the value is a UUID, and False if it is not.
 
         Args:
             value (_type_): a value that may or may not be a UUID
