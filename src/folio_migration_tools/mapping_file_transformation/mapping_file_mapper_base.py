@@ -476,12 +476,8 @@ class MappingFileMapperBase(MapperBase):
                                 self.library_configuration.multi_field_delimiter,
                             )
             i = i + 1
-            if (
-                temp_object != {}
-                and all(
-                    (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
-                )
-                and all(r in temp_object for r in required)
+            if temp_object != {} and all(
+                temp_object.get(r) or (isinstance(temp_object.get(r), bool)) for r in required
             ):
                 if any(multi_field_props):
                     resulting_array.extend(
@@ -495,12 +491,16 @@ class MappingFileMapperBase(MapperBase):
                     resulting_array.append(temp_object)
 
             elif any((v for k, v in temp_object.items() if not self.uuid_check(v))):
-                Helper.log_data_issue(
-                    f"{prop_name}",
-                    f"Sub-property {sub_prop} removed as it is missing required fields:"
-                    f"{required}",
-                    temp_object,
+                self.migration_report.add(
+                    Blurbs.IncompleteSubPropertyRemoved,
+                    f"{prop_name}.{sub_prop}",
                 )
+                # Helper.log_data_issue(
+                #     f"{prop_name}",
+                #     f"Sub-property {sub_prop} removed as it is missing required fields:"
+                #     f"{required}",
+                #     temp_object,
+                # )
 
         if any(resulting_array):
             set_deep2(folio_object, prop_name, resulting_array)
