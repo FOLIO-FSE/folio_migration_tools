@@ -13,6 +13,7 @@ from folio_migration_tools.migration_tasks.organization_transformer import (
 from folio_migration_tools.migration_tasks.organization_transformer import (
     OrganizationTransformer,
 )
+from folio_migration_tools.library_configuration import LibraryConfiguration
 
 
 def test_get_object_type():
@@ -21,38 +22,6 @@ def test_get_object_type():
 
 def test_subclass_inheritance():
     assert issubclass(OrganizationTransformer, MigrationTaskBase)
-
-
-# Organizations -- Post-transformation cleanup
-def test_remove_organization_types_pre_morning_glory():
-    rec = {
-        "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
-        "name": "Academic International Press",
-        "organizationTypes": ["fc54327d-fd60-4f6a-ba37-a4375511b91b"],
-    }
-
-    clean_org_lotus = OrganizationTransformer.clean_org_type_pre_morning_glory(
-        OrganizationTransformer, rec, "lotus"
-    )
-    assert clean_org_lotus == {
-        "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
-        "name": "Academic International Press",
-    }
-
-    rec = {
-        "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
-        "name": "Academic International Press",
-        "organizationTypes": ["fc54327d-fd60-4f6a-ba37-a4375511b91b"],
-    }
-
-    clean_org_morning_glory = OrganizationTransformer.clean_org_type_pre_morning_glory(
-        OrganizationTransformer, rec, "morning_glory"
-    )
-    assert clean_org_morning_glory == {
-        "id": "c15aabf7-8a4a-5a6c-8c44-2a51f17db6a9",
-        "name": "Academic International Press",
-        "organizationTypes": ["fc54327d-fd60-4f6a-ba37-a4375511b91b"],
-    }
 
 
 def test_clean_up_one_address():

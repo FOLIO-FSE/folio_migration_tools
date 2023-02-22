@@ -20,6 +20,10 @@ class Blurbs:
         "Report on how PO-Line creation went, what merge criterias were used, etc",
     )
     AcquisitionMethodMapping = ("Acquisition Method Mapping", "")
+    MalformattedInterfaceUri = (
+        "FOLIO Interface URIs must start with one of the following: 'ftp://', 'sftp://', 'http://', 'https://',"
+        "Interfaces with malformed URIs will not be migrated."
+    )
     FieldMappingDetails = ("Mapping details", "")
     CatalogingAgency = ("Cataloging sources", "")
     Trivia = ("Trivia", "")

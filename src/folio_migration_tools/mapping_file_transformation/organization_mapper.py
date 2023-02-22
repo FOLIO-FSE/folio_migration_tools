@@ -320,11 +320,13 @@ class OrganizationMapper(MappingFileMapperBase):
 
                 elif property_name_level1 == "interfaces":
                     interface_schema = OrganizationMapper.fetch_additional_schema("interface")
+                    interface_schema["required"] = ["name"]
+
+
+                    # Temporarily add the credential object as a subproperty 
                     interface_credential_schema = OrganizationMapper.fetch_additional_schema(
                         "interface_credential"
                     )
-                    
-                    # Temporarily add the credential object as a subproperty 
                     interface_credential_schema["required"] = ["username", "password"]
                     interface_schema["properties"][
                         "interfaceCredential"

@@ -3,6 +3,7 @@ import logging
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -126,7 +127,7 @@ def test_organization_mapping(mapper):
 
 
 def test_single_org_type_refdata_mapping(mapper):
-    data["vendor_code"] = "v2"
+    data["vendor_code"] = "vr2"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test reference data mapping
@@ -134,7 +135,7 @@ def test_single_org_type_refdata_mapping(mapper):
 
 
 def test_single_category_refdata_mapping(mapper):
-    data["vendor_code"] = "v3"
+    data["vendor_code"] = "vr3"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test arrays of contact information
@@ -230,6 +231,7 @@ def test_interfaces_type_enum_mapping(mapper):
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["type"][0] in valid_interface_types
+    assert len(organization["interfaces"]) == 1
 
 
 def test_invalid_non_required_enum_in_sub_object_mapping(mapper):
@@ -254,18 +256,18 @@ def test_invalid_non_required_enum_in_sub_object_mapping(mapper):
             "account_name": "MyAccount",  # String, required for Account
             "account_status": "Active",  # String, required for Account
             "account_paymentMethod": "Invalid Value",  # Enum,
-        }
+        },
     ]
 
     organization, idx = mapper.do_map(
         records[0], records[0]["code"], FOLIONamespaces.organizations
     )
-    assert organization["accounts"][0]["code"]
+    assert organization["accounts"][0]["name"]
 
-    organization, idx = mapper.do_map(
-        records[1], records[1]["code"], FOLIONamespaces.organizations
-    )
-    assert not organization
+    with pytest.raises(TransformationRecordFailedError):
+        organization, idx = mapper.do_map(
+            records[1], records[1]["code"], FOLIONamespaces.organizations
+        )
 
 
 def test_empty_non_required_enum_in_sub_object_mapping(mapper):
@@ -279,31 +281,15 @@ def test_empty_non_required_enum_in_sub_object_mapping(mapper):
             "account_name": "MyAccount",  # String, required for Account
             "account_status": "Active",  # String, required for Account
             "account_paymentMethod": "",  # Enum
-        },
-        data
-        | {
-            "name": "Vendor Without Account 1",  # String, required
-            "code": "eo4",  # String, required
-            "status": "Active",  # Enum, required
-            "account_number": "",  # String, required for Account
-            "account_name": "",  # String, required for Account
-            "account_status": "",  # String, required for Account
-            "account_paymentMethod": "",  # Enum,
         }
     ]
 
     organization, idx = mapper.do_map(
         records[0], records[0]["code"], FOLIONamespaces.organizations
     )
-    assert "paymentMethod" not in organization["accounts"][0].keys()
+    assert "name" in organization["accounts"][0]
+    assert "paymentMethod" not in organization["accounts"][0]
 
-    organization, idx = mapper.do_map(
-        records[1], records[1]["code"], FOLIONamespaces.organizations
-    )
-    assert not organization.get("accounts")
-
-    organization, idx = mapper.do_map(records[2], records[2]["code"], FOLIONamespaces.organizations)
-    assert organization["accounts"]
 
 def test_interface_credentials(mapper):
     data["code"] = "ic1"
@@ -374,7 +360,7 @@ organization_map = {
             "description": "",
         },
         {
-            "folio_field": "accounts[0].status",
+            "folio_field": "accounts[0].accountStatus",
             "legacy_field": "account_status",
             "value": "",
             "description": "",

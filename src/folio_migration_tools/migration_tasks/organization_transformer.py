@@ -10,6 +10,7 @@ from os.path import isfile
 from typing import List
 from typing import Optional
 
+import validators
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -220,61 +221,78 @@ class OrganizationTransformer(MigrationTaskBase):
 
         logging.info("All done!")
 
-    def clean_org(self, folio_rec):
-        self.clean_org_type_pre_morning_glory(folio_rec, self.library_configuration.folio_release)
-        self.clean_addresses(folio_rec)
+    def clean_org(self, record):
+        if record.get("addresses"):
+            self.clean_addresses(record)
+        if record.get("interfaces"):
+            self.validate_url(record)
 
-        return folio_rec
+        return record
 
-    def clean_org_type_pre_morning_glory(self, folio_rec, folio_release):
-        # Remove the organizationTypes for older releases
-        if folio_release in ["lotus"]:
-            if folio_rec.get("organizationTypes"):
-                del folio_rec["organizationTypes"]
-        return folio_rec
+    def clean_addresses(self, record):
+        addresses = record.get("addresses", [])
+        primary_address_exists = False
+        empty_addresses = []
 
-    def clean_addresses(self, folio_rec):
-        if addresses := folio_rec.get("addresses", []):
-            primary_address_exists = False
-            empty_addresses = []
+        for address in addresses:
+            # Check if the address has content
+            address_content = {k: v for k, v in address.items() if k != "isPrimary"}
+            if not any(address_content.values()):
+                empty_addresses.append(address)
 
-            for address in addresses:
-                # Check if the address has content
-                address_content = {k: v for k, v in address.items() if k != "isPrimary"}
-                if not any(address_content.values()):
-                    empty_addresses.append(address)
+            # Check if the address is primary
+            if address.get("isPrimary") is True:
+                primary_address_exists = True
 
-                # Check if the address is primary
-                if address.get("isPrimary") is True:
-                    primary_address_exists = True
+        # If none of the existing addresses is pimrary
+        # Make the first one primary
+        if not primary_address_exists:
+            addresses[0]["isPrimary"] = True
 
-            # If none of the existing addresses is pimrary
-            # Make the first one primary
-            if not primary_address_exists:
-                addresses[0]["isPrimary"] = True
+        record["addresses"] = [a for a in addresses if a not in empty_addresses]
 
-            folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
+        return record
 
-            return folio_rec
+    def validate_url(self, record):
+        valid_interfaces = []
+        for interface in record.get("interfaces"):
+            if ("uri" not in interface) or (
+                interface.get("uri") and validators.url(interface["uri"])
+            ):
+                valid_interfaces.append(interface)
+            else:
+                self.migration_report.add(
+                        Blurbs.MalformattedInterfaceUrl,
+                        f"Interfaces with malformed URI:",
+                    )
+                Helper.log_data_issue(
+                    f"Interface: {interface['name']}",
+                    f"RECORD FAILED Malformed URI: {interface['uri']}.",
+                    interface,
+                )
+
+        record["interfaces"] = valid_interfaces
+        
+        return record
 
     def handle_embedded_extradata_objects(self, record):
         if record.get("interfaces"):
             extradata_object_type = "interfaces"
-            embedded_object_array = record[extradata_object_type]
+            extradata_object_array = record[extradata_object_type]
             record[extradata_object_type] = []
 
-            for embedded_object in embedded_object_array:
-                self.create_linked_extradata_objects(
+            for embedded_object in extradata_object_array:
+                self.create_linked_extradata_object(
                     record, embedded_object, extradata_object_type
                 )
 
         if record.get("contacts"):
             extradata_object_type = "contacts"
-            embedded_object_array = record[extradata_object_type]
+            extradata_object_array = record[extradata_object_type]
             record[extradata_object_type] = []
-            
-            for embedded_object in embedded_object_array:
-                self.create_linked_extradata_objects(
+
+            for embedded_object in extradata_object_array:
+                self.create_linked_extradata_object(
                     record, embedded_object, extradata_object_type
                 )
 
@@ -284,7 +302,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         return record
 
-    def create_linked_extradata_objects(self, record, embedded_object, extradata_object_type):
+    def create_linked_extradata_object(self, record, embedded_object, extradata_object_type):
         """Creates extradata objects from embedded extradata objects,
         and replaces the embedde dobjects with UUIDs.
 
@@ -299,20 +317,19 @@ class OrganizationTransformer(MigrationTaskBase):
         Returns:
             _type_: The organization record with linked extradata UUIDs.
         """
-
         # Save away a hash of the embedded extradata to identify duplicates
         embedded_object_hash = sha1(
             json.dumps(embedded_object, sort_keys=True).encode("utf-8")
         ).hexdigest()
 
         # Check if this object has already been created
-        matched_uuids = [
+        identical_objects = [
             value
             for value in self.embedded_extradata_object_cache
             if value == embedded_object_hash
         ]
 
-        if len(matched_uuids) > 0:
+        if len(identical_objects) > 0:
             self.mapper.migration_report.add_general_statistics(
                 f"Number of reoccuring identical {extradata_object_type}:"
             )
