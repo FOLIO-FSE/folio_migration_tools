@@ -325,3 +325,18 @@ def test_contact_formatting_and_content():
         '"emailAddresses": [{"value": "andme(at)me.com"}]'
         in str(mocked_organization_transformer.extradata_writer.cache)
     )
+
+def test_validate_url():
+    mocked_organization_transformer = Mock(spec=OrganizationTransformer)
+    mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
+    mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
+
+    record = {
+        "name": "FOLIO",
+        "interfaces": [
+            {"name": "FOLIO", "uri": "https://www.folio.org"},
+            {"name": "Community wiki", "uri": "ww.wiki.folio.org"},
+        ]}
+    record = OrganizationTransformer.validate_url(mocked_organization_transformer, record)
+
+    assert len(record["interfaces"]) == 1

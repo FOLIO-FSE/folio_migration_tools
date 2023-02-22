@@ -147,16 +147,16 @@ class OrganizationTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.organizations
                     )
 
-                    folio_rec = self.handle_embedded_extradata_objects(folio_rec)
+                    folio_rec = self.clean_org(folio_rec)
 
-                    clean_folio_rec = self.clean_org(folio_rec)
+                    folio_rec = self.handle_embedded_extradata_objects(folio_rec)
 
                     if idx == 0:
                         logging.info("First FOLIO record:")
-                        logging.info(json.dumps(clean_folio_rec, indent=4))
+                        logging.info(json.dumps(folio_rec, indent=4))
 
                     # Writes record to file
-                    Helper.write_to_file(results_file, clean_folio_rec)
+                    Helper.write_to_file(results_file, folio_rec)
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -225,7 +225,7 @@ class OrganizationTransformer(MigrationTaskBase):
         if record.get("addresses"):
             self.clean_addresses(record)
         if record.get("interfaces"):
-            self.validate_url(record)
+            self.validate_uri(record)
 
         return record
 
@@ -253,7 +253,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         return record
 
-    def validate_url(self, record):
+    def validate_uri(self, record):
         valid_interfaces = []
         for interface in record.get("interfaces"):
             if ("uri" not in interface) or (
@@ -261,13 +261,13 @@ class OrganizationTransformer(MigrationTaskBase):
             ):
                 valid_interfaces.append(interface)
             else:
-                self.migration_report.add(
-                    Blurbs.MalformattedInterfaceUrl,
+                self.mapper.migration_report.add(
+                    Blurbs.MalformedInterfaceUri,
                     "Interfaces",
                 )
                 Helper.log_data_issue(
-                    f"Interface: {interface['name']}",
-                    f"RECORD FAILED Malformed URI: {interface['uri']}.",
+                    f"{record['code']}",
+                    f"INTERFACE FAILED Malformed interface URI: {interface['uri']}",
                     interface,
                 )
 
@@ -328,7 +328,7 @@ class OrganizationTransformer(MigrationTaskBase):
             )
             Helper.log_data_issue(
                 f"{record['code']}",
-                f"Identical {extradata_object_type} objects found in multiple organizations:",
+                f"Identical {extradata_object_type} objects found in multiple organizations",
                 embedded_object,
             )
 

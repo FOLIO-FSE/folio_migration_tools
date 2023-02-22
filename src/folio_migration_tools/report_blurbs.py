@@ -23,6 +23,9 @@ class Blurbs:
     MalformattedInterfaceUri = (
         "FOLIO Interface URIs must start with one of the following: 'ftp://', 'sftp://', 'http://', 'https://',"
         "Interfaces with malformed URIs will not be migrated."
+    MalformedInterfaceUri = (
+        "Malformed interface URIs"
+        "FOLIO Interface URIs must start with one of the following: 'ftp://', 'sftp://', 'http://', 'https://'. Interfaces with malformed URIs will not be migrated."
     )
     FieldMappingDetails = ("Mapping details", "")
     CatalogingAgency = ("Cataloging sources", "")
@@ -30,11 +33,11 @@ class Blurbs:
     LeaderManipulation = ("Leader manipulation", "")
     TermsMapping = ("Terms Mapping", "Reference data mapping for Terms.")
     CategoriesMapping = (
-        "Organization Contact Information Categories Mapping",
+        "Organization Contact categories",
         "Reference data mapping for Categories assigned to Organization contacts, addresses, emails, and phones numbers.",
     )
     OrganizationTypeMapping = (
-        "Organization Type Mapping",
+        "Organization types",
         "Reference data mapping for Organization types.",
     )
 
