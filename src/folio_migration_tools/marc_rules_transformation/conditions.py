@@ -132,7 +132,6 @@ class Conditions:
         logging.info("%s\tholdings types", len(self.holdings_types))
 
     def setup_reference_data_for_all(self):
-
         logging.info(f"{len(self.folio.class_types)}\tclass_types")
         logging.info(
             f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships"
@@ -609,7 +608,6 @@ class Conditions:
     def condition_set_permanent_location_id(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
-
         if "legacy_locations" not in self.ref_data_dicts:
             try:
                 d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}

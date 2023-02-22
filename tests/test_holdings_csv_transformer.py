@@ -41,7 +41,6 @@ def test_generate_boundwith_part(caplog):
 
 
 def test_merge_holding_in_first_boundwith(caplog):
-
     mock_folio = mocked_classes.mocked_folio_client()
 
     mock_mapper = Mock(spec=HoldingsMapper)
@@ -63,7 +62,6 @@ def test_merge_holding_in_first_boundwith(caplog):
 
 
 def test_merge_holding_in_second_boundwith_to_merge(caplog):
-
     mock_folio = mocked_classes.mocked_folio_client()
 
     mock_mapper = Mock(spec=HoldingsMapper)
@@ -95,7 +93,6 @@ def test_merge_holding_in_second_boundwith_to_merge(caplog):
 
 
 def test_merge_holding_in_second_boundwith_to_not_merge(caplog):
-
     mock_folio = mocked_classes.mocked_folio_client()
 
     mock_mapper = Mock(spec=HoldingsMapper)

@@ -8,7 +8,6 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 
 
 class ExtradataWriter:
-
     __instance = None
     __inited = False
 

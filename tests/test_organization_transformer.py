@@ -55,7 +55,6 @@ def test_remove_organization_types_pre_morning_glory():
 
 
 def test_create_and_link_contacts():
-
     mocked_organization_transformer = Mock(spec=OrganizationTransformer)
     mocked_organization_transformer.contacts_cache = {}
     mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))

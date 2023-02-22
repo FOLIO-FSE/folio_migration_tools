@@ -155,7 +155,6 @@ class HoldingsHelper:
 def extend_list(
     prop_name: str, holdings_record: dict, incoming_holdings: dict, accept_dupe_items: bool = False
 ):
-
     temp = holdings_record.get(prop_name, [])
     all_already_in = all(i in temp for i in incoming_holdings.get(prop_name, []))
     for f in incoming_holdings.get(prop_name, []):

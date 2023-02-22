@@ -30,7 +30,6 @@ class OrganizationMapper(MappingFileMapperBase):
         email_categories_map,
         phone_categories_map,
     ):
-
         # Build composite organization schema
         organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
@@ -189,7 +188,6 @@ class OrganizationMapper(MappingFileMapperBase):
             _type_: _description_
         """
         try:
-
             # Authenticate when calling GitHub, using an API key stored in .env
             github_headers = {
                 "content-type": "application/json",
@@ -304,9 +302,7 @@ class OrganizationMapper(MappingFileMapperBase):
         supported_types = ["string", "boolean", "number", "integer", "text", "object", "array"]
 
         try:
-
             for property_name_level1, property_level1 in object_schema["properties"].items():
-
                 # For now, treat references to UUIDs like strings
                 # It's not great practice, but it's the way FOLIO mostly handles it
                 if "../../common/schemas/uuid.json" in property_level1.get("$ref", ""):
@@ -342,13 +338,11 @@ class OrganizationMapper(MappingFileMapperBase):
                     or "../" in property_level1.get("$ref", "")
                     or "../" in property_level1.get("items", {}).get("$ref", "")
                 ):
-
                     logging.info(f"Property not yet supported: {property_name_level1}")
                     property_level1["type"] = "Deprecated"
 
                 # Handle object properties
                 elif property_level1.get("type") == "object" and property_level1.get("$ref"):
-
                     logging.info("Fecthing referenced schema for object %s", property_name_level1)
 
                     ref_object = property_level1["$ref"]
@@ -362,7 +356,6 @@ class OrganizationMapper(MappingFileMapperBase):
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
                     "$ref"
                 ):
-
                     ref_object = property_level1["items"]["$ref"]
                     schema_url = f"{submodule_path}/{ref_object}"
 

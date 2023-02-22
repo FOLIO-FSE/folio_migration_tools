@@ -183,7 +183,6 @@ class MappingFileMapperBase(MapperBase):
         ]
 
     def instantiate_record(self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces):
-
         if self.ignore_legacy_identifier:
             return ({}, str(uuid.uuid4()))
 
@@ -241,7 +240,6 @@ class MappingFileMapperBase(MapperBase):
     def do_map(
         self, legacy_object, index_or_id: str, object_type: FOLIONamespaces
     ) -> tuple[dict, str]:
-
         folio_object, legacy_id = self.instantiate_record(legacy_object, index_or_id, object_type)
         for property_name, property in self.schema["properties"].items():
             try:
@@ -444,22 +442,11 @@ class MappingFileMapperBase(MapperBase):
                             and self.library_configuration.multi_field_delimiter in res
                         ):
                             multi_field_props.append(sub_prop_name)
-                        if res and "enum" in sub_prop and res not in sub_prop["enum"]:
-                            raise TransformationRecordFailedError(
-                                index_or_id,
-                                f"Mapped enum value was not in list of enums: {sub_prop['enum']}",
-                                res,
-                            )
-                        elif "enum" in sub_prop and not res:
-                            raise TransformationRecordFailedError(
-                                index_or_id,
-                                (
-                                    f"Empty string for Enum value in {prop_path}. "
-                                    f"Allowed values are {sub_prop['enum']}"
-                                ),
-                                res,
-                            )
-                        temp_object[sub_prop_name] = res
+
+                        self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
+                        if res or isinstance(res, bool):
+                            temp_object[sub_prop_name] = res
+
                     elif (
                         sub_prop_name in sub_properties
                         and sub_properties[sub_prop_name].get("type", "") == "array"
@@ -488,8 +475,9 @@ class MappingFileMapperBase(MapperBase):
                                 self.library_configuration.multi_field_delimiter,
                             )
             i = i + 1
+
             if temp_object != {} and all(
-                (v or (isinstance(v, bool)) for k, v in temp_object.items() if k in required)
+                temp_object.get(r) or (isinstance(temp_object.get(r), bool)) for r in required
             ):
                 if any(multi_field_props):
                     resulting_array.extend(
@@ -501,6 +489,25 @@ class MappingFileMapperBase(MapperBase):
                     )
                 else:
                     resulting_array.append(temp_object)
+
+            elif any(
+                (
+                    v
+                    for k, v in temp_object.items()
+                    if not self.is_uuid(v) and not isinstance(v, bool)
+                )
+            ):
+                self.migration_report.add(
+                    Blurbs.IncompleteSubPropertyRemoved,
+                    f"{prop_name}.{sub_prop}",
+                )
+                # Helper.log_data_issue(
+                #     f"{prop_name}",
+                #     f"Sub-property {sub_prop} removed as it is missing required fields:"
+                #     f"{required}",
+                #     temp_object,
+                # )
+
         if any(resulting_array):
             set_deep2(folio_object, prop_name, resulting_array)
 
@@ -558,6 +565,13 @@ class MappingFileMapperBase(MapperBase):
     ):
         if self.has_basic_property(legacy_object, property_name):  # is there a match in the csv?
             if mapped_prop := self.get_prop(legacy_object, property_name, index_or_id):
+                self.validate_enums(
+                    mapped_prop,
+                    schema_property,
+                    property_name,
+                    index_or_id,
+                    self.schema.get("required", []),
+                )
                 folio_object[property_name] = mapped_prop
             self.report_legacy_mapping(self.legacy_basic_property(property_name), True, True)
         elif "default" in schema_property:
@@ -694,6 +708,45 @@ class MappingFileMapperBase(MapperBase):
         d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
         self.ref_data_dicts[dict_key] = d
         return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ())
+
+    def validate_enums(
+        self,
+        mapped_value,
+        mapped_schema_property,
+        mapped_schema_property_name,
+        index_or_id,
+        required,
+    ):
+        if (
+            "enum" in mapped_schema_property
+            and mapped_value
+            and mapped_value not in mapped_schema_property["enum"]
+        ) or (
+            "enum" in mapped_schema_property
+            and mapped_schema_property_name in required
+            and not mapped_value
+        ):
+            raise TransformationRecordFailedError(
+                index_or_id,
+                f"Forbidden value for enum property {mapped_schema_property_name}."
+                f"Allowed values are: {mapped_schema_property['enum']}",
+                mapped_value,
+            )
+
+    def is_uuid(self, value):
+        """Returns True if the value is a UUID, and False if it is not.
+
+        Args:
+            value (_type_): a value that may or may not be a UUID
+
+        Returns:
+            bool: True/False
+        """
+        try:
+            uuid.UUID(str(value))
+        except ValueError:
+            return False
+        return True
 
 
 def skip_property(property_name, property):

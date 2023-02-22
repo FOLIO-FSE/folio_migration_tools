@@ -21,7 +21,6 @@ from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MapperBase:
-
     legacy_id_template = "Identifier(s) from previous system:"
     bib_id_template = "Bib id: "
 
@@ -167,7 +166,6 @@ class MapperBase:
         folio_property_name="",
         prevent_default=False,
     ):
-
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
             # Get the values in the fields that will be used for mapping
@@ -362,7 +360,6 @@ class MapperBase:
 
 
 def flatten(my_dict: dict, path=""):
-
     for k, v in iter(my_dict.items()):
         if not path:
             yield k

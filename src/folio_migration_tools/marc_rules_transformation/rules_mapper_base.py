@@ -429,7 +429,6 @@ class RulesMapperBase(MapperBase):
             target_field.get("type", "") == "array"
             and target_field.get("items", {}).get("type", "") == "string"
         ):
-
             if target_string not in rec:
                 rec[target_string] = value
             else:

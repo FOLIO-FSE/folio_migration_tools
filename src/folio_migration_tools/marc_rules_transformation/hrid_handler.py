@@ -148,7 +148,6 @@ class HRIDHandler:
     def store_hrid_settings(self):
         logging.info("Setting HRID counter to current")
         try:
-
             if self.hrids_not_updated():
                 logging.info("NOT POSTing HRID settings, since did not change.")
                 return

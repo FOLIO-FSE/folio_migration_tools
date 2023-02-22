@@ -144,7 +144,6 @@ class RequestsMigrator(MigrationTaskBase):
             self.valid_legacy_requests[self.task_configuration.starting_row - 1 :],
             start=1,
         ):
-
             t0_migration = time.time()
             try:
                 res, legacy_request = self.prepare_legacy_request(legacy_request)

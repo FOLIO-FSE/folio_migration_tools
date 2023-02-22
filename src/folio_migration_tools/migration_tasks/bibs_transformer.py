@@ -56,7 +56,6 @@ class BibsTransformer(MigrationTaskBase):
         library_config: LibraryConfiguration,
         use_logging: bool = True,
     ):
-
         super().__init__(library_config, task_config, use_logging)
         self.processor: MarcFileProcessor
         self.check_source_files(

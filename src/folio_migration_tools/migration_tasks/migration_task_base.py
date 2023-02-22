@@ -38,7 +38,6 @@ class MigrationTaskBase:
         task_configuration,
         use_logging: bool = True,
     ):
-
         logging.info("MigrationTaskBase init")
         self.start_datetime = datetime.now(timezone.utc)
         self.task_configuration = task_configuration

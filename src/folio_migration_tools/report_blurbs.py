@@ -10,6 +10,7 @@ class ReportSection(Enum):
 
 class Blurbs:
     AuthoritySources = ("Authorization sources and related information", "")
+    IncompleteSubPropertyRemoved = ("Sub-property removed due to missing required fields", "")
     FieldMappingDetails = ("Mapping details", "")
     CatalogingAgency = ("Cataloging sources", "")
     Trivia = ("Trivia", "")

@@ -122,7 +122,7 @@ def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client):
             {
                 "folio_field": "electronicAccess[0].relationshipId",
                 "legacy_field": "",
-                "value": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
+                "value": "23d1669c-a32d-5bd0-b232-ac40181a5c7e",
                 "description": "",
             },
             {
@@ -134,7 +134,7 @@ def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client):
             {
                 "folio_field": "electronicAccess[1].relationshipId",
                 "legacy_field": "",
-                "value": "f5d0068e-000-458e-8a81-b85e7b9a14aa",
+                "value": "23d1669c-a32d-5bd0-b232-ac40181a5c7e",
                 "description": "",
             },
             {
@@ -773,6 +773,125 @@ def test_validate_required_properties_item_notes_split_on_delimiter_notes(mocked
     assert folio_rec["notes"][1]["note"] == "my second note"
     assert folio_rec["notes"][1]["staffOnly"] == True
     assert folio_rec["notes"][1]["itemNoteTypeId"] == "A UUID"
+
+
+def test_validate_remove_and_report_incomplete_object_property(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "status": {
+                "description": "The status of this organization",
+                "type": "string",
+                "enum": ["Active", "Inactive", "Pending"],
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "description": "The unique id of this interface",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "uri": {
+                            "description": "The URI this interface",
+                            "type": "string",
+                        },
+                        "name": {"description": "The name of this interface", "type": "string"},
+                    },
+                    "required": ["name"],
+                    "additionalProperties": True,
+                },
+            },
+        },
+        "additionalProperties": False,
+        "required": ["status"],
+    }
+
+    record1 = {
+        "id": "id1",
+        "status": "Active",
+        "int_name": "",
+        "int_uri": "this has a uri but no name",
+        "int_nameB": "A name",
+        "int_uriB": "A uri",
+    }
+
+    record2 = {
+        "id": "id2",
+        "status": "Active",
+        "int_name": "This has a name but no uri",
+        "int_uri": "",
+    }
+
+    record3 = {
+        "id": "id3",
+        "status": "Active",
+        "int_name": "",
+        "int_uri": "eb1e8cd4-4bb6-51b0-a2a7-51159d552e13",
+    }
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "status",
+                "legacy_field": "status",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].uri",
+                "legacy_field": "int_uri",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "int_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[1].uri",
+                "legacy_field": "int_uriB",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[1].name",
+                "legacy_field": "int_nameB",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record1, record1["id"], FOLIONamespaces.organizations)
+    assert len(folio_rec["interfaces"]) == 1
+
+    folio_rec, folio_id = mapper.do_map(record2, record2["id"], FOLIONamespaces.organizations)
+    assert "name" in folio_rec["interfaces"][0]
+    assert "uri" not in folio_rec["interfaces"][0]
+
+    folio_rec, folio_id = mapper.do_map(record3, record3["id"], FOLIONamespaces.organizations)
+    assert "interfaces" not in folio_rec
 
 
 def test_multiple_repeated_split_on_delimiter_electronic_access(mocked_folio_client):
@@ -1988,7 +2107,7 @@ def test_map_enums(mocked_folio_client):
     assert folio_rec["status"] == "Pending"
 
 
-def test_map_empty_required_enums(mocked_folio_client):
+def test_map_enums_empty_required(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2104,7 +2223,7 @@ def test_map_empty_required_enums(mocked_folio_client):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
-def test_map_empty_not_required_enums(mocked_folio_client):
+def test_map_enums_empty_not_required(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2220,7 +2339,85 @@ def test_map_empty_not_required_enums(mocked_folio_client):
     assert "status" not in folio_rec
 
 
-def test_map_empty_not_required_deeper_level_enums(mocked_folio_client):
+def test_map_enums_invalid_required(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "status": {
+                "description": "The status of this organization",
+                "type": "string",
+                "enum": ["Active", "Inactive", "Pending"],
+            },
+        },
+        "additionalProperties": False,
+        "required": ["status"],
+    }
+    record = {"id": "id1", "status": "Whaaaat?"}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    with pytest.raises(
+        TransformationRecordFailedError, match=r"Forbidden value for enum property"
+    ):
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+
+def test_map_enums_invalid_not_required(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "status": {
+                "description": "The status of this organization",
+                "type": "string",
+                "enum": ["Active", "Inactive", "Pending"],
+            },
+        },
+        "additionalProperties": False,
+        "required": [],
+    }
+    record = {"id": "id1", "status": "Whaaaat?"}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    with pytest.raises(
+        TransformationRecordFailedError, match=r"Forbidden value for enum property"
+    ):
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+
+def test_map_enums_empty_not_required_deeper_level(mocked_folio_client):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2298,12 +2495,77 @@ def test_map_empty_not_required_deeper_level_enums(mocked_folio_client):
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert "deliveryMethod" not in folio_rec["interfaces"][0]
+
+
+def test_map_enums_invalid_not_required_deeper_level(mocked_folio_client):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "interfaces": {
+                "id": "interfaces",
+                "description": "The list of interfaces assigned to this organization",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "An interface record",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "description": "The unique id of this interface",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "name": {"description": "The name of this interface", "type": "string"},
+                        "deliveryMethod": {
+                            "description": "The delivery method for this interface",
+                            "type": "string",
+                            "enum": ["Online", "FTP", "Email", "Other"],
+                        },
+                    },
+                    "additionalProperties": True,
+                },
+            },
+        },
+        "additionalProperties": False,
+        "required": [],
+    }
+    record = {"id": "id1", "delivery_method": "Offline"}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].deliveryMethod",
+                "legacy_field": "delivery_method",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "interfaces[0].name",
+                "legacy_field": "",
+                "value": "apa",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
     with pytest.raises(
-        TransformationRecordFailedError,
-        match=".*Empty string for Enum value in interfaces.*.deliveryMethod.*",
+        TransformationRecordFailedError, match=r"Forbidden value for enum property"
     ):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
-        assert "deliveryMethod" not in folio_rec["interfaces"][0]
 
 
 def test_default_false(mocked_folio_client):
@@ -2512,75 +2774,6 @@ def test_default_true(mocked_folio_client):
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert folio_rec["isVendor"] is True
-
-
-def test_map_wrong_not_required_deeper_level_enums(mocked_folio_client):
-    schema = {
-        "$schema": "http://json-schema.org/draft-04/schema#",
-        "description": "The record of an organization",
-        "type": "object",
-        "properties": {
-            "id": {
-                "description": "The unique UUID for this organization",
-                "$ref": "../../common/schemas/uuid.json",
-                "type": "string",
-            },
-            "interfaces": {
-                "id": "interfaces",
-                "description": "The list of interfaces assigned to this organization",
-                "type": "array",
-                "items": {
-                    "$schema": "http://json-schema.org/draft-04/schema#",
-                    "description": "An interface record",
-                    "type": "object",
-                    "properties": {
-                        "id": {
-                            "description": "The unique id of this interface",
-                            "$ref": "../../common/schemas/uuid.json",
-                            "type": "string",
-                        },
-                        "name": {"description": "The name of this interface", "type": "string"},
-                        "deliveryMethod": {
-                            "description": "The delivery method for this interface",
-                            "type": "string",
-                            "enum": ["Online", "FTP", "Email", "Other"],
-                        },
-                    },
-                    "additionalProperties": True,
-                },
-            },
-        },
-        "additionalProperties": False,
-        "required": [],
-    }
-    record = {"id": "id1", "delivery_method": "Offline"}
-    the_map = {
-        "data": [
-            {
-                "folio_field": "legacyIdentifier",
-                "legacy_field": "id",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "interfaces[0].deliveryMethod",
-                "legacy_field": "delivery_method",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "interfaces[0].name",
-                "legacy_field": "",
-                "value": "apa",
-                "description": "",
-            },
-        ]
-    }
-    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    with pytest.raises(
-        TransformationRecordFailedError, match=r".*Mapped enum value was not in list of enums.*"
-    ):
-        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
 def test_map_array_object_array_object_string(mocked_folio_client):
