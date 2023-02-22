@@ -262,9 +262,9 @@ class OrganizationTransformer(MigrationTaskBase):
                 valid_interfaces.append(interface)
             else:
                 self.migration_report.add(
-                        Blurbs.MalformattedInterfaceUrl,
-                        f"Interfaces with malformed URI:",
-                    )
+                    Blurbs.MalformattedInterfaceUrl,
+                    "Interfaces",
+                )
                 Helper.log_data_issue(
                     f"Interface: {interface['name']}",
                     f"RECORD FAILED Malformed URI: {interface['uri']}.",
@@ -272,7 +272,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 )
 
         record["interfaces"] = valid_interfaces
-        
+
         return record
 
     def handle_embedded_extradata_objects(self, record):
@@ -282,9 +282,7 @@ class OrganizationTransformer(MigrationTaskBase):
             record[extradata_object_type] = []
 
             for embedded_object in extradata_object_array:
-                self.create_linked_extradata_object(
-                    record, embedded_object, extradata_object_type
-                )
+                self.create_linked_extradata_object(record, embedded_object, extradata_object_type)
 
         if record.get("contacts"):
             extradata_object_type = "contacts"
@@ -292,9 +290,7 @@ class OrganizationTransformer(MigrationTaskBase):
             record[extradata_object_type] = []
 
             for embedded_object in extradata_object_array:
-                self.create_linked_extradata_object(
-                    record, embedded_object, extradata_object_type
-                )
+                self.create_linked_extradata_object(record, embedded_object, extradata_object_type)
 
         # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
         if "notes" in record:
@@ -308,18 +304,15 @@ class OrganizationTransformer(MigrationTaskBase):
 
         Args:
             record (_type_): _description_
-            nested_object (_type_): _description_
+            embedded_object (_type_): _description_
             extradata_object_type (_type_): _description_
-
-        Raises:
-            TransformationProcessError: _description_
 
         Returns:
             _type_: The organization record with linked extradata UUIDs.
         """
         # Save away a hash of the embedded extradata to identify duplicates
         embedded_object_hash = sha1(
-            json.dumps(embedded_object, sort_keys=True).encode("utf-8")
+            json.dumps(embedded_object, sort_keys=True).encode("utf-8"), usedforsecurity=False
         ).hexdigest()
 
         # Check if this object has already been created
@@ -330,60 +323,6 @@ class OrganizationTransformer(MigrationTaskBase):
         ]
 
         if len(identical_objects) > 0:
-            self.mapper.migration_report.add_general_statistics(
-                f"Number of reoccuring identical {extradata_object_type}:"
-            )
-            Helper.log_data_issue(
-                f"Organization: {record['name']}",
-                f"Identical {extradata_object_type} objects found in multiple organizations:",
-                embedded_object,
-            )
-
-        # Generate a UUID and add to the contact
-        extradata_object_uuid = str(uuid.uuid4())
-        embedded_object["id"] = extradata_object_uuid
-        self.extradata_writer.write(extradata_object_type, embedded_object)
-
-        self.mapper.migration_report.add_general_statistics(
-            f"Number of {extradata_object_type} created:"
-        )
-        # Save contact to extradata file
-        # Append the contact UUID to the organization record
-        record[extradata_object_type].append(extradata_object_uuid)
-
-        self.embedded_extradata_object_cache.add(embedded_object_hash)
-
-        return record
-
-    def create_linked_extradata_objects(self, record, embedded_object, extradata_object_type):
-        """Creates extradata objects from embedded extradata objects,
-        and replaces the embedde dobjects with UUIDs.
-
-        Args:
-            record (_type_): _description_
-            nested_object (_type_): _description_
-            extradata_object_type (_type_): _description_
-
-        Raises:
-            TransformationProcessError: _description_
-
-        Returns:
-            _type_: The organization record with linked extradata UUIDs.
-        """
-
-        # Save away a hash of the embedded extradata to identify duplicates
-        embedded_object_hash = sha1(
-            json.dumps(embedded_object, sort_keys=True).encode("utf-8")
-        ).hexdigest()
-
-        # Check if this object has already been created
-        matched_uuids = [
-            value
-            for value in self.embedded_extradata_object_cache
-            if value == embedded_object_hash
-        ]
-
-        if len(matched_uuids) > 0:
             self.mapper.migration_report.add_general_statistics(
                 f"Number of reoccuring identical {extradata_object_type}:"
             )

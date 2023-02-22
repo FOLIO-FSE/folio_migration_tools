@@ -322,8 +322,7 @@ class OrganizationMapper(MappingFileMapperBase):
                     interface_schema = OrganizationMapper.fetch_additional_schema("interface")
                     interface_schema["required"] = ["name"]
 
-
-                    # Temporarily add the credential object as a subproperty 
+                    # Temporarily add the credential object as a subproperty
                     interface_credential_schema = OrganizationMapper.fetch_additional_schema(
                         "interface_credential"
                     )
@@ -331,9 +330,8 @@ class OrganizationMapper(MappingFileMapperBase):
                     interface_schema["properties"][
                         "interfaceCredential"
                     ] = interface_credential_schema
-                    
-                    property_level1["items"] = interface_schema
 
+                    property_level1["items"] = interface_schema
 
                 elif (
                     property_level1.get("type") == "array"

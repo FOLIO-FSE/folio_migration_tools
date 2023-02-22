@@ -13,7 +13,6 @@ from folio_migration_tools.migration_tasks.organization_transformer import (
 from folio_migration_tools.migration_tasks.organization_transformer import (
     OrganizationTransformer,
 )
-from folio_migration_tools.library_configuration import LibraryConfiguration
 
 
 def test_get_object_type():
@@ -181,7 +180,7 @@ def test_clean_up_two_addresses_both_empty():
 
     assert clean_address == {"addresses": []}
 
-    
+
 # Check that embedded objects are removed
 def test_handle_embedded_extradata_objects():
     mocked_organization_transformer = Mock(spec=OrganizationTransformer)
@@ -223,6 +222,7 @@ def test_handle_embedded_extradata_objects():
 
     assert organization["interfaces"] == []
     assert organization["contacts"] == []
+
 
 # Test extradata creation
 def test_create_linked_extradata_objects():

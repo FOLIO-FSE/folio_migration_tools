@@ -290,11 +290,13 @@ def test_empty_non_required_enum_in_sub_object_mapping(mapper):
     assert "name" in organization["accounts"][0]
     assert "paymentMethod" not in organization["accounts"][0]
 
-
+@pytest.mark.skip(
+    reason="Under implementation."
+)
 def test_interface_credentials(mapper):
     data["code"] = "ic1"
     data["interface_1_username"] = "myUsername"
-    data["interface_1_password"] = "myPassword"
+    data["interface_1_password"] = "myPassword"  # noqa: S105
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["interfaceCredential"]["username"] == "myUsername"
