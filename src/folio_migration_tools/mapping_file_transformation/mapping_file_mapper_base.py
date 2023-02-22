@@ -771,8 +771,8 @@ class MappingFileMapperBase(MapperBase):
         ):
             raise TransformationRecordFailedError(
                 index_or_id,
-                f"Forbidden value for enum property {mapped_schema_property_name}."
-                f"Allowed values are: {mapped_schema_property['enum']}",
+                f"Allowed values for {mapped_schema_property_name} are {mapped_schema_property['enum']} "
+                f"Forbidden value found: ",
                 mapped_value,
             )
 

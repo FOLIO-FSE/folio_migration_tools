@@ -327,7 +327,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 f"Number of reoccuring identical {extradata_object_type}:"
             )
             Helper.log_data_issue(
-                f"Organization: {record['name']}",
+                f"{record['code']}",
                 f"Identical {extradata_object_type} objects found in multiple organizations:",
                 embedded_object,
             )
