@@ -41,7 +41,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         base_folder="/",
         multi_field_delimiter="^-^",
     )
-    instance_id_map = {"1": ["1", "ljdlsakjdlakjsdlkas", "1"]}
+    instance_id_map = {"1": ["1", "ae1daef2-ddea-4d87-a434-3aa98ed3e687", "1"]}
     composite_order_map = {
         "data": [
             {
@@ -187,5 +187,8 @@ def test_composite_order_with_one_pol_mapping(mapper):
     assert (
         composite_order_with_pol["compositePoLines"][0]["titleOrPackage"] == "Once upon a time..."
     )
-    assert composite_order_with_pol["compositePoLines"][0]["instanceId"] == "ljdlsakjdlakjsdlkas"
+    assert (
+        composite_order_with_pol["compositePoLines"][0]["instanceId"]
+        == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
+    )
     assert composite_order_with_pol["compositePoLines"][0]["cost"]["currency"] == "USD"
