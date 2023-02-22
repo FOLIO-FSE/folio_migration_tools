@@ -212,6 +212,48 @@ def test_clean_up_two_addresses_both_empty():
 
     assert clean_address == {"addresses": []}
 
+    
+# Check that embedded objects are removed
+def test_handle_embedded_extradata_objects():
+    mocked_organization_transformer = Mock(spec=OrganizationTransformer)
+    mocked_organization_transformer.embedded_extradata_object_cache = set()
+    mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
+    mocked_organization_transformer.extradata_writer.cache = []
+    mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
+    mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
+
+    organization = {
+        "name": "FOLIO",
+        "interfaces": [
+            {"name": "FOLIO", "uri": "https://www.folio.org"},
+            {"name": "Community wiki", "uri": "https://www.wiki.folio.org"},
+        ],
+        "contacts": [
+            {
+                "firstName": "Jane",
+                "lastName": "Deer",
+                "emailAddresses": [{"value": "me(at)me.com"}],
+            },
+            {
+                "firstName": "John",
+                "lastName": "Doe",
+                "addresses": [{"addressLine1": "MyStreet"}, {"city": "Bogotá"}],
+                "emailAddresses": [{"value": "andme(at)me.com"}],
+            },
+            {
+                "firstName": "Jane",
+                "lastName": "Deer",
+                "emailAddresses": [{"value": "me(at)me.com"}],
+            },
+        ],
+    }
+
+    OrganizationTransformer.handle_embedded_extradata_objects(
+        mocked_organization_transformer, organization
+    )
+
+    assert organization["interfaces"] == []
+    assert organization["contacts"] == []
 
 # Test extradata creation
 def test_create_linked_extradata_objects():
@@ -279,6 +321,7 @@ def test_create_linked_extradata_objects():
 
     # Check that reoccuring contacts are NOT deduplicated
     assert str(mocked_organization_transformer.extradata_writer.cache).count("Jane") == 2
+    assert str(mocked_organization_transformer.extradata_writer.cache).count("www") == 2
 
 
 def test_contact_formatting_and_content():
@@ -313,28 +356,3 @@ def test_contact_formatting_and_content():
         '"emailAddresses": [{"value": "andme(at)me.com"}]'
         in str(mocked_organization_transformer.extradata_writer.cache)
     )
-
-
-# Tests for interfaces array
-def test_handle_embedded_extradata_objects():
-    mocked_organization_transformer = Mock(spec=OrganizationTransformer)
-    mocked_organization_transformer.embedded_extradata_object_cache = set()
-    mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
-    mocked_organization_transformer.extradata_writer.cache = []
-    mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
-    mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
-
-    organization = {
-        "name": "FOLIO",
-        "interfaces": [
-            {"name": "FOLIO", "uri": "https://www.folio.org"},
-            {"name": "Community wiki", "uri": "https://www.wiki.folio.org"},
-        ],
-    }
-
-    OrganizationTransformer.handle_embedded_extradata_objects(
-        mocked_organization_transformer, organization
-    )
-
-    assert organization["interfaces"] == []
-    assert organization["name"] == "FOLIO"

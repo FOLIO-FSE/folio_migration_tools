@@ -260,31 +260,25 @@ class OrganizationTransformer(MigrationTaskBase):
     def handle_embedded_extradata_objects(self, record):
         if record.get("interfaces"):
             extradata_object_type = "interfaces"
-            embedded_extradata_object = record["interfaces"]
-            minimum_required_props = ["name"]
-            record["interfaces"] = []
+            embedded_object_array = record[extradata_object_type]
+            record[extradata_object_type] = []
 
-            # Only if the object contains minimum data will it be created and linked
-            for nested_object in embedded_extradata_object:
-                if all(nested_object.get(prop, "") != "" for prop in minimum_required_props):
-                    self.create_linked_extradata_objects(
-                        record, nested_object, extradata_object_type
-                    )
+            for embedded_object in embedded_object_array:
+                self.create_linked_extradata_objects(
+                    record, embedded_object, extradata_object_type
+                )
 
         if record.get("contacts"):
             extradata_object_type = "contacts"
-            minimum_required_props = ["firstName", "firstName"]
-            embedded_extradata_object = record["contacts"]
-            record["contacts"] = []
+            embedded_object_array = record[extradata_object_type]
+            record[extradata_object_type] = []
+            
+            for embedded_object in embedded_object_array:
+                self.create_linked_extradata_objects(
+                    record, embedded_object, extradata_object_type
+                )
 
-            # Only if the object contains minimum data will it be created and linked
-            for nested_object in embedded_extradata_object:
-                if all(nested_object.get(prop, "") != "" for prop in minimum_required_props):
-                    self.create_linked_extradata_objects(
-                        record, nested_object, extradata_object_type
-                    )
-
-        # TODO Do the same as for Contacts? Check implementation for Users.
+        # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
         if "notes" in record:
             pass
 
