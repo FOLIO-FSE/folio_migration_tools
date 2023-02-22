@@ -78,11 +78,6 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
             },
         ]
     }
-    vendor_code_map = [
-        {"vendor": "ebsco", "folio_code": "EBSCO"},
-        {"vendor": "*", "folio_code": "EBSCO"},
-        {"vendor": "yankee", "folio_code": "GOBI"},
-    ]
     acg_method_map = [
         {"vendor": "ebsco", "folio_value": "Purchase"},
         {"vendor": "*", "folio_value": "Purchase"},
@@ -92,8 +87,8 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         lib_config,
         composite_order_map,
         instance_id_map,
-        vendor_code_map,
         acg_method_map,
+        "",
         "",
         "",
         "",
@@ -166,7 +161,7 @@ def test_parse_record_mapping_file(mapper):
 
 
 def test_composite_order_mapping(mapper):
-    data = {"order_number": "o123", "vendor": "ebsco", "type": "One-Time"}
+    data = {"order_number": "o123", "vendor": "EBSCO", "type": "One-Time"}
 
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
     assert composite_order["id"] == "6bf8d907-054d-53ad-9031-7a45887fcafa"

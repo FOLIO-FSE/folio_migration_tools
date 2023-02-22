@@ -181,41 +181,50 @@ class MappingFileMapperBase(MapperBase):
             if (k["legacy_field"].strip() not in empty_vals)
         ]
 
-    def instantiate_record(self, legacy_object: dict, index_or_id, object_type: FOLIONamespaces):
+    def instantiate_record(
+        self,
+        legacy_object: dict,
+        index_or_id,
+        object_type: FOLIONamespaces,
+        accept_duplicate_ids: bool = False,
+    ):
+
         if self.ignore_legacy_identifier:
             return ({}, str(uuid.uuid4()))
 
-        if legacy_id := " ".join(
-            legacy_object.get(li, "") for li in self.legacy_id_property_names
-        ).strip():
-            generated_id = str(
-                FolioUUID(
-                    self.folio_client.okapi_url,
-                    object_type,
-                    legacy_id,
-                )
-            )
-            if generated_id in self.unique_record_ids:
-                raise TransformationRecordFailedError(
-                    index_or_id,
-                    "Legacy id already generated.",
-                    f"UUID: {generated_id}, seed: {legacy_id}",
-                )
-            self.unique_record_ids.add(generated_id)
-            return (
-                {
-                    "id": generated_id,
-                    "metadata": self.folio_client.get_metadata_construct(),
-                    "type": "object",
-                },
-                legacy_id,
-            )
-        else:
+        if not (
+            legacy_id := " ".join(
+                legacy_object.get(li, "") for li in self.legacy_id_property_names
+            ).strip()
+        ):
             raise TransformationRecordFailedError(
                 index_or_id,
                 "Could not get a value from legacy object from the property "
                 f"{self.legacy_id_property_names}. Check mapping and data",
             )
+        generated_id = str(
+            FolioUUID(
+                self.folio_client.okapi_url,
+                object_type,
+                legacy_id,
+            )
+        )
+        if generated_id in self.unique_record_ids and not accept_duplicate_ids:
+            raise TransformationRecordFailedError(
+                index_or_id,
+                "Legacy id already generated.",
+                f"UUID: {generated_id}, seed: {legacy_id}",
+            )
+        else:
+            self.unique_record_ids.add(generated_id)
+        return (
+            {
+                "id": generated_id,
+                "metadata": self.folio_client.get_metadata_construct(),
+                "type": "object",
+            },
+            legacy_id,
+        )
 
     def get_statistical_codes(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:
@@ -237,9 +246,16 @@ class MappingFileMapperBase(MapperBase):
         raise NotImplementedError("This method needs to be implemented in a implementing class")
 
     def do_map(
-        self, legacy_object, index_or_id: str, object_type: FOLIONamespaces
+        self,
+        legacy_object,
+        index_or_id: str,
+        object_type: FOLIONamespaces,
+        accept_duplicate_ids=False,
     ) -> tuple[dict, str]:
-        folio_object, legacy_id = self.instantiate_record(legacy_object, index_or_id, object_type)
+
+        folio_object, legacy_id = self.instantiate_record(
+            legacy_object, index_or_id, object_type, accept_duplicate_ids
+        )
         for property_name, property in self.schema["properties"].items():
             try:
                 self.map_property(property_name, property, folio_object, legacy_id, legacy_object)

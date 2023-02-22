@@ -9,8 +9,16 @@ class ReportSection(Enum):
 
 
 class Blurbs:
+    DiffsBetweenOrders = (
+        "Differences between generated orders with same Legacy Identifier",
+        "This is a technical report that helps you to identify differences in the mapped order fields. ",
+    )
     AuthoritySources = ("Authorization sources and related information", "")
     IncompleteSubPropertyRemoved = ("Sub-property removed due to missing required fields", "")
+    POLCreation = (
+        "PO-Line creation",
+        "Report on how PO-Line creation went, what merge criterias were used, etc",
+    )
     AcquisitionMethodMapping = ("Acquisition Method Mapping", "")
     FieldMappingDetails = ("Mapping details", "")
     CatalogingAgency = ("Cataloging sources", "")

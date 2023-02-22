@@ -9,6 +9,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from requests.exceptions import HTTPError
 
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -26,7 +27,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
         library_configuration: LibraryConfiguration,
         composite_order_map: dict,
         instance_id_map: dict,
-        vendor_code_map: dict,
         acquisition_method_map,
         payment_status_map,
         receipt_status_map,
@@ -50,14 +50,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             library_configuration,
         )
         self.instance_id_map = instance_id_map
-        self.vendor_code_mapping = RefDataMapping(
-            self.folio_client,
-            "/organizations-storage/organizations",
-            "organizations",
-            vendor_code_map,
-            "code",
-            Blurbs.AcquisitionMethodMapping,
-        )
+        self.vendor_code_map = dict(self.setup_vendor_code_map())
         self.acquisitions_methods_mapping = RefDataMapping(
             self.folio_client,
             "/orders/acquisition-methods",
@@ -74,8 +67,16 @@ class CompositeOrderMapper(MappingFileMapperBase):
             mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
             return mapped_val["folio_id"]
         elif folio_prop_name == "vendor":
-            mapped_val = self.vendor_code_mapping.get_ref_data_mapping(legacy_order)
-            return mapped_val["folio_id"]
+            if mapped_value in self.vendor_code_map:
+                self.migration_report.add_general_statistics(
+                    "Successfully matched Vendor against code"
+                )
+                return self.vendor_code_map[mapped_value]
+            else:
+                self.migration_report.add_general_statistics("Orders without assigned vendor")
+                Helper.log_data_issue(
+                    index_or_id, "Vendor code not found among migrated Organizations", mapped_value
+                )
         if folio_prop_name.endswith(".instanceId"):
             if mapped_value in self.instance_id_map:
                 self.migration_report.add_general_statistics(
@@ -86,7 +87,18 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 self.migration_report.add_general_statistics(
                     "Bib id not found in list over migrated bibs."
                 )
+                Helper.log_data_issue(
+                    index_or_id, "Bib id not found in list over migrated bibs.", mapped_value
+                )
         return mapped_value
+
+    def setup_vendor_code_map(self):
+        yield from [
+            (entry["code"], entry["id"])
+            for entry in self.folio_client.get_all(
+                "/organizations-storage/organizations", "organizations"
+            )
+        ]
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
