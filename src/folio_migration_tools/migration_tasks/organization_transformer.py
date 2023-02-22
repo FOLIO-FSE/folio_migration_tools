@@ -290,7 +290,10 @@ class OrganizationTransformer(MigrationTaskBase):
             record[extradata_object_type] = []
 
             for embedded_object in extradata_object_array:
-                self.create_linked_extradata_object(record, embedded_object, extradata_object_type)
+                if embedded_object.get("firstName") and embedded_object.get("lastName"):
+                    self.create_linked_extradata_object(
+                        record, embedded_object, extradata_object_type
+                    )
 
         # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
         if "notes" in record:

@@ -347,7 +347,6 @@ class OrganizationMapper(MappingFileMapperBase):
                     or "../" in property_level1.get("items", {}).get("$ref", "")
                 ):
                     logging.info(f"Property not yet supported: {property_name_level1}")
-                    property_level1["type"] = "Deprecated"
 
                 # Handle object properties
                 elif property_level1.get("type") == "object" and property_level1.get("$ref"):

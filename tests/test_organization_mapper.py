@@ -25,18 +25,13 @@ def test_fetch_org_schemas_from_github_happy_path():
 
     assert organization_schema["$schema"]
 
-
-# Building contact schema from github
-
-# Building contact schema from github
-
-
+# Build contact schema from github
 def test_fetch_contact_schemas_from_github_happy_path():
     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
     assert contact_schema["$schema"]
 
 
-# Building interface schema from github
+# Build interface schema from github
 def test_fetch_interfaces_schemas_from_github_happy_path():
     contact_schema = OrganizationMapper.fetch_additional_schema("interface")
     assert contact_schema["$schema"]
@@ -168,7 +163,6 @@ def test_enforce_schema_required_properties_in_organization(mapper):
     # There should be no phone numbers, as the data is empty
     assert not organization.get("phoneNumbers")
 
-
 @pytest.mark.skip(
     reason="We would need a way of using the same ref data file for multiple values. See #411"
 )
@@ -202,7 +196,7 @@ def test_multiple_emails_array_objects(mapper):
 
 
 def test_contacts_basic_mapping(mapper):
-    data["code"] = "o6"
+    data["code"] = "co6"
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["contacts"][0]["firstName"] == "Jane"
@@ -210,9 +204,18 @@ def test_contacts_basic_mapping(mapper):
 
 
 def test_contacts_address_mapping(mapper):
-    data["code"] = "o7"
+    data["code"] = "co7"
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
     assert organization["contacts"][0]["firstName"] == "Jane"
+
+
+def test_contacts_required_properties(mapper):
+    data["code"] = "co7"
+    data["contact_person_f"] = ""
+
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+
+    assert "contacts" not in organization
 
 
 # Test "interfaces" array
