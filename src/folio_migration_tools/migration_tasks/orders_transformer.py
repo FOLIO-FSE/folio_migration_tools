@@ -8,6 +8,7 @@ from os.path import isfile
 from typing import List
 from typing import Optional
 
+from deepdiff import DeepDiff
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic.main import BaseModel
 
@@ -35,10 +36,8 @@ class OrdersTransformer(MigrationTaskBase):
         migration_task_type: str
         files: List[FileDefinition]
         orders_mapping_file_name: str
-        order_type_map_file_name: str
         organizations_code_map_file_name: str
         acquisition_method_map_file_name: str
-        order_format_map_file_name: str
         payment_status_map_file_name: Optional[str] = ""
         receipt_status_map_file_name: Optional[str] = ""
         workflow_status_map_file_name: Optional[str] = ""
@@ -63,7 +62,7 @@ class OrdersTransformer(MigrationTaskBase):
         self.task_config = task_config
         self.files = self.list_source_files()
         self.total_records = 0
-
+        self.current_folio_record: dict = {}
         self.orders_map = self.setup_records_map(
             self.folder_structure.mapping_files_folder / self.task_config.orders_mapping_file_name
         )
@@ -74,18 +73,13 @@ class OrdersTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.orders_map
         )
+        self.minted_ids: set = set()
 
         self.mapper = CompositeOrderMapper(
             self.folio_client,
             self.library_configuration,
             self.orders_map,
             self.load_id_map(self.folder_structure.instance_id_map_path, True),
-            self.load_ref_data_mapping_file(
-                "vendor",
-                self.folder_structure.mapping_files_folder
-                / self.task_config.organizations_code_map_file_name,
-                self.folio_keys,
-            ),
             self.load_ref_data_mapping_file(
                 "acquisitionMethod",
                 self.folder_structure.mapping_files_folder
@@ -169,14 +163,37 @@ class OrdersTransformer(MigrationTaskBase):
                         logging.info(json.dumps(record, indent=4))
 
                     folio_rec, legacy_id = self.mapper.do_map(
-                        record, f"row {idx}", FOLIONamespaces.orders
+                        record, f"row {idx}", FOLIONamespaces.orders, True
                     )
-                    if idx == 0:
-                        logging.info("First FOLIO record:")
-                        logging.info(json.dumps(folio_rec, indent=4))
 
-                    # Writes record to file
-                    Helper.write_to_file(results_file, folio_rec)
+                    # Handle merging and storage
+                    if not self.current_folio_record:
+                        self.current_folio_record = folio_rec
+                    if (
+                        self.current_folio_record
+                        and folio_rec["id"]
+                        and folio_rec["id"] != self.current_folio_record.get("id", "")
+                    ):
+
+                        # Writes record to file
+                        Helper.write_to_file(results_file, self.current_folio_record)
+                        self.mapper.migration_report.add_general_statistics(
+                            "Orders written to disk"
+                        )
+                        self.current_folio_record = folio_rec
+
+                    else:
+                        # Merge if possible
+                        diff = DeepDiff(self.current_folio_record, folio_rec)
+                        if "compositePoLines" in diff.affected_root_keys:
+                            self.current_folio_record.get("compositePoLines", []).extend(
+                                folio_rec.get("compositePoLines", [])
+                            )
+                            self.mapper.migration_report.add_general_statistics(
+                                "PO-lines merged into one PO"
+                            )
+                        for key in diff.affected_paths:
+                            self.mapper.migration_report.add(Blurbs.DiffsBetweenOrders, key)
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -184,10 +201,6 @@ class OrdersTransformer(MigrationTaskBase):
                     self.mapper.handle_transformation_record_failed_error(idx, error)
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
-
-                self.mapper.migration_report.add_general_statistics(
-                    "Number of objects in source data file"
-                )
 
                 # TODO Rewrite to base % value on number of rows in file
                 if idx > 1 and idx % 50 == 0:
@@ -203,6 +216,8 @@ class OrdersTransformer(MigrationTaskBase):
                 f"Done processing {filename} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
+            logging.info("Storing last record to disk")
+            Helper.write_to_file(results_file, self.current_folio_record)
 
     def do_work(self):
         logging.info("Getting started!")

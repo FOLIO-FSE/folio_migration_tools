@@ -41,6 +41,7 @@ folio-uuid = "^0.2.7"
 pymarc = "^4.2.1"
 pydantic = "^1.10.2"
 argparse-prompt = "^0.0.5"
+deepdiff = "^6.2.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.1.3"
