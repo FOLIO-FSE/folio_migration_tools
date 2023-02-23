@@ -278,22 +278,26 @@ class OrganizationTransformer(MigrationTaskBase):
     def handle_embedded_extradata_objects(self, record):
         if record.get("interfaces"):
             extradata_object_type = "interfaces"
-            extradata_object_array = record[extradata_object_type]
-            record[extradata_object_type] = []
+            referenced_objects = []
 
-            for embedded_object in extradata_object_array:
-                self.create_linked_extradata_object(record, embedded_object, extradata_object_type)
+            for embedded_object in record[extradata_object_type]:
+                referenced_objects.append(
+                    self.create_linked_extradata_object(embedded_object, extradata_object_type)
+                )
+
+            record[extradata_object_type] = referenced_objects
 
         if record.get("contacts"):
             extradata_object_type = "contacts"
-            extradata_object_array = record[extradata_object_type]
-            record[extradata_object_type] = []
+            referenced_objects = []
 
-            for embedded_object in extradata_object_array:
+            for embedded_object in record[extradata_object_type]:
                 if embedded_object.get("firstName") and embedded_object.get("lastName"):
-                    self.create_linked_extradata_object(
-                        record, embedded_object, extradata_object_type
+                    referenced_objects.append(
+                        self.create_linked_extradata_object(embedded_object, extradata_object_type)
                     )
+
+            record[extradata_object_type] = referenced_objects
 
         # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
         if "notes" in record:
@@ -301,7 +305,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         return record
 
-    def create_linked_extradata_object(self, record, embedded_object, extradata_object_type):
+    def create_linked_extradata_object(self, embedded_object, extradata_object_type):
         """Creates extradata objects from embedded extradata objects,
         and replaces the embedde dobjects with UUIDs.
 
@@ -330,7 +334,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 f"Number of reoccuring identical {extradata_object_type}:"
             )
             Helper.log_data_issue(
-                f"{record['code']}",
+                f"{self.legacy_id}",
                 f"Identical {extradata_object_type} objects found in multiple organizations",
                 embedded_object,
             )
@@ -345,8 +349,7 @@ class OrganizationTransformer(MigrationTaskBase):
         )
         # Save contact to extradata file
         # Append the contact UUID to the organization record
-        record[extradata_object_type].append(extradata_object_uuid)
 
         self.embedded_extradata_object_cache.add(embedded_object_hash)
 
-        return record
+        return extradata_object_uuid

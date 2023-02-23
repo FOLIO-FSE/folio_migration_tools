@@ -220,20 +220,21 @@ def test_handle_embedded_extradata_objects():
         mocked_organization_transformer, organization
     )
 
-    assert organization["interfaces"] == []
-    assert organization["contacts"] == []
+    assert len(organization["interfaces"]) == 2
+    assert "FOLIO" not in organization["interfaces"]
+    assert len(organization["contacts"]) == 3
+    assert "Jane" not in organization["contacts"]
 
 
 # Test extradata creation
-def test_create_linked_extradata_objects():
+def test_create_linked_extradata_object():
     mocked_organization_transformer = Mock(spec=OrganizationTransformer)
     mocked_organization_transformer.embedded_extradata_object_cache = set()
     mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
     mocked_organization_transformer.extradata_writer.cache = []
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
     mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
-
-    organization = {"name": "FOLIO", "interfaces": [], "contacts": []}
+    mocked_organization_transformer.legacy_id = "etxra_org1"
 
     interfaces = [
         {"name": "FOLIO", "uri": "https://www.folio.org"},
@@ -259,28 +260,32 @@ def test_create_linked_extradata_objects():
         },
     ]
 
+    linked_interfaces = []
     for interface in interfaces:
-        OrganizationTransformer.create_linked_extradata_objects(
-            mocked_organization_transformer, organization, interface, "interfaces"
+        linked_interface = OrganizationTransformer.create_linked_extradata_object(
+            mocked_organization_transformer, interface, "interfaces"
         )
+        linked_interfaces.append(linked_interface)
 
+    linked_contacts = []
     for contact in contacts:
-        OrganizationTransformer.create_linked_extradata_objects(
-            mocked_organization_transformer, organization, contact, "contacts"
+        linked_contact = OrganizationTransformer.create_linked_extradata_object(
+            mocked_organization_transformer, contact, "contacts"
         )
+        linked_contacts.append(linked_contact)
 
     # Check that UUIDs have been added to the organization record
-    assert all(uuid.UUID(str(value), version=4) for value in organization["interfaces"])
-    assert all(uuid.UUID(str(value), version=4) for value in organization["contacts"])
+    assert all(uuid.UUID(str(value), version=4) for value in linked_interfaces)
+    assert all(uuid.UUID(str(value), version=4) for value in linked_contacts)
 
     # Check that all the assigned UUIDs are in the extradata writer cache
     assert all(
         str(id) in str(mocked_organization_transformer.extradata_writer.cache)
-        for id in organization["interfaces"]
+        for id in linked_interfaces
     )
     assert all(
         str(id) in str(mocked_organization_transformer.extradata_writer.cache)
-        for id in organization["contacts"]
+        for id in linked_contacts
     )
 
     # Check that there are contacts in the extradata writer
@@ -314,8 +319,8 @@ def test_contact_formatting_and_content():
         ],
     }
 
-    OrganizationTransformer.create_linked_extradata_objects(
-        mocked_organization_transformer, organization, organization["contacts"][0], "contacts"
+    OrganizationTransformer.create_linked_extradata_object(
+        mocked_organization_transformer, organization["contacts"][0], "contacts"
     )
 
     assert (
@@ -326,17 +331,58 @@ def test_contact_formatting_and_content():
         in str(mocked_organization_transformer.extradata_writer.cache)
     )
 
-def test_validate_url():
+
+def test_validate_uri():
     mocked_organization_transformer = Mock(spec=OrganizationTransformer)
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
     mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
 
     record = {
         "name": "FOLIO",
+        "code": "FOLIO",
+        "status": "Active",
         "interfaces": [
             {"name": "FOLIO", "uri": "https://www.folio.org"},
             {"name": "Community wiki", "uri": "ww.wiki.folio.org"},
-        ]}
-    record = OrganizationTransformer.validate_url(mocked_organization_transformer, record)
+        ],
+    }
+    record = OrganizationTransformer.validate_uri(mocked_organization_transformer, record)
 
     assert len(record["interfaces"]) == 1
+
+
+def test_contact_remove_incomplete_object():
+    mocked_organization_transformer = Mock(spec=OrganizationTransformer)
+    mocked_organization_transformer.embedded_extradata_object_cache = set()
+    mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
+    mocked_organization_transformer.extradata_writer.cache = []
+    mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
+    mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
+
+    organization = {
+        "name": "YourCompany",
+        "code": "YC",
+        "status": "Active",
+        "contacts": [
+            {
+                "firstName": "June",
+                "lastName": "Day",
+                "addresses": [{"addressLine1": "MyStreet"}, {"city": "Stockholm"}],
+                "phoneNumbers": [{"phoneNumber": "123"}],
+                "emailAddresses": [{"value": "andme(at)me.com"}],
+            },
+            {
+                "firstName": "Joe",
+                "addresses": [{"addressLine1": "MyStreet"}, {"city": "Stockholm"}],
+                "phoneNumbers": [{"phoneNumber": "123"}],
+                "emailAddresses": [{"value": "andme(at)me.com"}],
+            },
+        ],
+        "interfaces": [],
+    }
+
+    organization = OrganizationTransformer.handle_embedded_extradata_objects(
+        mocked_organization_transformer, organization
+    )
+
+    assert len(organization["contacts"]) == 1
