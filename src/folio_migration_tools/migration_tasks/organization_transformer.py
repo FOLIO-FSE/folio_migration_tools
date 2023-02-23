@@ -148,7 +148,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     )
 
                     folio_rec = self.clean_org(folio_rec)
-
+                    self.mapper.report_folio_mapping(folio_rec, self.mapper.organization_schema)
                     folio_rec = self.handle_embedded_extradata_objects(folio_rec)
 
                     if idx == 0:
@@ -157,6 +157,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
                     # Writes record to file
                     Helper.write_to_file(results_file, folio_rec)
+                    
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -208,7 +209,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                "", migration_report_file, self.start_datetime
+                "Ogranization transformation report", migration_report_file, self.start_datetime
             )
 
             Helper.print_mapping_report(
@@ -217,6 +218,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+            
         self.clean_out_empty_logs()
 
         logging.info("All done!")

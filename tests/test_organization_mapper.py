@@ -122,16 +122,16 @@ def test_organization_mapping(mapper):
 
 
 def test_single_org_type_refdata_mapping(mapper):
-    data["vendor_code"] = "ovre9"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    data["code"] = "ov9"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # Test reference data mapping
     assert organization["organizationTypes"] == ["837d04b6-d81c-4c49-9efd-2f62515999b3"]
 
 
 def test_single_category_refdata_mapping(mapper):
-    data["vendor_code"] = "ovre10"
-    organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
+    data["code"] = "ov10"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # Test arrays of contact information
     assert organization["addresses"][0]["categories"] == ["c78640d5-a1ec-4721-9a1f-c6f876d4c179"]

@@ -43,7 +43,7 @@ class OrganizationMapper(MappingFileMapperBase):
             FOLIONamespaces.organizations,
             library_configuration,
         )
-
+        self.organization_schema = organization_schema
         # Set up reference data maps
         self.set_up_reference_data_mapping(
             organization_types_map,
