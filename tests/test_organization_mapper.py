@@ -249,7 +249,7 @@ def test_interfaces_type_enum_empty(mapper):
     data["code"] = "io3"
     data["interface_1_type"] = ""
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-    assert len(organization["interfaces"][0]["type"]) == 0
+    assert "type" not in organization["interfaces"]
 
 
 def test_invalid_non_required_enum_in_sub_object_mapping(mapper):

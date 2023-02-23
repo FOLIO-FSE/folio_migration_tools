@@ -514,12 +514,13 @@ class MappingFileMapperBase(MapperBase):
                         for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
                             res = self.get_prop(legacy_object, array_path, index_or_id)
                             self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
-                            self.add_values_to_string_array(
-                                sub_prop_name,
-                                temp_object,
-                                res,
-                                self.library_configuration.multi_field_delimiter,
-                            )
+                            if res or isinstance(res, bool):
+                                self.add_values_to_string_array(
+                                    sub_prop_name,
+                                    temp_object,
+                                    res,
+                                    self.library_configuration.multi_field_delimiter,
+                                )
 
                     elif sub_prop.get("type", "") == "object" and "properties" in sub_prop:
                         self.map_object_props(
