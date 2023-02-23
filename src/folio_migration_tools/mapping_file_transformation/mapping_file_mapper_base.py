@@ -768,6 +768,10 @@ class MappingFileMapperBase(MapperBase):
             "enum" in mapped_schema_property
             and mapped_schema_property_name in required
             and not mapped_value
+        ) or (
+            mapped_schema_property.get("items", {}).get("enum")
+            and mapped_value
+            and mapped_value not in mapped_schema_property.get("items", {}).get("enum")
         ):
             raise TransformationRecordFailedError(
                 index_or_id,

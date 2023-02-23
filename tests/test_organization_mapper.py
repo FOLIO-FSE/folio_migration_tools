@@ -227,18 +227,20 @@ def test_interfaces_basic_mapping(mapper):
     assert organization["interfaces"][0]["uri"] == "https://www.folio.org"
 
 
-def test_interfaces_type_enum_mapping(mapper):
-    # Array of enums
-    valid_interface_types = ["Admin", "End user", "Reports", "Orders", "Invoices", "Other"]
-    data["code"] = "o9"
+def test_interfaces_type_enum_invalid(mapper):
+    data["code"] = "io2"
+    data["interface_1_type"] = "Whaaaat?"
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+    assert len(organization["interfaces"][0]["type"]) == 1
 
-    assert organization["interfaces"][0]["type"][0] in valid_interface_types
-    assert len(organization["interfaces"]) == 1
+def test_interfaces_type_enum_empty(mapper):
+    data["code"] = "io3"
+    data["interface_1_type"] = ""
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+    assert len(organization["interfaces"][0]["type"]) == 0
 
 
 def test_invalid_non_required_enum_in_sub_object_mapping(mapper):
-
     records = [
         data
         | {
@@ -335,7 +337,6 @@ data = {
     "contact_address_town": "Gothenburg",  # String
     "interface_1_uri": "https://www.folio.org",  # String
     "interface_1_name": "FOLIO",  # String
-    "interface_1_type": "Admin",  # String
     "interface_1_notes": "A good starting point for FOLIO info/links.",  # String
     "interface_1_delivery": "Online",  # Enum
     "interface_1_statFormat": "Interpretative dance",  # String
@@ -343,7 +344,7 @@ data = {
     "interface_1_localLocation": "The shelf behind the houseplant",  # String
     "interface_1_onlineLocation": "How does this differ from URI?",  # String
     "interface_2_uri": "https://www.wiki.folio.org",
-    "interface_2_type": "Community wiki",
+    "interface_2_type": "End user",
 }
 
 # A mocked mapping file
