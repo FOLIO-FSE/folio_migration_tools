@@ -230,10 +230,20 @@ def test_interfaces_basic_mapping(mapper):
 
 
 def test_interfaces_type_enum_invalid(mapper):
-    data["code"] = "io2"
-    data["interface_1_type"] = "Whaaaat?"
-    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-    assert len(organization["interfaces"][0]["type"]) == 1
+    enum_interface = {
+            "name": "Vendor With Account 1",  # String, required
+            "code": "eo1",  # String, required
+            "status": "Active",  # Enum, required
+            "interface_1_type": "Whaaaat?", 
+            "interface_1_name": "Interface name",
+            "address_categories": "rt",
+            "phone_categories": "rt",
+            "email1_categories": "rt",
+            "email2_categories": "rt",
+        }
+
+    organization, idx = mapper.do_map(enum_interface, enum_interface["code"], FOLIONamespaces.organizations)
+    assert "interfaces" not in organization
 
 def test_interfaces_type_enum_empty(mapper):
     data["code"] = "io3"

@@ -513,6 +513,7 @@ class MappingFileMapperBase(MapperBase):
                         # We have not reached the end of the prop path
                         for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
                             res = self.get_prop(legacy_object, array_path, index_or_id)
+                            self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
                             self.add_values_to_string_array(
                                 sub_prop_name,
                                 temp_object,
@@ -776,7 +777,7 @@ class MappingFileMapperBase(MapperBase):
             raise TransformationRecordFailedError(
                 index_or_id,
                 f"Allowed values for {mapped_schema_property_name} are {mapped_schema_property['enum']} "
-                f"Forbidden value found: ",
+                f"Forbidden enum value found: ",
                 mapped_value,
             )
 
