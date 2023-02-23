@@ -25,6 +25,7 @@ def test_fetch_org_schemas_from_github_happy_path():
 
     assert organization_schema["$schema"]
 
+
 # Build contact schema from github
 def test_fetch_contact_schemas_from_github_happy_path():
     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
@@ -163,6 +164,7 @@ def test_enforce_schema_required_properties_in_organization(mapper):
     # There should be no phone numbers, as the data is empty
     assert not organization.get("phoneNumbers")
 
+
 @pytest.mark.skip(
     reason="We would need a way of using the same ref data file for multiple values. See #411"
 )
@@ -208,9 +210,8 @@ def test_contacts_address_mapping(mapper):
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
     assert organization["contacts"][0]["firstName"] == "Jane"
 
-@pytest.mark.skip(
-    reason="Temporarily handling this in method handle_embedded_extradata_objects"
-)
+
+@pytest.mark.skip(reason="Temporarily handling this in method handle_embedded_extradata_objects")
 def test_contacts_required_properties(mapper):
     data["code"] = "co7"
     data["contact_person_f"] = ""
@@ -231,19 +232,22 @@ def test_interfaces_basic_mapping(mapper):
 
 def test_interfaces_type_enum_invalid(mapper):
     enum_interface = {
-            "name": "Vendor With Account 1",  # String, required
-            "code": "eo1",  # String, required
-            "status": "Active",  # Enum, required
-            "interface_1_type": "Whaaaat?", 
-            "interface_1_name": "Interface name",
-            "address_categories": "rt",
-            "phone_categories": "rt",
-            "email1_categories": "rt",
-            "email2_categories": "rt",
-        }
+        "name": "Vendor With Account 1",  # String, required
+        "code": "eo1",  # String, required
+        "status": "Active",  # Enum, required
+        "interface_1_type": "Whaaaat?",
+        "interface_1_name": "Interface name",
+        "address_categories": "rt",
+        "phone_categories": "rt",
+        "email1_categories": "rt",
+        "email2_categories": "rt",
+    }
 
-    organization, idx = mapper.do_map(enum_interface, enum_interface["code"], FOLIONamespaces.organizations)
+    organization, idx = mapper.do_map(
+        enum_interface, enum_interface["code"], FOLIONamespaces.organizations
+    )
     assert "interfaces" not in organization
+
 
 def test_interfaces_type_enum_empty(mapper):
     data["code"] = "io3"
@@ -307,9 +311,8 @@ def test_empty_non_required_enum_in_sub_object_mapping(mapper):
     assert "name" in organization["accounts"][0]
     assert "paymentMethod" not in organization["accounts"][0]
 
-@pytest.mark.skip(
-    reason="Under implementation."
-)
+
+@pytest.mark.skip(reason="Under implementation.")
 def test_interface_credentials(mapper):
     data["code"] = "ic1"
     data["interface_1_username"] = "myUsername"

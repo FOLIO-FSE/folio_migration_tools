@@ -157,7 +157,6 @@ class OrganizationTransformer(MigrationTaskBase):
 
                     # Writes record to file
                     Helper.write_to_file(results_file, folio_rec)
-                    
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -218,7 +217,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
-            
+
         self.clean_out_empty_logs()
 
         logging.info("All done!")
@@ -308,11 +307,10 @@ class OrganizationTransformer(MigrationTaskBase):
         return record
 
     def create_linked_extradata_object(self, embedded_object, extradata_object_type):
-        """Creates extradata objects from embedded extradata objects,
-        and replaces the embedde dobjects with UUIDs.
+        """Creates an extradata object from an embedded object,
+        and returns the UUID.
 
         Args:
-            record (_type_): _description_
             embedded_object (_type_): _description_
             extradata_object_type (_type_): _description_
 

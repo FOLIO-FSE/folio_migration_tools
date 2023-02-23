@@ -2380,9 +2380,7 @@ def test_map_enums_invalid_required(mocked_folio_client):
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    with pytest.raises(
-        TransformationRecordFailedError, match=r"Forbidden enum value found"
-    ):
+    with pytest.raises(TransformationRecordFailedError, match=r"Forbidden enum value found"):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
@@ -2419,9 +2417,7 @@ def test_map_enums_invalid_not_required(mocked_folio_client):
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    with pytest.raises(
-        TransformationRecordFailedError, match=r"Forbidden enum value found"
-    ):
+    with pytest.raises(TransformationRecordFailedError, match=r"Forbidden enum value found"):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
@@ -2570,9 +2566,7 @@ def test_map_enums_invalid_not_required_deeper_level(mocked_folio_client):
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    with pytest.raises(
-        TransformationRecordFailedError, match=r"Forbidden enum value found"
-    ):
+    with pytest.raises(TransformationRecordFailedError, match=r"Forbidden enum value found"):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
@@ -2847,9 +2841,7 @@ def test_map_wrong_not_required_deeper_level_enums(mocked_folio_client: FolioCli
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    with pytest.raises(
-        TransformationRecordFailedError, match=r"Forbidden enum value found"
-    ):
+    with pytest.raises(TransformationRecordFailedError, match=r"Forbidden enum value found"):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
