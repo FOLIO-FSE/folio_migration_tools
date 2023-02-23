@@ -10,7 +10,6 @@ from os.path import isfile
 from typing import List
 from typing import Optional
 
-import validators
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -256,9 +255,11 @@ class OrganizationTransformer(MigrationTaskBase):
 
     def validate_uri(self, record):
         valid_interfaces = []
+        uri_prefixes = ('ftp://', 'sftp://', 'http://', 'https://')
+
         for interface in record.get("interfaces"):
             if ("uri" not in interface) or (
-                interface.get("uri") and validators.url(interface["uri"])
+                interface.get("uri", "").startswith(uri_prefixes)
             ):
                 valid_interfaces.append(interface)
             else:
@@ -300,8 +301,8 @@ class OrganizationTransformer(MigrationTaskBase):
 
             record[extradata_object_type] = referenced_objects
 
-        # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
         if "notes" in record:
+        # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
             pass
 
         return record
