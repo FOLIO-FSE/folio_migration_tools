@@ -255,12 +255,10 @@ class OrganizationTransformer(MigrationTaskBase):
 
     def validate_uri(self, record):
         valid_interfaces = []
-        uri_prefixes = ('ftp://', 'sftp://', 'http://', 'https://')
+        uri_prefixes = ("ftp://", "sftp://", "http://", "https://")
 
         for interface in record.get("interfaces"):
-            if ("uri" not in interface) or (
-                interface.get("uri", "").startswith(uri_prefixes)
-            ):
+            if ("uri" not in interface) or (interface.get("uri", "").startswith(uri_prefixes)):
                 valid_interfaces.append(interface)
             else:
                 self.mapper.migration_report.add(
@@ -302,7 +300,7 @@ class OrganizationTransformer(MigrationTaskBase):
             record[extradata_object_type] = referenced_objects
 
         if "notes" in record:
-        # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
+            # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
             pass
 
         return record
