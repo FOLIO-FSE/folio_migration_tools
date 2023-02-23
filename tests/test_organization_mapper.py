@@ -122,7 +122,7 @@ def test_organization_mapping(mapper):
 
 
 def test_single_org_type_refdata_mapping(mapper):
-    data["vendor_code"] = "vr2"
+    data["vendor_code"] = "ovre9"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test reference data mapping
@@ -130,7 +130,7 @@ def test_single_org_type_refdata_mapping(mapper):
 
 
 def test_single_category_refdata_mapping(mapper):
-    data["vendor_code"] = "vr3"
+    data["vendor_code"] = "ovre10"
     organization, idx = mapper.do_map(data, data["vendor_code"], FOLIONamespaces.organizations)
 
     # Test arrays of contact information
@@ -257,7 +257,7 @@ def test_invalid_non_required_enum_in_sub_object_mapping(mapper):
         data
         | {
             "name": "Vendor With Account 1",  # String, required
-            "code": "eo1",  # String, required
+            "code": "eoi1",  # String, required
             "status": "Active",  # Enum, required
             "account_number": "ac1",  # String, required for Account
             "account_name": "MyAccount",  # String, required for Account
@@ -267,7 +267,7 @@ def test_invalid_non_required_enum_in_sub_object_mapping(mapper):
         data
         | {
             "name": "Vendor With Account 2",  # String, required
-            "code": "eo2",  # String, required
+            "code": "eoi2",  # String, required
             "status": "Active",  # Enum, required
             "account_number": "ac2",  # String, required for Account
             "account_name": "MyAccount",  # String, required for Account

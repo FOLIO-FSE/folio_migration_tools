@@ -551,7 +551,7 @@ class MappingFileMapperBase(MapperBase):
             ):
                 self.migration_report.add(
                     Blurbs.IncompleteSubPropertyRemoved,
-                    f"{prop_name}.{sub_prop_name}",
+                    f"{prop_name}",
                 )
                 # Helper.log_data_issue(
                 #     f"{prop_name}",
