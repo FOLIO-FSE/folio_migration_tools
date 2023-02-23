@@ -71,15 +71,34 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
                 "description": "",
             },
             {
+                "folio_field": "compositePoLines[0].acquisitionMethod",
+                "legacy_field": "vendor",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].orderFormat",
+                "legacy_field": "vendor",
+                "value": "",
+                "description": "",
+                "rules": {"replaceValues": {"EBSCO": "Electronic Resource"}},
+            },
+            {
                 "folio_field": "compositePoLines[0].cost.currency",
                 "legacy_field": "",
                 "value": "USD",
                 "description": "",
             },
+            {
+                "folio_field": "compositePoLines[0].source",
+                "legacy_field": "",
+                "value": "API",
+                "description": "",
+            },
         ]
     }
     acg_method_map = [
-        {"vendor": "ebsco", "folio_value": "Purchase"},
+        {"vendor": "EBSCO", "folio_value": "Purchase"},
         {"vendor": "*", "folio_value": "Purchase"},
     ]
     return CompositeOrderMapper(
@@ -173,7 +192,7 @@ def test_composite_order_mapping(mapper):
 def test_composite_order_with_one_pol_mapping(mapper):
     data = {
         "order_number": "o124",
-        "vendor": "ebsco",
+        "vendor": "EBSCO",
         "type": "One-Time",
         "TITLE": "Once upon a time...",
         "bibnumber": "1",
