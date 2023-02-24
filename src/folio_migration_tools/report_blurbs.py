@@ -14,23 +14,30 @@ class Blurbs:
         "This is a technical report that helps you to identify differences in the mapped order fields. ",
     )
     AuthoritySources = ("Authorization sources and related information", "")
-    IncompleteSubPropertyRemoved = ("Sub-property removed due to missing required fields", "")
+    IncompleteSubPropertyRemoved = (
+        "Sub-property removed due to missing required fields",
+        "Add the missing required information to the record in your current ILS to ensure that it can be migrated over.",
+    )
     POLCreation = (
         "PO-Line creation",
         "Report on how PO-Line creation went, what merge criterias were used, etc",
     )
     AcquisitionMethodMapping = ("Acquisition Method Mapping", "")
+    MalformedInterfaceUri = (
+        "Malformed interface URIs",
+        "Interfaces with malformed URIs will not be migrated. See data issues log.\nFOLIO Interface URIs must start with one of the following: 'ftp://', 'sftp://', 'http://', 'https://'.",
+    )
     FieldMappingDetails = ("Mapping details", "")
     CatalogingAgency = ("Cataloging sources", "")
     Trivia = ("Trivia", "")
     LeaderManipulation = ("Leader manipulation", "")
     TermsMapping = ("Terms Mapping", "Reference data mapping for Terms.")
     CategoriesMapping = (
-        "Organization Contact Information Categories Mapping",
-        "Reference data mapping for Categories assigned to Organization contacts, addresses, emails, and phones numbers.",
+        "Organization contact categories",
+        "Reference data mapping for contacts, addresses, emails, and phones numbers.",
     )
     OrganizationTypeMapping = (
-        "Organization Type Mapping",
+        "Organization types",
         "Reference data mapping for Organization types.",
     )
 

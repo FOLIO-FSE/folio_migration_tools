@@ -892,9 +892,82 @@
             "description": "The list of interfaces assigned to this organization",
             "type": "array",
             "items": {
-                "description": "UUID of an interface record",
-                "$ref": "../../common/schemas/uuid.json",
-                "type": "string"
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "description": "An interface record",
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "description": "The unique id of this interface",
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "string"
+                    },
+                    "name": {
+                        "description": "The name of this interface",
+                        "type": "string"
+                    },
+                    "uri": {
+                        "description": "The URI of this interface",
+                        "type": "string"
+                    },
+                    "notes": {
+                        "description": "The notes for this interface",
+                        "type": "string"
+                    },
+                    "available": {
+                        "description": "The availability setting for this interface",
+                        "type": "boolean"
+                    },
+                    "deliveryMethod": {
+                        "description": "The delivery method for this interface",
+                        "type": "string",
+                        "enum": [
+                            "Online",
+                            "FTP",
+                            "Email",
+                            "Other"
+                        ]
+                    },
+                    "statisticsFormat": {
+                        "description": "The format of the statistics for this interface",
+                        "type": "string"
+                    },
+                    "locallyStored": {
+                        "description": "The locally stored location of this interface",
+                        "type": "string"
+                    },
+                    "onlineLocation": {
+                        "description": "The online location for this interface",
+                        "type": "string"
+                    },
+                    "statisticsNotes": {
+                        "description": "The notes regarding the statistics for this interface",
+                        "type": "string"
+                    },
+                    "type": {
+                        "description": "Interface types",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "$ref": "interface_type.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "description": "the type of interface",
+                            "enum": [
+                                "Admin",
+                                "End user",
+                                "Reports",
+                                "Orders",
+                                "Invoices",
+                                "Other"
+                            ]
+                        }
+                    },
+                    "metadata": {
+                        "type": "Deprecated",
+                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "readonly": true
+                    }
+                },
+                "additionalProperties": false
             }
         },
         "accounts": {

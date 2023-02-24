@@ -513,12 +513,16 @@ class MappingFileMapperBase(MapperBase):
                         # We have not reached the end of the prop path
                         for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
                             res = self.get_prop(legacy_object, array_path, index_or_id)
-                            self.add_values_to_string_array(
-                                sub_prop_name,
-                                temp_object,
-                                res,
-                                self.library_configuration.multi_field_delimiter,
+                            self.validate_enums(
+                                res, sub_prop, sub_prop_name, index_or_id, required
                             )
+                            if res or isinstance(res, bool):
+                                self.add_values_to_string_array(
+                                    sub_prop_name,
+                                    temp_object,
+                                    res,
+                                    self.library_configuration.multi_field_delimiter,
+                                )
 
                     elif sub_prop.get("type", "") == "object" and "properties" in sub_prop:
                         self.map_object_props(
@@ -549,7 +553,7 @@ class MappingFileMapperBase(MapperBase):
             ):
                 self.migration_report.add(
                     Blurbs.IncompleteSubPropertyRemoved,
-                    f"{prop_name}.{sub_prop_name}",
+                    f"{prop_name}",
                 )
                 # Helper.log_data_issue(
                 #     f"{prop_name}",
@@ -761,18 +765,27 @@ class MappingFileMapperBase(MapperBase):
         required,
     ):
         if (
-            "enum" in mapped_schema_property
-            and mapped_value
-            and mapped_value not in mapped_schema_property["enum"]
-        ) or (
-            "enum" in mapped_schema_property
-            and mapped_schema_property_name in required
-            and not mapped_value
+            (
+                "enum" in mapped_schema_property
+                and mapped_value
+                and mapped_value not in mapped_schema_property["enum"]
+            )
+            or (
+                "enum" in mapped_schema_property
+                and mapped_schema_property_name in required
+                and not mapped_value
+            )
+            or (
+                mapped_schema_property.get("items", {}).get("enum")
+                and mapped_value
+                and mapped_value not in mapped_schema_property.get("items", {}).get("enum")
+            )
         ):
             raise TransformationRecordFailedError(
                 index_or_id,
-                f"Forbidden value for enum property {mapped_schema_property_name}."
-                f"Allowed values are: {mapped_schema_property['enum']}",
+                f"Allowed values for {mapped_schema_property_name}"
+                f"are {mapped_schema_property['enum']} "
+                f"Forbidden enum value found: ",
                 mapped_value,
             )
 

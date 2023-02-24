@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 import uuid
+from hashlib import sha1
 from os.path import isfile
 from typing import List
 from typing import Optional
@@ -106,9 +107,7 @@ class OrganizationTransformer(MigrationTaskBase):
             ),
         )
 
-        # TODO We should cache contacts and interfaces to ensure we don't add duplicates.
-        # See similar implementation for instructors in Courses mapper
-        self.contacts_cache: dict = {}
+        self.embedded_extradata_object_cache: set = set()
         self.interfaces_cache: dict = {}
 
     def list_source_files(self):
@@ -147,16 +146,16 @@ class OrganizationTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.organizations
                     )
 
-                    folio_rec = self.create_extradata_objects(folio_rec)
-
-                    clean_folio_rec = self.clean_org(folio_rec)
+                    folio_rec = self.clean_org(folio_rec)
+                    self.mapper.report_folio_mapping(folio_rec, self.mapper.organization_schema)
+                    folio_rec = self.handle_embedded_extradata_objects(folio_rec)
 
                     if idx == 0:
                         logging.info("First FOLIO record:")
-                        logging.info(json.dumps(clean_folio_rec, indent=4))
+                        logging.info(json.dumps(folio_rec, indent=4))
 
                     # Writes record to file
-                    Helper.write_to_file(results_file, clean_folio_rec)
+                    Helper.write_to_file(results_file, folio_rec)
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -208,7 +207,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                "", migration_report_file, self.start_datetime
+                "Ogranization transformation report", migration_report_file, self.start_datetime
             )
 
             Helper.print_mapping_report(
@@ -217,93 +216,139 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+
         self.clean_out_empty_logs()
 
         logging.info("All done!")
 
-    def clean_org(self, folio_rec):
-        self.clean_org_type_pre_morning_glory(folio_rec, self.library_configuration.folio_release)
-        self.clean_addresses(folio_rec)
+    def clean_org(self, record):
+        if record.get("addresses"):
+            self.clean_addresses(record)
+        if record.get("interfaces"):
+            self.validate_uri(record)
 
-        return folio_rec
+        return record
 
-    def clean_org_type_pre_morning_glory(self, folio_rec, folio_release):
-        # Remove the organizationTypes for older releases
-        if folio_release in ["lotus"]:
-            if folio_rec.get("organizationTypes"):
-                del folio_rec["organizationTypes"]
-        return folio_rec
+    def clean_addresses(self, record):
+        addresses = record.get("addresses", [])
+        primary_address_exists = False
+        empty_addresses = []
 
-    def clean_addresses(self, folio_rec):
-        if addresses := folio_rec.get("addresses", []):
-            primary_address_exists = False
-            empty_addresses = []
+        for address in addresses:
+            # Check if the address has content
+            address_content = {k: v for k, v in address.items() if k != "isPrimary"}
+            if not any(address_content.values()):
+                empty_addresses.append(address)
 
-            for address in addresses:
-                # Check if the address has content
-                address_content = {k: v for k, v in address.items() if k != "isPrimary"}
-                if not any(address_content.values()):
-                    empty_addresses.append(address)
+            # Check if the address is primary
+            if address.get("isPrimary") is True:
+                primary_address_exists = True
 
-                # Check if the address is primary
-                if address.get("isPrimary") is True:
-                    primary_address_exists = True
+        # If none of the existing addresses is pimrary
+        # Make the first one primary
+        if not primary_address_exists:
+            addresses[0]["isPrimary"] = True
 
-            # If none of the existing addresses is pimrary
-            # Make the first one primary
-            if not primary_address_exists:
-                addresses[0]["isPrimary"] = True
+        record["addresses"] = [a for a in addresses if a not in empty_addresses]
 
-            folio_rec["addresses"] = [a for a in addresses if a not in empty_addresses]
+        return record
 
-            return folio_rec
+    def validate_uri(self, record):
+        valid_interfaces = []
+        uri_prefixes = ("ftp://", "sftp://", "http://", "https://")
 
-    def create_extradata_objects(self, record):
+        for interface in record.get("interfaces"):
+            if ("uri" not in interface) or (interface.get("uri", "").startswith(uri_prefixes)):
+                valid_interfaces.append(interface)
+            else:
+                self.mapper.migration_report.add(
+                    Blurbs.MalformedInterfaceUri,
+                    "Interfaces",
+                )
+                Helper.log_data_issue(
+                    f"{record['code']}",
+                    f"INTERFACE FAILED Malformed interface URI: {interface['uri']}",
+                    interface,
+                )
+
+        record["interfaces"] = valid_interfaces
+
+        return record
+
+    def handle_embedded_extradata_objects(self, record):
+        if record.get("interfaces"):
+            extradata_object_type = "interfaces"
+            referenced_objects = []
+
+            for embedded_object in record[extradata_object_type]:
+                referenced_objects.append(
+                    self.create_linked_extradata_object(embedded_object, extradata_object_type)
+                )
+
+            record[extradata_object_type] = referenced_objects
+
         if record.get("contacts"):
-            mapped_contacts = record["contacts"]
-            record["contacts"] = []
+            extradata_object_type = "contacts"
+            referenced_objects = []
 
-            for contact in mapped_contacts:
-                if contact.get("firstName") and contact.get("lastName"):
-                    # Check if this contact has already been created
-                    matched_uuids = [
-                        key for key, value in self.contacts_cache.items() if value == contact
-                    ]
+            for embedded_object in record[extradata_object_type]:
+                if embedded_object.get("firstName") and embedded_object.get("lastName"):
+                    referenced_objects.append(
+                        self.create_linked_extradata_object(embedded_object, extradata_object_type)
+                    )
 
-                    if len(matched_uuids) == 1:
-                        contact_uuid = matched_uuids[0]
-                        # Append the contact UUID to the organization record
-                        record["contacts"].append(contact_uuid)
+            record[extradata_object_type] = referenced_objects
 
-                    elif len(matched_uuids) >= 1:
-                        raise TransformationProcessError(
-                            f"Critical code error. Duplicate contacts created:\n{matched_uuids}"
-                        )
-
-                    else:
-                        # Save away the contact info without a uuid for deduplication
-                        contact_info_to_cache = contact.copy()
-                        # Generate a UUID and add to the contact
-                        contact_uuid = str(uuid.uuid4())
-                        contact["id"] = contact_uuid
-                        # TODO Validate.
-                        # TODO Add address cleanup backwhen the mapper is creating proper addresses
-                        # contact = self.clean_addresses(contact)
-                        self.extradata_writer.write(
-                            "contacts", contact
-                        )  # Double check the endpoint/poster syntax
-                        self.mapper.migration_report.add_general_statistics("Created Contacts")
-                        # Save contact to extradata file
-                        # Append the contact UUID to the organization record
-                        record["contacts"].append(contact_uuid)
-                        self.contacts_cache[contact_uuid] = contact_info_to_cache
-
-        # TODO Do the same as for Contacts. Find out if extradata poster can post credentials.
-        if "interfaces" in record:
-            pass
-
-        # TODO Do the same as for Contacts?
         if "notes" in record:
+            # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
             pass
 
         return record
+
+    def create_linked_extradata_object(self, embedded_object, extradata_object_type):
+        """Creates an extradata object from an embedded object,
+        and returns the UUID.
+
+        Args:
+            embedded_object (_type_): _description_
+            extradata_object_type (_type_): _description_
+
+        Returns:
+            _type_: The organization record with linked extradata UUIDs.
+        """
+        # Save away a hash of the embedded extradata to identify duplicates
+        embedded_object_hash = sha1(
+            json.dumps(embedded_object, sort_keys=True).encode("utf-8"), usedforsecurity=False
+        ).hexdigest()
+
+        # Check if this object has already been created
+        identical_objects = [
+            value
+            for value in self.embedded_extradata_object_cache
+            if value == embedded_object_hash
+        ]
+
+        if len(identical_objects) > 0:
+            self.mapper.migration_report.add_general_statistics(
+                f"Number of reoccuring identical {extradata_object_type}:"
+            )
+            Helper.log_data_issue(
+                f"{self.legacy_id}",
+                f"Identical {extradata_object_type} objects found in multiple organizations",
+                embedded_object,
+            )
+
+        # Generate a UUID and add to the contact
+        extradata_object_uuid = str(uuid.uuid4())
+        embedded_object["id"] = extradata_object_uuid
+        self.extradata_writer.write(extradata_object_type, embedded_object)
+
+        self.mapper.migration_report.add_general_statistics(
+            f"Number of {extradata_object_type} created:"
+        )
+        # Save contact to extradata file
+        # Append the contact UUID to the organization record
+
+        self.embedded_extradata_object_cache.add(embedded_object_hash)
+
+        return extradata_object_uuid
