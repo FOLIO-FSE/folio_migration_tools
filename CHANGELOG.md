@@ -1,5 +1,34 @@
 # Changelog
 
+## v_1_7_5 (26/02/2023)
+
+#### Organizations
+
+- [**Organizations**] Make mapper map array > object > object > string [#502](https://github.com/FOLIO-FSE/folio_migration_tools/issues/502)
+- [**Organizations**] Refine handling of identical Contacts in Organizations [#468](https://github.com/FOLIO-FSE/folio_migration_tools/issues/468)
+
+#### Tool enhancements
+
+- [**Tool enhancements**][**Orders**] Add Instance Matching to Orders Mapper [#394](https://github.com/FOLIO-FSE/folio_migration_tools/issues/394)
+- [**Tool enhancements**][**Organizations**] Make Organization schema in Mapping file creator Lotus-compliant [#298](https://github.com/FOLIO-FSE/folio_migration_tools/issues/298)
+- [**Tool enhancements**][**Organizations**] When creating Organizations, create Interfaces as extradata [#295](https://github.com/FOLIO-FSE/folio_migration_tools/issues/295)
+- [**Tool enhancements**][**Orders**] Create an initial implementation of a migration task for compositePurchaseOrders (Orders and PO Lines) [#202](https://github.com/FOLIO-FSE/folio_migration_tools/issues/202)
+
+#### bug
+
+- [**bug**] MFHD Transformer crashes when MFHD records contain more than one 852$b [#532](https://github.com/FOLIO-FSE/folio_migration_tools/issues/532)
+- [**bug**] Mapper incorrectly fails record where a non-required enum is empty [#509](https://github.com/FOLIO-FSE/folio_migration_tools/issues/509)
+
+#### wontfix
+
+- [**wontfix**][**Organizations**] Create organizations legacy id map  [#511](https://github.com/FOLIO-FSE/folio_migration_tools/issues/511)
+
+---
+
+## 1.7.4 (17/02/2023)
+
+---
+
 ## v_1_7_3 (15/02/2023)
 
 #### Inventory
@@ -22,6 +51,7 @@
 
 - [**organizations**] The mapping process should validate enums-type properties according to schemas [#486](https://github.com/FOLIO-FSE/folio_migration_tools/issues/486)
 
+---
 
 ## v_1_7_2 (31/01/2023)
 
@@ -512,29 +542,3 @@ Batchposter now allows running multiple files of the same object type in one run
 ---
 
 ## juniper_lts (31/01/2022)
-
----
-
-## Juniper 1.2 (09/12/2021)
-## What's Changed
-#69 ##Handle duplicate barcodes
-#85 Remove suppression CLI argument from main_holdings_csv since this is not used. 
-#82 ## Add options for getting Cataloged date from 008 
-#51 ## 001s as HRIDs: Log Instances that had 001 collisions and where assigned FOLIO-style HRIDs
-## Handling of duplicate Instance ids at main_holdings_marc.py. 
-## Log failing location mapping to Data issues log
-## Report on duplicate instance ids from multible main_bibs.py runs when running any of the main_holdings scripts
-
-**Full Changelog**: https://github.com/FOLIO-FSE/MARC21-To-FOLIO/compare/juniper_1_1...juniper_1_2
----
-
-## Juniper 1.1 (15/11/2021)
-# Breaking and major changes
-## property legacyIdentifier required for mapping file-based migration scripts
-As part of the work with deterministic UUIDs, we now need a legacyIdentifer property in the mapping files. data-mapping-file-creator has been updated with this new property:
-
-![image](https://user-images.githubusercontent.com/1894384/141301030-b3785435-6dd8-43a2-8202-d35f0ef950f4.png)
-
-main_items.py and main_holdings_csv.py will halt if the property is missing:
-
-![image](https://user-images.githubusercontent.com/1894384/141300583-e39c460f-efa1-4a7e-977c-7a665a33b812.png)
