@@ -167,7 +167,18 @@ class MarcFileProcessor:
             ),
             None,
         )
-        marc_record["852"]["b"] = location_code
+        if "852" not in marc_record:
+            raise TransformationRecordFailedError(
+                "", "No 852 in record when storing new location code", ""
+            )
+        first_852 = marc_record.get_fields("852")[0]
+        first_852.delete_subfield("b")
+        while old_b := first_852.delete_subfield("b"):
+            first_852.add_subfield("x", old_b, 0)
+            self.mapper.migration_report.add(
+                Blurbs.LocationMapping, "Additional 852$b was moved to 852$x"
+            )
+        first_852.add_subfield("b", location_code, 0)
         self.mapper.migration_report.add(Blurbs.LocationMapping, "Set 852 to FOLIO location code")
 
     def exit_on_too_many_exceptions(self):
