@@ -167,6 +167,9 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.mapper.migration_report.add_general_statistics(
                     "Number of objects in source data file"
                 )
+                self.mapper.migration_report.add_general_statistics(
+            f"Number of organizations created:"
+        )
 
                 # TODO Rewrite to base % value on number of rows in file
                 if idx > 1 and idx % 50 == 0:
@@ -278,26 +281,38 @@ class OrganizationTransformer(MigrationTaskBase):
     def handle_embedded_extradata_objects(self, record):
         if record.get("interfaces"):
             extradata_object_type = "interfaces"
-            referenced_objects = []
+            ids_of_external_objects = []
 
-            for embedded_object in record[extradata_object_type]:
-                referenced_objects.append(
-                    self.create_linked_extradata_object(embedded_object, extradata_object_type)
+            for embedded_interface in record[extradata_object_type]:
+                interface_credential = embedded_interface.get("interfaceCredential")
+                embedded_interface.pop("interfaceCredential", None)
+
+                interface_id = self.create_referenced_extradata_object(
+                    embedded_interface, extradata_object_type
                 )
+                ids_of_external_objects.append(interface_id)
 
-            record[extradata_object_type] = referenced_objects
+                if "username" in interface_credential:
+                    interface_credential["interfaceId"] = interface_id
+                    self.create_referenced_extradata_object(
+                        interface_credential, "interfaceCredential"
+                    )
+                    
+            record[extradata_object_type] = ids_of_external_objects
 
         if record.get("contacts"):
             extradata_object_type = "contacts"
-            referenced_objects = []
+            ids_of_external_objects = []
 
-            for embedded_object in record[extradata_object_type]:
-                if embedded_object.get("firstName") and embedded_object.get("lastName"):
-                    referenced_objects.append(
-                        self.create_linked_extradata_object(embedded_object, extradata_object_type)
+            for embedded_contact in record[extradata_object_type]:
+                if embedded_contact.get("firstName") and embedded_contact.get("lastName"):
+                    ids_of_external_objects.append(
+                        self.create_referenced_extradata_object(
+                            embedded_contact, extradata_object_type
+                        )
                     )
 
-            record[extradata_object_type] = referenced_objects
+            record[extradata_object_type] = ids_of_external_objects
 
         if "notes" in record:
             # TODO Do the same as for Contacts/Interfaces? Check implementation for Users.
@@ -305,7 +320,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         return record
 
-    def create_linked_extradata_object(self, embedded_object, extradata_object_type):
+    def create_referenced_extradata_object(self, embedded_object, extradata_object_type):
         """Creates an extradata object from an embedded object,
         and returns the UUID.
 
@@ -316,12 +331,10 @@ class OrganizationTransformer(MigrationTaskBase):
         Returns:
             _type_: The organization record with linked extradata UUIDs.
         """
-        # Save away a hash of the embedded extradata to identify duplicates
         embedded_object_hash = sha1(
             json.dumps(embedded_object, sort_keys=True).encode("utf-8"), usedforsecurity=False
         ).hexdigest()
 
-        # Check if this object has already been created
         identical_objects = [
             value
             for value in self.embedded_extradata_object_cache
@@ -338,17 +351,14 @@ class OrganizationTransformer(MigrationTaskBase):
                 embedded_object,
             )
 
-        # Generate a UUID and add to the contact
         extradata_object_uuid = str(uuid.uuid4())
         embedded_object["id"] = extradata_object_uuid
+
         self.extradata_writer.write(extradata_object_type, embedded_object)
+        self.embedded_extradata_object_cache.add(embedded_object_hash)
 
         self.mapper.migration_report.add_general_statistics(
-            f"Number of {extradata_object_type} created:"
+            f"Number of linked {extradata_object_type} created:"
         )
-        # Save contact to extradata file
-        # Append the contact UUID to the organization record
-
-        self.embedded_extradata_object_cache.add(embedded_object_hash)
 
         return extradata_object_uuid
