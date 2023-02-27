@@ -325,9 +325,7 @@ def test_interface_credentials(mapper):
         "email2_categories": "",
     }
 
-    organization, idx = mapper.do_map(
-        data, data["code"], FOLIONamespaces.organizations
-    )
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["interfaceCredential"]["username"] == "myUsername"
     assert organization["interfaces"][0]["interfaceCredential"]["password"] == "myPassword"

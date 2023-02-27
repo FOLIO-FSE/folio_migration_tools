@@ -1,5 +1,3 @@
-import json
-
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.migration_tasks import batch_poster
@@ -35,9 +33,12 @@ def test_get_unsafe_and_safe_endpoints():
 
 
 def test_get_extradata_endpoint_interface_credential():
-    extradata = 'interfaceCredential\t{"username": "wikiUsername", "password": "wikiPassword", "interfaceId": "7e131c38-5384-44ed-9f4a-da6ca2f36498", "id": "94357d5f-154d-445d-bd1a-454df2acffd3"}'
+    extradata = 'interfaceCredential\t{"interfaceId": "7e131c38-5384-44ed-9f4a-da6ca2f36498"}'
     (object_name, data) = extradata.split("\t")
 
     endpoint = batch_poster.get_extradata_endpoint(object_name, data)
 
-    assert endpoint == 'organizations-storage/interfaces/7e131c38-5384-44ed-9f4a-da6ca2f36498/credentials'
+    assert (
+        endpoint
+        == "organizations-storage/interfaces/7e131c38-5384-44ed-9f4a-da6ca2f36498/credentials"
+    )

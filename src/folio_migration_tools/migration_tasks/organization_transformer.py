@@ -168,8 +168,8 @@ class OrganizationTransformer(MigrationTaskBase):
                     "Number of objects in source data file"
                 )
                 self.mapper.migration_report.add_general_statistics(
-            f"Number of organizations created:"
-        )
+                    "Number of organizations created:"
+                )
 
                 # TODO Rewrite to base % value on number of rows in file
                 if idx > 1 and idx % 50 == 0:
@@ -292,12 +292,12 @@ class OrganizationTransformer(MigrationTaskBase):
                 )
                 ids_of_external_objects.append(interface_id)
 
-                if "username" in interface_credential:
+                if interface_credential and "username" in interface_credential:
                     interface_credential["interfaceId"] = interface_id
                     self.create_referenced_extradata_object(
                         interface_credential, "interfaceCredential"
                     )
-                    
+
             record[extradata_object_type] = ids_of_external_objects
 
         if record.get("contacts"):
