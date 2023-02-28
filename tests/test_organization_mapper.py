@@ -292,34 +292,62 @@ def test_invalid_non_required_enum_in_sub_object_mapping(mapper):
 
 
 def test_empty_non_required_enum_in_sub_object_mapping(mapper):
-    records = [
-        data
-        | {
-            "name": "Vendor With Account 3",  # String, required
-            "code": "eo3",  # String, required
-            "status": "Active",  # Enum, required
-            "account_number": "ac3",  # String, required for Account
-            "account_name": "MyAccount",  # String, required for Account
-            "account_status": "Active",  # String, required for Account
-            "account_paymentMethod": "",  # Enum
-        }
-    ]
+    data = {
+        "name": "Vendor With Account 3",  # String, required
+        "code": "eo3",  # String, required
+        "status": "Active",  # Enum, required
+        "account_number": "ac3",  # String, required for Account
+        "account_name": "MyAccount",  # String, required for Account
+        "account_status": "Active",  # String, required for Account
+        "account_paymentMethod": "",  # Enum
+        "address_categories": "",
+        "phone_categories": "",
+        "email1_categories": "",
+        "email2_categories": "",
+    }
 
-    organization, idx = mapper.do_map(
-        records[0], records[0]["code"], FOLIONamespaces.organizations
-    )
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
     assert "name" in organization["accounts"][0]
     assert "paymentMethod" not in organization["accounts"][0]
 
 
-@pytest.mark.skip(reason="Under implementation.")
 def test_interface_credentials(mapper):
-    data["code"] = "ic1"
-    data["interface_1_username"] = "myUsername"
-    data["interface_1_password"] = "myPassword"  # noqa: S105
+    data = {
+        "name": "Vendor With Interface 1",  # String, required
+        "code": "test_interface_credentials",  # String, required
+        "status": "Active",  # Enum, required
+        "interface_1_name": "Interface name",
+        "interface_1_username": "myUsername",
+        "interface_1_password": "myPassword",  # noqa: S105
+        "address_categories": "",
+        "phone_categories": "",
+        "email1_categories": "",
+        "email2_categories": "",
+    }
+
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert organization["interfaces"][0]["interfaceCredential"]["username"] == "myUsername"
+    assert organization["interfaces"][0]["interfaceCredential"]["password"] == "myPassword"
+    assert (
+        organization["interfaces"][0]["interfaceCredential"]["interfaceId"]
+        == "replace_with_interface_id"
+    )
+
+
+@pytest.mark.skip(reason="Temporarily handled in transformer. See #531")
+def test_interface_credentials_required_properties(mapper):
+    data["code"] = "ic2"
+    data["interface_1_username"] = "myUsername"
+    data["interface_1_password"] = ""  # noqa: S105
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+    assert "interfaceCredential" not in organization["interfaces"][0]
+
+    data["code"] = "ic3"
+    data["interface_1_username"] = ""
+    data["interface_1_password"] = "myPassword"  # noqa: S105
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+    assert "interfaceCredential" not in organization["interfaces"][0]
 
 
 # Shared data and maps
@@ -546,6 +574,12 @@ organization_map = {
             "folio_field": "interfaces[0].available",
             "legacy_field": "",
             "value": True,
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].interfaceCredential.interfaceId",
+            "legacy_field": "",
+            "value": "",
             "description": "",
         },
         {

@@ -99,6 +99,11 @@ class OrganizationMapper(MappingFileMapperBase):
                 False,
             )
 
+        elif re.compile("interfaces\[(\d+)\]\.interfaceCredential.interfaceId").fullmatch(
+            folio_prop_name
+        ):
+            return "replace_with_interface_id"
+
         legacy_values = MappingFileMapperBase.get_legacy_vals(
             legacy_organization, legacy_organization_keys
         )
@@ -326,7 +331,10 @@ class OrganizationMapper(MappingFileMapperBase):
                     interface_credential_schema = OrganizationMapper.fetch_additional_schema(
                         "interface_credential"
                     )
-                    interface_credential_schema["required"] = ["username", "password"]
+                    interface_credential_schema["required"] = (
+                        ["username", "password", "interfaceId"],
+                    )
+
                     interface_schema["properties"][
                         "interfaceCredential"
                     ] = interface_credential_schema

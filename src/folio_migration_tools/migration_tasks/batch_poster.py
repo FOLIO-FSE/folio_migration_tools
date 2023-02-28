@@ -597,6 +597,11 @@ def get_extradata_endpoint(object_name: str, string_object: str):
     if object_name == "instructor":
         instructor = json.loads(string_object)
         return f'coursereserves/courselistings/{instructor["courseListingId"]}/instructors'
+
+    if object_name == "interfaceCredential":
+        credential = json.loads(string_object)
+        return f'organizations-storage/interfaces/{credential["interfaceId"]}/credentials'
+
     return object_types[object_name]
 
 
