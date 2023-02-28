@@ -136,26 +136,31 @@ class OrganizationTransformer(MigrationTaskBase):
             records_processed = 0
             for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
                 records_processed += 1
-
                 try:
-                    # Print first legacy record, then first transformed record
                     if idx == 0:
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
+
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.organizations
                     )
-
-                    folio_rec = self.clean_org(folio_rec)
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.organization_schema)
+
+                    # Create extradata and clean the record up
                     folio_rec = self.handle_embedded_extradata_objects(folio_rec)
+                    self.mapper.notes_mapper.map_notes(
+                        record,
+                        legacy_id,
+                        folio_rec["organization"]["id"],
+                        FOLIONamespaces.organizations,
+                    )
+                    folio_rec = self.clean_org(folio_rec)
+
+                    Helper.write_to_file(results_file, folio_rec)
 
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
-
-                    # Writes record to file
-                    Helper.write_to_file(results_file, folio_rec)
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -284,8 +289,7 @@ class OrganizationTransformer(MigrationTaskBase):
             ids_of_external_objects = []
 
             for embedded_interface in record[extradata_object_type]:
-                interface_credential = embedded_interface.get("interfaceCredential")
-                embedded_interface.pop("interfaceCredential", None)
+                interface_credential = embedded_interface.pop("interfaceCredential", None)
 
                 interface_id = self.create_referenced_extradata_object(
                     embedded_interface, extradata_object_type

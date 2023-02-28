@@ -1,3 +1,4 @@
+import json
 import uuid
 from pathlib import Path
 from unittest.mock import Mock
@@ -366,24 +367,26 @@ def test_create_linked_extradata_object_credentials():
 
     credential_interface_ids = []
     credentials = []
+    interfaces = []
 
     for interface in organization["interfaces"]:
+        interface_credential = interface.pop("interfaceCredential", None)
         interface_id = OrganizationTransformer.create_referenced_extradata_object(
             mocked_organization_transformer, interface, "interfaces"
         )
 
-        if "interfaceCredential" in interface:
+        if interface_credential and "username" in interface_credential:
             credential_interface_ids.append(interface_id)
-
-            interface["interfaceCredential"]["interfaceId"] = interface_id
+            interface_credential["interfaceId"] = interface_id
 
             credential = OrganizationTransformer.create_referenced_extradata_object(
                 mocked_organization_transformer,
-                interface["interfaceCredential"],
+                interface_credential,
                 "interfaceCredential",
             )
 
             credentials.append(credential)
+        interfaces.append(interface)
 
     assert all(
         f'"interfaceId": "{interface_id}"'
@@ -392,6 +395,8 @@ def test_create_linked_extradata_object_credentials():
     )
 
     assert len(credentials) == 2
+
+    assert "interfaceCredentials" not in (interface for interface in interfaces)
 
 
 def test_contact_formatting_and_content():
@@ -402,6 +407,7 @@ def test_contact_formatting_and_content():
     mocked_organization_transformer.extradata_writer.cache = []
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
     mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
+    
     organization = {
         "name": "YourCompany",
         "contacts": [
