@@ -102,7 +102,7 @@ class Blurbs:
     )
     MappedNoteTypes = (
         "Mapped note types",
-        "Library action: **REVIEW** <br/>The created FOLIO instances contain the following Note type values.  <br/>The library should review the total number for each value against what they would expect to see mapped.",
+        "Library action: **REVIEW** <br/>The created FOLIO records contain the following Note type values.  <br/>The library should review the total number for each value against what they would expect to see mapped.",
     )
     MappedContributorNameTypes = (
         "Mapped contributor name types",

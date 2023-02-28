@@ -31,16 +31,9 @@ class OrganizationMapper(MappingFileMapperBase):
         email_categories_map,
         phone_categories_map,
     ):
-        self.folio_client: FolioClient = folio_client
-        self.notes_mapper: NotesMapper = NotesMapper(
-            library_configuration,
-            self.folio_client,
-            organization_map,
-            FOLIONamespaces.note,
-            True,
-        )
-
         # Build composite organization schema
+        if os.environ.get("GITHUB_TOKEN"):
+            logging.info("Using GITHB_TOKEN environment variable for Gihub API Access")
         organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
         )
@@ -61,6 +54,16 @@ class OrganizationMapper(MappingFileMapperBase):
             email_categories_map,
             phone_categories_map,
         )
+
+        self.folio_client: FolioClient = folio_client
+        self.notes_mapper: NotesMapper = NotesMapper(
+            library_configuration,
+            self.folio_client,
+            organization_map,
+            FOLIONamespaces.note,
+            True,
+        )
+        self.notes_mapper.migration_report = self.migration_report
 
     # Commence the mapping work
     def get_prop(self, legacy_organization, folio_prop_name, index_or_id):
@@ -205,7 +208,6 @@ class OrganizationMapper(MappingFileMapperBase):
             }
 
             if os.environ.get("GITHUB_TOKEN"):
-                logging.info("Using GITHB_TOKEN environment variable for Gihub API Access")
                 github_headers["authorization"] = f"token {os.environ.get('GITHUB_TOKEN')}"
 
             # Start talkign to GitHub...

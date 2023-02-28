@@ -174,7 +174,6 @@ class OrdersTransformer(MigrationTaskBase):
                         and folio_rec["id"]
                         and folio_rec["id"] != self.current_folio_record.get("id", "")
                     ):
-
                         # Writes record to file
                         Helper.write_to_file(results_file, self.current_folio_record)
                         self.mapper.migration_report.add_general_statistics(

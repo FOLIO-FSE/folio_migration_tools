@@ -149,7 +149,6 @@ def test_fetch_acq_schemas_from_github_happy_path():
 
 
 def test_parse_record_mapping_file(mapper):
-
     composite_order_map = {
         "data": [
             {

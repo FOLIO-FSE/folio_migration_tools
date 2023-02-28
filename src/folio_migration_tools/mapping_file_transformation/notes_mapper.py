@@ -60,6 +60,7 @@ class NotesMapper(MappingFileMappingBaseImpl):
                     if "type" in note:
                         del note["type"]
                     self.extradata_writer.write("notes", note)
+                    self.migration_report.add_general_statistics("Number of linked notes created")
                     self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
                 else:
                     self.migration_report.add_general_statistics(

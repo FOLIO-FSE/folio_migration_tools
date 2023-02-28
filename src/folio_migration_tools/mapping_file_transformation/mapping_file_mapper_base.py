@@ -188,7 +188,6 @@ class MappingFileMapperBase(MapperBase):
         object_type: FOLIONamespaces,
         accept_duplicate_ids: bool = False,
     ):
-
         if self.ignore_legacy_identifier:
             return ({}, str(uuid.uuid4()))
 
@@ -252,7 +251,6 @@ class MappingFileMapperBase(MapperBase):
         object_type: FOLIONamespaces,
         accept_duplicate_ids=False,
     ) -> tuple[dict, str]:
-
         folio_object, legacy_id = self.instantiate_record(
             legacy_object, index_or_id, object_type, accept_duplicate_ids
         )
@@ -438,7 +436,6 @@ class MappingFileMapperBase(MapperBase):
                     index_or_id,
                 )
             elif child_property.get("type", "") == "string":
-
                 path = sub_prop_path.split("].")[-1]
                 if p := self.get_prop(legacy_object, sub_prop_path, index_or_id):
                     set_deep(folio_object, f"{path}", p)
@@ -685,7 +682,6 @@ class MappingFileMapperBase(MapperBase):
             raise exception from exception
 
     def has_property(self, legacy_object, folio_prop_name: str):
-
         legacy_keys = self.field_map.get(folio_prop_name, [])
         return (
             any(legacy_keys)

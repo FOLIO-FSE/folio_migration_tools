@@ -151,7 +151,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     self.mapper.notes_mapper.map_notes(
                         record,
                         legacy_id,
-                        folio_rec["organization"]["id"],
+                        folio_rec["id"],
                         FOLIONamespaces.organizations,
                     )
                     folio_rec = self.clean_org(folio_rec)
@@ -173,7 +173,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     "Number of objects in source data file"
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of organizations created:"
+                    "Number of organizations created"
                 )
 
                 # TODO Rewrite to base % value on number of rows in file
@@ -347,7 +347,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         if len(identical_objects) > 0:
             self.mapper.migration_report.add_general_statistics(
-                f"Number of reoccuring identical {extradata_object_type}:"
+                f"Number of reoccuring identical {extradata_object_type}"
             )
             Helper.log_data_issue(
                 f"{self.legacy_id}",
@@ -362,7 +362,7 @@ class OrganizationTransformer(MigrationTaskBase):
         self.embedded_extradata_object_cache.add(embedded_object_hash)
 
         self.mapper.migration_report.add_general_statistics(
-            f"Number of linked {extradata_object_type} created:"
+            f"Number of linked {extradata_object_type} created"
         )
 
         return extradata_object_uuid

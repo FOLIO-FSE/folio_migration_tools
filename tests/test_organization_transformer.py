@@ -1,4 +1,3 @@
-import json
 import uuid
 from pathlib import Path
 from unittest.mock import Mock
@@ -407,7 +406,7 @@ def test_contact_formatting_and_content():
     mocked_organization_transformer.extradata_writer.cache = []
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
     mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
-    
+
     organization = {
         "name": "YourCompany",
         "contacts": [
