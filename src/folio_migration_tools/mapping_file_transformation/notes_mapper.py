@@ -54,11 +54,13 @@ class NotesMapper(MappingFileMappingBaseImpl):
                     type_string = {
                         FOLIONamespaces.users: "user",
                         FOLIONamespaces.course: "course",
+                        FOLIONamespaces.organizations: "organization",
                     }.get(record_type)
                     note["links"] = [{"id": object_uuid, "type": type_string}]
                     if "type" in note:
                         del note["type"]
                     self.extradata_writer.write("notes", note)
+                    self.migration_report.add_general_statistics("Number of linked notes created")
                     self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
                 else:
                     self.migration_report.add_general_statistics(

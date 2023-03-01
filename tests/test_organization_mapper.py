@@ -311,7 +311,7 @@ def test_empty_non_required_enum_in_sub_object_mapping(mapper):
     assert "paymentMethod" not in organization["accounts"][0]
 
 
-def test_interface_credentials(mapper):
+def test_map_interface_credentials(mapper):
     data = {
         "name": "Vendor With Interface 1",  # String, required
         "code": "test_interface_credentials",  # String, required
@@ -332,6 +332,36 @@ def test_interface_credentials(mapper):
     assert (
         organization["interfaces"][0]["interfaceCredential"]["interfaceId"]
         == "replace_with_interface_id"
+    )
+
+
+def test_map_organization_notes(mapper):
+    data = {
+        "name": "Vendor With Interface 1",  # String, required
+        "code": "test_map_organization_notes1",  # String, required
+        "status": "Active",  # Enum, required
+        "note1": "The game is afoot!",
+        "note2": "Elementary! /SH",
+        "address_categories": "",
+        "phone_categories": "",
+        "email1_categories": "",
+        "email2_categories": "",
+    }
+
+    res = mapper.do_map(data, 1, FOLIONamespaces.organizations)
+    mapper.notes_mapper.map_notes(data, data["code"], res[0]["id"], FOLIONamespaces.organizations)
+
+    assert (
+        'notes\t{"typeId": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5", "title": "A migrated note",'
+        ' "domain": "organizations", "content": "The game is afoot!",'
+        ' "links": [{"id": "3c4c99a2-ac24-57c5-81e3-d53fe84a2a60", "type": "organization"}]}\n'
+        in mapper.extradata_writer.cache
+    )
+    assert (
+        'notes\t{"typeId": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5", "title": "Another note",'
+        ' "domain": "organizations", "content": "Elementary! /SH",'
+        ' "links": [{"id": "3c4c99a2-ac24-57c5-81e3-d53fe84a2a60", "type": "organization"}]}\n'
+        in mapper.extradata_writer.cache
     )
 
 
@@ -676,6 +706,54 @@ organization_map = {
         {
             "folio_field": "organizationTypes",
             "legacy_field": "organization_types",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[0].domain",
+            "legacy_field": "Not mapped",
+            "value": "organizations",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[0].typeId",
+            "legacy_field": "",
+            "value": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[0].title",
+            "legacy_field": "",
+            "value": "A migrated note",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[0].content",
+            "legacy_field": "note1",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[1].domain",
+            "legacy_field": "Not mapped",
+            "value": "organizations",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[1].typeId",
+            "legacy_field": "",
+            "value": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[1].title",
+            "legacy_field": "",
+            "value": "Another note",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[1].content",
+            "legacy_field": "note2",
             "value": "",
             "description": "",
         },

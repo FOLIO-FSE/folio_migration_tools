@@ -128,7 +128,6 @@ def test_add_mapped_location_code_to_record_no_852():
     record = Record()
     folio_rec = {"permanentLocationId": "new_loc"}
     with pytest.raises(TransformationRecordFailedError):
-
         MarcFileProcessor.add_mapped_location_code_to_record(mock_processor, record, folio_rec)
         if "852" not in record:
             raise Exception()

@@ -35,7 +35,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
         funds_map,
         funds_expense_class_map=None,
     ):
-
         # Get organization schema
         composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-orders", "mod-orders", "composite_purchase_order"
@@ -117,7 +116,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
             _type_: _description_
         """
         try:
-
             # Authenticate when calling GitHub, using an API key stored in .env
             github_headers = {
                 "content-type": "application/json",
@@ -240,7 +238,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
         ]
 
         try:
-
             if (
                 "properties" not in object_schema
                 and "$ref" in object_schema
@@ -253,16 +250,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
             for property_name_level1, property_level1 in object_schema.get(
                 "properties", {}
             ).items():
-
                 # Report and discard unhandled properties
                 if property_level1.get("type") not in supported_types:
-
                     logging.info(f"Property not yet supported: {property_name_level1}")
                     property_level1["type"] = "Deprecated"
 
                 # Handle object properties
                 elif property_level1.get("type") == "object" and property_level1.get("$ref"):
-
                     logging.info("Fecthing referenced schema for object %s", property_name_level1)
                     actual_path = urllib.parse.urljoin(
                         f"{submodule_path}", object_schema.get("$ref", "")
@@ -281,7 +275,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
                     "$ref"
                 ):
-
                     logging.info(
                         "Fetching referenced schema for array object %s", property_name_level1
                     )
