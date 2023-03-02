@@ -73,15 +73,7 @@ class OrganizationMapper(MappingFileMapperBase):
             folio_prop_name,
         )
 
-        # legacy_organization_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        # If there is a verbatim "value" set in the object map, return that one
-        # if len(legacy_organization_keys) == 1 and folio_prop_name in self.mapped_from_values:
-        # value = self.mapped_from_values.get(folio_prop_name, "")
-
         mapped_value = self.get_value_from_map(folio_prop_name, legacy_organization, index_or_id)
-        self.migration_report.add(
-            Blurbs.DefaultValuesAdded, f"{mapped_value} added to {folio_prop_name}"
-        )
 
         # Perfrom reference data mappings
         if folio_prop_name == "organizationTypes":
@@ -118,18 +110,6 @@ class OrganizationMapper(MappingFileMapperBase):
             return "replace_with_interface_id"
 
         return mapped_value
-
-        # legacy_values = MappingFileMapperBase.get_legacy_vals(
-        #     legacy_organization, legacy_organization_keys
-        # )
-        # legacy_value = " ".join(legacy_values).strip()
-
-        # # What dores the below do?
-        # if any(legacy_organization_keys):
-        #     return legacy_value
-        # else:
-        #     # edge case
-        #     return ""
 
     def set_up_reference_data_mapping(
         self,
