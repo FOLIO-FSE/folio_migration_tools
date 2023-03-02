@@ -116,10 +116,21 @@ def test_organization_mapping(mapper):
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # Test string values mapping
-    assert organization["name"] == "Abe Books"
+    
     assert organization["code"] == "o1"
     assert organization["description"] == "Good stuff!"
     assert organization["status"] == "Active"
+
+
+def test_use_fallback_legacy_field_if_legacy_field_empty(mapper):
+    data["name"] = "Abby Books"
+    data["code"] = "test_use_fallback_legacy_field_if_legacy_field_empty"
+    data["account_number"] = "123"
+    data["account_status"] = "Active"
+    data["account_name"] = ""
+
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+    assert organization["accounts"][0]["name"] == "Abby Books"
 
 
 def test_single_org_type_refdata_mapping(mapper):
@@ -211,6 +222,7 @@ def test_contacts_required_properties(mapper):
 
 def test_contacts_category_refdata_mapping_single(mapper):
     data["code"] = "ov10"
+    data["PHONE NUM"] = "123-456"
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # Test arrays of contact information
@@ -219,6 +231,7 @@ def test_contacts_category_refdata_mapping_single(mapper):
     assert organization["phoneNumbers"][0]["categories"] == [
         "e193b0d1-4674-4a9e-818b-375f013d963f"
     ]
+
 
 @pytest.mark.skip(reason="Requires #542")
 def test_contacts_categories_replacevalue_multiple(mapper):
@@ -238,7 +251,10 @@ def test_contacts_categories_replacevalue_multiple(mapper):
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # Test arrays of contact information
-    assert organization["contacts"][0]["categories"] == ["e193b0d1-4674-4a9e-818b-375f013d963f", "604c2c9d-ed3a-46cd-bec4-69926c303b22"]
+    assert organization["contacts"][0]["categories"] == [
+        "e193b0d1-4674-4a9e-818b-375f013d963f",
+        "604c2c9d-ed3a-46cd-bec4-69926c303b22",
+    ]
 
 
 # Test "interfaces" array
@@ -457,6 +473,7 @@ organization_map = {
             "legacy_field": "account_name",
             "value": "",
             "description": "",
+            "fallback_legacy_field": "name"
         },
         {
             "folio_field": "accounts[0].accountStatus",

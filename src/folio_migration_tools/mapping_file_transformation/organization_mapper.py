@@ -76,7 +76,7 @@ class OrganizationMapper(MappingFileMapperBase):
         # legacy_organization_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
         # If there is a verbatim "value" set in the object map, return that one
         # if len(legacy_organization_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            # value = self.mapped_from_values.get(folio_prop_name, "")
+        # value = self.mapped_from_values.get(folio_prop_name, "")
 
         mapped_value = self.get_value_from_map(folio_prop_name, legacy_organization, index_or_id)
         self.migration_report.add(
