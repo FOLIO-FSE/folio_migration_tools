@@ -25,6 +25,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
+from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.test_infrastructure import mocked_classes
 
 xpath_245 = "//marc:datafield[@tag='245']"
@@ -90,6 +91,28 @@ def default_map_suppression(file_name, xpath, the_mapper):
         data = " ".join([data, str(etree.tostring(element, pretty_print=True), "utf-8")])
     # print(json.dumps(rec, indent=4, sort_keys=True))
     return [result, data]
+
+
+def test_field_empty_856_and_082(mapper):
+    record = default_map("test_empty_856_and_082.xml", xpath_245, mapper)
+    assert "electronicAccess" not in record[0]
+    assert "classifications" not in record[0]
+    assert "uri" in mapper.migration_report.report[Blurbs.MissingRequiredProperties[0]]
+    assert (
+        "classificationNumber"
+        in mapper.migration_report.report[Blurbs.MissingRequiredProperties[0]]
+    )
+
+
+def test_missing_856_and_082(mapper):
+    record = default_map("test_missing_856_and_082.xml", xpath_245, mapper)
+    assert "electronicAccess" not in record[0]
+    assert "classifications" not in record[0]
+    assert "uri" in mapper.migration_report.report[Blurbs.MissingRequiredProperties[0]]
+    assert (
+        "classificationNumber"
+        in mapper.migration_report.report[Blurbs.MissingRequiredProperties[0]]
+    )
 
 
 def test_non_suppression(mapper):
@@ -283,8 +306,6 @@ def test_should_add_identifiers_010_019_020_022_024_028_035(mapper):
         "9780071842013 (paperback) 200 SEK",
         "0071842012 (paperback)",
         "0376-4583",
-        "0027-3475",
-        "0027-3476",
         "1234-1232",
         "7822183031",
         "M011234564",
@@ -297,6 +318,7 @@ def test_should_add_identifiers_010_019_020_022_024_028_035(mapper):
 
     for id in expected_identifiers:
         assert id in ids_in_rec
+    assert "0027-3475 0027-3476" in ids_in_rec or "0027-3476 0027-3475" in ids_in_rec
 
     folio_uuid_pattern = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
 

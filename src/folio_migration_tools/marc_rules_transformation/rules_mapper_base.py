@@ -93,14 +93,25 @@ class RulesMapperBase(MapperBase):
         self, marc_field: pymarc.Field, mappings, folio_record, legacy_ids
     ):
         for mapping in mappings:
-            if "entity" not in mapping:
-                self.handle_normal_mapping(mapping, marc_field, folio_record, legacy_ids)
-            else:
-                self.handle_entity_mapping(
-                    marc_field,
-                    mapping,
-                    folio_record,
-                    legacy_ids,
+            try:
+                if "entity" not in mapping:
+                    self.handle_normal_mapping(mapping, marc_field, folio_record, legacy_ids)
+                else:
+                    self.handle_entity_mapping(
+                        marc_field,
+                        mapping,
+                        folio_record,
+                        legacy_ids,
+                    )
+            except TransformationFieldMappingError as tre:
+                tre.log_it()
+                logging.error(
+                    "map_field_according_to_mapping %s %s %s %s %s",
+                    "-".join(legacy_ids),
+                    marc_field.tag,
+                    marc_field.format_field(),
+                    json.dumps(mappings),
+                    tre.message,
                 )
 
     def handle_normal_mapping(self, mapping, marc_field: pymarc.Field, folio_record, legacy_ids):
@@ -210,16 +221,6 @@ class RulesMapperBase(MapperBase):
                 self.map_field_according_to_mapping(marc_field, mappings, folio_record, legacy_ids)
                 if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                     ignored_subsequent_fields.add(marc_field.tag)
-            except TransformationFieldMappingError as tre:
-                tre.log_it()
-                logging.error(
-                    "map_field_according_to_mapping %s %s %s %s %s",
-                    "-".join(legacy_ids),
-                    marc_field.tag,
-                    marc_field.format_field(),
-                    json.dumps(mappings),
-                    tre.message,
-                )
             except Exception as ee:
                 logging.error(
                     "map_field_according_to_mapping %s %s %s",
@@ -458,6 +459,11 @@ class RulesMapperBase(MapperBase):
 
     def create_entity(self, entity_mappings, marc_field, entity_parent_key, index_or_legacy_id):
         entity = {}
+        parent_schema_prop = self.schema.get("properties", {}).get(entity_parent_key, {})
+        if parent_schema_prop.get("type", "") == "array":
+            req_entity_props = parent_schema_prop["items"].get("required", [])
+        elif parent_schema_prop.get("type", "") == "object":
+            req_entity_props = parent_schema_prop.get("required", [])
         for entity_mapping in entity_mappings:
             k = entity_mapping["target"].split(".")[-1]
             if my_values := [
@@ -469,6 +475,19 @@ class RulesMapperBase(MapperBase):
                     entity[k] = my_values[0]
                 else:
                     entity = my_values[0]
+        missing_required_props = [
+            req_entity_prop
+            for req_entity_prop in req_entity_props
+            if req_entity_prop not in entity
+        ]
+        if any(missing_required_props):
+            for p in missing_required_props:
+                self.migration_report.add(Blurbs.MissingRequiredProperties, p)
+            raise TransformationFieldMappingError(
+                index_or_legacy_id,
+                f"Missing required property/ies: {missing_required_props} in {entity_parent_key}",
+                marc_field,
+            )
         return entity
 
     def handle_entity_mapping(
