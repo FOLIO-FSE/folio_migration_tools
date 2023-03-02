@@ -116,7 +116,7 @@ def test_organization_mapping(mapper):
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # Test string values mapping
-    
+
     assert organization["code"] == "o1"
     assert organization["description"] == "Good stuff!"
     assert organization["status"] == "Active"
@@ -473,7 +473,7 @@ organization_map = {
             "legacy_field": "account_name",
             "value": "",
             "description": "",
-            "fallback_legacy_field": "name"
+            "fallback_legacy_field": "name",
         },
         {
             "folio_field": "accounts[0].accountStatus",
