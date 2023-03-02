@@ -130,18 +130,6 @@ def test_single_org_type_refdata_mapping(mapper):
     assert organization["organizationTypes"] == ["837d04b6-d81c-4c49-9efd-2f62515999b3"]
 
 
-def test_single_category_refdata_mapping(mapper):
-    data["code"] = "ov10"
-    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-
-    # Test arrays of contact information
-    assert organization["addresses"][0]["categories"] == ["c78640d5-a1ec-4721-9a1f-c6f876d4c179"]
-
-    assert organization["phoneNumbers"][0]["categories"] == [
-        "e193b0d1-4674-4a9e-818b-375f013d963f"
-    ]
-
-
 def test_tags_object_array(mapper):
     data["code"] = "o4"
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
@@ -219,6 +207,38 @@ def test_contacts_required_properties(mapper):
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     assert "contacts" not in organization
+
+
+def test_contacts_category_refdata_mapping_single(mapper):
+    data["code"] = "ov10"
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+
+    # Test arrays of contact information
+    assert organization["addresses"][0]["categories"] == ["c78640d5-a1ec-4721-9a1f-c6f876d4c179"]
+
+    assert organization["phoneNumbers"][0]["categories"] == [
+        "e193b0d1-4674-4a9e-818b-375f013d963f"
+    ]
+
+@pytest.mark.skip(reason="Requires #542")
+def test_contacts_categories_replacevalue_multiple(mapper):
+    data = {
+        "name": "The Vendor",  # String, required
+        "code": "test_contacts_categories_replacevalue_single",  # String, required
+        "status": "Active",  # Enum, required
+        "contact_person_f": "Joey",
+        "contact_person_l": "Janeway",
+        "contact_categories": "mspt^-^sls",
+        "address_categories": "",
+        "phone_categories": "",
+        "email1_categories": "",
+        "email2_categories": "",
+    }
+
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+
+    # Test arrays of contact information
+    assert organization["contacts"][0]["categories"] == ["e193b0d1-4674-4a9e-818b-375f013d963f", "604c2c9d-ed3a-46cd-bec4-69926c303b22"]
 
 
 # Test "interfaces" array
@@ -514,6 +534,18 @@ organization_map = {
             "folio_field": "contacts[0].lastName",
             "legacy_field": "contact_person_l",
             "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "contacts[0].categories[0]",
+            "legacy_field": "contact_categories",
+            "value": "",
+            "rules": {
+                "replaceValues": {
+                    "mspt": "e193b0d1-4674-4a9e-818b-375f013d963f",
+                    "sls": "604c2c9d-ed3a-46cd-bec4-69926c303b22",
+                }
+            },
             "description": "",
         },
         {
