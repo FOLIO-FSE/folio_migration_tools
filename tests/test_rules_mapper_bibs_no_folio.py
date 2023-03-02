@@ -12,6 +12,7 @@ from folio_migration_tools.report_blurbs import Blurbs
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
@@ -330,3 +331,39 @@ def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
         assert "1. 7月星組公演.  淀君, シャンソン・ダムール (1959)" in res["notes"][2]["note"]
         assert "宝塚" in res["publication"][1]["place"]
         assert "Records without $6" in mapper.migration_report.report["880 mappings"]
+
+
+def test_required_properties_electronic_access_missing_u(mapper: BibsRulesMapper, caplog):
+    with pytest.raises(TransformationFieldMappingError):
+        bad_856 = Field(
+            tag="856", indicators=["0", "0"], subfields=["y", "URL to some fancy place"]
+        )
+        mapping_856 = mapper.mappings["856"][0]
+        folio_record: dict = {}
+        mapper.handle_entity_mapping(bad_856, mapping_856, folio_record, ["reqprop_entity_1"])
+
+
+def test_required_properties_electronic_access_empty_u(mapper: BibsRulesMapper, caplog):
+    with pytest.raises(TransformationFieldMappingError):
+        bad_856 = Field(
+            tag="856", indicators=["0", "0"], subfields=["u", "", "y", "URL to some fancy place"]
+        )
+        mapping_856 = mapper.mappings["856"][0]
+        folio_record: dict = {}
+        mapper.handle_entity_mapping(bad_856, mapping_856, folio_record, ["reqprop_entity_1"])
+
+
+def test_required_properties_classification_empty_a(mapper: BibsRulesMapper, caplog):
+    with pytest.raises(TransformationFieldMappingError):
+        bad_082 = Field(tag="082", indicators=["0", "0"], subfields=["a", ""])
+        mapping_082 = mapper.mappings["082"][0]
+        folio_record: dict = {}
+        mapper.handle_entity_mapping(bad_082, mapping_082, folio_record, ["reqprop_entity_1"])
+
+
+def test_required_properties_classification_missing_a(mapper: BibsRulesMapper, caplog):
+    with pytest.raises(TransformationFieldMappingError):
+        bad_082 = Field(tag="082", indicators=["0", "0"], subfields=["z", "garbage field"])
+        mapping_082 = mapper.mappings["082"][0]
+        folio_record: dict = {}
+        mapper.handle_entity_mapping(bad_082, mapping_082, folio_record, ["reqprop_entity_1"])

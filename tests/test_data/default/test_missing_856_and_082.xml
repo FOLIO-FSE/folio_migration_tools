@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2018-11-15T10:20:51.299Z</responseDate>
+    <request verb="ListRecords" metadataPrefix="marcxml_includehold" from="2018-11-14T08:00:00Z" until="2018-11-14T20:00:00Z" x-withDeletedData="true" set="bib:Z">http://libris.kb.se/oaipmh/</request>
+    <ListRecords>
+        <record>
+            <header>
+                <identifier>https://libris.kb.se/8sl08b9l54wxk4m</identifier>
+                <datestamp>2017-08-11T09:17:19Z</datestamp>
+                <setSpec>bib</setSpec>
+            </header>
+            <metadata>
+                <record xmlns="http://www.loc.gov/MARC21/slim" type="Bibliographic">
+                    <leader>     nam a       7  4500</leader>
+                    <controlfield tag="001">21080448</controlfield>
+                    <controlfield tag="005">20170811111719.0</controlfield>
+                    <controlfield tag="008">170811t20152015sz |||||||||||000 ||eng| </controlfield>
+                    <datafield ind1=" " ind2=" " tag="010">
+                        <subfield code="a">2015939348</subfield>
+                    </datafield>                   
+                    <datafield ind1="0" ind2="4" tag="082">
+                        <subfield code="2">23</subfield>
+                    </datafield>
+                    <datafield ind1="0" ind2="0" tag="245">
+                        <subfield code="a">Engineering education and practice in context</subfield>
+                        <subfield code="n">Volume 2</subfield>
+                        <subfield code="p">Engineering identities, epistemologies and values /</subfield>
+                        <subfield code="c">Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors.</subfield>
+                    </datafield>
+                    <datafield ind1="1" ind2=" " tag="856">
+                        <subfield code="z">Newberry, Byron</subfield>
+                    </datafield>
+                    <datafield ind1=" " ind2=" " tag="887">
+                        <subfield code="a">{"@id":"8sl08b9l54wxk4m","modified":"2017-08-11T11:17:19+02:00","checksum":"86550674522"}</subfield>
+                        <subfield code="2">librisxl</subfield>
+                    </datafield>
+                </record>
+            </metadata>
+            <about>
+                <agent name="unknown"/>
+            </about>
+        </record>
+    </ListRecords>
+</OAI-PMH>
