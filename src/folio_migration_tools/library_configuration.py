@@ -39,6 +39,7 @@ class IlsFlavour(str, Enum):
     tag907y = "tag907y"
     tag001 = "tag001"
     tagf990a = "tagf990a"
+    custom = "custom"
     none = "none"
 
 

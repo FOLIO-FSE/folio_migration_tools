@@ -39,6 +39,17 @@ class BibsTransformer(MigrationTaskBase):
         deactivate035_from001: Optional[bool] = False
         files: List[FileDefinition]
         ils_flavour: IlsFlavour
+        custom_bib_id_field: Annotated[
+            str,
+            Field(
+                description=(
+                    'A string representing a MARC field with optional subfield indicated by a "$" '
+                    '(eg. "991$a") from which to draw legacy Bib ID. Use this in combination '
+                    'with `ilsFlavour: "custom"`. Defaults to "001", and is ignored for all other '
+                    "ilsFlavours."
+                )
+            ),
+        ] = "001"
         tags_to_delete: Optional[List[str]] = []
         reset_hrid_settings: Optional[bool] = False
         never_update_hrid_settings: Optional[bool] = False
