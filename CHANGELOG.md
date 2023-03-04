@@ -1,5 +1,30 @@
 # Changelog
 
+## v_1_7_6 (04/03/2023)
+
+#### Organizations
+
+- [**Organizations**] When creating Organizations with Interfaces, create Credentials as extradata [#465](https://github.com/FOLIO-FSE/folio_migration_tools/issues/465)
+- [**Organizations**] Handle posting of extradata when some types need to be posted before the main object, some after [#451](https://github.com/FOLIO-FSE/folio_migration_tools/issues/451)
+
+#### Tool enhancements
+
+- [**Tool enhancements**][**Organizations**] When creating Organizations, create Notes as extradata [#296](https://github.com/FOLIO-FSE/folio_migration_tools/issues/296)
+
+#### bug
+
+- [**bug**][**Inventory**] Ensure that properties required in the schema are honoured on all levels - Inventory [#536](https://github.com/FOLIO-FSE/folio_migration_tools/issues/536)
+- [**bug**][**wontfix**][**Organizations**][**Orders**] Ensure that properties required in the schema are honoured on all levels [#464](https://github.com/FOLIO-FSE/folio_migration_tools/issues/464)
+
+#### closed
+
+- [**closed**] Implement replaceValues mapping feature for Organizations [#541](https://github.com/FOLIO-FSE/folio_migration_tools/issues/541)
+- [**closed**] Record POST fails if electronicAccess[]relationshipId provided but uri is null [#539](https://github.com/FOLIO-FSE/folio_migration_tools/issues/539)
+- [**closed**] Record POST fails if classificationTypeId provided but classificationNumber is null [#538](https://github.com/FOLIO-FSE/folio_migration_tools/issues/538)
+- [**closed**] POST fails for any Instance batch containing a record lacking classifications [#534](https://github.com/FOLIO-FSE/folio_migration_tools/issues/534)
+
+---
+
 ## v_1_7_5 (26/02/2023)
 
 #### Organizations
@@ -538,7 +563,3 @@ Batchposter now allows running multiple files of the same object type in one run
 ---
 
 ## Kiwi 1.0 (16/03/2022)
-
----
-
-## juniper_lts (31/01/2022)
