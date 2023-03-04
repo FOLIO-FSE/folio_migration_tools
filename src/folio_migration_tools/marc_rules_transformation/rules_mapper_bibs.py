@@ -543,6 +543,8 @@ class BibsRulesMapper(RulesMapperBase):
                     "999 $c is missing, although it is required for this legacy ILS choice",
                     marc_record.as_json(),
                 ) from e
+        elif ils_flavour == IlsFlavour.custom:
+            return get_custom_bib_id(marc_record, self.task_configuration.custom_bib_id_field)
         elif ils_flavour == IlsFlavour.none:
             return [str(uuid.uuid4())]
         else:
@@ -578,6 +580,25 @@ def get_unspecified_mode_of_issuance(folio_client: FolioClient):
         )
         sys.exit(1)
     return next(i["id"] for i in m_o_is if i["name"].lower() == "unspecified")
+
+
+def get_custom_bib_id(marc_record: Record, field_string: str):
+    if field_keys := field_string.split("$", maxsplit=1):
+        try:
+            if len(field_keys) == 2:
+                return [marc_record[field_keys[0]][field_keys[1]]]
+            else:
+                return [marc_record[field_keys[0]]]
+        except Exception as e:
+            raise TransformationRecordFailedError(
+                "unknown identifier",
+                f"{field_string} is missing from record but is required in all records",
+                marc_record.as_json(),
+            ) from e
+    else:
+        raise TransformationProcessError(
+            "", 'Critical process issue. No "customBibIdField" specified in task configuration.'
+        )
 
 
 def get_iii_bib_id(marc_record: Record):
