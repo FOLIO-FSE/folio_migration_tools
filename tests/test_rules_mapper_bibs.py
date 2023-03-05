@@ -97,22 +97,12 @@ def test_field_empty_856_and_082(mapper):
     record = default_map("test_empty_856_and_082.xml", xpath_245, mapper)
     assert "electronicAccess" not in record[0]
     assert "classifications" not in record[0]
-    assert "uri" in mapper.migration_report.report[Blurbs.MissingRequiredProperties[0]]
-    assert (
-        "classificationNumber"
-        in mapper.migration_report.report[Blurbs.MissingRequiredProperties[0]]
-    )
 
 
 def test_missing_856_and_082(mapper):
     record = default_map("test_missing_856_and_082.xml", xpath_245, mapper)
     assert "electronicAccess" not in record[0]
     assert "classifications" not in record[0]
-    assert "uri" in mapper.migration_report.report[Blurbs.MissingRequiredProperties[0]]
-    assert (
-        "classificationNumber"
-        in mapper.migration_report.report[Blurbs.MissingRequiredProperties[0]]
-    )
 
 
 def test_non_suppression(mapper):

@@ -105,14 +105,6 @@ class RulesMapperBase(MapperBase):
                     )
             except TransformationFieldMappingError as tre:
                 tre.log_it()
-                logging.error(
-                    "map_field_according_to_mapping %s %s %s %s %s",
-                    "-".join(legacy_ids),
-                    marc_field.tag,
-                    marc_field.format_field(),
-                    json.dumps(mappings),
-                    tre.message,
-                )
 
     def handle_normal_mapping(self, mapping, marc_field: pymarc.Field, folio_record, legacy_ids):
         target = mapping["target"]
@@ -461,9 +453,11 @@ class RulesMapperBase(MapperBase):
         entity = {}
         parent_schema_prop = self.schema.get("properties", {}).get(entity_parent_key, {})
         if parent_schema_prop.get("type", "") == "array":
-            req_entity_props = parent_schema_prop["items"].get("required", [])
+            req_entity_props = parent_schema_prop.get("items", {}).get("required", [])
         elif parent_schema_prop.get("type", "") == "object":
             req_entity_props = parent_schema_prop.get("required", [])
+        else:
+            req_entity_props = []
         for entity_mapping in entity_mappings:
             k = entity_mapping["target"].split(".")[-1]
             if my_values := [
@@ -480,15 +474,7 @@ class RulesMapperBase(MapperBase):
             for req_entity_prop in req_entity_props
             if req_entity_prop not in entity
         ]
-        if any(missing_required_props):
-            for p in missing_required_props:
-                self.migration_report.add(Blurbs.MissingRequiredProperties, p)
-            raise TransformationFieldMappingError(
-                index_or_legacy_id,
-                f"Missing required property/ies: {missing_required_props} in {entity_parent_key}",
-                marc_field,
-            )
-        return entity
+        return {} if any(missing_required_props) else entity
 
     def handle_entity_mapping(
         self,
@@ -502,8 +488,9 @@ class RulesMapperBase(MapperBase):
         if mapping.get("entityPerRepeatedSubfield", False):
             for temp_field in self.grouped(marc_field):
                 entity = self.create_entity(entity_mapping, temp_field, e_parent, legacy_ids)
-                if (type(entity) is dict and all(entity.values())) or (
-                    type(entity) is list and all(entity)
+                if entity and (
+                    (type(entity) is dict and all(entity.values()))
+                    or (type(entity) is list and all(entity))
                 ):
                     self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
         else:
@@ -512,7 +499,7 @@ class RulesMapperBase(MapperBase):
             entity = self.create_entity(entity_mapping, marc_field, e_parent, legacy_ids)
             if e_parent in ["precedingTitles", "succeedingTitles"]:
                 self.create_preceding_succeeding_titles(entity, e_parent, folio_record["id"])
-            elif (
+            elif entity and (
                 all(
                     v
                     for k, v in entity.items()
