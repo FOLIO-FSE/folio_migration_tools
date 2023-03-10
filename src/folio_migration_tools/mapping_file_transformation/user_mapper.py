@@ -34,6 +34,59 @@ class UserMapper(MappingFileMapperBase):
             user_schema = folio_client.get_from_github(
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
             )
+
+            #TODO Fetch dynamically instead
+            user_schema["properties"]["requestPreference"] = {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "type": "object",
+                "description": "Request preference schema",
+                "properties": {
+                    "id": {
+                        "description": "Unique request preference ID",
+                        "type": "string",
+                        "$ref": "raml-util/schemas/uuid.schema",
+                    },
+                    "userId": {
+                        "description": "UUID of user associated with this request preference",
+                        "type": "string",
+                        "$ref": "raml-util/schemas/uuid.schema",
+                    },
+                    "holdShelf": {
+                        "description": "Whether 'Hold Shelf' option is available to the user.",
+                        "type": "boolean",
+                        "enum": [True],
+                        "example": True,
+                    },
+                    "delivery": {
+                        "description": "Whether 'Delivery' option is available to the user.",
+                        "type": "boolean",
+                        "default": False,
+                        "example": False,
+                    },
+                    "defaultServicePointId": {
+                        "description": "UUID of default service point for 'Hold Shelf' option",
+                        "type": "string",
+                        "$ref": "raml-util/schemas/uuid.schema",
+                    },
+                    "defaultDeliveryAddressTypeId": {
+                        "description": "Name of user's address type",
+                        "type": "string",
+                    },
+                    "fulfillment": {
+                        "description": "Preferred fulfillment type. Possible values are 'Delivery', 'Hold Shelf'",
+                        "type": "string",
+                        "enum": ["Delivery", "Hold Shelf"],
+                        "example": "Delivery",
+                    },
+                    "metadata": {
+                        "description": "Metadata about creation and changes to request preference",
+                        "$ref": "raml-util/schemas/metadata.schema",
+                        "readonly": True,
+                    },
+                },
+                "additionalProperties": False,
+                "required": ["holdShelf", "delivery"],
+            }
             super().__init__(
                 folio_client,
                 user_schema,
@@ -77,10 +130,19 @@ class UserMapper(MappingFileMapperBase):
             folio_user["personal"] = {}
         folio_user["personal"]["preferredContactTypeId"] = "Email"
         folio_user["active"] = True
-        folio_user["requestPreference"] = {
-            "holdShelf": True,
-            "delivery": False,
-        }
+        if folio_user.get("requestPreference"):
+            folio_user["requestPreference"].update(
+                {
+                    "holdShelf": True,
+                    "delivery": False,
+                }
+            )
+        else:
+            folio_user["requestPreference"] = {
+                "holdShelf": True,
+                "delivery": False,
+            }
+
         clean_folio_object = self.validate_required_properties(
             index_or_id, folio_user, self.schema, FOLIONamespaces.users
         )
