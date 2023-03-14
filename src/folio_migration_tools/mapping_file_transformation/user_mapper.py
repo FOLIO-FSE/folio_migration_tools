@@ -35,58 +35,10 @@ class UserMapper(MappingFileMapperBase):
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
             )
 
-            #TODO Fetch dynamically instead
-            user_schema["properties"]["requestPreference"] = {
-                "$schema": "http://json-schema.org/draft-04/schema#",
-                "type": "object",
-                "description": "Request preference schema",
-                "properties": {
-                    "id": {
-                        "description": "Unique request preference ID",
-                        "type": "string",
-                        "$ref": "raml-util/schemas/uuid.schema",
-                    },
-                    "userId": {
-                        "description": "UUID of user associated with this request preference",
-                        "type": "string",
-                        "$ref": "raml-util/schemas/uuid.schema",
-                    },
-                    "holdShelf": {
-                        "description": "Whether 'Hold Shelf' option is available to the user.",
-                        "type": "boolean",
-                        "enum": [True],
-                        "example": True,
-                    },
-                    "delivery": {
-                        "description": "Whether 'Delivery' option is available to the user.",
-                        "type": "boolean",
-                        "default": False,
-                        "example": False,
-                    },
-                    "defaultServicePointId": {
-                        "description": "UUID of default service point for 'Hold Shelf' option",
-                        "type": "string",
-                        "$ref": "raml-util/schemas/uuid.schema",
-                    },
-                    "defaultDeliveryAddressTypeId": {
-                        "description": "Name of user's address type",
-                        "type": "string",
-                    },
-                    "fulfillment": {
-                        "description": "Preferred fulfillment type. Possible values are 'Delivery', 'Hold Shelf'",
-                        "type": "string",
-                        "enum": ["Delivery", "Hold Shelf"],
-                        "example": "Delivery",
-                    },
-                    "metadata": {
-                        "description": "Metadata about creation and changes to request preference",
-                        "$ref": "raml-util/schemas/metadata.schema",
-                        "readonly": True,
-                    },
-                },
-                "additionalProperties": False,
-                "required": ["holdShelf", "delivery"],
-            }
+            user_schema["properties"]["requestPreference"] = folio_client.get_from_github(
+                "folio-org", "mod-user-import", "/ramls/schemas/userImportRequestPreference.json"
+            )
+
             super().__init__(
                 folio_client,
                 user_schema,

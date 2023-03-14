@@ -48,16 +48,14 @@ def test_basic(mocked_folio_client):
                 "value": "Last name",
                 "description": "",
             },
-            {
-                "folio_field": "requestPreference.defaultServicePointId",
-                "legacy_field": "homebranch",
-                "value": "",
-                "description": "",
-                "fallback_legacy_field": "",
-            },
         ]
     }
-    legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1", "homebranch":"75e59650-bbc5-4ce4-9f45-45382825fedc"}
+    legacy_user_record = {
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+        "homebranch": "75e59650-bbc5-4ce4-9f45-45382825fedc",
+    }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
@@ -77,7 +75,7 @@ def test_basic(mocked_folio_client):
     assert folio_user["requestPreference"]["defaultServicePointId"]
 
 
-def test_map_from_referenced_object_schema(mocked_folio_client):
+def test_map_request_preference_with_replace_value(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -109,11 +107,17 @@ def test_map_from_referenced_object_schema(mocked_folio_client):
                 "legacy_field": "homebranch",
                 "value": "",
                 "description": "",
+                "rules": {"replaceValues": {"my place": "75e59650-bbc5-4ce4-9f45-45382825fedc"}},
                 "fallback_legacy_field": "",
             },
         ]
     }
-    legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1", "homebranch":"75e59650-bbc5-4ce4-9f45-45382825fedc"}
+    legacy_user_record = {
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+        "homebranch": "my place",
+    }
     mock_library_conf = Mock(spec=LibraryConfiguration)
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
@@ -126,7 +130,11 @@ def test_map_from_referenced_object_schema(mocked_folio_client):
         legacy_user_record, folio_user, index_or_id
     )
 
-    assert folio_user["requestPreference"]["defaultServicePointId"]
+    assert (
+        folio_user["requestPreference"]["defaultServicePointId"]
+        == "75e59650-bbc5-4ce4-9f45-45382825fedc"
+    )
+
 
 def test_basic_fallback(mocked_folio_client):
     user_map = {
