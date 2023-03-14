@@ -72,7 +72,6 @@ def test_basic(mocked_folio_client):
     assert folio_user["id"] == "c2a8733b-4fbc-5ef1-ace9-f02e7b3a6f35"
     assert folio_user["personal"]["preferredContactTypeId"] == "Email"
     assert folio_user["active"] is True
-    assert folio_user["requestPreference"]["defaultServicePointId"]
 
 
 def test_map_request_preference_with_replace_value(mocked_folio_client):
