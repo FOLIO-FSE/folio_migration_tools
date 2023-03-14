@@ -722,6 +722,79 @@ def test_validate_required_properties_obj(mocked_folio_client: FolioClient):
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert folio_rec["electronicAccessObj"]["uri"] == "some_link"
 
+def test_validate_required_properties_array_object_with_object_and_strings(mocked_folio_client: FolioClient):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "contacts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["firstName"],
+                    "properties": {
+                        "firstName": {"type": "string"},
+                        "lastName": {"type": "string"},
+                        "addresses": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "addressLine1": {"type": "string"},
+                                    "addressLine2": {"type": "string"},
+                                },
+                                "required": ["addressLine1"]
+                            },
+                        },
+                    },
+                },
+            }
+        },
+    }
+
+    record = {
+        "id": "id1",
+        "fname": "",
+        "contact_address_line1": "My Street",
+        "contact_address2_line1": "My other street",
+        "contact2_address_line1": "Yet another street",
+        "contact_address_town": "Gothenburg",
+        "contact_address_types": "support<delimiter>sales"
+        }
+    
+    org_map = {
+        "data": [
+            {
+                "folio_field": "contacts[0].firstName",
+                "legacy_field": "fname",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].addressLine1",
+                "legacy_field": "contact_address_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].categories",
+                "legacy_field": "contact_address_types",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    contact = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert "contacts" not in folio_rec
 
 def test_validate_required_properties_item_notes_split_on_delimiter_notes(
     mocked_folio_client: FolioClient,
