@@ -166,6 +166,14 @@ class OrdersTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.orders, True
                     )
 
+                    # Add notes
+                    self.mapper.notes_mapper.map_notes(
+                        record,
+                        legacy_id,
+                        folio_rec["id"],
+                        FOLIONamespaces.organizations,
+                    )
+
                     # Handle merging and storage
                     if not self.current_folio_record:
                         self.current_folio_record = folio_rec

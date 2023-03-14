@@ -59,6 +59,12 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
             {"folio_field": "vendor", "legacy_field": "vendor", "value": "", "description": ""},
             {"folio_field": "orderType", "legacy_field": "type", "value": "", "description": ""},
             {
+                "folio_field": "compositePoLines[0].id",
+                "legacy_field": "order_number",
+                "value": "",
+                "description": "",
+            },
+            {
                 "folio_field": "compositePoLines[0].titleOrPackage",
                 "legacy_field": "TITLE",
                 "value": "",
@@ -93,6 +99,36 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
                 "folio_field": "compositePoLines[0].source",
                 "legacy_field": "",
                 "value": "API",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].source",
+                "legacy_field": "",
+                "value": "API",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].domain",
+                "legacy_field": "Not mapped",
+                "value": "orders",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].typeId",
+                "legacy_field": "",
+                "value": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].title",
+                "legacy_field": "",
+                "value": "A migrated note",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].content",
+                "legacy_field": "note1",
+                "value": "",
                 "description": "",
             },
         ]
@@ -211,3 +247,31 @@ def test_composite_order_with_one_pol_mapping(mapper):
         == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
     )
     assert composite_order_with_pol["compositePoLines"][0]["cost"]["currency"] == "USD"
+
+
+def test_pol_with_note(mapper):
+    data = {
+        "order_number": "o124",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Once upon a time...",
+        "bibnumber": "1",
+        "note1": "Hello, hello, hello!",
+    }
+
+    composite_order_with_pol, idx = mapper.do_map(
+        data, data["order_number"], FOLIONamespaces.orders
+    )
+    mapper.notes_mapper.map_notes(
+        data,
+        data["order_number"],
+        composite_order_with_pol["compositePoLines"][0]["id"],
+        FOLIONamespaces.orders,
+    )
+
+    assert (
+        'notes\t{"typeId": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5", "title": "A migrated note",'
+        ' "domain": "orders", "content": "Hello, hello, hello!",'
+        ' "links": [{"id": "o124", "type": "orders"}]}\n'
+        in mapper.extradata_writer.cache
+    )
