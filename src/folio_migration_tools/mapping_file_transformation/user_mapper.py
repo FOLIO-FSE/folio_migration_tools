@@ -34,6 +34,11 @@ class UserMapper(MappingFileMapperBase):
             user_schema = folio_client.get_from_github(
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"
             )
+
+            user_schema["properties"]["requestPreference"] = folio_client.get_from_github(
+                "folio-org", "mod-user-import", "/ramls/schemas/userImportRequestPreference.json"
+            )
+
             super().__init__(
                 folio_client,
                 user_schema,
@@ -77,10 +82,19 @@ class UserMapper(MappingFileMapperBase):
             folio_user["personal"] = {}
         folio_user["personal"]["preferredContactTypeId"] = "Email"
         folio_user["active"] = True
-        folio_user["requestPreference"] = {
-            "holdShelf": True,
-            "delivery": False,
-        }
+        if folio_user.get("requestPreference"):
+            folio_user["requestPreference"].update(
+                {
+                    "holdShelf": True,
+                    "delivery": False,
+                }
+            )
+        else:
+            folio_user["requestPreference"] = {
+                "holdShelf": True,
+                "delivery": False,
+            }
+
         clean_folio_object = self.validate_required_properties(
             index_or_id, folio_user, self.schema, FOLIONamespaces.users
         )
