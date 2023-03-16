@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
@@ -30,6 +31,7 @@ def mocked_folio_client() -> FolioClient:
         mocked_folio.folio_get_single_object = folio_get_single_object_mocked
         mocked_folio.folio_get_all = folio_get_all_mocked
         mocked_folio.get_from_github = folio_get_from_github
+        mocked_folio.current_user = str(uuid.uuid4())
         return mocked_folio
     except Exception as ee:
         logging.error(ee)
