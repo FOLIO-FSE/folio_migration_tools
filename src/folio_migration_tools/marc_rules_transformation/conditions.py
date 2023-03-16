@@ -177,6 +177,69 @@ class Conditions:
     def condition_trim(self, legacy_id, value, parameter, marc_field: field.Field):
         return value.strip()
 
+    def condition_set_contributor_type_id_by_code_or_name(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        contributor_code_subfield = parameter.get("contributorCodeSubfield", "4")
+        for subfield in marc_field.get_subfields(contributor_code_subfield):
+            normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
+            t = self.get_ref_data_tuple_by_code(
+                self.folio.contributor_types, "contrib_types_c", normalized_subfield
+            )
+            if not t:
+                self.mapper.migration_report.add(
+                    Blurbs.ContributorTypeMapping,
+                    (
+                        f'Mapping failed for ${contributor_code_subfield} "{subfield}" '
+                        f"({normalized_subfield}) "
+                    ),
+                )
+                Helper.log_data_issue(
+                    legacy_id,
+                    f"Mapping failed for ${contributor_code_subfield}",
+                    f'{subfield}" ({normalized_subfield}) ',
+                )
+            else:
+                self.mapper.migration_report.add(
+                    Blurbs.ContributorTypeMapping,
+                    (
+                        f"Contributor type code {t[1]} found for ${contributor_code_subfield} "
+                        f'"{subfield}" ({normalized_subfield}))'
+                    ),
+                )
+                return t[0]
+        fallback_name_field = "j" if marc_field.tag in ["111", "711"] else "e"
+        contributor_name_subfield = parameter.get("contributorNameSubfield", fallback_name_field)
+        for subfield in marc_field.get_subfields(contributor_name_subfield):
+            normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
+            t = self.get_ref_data_tuple_by_name(
+                self.folio.contributor_types, "contrib_types_n", normalized_subfield
+            )
+
+            if not t:
+                self.mapper.migration_report.add(
+                    Blurbs.ContributorTypeMapping,
+                    (
+                        f"Mapping failed for {marc_field.tag} ${contributor_name_subfield} "
+                        f"{subfield} (Normalized: {normalized_subfield}) "
+                    ),
+                )
+                Helper.log_data_issue(
+                    legacy_id,
+                    f"Mapping failed for {marc_field.tag} ${contributor_name_subfield}",
+                    f'{subfield}" ({normalized_subfield}) ',
+                )
+            else:
+                self.mapper.migration_report.add(
+                    Blurbs.ContributorTypeMapping,
+                    (
+                        f"Contributor type name {t[1]} found for {marc_field.tag} "
+                        f"${contributor_name_subfield} {normalized_subfield} ({subfield}) "
+                    ),
+                )
+                return t[0]
+        return self.default_contributor_type["id"]
+
     def condition_set_holdings_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
         self.mapper.migration_report.add(Blurbs.HoldingsTypeMapping, "Condition in rules hit")
         return ""
