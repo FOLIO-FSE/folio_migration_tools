@@ -324,20 +324,19 @@ def test_should_add_identifiers_010_019_020_022_024_028_035(mapper):
 def test_should_add_series_statements_800_810_811_830_440_490_to_series_list(mapper):
     xpath = "//marc:datafield[@tag='800' or @tag='810' or @tag='830' or @tag='440' or @tag='490' or @tag='811']"
     record = default_map("test_series.xml", xpath, mapper)
-
+    series_values = [s["value"] for s in record[0]["series"]]
     # 800
-    assert "Joyce, James, 1882-1941. James Joyce archive" in record[0]["series"]
+    assert "Joyce, James, 1882-1941. James Joyce archive" in series_values
     # 810
-    assert "United States. Dept. of the Army. Field manual", record[0]["series"]
+    assert "United States. Dept. of the Army. Field manual", series_values
     # 811
     assert (
         "International Congress of Nutrition (11th : 1978 : Rio de Janeiro, Brazil). Nutrition and food science ; v. 1"
-        in record[0]["series"]
+        in series_values
     )  # 830
-    assert "Philosophy of engineering and technology ; v. 21" in record[0]["series"]
+    assert "Philosophy of engineering and technology ; v. 21" in series_values
     assert (
-        "American university studies. Foreign language instruction ; vol. 12"
-        in record[0]["series"]
+        "American university studies. Foreign language instruction ; vol. 12" in series_values
     )  # 440
 
     # 490
@@ -382,23 +381,23 @@ def test_should_add_classifications_050_082_090_086_to_the_classifications_list(
 def test_should_add_subjects_600_610_611_630_647_648_650_651_to_the_subjects_list(mapper):
     xpath = "//marc:datafield[@tag='600' or @tag='610' or @tag='611' or @tag='630' or @tag='647' or @tag='648' or @tag='650' or @tag='651']"
     record = default_map("test_subjects.xml", xpath, mapper)
-
+    subject_values = [s["value"] for s in record[0]["subjects"]]
     assert (
         "Kougeas, Sōkr. V. IV Diogenes, Emperor of the East, active 1068-1071. (Sōkratēs V.)"
-        in record[0]["subjects"]
+        in subject_values
     )  # with self.subTest("610$abcdn"):
-    assert "Frederick II, King of Prussia, 1712-1786. No. 2" in record[0]["subjects"]
+    assert "Frederick II, King of Prussia, 1712-1786. No. 2" in subject_values
     assert (
         "Mississippi Valley Sanitary Fair (Venice, Italy). (1864 : ǂc Saint Louis, Mo.). Freedmen and Union Refugees' Department"
-        in record[0]["subjects"]
+        in subject_values
     )
     assert (
         "B.J. and the Bear. (1906) 1998. [medium] Manuscript. English New International [title]"
-        in record[0]["subjects"]
+        in subject_values
     )
-    assert "Twentieth century Social life and customs" in record[0]["subjects"]
-    assert "Engineering Philosophy", record[0]["subjects"]
-    assert "Aix-en-Provence (France) Philosophy. Early works to 1800" in record[0]["subjects"]
+    assert "Twentieth century Social life and customs" in subject_values
+    assert "Engineering Philosophy", subject_values
+    assert "Aix-en-Provence (France) Philosophy. Early works to 1800" in subject_values
 
 
 def test_should_add_publications_260_abc_264_abc_to_the_publications_list(mapper):

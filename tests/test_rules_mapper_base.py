@@ -56,6 +56,32 @@ def test_date_from_008():
     # assert instance["metadata"]["createdDate"] == "2017-03-09T00:00:00"
 
 
+def test_get_first_subfield_value():
+    marc_field = Field(
+        tag="100",
+        indicators=["0", "1"],
+        subfields=[
+            "e",
+            "puppeteer",
+            "e",
+            "assistant puppeteer",
+            "e",
+            "Executive Vice Puppeteer",
+        ],
+    )
+    assert marc_field.get_subfields("j", "e")[0] == "puppeteer"
+
+
+def test_get_first_subfield_value_no_subfields():
+    with pytest.raises(IndexError):
+        marc_field = Field(
+            tag="100",
+            indicators=["0", "1"],
+            subfields=[],
+        )
+        assert marc_field.get_subfields("j", "e")[0] == "puppeteer"
+
+
 def test_remove_subfields():
     marc_field = Field(
         tag="338",

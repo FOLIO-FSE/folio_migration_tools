@@ -469,6 +469,18 @@ class RulesMapperBase(MapperBase):
                     entity[k] = my_values[0]
                 else:
                     entity = my_values[0]
+            elif "alternativeMapping" in entity_mapping:
+                alt_mapping = entity_mapping["alternativeMapping"]
+                alt_k = alt_mapping["target"].split(".")[-1]
+                if alt_values := [
+                    v
+                    for v in self.apply_rules(marc_field, alt_mapping, index_or_legacy_id)
+                    if v != ""
+                ]:
+                    if entity_parent_key != alt_k:
+                        entity[alt_k] = alt_values[0]
+                    else:
+                        entity = alt_values[0]
         missing_required_props = [
             req_entity_prop
             for req_entity_prop in req_entity_props

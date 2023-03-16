@@ -238,7 +238,7 @@ class Conditions:
                     ),
                 )
                 return t[0]
-        return self.default_contributor_type["id"]
+        return ""
 
     def condition_set_holdings_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
         self.mapper.migration_report.add(Blurbs.HoldingsTypeMapping, "Condition in rules hit")
@@ -641,7 +641,10 @@ class Conditions:
             for cont_type in self.folio.contributor_types:
                 if normalized_subfield in [cont_type["code"], cont_type["name"]]:
                     return cont_type["name"]
-        return self.default_contributor_type["name"]
+        try:
+            marc_field.get_subfields("j", "e")[0]
+        except IndexError as ee:
+            return ""
 
     def condition_set_alternative_title_type_id(self, legacy_id, value, parameter, marc_field):
         try:
