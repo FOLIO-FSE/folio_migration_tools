@@ -21,44 +21,42 @@
             "title": "Orders Mapping File Name",
             "type": "string"
         },
-        "order_type_map_file_name": {
-            "title": "Order Type Map File Name",
+        "organizations_code_map_file_name": {
+            "title": "Organizations Code Map File Name",
             "type": "string"
         },
         "acquisition_method_map_file_name": {
             "title": "Acquisition Method Map File Name",
             "type": "string"
         },
-        "order_format_map_file_name": {
-            "title": "Order Format Map File Name",
-            "type": "string"
-        },
         "payment_status_map_file_name": {
             "title": "Payment Status Map File Name",
+            "default": "",
             "type": "string"
         },
         "receipt_status_map_file_name": {
             "title": "Receipt Status Map File Name",
+            "default": "",
             "type": "string"
         },
         "workflow_status_map_file_name": {
             "title": "Workflow Status Map File Name",
+            "default": "",
             "type": "string"
         },
         "location_map_file_name": {
             "title": "Location Map File Name",
-            "type": "string"
-        },
-        "funds_expense_class_map_file_name": {
-            "title": "Funds Expense Class Map File Name",
+            "default": "",
             "type": "string"
         },
         "funds_map_file_name": {
             "title": "Funds Map File Name",
+            "default": "",
             "type": "string"
         },
-        "organization_map_file_name": {
-            "title": "Organization Map File Name",
+        "funds_expense_class_map_file_name": {
+            "title": "Funds Expense Class Map File Name",
+            "default": "",
             "type": "string"
         }
     },
@@ -67,16 +65,8 @@
         "migration_task_type",
         "files",
         "orders_mapping_file_name",
-        "order_type_map_file_name",
-        "acquisition_method_map_file_name",
-        "order_format_map_file_name",
-        "payment_status_map_file_name",
-        "receipt_status_map_file_name",
-        "workflow_status_map_file_name",
-        "location_map_file_name",
-        "funds_expense_class_map_file_name",
-        "funds_map_file_name",
-        "organization_map_file_name"
+        "organizations_code_map_file_name",
+        "acquisition_method_map_file_name"
     ],
     "definitions": {
         "FileDefinition": {

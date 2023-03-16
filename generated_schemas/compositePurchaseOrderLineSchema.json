@@ -407,6 +407,11 @@
                                 "description": "notes regarding receiving instructions",
                                 "type": "string"
                             },
+                            "isAcknowledged": {
+                                "description": "Flag for acknowledge receiving note",
+                                "type": "boolean",
+                                "default": false
+                            },
                             "productIds": {
                                 "description": "a list of product identifiers",
                                 "id": "productIds",
@@ -423,7 +428,8 @@
                                         },
                                         "productIdType": {
                                             "description": "The type of product identifier",
-                                            "$ref": "../../common/schemas/product_id_type.json"
+                                            "$ref": "../../common/schemas/product_id_type.json",
+                                            "type": "Deprecated"
                                         },
                                         "qualifier": {
                                             "description": "Information about the binding, format, volume numbers, part of a set, publisher, distributor, etc. which might be enclosed in parenthesis",
@@ -544,19 +550,23 @@
                             "properties": {
                                 "code": {
                                     "description": "the fund code",
-                                    "$ref": "../../common/schemas/fund_code.json"
+                                    "$ref": "../../common/schemas/fund_code.json",
+                                    "type": "Deprecated"
                                 },
                                 "encumbrance": {
                                     "description": "UUID of encumbrance record associated with this fund distribution",
-                                    "$ref": "../../common/schemas/uuid.json"
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "Deprecated"
                                 },
                                 "fundId": {
                                     "description": "UUID of the fund associated with this fund distribution",
-                                    "$ref": "../../common/schemas/uuid.json"
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "Deprecated"
                                 },
                                 "expenseClassId": {
                                     "description": "UUID of the expense class associated with this fund distribution",
-                                    "$ref": "../../common/schemas/uuid.json"
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "Deprecated"
                                 },
                                 "distributionType": {
                                     "description": "Percentage or amount type of the value property",
@@ -642,7 +652,8 @@
                     },
                     "packagePoLineId": {
                         "description": "UUID referencing the poLine that represents the package that this POLs title belongs to",
-                        "$ref": "../../common/schemas/uuid.json"
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "Deprecated"
                     },
                     "paymentStatus": {
                         "description": "Payment/Receipt status",
@@ -856,7 +867,8 @@
                             },
                             "referenceNumbers": {
                                 "description": "Collection of reference number items",
-                                "$ref": "../../common/schemas/reference_numbers.json"
+                                "$ref": "../../common/schemas/reference_numbers.json",
+                                "type": "Deprecated"
                             }
                         },
                         "additionalProperties": false
