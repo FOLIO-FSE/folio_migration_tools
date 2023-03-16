@@ -572,7 +572,7 @@
                         "default": false
                     },
                     "metadata": {
-                        "type": "Deprecated",
+                        "type": "object",
                         "$ref": "../../../raml-util/schemas/metadata.schema",
                         "readonly": true
                     }
@@ -962,12 +962,48 @@
                         }
                     },
                     "metadata": {
-                        "type": "Deprecated",
+                        "type": "object",
                         "$ref": "../../../raml-util/schemas/metadata.schema",
                         "readonly": true
+                    },
+                    "interfaceCredential": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "description": "An interface credential record",
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "description": "The unique id of this interface credential",
+                                "$ref": "../../common/schemas/uuid.json",
+                                "type": "string"
+                            },
+                            "username": {
+                                "description": "The login username for this interface",
+                                "type": "string"
+                            },
+                            "password": {
+                                "description": "The login password for this interface",
+                                "type": "string"
+                            },
+                            "interfaceId": {
+                                "description": "The unique id of the associated interface",
+                                "$ref": "../../common/schemas/uuid.json",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            [
+                                "username",
+                                "password",
+                                "interfaceId"
+                            ]
+                        ]
                     }
                 },
-                "additionalProperties": false
+                "additionalProperties": false,
+                "required": [
+                    "name"
+                ]
             }
         },
         "accounts": {
@@ -1106,7 +1142,7 @@
             }
         },
         "metadata": {
-            "type": "Deprecated",
+            "type": "object",
             "$ref": "../../../raml-util/schemas/metadata.schema",
             "readonly": true
         }

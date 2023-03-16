@@ -3204,7 +3204,8 @@
                         "target": "identifiers.value"
                     }
                 ],
-                "entityPerRepeatedSubfield": true
+                "entityPerRepeatedSubfield": true,
+                "keepTrailingBackslash": true
             }
         ],
         "024": [
@@ -5063,6 +5064,14 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
+                        "description": "Authority ID that controlling the contributor",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "contributors.authorityId"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Personal Name",
                         "rules": [
                             {
@@ -5080,38 +5089,33 @@
                         "target": "contributors.contributorNameTypeId"
                     },
                     {
+                        "alternativeMapping": {
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "e"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type of contributor",
                         "rules": [
                             {
                                 "conditions": [
                                     {
-                                        "type": "set_contributor_type_id"
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "e"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
                                     }
                                 ]
                             }
                         ],
                         "subfield": [
-                            "4"
-                        ],
-                        "target": "contributors.contributorTypeId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
-                        "description": "Contributor type free text",
-                        "rules": [
-                            {
-                                "conditions": [
-                                    {
-                                        "type": "set_contributor_type_text"
-                                    }
-                                ]
-                            }
-                        ],
-                        "subfield": [
+                            "4",
                             "e"
                         ],
-                        "target": "contributors.contributorTypeText"
+                        "target": "contributors.contributorTypeId"
                     },
                     {
                         "applyRulesOnConcatenatedData": true,
@@ -5163,6 +5167,14 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
+                        "description": "Authority ID that controlling the contributor",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "contributors.authorityId"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Corporate Name",
                         "rules": [
                             {
@@ -5180,36 +5192,31 @@
                         "target": "contributors.contributorNameTypeId"
                     },
                     {
-                        "applyRulesOnConcatenatedData": true,
-                        "description": "Contributor type free text",
-                        "rules": [
-                            {
-                                "conditions": [
-                                    {
-                                        "type": "set_contributor_type_text"
-                                    }
-                                ]
-                            }
-                        ],
-                        "subfield": [
-                            "e"
-                        ],
-                        "target": "contributors.contributorTypeText"
-                    },
-                    {
+                        "alternativeMapping": {
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "e"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type of contributor",
                         "rules": [
                             {
                                 "conditions": [
                                     {
-                                        "type": "set_contributor_type_id"
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "e"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
                                     }
                                 ]
                             }
                         ],
                         "subfield": [
-                            "4"
+                            "4",
+                            "e"
                         ],
                         "target": "contributors.contributorTypeId"
                     },
@@ -5261,6 +5268,14 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
+                        "description": "Authority ID that controlling the contributor",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "contributors.authorityId"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Meeting Name",
                         "rules": [
                             {
@@ -5278,38 +5293,33 @@
                         "target": "contributors.contributorNameTypeId"
                     },
                     {
+                        "alternativeMapping": {
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "j"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type of contributor",
                         "rules": [
                             {
                                 "conditions": [
                                     {
-                                        "type": "set_contributor_type_id"
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "j"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
                                     }
                                 ]
                             }
                         ],
                         "subfield": [
-                            "4"
-                        ],
-                        "target": "contributors.contributorTypeId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
-                        "description": "Contributor type free text",
-                        "rules": [
-                            {
-                                "conditions": [
-                                    {
-                                        "type": "set_contributor_type_text"
-                                    }
-                                ]
-                            }
-                        ],
-                        "subfield": [
+                            "4",
                             "j"
                         ],
-                        "target": "contributors.contributorTypeText"
+                        "target": "contributors.contributorTypeId"
                     },
                     {
                         "applyRulesOnConcatenatedData": true,
@@ -5419,6 +5429,13 @@
                             "t"
                         ],
                         "target": "alternativeTitles.alternativeTitle"
+                    },
+                    {
+                        "description": "Authority ID that controlling the alternative title",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "alternativeTitles.authorityId"
                     }
                 ]
             }
@@ -5486,6 +5503,13 @@
                             "s"
                         ],
                         "target": "alternativeTitles.alternativeTitle"
+                    },
+                    {
+                        "description": "Authority ID that controlling the alternative title",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "alternativeTitles.authorityId"
                     }
                 ]
             }
@@ -5582,6 +5606,13 @@
                             "5"
                         ],
                         "target": "alternativeTitles.alternativeTitle"
+                    },
+                    {
+                        "description": "Authority ID that controlling the alternative title",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "alternativeTitles.authorityId"
                     }
                 ]
             }
@@ -5639,6 +5670,13 @@
                             "x"
                         ],
                         "target": "alternativeTitles.alternativeTitle"
+                    },
+                    {
+                        "description": "Authority ID that controlling the alternative title",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "alternativeTitles.authorityId"
                     }
                 ]
             }
@@ -9602,11 +9640,14 @@
                         "target": "notes.note"
                     },
                     {
-                        "description": "If true, determines that the note should not be visible for others than staff",
+                        "description": "If the 1st indicator equals 0, determines that the note should not be visible for others than staff",
                         "rules": [
                             {
-                                "conditions": [],
-                                "value": "false"
+                                "conditions": [
+                                    {
+                                        "type": "set_note_staff_only_via_indicator"
+                                    }
+                                ]
                             }
                         ],
                         "subfield": [
@@ -9619,251 +9660,318 @@
         ],
         "600": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "b",
+                                    "c",
+                                    "d",
+                                    "j",
+                                    "q",
+                                    "t",
+                                    "f",
+                                    "g",
+                                    "k",
+                                    "l",
+                                    "m",
+                                    "n",
+                                    "o",
+                                    "p",
+                                    "r",
+                                    "s"
+                                ],
+                                "value": " "
+                            },
+                            {
+                                "subfields": [
+                                    "x",
+                                    "y",
+                                    "z",
+                                    "v"
+                                ],
+                                "value": "--"
+                            },
+                            {
+                                "subfields": [],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
                             "b",
                             "c",
                             "d",
-                            "j",
-                            "q",
-                            "t",
+                            "e",
                             "f",
                             "g",
+                            "h",
+                            "j",
                             "k",
                             "l",
                             "m",
                             "n",
                             "o",
                             "p",
+                            "q",
                             "r",
-                            "s"
-                        ],
-                        "value": " "
-                    },
-                    {
-                        "subfields": [
+                            "s",
+                            "t",
+                            "u",
+                            "v",
                             "x",
                             "y",
-                            "z",
-                            "v"
+                            "z"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
                     },
                     {
-                        "subfields": [],
-                        "value": "--"
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "b",
-                    "c",
-                    "d",
-                    "e",
-                    "f",
-                    "g",
-                    "h",
-                    "j",
-                    "k",
-                    "l",
-                    "m",
-                    "n",
-                    "o",
-                    "p",
-                    "q",
-                    "r",
-                    "s",
-                    "t",
-                    "u",
-                    "v",
-                    "x",
-                    "y",
-                    "z"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "610": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "b",
+                                    "c",
+                                    "d",
+                                    "t",
+                                    "f",
+                                    "g",
+                                    "k",
+                                    "l",
+                                    "m",
+                                    "n",
+                                    "o",
+                                    "p",
+                                    "s"
+                                ],
+                                "value": " "
+                            },
+                            {
+                                "subfields": [
+                                    "x",
+                                    "y",
+                                    "z",
+                                    "v"
+                                ],
+                                "value": "--"
+                            },
+                            {
+                                "subfields": [],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
                             "b",
                             "c",
                             "d",
-                            "t",
+                            "e",
                             "f",
                             "g",
+                            "h",
                             "k",
                             "l",
                             "m",
                             "n",
                             "o",
                             "p",
-                            "s"
-                        ],
-                        "value": " "
-                    },
-                    {
-                        "subfields": [
+                            "r",
+                            "s",
+                            "t",
+                            "u",
+                            "v",
                             "x",
                             "y",
-                            "z",
-                            "v"
+                            "z"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
                     },
                     {
-                        "subfields": [],
-                        "value": "--"
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "b",
-                    "c",
-                    "d",
-                    "e",
-                    "f",
-                    "g",
-                    "h",
-                    "k",
-                    "l",
-                    "m",
-                    "n",
-                    "o",
-                    "p",
-                    "r",
-                    "s",
-                    "t",
-                    "u",
-                    "v",
-                    "x",
-                    "y",
-                    "z"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "611": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "c",
+                                    "d",
+                                    "e",
+                                    "q",
+                                    "t",
+                                    "f",
+                                    "g",
+                                    "k",
+                                    "l",
+                                    "m",
+                                    "n",
+                                    "o",
+                                    "p",
+                                    "r",
+                                    "s"
+                                ],
+                                "value": " "
+                            },
+                            {
+                                "subfields": [
+                                    "x",
+                                    "y",
+                                    "z",
+                                    "v"
+                                ],
+                                "value": "--"
+                            },
+                            {
+                                "subfields": [],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
                             "c",
                             "d",
                             "e",
-                            "q",
-                            "t",
                             "f",
                             "g",
+                            "h",
+                            "j",
                             "k",
                             "l",
-                            "m",
                             "n",
-                            "o",
                             "p",
-                            "r",
-                            "s"
-                        ],
-                        "value": " "
-                    },
-                    {
-                        "subfields": [
+                            "q",
+                            "s",
+                            "t",
+                            "u",
+                            "v",
                             "x",
                             "y",
-                            "z",
-                            "v"
+                            "z"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
                     },
                     {
-                        "subfields": [],
-                        "value": "--"
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "c",
-                    "d",
-                    "e",
-                    "f",
-                    "g",
-                    "h",
-                    "j",
-                    "k",
-                    "l",
-                    "n",
-                    "p",
-                    "q",
-                    "s",
-                    "t",
-                    "u",
-                    "v",
-                    "x",
-                    "y",
-                    "z"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "630": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "d",
+                                    "f",
+                                    "g",
+                                    "k",
+                                    "l",
+                                    "m",
+                                    "n",
+                                    "o",
+                                    "p",
+                                    "r",
+                                    "s"
+                                ],
+                                "value": " "
+                            },
+                            {
+                                "subfields": [
+                                    "x",
+                                    "y",
+                                    "z",
+                                    "v"
+                                ],
+                                "value": "--"
+                            },
+                            {
+                                "subfields": [],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
                             "d",
+                            "e",
                             "f",
                             "g",
+                            "h",
                             "k",
                             "l",
                             "m",
@@ -9871,64 +9979,60 @@
                             "o",
                             "p",
                             "r",
-                            "s"
-                        ],
-                        "value": " "
-                    },
-                    {
-                        "subfields": [
+                            "s",
+                            "t",
+                            "v",
                             "x",
                             "y",
-                            "z",
-                            "v"
+                            "z"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
                     },
                     {
-                        "subfields": [],
-                        "value": "--"
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "d",
-                    "e",
-                    "f",
-                    "g",
-                    "h",
-                    "k",
-                    "l",
-                    "m",
-                    "n",
-                    "o",
-                    "p",
-                    "r",
-                    "s",
-                    "t",
-                    "v",
-                    "x",
-                    "y",
-                    "z"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "647": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "c",
+                                    "d",
+                                    "g",
+                                    "x",
+                                    "y",
+                                    "z",
+                                    "v"
+                                ],
+                                "value": "--"
+                            },
+                            {
+                                "subfields": [],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
                             "c",
                             "d",
@@ -9938,77 +10042,97 @@
                             "z",
                             "v"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
                     },
                     {
-                        "subfields": [],
-                        "value": "--"
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "c",
-                    "d",
-                    "g",
-                    "x",
-                    "y",
-                    "z",
-                    "v"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "648": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "x",
+                                    "y",
+                                    "z",
+                                    "v"
+                                ],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
                             "x",
                             "y",
                             "z",
                             "v"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
+                    },
+                    {
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "x",
-                    "y",
-                    "z",
-                    "v"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "650": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "b",
+                                    "c",
+                                    "d",
+                                    "e",
+                                    "g",
+                                    "v",
+                                    "x",
+                                    "y",
+                                    "z"
+                                ],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
                             "b",
                             "c",
@@ -10020,40 +10144,48 @@
                             "y",
                             "z"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
+                    },
+                    {
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "b",
-                    "c",
-                    "d",
-                    "e",
-                    "g",
-                    "v",
-                    "x",
-                    "y",
-                    "z"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "651": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "e",
+                                    "g",
+                                    "v",
+                                    "x",
+                                    "y",
+                                    "z"
+                                ],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
                             "e",
                             "g",
@@ -10062,63 +10194,79 @@
                             "y",
                             "z"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
+                    },
+                    {
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "e",
-                    "g",
-                    "v",
-                    "x",
-                    "y",
-                    "z"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "655": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Subject Headings",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Subject Headings",
+                        "rules": [
                             {
-                                "type": "trim_period, trim"
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                ],
-                "subFieldDelimiter": [
-                    {
-                        "subfields": [
+                        ],
+                        "subFieldDelimiter": [
+                            {
+                                "subfields": [
+                                    "a",
+                                    "e",
+                                    "g",
+                                    "v",
+                                    "x",
+                                    "y",
+                                    "z"
+                                ],
+                                "value": "--"
+                            }
+                        ],
+                        "subfield": [
                             "a",
-                            "e",
-                            "g",
+                            "b",
+                            "c",
                             "v",
                             "x",
                             "y",
                             "z"
                         ],
-                        "value": "--"
+                        "target": "subjects.value"
+                    },
+                    {
+                        "description": "Authority ID that controlling the subject",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "subjects.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "b",
-                    "c",
-                    "v",
-                    "x",
-                    "y",
-                    "z"
-                ],
-                "target": "subjects"
+                ]
             }
         ],
         "700": [
             {
                 "entity": [
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Authority ID that controlling the contributor",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "contributors.authorityId"
+                    },
                     {
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type for Personal Name",
@@ -10138,38 +10286,33 @@
                         "target": "contributors.contributorNameTypeId"
                     },
                     {
+                        "alternativeMapping": {
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "e"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type of contributor",
                         "rules": [
                             {
                                 "conditions": [
                                     {
-                                        "type": "set_contributor_type_id"
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "e"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
                                     }
                                 ]
                             }
                         ],
                         "subfield": [
-                            "4"
-                        ],
-                        "target": "contributors.contributorTypeId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
-                        "description": "Contributor type free text",
-                        "rules": [
-                            {
-                                "conditions": [
-                                    {
-                                        "type": "set_contributor_type_text"
-                                    }
-                                ]
-                            }
-                        ],
-                        "subfield": [
+                            "4",
                             "e"
                         ],
-                        "target": "contributors.contributorTypeText"
+                        "target": "contributors.contributorTypeId"
                     },
                     {
                         "applyRulesOnConcatenatedData": true,
@@ -10221,6 +10364,14 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
+                        "description": "Authority ID that controlling the contributor",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "contributors.authorityId"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Corporate Name",
                         "rules": [
                             {
@@ -10238,38 +10389,33 @@
                         "target": "contributors.contributorNameTypeId"
                     },
                     {
+                        "alternativeMapping": {
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "e"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type of contributor",
                         "rules": [
                             {
                                 "conditions": [
                                     {
-                                        "type": "set_contributor_type_id"
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "e"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
                                     }
                                 ]
                             }
                         ],
                         "subfield": [
-                            "4"
-                        ],
-                        "target": "contributors.contributorTypeId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
-                        "description": "Contributor type free text",
-                        "rules": [
-                            {
-                                "conditions": [
-                                    {
-                                        "type": "set_contributor_type_text"
-                                    }
-                                ]
-                            }
-                        ],
-                        "subfield": [
+                            "4",
                             "e"
                         ],
-                        "target": "contributors.contributorTypeText"
+                        "target": "contributors.contributorTypeId"
                     },
                     {
                         "applyRulesOnConcatenatedData": true,
@@ -10319,6 +10465,14 @@
                 "entity": [
                     {
                         "applyRulesOnConcatenatedData": true,
+                        "description": "Authority ID that controlling the contributor",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "contributors.authorityId"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
                         "description": "Type for Meeting Name",
                         "rules": [
                             {
@@ -10336,38 +10490,33 @@
                         "target": "contributors.contributorNameTypeId"
                     },
                     {
+                        "alternativeMapping": {
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "j"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
                         "applyRulesOnConcatenatedData": true,
                         "description": "Type of contributor",
                         "rules": [
                             {
                                 "conditions": [
                                     {
-                                        "type": "set_contributor_type_id"
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "j"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
                                     }
                                 ]
                             }
                         ],
                         "subfield": [
-                            "4"
-                        ],
-                        "target": "contributors.contributorTypeId"
-                    },
-                    {
-                        "applyRulesOnConcatenatedData": true,
-                        "description": "Contributor type free text",
-                        "rules": [
-                            {
-                                "conditions": [
-                                    {
-                                        "type": "set_contributor_type_text"
-                                    }
-                                ]
-                            }
-                        ],
-                        "subfield": [
+                            "4",
                             "j"
                         ],
-                        "target": "contributors.contributorTypeText"
+                        "target": "contributors.contributorTypeId"
                     },
                     {
                         "applyRulesOnConcatenatedData": true,
@@ -10410,6 +10559,263 @@
                         "target": "contributors.name"
                     }
                 ]
+            }
+        ],
+        "720": [
+            {
+                "entity": [
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Type for Personal Name",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "parameter": {
+                                            "name": "Personal name"
+                                        },
+                                        "type": "set_contributor_name_type_id"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [],
+                        "target": "contributors.contributorNameTypeId"
+                    },
+                    {
+                        "alternativeMapping": {
+                            "description": "Contributor type free text",
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "e"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Type of contributor",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "e"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [
+                            "4",
+                            "e"
+                        ],
+                        "target": "contributors.contributorTypeId"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Primary contributor",
+                        "rules": [
+                            {
+                                "conditions": [],
+                                "value": "false"
+                            }
+                        ],
+                        "subfield": [],
+                        "target": "contributors.primary"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Personal Name",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [
+                            "a"
+                        ],
+                        "target": "contributors.name"
+                    }
+                ],
+                "indicators": {
+                    "ind1": "1",
+                    "ind2": "*"
+                }
+            },
+            {
+                "entity": [
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Type for Personal Name",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "parameter": {
+                                            "name": "Personal name"
+                                        },
+                                        "type": "set_contributor_name_type_id"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [],
+                        "target": "contributors.contributorNameTypeId"
+                    },
+                    {
+                        "alternativeMapping": {
+                            "description": "Contributor type free text",
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "e"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Type of contributor",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "e"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [
+                            "4",
+                            "e"
+                        ],
+                        "target": "contributors.contributorTypeId"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Primary contributor",
+                        "rules": [
+                            {
+                                "conditions": [],
+                                "value": "false"
+                            }
+                        ],
+                        "subfield": [],
+                        "target": "contributors.primary"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Personal Name",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [
+                            "a"
+                        ],
+                        "target": "contributors.name"
+                    }
+                ],
+                "indicators": {
+                    "ind1": " ",
+                    "ind2": "*"
+                }
+            },
+            {
+                "entity": [
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Type for Corporate Name",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "parameter": {
+                                            "name": "Corporate name"
+                                        },
+                                        "type": "set_contributor_name_type_id"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [],
+                        "target": "contributors.contributorNameTypeId"
+                    },
+                    {
+                        "alternativeMapping": {
+                            "description": "Contributor type free text",
+                            "ignoreSubsequentSubfields": true,
+                            "subfield": [
+                                "e"
+                            ],
+                            "target": "contributors.contributorTypeText"
+                        },
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Type of contributor",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "parameter": {
+                                            "contributorCodeSubfield": "4",
+                                            "contributorNameSubfield": "e"
+                                        },
+                                        "type": "set_contributor_type_id_by_code_or_name"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [
+                            "4",
+                            "e"
+                        ],
+                        "target": "contributors.contributorTypeId"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Primary contributor",
+                        "rules": [
+                            {
+                                "conditions": [],
+                                "value": "false"
+                            }
+                        ],
+                        "subfield": [],
+                        "target": "contributors.primary"
+                    },
+                    {
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Personal Name",
+                        "rules": [
+                            {
+                                "conditions": [
+                                    {
+                                        "type": "trim_period, trim"
+                                    }
+                                ]
+                            }
+                        ],
+                        "subfield": [
+                            "a"
+                        ],
+                        "target": "contributors.name"
+                    }
+                ],
+                "indicators": {
+                    "ind1": "2",
+                    "ind2": "*"
+                }
             }
         ],
         "780": [
@@ -10608,162 +11014,206 @@
         ],
         "800": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Series Statement",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Series Statement",
+                        "rules": [
                             {
-                                "type": "remove_ending_punc, trim"
+                                "conditions": [
+                                    {
+                                        "type": "remove_ending_punc, trim"
+                                    }
+                                ]
                             }
-                        ]
+                        ],
+                        "subfield": [
+                            "a",
+                            "b",
+                            "c",
+                            "d",
+                            "e",
+                            "f",
+                            "g",
+                            "h",
+                            "j",
+                            "k",
+                            "l",
+                            "m",
+                            "n",
+                            "o",
+                            "p",
+                            "q",
+                            "r",
+                            "s",
+                            "t",
+                            "u",
+                            "v",
+                            "w",
+                            "x",
+                            "3",
+                            "5"
+                        ],
+                        "target": "series.value"
+                    },
+                    {
+                        "description": "Authority ID that controlling the series",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "series.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "b",
-                    "c",
-                    "d",
-                    "e",
-                    "f",
-                    "g",
-                    "h",
-                    "j",
-                    "k",
-                    "l",
-                    "m",
-                    "n",
-                    "o",
-                    "p",
-                    "q",
-                    "r",
-                    "s",
-                    "t",
-                    "u",
-                    "v",
-                    "w",
-                    "x",
-                    "3",
-                    "5"
-                ],
-                "target": "series"
+                ]
             }
         ],
         "810": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Series Statement",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Series Statement",
+                        "rules": [
                             {
-                                "type": "remove_ending_punc, trim"
+                                "conditions": [
+                                    {
+                                        "type": "remove_ending_punc, trim"
+                                    }
+                                ]
                             }
-                        ]
+                        ],
+                        "subfield": [
+                            "a",
+                            "b",
+                            "c",
+                            "d",
+                            "e",
+                            "f",
+                            "g",
+                            "h",
+                            "k",
+                            "l",
+                            "m",
+                            "n",
+                            "o",
+                            "p",
+                            "r",
+                            "s",
+                            "t",
+                            "u",
+                            "v",
+                            "w",
+                            "x",
+                            "3",
+                            "5"
+                        ],
+                        "target": "series.value"
+                    },
+                    {
+                        "description": "Authority ID that controlling the series",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "series.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "b",
-                    "c",
-                    "d",
-                    "e",
-                    "f",
-                    "g",
-                    "h",
-                    "k",
-                    "l",
-                    "m",
-                    "n",
-                    "o",
-                    "p",
-                    "r",
-                    "s",
-                    "t",
-                    "u",
-                    "v",
-                    "w",
-                    "x",
-                    "3",
-                    "5"
-                ],
-                "target": "series"
+                ]
             }
         ],
         "811": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Series Statement",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Series Statement",
+                        "rules": [
                             {
-                                "type": "remove_ending_punc, trim"
+                                "conditions": [
+                                    {
+                                        "type": "remove_ending_punc, trim"
+                                    }
+                                ]
                             }
-                        ]
+                        ],
+                        "subfield": [
+                            "a",
+                            "c",
+                            "d",
+                            "e",
+                            "f",
+                            "g",
+                            "h",
+                            "j",
+                            "k",
+                            "l",
+                            "n",
+                            "p",
+                            "q",
+                            "s",
+                            "t",
+                            "u",
+                            "v",
+                            "w",
+                            "x",
+                            "3",
+                            "5"
+                        ],
+                        "target": "series.value"
+                    },
+                    {
+                        "description": "Authority ID that controlling the series",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "series.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "c",
-                    "d",
-                    "e",
-                    "f",
-                    "g",
-                    "h",
-                    "j",
-                    "k",
-                    "l",
-                    "n",
-                    "p",
-                    "q",
-                    "s",
-                    "t",
-                    "u",
-                    "v",
-                    "w",
-                    "x",
-                    "3",
-                    "5"
-                ],
-                "target": "series"
+                ]
             }
         ],
         "830": [
             {
-                "applyRulesOnConcatenatedData": true,
-                "description": "Series Statement",
-                "rules": [
+                "entity": [
                     {
-                        "conditions": [
+                        "applyRulesOnConcatenatedData": true,
+                        "description": "Series Statement",
+                        "rules": [
                             {
-                                "type": "remove_ending_punc, trim"
+                                "conditions": [
+                                    {
+                                        "type": "remove_ending_punc, trim"
+                                    }
+                                ]
                             }
-                        ]
+                        ],
+                        "subfield": [
+                            "a",
+                            "d",
+                            "f",
+                            "g",
+                            "h",
+                            "k",
+                            "l",
+                            "m",
+                            "n",
+                            "o",
+                            "p",
+                            "r",
+                            "s",
+                            "t",
+                            "v",
+                            "w",
+                            "x",
+                            "3",
+                            "5"
+                        ],
+                        "target": "series.value"
+                    },
+                    {
+                        "description": "Authority ID that controlling the series",
+                        "subfield": [
+                            "9"
+                        ],
+                        "target": "series.authorityId"
                     }
-                ],
-                "subfield": [
-                    "a",
-                    "d",
-                    "f",
-                    "g",
-                    "h",
-                    "k",
-                    "l",
-                    "m",
-                    "n",
-                    "o",
-                    "p",
-                    "r",
-                    "s",
-                    "t",
-                    "v",
-                    "w",
-                    "x",
-                    "3",
-                    "5"
-                ],
-                "target": "series"
+                ]
             }
         ],
         "856": [
@@ -12082,6 +12532,20 @@
             "name": "Visual materials, DVDs, etc. (visual)",
             "source": "UC",
             "statisticalCodeTypeId": "3abd6fc2-b3e4-4879-b1e1-78be41769fe3"
+        },
+        {
+            "code": "withdrawn",
+            "id": "c4073462-6144-4b69-a543-dd131e241799",
+            "name": "Withdrawn (withdrawn)",
+            "source": "UC",
+            "statisticalCodeTypeId": "0d3ec58e-dc3c-4aa1-9eba-180fca95c544"
+        },
+        {
+            "code": "XOCLC",
+            "id": "264c4f94-1538-43a3-8b40-bed68384b31b",
+            "name": "Do not share with OCLC",
+            "source": "folio",
+            "statisticalCodeTypeId": "0d3ec58e-dc3c-4aa1-9eba-180fca95c544"
         }
     ],
     "/templates": [

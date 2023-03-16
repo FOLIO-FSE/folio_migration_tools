@@ -68,7 +68,7 @@ def generate_extended_folio_object_schema(args):
         outfile.write(json.dumps(organization_schema, indent=4))
         outfile.write("\n")
 
-    courses_schema = CoursesMapper.get_composite_course_schema()
+    courses_schema = CoursesMapper.get_composite_course_schema(None)
     with open(os.path.join(args.results_path, "compositeCoursesSchema.json"), "w") as outfile:
         outfile.write(json.dumps(courses_schema, indent=4))
         outfile.write("\n")
