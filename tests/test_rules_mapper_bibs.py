@@ -344,6 +344,15 @@ def test_should_add_series_statements_800_810_811_830_440_490_to_series_list(map
     """assert "Pediatric clinics of North America ; v. 2, no. 4", record[0]["series"]   )"""
 
 
+def test_should_add_contributor_type_text_(mapper):
+    xpath = "//marc:datafield[@tag='100' or @tag='111']"
+    record = default_map("test_contributors_text.xml", xpath, mapper)
+    contributor_type_texts = [c.get("contributorTypeText", "") for c in record[0]["contributors"]]
+
+    assert "Hackathon" in contributor_type_texts
+    assert "Coolest kid on the block." in contributor_type_texts
+
+
 def test_should_add_contributors_100_111_700_to_the_contributors_list(mapper):
     xpath = "//marc:datafield[@tag='100' or @tag='111' or @tag='700']"
     record = default_map("test_contributors.xml", xpath, mapper)
