@@ -326,7 +326,7 @@ def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
         res = mapper.parse_record(
             record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False), ["ii"]
         )
-        assert "宝塚歌劇団" in res["subjects"]
+        assert "宝塚歌劇団" in [s["value"] for s in res["subjects"]]
         assert "[東京宝塚劇場公演パンフレット. ]" in res["alternativeTitles"][0]["alternativeTitle"]
         assert "1. 7月星組公演.  淀君, シャンソン・ダムール (1959)" in res["notes"][2]["note"]
         assert "宝塚" in res["publication"][1]["place"]
