@@ -90,8 +90,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 Helper.log_data_issue(
                     index_or_id, "Vendor code not found among migrated Organizations", mapped_value
                 )
+
+        elif re.compile("compositePoLines\[(\d+)\]\.id").fullmatch(
+            folio_prop_name
+        ):
+            return str(uuid.uuid4())
             
-        if folio_prop_name.endswith(".instanceId"):
+        elif folio_prop_name.endswith(".instanceId"):
             if mapped_value in self.instance_id_map:
                 self.migration_report.add_general_statistics(
                     "Instance ID mapped from previously migrated bib records"
