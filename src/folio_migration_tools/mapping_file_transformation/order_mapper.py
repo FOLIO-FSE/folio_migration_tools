@@ -95,6 +95,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
             folio_prop_name
         ):
             return str(uuid.uuid4())
+        
+        elif re.compile(r"notes\[\d+\]\.").match(
+            folio_prop_name
+        ):
+            return ""
             
         elif folio_prop_name.endswith(".instanceId"):
             if mapped_value in self.instance_id_map:
