@@ -1,15 +1,12 @@
-import uuid
+import io
 from pathlib import Path
 from unittest.mock import Mock
-
-from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.mapping_file_transformation.order_mapper import (
     CompositeOrderMapper,
 )
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.migration_tasks.orders_transformer import OrdersTransformer
 
 
@@ -81,10 +78,10 @@ def test_merge_into_orders_with_embedded_pols():
     ]
 
     # TODO don't write the file
-    with open(Path("file.json"), "w+") as results_file:
-        for idx, order in enumerate(order_objects):
-            OrdersTransformer.merge_into_orders_with_embedded_pols(
-                mocked_orders_transformer, order, results_file
-            )
+    results_file = io.StringIO("")
+    for idx, order in enumerate(order_objects):
+        OrdersTransformer.merge_into_orders_with_embedded_pols(
+            mocked_orders_transformer, order, results_file
+        )
 
     assert len(mocked_orders_transformer.current_folio_record["compositePoLines"]) == 2

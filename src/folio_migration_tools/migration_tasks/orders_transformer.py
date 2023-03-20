@@ -244,9 +244,7 @@ class OrdersTransformer(MigrationTaskBase):
         if folio_rec["id"] != self.current_folio_record["id"]:
             # Writes record to file
             Helper.write_to_file(results_file, self.current_folio_record)
-            self.mapper.migration_report.add_general_statistics(
-                "Orders written to disk"
-            )
+            self.mapper.migration_report.add_general_statistics("Orders written to disk")
             self.current_folio_record = folio_rec
 
         else:
@@ -256,8 +254,6 @@ class OrdersTransformer(MigrationTaskBase):
                 self.current_folio_record.get("compositePoLines", []).extend(
                     folio_rec.get("compositePoLines", [])
                 )
-                self.mapper.migration_report.add_general_statistics(
-                    "PO-lines merged into one PO"
-                )
+                self.mapper.migration_report.add_general_statistics("PO-lines merged into one PO")
             for key in diff.affected_paths:
                 self.mapper.migration_report.add(Blurbs.DiffsBetweenOrders, key)

@@ -256,7 +256,6 @@ def test_composite_order_mapping(mapper):
 
 
 def test_composite_order_with_one_pol_mapping(mapper):
-
     data = {
         "order_number": "o124",
         "vendor": "EBSCO",
@@ -281,7 +280,6 @@ def test_composite_order_with_one_pol_mapping(mapper):
 
 
 def test_one_order_one_pol_multiple_notes(mapper):
-
     mapper.composite_order_map = {
         "data": [
             {
@@ -413,7 +411,7 @@ def test_one_order_one_pol_multiple_notes(mapper):
         "bibnumber": "1",
         "note1": "Hello, hello, hello!",
         "note2": "Make it work!",
-        "order_note": "Buy only important stuff."
+        "order_note": "Buy only important stuff.",
     }
 
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders, True)
@@ -435,7 +433,6 @@ def test_one_order_one_pol_multiple_notes(mapper):
 
 
 def test_multiple_pols_with_one_or_more_notes(mapper):
-
     data_pols = [
         {
             "row_number": "o124-1",
@@ -461,7 +458,9 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
     composite_orders = []
 
     for row in data_pols:
-        composite_order, idx = mapper.do_map(row, row["order_number"], FOLIONamespaces.orders, True)
+        composite_order, idx = mapper.do_map(
+            row, row["order_number"], FOLIONamespaces.orders, True
+        )
 
         composite_orders.append(composite_order)
 
