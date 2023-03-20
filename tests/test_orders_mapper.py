@@ -413,9 +413,8 @@ def test_one_order_one_pol_multiple_notes(mapper):
         "note2": "Make it work!",
         "order_note": "Buy only important stuff.",
     }
-
+    mapper.extradata_writer.cache = []
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders, True)
-
     mapper.notes_mapper.map_notes(
         data,
         data["order_number"],
@@ -456,6 +455,7 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
     ]
 
     composite_orders = []
+    mapper.extradata_writer.cache = []
 
     for row in data_pols:
         composite_order, idx = mapper.do_map(
