@@ -224,7 +224,7 @@ class MappingFileMapperBase(MapperBase):
             legacy_id,
         )
 
-    def get_statistical_codes(self, legacy_item: dict, folio_prop_name: str, index_or_id):
+    def get_statistical_code(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:
             return self.get_mapped_ref_data_value(
                 self.statistical_codes_mapping,

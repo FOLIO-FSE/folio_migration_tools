@@ -61,16 +61,12 @@ class HoldingsMapper(MappingFileMapperBase):
 
         if folio_prop_name == "permanentLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
-        elif folio_prop_name == "temporaryLocationId":
-            return self.get_location_id(legacy_item, index_or_id, folio_prop_name, True)
         elif folio_prop_name == "callNumber":
             return self.get_call_number(mapped_value)
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
-        elif folio_prop_name == "statisticalCodeIds":
-            return self.get_statistical_codes(
-                mapped_value.split(" "), folio_prop_name, index_or_id
-            )
+        elif folio_prop_name.startswith("statisticalCodeIds"):
+            return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(mapped_value, index_or_id)
         elif mapped_value:
@@ -104,7 +100,7 @@ class HoldingsMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
             )
-        self.migration_report.add(Blurbs.CallNumberTypeMapping, "No mapping")
+        self.migration_report.add(Blurbs.CallNumberTypeMapping, "No Call Number Type Mapping")
         return ""
 
     def get_instance_ids(self, legacy_value: str, index_or_id: str):
