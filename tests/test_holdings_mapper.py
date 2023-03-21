@@ -339,6 +339,18 @@ def test_simple_get_prop_instance_id(mapper: HoldingsMapper):
     assert res == ["88009a08-5a2e-49e1-a3dd-d44c44d21b76"]
 
 
+def test_simple_get_prop_stat_codes_empty_if_empty(mapper: HoldingsMapper):
+    legacy_holding = {"STATCODE": ""}
+    res = mapper.get_prop(legacy_holding, "statisticalCodeIds[0]", "id1")
+    assert res == ""
+
+
+def test_simple_get_prop_stat_codes_empty_if_not_mapped(mapper: HoldingsMapper):
+    legacy_holding = {"STATCODE": "CodeBlue"}  # CodeBlue is not in map
+    res = mapper.get_prop(legacy_holding, "statisticalCodeIds[0]", "id1")
+    assert res == ""
+
+
 def test_simple_get_prop_stat_codes(mapper: HoldingsMapper):
     legacy_holding = {"STATCODE": "Codered"}
     res = mapper.get_prop(legacy_holding, "statisticalCodeIds[0]", "id1")
