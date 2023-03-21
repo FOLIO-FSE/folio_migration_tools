@@ -20,7 +20,7 @@ else:
 def tests(session):
     posargs = ["--cov=./", "--cov-report=xml", "--durations=20"]
     session.run("poetry", "install", external=True)
-    session.run("pytest", "--cov", *posargs, env=env)
+    session.run("pytest", *posargs, env=env)
 
 
 @nox.session()
