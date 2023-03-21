@@ -38,13 +38,7 @@ class MyTestableFileMapper(MappingFileMapperBase):
         )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            return self.mapped_from_values.get(folio_prop_name, "")
-        legacy_values = MappingFileMapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
-        if len(legacy_values) > 0 and all(isinstance(v, bool) for v in legacy_values):
-            return legacy_values[0]
-        return " ".join(legacy_values).strip()
+        return super().get_prop(legacy_item, folio_prop_name, index_or_id)
 
 
 def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client: FolioClient):
@@ -3725,7 +3719,7 @@ def test_get_legacy_value_fallback_value():
     assert res == "info@leifochbilly.se"
 
 
-def test_get_legacy_value_from_map(mocked_folio_client):
+def test_get_prop(mocked_folio_client):
     legacy_object = {"id": "1", "title": "Alpha", "alternative_title": "Omega"}
     schema = {}
     the_map = {
@@ -3746,11 +3740,11 @@ def test_get_legacy_value_from_map(mocked_folio_client):
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    res = mapper.get_value_from_map("title", legacy_object, "")
+    res = mapper.get_prop(legacy_object, "title", "")
     assert res == "Alpha Omega"
 
 
-def test_get_legacy_value_from_map_one_value(mocked_folio_client):
+def test_get_prop_one_value(mocked_folio_client):
     legacy_object = {"id": "1", "title": "Alpha", "alternative_title": "Omega"}
     schema = {}
     the_map = {
@@ -3771,7 +3765,7 @@ def test_get_legacy_value_from_map_one_value(mocked_folio_client):
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    res = mapper.get_value_from_map("title", legacy_object, "")
+    res = mapper.get_prop(legacy_object, "title", "")
     assert res == "Alpha Beta"
 
 

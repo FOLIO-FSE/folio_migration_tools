@@ -13,6 +13,7 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapping_base
 from folio_migration_tools.report_blurbs import Blurbs
 
 
+# flake8: noqa: s113
 class NotesMapper(MappingFileMappingBaseImpl):
     def __init__(
         self,
@@ -69,22 +70,7 @@ class NotesMapper(MappingFileMappingBaseImpl):
                     )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-
-        if folio_prop_name in self.mapped_from_values and len(legacy_item_keys) == 1:
-            return self.mapped_from_values.get(folio_prop_name, "")
-
-        map_entries = list(
-            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
-                folio_prop_name, self.record_map["data"]
-            )
-        )
-        if len(map_entries) > 1:
-            self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
-        return " ".join(
-            MappingFileMapperBase.get_legacy_value(legacy_item, map_entry, self.migration_report)
-            for map_entry in map_entries
-        ).strip()
+        return super().get_prop(legacy_item, folio_prop_name, index_or_id)
 
     def get_notes_schema(self):
         notes_schema = self.folio_client.get_from_github(

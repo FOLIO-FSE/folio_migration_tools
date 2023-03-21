@@ -56,37 +56,27 @@ class HoldingsMapper(MappingFileMapperBase):
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
 
-        # IF there is a value mapped, return that one
-        if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            self.migration_report.add(
-                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
-            )
-            return value
-
-        legacy_values = MappingFileMapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
-        legacy_value = " ".join(legacy_values).strip()
+        mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
 
         if folio_prop_name == "permanentLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
         elif folio_prop_name == "temporaryLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name, True)
         elif folio_prop_name == "callNumber":
-            return self.get_call_number(legacy_value)
+            return self.get_call_number(mapped_value)
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
         elif folio_prop_name == "statisticalCodeIds":
-            return self.get_statistical_codes(legacy_values, folio_prop_name, index_or_id)
+            return self.get_statistical_codes(
+                mapped_value.split(" "), folio_prop_name, index_or_id
+            )
         elif folio_prop_name == "instanceId":
-            return self.get_instance_ids(legacy_value, index_or_id)
-        elif any(legacy_item_keys):
-            if len(legacy_item_keys) > 1:
-                self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
-            return legacy_value
+            return self.get_instance_ids(mapped_value, index_or_id)
+        elif mapped_value:
+            return mapped_value
         else:
-            # edge case
+            self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")
             return ""
 
     def get_call_number(self, legacy_value):

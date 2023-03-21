@@ -27,7 +27,6 @@ def mocked_folio_client() -> FolioClient:
         FolioClient.login = MagicMock(name="login", return_value=None)
         FolioClient.okapi_token = "token"  # noqa:S105
         mocked_folio = FolioClient("okapi_url", "tenant_id", "username", "password")
-
         mocked_folio.folio_get_single_object = folio_get_single_object_mocked
         mocked_folio.folio_get_all = folio_get_all_mocked
         mocked_folio.get_from_github = folio_get_from_github

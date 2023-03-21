@@ -75,8 +75,6 @@ class OrganizationMapper(MappingFileMapperBase):
             folio_prop_name,
         )
 
-        mapped_value = self.get_value_from_map(folio_prop_name, legacy_organization, index_or_id)
-
         # Perfrom reference data mappings
         if folio_prop_name == "organizationTypes":
             return self.get_mapped_ref_data_value(
@@ -111,7 +109,7 @@ class OrganizationMapper(MappingFileMapperBase):
         ):
             return "replace_with_interface_id"
 
-        return mapped_value
+        return super().get_prop(legacy_organization, folio_prop_name, index_or_id)
 
     def set_up_reference_data_mapping(
         self,

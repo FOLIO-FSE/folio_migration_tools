@@ -2,6 +2,7 @@ import json
 import logging
 import sys
 from datetime import datetime
+from datetime import timezone
 from typing import Set
 from uuid import uuid4
 
@@ -144,25 +145,14 @@ class ItemMapper(MappingFileMapperBase):
         logging.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        value_tuple = (legacy_item, folio_prop_name, index_or_id)
-
-        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-
-        # IF there is a value mapped, return that one
-        if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            self.migration_report.add(
-                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
-            )
-            return value
-
-        legacy_values = MappingFileMapperBase.get_legacy_vals(legacy_item, legacy_item_keys)
-        legacy_value = " ".join(legacy_values).strip()
+        mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
 
         if folio_prop_name == "permanentLocationId":
             return self.get_mapped_ref_data_value(
                 self.location_mapping,
-                *value_tuple,
+                legacy_item,
+                folio_prop_name,
+                index_or_id,
                 False,
             )
         elif folio_prop_name == "temporaryLocationId":
@@ -173,7 +163,9 @@ class ItemMapper(MappingFileMapperBase):
                 )
             temp_loc = self.get_mapped_ref_data_value(
                 self.temp_location_mapping,
-                *value_tuple,
+                legacy_item,
+                folio_prop_name,
+                index_or_id,
                 True,
             )
             self.migration_report.add(Blurbs.TemporaryLocationMapping, f"{temp_loc}")
@@ -181,18 +173,20 @@ class ItemMapper(MappingFileMapperBase):
         elif folio_prop_name == "materialTypeId":
             return self.get_mapped_ref_data_value(
                 self.material_type_mapping,
-                *value_tuple,
+                legacy_item,
+                folio_prop_name,
+                index_or_id,
             )
         elif folio_prop_name == "itemLevelCallNumberTypeId":
             return self.get_item_level_call_number_type_id(
                 legacy_item, folio_prop_name, index_or_id
             )
         elif folio_prop_name == "status.name":
-            return self.transform_status(legacy_value)
+            return self.transform_status(mapped_value)
         elif folio_prop_name == "barcode":
-            barcode = next((v for v in legacy_values if v), "")
+            barcode = mapped_value
             if barcode.strip() and barcode in self.unique_barcodes:
-                Helper.log_data_issue(index_or_id, "Duplicate barcode", "-".join(legacy_values))
+                Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
                 self.migration_report.add_general_statistics("Duplicate barcodes")
                 return f"{barcode}-{uuid4()}"
             else:
@@ -201,11 +195,13 @@ class ItemMapper(MappingFileMapperBase):
                 return barcode
 
         elif folio_prop_name == "status.date":
-            return datetime.utcnow().isoformat()
+            return datetime.now(timezone.utc).isoformat()
         elif folio_prop_name == "temporaryLoanTypeId":
             ltid = self.get_mapped_ref_data_value(
                 self.temp_loan_type_mapping,
-                *value_tuple,
+                legacy_item,
+                folio_prop_name,
+                index_or_id,
                 True,
             )
             self.migration_report.add(
@@ -213,7 +209,9 @@ class ItemMapper(MappingFileMapperBase):
             )
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
-            return self.get_mapped_ref_data_value(self.loan_type_mapping, *value_tuple)
+            return self.get_mapped_ref_data_value(
+                self.loan_type_mapping, legacy_item, folio_prop_name, index_or_id
+            )
         elif folio_prop_name.startswith("statisticalCodeIds"):
             statistical_code_id = self.get_statistical_codes(
                 legacy_item, folio_prop_name, index_or_id
@@ -224,10 +222,10 @@ class ItemMapper(MappingFileMapperBase):
             )
             return statistical_code_id
         elif folio_prop_name == "holdingsRecordId":
-            if legacy_value in self.holdings_id_map:
-                return self.holdings_id_map[legacy_value][1]
-            elif f"{self.bib_id_template}{legacy_value}" in self.holdings_id_map:
-                return self.holdings_id_map[f"{self.bib_id_template}{legacy_value}"][1]
+            if mapped_value in self.holdings_id_map:
+                return self.holdings_id_map[mapped_value][1]
+            elif f"{self.bib_id_template}{mapped_value}" in self.holdings_id_map:
+                return self.holdings_id_map[f"{self.bib_id_template}{mapped_value}"][1]
             self.migration_report.add_general_statistics(
                 "Records failed because of failed holdings",
             )
@@ -235,15 +233,11 @@ class ItemMapper(MappingFileMapperBase):
                 "Holdings id referenced in legacy item "
                 "was not found amongst transformed Holdings records"
             )
-            raise TransformationRecordFailedError(index_or_id, s, legacy_value)
-        elif any(legacy_item_keys):
-            if len(legacy_item_keys) > 1:
-                self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
-            return legacy_value
+            raise TransformationRecordFailedError(index_or_id, s, mapped_value)
+        elif mapped_value:
+            return mapped_value
         else:
-            self.migration_report.add(
-                Blurbs.UnmappedProperties, f"{folio_prop_name} {legacy_item_keys}"
-            )
+            self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")
             return ""
 
     def get_item_level_call_number_type_id(self, legacy_item, folio_prop_name: str, index_or_id):

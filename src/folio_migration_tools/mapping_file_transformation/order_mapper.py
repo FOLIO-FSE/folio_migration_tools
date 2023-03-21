@@ -19,6 +19,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
 )
 from folio_migration_tools.report_blurbs import Blurbs
 
+# flake8: noqa: s113
+
 
 class CompositeOrderMapper(MappingFileMapperBase):
     def __init__(
@@ -61,7 +63,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         logging.info("Init done")
 
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id):
-        mapped_value = self.get_value_from_map(folio_prop_name, legacy_order, index_or_id)
+        mapped_value = super().get_prop(legacy_order, folio_prop_name, index_or_id)
         if folio_prop_name.endswith(".acquisitionMethod"):
             mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
             return mapped_val["folio_id"]

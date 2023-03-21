@@ -246,14 +246,20 @@ class MappingFileMapperBase(MapperBase):
                 folio_prop_name, self.record_map["data"]
             )
         )
-        if len(map_entries) > 1:
+        if not any(map_entries):
+            return ""
+        elif len(map_entries) > 1:
             self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
-        return " ".join(
-            MappingFileMapperBase.get_legacy_value(
-                legacy_object, map_entry, self.migration_report, index_or_id
+            return " ".join(
+                MappingFileMapperBase.get_legacy_value(
+                    legacy_object, map_entry, self.migration_report, index_or_id
+                )
+                for map_entry in map_entries
+            ).strip()
+        else:
+            return MappingFileMapperBase.get_legacy_value(
+                legacy_object, map_entries[0], self.migration_report, index_or_id
             )
-            for map_entry in map_entries
-        ).strip()
 
     def do_map(
         self,
@@ -323,29 +329,6 @@ class MappingFileMapperBase(MapperBase):
                 legacy_object, schema_property_name, folio_object, index_or_id, schema_property
             )
 
-    def get_value_from_map(
-        self,
-        folio_prop_name: str,
-        legacy_object: dict,
-        index_or_id: str = "",
-    ):
-        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        map_entries = list(
-            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
-                folio_prop_name, self.record_map["data"]
-            )
-        )
-        if folio_prop_name in self.mapped_from_values and len(legacy_item_keys) == 1:
-            return self.mapped_from_values.get(folio_prop_name, "")
-        if len(map_entries) > 1:
-            self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
-        return " ".join(
-            MappingFileMapperBase.get_legacy_value(
-                legacy_object, map_entry, self.migration_report, index_or_id
-            )
-            for map_entry in map_entries
-        ).strip()
-
     @staticmethod
     def get_legacy_value(
         legacy_object: dict,
@@ -354,7 +337,9 @@ class MappingFileMapperBase(MapperBase):
         index_or_id: str = "",
     ):
         # Mapping from value fields has preceedence and does not get involved in post processing
-        if mapping_file_entry.get("value", ""):
+        if mapping_file_entry.get("value", "") or isinstance(
+            mapping_file_entry.get("value", ""), bool
+        ):
             value_mapped_value = mapping_file_entry.get("value")
             migration_report.add(
                 Blurbs.DefaultValuesAdded,
@@ -363,7 +348,7 @@ class MappingFileMapperBase(MapperBase):
             return value_mapped_value
 
         # Value mapped from the Legacy field(s)
-        value = legacy_object.get(mapping_file_entry["legacy_field"], "").strip()
+        value = legacy_object.get(mapping_file_entry["legacy_field"], "")
         if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
             if replaced_val := mapping_file_entry["rules"]["replaceValues"].get(value, ""):
                 migration_report.add(
@@ -398,7 +383,7 @@ class MappingFileMapperBase(MapperBase):
                     f"instead of empty {mapping_file_entry['legacy_field']}"
                 ),
             )
-            value = mapping_file_entry.get("fallback_value", "").strip()
+            value = mapping_file_entry.get("fallback_value", "")
         return value
 
     @staticmethod
@@ -735,13 +720,10 @@ class MappingFileMapperBase(MapperBase):
             if k["folio_field"] == folio_prop_name
             and any(
                 [
-                    is_bool_or_numeric(k.get("value", "")) or k.get("value", "").strip(),
-                    k.get("legacy_field", "").strip(),
-                    k.get("fallback_legacy_field", "").strip(),
-                    (
-                        is_bool_or_numeric(k.get("fallback_value", ""))
-                        or k.get("fallback_value", "").strip()
-                    ),
+                    is_set_or_bool_or_numeric(k.get("value", "")),
+                    is_set_or_bool_or_numeric(k.get("legacy_field", "")),
+                    is_set_or_bool_or_numeric(k.get("fallback_legacy_field", "")),
+                    is_set_or_bool_or_numeric(k.get("fallback_value", "")),
                 ]
             )
         )
@@ -935,5 +917,5 @@ def in_deep(dictionary, keys):
     )
 
 
-def is_bool_or_numeric(any_value):
-    return any([isinstance(any_value, t) for t in [int, bool, float, complex]])
+def is_set_or_bool_or_numeric(any_value):
+    return any(isinstance(any_value, t) for t in [int, bool, float, complex]) or any_value.strip()
