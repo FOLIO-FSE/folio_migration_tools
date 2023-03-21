@@ -129,7 +129,6 @@ class UserMapper(MappingFileMapperBase):
             yield row
 
     def get_prop(self, legacy_user, folio_prop_name, index_or_id):
-        value_tuple = (legacy_user, folio_prop_name, index_or_id)
         mapped_value = super().get_prop(legacy_user, folio_prop_name, index_or_id)
         if folio_prop_name == "personal.addresses.id":
             return ""
@@ -137,7 +136,8 @@ class UserMapper(MappingFileMapperBase):
             if self.groups_mapping:
                 return self.get_mapped_name(
                     self.groups_mapping,
-                    *value_tuple,
+                    legacy_user,
+                    index_or_id,
                     False,
                 )
             else:
@@ -151,14 +151,15 @@ class UserMapper(MappingFileMapperBase):
                 )
             return self.get_mapped_name(
                 self.departments_mapping,
-                *value_tuple,
+                legacy_user,
+                index_or_id,
                 False,
             )
         elif folio_prop_name in ["expirationDate", "enrollmentDate", "personal.dateOfBirth"]:
-            return self.get_parsed_date(legacy_user, mapped_value, folio_prop_name)
+            return self.get_parsed_date(mapped_value, folio_prop_name)
         return mapped_value
 
-    def get_parsed_date(self, legacy_user: dict, mapped_value, folio_prop_name: str):
+    def get_parsed_date(self, mapped_value, folio_prop_name: str):
         try:
             format_date = parse(mapped_value, fuzzy=True)
             fmt_string = f"{folio_prop_name}: {mapped_value} -> {format_date.isoformat()}"
