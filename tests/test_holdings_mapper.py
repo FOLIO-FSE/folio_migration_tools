@@ -58,7 +58,7 @@ def mapper(pytestconfig) -> HoldingsMapper:
             },
             {
                 "folio_field": "callNumber",
-                "legacy_field": "Not mapped",
+                "legacy_field": "CALLNUMBER",
                 "value": "",
                 "description": "",
             },
@@ -82,7 +82,7 @@ def mapper(pytestconfig) -> HoldingsMapper:
             },
             {
                 "folio_field": "callNumberTypeId",
-                "legacy_field": "Not mapped",
+                "legacy_field": "CALLNUMBERTYPE",
                 "value": "",
                 "description": "",
             },
@@ -210,7 +210,7 @@ def mapper(pytestconfig) -> HoldingsMapper:
             },
             {
                 "folio_field": "instanceId",
-                "legacy_field": "fake_instance_id",
+                "legacy_field": "bibnumber",
                 "value": "",
                 "description": "",
             },
@@ -299,15 +299,27 @@ def mapper(pytestconfig) -> HoldingsMapper:
                 "value": "",
                 "description": "",
             },
+            {
+                "folio_field": "statisticalCodeIds[0]",
+                "legacy_field": "STATCODE",
+                "value": "",
+                "description": "",
+            },
         ]
     }
     location_map = [
         {"folio_code": "KU/CC/DI/P", "PERM_LOCATION": "infoOff"},
         {"folio_code": "E", "PERM_LOCATION": "*"},
     ]
-    call_number_type_map = {}
-    statistical_codes_map = {}
-    instance_id_map = {}
+    call_number_type_map = [
+        {"folio_name": "LC Modified", "CALLNUMBERTYPE": "LCM"},
+        {"folio_name": "Library of Congress classification", "CALLNUMBERTYPE": "*"},
+    ]
+    statistical_codes_map = [
+        {"folio_code": "arch", "STATCODE": "Codered"},
+        {"folio_code": "audstream", "STATCODE": "*"},
+    ]
+    instance_id_map = {"b1": ["b1", "88009a08-5a2e-49e1-a3dd-d44c44d21b76"]}
     mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
     mocked_config.look_up_instructor = False
     return HoldingsMapper(
@@ -321,16 +333,38 @@ def mapper(pytestconfig) -> HoldingsMapper:
     )
 
 
+def test_simple_get_prop_instance_id(mapper: HoldingsMapper):
+    legacy_holding = {"bibnumber": "b1"}
+    res = mapper.get_prop(legacy_holding, "instanceId", "id1")
+    assert res == ["88009a08-5a2e-49e1-a3dd-d44c44d21b76"]
+
+
+def test_simple_get_prop_stat_codes(mapper: HoldingsMapper):
+    legacy_holding = {"STATCODE": "Codered"}
+    res = mapper.get_prop(legacy_holding, "statisticalCodeIds[0]", "id1")
+    assert res == "b6b46869-f3c1-4370-b603-29774a1e42b1"
+
+
+def test_simple_get_prop_call_number_type(mapper: HoldingsMapper):
+    legacy_holding = {"CALLNUMBERTYPE": "LCM"}
+    res = mapper.get_prop(legacy_holding, "callNumberTypeId", "id1")
+    assert res == "512173a7-bd09-490e-b773-17d83f2b63fe"
+
+
+def test_simple_get_prop_call_number(mapper: HoldingsMapper):
+    legacy_holding = {"CALLNUMBER": "V.01"}
+    res = mapper.get_prop(legacy_holding, "callNumber", "id1")
+    assert res == "V.01"
+
+
 def test_simple_get_prop_perm_location(mapper: HoldingsMapper):
     legacy_holding = {"PERM_LOCATION": "electronic"}
-
     res = mapper.get_prop(legacy_holding, "permanentLocationId", "id1")
     assert res == "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
 
 
 def test_simple_get_prop_regular_value(mapper: HoldingsMapper):
     legacy_holding = {"Z30_REC_KEY": "old_id"}
-
     res = mapper.get_prop(legacy_holding, "formerIds[0]", "old_id")
     assert res == "old_id"
 

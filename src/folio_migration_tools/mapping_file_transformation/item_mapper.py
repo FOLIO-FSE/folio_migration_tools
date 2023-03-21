@@ -213,7 +213,7 @@ class ItemMapper(MappingFileMapperBase):
                 self.loan_type_mapping, legacy_item, folio_prop_name, index_or_id
             )
         elif folio_prop_name.startswith("statisticalCodeIds"):
-            statistical_code_id = self.get_statistical_codes(
+            statistical_code_id = self.get_statistical_code(
                 legacy_item, folio_prop_name, index_or_id
             )
             self.migration_report.add(
