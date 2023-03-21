@@ -18,6 +18,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
+@pytest.mark.slow
 def test_fetch_org_schemas_from_github_happy_path():
     organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
         "folio-org", "mod-organizations-storage", "mod-orgs", "organization"

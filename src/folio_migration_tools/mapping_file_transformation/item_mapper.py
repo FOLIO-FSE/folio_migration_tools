@@ -160,7 +160,7 @@ class ItemMapper(MappingFileMapperBase):
         legacy_value = " ".join(legacy_values).strip()
 
         if folio_prop_name == "permanentLocationId":
-            return self.get_mapped_value(
+            return self.get_mapped_ref_data_value(
                 self.location_mapping,
                 *value_tuple,
                 False,
@@ -171,7 +171,7 @@ class ItemMapper(MappingFileMapperBase):
                     "Temporary location is mapped, but there is no "
                     "temporary location mapping file referenced in configuration"
                 )
-            temp_loc = self.get_mapped_value(
+            temp_loc = self.get_mapped_ref_data_value(
                 self.temp_location_mapping,
                 *value_tuple,
                 True,
@@ -179,7 +179,7 @@ class ItemMapper(MappingFileMapperBase):
             self.migration_report.add(Blurbs.TemporaryLocationMapping, f"{temp_loc}")
             return temp_loc
         elif folio_prop_name == "materialTypeId":
-            return self.get_mapped_value(
+            return self.get_mapped_ref_data_value(
                 self.material_type_mapping,
                 *value_tuple,
             )
@@ -203,7 +203,7 @@ class ItemMapper(MappingFileMapperBase):
         elif folio_prop_name == "status.date":
             return datetime.utcnow().isoformat()
         elif folio_prop_name == "temporaryLoanTypeId":
-            ltid = self.get_mapped_value(
+            ltid = self.get_mapped_ref_data_value(
                 self.temp_loan_type_mapping,
                 *value_tuple,
                 True,
@@ -213,7 +213,7 @@ class ItemMapper(MappingFileMapperBase):
             )
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
-            return self.get_mapped_value(self.loan_type_mapping, *value_tuple)
+            return self.get_mapped_ref_data_value(self.loan_type_mapping, *value_tuple)
         elif folio_prop_name.startswith("statisticalCodeIds"):
             statistical_code_id = self.get_statistical_codes(
                 legacy_item, folio_prop_name, index_or_id
@@ -248,7 +248,7 @@ class ItemMapper(MappingFileMapperBase):
 
     def get_item_level_call_number_type_id(self, legacy_item, folio_prop_name: str, index_or_id):
         if self.call_number_mapping:
-            return self.get_mapped_value(
+            return self.get_mapped_ref_data_value(
                 self.call_number_mapping, legacy_item, index_or_id, folio_prop_name
             )
         self.migration_report.add(
