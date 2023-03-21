@@ -101,7 +101,7 @@ class HoldingsMapper(MappingFileMapperBase):
     def get_location_id(
         self, legacy_item: dict, id_or_index, folio_prop_name, prevent_default=False
     ):
-        return self.get_mapped_value(
+        return self.get_mapped_ref_data_value(
             self.location_mapping,
             legacy_item,
             id_or_index,
@@ -111,7 +111,7 @@ class HoldingsMapper(MappingFileMapperBase):
 
     def get_call_number_type_id(self, legacy_item, folio_prop_name: str, id_or_index):
         if self.call_number_mapping:
-            return self.get_mapped_value(
+            return self.get_mapped_ref_data_value(
                 self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
             )
         self.migration_report.add(Blurbs.CallNumberTypeMapping, "No mapping")

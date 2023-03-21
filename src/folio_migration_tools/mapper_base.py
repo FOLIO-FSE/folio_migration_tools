@@ -38,7 +38,7 @@ class MapperBase:
         self.library_configuration: LibraryConfiguration = library_configuration
 
         self.mapped_folio_fields: dict = {}
-        self.migration_report = MigrationReport()
+        self.migration_report: MigrationReport = MigrationReport()
         self.num_criticalerrors = 0
         self.num_exeptions = 0
         self.mapped_legacy_fields: dict = {}
@@ -158,7 +158,7 @@ class MapperBase:
                 ),
             ) from exception
 
-    def get_mapped_value(
+    def get_mapped_ref_data_value(
         self,
         ref_data_mapping: RefDataMapping,
         legacy_object,
