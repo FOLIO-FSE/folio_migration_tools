@@ -3605,6 +3605,51 @@ def test_get_legacy_value_mapped_value():
     assert res == "Leif"
 
 
+def test_get_prop_same_as_get_legacy_value_mapped_value():
+    legacy_object = {"title": "Leif"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+    }
+
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    mock_self = Mock(spec=MappingFileMapperBase)
+    mock_self.record_map = {"data": [mapping_file_entry]}
+    mock_self.mapped_from_legacy_data = {"title": "title"}
+    mock_self.migration_report = MigrationReport()
+    res2 = MappingFileMapperBase.get_prop(mock_self, legacy_object, "title", "")
+    assert res == res2
+
+
+def test_get_prop_concatenated():
+    legacy_object = {"firstname": "Leif", "lastname": "Randt"}
+    mapping_file_entries = [
+        {
+            "folio_field": "title",
+            "legacy_field": "firstname",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "title",
+            "legacy_field": "lastname",
+            "value": "",
+            "description": "",
+        },
+    ]
+
+    mock_self = Mock(spec=MappingFileMapperBase)
+    mock_self.record_map = {"data": mapping_file_entries}
+    mock_self.mapped_from_legacy_data = {"title": ["firstname", "lastname"]}
+    mock_self.migration_report = MigrationReport()
+    res2 = MappingFileMapperBase.get_prop(mock_self, legacy_object, "title", "")
+    assert res2 == "Leif Randt"
+
+
 def test_get_legacy_value_value():
     legacy_object = {"title": "Leif"}
     mapping_file_entry = {

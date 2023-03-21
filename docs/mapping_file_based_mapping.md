@@ -52,6 +52,18 @@ A typical entry looks like this:
 }
 ```
 folio_field and legacy_field are mandatory. All other fields are optional. 
+### The pirority of the mappings in the mapping entry:
+There might be exceptions to this in some areas, but generally, this is the how the mapping works:
+1. If there are reference data mappings or special cases for particular fields, then this has precedence
+2. Values added to the *value* field are returned immediately without any further manipulation
+3. Then, the *legacy field* value gets extracted from the source record.
+4. If there is an entry for rules.replaceValues, the extracted value is run through this process
+5. If there is an entry for rules.regexGetFirstMatchOrEmpty, the extracted value is run through this process as well and then return the value
+6. If the above steps does not result in a value, and if there is a fallback field in the legacy data, mapped by the *fallback_legacy_field*, this field will be returned
+7. If none of the above have resulted in a value, and there is an entry for *fallback_value* in the mapping entry, this value will be returned
+
+*If there are multiple mapping entries for the same FOLIO field, the results from the above process will get concatenated with a space between them, in the order that they appear in the mapping file.*
+
 
 ### The folio_field property
 The folio_field must contain the target folio field.
