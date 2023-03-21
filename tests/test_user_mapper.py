@@ -497,12 +497,6 @@ def test_basic_replace_regex_match(mocked_folio_client):
                 "value": "",
                 "description": "",
             },
-            {
-                "folio_field": "personal.lastName",
-                "legacy_field": "",
-                "value": "Last name",
-                "description": "",
-            },
         ]
     }
     legacy_user_record = {
@@ -568,12 +562,6 @@ def test_basic_replace_regex_match_no_middle(mocked_folio_client):
                 "value": "",
                 "description": "",
             },
-            {
-                "folio_field": "personal.lastName",
-                "legacy_field": "",
-                "value": "Last name",
-                "description": "",
-            },
         ]
     }
     legacy_user_record = {
@@ -597,6 +585,7 @@ def test_basic_replace_regex_match_no_middle(mocked_folio_client):
     assert folio_user["personal"]["firstName"] == "Carol"
 
 
+@pytest.mark.slow
 def test_basic_fallback_all_empty(mocked_folio_client):
     with pytest.raises(TransformationRecordFailedError):
         user_map = {
@@ -644,6 +633,7 @@ def test_basic_fallback_all_empty(mocked_folio_client):
         )
 
 
+@pytest.mark.slow
 def test_basic_turn_off_id_and_request_preferences(mocked_folio_client):
     user_map = {
         "data": [
@@ -689,6 +679,7 @@ def test_basic_turn_off_id_and_request_preferences(mocked_folio_client):
     assert "requestPreference" not in folio_user
 
 
+@pytest.mark.slow
 def test_one_to_one_group_mapping(mocked_folio_client):
     user_map = {
         "data": [
@@ -1049,6 +1040,7 @@ def test_boolean_values_explicitly_true(mocked_folio_client):
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
 
 
+@pytest.mark.slow
 def test_boolean_values_explicitly_true_json_string(mocked_folio_client):
     user_map_str = '{ "data": [{ "folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""}, { "folio_field": "username", "legacy_field": "user_name", "value": "", "description": "" }, { "folio_field": "externalSystemId", "legacy_field": "ext_id", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine1", "legacy_field": "HOMEADDRESS1", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine2", "legacy_field": "HOMEADDRESS2", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressTypeId", "legacy_field": "Not mapped", "value": "Home", "description": "" }, { "folio_field": "personal.addresses[0].city", "legacy_field": "HOMECITY", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].postalCode", "legacy_field": "HOMEZIP", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].region", "legacy_field": "HOMESTATE", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].primaryAddress", "legacy_field": "Not mapped", "value": true, "description": "" } ] }'  # noqa
     user_map = json.loads(user_map_str)

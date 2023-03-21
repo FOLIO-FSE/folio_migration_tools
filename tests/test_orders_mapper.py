@@ -117,6 +117,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
 
 
 # Tests
+@pytest.mark.slow
 def test_fetch_acq_schemas_from_github_happy_path():
     composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
         "folio-org", "mod-orders", "mod-orders", "composite_purchase_order"
