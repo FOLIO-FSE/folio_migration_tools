@@ -94,7 +94,6 @@ class MapperBase:
         ref_data_mapping: RefDataMapping,
         legacy_object,
         index_or_id,
-        folio_property_name="",
         prevent_default=False,
     ):
         try:
