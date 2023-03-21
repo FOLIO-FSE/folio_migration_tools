@@ -141,41 +141,26 @@ class CoursesMapper(MappingFileMapperBase):
             del instructor["userId"]
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        value_tuple = (legacy_item, folio_prop_name, index_or_id)
-
-        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-
-        # IF there is a value mapped, return that one
-        if len(legacy_item_keys) == 1 and folio_prop_name in self.mapped_from_values:
-            value = self.mapped_from_values.get(folio_prop_name, "")
-            self.migration_report.add(
-                Blurbs.DefaultValuesAdded, f"{value} added to {folio_prop_name}"
-            )
-            return value
-
-        legacy_values = self.get_legacy_vals(legacy_item, legacy_item_keys)
-        legacy_value = " ".join(legacy_values).strip()
-
         if folio_prop_name == "courselisting.termId":
-            return self.get_mapped_value(
+            return self.get_mapped_ref_data_value(
                 self.terms_map,
-                *value_tuple,
+                legacy_item,
+                folio_prop_name,
+                index_or_id,
                 False,
             )
         elif folio_prop_name == "course.departmentId":
-            return self.get_mapped_value(
+            return self.get_mapped_ref_data_value(
                 self.departments_map,
-                *value_tuple,
+                legacy_item,
+                folio_prop_name,
+                index_or_id,
                 False,
             )
-        elif any(legacy_item_keys):
-            if len(legacy_item_keys) > 1:
-                self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
-            return legacy_value
+        elif mapped_value := super().get_prop(legacy_item, folio_prop_name, index_or_id):
+            return mapped_value
         else:
-            self.migration_report.add(
-                Blurbs.UnmappedProperties, f"{folio_prop_name} {legacy_item_keys}"
-            )
+            self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")
             return ""
 
     def get_composite_course_schema(self) -> Dict[str, Any]:
