@@ -3,6 +3,7 @@ import json
 import logging
 import sys
 from datetime import datetime
+from datetime import timezone
 
 from dateutil.parser import parse
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -129,16 +130,8 @@ class UserMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_user, folio_prop_name, index_or_id):
         value_tuple = (legacy_user, folio_prop_name, index_or_id)
-        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
-        map_entries = list(
-            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
-                folio_prop_name, self.record_map["data"]
-            )
-        )
-        if folio_prop_name in self.mapped_from_values and len(legacy_item_keys) == 1:
-            return self.mapped_from_values.get(folio_prop_name, "")
-
-        elif folio_prop_name == "personal.addresses.id":
+        mapped_value = super().get_prop(legacy_user, folio_prop_name, index_or_id)
+        if folio_prop_name == "personal.addresses.id":
             return ""
         elif folio_prop_name == "patronGroup":
             if self.groups_mapping:
@@ -148,9 +141,7 @@ class UserMapper(MappingFileMapperBase):
                     False,
                 )
             else:
-                return MappingFileMapperBase.get_legacy_value(
-                    legacy_user, map_entries[0], self.migration_report
-                )
+                return mapped_value
         elif folio_prop_name.startswith("departments"):
             if not self.departments_mapping:
                 raise TransformationProcessError(
@@ -163,41 +154,21 @@ class UserMapper(MappingFileMapperBase):
                 *value_tuple,
                 False,
             )
-        elif any(map_entries) and folio_prop_name in [
-            "expirationDate",
-            "enrollmentDate",
-            "personal.dateOfBirth",
-        ]:
-            return self.get_parsed_date(legacy_user, map_entries[0], folio_prop_name)
+        elif folio_prop_name in ["expirationDate", "enrollmentDate", "personal.dateOfBirth"]:
+            return self.get_parsed_date(legacy_user, mapped_value, folio_prop_name)
+        return mapped_value
 
-        if len(map_entries) > 1:
-            self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
-        return " ".join(
-            MappingFileMapperBase.get_legacy_value(legacy_user, map_entry, self.migration_report)
-            for map_entry in map_entries
-        ).strip()
-
-    def get_parsed_date(self, legacy_user: dict, legacy_mapping: dict, folio_prop_name: str):
+    def get_parsed_date(self, legacy_user: dict, mapped_value, folio_prop_name: str):
         try:
-            if not self.get_legacy_value(legacy_user, legacy_mapping, self.migration_report):
-                return ""
-            format_date = parse(
-                self.get_legacy_value(legacy_user, legacy_mapping, self.migration_report),
-                fuzzy=True,
-            )
-            fmt_string = (
-                f"{folio_prop_name}: "
-                f"{self.get_legacy_value(legacy_user, legacy_mapping,self.migration_report)}"
-                f" -> {format_date.isoformat()}"
-            )
-            self.migration_report.add(Blurbs.DateTimeConversions, fmt_string)
+            format_date = parse(mapped_value, fuzzy=True)
+            fmt_string = f"{folio_prop_name}: {mapped_value} -> {format_date.isoformat()}"
             return format_date.isoformat()
         except Exception as ee:
-            v = self.get_legacy_value(legacy_user, legacy_mapping, self.migration_report)
+            v = mapped_value
             logging.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
             fmt_string = f"Parsing error! {folio_prop_name}: {v}. NOW() was returned"
             self.migration_report.add(Blurbs.DateTimeConversions, fmt_string)
-            return datetime.utcnow().isoformat()
+            return datetime.now(timezone.utc).isoformat()
 
     def setup_groups_mapping(self, groups_map):
         if groups_map:
