@@ -1,8 +1,359 @@
 from unittest.mock import Mock
 
+import pytest
+
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
 )
+from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.migration_tasks.holdings_csv_transformer import (
+    HoldingsCsvTransformer,
+)
+from folio_migration_tools.test_infrastructure import mocked_classes
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mapper(pytestconfig) -> HoldingsMapper:
+    okapi_url = "okapi_url"
+    tenant_id = "tenant_id"
+    username = "username"
+    password = "password"  # noqa: S105
+
+    print("init")
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    lib = LibraryConfiguration(
+        okapi_url=okapi_url,
+        tenant_id=tenant_id,
+        okapi_username=username,
+        okapi_password=password,
+        folio_release=FolioRelease.morning_glory,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="I have no clue",
+        base_folder="/",
+    )
+    holdings_map = {
+        "data": [
+            {
+                "folio_field": "_version",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "acquisitionFormat",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "acquisitionMethod",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "callNumber",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "callNumberPrefix",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "Z30_REC_KEY",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "callNumberSuffix",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "callNumberTypeId",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "copyNumber",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "digitizationPolicy",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "discoverySuppress",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "electronicAccess[0].linkText",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "electronicAccess[0].materialsSpecification",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "electronicAccess[0].publicNote",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "electronicAccess[0].relationshipId",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "electronicAccess[0].uri",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "formerIds[0]",
+                "legacy_field": "Z30_REC_KEY",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatements[0].note",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatements[0].staffNote",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatements[0].statement",
+                "legacy_field": "holdings_stmt",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatementsForIndexes[0].note",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatementsForIndexes[0].staffNote",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatementsForIndexes[0].statement",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatementsForSupplements[0].note",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatementsForSupplements[0].staffNote",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsStatementsForSupplements[0].statement",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "holdingsTypeId",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "hrid", "legacy_field": "Not mapped", "value": "", "description": ""},
+            {"folio_field": "id", "legacy_field": "Not mapped", "value": "", "description": ""},
+            {
+                "folio_field": "illPolicyId",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "instanceId",
+                "legacy_field": "fake_instance_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].holdingsNoteTypeId",
+                "legacy_field": "holdings_note",
+                "value": "f453de0f-8b54-4e99-9180-52932529e3a6",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].note",
+                "legacy_field": "holdings_note",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "notes[0].staffOnly",
+                "legacy_field": "holdings_note",
+                "value": True,
+                "description": "",
+            },
+            {
+                "folio_field": "numberOfItems",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "permanentLocationId",
+                "legacy_field": "PERM_LOCATION",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "receiptStatus",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "receivingHistory.displayType",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "receivingHistory.entries[0].chronology",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "receivingHistory.entries[0].enumeration",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "receivingHistory.entries[0].publicDisplay",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "retentionPolicy",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "shelvingTitle",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "sourceId",
+                "legacy_field": "Not mapped",
+                "value": "",
+                "description": "",
+            },
+            {"folio_field": "tags", "legacy_field": "", "value": "", "description": ""},
+            {
+                "folio_field": "temporaryLocationId",
+                "legacy_field": "TEMP_LOCATION",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    location_map = [
+        {"folio_code": "KU/CC/DI/P", "PERM_LOCATION": "infoOff"},
+        {"folio_code": "E", "PERM_LOCATION": "*"},
+    ]
+    call_number_type_map = {}
+    statistical_codes_map = {}
+    instance_id_map = {}
+    mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mocked_config.look_up_instructor = False
+    return HoldingsMapper(
+        mock_folio,
+        holdings_map,
+        location_map,
+        call_number_type_map,
+        instance_id_map,
+        lib,
+        statistical_codes_map,
+    )
+
+
+def test_simple_get_prop_perm_location(mapper: HoldingsMapper):
+    legacy_holding = {"PERM_LOCATION": "electronic"}
+
+    res = mapper.get_prop(legacy_holding, "permanentLocationId", "id1")
+    assert res == "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
+
+
+def test_simple_get_prop_regular_value(mapper: HoldingsMapper):
+    legacy_holding = {"Z30_REC_KEY": "old_id"}
+
+    res = mapper.get_prop(legacy_holding, "formerIds[0]", "old_id")
+    assert res == "old_id"
+
+
+def test_get_legacy_bib_ids_one_id():
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = HoldingsMapper.get_legacy_bib_ids(mocked_mapper, "id 1", "LegacyId")
+    assert res == ["id 1"]
+
+
+def test_get_legacy_bib_ids_two_ids():
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    res = HoldingsMapper.get_legacy_bib_ids(mocked_mapper, '["id 1","id 2"]', "LegacyId")
+    assert res == ["id 1", "id 2"]
+
+
+def test_get_legacy_bib_ids_two_exception():
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    mocked_mapper.migration_report = MigrationReport()
+    with pytest.raises(TransformationRecordFailedError):
+        HoldingsMapper.get_legacy_bib_ids(mocked_mapper, '[id 1,id 2"]', "LegacyId")
 
 
 def test_get_call_number_1():
