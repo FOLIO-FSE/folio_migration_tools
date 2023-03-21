@@ -4,7 +4,6 @@ import json
 import logging
 import re
 import uuid
-from abc import abstractmethod
 from functools import reduce
 from pathlib import Path
 from typing import Dict
@@ -73,8 +72,8 @@ class MappingFileMapperBase(MapperBase):
         )
         legacy_fields = set()
         self.setup_statistical_codes_map(statistical_codes_map)
-        self.mapped_from_legacy_data: dict = {}
         self.legacy_user_mappings: dict = {}
+        self.mapped_from_legacy_data: dict = {}
         for k in self.record_map["data"]:
             if (
                 k["legacy_field"] not in self.empty_vals
@@ -227,7 +226,7 @@ class MappingFileMapperBase(MapperBase):
 
     def get_statistical_codes(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:
-            return self.get_mapped_value(
+            return self.get_mapped_ref_data_value(
                 self.statistical_codes_mapping,
                 legacy_item,
                 index_or_id,
@@ -240,9 +239,21 @@ class MappingFileMapperBase(MapperBase):
         )
         return ""
 
-    @abstractmethod
-    def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        raise NotImplementedError("This method needs to be implemented in a implementing class")
+    def get_prop(self, legacy_object, folio_prop_name, index_or_id):
+        legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
+        map_entries = list(
+            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
+                folio_prop_name, self.record_map["data"]
+            )
+        )
+        if len(map_entries) > 1:
+            self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
+        return " ".join(
+            MappingFileMapperBase.get_legacy_value(
+                legacy_object, map_entry, self.migration_report, index_or_id
+            )
+            for map_entry in map_entries
+        ).strip()
 
     def do_map(
         self,
@@ -342,8 +353,16 @@ class MappingFileMapperBase(MapperBase):
         migration_report: MigrationReport,
         index_or_id: str = "",
     ):
+        # Mapping from value fields has preceedence and does not get involved in post processing
         if mapping_file_entry.get("value", ""):
-            return mapping_file_entry.get("value")
+            value_mapped_value = mapping_file_entry.get("value")
+            migration_report.add(
+                Blurbs.DefaultValuesAdded,
+                f"{value_mapped_value} added to {mapping_file_entry.get('folio_field', '')}",
+            )
+            return value_mapped_value
+
+        # Value mapped from the Legacy field(s)
         value = legacy_object.get(mapping_file_entry["legacy_field"], "").strip()
         if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
             if replaced_val := mapping_file_entry["rules"]["replaceValues"].get(value, ""):
@@ -711,7 +730,20 @@ class MappingFileMapperBase(MapperBase):
     @staticmethod
     def get_map_entries_by_folio_prop_name(folio_prop_name, data):
         return (
-            k for k in data if k["folio_field"] == folio_prop_name and k["legacy_field"].strip()
+            k
+            for k in data
+            if k["folio_field"] == folio_prop_name
+            and any(
+                [
+                    is_bool_or_numeric(k.get("value", "")) or k.get("value", "").strip(),
+                    k.get("legacy_field", "").strip(),
+                    k.get("fallback_legacy_field", "").strip(),
+                    (
+                        is_bool_or_numeric(k.get("fallback_value", ""))
+                        or k.get("fallback_value", "").strip()
+                    ),
+                ]
+            )
         )
 
     def legacy_basic_property(self, folio_prop):
@@ -901,3 +933,7 @@ def in_deep(dictionary, keys):
         keys.split("."),
         dictionary,
     )
+
+
+def is_bool_or_numeric(any_value):
+    return any([isinstance(any_value, t) for t in [int, bool, float, complex]])
