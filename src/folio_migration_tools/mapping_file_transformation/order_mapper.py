@@ -19,8 +19,6 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
 )
 from folio_migration_tools.report_blurbs import Blurbs
 
-# flake8: noqa: s113
-
 
 class CompositeOrderMapper(MappingFileMapperBase):
     def __init__(
