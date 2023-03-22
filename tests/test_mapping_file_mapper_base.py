@@ -3892,3 +3892,37 @@ def test_map_array_object_subproperty_string(mocked_folio_client: FolioClient):
 
     assert folio_rec["interfaces"][0]["name"] == "FOLIO"
     assert folio_rec["interfaces"][0]["cost"]["currency"] == "USD"
+
+
+def test_get_prop_22(mocked_folio_client: FolioClient):
+    record_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record_schema: dict = {}
+    legacy_record = {"user_name": "user_name_1", "id": "1"}
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        record_schema,
+        record_map,
+        None,
+        FOLIONamespaces.other,
+        mock_library_conf,
+        True,
+    )
+    prop = mapper.get_prop(legacy_record, "username", "1")
+    assert prop == "user_name_1"
