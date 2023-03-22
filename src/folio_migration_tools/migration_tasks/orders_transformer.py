@@ -171,7 +171,7 @@ class OrdersTransformer(MigrationTaskBase):
                         record,
                         legacy_id,
                         folio_rec["id"],
-                        FOLIONamespaces.organizations,
+                        FOLIONamespaces.orders,
                     )
 
                     self.merge_into_orders_with_embedded_pols(folio_rec, results_file)

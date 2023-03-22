@@ -422,7 +422,7 @@ def test_one_order_one_pol_multiple_notes(mapper):
         FOLIONamespaces.orders,
     )
 
-    # All in all there shoulkd be three order notes
+    # All in all there should be three order notes
     assert str(mapper.extradata_writer.cache).count('"domain": "orders"') == 2
 
     # There should be two notes linked to the POL
