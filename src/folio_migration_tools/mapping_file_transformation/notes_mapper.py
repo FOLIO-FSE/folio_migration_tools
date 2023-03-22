@@ -7,14 +7,11 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from folio_migration_tools.mapping_file_transformation.mapping_file_mapping_base_impl import (
-    MappingFileMappingBaseImpl,
-)
 from folio_migration_tools.report_blurbs import Blurbs
 
 
 # flake8: noqa: s113
-class NotesMapper(MappingFileMappingBaseImpl):
+class NotesMapper(MappingFileMapperBase):
     def __init__(
         self,
         library_configuration: LibraryConfiguration,
@@ -26,11 +23,12 @@ class NotesMapper(MappingFileMappingBaseImpl):
         self.folio_client: FolioClient = folio_client
         self.setup_notes_schema()
         super().__init__(
-            library_configuration,
             folio_client,
             self.notes_schema,
             record_map,
+            None,
             object_type,
+            library_configuration,
             ignore_legacy_identifier,
         )
 
@@ -68,9 +66,6 @@ class NotesMapper(MappingFileMappingBaseImpl):
                         "Notes without content that were discarded. Set some default "
                         "value if you only intend to set the note title"
                     )
-
-    def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        return super().get_prop(legacy_item, folio_prop_name, index_or_id)
 
     def get_notes_schema(self):
         notes_schema = self.folio_client.get_from_github(
