@@ -16,7 +16,8 @@ ignore =
     D105,
     D106,
     D107,
-    B905
+    B905,
+    S113
 max-complexity = 22
 max-line-length = 99
 exclude = .git,__pycache__,docs/source/conf.py,old,build,dist,tests, src/folio_migration_tools/report_blurbs.py
