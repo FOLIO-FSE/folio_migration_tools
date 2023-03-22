@@ -39,6 +39,12 @@
         "ilsFlavour": {
             "$ref": "#/definitions/IlsFlavour"
         },
+        "customBibIdField": {
+            "title": "Custombibidfield",
+            "description": "A string representing a MARC field with optional subfield indicated by a \"$\" (eg. \"991$a\") from which to draw legacy Bib ID. Use this in combination with `ilsFlavour: \"custom\"`. Defaults to \"001\", and is ignored for all other ilsFlavours.",
+            "default": "001",
+            "type": "string"
+        },
         "tagsToDelete": {
             "title": "Tagstodelete",
             "default": [],
@@ -120,6 +126,7 @@
                 "tag907y",
                 "tag001",
                 "tagf990a",
+                "custom",
                 "none"
             ],
             "type": "string"

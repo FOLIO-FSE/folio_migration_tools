@@ -10,7 +10,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.report_blurbs import Blurbs
 
 
-# flake8: noqa: s113
 class NotesMapper(MappingFileMapperBase):
     def __init__(
         self,
