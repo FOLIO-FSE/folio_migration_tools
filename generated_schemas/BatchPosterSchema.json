@@ -27,6 +27,7 @@
         },
         "rerunFailedRecords": {
             "title": "Rerunfailedrecords",
+            "description": "Toggles whether or not BatchPoster should try to rerun failed batches or just leave the failing records on disk.",
             "default": true,
             "type": "boolean"
         },

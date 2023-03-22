@@ -7,7 +7,6 @@ import traceback
 from datetime import datetime
 from typing import Annotated
 from typing import List
-from typing import Optional
 from uuid import uuid4
 
 import requests
@@ -53,7 +52,15 @@ class BatchPoster(MigrationTaskBase):
         object_type: str
         files: List[FileDefinition]
         batch_size: int
-        rerun_failed_records: Optional[bool] = True
+        rerun_failed_records: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Toggles whether or not BatchPoster should try to rerun failed batches or "
+                    "just leave the failing records on disk."
+                )
+            ),
+        ] = True
         use_safe_inventory_endpoints: Annotated[
             bool,
             Field(
@@ -441,6 +448,14 @@ class BatchPoster(MigrationTaskBase):
             except Exception as ee:
                 logging.exception("Occurred during rerun")
                 raise TransformationProcessError("Error during rerun") from ee
+        elif not self.task_configuration.rerun_failed_records and (self.num_failures > 0):
+            logging.info(
+                (
+                    "Task configured to not rerun failed records. "
+                    " File with failed records is located at %s"
+                ),
+                str(self.folder_structure.failed_recs_path),
+            )
 
     def create_snapshot(self):
         snapshot = {
