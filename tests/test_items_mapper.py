@@ -73,6 +73,8 @@ def test_item_mapping(mapper):
 
     item, idx = mapper.do_map(data, data["barcode"], FOLIONamespaces.items)
     assert item["barcode"] == "000000950000010"
+    
+    assert "mat" in mapper.mapped_legacy_fields
 
 
 # Shared map
@@ -87,13 +89,13 @@ item_map = {
         },
         {
             "folio_field": "permanentLoanTypeId",
-            "legacy_field": "barcode",
+            "legacy_field": "lt",
             "value": "",
             "description": "",
         },
         {
             "folio_field": "materialTypeId",
-            "legacy_field": "barcode",
+            "legacy_field": "mat",
             "value": "",
             "description": "",
         },
