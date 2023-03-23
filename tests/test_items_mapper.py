@@ -1,17 +1,9 @@
-import uuid
-from unittest.mock import Mock
-
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
-from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
-    MappingFileMapperBase,
-)
-from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
 
 
@@ -73,7 +65,7 @@ def test_item_mapping(mapper):
 
     item, idx = mapper.do_map(data, data["barcode"], FOLIONamespaces.items)
     assert item["barcode"] == "000000950000010"
-    
+
     assert "mat" in mapper.mapped_legacy_fields
 
 

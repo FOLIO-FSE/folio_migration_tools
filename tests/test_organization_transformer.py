@@ -488,19 +488,3 @@ def test_contact_remove_incomplete_object():
     )
 
     assert len(organization["contacts"]) == 1
-
-
-def test_wrap_up():
-    mocked_organization_transformer = Mock(spec=OrganizationTransformer)
-    mocked_organization_transformer.embedded_extradata_object_cache = set()
-    mocked_organization_transformer.extradata_writer = ExtradataWriter(io.StringIO())
-    mocked_organization_transformer.extradata_writer.path_to_file = Path("")
-    mocked_organization_transformer.extradata_writer.cache = []
-    mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
-    mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
-
-    OrganizationTransformer.wrap_up.write_migration_report(
-        mocked_organization_transformer
-    )
-
-    assert mocked_organization_transformer

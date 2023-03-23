@@ -36,5 +36,5 @@ def test_print_mapping_report():
     )
 
     report_content = migration_report_file.getvalue()
-    
+
     assert "interface_1_name" in report_content
