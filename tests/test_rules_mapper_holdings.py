@@ -96,6 +96,13 @@ def test_setup_boundwith_relationship_map_missing_entries():
         RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
 
 
+def test_setup_boundwith_relationship_map_missing_entries_2():
+    mocked_mapper = Mock(spec=RulesMapperHoldings)
+    file_mock = []
+    res = RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
+    assert res == {}
+
+
 def test_setup_boundwith_relationship_map_empty_entries():
     with pytest.raises(TransformationProcessError):
         mocked_mapper = Mock(spec=RulesMapperHoldings)
