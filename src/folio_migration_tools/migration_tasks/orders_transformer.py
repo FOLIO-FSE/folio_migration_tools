@@ -166,33 +166,15 @@ class OrdersTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.orders, True
                     )
 
-                    # Handle merging and storage
-                    if not self.current_folio_record:
-                        self.current_folio_record = folio_rec
-                    if (
-                        self.current_folio_record
-                        and folio_rec["id"]
-                        and folio_rec["id"] != self.current_folio_record.get("id", "")
-                    ):
-                        # Writes record to file
-                        Helper.write_to_file(results_file, self.current_folio_record)
-                        self.mapper.migration_report.add_general_statistics(
-                            "Orders written to disk"
-                        )
-                        self.current_folio_record = folio_rec
+                    # Add notes
+                    self.mapper.notes_mapper.map_notes(
+                        record,
+                        legacy_id,
+                        folio_rec["id"],
+                        FOLIONamespaces.orders,
+                    )
 
-                    else:
-                        # Merge if possible
-                        diff = DeepDiff(self.current_folio_record, folio_rec)
-                        if "compositePoLines" in diff.affected_root_keys:
-                            self.current_folio_record.get("compositePoLines", []).extend(
-                                folio_rec.get("compositePoLines", [])
-                            )
-                            self.mapper.migration_report.add_general_statistics(
-                                "PO-lines merged into one PO"
-                            )
-                        for key in diff.affected_paths:
-                            self.mapper.migration_report.add(Blurbs.DiffsBetweenOrders, key)
+                    self.merge_into_orders_with_embedded_pols(folio_rec, results_file)
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -254,3 +236,24 @@ class OrdersTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
         logging.info("All done!")
+
+    def merge_into_orders_with_embedded_pols(self, folio_rec, results_file):
+        # Handle merging and storage
+        if not self.current_folio_record:
+            self.current_folio_record = folio_rec
+        if folio_rec["id"] != self.current_folio_record["id"]:
+            # Writes record to file
+            Helper.write_to_file(results_file, self.current_folio_record)
+            self.mapper.migration_report.add_general_statistics("Orders written to disk")
+            self.current_folio_record = folio_rec
+
+        else:
+            # Merge if possible
+            diff = DeepDiff(self.current_folio_record, folio_rec)
+            if "compositePoLines" in diff.affected_root_keys:
+                self.current_folio_record.get("compositePoLines", []).extend(
+                    folio_rec.get("compositePoLines", [])
+                )
+                self.mapper.migration_report.add_general_statistics("PO-lines merged into one PO")
+            for key in diff.affected_paths:
+                self.mapper.migration_report.add(Blurbs.DiffsBetweenOrders, key)

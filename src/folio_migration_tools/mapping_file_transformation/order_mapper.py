@@ -1,8 +1,10 @@
 import json
 import logging
 import os
+import re
 import sys
 import urllib.parse
+import uuid
 
 import requests
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -14,6 +16,7 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+from folio_migration_tools.mapping_file_transformation.notes_mapper import NotesMapper
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -60,11 +63,22 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         logging.info("Init done")
 
+        self.folio_client: FolioClient = folio_client
+        self.notes_mapper: NotesMapper = NotesMapper(
+            library_configuration,
+            self.folio_client,
+            composite_order_map,
+            FOLIONamespaces.note,
+            True,
+        )
+        self.notes_mapper.migration_report = self.migration_report
+
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id):
         mapped_value = super().get_prop(legacy_order, folio_prop_name, index_or_id)
         if folio_prop_name.endswith(".acquisitionMethod"):
             mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
             return mapped_val["folio_id"]
+
         elif folio_prop_name == "vendor":
             if mapped_value in self.vendor_code_map:
                 self.migration_report.add_general_statistics(
@@ -76,7 +90,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 Helper.log_data_issue(
                     index_or_id, "Vendor code not found among migrated Organizations", mapped_value
                 )
-        if folio_prop_name.endswith(".instanceId"):
+
+        elif re.compile("compositePoLines\[(\d+)\]\.id").fullmatch(folio_prop_name):
+            return str(uuid.uuid4())
+
+        elif re.compile(r"notes\[\d+\]\.").match(folio_prop_name):
+            return ""
+
+        elif folio_prop_name.endswith(".instanceId"):
             if mapped_value in self.instance_id_map:
                 self.migration_report.add_general_statistics(
                     "Instance ID mapped from previously migrated bib records"

@@ -53,6 +53,7 @@ class NotesMapper(MappingFileMapperBase):
                         FOLIONamespaces.users: "user",
                         FOLIONamespaces.course: "course",
                         FOLIONamespaces.organizations: "organization",
+                        FOLIONamespaces.orders: "orders",
                     }.get(record_type)
                     note["links"] = [{"id": object_uuid, "type": type_string}]
                     if "type" in note:
