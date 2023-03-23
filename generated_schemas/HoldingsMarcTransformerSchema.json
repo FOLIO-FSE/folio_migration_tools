@@ -51,6 +51,12 @@
             "title": "Fallbackholdingstypeid",
             "type": "string"
         },
+        "boundwithRelationshipFilePath": {
+            "title": "Boundwith relationship file path",
+            "description": "Path to a file outlining Boundwith relationships, in the style of Voyager. A TSV file with MFHD_ID and BIB_ID headers and values",
+            "default": "",
+            "type": "string"
+        },
         "createSourceRecords": {
             "title": "Createsourcerecords",
             "description": "Controls wheter or not to retain the MARC records in SRS.",
