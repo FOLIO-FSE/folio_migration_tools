@@ -34,6 +34,7 @@ class RulesMapperHoldings(RulesMapperBase):
         task_configuration,
         library_configuration: LibraryConfiguration,
         parent_id_map: dict,
+        boundwith_relationship_map,
     ):
         self.task_configuration = task_configuration
         self.conditions = Conditions(
@@ -51,6 +52,9 @@ class RulesMapperHoldings(RulesMapperBase):
             self.fetch_holdings_schema(folio_client),
             self.conditions,
             parent_id_map,
+        )
+        self.boundwith_relationship_map = self.setup_boundwith_relationship_map(
+            boundwith_relationship_map
         )
         self.location_map = location_map
         self.holdings_id_map: dict = {}
@@ -359,6 +363,20 @@ class RulesMapperHoldings(RulesMapperBase):
                     (f"{Blurbs.HoldingsTypeMapping[0]}. leader 06 was unmapped."),
                     ldr06,
                 )
+
+    def setup_boundwith_relationship_map(self, boundwith_relationship_map):
+        new_map = {}
+        for entry in boundwith_relationship_map:
+            if "MFHD_ID" not in entry or not entry.get("MFHD_ID", ""):
+                raise TransformationProcessError(
+                    "", "Column MFHD_ID missing from Boundwith relationship map", ""
+                )
+            if "BIB_ID" not in entry or not entry.get("BIB_ID", ""):
+                raise TransformationProcessError(
+                    "", "Column BIB_ID missing from Boundwith relationship map", ""
+                )
+            new_map[entry["MFHD_ID"]] = new_map.get(entry["MFHD_ID"], []) + [entry["BIB_ID"]]
+        return new_map
 
     def set_default_call_number_type_if_empty(self, folio_holding):
         if not folio_holding.get("callNumberTypeId", ""):

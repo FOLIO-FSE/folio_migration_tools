@@ -6,6 +6,7 @@ from pymarc import Field
 from pymarc import MARCReader
 from pymarc import Record
 
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
@@ -55,7 +56,7 @@ def mapper(pytestconfig) -> RulesMapperHoldings:
         {"legacy_code": "jnlDesk", "folio_code": "KU/CC/DI/2"},
         {"legacy_code": "*", "folio_code": "KU/CC/DI/2"},
     ]
-    mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map)
+    mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map, [])
     mapper.folio_client = folio
     mapper.migration_report = MigrationReport()
     return mapper
@@ -86,6 +87,33 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
         assert len(res["administrativeNotes"]) > 0
         assert res["callNumber"] == "QB611 .C44"
         assert res["callNumberTypeId"] == "95467209-6d7b-468b-94df-0f5d7ad2747d"
+
+
+def test_setup_boundwith_relationship_map_missing_entries():
+    with pytest.raises(TransformationProcessError):
+        mocked_mapper = Mock(spec=RulesMapperHoldings)
+        file_mock = [{}]
+        RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
+
+
+def test_setup_boundwith_relationship_map_empty_entries():
+    with pytest.raises(TransformationProcessError):
+        mocked_mapper = Mock(spec=RulesMapperHoldings)
+        file_mock = [{"MFHD_ID": "", "BIB_ID": ""}]
+        RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
+
+
+def test_setup_boundwith_relationship_map_with_entries():
+    mocked_mapper = Mock(spec=RulesMapperHoldings)
+    file_mock = [
+        {"MFHD_ID": "H1", "BIB_ID": "B1"},
+        {"MFHD_ID": "H1", "BIB_ID": "B2"},
+        {"MFHD_ID": "H2", "BIB_ID": "B3"},
+        {"MFHD_ID": "H2", "BIB_ID": "B4"},
+    ]
+    res = RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
+    assert len(res) == 2
+    assert res["H1"] == ["B1", "B2"]
 
 
 def test_edit852(mapper: RulesMapperHoldings, caplog):

@@ -32,6 +32,16 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         location_map_file_name: str
         default_call_number_type_name: str
         fallback_holdings_type_id: str
+        boundwith_relationship_file_path: Annotated[
+            str,
+            Field(
+                title="Boundwith relationship file path",
+                description=(
+                    "Path to a file outlining Boundwith relationships, in the style of Voyager."
+                    " A TSV file with MFHD_ID and BIB_ID headers and values"
+                ),
+            ),
+        ] = ""
         create_source_records: Annotated[
             bool, Field(description="Controls wheter or not to retain the MARC records in SRS.")
         ] = True
@@ -74,6 +84,18 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             "%s will be used as default holdings type",
             self.default_holdings_type.get("name", ""),
         )
+
+        # Load Boundwith relationship map
+        self.boundwith_relationship_map = []
+        if self.task_config.boundwith_relationship_file_path:
+            with open(
+                self.folder_structure.legacy_records_folder
+                / self.task_config.boundwith_relationship_file_path
+            ) as boundwith_relationship_file:
+                self.boundwith_relationship_map = list(
+                    csv.DictReader(boundwith_relationship_file, dialect="tsv")
+                )
+
         location_map_path = (
             self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name
         )
@@ -91,6 +113,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.task_config,
             self.library_configuration,
             self.instance_id_map,
+            self.boundwith_relationship_map,
         )
         if (
             self.task_configuration.reset_hrid_settings
