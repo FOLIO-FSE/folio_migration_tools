@@ -387,6 +387,42 @@ def test_validate_required_properties_item_notes(mocked_folio_client: FolioClien
     assert len(folio_rec["notes"]) == 1
 
 
+def test_validate_required_properties_item_notes_defaults_in_simple_objects(
+    mocked_folio_client: FolioClient,
+):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "title": {"type": "string", "default": "Fallback title"},
+        },
+    }
+    fake_holdings_map = {
+        "data": [
+            {
+                "folio_field": "title",
+                "legacy_field": "title",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"title": "", "id": "aa_34"}
+    tfm = MyTestableFileMapper(schema, fake_holdings_map, mocked_folio_client)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    ItemsTransformer.handle_notes(folio_rec)
+    assert "title" in folio_rec
+    assert folio_rec["title"] == "Fallback title"
+
+
 def test_validate_required_properties_item_notes_unmapped(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
