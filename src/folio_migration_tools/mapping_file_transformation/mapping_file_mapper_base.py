@@ -72,7 +72,7 @@ class MappingFileMapperBase(MapperBase):
         )
         legacy_fields = set()
         self.setup_statistical_codes_map(statistical_codes_map)
-        self.legacy_user_mappings: dict = {}
+        self.legacy_record_mappings: dict = {}
         self.mapped_from_legacy_data: dict = {}
         for k in self.record_map["data"]:
             if (
@@ -81,7 +81,7 @@ class MappingFileMapperBase(MapperBase):
                 or k["value"] not in self.empty_vals
             ):
                 clean_folio_field = re.sub(r"\[\d+\]", "", k["folio_field"])
-                self.legacy_user_mappings[k["folio_field"]] = list(
+                self.legacy_record_mappings[k["folio_field"]] = list(
                     self.get_map_entries_by_folio_prop_name(
                         clean_folio_field, self.record_map["data"]
                     )
@@ -480,7 +480,7 @@ class MappingFileMapperBase(MapperBase):
                         # We have reached the end of the prop path?
                         res = self.get_prop(legacy_object, prop_path, index_or_id)
                         self.report_legacy_mapping(
-                            self.legacy_basic_property(sub_prop_name), True, True
+                            self.legacy_basic_property(prop_path), True, True
                         )
 
                         if (
@@ -698,7 +698,7 @@ class MappingFileMapperBase(MapperBase):
             return False
         if folio_prop_name in self.mapped_from_values:
             return True
-        legacy_mappings = self.legacy_user_mappings.get(folio_prop_name, [])
+        legacy_mappings = self.legacy_record_mappings.get(folio_prop_name, [])
         return (
             any(legacy_mappings)
             and any(legacy_mapping not in empty_vals for legacy_mapping in legacy_mappings)
