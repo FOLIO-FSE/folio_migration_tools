@@ -56,7 +56,6 @@ class HoldingsMapper(MappingFileMapperBase):
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-
         mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
 
         if folio_prop_name == "permanentLocationId":
