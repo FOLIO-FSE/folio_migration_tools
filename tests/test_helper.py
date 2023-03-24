@@ -31,10 +31,11 @@ def test_print_mapping_report():
         "tgs": [1, 1],
     }
 
-    Helper.print_mapping_report(
-        migration_report_file, 5, mapped_folio_fields, mapped_legacy_fields
-    )
+    with io.StringIO() as migration_report_file:
+        Helper.print_mapping_report(
+            migration_report_file, 5, mapped_folio_fields, mapped_legacy_fields
+        )
 
-    report_content = migration_report_file.getvalue()
+        report_content = migration_report_file.getvalue()
 
-    assert "interface_1_name" in report_content
+        assert "interface_1_name" in report_content
