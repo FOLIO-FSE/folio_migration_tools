@@ -314,7 +314,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
-        if not self.task_configuration.never_update_hrid_settings:
+        if self.task_configuration.update_hrid_settings:
             if self.task_configuration.create_source_records:
                 self.hrid_handler.store_hrid_settings()
             else:

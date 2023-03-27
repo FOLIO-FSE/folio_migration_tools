@@ -71,9 +71,10 @@
             "default": false,
             "type": "boolean"
         },
-        "neverUpdateHridSettings": {
-            "title": "Neverupdatehridsettings",
-            "default": false,
+        "updateHridSettings": {
+            "title": "Update HRID settings",
+            "description": "At the end of the run, update FOLIO with the HRID settings",
+            "default": true,
             "type": "boolean"
         }
     },

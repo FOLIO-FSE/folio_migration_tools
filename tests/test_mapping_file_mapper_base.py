@@ -1381,6 +1381,7 @@ header_1,header_2,header_3
 value_1,value_2,value_3
 """
 
+
 def test__get_delimited_file_reader():
     csv.register_dialect("tsv", delimiter="\t")
     with io.StringIO(delimited_data_tab) as delimited_data_tab_file:
