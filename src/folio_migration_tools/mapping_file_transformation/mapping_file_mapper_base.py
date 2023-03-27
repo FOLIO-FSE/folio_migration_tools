@@ -307,6 +307,10 @@ class MappingFileMapperBase(MapperBase):
                         index_or_id,
                         schema_property["items"].get("required", []),
                     )
+                    self.validate_object_items_in_array(
+                        folio_object, schema_property_name, schema_property
+                    )
+
                 elif schema_property["items"].get("type", "") == "string":
                     self.map_string_array_props(
                         legacy_object,
@@ -428,6 +432,11 @@ class MappingFileMapperBase(MapperBase):
                     folio_object,
                     index_or_id,
                     [],
+                )
+                self.validate_object_items_in_array(
+                    folio_object,
+                    f"{schema_property_name}.{child_property_name}",
+                    child_property["items"]["properties"],
                 )
             elif (
                 child_property.get("type", "") == "array"
@@ -813,6 +822,21 @@ class MappingFileMapperBase(MapperBase):
         except ValueError:
             return False
         return True
+
+    def validate_object_items_in_array(self, folio_object, schema_property_name, schema_property):
+        valid_array_objects = []
+        for item in folio_object[schema_property_name]:
+            if all(
+                item.get(r) or (isinstance(item.get(r), bool))
+                for r in schema_property["items"].get("required", [])
+            ):
+                valid_array_objects.append(item)
+            else:
+                self.migration_report.add(
+                    Blurbs.IncompleteSubPropertyRemoved,
+                    f"{schema_property_name}",
+                )
+        folio_object[schema_property_name] = [item for item in valid_array_objects]
 
 
 def skip_property(property_name, property):

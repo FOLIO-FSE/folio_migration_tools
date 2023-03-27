@@ -1004,6 +1004,7 @@ def test_validate_remove_and_report_incomplete_object_property(mocked_folio_clie
 
 
 def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_folio_client):
+    # 531
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -1094,8 +1095,12 @@ def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_f
     record = {
         "id": "test_validate_required_properites_in_array_objects_with_sub_objects",
         "name": "My Org",
-        "contact_person": "Jane",
-        "contact_email": "myemail@myemail.com",
+        "contact_person1_f": "Jane",
+        "contact_person1_l": "",
+        "contact_person1_e": "myemai1@myemail.com",
+        "contact_person2_f": "John",
+        "contact_person2_l": "James",
+        "contact_person2_e": "myemail2@myemail.com",
     }
 
     org_map = {
@@ -1107,14 +1112,38 @@ def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_f
                 "description": "",
             },
             {
+                "folio_field": "contacts[0].lastName",
+                "legacy_field": "",
+                "value": "",
+                "description": "",
+            },
+            {
                 "folio_field": "contacts[0].firstName",
-                "legacy_field": "contact_person",
+                "legacy_field": "contact_person1_f",
                 "value": "",
                 "description": "",
             },
             {
                 "folio_field": "contacts[0].emails[0].value",
-                "legacy_field": "contact_email",
+                "legacy_field": "contact_person1_e",
+                "value": "",
+                "description": "",
+            },
+                        {
+                "folio_field": "contacts[1].lastName",
+                "legacy_field": "contact_person2_l",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[1].firstName",
+                "legacy_field": "contact_person2_f",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[1].emails[0].value",
+                "legacy_field": "contact_person2_e",
                 "value": "",
                 "description": "",
             },
@@ -1128,7 +1157,7 @@ def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_f
     }
     mapper = MyTestableFileMapper(schema, org_map, mocked_folio_client)
     org, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
-    assert "contacts" not in org
+    assert len(org["contacts"]) == 1
 
 
 def test_multiple_repeated_split_on_delimiter_electronic_access(mocked_folio_client):
@@ -3516,7 +3545,6 @@ def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client: Folio
     assert folio_rec["streets"][2] == "Yet another street"
 
 
-# TODO Make this run successfully.
 def test_map_array_object_array_object_array_string(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
