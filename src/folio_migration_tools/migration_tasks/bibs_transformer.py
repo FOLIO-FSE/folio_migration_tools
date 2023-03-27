@@ -56,6 +56,16 @@ class BibsTransformer(MigrationTaskBase):
         create_source_records: Annotated[
             bool, Field(description="Controls wheter or not to retain the MARC records in SRS.")
         ] = True
+        parse_cataloged_date: Annotated[
+            bool,
+            Field(
+                title="Parse cataloged date",
+                description=(
+                    "Parse fields mapped to catalogedDate into a FOLIO accepted date string using "
+                    "dateutil.parser. Verify results carefully when using"
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
