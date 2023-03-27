@@ -61,7 +61,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
 
 def test_handle_suppression_set_false(mapper):
     folio_instance = {}
-    file_def = FileDefinition(file_name="", staff_suppressed=False, suppressed=False)
+    file_def = FileDefinition(file_name="", staff_suppressed=False, discovery_suppressed=False)
     mapper.handle_suppression(folio_instance, file_def)
     assert folio_instance.get("staffSuppress") is False
     assert folio_instance.get("discoverySuppress") is False
@@ -74,7 +74,7 @@ def test_handle_suppression_set_false(mapper):
 
 def test_handle_suppression_set_true(mapper):
     folio_instance = {}
-    file_def = FileDefinition(file_name="", staff_suppressed=True, suppressed=True)
+    file_def = FileDefinition(file_name="", staff_suppressed=True, discovery_suppressed=True)
     mapper.handle_suppression(folio_instance, file_def)
     assert folio_instance.get("staffSuppress") is True
     assert folio_instance.get("discoverySuppress") is True
@@ -326,7 +326,9 @@ def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
         record: Record = None
         record = next(reader)
         res = mapper.parse_record(
-            record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False), ["ii"]
+            record,
+            FileDefinition(file_name="", discovery_suppressed=False, staff_suppressed=False),
+            ["ii"],
         )[0]
         assert "宝塚歌劇団" in [s["value"] for s in res["subjects"]]
         assert "[東京宝塚劇場公演パンフレット. ]" in res["alternativeTitles"][0]["alternativeTitle"]
