@@ -404,8 +404,6 @@ class MapperBase:
         }
         self.extradata_writer.write("boundwithPart", part)
 
-        self,
-
     def create_bound_with_holdings(
         self,
         folio_holding: dict,
