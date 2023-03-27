@@ -372,35 +372,6 @@ class RulesMapperHoldings(RulesMapperBase):
                     ldr06,
                 )
 
-    def setup_boundwith_relationship_map(self, boundwith_relationship_map):
-        new_map = {}
-        for entry in boundwith_relationship_map:
-            if "MFHD_ID" not in entry or not entry.get("MFHD_ID", ""):
-                raise TransformationProcessError(
-                    "", "Column MFHD_ID missing from Boundwith relationship map", ""
-                )
-            if "BIB_ID" not in entry or not entry.get("BIB_ID", ""):
-                raise TransformationProcessError(
-                    "", "Column BIB_ID missing from Boundwith relationship map", ""
-                )
-            instance_uuid = str(
-                FolioUUID(
-                    str(self.folio_client.okapi_url),
-                    FOLIONamespaces.instances,
-                    entry["BIB_ID"],
-                )
-            )
-            mfhd_uuid = str(
-                FolioUUID(
-                    str(self.folio_client.okapi_url),
-                    FOLIONamespaces.holdings,
-                    entry["MFHD_ID"],
-                )
-            )
-            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [instance_uuid]
-
-        return new_map
-
     def set_default_call_number_type_if_empty(self, folio_holding):
         if not folio_holding.get("callNumberTypeId", ""):
             folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type["id"]
