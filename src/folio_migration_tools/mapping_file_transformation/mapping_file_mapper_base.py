@@ -434,10 +434,11 @@ class MappingFileMapperBase(MapperBase):
                     [],
                 )
                 self.validate_object_items_in_array(
-                    folio_object,
-                    f"{schema_property_name}.{child_property_name}",
+                    legacy_object,
+                    child_property_name,
                     child_property["items"]["properties"],
                 )
+
             elif (
                 child_property.get("type", "") == "array"
                 and child_property.get("items", {}).get("type", "") == "string"
@@ -540,37 +541,16 @@ class MappingFileMapperBase(MapperBase):
                         )
             i = i + 1
 
-            if temp_object != {} and all(
-                temp_object.get(r) or (isinstance(temp_object.get(r), bool)) for r in required
-            ):
-                if any(multi_field_props):
-                    resulting_array.extend(
-                        self.split_obj_by_delim(
-                            self.library_configuration.multi_field_delimiter,
-                            temp_object,
-                            multi_field_props,
-                        )
+            if any(multi_field_props):
+                resulting_array.extend(
+                    self.split_obj_by_delim(
+                        self.library_configuration.multi_field_delimiter,
+                        temp_object,
+                        multi_field_props,
                     )
-                else:
-                    resulting_array.append(temp_object)
-
-            elif any(
-                (
-                    v
-                    for k, v in temp_object.items()
-                    if not self.is_uuid(v) and not isinstance(v, bool)
                 )
-            ):
-                self.migration_report.add(
-                    Blurbs.IncompleteSubPropertyRemoved,
-                    f"{prop_name}",
-                )
-                # Helper.log_data_issue(
-                #     f"{prop_name}",
-                #     f"Sub-property {sub_prop} removed as it is missing required fields:"
-                #     f"{required}",
-                #     temp_object,
-                # )
+            else:
+                resulting_array.append(temp_object)
 
         if any(resulting_array):
             set_deep2(folio_object, prop_name, resulting_array)
@@ -825,7 +805,7 @@ class MappingFileMapperBase(MapperBase):
 
     def validate_object_items_in_array(self, folio_object, schema_property_name, schema_property):
         valid_array_objects = []
-        for item in folio_object[schema_property_name]:
+        for item in folio_object.get(schema_property_name, []):
             if all(
                 item.get(r) or (isinstance(item.get(r), bool))
                 for r in schema_property["items"].get("required", [])
@@ -836,7 +816,10 @@ class MappingFileMapperBase(MapperBase):
                     Blurbs.IncompleteSubPropertyRemoved,
                     f"{schema_property_name}",
                 )
-        folio_object[schema_property_name] = [item for item in valid_array_objects]
+        if valid_array_objects:
+            folio_object[schema_property_name] = valid_array_objects
+        else:
+            folio_object.pop(schema_property_name, [])
 
 
 def skip_property(property_name, property):

@@ -211,9 +211,8 @@ def test_contacts_address_mapping(mapper):
     assert organization["contacts"][0]["firstName"] == "Jane"
 
 
-# @pytest.mark.skip(reason="Temporarily handling this in method handle_embedded_extradata_objects")
 def test_contacts_required_properties(mapper):
-    data["code"] = "co7"
+    data["code"] = "test_contacts_required_properties7"
     data["contact_person_f"] = ""
 
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
