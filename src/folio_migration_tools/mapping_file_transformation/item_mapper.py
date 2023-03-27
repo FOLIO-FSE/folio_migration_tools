@@ -37,6 +37,7 @@ class ItemMapper(MappingFileMapperBase):
         temporary_loan_type_mapping,
         temporary_location_mapping,
         library_configuration: LibraryConfiguration,
+        boundwith_relationship_map,
     ):
         item_schema = folio_client.get_item_schema()
         super().__init__(
@@ -91,6 +92,9 @@ class ItemMapper(MappingFileMapperBase):
             loan_type_map,
             "name",
             Blurbs.PermanentLoanTypeMapping,
+        )
+        self.boundwith_relationship_map = self.setup_boundwith_relationship_map(
+            boundwith_relationship_map
         )
 
         self.material_type_mapping = RefDataMapping(

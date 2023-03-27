@@ -282,6 +282,35 @@ class MapperBase:
             )
             sys.exit(1)
 
+    def setup_boundwith_relationship_map(self, boundwith_relationship_map):
+        new_map = {}
+        for entry in boundwith_relationship_map:
+            if "MFHD_ID" not in entry or not entry.get("MFHD_ID", ""):
+                raise TransformationProcessError(
+                    "", "Column MFHD_ID missing from Boundwith relationship map", ""
+                )
+            if "BIB_ID" not in entry or not entry.get("BIB_ID", ""):
+                raise TransformationProcessError(
+                    "", "Column BIB_ID missing from Boundwith relationship map", ""
+                )
+            instance_uuid = str(
+                FolioUUID(
+                    str(self.folio_client.okapi_url),
+                    FOLIONamespaces.instances,
+                    entry["BIB_ID"],
+                )
+            )
+            mfhd_uuid = str(
+                FolioUUID(
+                    str(self.folio_client.okapi_url),
+                    FOLIONamespaces.holdings,
+                    entry["MFHD_ID"],
+                )
+            )
+            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [instance_uuid]
+
+        return new_map
+
     def save_id_map_file(self, path, legacy_map: dict):
         with open(path, "w") as legacy_map_file:
             for id_string in legacy_map.values():
@@ -389,11 +418,11 @@ class MapperBase:
                 "holdingstype specifically for boundwith holdings and reference "
                 "the UUID in this parameter."
             )
-        for bwidx, instance_id in enumerate(instance_ids):
-            if not instance_id:
+        for bwidx, instance_uuid in enumerate(instance_ids):
+            if not instance_uuid:
                 raise ValueError(f"No Instance ID for record {folio_holding}")
             bound_with_holding = copy.deepcopy(folio_holding)
-            bound_with_holding["instanceId"] = instance_id
+            bound_with_holding["instanceId"] = instance_uuid
 
             if call_number := folio_holding.get("callNumber", None):
                 if "[" in call_number:
@@ -405,13 +434,15 @@ class MapperBase:
 
             # The subsequent copies gets different ids, but the original is maintained.
             if bwidx > 0:
-                bound_with_holding["id"] = self.generate_bw_holding_uuid(
-                    folio_holding["id"], instance_id
+                bound_with_holding["id"] = self.generate_boundwith_holding_uuid(
+                    folio_holding["id"], instance_uuid
                 )
+                if bound_with_holding.get("hrid", ""):
+                    bound_with_holding["hrid"] = f'{bound_with_holding["hrid"]}_bw_{bwidx}'
             self.migration_report.add_general_statistics("Bound-with holdings created")
             yield bound_with_holding
 
-    def generate_bw_holding_uuid(self, holding_uuid, instance_uuid):
+    def generate_boundwith_holding_uuid(self, holding_uuid, instance_uuid):
         return str(
             FolioUUID(
                 self.folio_client.okapi_url,

@@ -7,10 +7,12 @@ import sys
 import time
 import traceback
 import uuid
+from typing import Annotated
 from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -48,6 +50,16 @@ class ItemsTransformer(MigrationTaskBase):
         call_number_type_map_file_name: str
         reset_hrid_settings: Optional[bool] = False
         never_update_hrid_settings: Optional[bool] = False
+        boundwith_relationship_file_path: Annotated[
+            str,
+            Field(
+                title="Boundwith relationship file path",
+                description=(
+                    "Path to a file outlining Boundwith relationships, in the style of Voyager."
+                    " A TSV file with MFHD_ID and BIB_ID headers and values"
+                ),
+            ),
+        ] = ""
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -99,6 +111,20 @@ class ItemsTransformer(MigrationTaskBase):
                 self.folder_structure.temp_loan_type_map_path,
             )
             temporary_loan_type_mapping = None
+        # Load Boundwith relationship map
+        self.boundwith_relationship_map = []
+        if self.task_config.boundwith_relationship_file_path:
+            with open(
+                self.folder_structure.data_folder
+                / FOLIONamespaces.holdings.name
+                / self.task_config.boundwith_relationship_file_path
+            ) as boundwith_relationship_file:
+                self.boundwith_relationship_map = list(
+                    csv.DictReader(boundwith_relationship_file, dialect="tsv")
+                )
+            logging.info(
+                "Rows in Bound with relationship map: %s", len(self.boundwith_relationship_map)
+            )
 
         if (
             self.folder_structure.mapping_files_folder
@@ -155,6 +181,7 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_loan_type_mapping,
             temporary_location_mapping,
             self.library_configuration,
+            self.boundwith_relationship_map,
         )
         if (
             self.task_configuration.reset_hrid_settings
@@ -205,6 +232,19 @@ class ItemsTransformer(MigrationTaskBase):
 
                     self.handle_circiulation_notes(folio_rec, self.folio_client.current_user)
                     self.handle_notes(folio_rec)
+                    if folio_rec["holdingsRecordId"] in self.mapper.boundwith_relationship_map:
+                        for idx, instance_id in enumerate(
+                            self.mapper.boundwith_relationship_map.get(
+                                folio_rec["holdingsRecordId"]
+                            )
+                        ):
+                            if idx == 0:
+                                bw_id = folio_rec["holdingsRecordId"]
+                            else:
+                                bw_id = self.mapper.generate_boundwith_holding_uuid(
+                                    folio_rec["holdingsRecordId"], instance_id
+                                )
+                            self.mapper.create_and_write_boundwith_part(legacy_id, bw_id)
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
