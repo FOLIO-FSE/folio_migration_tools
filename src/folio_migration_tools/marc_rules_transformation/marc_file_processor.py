@@ -55,7 +55,7 @@ class MarcFileProcessor:
             TransformationRecordFailedError: _description_
         """
         success = True
-        folio_rec = {}
+        folio_recs = []
         self.records_count += 1
         try:
             # Transform the MARC21 to a FOLIO record
@@ -64,27 +64,27 @@ class MarcFileProcessor:
                 raise TransformationRecordFailedError(
                     f"Index in file: {idx}", "No legacy id found", idx
                 )
-            folio_rec = self.mapper.parse_record(marc_record, file_def, legacy_ids)
-            filtered_legacy_ids = self.get_valid_folio_record_ids(
-                legacy_ids,
-                self.legacy_ids,
-                self.mapper.migration_report,
-            )
-            self.add_legacy_ids_to_map(folio_rec, filtered_legacy_ids)
+            folio_recs = self.mapper.parse_record(marc_record, file_def, legacy_ids)
+            for idx, folio_rec in enumerate(folio_recs):
+                if idx == 0:
+                    filtered_legacy_ids = self.get_valid_folio_record_ids(
+                        legacy_ids, self.legacy_ids, self.mapper.migration_report
+                    )
+                    self.add_legacy_ids_to_map(folio_rec, filtered_legacy_ids)
 
-            self.save_srs_record(
-                marc_record,
-                file_def,
-                folio_rec,
-                legacy_ids,
-                self.object_type,
-            )
-            Helper.write_to_file(self.created_objects_file, folio_rec)
-            self.mapper.migration_report.add_general_statistics(
-                "Inventory records written to disk"
-            )
+                    self.save_srs_record(
+                        marc_record,
+                        file_def,
+                        folio_rec,
+                        legacy_ids,
+                        self.object_type,
+                    )
+                Helper.write_to_file(self.created_objects_file, folio_rec)
+                self.mapper.migration_report.add_general_statistics(
+                    "Inventory records written to disk"
+                )
+                self.exit_on_too_many_exceptions()
 
-            self.exit_on_too_many_exceptions()
         except TransformationRecordFailedError as error:
             success = False
             raise TransformationRecordFailedError(
@@ -101,18 +101,19 @@ class MarcFileProcessor:
             logging.error(inst.args)
             logging.error(inst)
             logging.error(marc_record)
-            logging.error(folio_rec)
+            logging.error(folio_recs)
             raise TransformationProcessError("", inst.args, "") from inst
         finally:
             if not success:
                 self.failed_records_count += 1
                 remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-                if (
-                    callable(remove_from_id_map)
-                    and "folio_rec" in locals()
-                    and folio_rec.get("formerIds", "")
-                ):
-                    self.mapper.remove_from_id_map(folio_rec.get("formerIds", []))
+                for folio_rec in folio_recs:
+                    if (
+                        callable(remove_from_id_map)
+                        and "folio_rec" in locals()
+                        and folio_rec.get("formerIds", "")
+                    ):
+                        self.mapper.remove_from_id_map(folio_rec.get("formerIds", []))
 
     def save_srs_record(
         self,

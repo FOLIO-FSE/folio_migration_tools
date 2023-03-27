@@ -150,7 +150,7 @@ class RulesMapperBase(MapperBase):
     @abstractmethod
     def parse_record(
         self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
-    ) -> dict:
+    ) -> list[dict]:
         raise NotImplementedError()
 
     @staticmethod
@@ -694,10 +694,9 @@ class RulesMapperBase(MapperBase):
             temp_leader = Leader(marc_record.leader)
             temp_leader[9] = "a"
             marc_record.leader = temp_leader
-        except Exception:
+        except Exception as ee:
             logging.exception(
-                "Something is wrong with the marc records leader: %s",
-                marc_record.leader,
+                "Something is wrong with the marc records leader: %s, %s", marc_record.leader, ee
             )
         srs_record_string = RulesMapperBase.get_srs_string(
             marc_record,

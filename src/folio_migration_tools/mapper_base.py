@@ -1,11 +1,15 @@
+import ast
+import copy
 import json
 import logging
 import sys
+import uuid
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
@@ -356,6 +360,65 @@ class MapperBase:
             folio_record["administrativeNotes"].append(
                 f"{MapperBase.legacy_id_template} {legacy_id}"
             )
+
+    def create_and_write_boundwith_part(self, legacy_item_id: str, bound_with_holding_uuid: dict):
+        part = {
+            "id": str(uuid.uuid4()),
+            "holdingsRecordId": bound_with_holding_uuid,
+            "itemId": str(
+                FolioUUID(
+                    self.folio_client.okapi_url,
+                    FOLIONamespaces.items,
+                    legacy_item_id,
+                )
+            ),
+        }
+        self.extradata_writer.write("boundwithPart", part)
+
+        self,
+
+    def create_bound_with_holdings(
+        self,
+        folio_holding: dict,
+        instance_ids: list,
+        bound_with_holdings_type_id: str,
+    ):
+        if not bound_with_holdings_type_id:
+            raise TransformationProcessError(
+                "Missing task setting holdingsTypeUuidForBoundwiths. Add a "
+                "holdingstype specifically for boundwith holdings and reference "
+                "the UUID in this parameter."
+            )
+        for bwidx, instance_id in enumerate(instance_ids):
+            if not instance_id:
+                raise ValueError(f"No Instance ID for record {folio_holding}")
+            bound_with_holding = copy.deepcopy(folio_holding)
+            bound_with_holding["instanceId"] = instance_id
+
+            if call_number := folio_holding.get("callNumber", None):
+                if "[" in call_number:
+                    call_numbers = ast.literal_eval(str(folio_holding["callNumber"]))
+                    bound_with_holding["callNumber"] = call_numbers[bwidx]
+                else:
+                    bound_with_holding["callNumber"] = call_number
+            bound_with_holding["holdingsTypeId"] = bound_with_holdings_type_id
+
+            # The subsequent copies gets different ids, but the original is maintained.
+            if bwidx > 0:
+                bound_with_holding["id"] = self.generate_bw_holding_uuid(
+                    folio_holding["id"], instance_id
+                )
+            self.migration_report.add_general_statistics("Bound-with holdings created")
+            yield bound_with_holding
+
+    def generate_bw_holding_uuid(self, holding_uuid, instance_uuid):
+        return str(
+            FolioUUID(
+                self.folio_client.okapi_url,
+                FOLIONamespaces.holdings,
+                f"{holding_uuid}-{instance_uuid}",
+            )
+        )
 
 
 def flatten(my_dict: dict, path=""):
