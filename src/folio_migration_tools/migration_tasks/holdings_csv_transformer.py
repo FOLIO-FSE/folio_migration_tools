@@ -1,5 +1,3 @@
-import ast
-import copy
 import csv
 import ctypes
 import json
@@ -7,13 +5,12 @@ import logging
 import sys
 import time
 import traceback
-import uuid
+from typing import Annotated
 from typing import List
 from typing import Optional
 
-from folio_uuid import FolioUUID
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient import FolioClient
+from pydantic import Field
 from requests import HTTPError
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -48,7 +45,16 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         default_call_number_type_name: str
         previously_generated_holdings_files: Optional[list[str]] = []
         fallback_holdings_type_id: str
-        holdings_type_uuid_for_boundwiths: str
+        holdings_type_uuid_for_boundwiths: Annotated[
+            str,
+            Field(
+                title="Holdings Type for Boundwith Holdings",
+                description=(
+                    "UUID for a Holdings type (set in Settings->Inventory) "
+                    "for Bound-with Holdings)"
+                ),
+            ),
+        ] = ""
         call_number_type_map_file_name: Optional[str]
         holdings_merge_criteria: Optional[list[str]] = [
             "instanceId",
@@ -336,73 +342,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
-        if not self.task_config.holdings_type_uuid_for_boundwiths:
-            raise TransformationProcessError(
-                "Missing task setting holdingsTypeUuidForBoundwiths. Add a "
-                "holdingstype specifically for boundwith holdings and reference "
-                "the UUID in this parameter."
+        folio_holding["formerIds"] = explode_former_ids(folio_holding)
+        return list(
+            self.mapper.create_bound_with_holdings(
+                folio_holding,
+                folio_holding["instanceId"],
+                self.task_config.holdings_type_uuid_for_boundwiths,
             )
-
-        # Add former ids
-        temp_ids = []
-        for former_id in folio_holding.get("formerIds", []):
-            if former_id.startswith("[") and former_id.endswith("]") and "," in former_id:
-                ids = list(
-                    former_id[1:-1].replace('"', "").replace(" ", "").replace("'", "").split(",")
-                )
-                temp_ids.extend(ids)
-            else:
-                temp_ids.append(former_id)
-        folio_holding["formerIds"] = temp_ids
-        for bwidx, instance_id in enumerate(folio_holding["instanceId"]):
-            if not instance_id:
-                raise ValueError(f"No ID for record {folio_holding}")
-
-            bound_with_holding = copy.deepcopy(folio_holding)
-            bound_with_holding["instanceId"] = instance_id
-            if folio_holding.get("callNumber", None):
-                call_numbers = ast.literal_eval(folio_holding["callNumber"])
-                if isinstance(call_numbers, str):
-                    call_numbers = [call_numbers]
-                bound_with_holding["callNumber"] = call_numbers[bwidx]
-            if not self.task_config.holdings_type_uuid_for_boundwiths:
-                raise TransformationProcessError(
-                    "",
-                    (
-                        "Boundwith UUID not added to task configuration."
-                        "Add a property to holdingsTypeUuidForBoundwiths to "
-                        "the task configuration"
-                    ),
-                    "",
-                )
-            bound_with_holding[
-                "holdingsTypeId"
-            ] = self.task_config.holdings_type_uuid_for_boundwiths
-            bound_with_holding["id"] = str(
-                FolioUUID(
-                    self.folio_client.okapi_url,
-                    FOLIONamespaces.holdings,
-                    f'{folio_holding["id"]}-{instance_id}',
-                )
-            )
-            self.mapper.migration_report.add_general_statistics("Bound-with holdings created")
-            yield bound_with_holding
-
-    def generate_boundwith_part(
-        self, folio_client: FolioClient, legacy_item_id: str, bound_with_holding: dict
-    ):
-        part = {
-            "id": str(uuid.uuid4()),
-            "holdingsRecordId": bound_with_holding["id"],
-            "itemId": str(
-                FolioUUID(
-                    folio_client.okapi_url,
-                    FOLIONamespaces.items,
-                    legacy_item_id,
-                )
-            ),
-        }
-        self.mapper.extradata_writer.write("boundwithPart", part)
+        )
 
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str
@@ -422,14 +369,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             if bw_key not in self.bound_with_keys:
                 self.bound_with_keys.add(bw_key)
                 self.holdings[bw_key] = incoming_holding
-                self.generate_boundwith_part(self.folio_client, legacy_item_id, incoming_holding)
+                self.mapper.create_and_write_boundwith_part(legacy_item_id, incoming_holding["id"])
                 self.mapper.migration_report.add_general_statistics(
                     "Unique BW Holdings created from Items"
                 )
             else:
                 self.merge_holding(bw_key, incoming_holding)
-                self.generate_boundwith_part(
-                    self.folio_client, legacy_item_id, self.holdings[bw_key]
+                self.mapper.create_and_write_boundwith_part(
+                    legacy_item_id, self.holdings[bw_key]["id"]
                 )
                 self.holdings_id_map[legacy_item_id] = self.mapper.get_id_map_tuple(
                     legacy_item_id, self.holdings[bw_key], self.object_type
@@ -474,3 +421,16 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             raise TransformationProcessError("", "No holdings source with name MARC in tenant")
         logging.info(json.dumps(res, indent=4))
         return res
+
+
+def explode_former_ids(folio_holding: dict):
+    temp_ids = []
+    for former_id in folio_holding.get("formerIds", []):
+        if former_id.startswith("[") and former_id.endswith("]") and "," in former_id:
+            ids = list(
+                former_id[1:-1].replace('"', "").replace(" ", "").replace("'", "").split(",")
+            )
+            temp_ids.extend(ids)
+        else:
+            temp_ids.append(former_id)
+    return temp_ids

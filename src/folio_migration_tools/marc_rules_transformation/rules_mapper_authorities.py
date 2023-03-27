@@ -87,7 +87,7 @@ class AuthorityMapper(RulesMapperBase):
 
     def parse_record(
         self, marc_record: pymarc.Record, file_def: FileDefinition, legacy_ids: List[str]
-    ) -> dict:
+    ) -> list[dict]:
         """Parses an auth recod into a FOLIO Authority object
          This is the main function
 
@@ -120,7 +120,7 @@ class AuthorityMapper(RulesMapperBase):
         self.dedupe_rec(clean_folio_authority)
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(clean_folio_authority, self.schema)
-        return clean_folio_authority
+        return [clean_folio_authority]
 
     def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
         folio_authority = {

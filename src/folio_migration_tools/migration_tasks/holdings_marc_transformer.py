@@ -32,6 +32,16 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         location_map_file_name: str
         default_call_number_type_name: str
         fallback_holdings_type_id: str
+        holdings_type_uuid_for_boundwiths: Annotated[
+            str,
+            Field(
+                title="Holdings Type for Boundwith Holdings",
+                description=(
+                    "UUID for a Holdings type (set in Settings->Inventory) "
+                    "for Bound-with Holdings)"
+                ),
+            ),
+        ] = ""
         boundwith_relationship_file_path: Annotated[
             str,
             Field(
@@ -95,6 +105,9 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 self.boundwith_relationship_map = list(
                     csv.DictReader(boundwith_relationship_file, dialect="tsv")
                 )
+            logging.info(
+                "Rows in Bound with relationship map: %s", len(self.boundwith_relationship_map)
+            )
 
         location_map_path = (
             self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name

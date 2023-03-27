@@ -25,10 +25,8 @@ def test_generate_boundwith_part(caplog):
     mock_transformer = Mock(spec=HoldingsCsvTransformer)
     mock_transformer.mapper = mock_mapper
 
-    mock_folio = mocked_classes.mocked_folio_client()
-    HoldingsCsvTransformer.generate_boundwith_part(
-        mock_transformer, mock_folio, "legacy_id", {"id": "holding_uuid"}
-    )
+    mock_mapper.folio_client = mocked_classes.mocked_folio_client()
+    HoldingsMapper.create_and_write_boundwith_part(mock_mapper, "legacy_id", "holding_uuid")
 
     assert any("boundwithPart\t" in ed for ed in mock_mapper.extradata_writer.cache)
     assert any(
@@ -52,7 +50,7 @@ def test_merge_holding_in_first_boundwith(caplog):
     mock_transformer.folio_client = mock_folio
     mock_transformer.mapper = mock_mapper
 
-    new_holding = {"instanceId": "Instance_1"}
+    new_holding = {"id": "holdings_id", "instanceId": "Instance_1"}
     instance_ids: list[str] = ["Instance_1", "Instance_2"]
     item_id: str = "item_1"
 
@@ -74,7 +72,7 @@ def test_merge_holding_in_second_boundwith_to_merge(caplog):
     mock_transformer.folio_client = mock_folio
     mock_transformer.mapper = mock_mapper
     mock_transformer.object_type = FOLIONamespaces.holdings
-    new_holding = {"instanceId": "Instance_1"}
+    new_holding = {"id": "holdings_id", "instanceId": "Instance_1"}
     instance_ids: list[str] = ["Instance_1", "Instance_2"]
     item_id: str = "item_1"
 
@@ -105,13 +103,13 @@ def test_merge_holding_in_second_boundwith_to_not_merge(caplog):
     mock_transformer.folio_client = mock_folio
     mock_transformer.mapper = mock_mapper
 
-    new_holding = {"instanceId": "Instance_1"}
+    new_holding = {"id": "holdings_id", "instanceId": "Instance_1"}
     instance_ids: list[str] = ["Instance_1", "Instance_2"]
     item_id: str = "item_1"
 
     HoldingsCsvTransformer.merge_holding_in(mock_transformer, new_holding, instance_ids, item_id)
 
-    new_holding_2 = {"instanceId": "Instance_2"}
+    new_holding_2 = {"id": "holdings_id2", "instanceId": "Instance_2"}
     instance_ids_2: list[str] = ["Instance_3", "Instance_2"]
     item_id_2: str = "item_2"
 

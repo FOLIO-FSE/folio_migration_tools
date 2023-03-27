@@ -92,7 +92,7 @@ class BibsRulesMapper(RulesMapperBase):
 
     def parse_record(
         self, marc_record: pymarc.Record, file_def: FileDefinition, legacy_ids: List[str]
-    ) -> dict:
+    ) -> list[dict]:
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function
@@ -126,7 +126,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.dedupe_rec(clean_folio_instance)
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(clean_folio_instance, self.schema)
-        return clean_folio_instance
+        return [clean_folio_instance]
 
     def perform_additional_parsing(
         self,

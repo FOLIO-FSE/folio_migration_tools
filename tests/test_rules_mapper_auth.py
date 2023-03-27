@@ -57,7 +57,7 @@ def test_basic(mapper: AuthorityMapper, caplog):
         reader.force_utf8 = True
         record: Record = None
         record = next(reader)
-        auth = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])
+        auth = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])[0]
         assert auth["personalName"] == "Ericsson, Leif KE, 1964-"
         assert auth["personalNameTitle"] == "Ericsson, Leif KE, 1964-"
         assert auth["id"] == "54ac1b25-aa36-566b-a688-030a745ae080"
@@ -85,7 +85,7 @@ def test_saft(mapper: AuthorityMapper, caplog):
         reader.force_utf8 = True
         record: Record = None
         record = next(reader)
-        auth = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])
+        auth = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])[0]
         assert "Yu, Tanling" in auth["sftPersonalName"]
         assert "于丹翎" in auth["sftPersonalName"]
         assert mapper.mapped_folio_fields["personalNameTitle"] == [1]

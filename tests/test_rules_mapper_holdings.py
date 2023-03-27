@@ -80,7 +80,7 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
         ids = RulesMapperHoldings.get_legacy_ids(mapper, record, 1)
         res = mapper.parse_record(
             record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False), ids
-        )
+        )[0]
         assert res
         assert res["permanentLocationId"] == "f34d27c6-a8eb-461b-acd6-5dea81771e70"
         assert res["hrid"] == "pref00000000001"
@@ -112,6 +112,7 @@ def test_setup_boundwith_relationship_map_empty_entries():
 
 def test_setup_boundwith_relationship_map_with_entries():
     mocked_mapper = Mock(spec=RulesMapperHoldings)
+    mocked_mapper.folio_client = mocked_classes.mocked_folio_client()
     file_mock = [
         {"MFHD_ID": "H1", "BIB_ID": "B1"},
         {"MFHD_ID": "H1", "BIB_ID": "B2"},
@@ -120,7 +121,10 @@ def test_setup_boundwith_relationship_map_with_entries():
     ]
     res = RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
     assert len(res) == 2
-    assert res["H1"] == ["B1", "B2"]
+    assert res["66db04ef-fbfb-5c45-9ed7-65a1f2495eaf"] == [
+        "ae0c833c-e76f-53aa-975a-7ac4c2be7972",
+        "fae73ef8-b546-5310-b4ee-c2d68fed48c5",
+    ]
 
 
 def test_edit852(mapper: RulesMapperHoldings, caplog):

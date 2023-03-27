@@ -87,7 +87,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def parse_record(
         self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
-    ) -> dict:
+    ) -> list[dict]:
         """Parses a mfhd recod into a FOLIO Inventory holdings object
         Community mapping suggestion: https://tinyurl.com/3rh52e2x
          This is the main function
@@ -151,7 +151,15 @@ class RulesMapperHoldings(RulesMapperBase):
         )
         self.dedupe_rec(cleaned_folio_holding, props_to_not_dedupe)
         self.report_folio_mapping(cleaned_folio_holding, self.schema)
-        return cleaned_folio_holding
+        if bw_instance_ids := self.boundwith_relationship_map.get(cleaned_folio_holding["id"], []):
+            return list(
+                self.create_bound_with_holdings(
+                    cleaned_folio_holding,
+                    bw_instance_ids,
+                    self.task_configuration.holdings_type_uuid_for_boundwiths,
+                )
+            )
+        return [cleaned_folio_holding]
 
     def set_instance_id_by_map(self, legacy_ids: list, folio_holding: dict, marc_record: Record):
         if "004" not in marc_record:
@@ -375,7 +383,22 @@ class RulesMapperHoldings(RulesMapperBase):
                 raise TransformationProcessError(
                     "", "Column BIB_ID missing from Boundwith relationship map", ""
                 )
-            new_map[entry["MFHD_ID"]] = new_map.get(entry["MFHD_ID"], []) + [entry["BIB_ID"]]
+            instance_uuid = str(
+                FolioUUID(
+                    str(self.folio_client.okapi_url),
+                    FOLIONamespaces.instances,
+                    entry["BIB_ID"],
+                )
+            )
+            mfhd_uuid = str(
+                FolioUUID(
+                    str(self.folio_client.okapi_url),
+                    FOLIONamespaces.holdings,
+                    entry["MFHD_ID"],
+                )
+            )
+            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [instance_uuid]
+
         return new_map
 
     def set_default_call_number_type_if_empty(self, folio_holding):
