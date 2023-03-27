@@ -32,7 +32,7 @@ xpath_245 = "//marc:datafield[@tag='245']"
 # flake8: noqa
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(autouse=True)
 def mapper(pytestconfig) -> BibsRulesMapper:
     print("mapper was called")
     folio = mocked_classes.mocked_folio_client()
@@ -103,6 +103,35 @@ def test_missing_856_and_082(mapper):
     record = default_map("test_missing_856_and_082.xml", xpath_245, mapper)
     assert "electronicAccess" not in record[0]
     assert "classifications" not in record[0]
+
+
+def test_mapped_cat_date_from_998_B(mapper: BibsRulesMapper):
+    temp_mappings = mapper.mappings.get("998", {})
+    mapper.task_configuration.parse_cataloged_date = True
+    mapper.mappings["998"] = [
+        {
+            "rules": [{"conditions": [{"type": "trim_period, trim"}]}],
+            "target": "catalogedDate",
+            "subfield": ["b"],
+            "description": "Cataloged Date",
+        }
+    ]
+    record = default_map("test_998_b_cat_date.xml", xpath_245, mapper)
+    assert record[0]["catalogedDate"] == "1993-06-23"
+
+
+def test_mapped_cat_date_from_998_B_configuration_defaults(mapper: BibsRulesMapper):
+    temp_mappings = mapper.mappings.get("998", {})
+    mapper.mappings["998"] = [
+        {
+            "rules": [{"conditions": [{"type": "trim_period, trim"}]}],
+            "target": "catalogedDate",
+            "subfield": ["b"],
+            "description": "Cataloged Date",
+        }
+    ]
+    record = default_map("test_998_b_cat_date.xml", xpath_245, mapper)
+    assert record[0]["catalogedDate"] == "06-23-93"
 
 
 def test_non_suppression(mapper):

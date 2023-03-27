@@ -1,8 +1,10 @@
 import logging
+from datetime import datetime
 from unittest.mock import Mock
 
 import pymarc
 import pytest
+from dateutil.parser import parse
 from pymarc import Field
 from pymarc import MARCReader
 from pymarc import Record
@@ -331,6 +333,17 @@ def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
         assert "1. 7月星組公演.  淀君, シャンソン・ダムール (1959)" in res["notes"][2]["note"]
         assert "宝塚" in res["publication"][1]["place"]
         assert "Records without $6" in mapper.migration_report.report["880 mappings"]
+
+
+def test_parse_cataloged_date():
+    cat_dates_and_expected_results = [
+        ["06-23-93", "1993-06-23"],
+        ["23/6-93", "1993-06-23"],
+        ["06-06-06", "2006-06-06"],
+    ]
+    for cd in cat_dates_and_expected_results:
+        parsed_date = parse(cd[0], fuzzy=True)
+        assert str(parsed_date.date()) == cd[1]
 
 
 @pytest.mark.skip(reason="Need to validate the entity before creating it")

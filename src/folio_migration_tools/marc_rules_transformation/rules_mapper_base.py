@@ -9,6 +9,7 @@ from textwrap import wrap
 from typing import List
 
 import pymarc
+from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
@@ -405,7 +406,18 @@ class RulesMapperBase(MapperBase):
 
     def add_value_to_first_level_target(self, rec, target_string, value):
         sch = self.schema["properties"]
-
+        if (
+            self.task_configuration.migration_task_type == "BibsTransformer"
+            and self.task_configuration.parse_cataloged_date
+            and target_string == "catalogedDate"
+        ):
+            try:
+                value = [str(parse(value[0], fuzzy=True).date())]
+            except Exception as ee:
+                Helper.log_data_issue("", f"Could not parse catalogedDate: {ee}", value)
+                self.migration_report.add(
+                    Blurbs.FieldMappingErrors, "Could not parse catalogedDate"
+                )
         if not target_string or target_string not in sch:
             raise TransformationFieldMappingError(
                 "",
