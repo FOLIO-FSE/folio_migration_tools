@@ -45,7 +45,9 @@
             "type": "string"
         },
         "holdingsTypeUuidForBoundwiths": {
-            "title": "Holdingstypeuuidforboundwiths",
+            "title": "Holdings Type for Boundwith Holdings",
+            "description": "UUID for a Holdings type (set in Settings->Inventory) for Bound-with Holdings)",
+            "default": "",
             "type": "string"
         },
         "callNumberTypeMapFileName": {
@@ -83,8 +85,7 @@
         "holdingsMapFileName",
         "locationMapFileName",
         "defaultCallNumberTypeName",
-        "fallbackHoldingsTypeId",
-        "holdingsTypeUuidForBoundwiths"
+        "fallbackHoldingsTypeId"
     ],
     "definitions": {
         "HridHandling": {

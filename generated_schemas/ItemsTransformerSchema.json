@@ -72,6 +72,12 @@
             "title": "Neverupdatehridsettings",
             "default": false,
             "type": "boolean"
+        },
+        "boundwithRelationshipFilePath": {
+            "title": "Boundwith relationship file path",
+            "description": "Path to a file outlining Boundwith relationships, in the style of Voyager. A TSV file with MFHD_ID and BIB_ID headers and values",
+            "default": "",
+            "type": "string"
         }
     },
     "required": [
