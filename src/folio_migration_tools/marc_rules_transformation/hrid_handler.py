@@ -25,11 +25,11 @@ class HRIDHandler:
     ):
         self.unique_001s: Set[str] = set()
         self.deactivate035_from001: bool = deactivate035_from001
-        hrid_path = "/hrid-settings-storage/hrid-settings"
+        self.hrid_path = "/hrid-settings-storage/hrid-settings"
         self.folio_client: FolioClient = folio_client
         self.handling: HridHandling = handling
         self.migration_report: MigrationReport = migration_report
-        self.hrid_settings = self.folio_client.folio_get_single_object(hrid_path)
+        self.hrid_settings = self.folio_client.folio_get_single_object(self.hrid_path)
         self.instance_hrid_prefix = self.hrid_settings["instances"]["prefix"]
         self.instance_hrid_counter = self.hrid_settings["instances"]["startNumber"]
         self.holdings_hrid_prefix = self.hrid_settings["holdings"]["prefix"]
