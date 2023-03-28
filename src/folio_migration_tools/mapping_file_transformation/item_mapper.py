@@ -62,6 +62,7 @@ class ItemMapper(MappingFileMapperBase):
                 "name",
                 Blurbs.TemporaryLoanTypeMapping,
             )
+        self.temp_location_mapping = None
         if temporary_location_mapping:
             self.temp_location_mapping = RefDataMapping(
                 self.folio_client,
@@ -71,8 +72,6 @@ class ItemMapper(MappingFileMapperBase):
                 "code",
                 Blurbs.TemporaryLocationMapping,
             )
-        else:
-            self.temp_location_mapping = None
 
         if item_statuses_map:
             self.setup_status_mapping(item_statuses_map)
@@ -149,7 +148,6 @@ class ItemMapper(MappingFileMapperBase):
         logging.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
 
         if folio_prop_name == "permanentLocationId":
             return self.get_mapped_ref_data_value(
@@ -185,19 +183,6 @@ class ItemMapper(MappingFileMapperBase):
             return self.get_item_level_call_number_type_id(
                 legacy_item, folio_prop_name, index_or_id
             )
-        elif folio_prop_name == "status.name":
-            return self.transform_status(mapped_value)
-        elif folio_prop_name == "barcode":
-            barcode = mapped_value
-            if barcode.strip() and barcode in self.unique_barcodes:
-                Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
-                self.migration_report.add_general_statistics("Duplicate barcodes")
-                return f"{barcode}-{uuid4()}"
-            else:
-                if barcode.strip():
-                    self.unique_barcodes.add(barcode)
-                return barcode
-
         elif folio_prop_name == "status.date":
             return datetime.now(timezone.utc).isoformat()
         elif folio_prop_name == "temporaryLoanTypeId":
@@ -225,6 +210,20 @@ class ItemMapper(MappingFileMapperBase):
                 f"{folio_prop_name} -> {statistical_code_id}",
             )
             return statistical_code_id
+
+        mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
+        if folio_prop_name == "status.name":
+            return self.transform_status(mapped_value)
+        elif folio_prop_name == "barcode":
+            barcode = mapped_value
+            if barcode.strip() and barcode in self.unique_barcodes:
+                Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
+                self.migration_report.add_general_statistics("Duplicate barcodes")
+                return f"{barcode}-{uuid4()}"
+            else:
+                if barcode.strip():
+                    self.unique_barcodes.add(barcode)
+                return barcode
         elif folio_prop_name == "holdingsRecordId":
             if mapped_value in self.holdings_id_map:
                 return self.holdings_id_map[mapped_value][1]
