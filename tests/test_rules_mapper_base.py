@@ -153,7 +153,7 @@ def test_grouped():
         f020s = record1.get_fields("020")
         grouped = RulesMapperBase.grouped(f020s[1])
         for tf in grouped:
-            assert type(tf) is Field
+            assert isinstance(tf, Field)
             assert tf.tag == "020"
             assert tf.subfields in [
                 ["a", "0870990004 (v. 1)", "c", "20sek"],
