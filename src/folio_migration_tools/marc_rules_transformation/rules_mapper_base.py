@@ -513,8 +513,8 @@ class RulesMapperBase(MapperBase):
             for temp_field in self.grouped(marc_field):
                 entity = self.create_entity(entity_mapping, temp_field, e_parent, legacy_ids)
                 if entity and (
-                    (type(entity) is dict and all(entity.values()))
-                    or (type(entity) is list and all(entity))
+                    (isinstance(entity, dict) and all(entity.values()))
+                    or (isinstance(entity, list) and all(entity))
                 ):
                     self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
         else:
