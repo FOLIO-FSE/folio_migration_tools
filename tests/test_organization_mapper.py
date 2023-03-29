@@ -211,9 +211,8 @@ def test_contacts_address_mapping(mapper):
     assert organization["contacts"][0]["firstName"] == "Jane"
 
 
-@pytest.mark.skip(reason="Temporarily handling this in method handle_embedded_extradata_objects")
 def test_contacts_required_properties(mapper):
-    data["code"] = "co7"
+    data["code"] = "test_contacts_required_properties7"
     data["contact_person_f"] = ""
 
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
@@ -402,7 +401,7 @@ def test_map_organization_notes(mapper):
     )
 
 
-@pytest.mark.skip(reason="Temporarily handled in transformer. See #531")
+@pytest.mark.skip(reason="For now handled in transformer.")
 def test_interface_credentials_required_properties(mapper):
     data["code"] = "ic2"
     data["interface_1_username"] = "myUsername"
