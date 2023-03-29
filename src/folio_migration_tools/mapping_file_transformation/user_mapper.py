@@ -2,8 +2,6 @@ import csv
 import json
 import logging
 import sys
-from datetime import datetime
-from datetime import timezone
 
 from dateutil.parser import parse
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -161,15 +159,16 @@ class UserMapper(MappingFileMapperBase):
 
     def get_parsed_date(self, mapped_value, folio_prop_name: str):
         try:
+            if not mapped_value.strip():
+                return ""
             format_date = parse(mapped_value, fuzzy=True)
-            fmt_string = f"{folio_prop_name}: {mapped_value} -> {format_date.isoformat()}"
             return format_date.isoformat()
         except Exception as ee:
             v = mapped_value
             logging.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
-            fmt_string = f"Parsing error! {folio_prop_name}: {v}. NOW() was returned"
+            fmt_string = f"Parsing error! {folio_prop_name}: {v}. The empty string was returned"
             self.migration_report.add(Blurbs.DateTimeConversions, fmt_string)
-            return datetime.now(timezone.utc).isoformat()
+            return ""
 
     def setup_groups_mapping(self, groups_map):
         if groups_map:

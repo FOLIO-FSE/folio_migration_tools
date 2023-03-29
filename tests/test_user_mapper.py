@@ -74,6 +74,145 @@ def test_basic(mocked_folio_client):
     assert folio_user["active"] is True
 
 
+def test_basic_all_dates(mocked_folio_client):
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "expirationDate",
+                "legacy_field": "",
+                "value": "06-20-21",
+                "description": "",
+            },
+            {
+                "folio_field": "enrollmentDate",
+                "legacy_field": "",
+                "value": "2021-06-20",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.dateOfBirth",
+                "legacy_field": "",
+                "value": "06-20-21",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+        "homebranch": "75e59650-bbc5-4ce4-9f45-45382825fedc",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    correct_date = "2021-06-20T00:00:00"
+    assert folio_user["personal"]["dateOfBirth"] == correct_date
+    assert folio_user["expirationDate"] == correct_date
+    assert folio_user["enrollmentDate"] == correct_date
+
+
+def test_basic_all_dates_empty_or_bad(mocked_folio_client):
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "expirationDate",
+                "legacy_field": "",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "enrollmentDate",
+                "legacy_field": "",
+                "value": "2021-60-20",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.dateOfBirth",
+                "legacy_field": "",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+        "homebranch": "75e59650-bbc5-4ce4-9f45-45382825fedc",
+    }
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert "dateOfBirth" not in folio_user["personal"]
+    assert "expirationDate" not in folio_user
+    assert "enrollmentDate" not in folio_user
+
+
 def test_map_request_preference_with_replace_value(mocked_folio_client):
     user_map = {
         "data": [
