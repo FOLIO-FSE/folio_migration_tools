@@ -56,16 +56,16 @@ class HoldingsMapper(MappingFileMapperBase):
             )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
-
         if folio_prop_name == "permanentLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
-        elif folio_prop_name == "callNumber":
-            return self.get_call_number(mapped_value)
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
         elif folio_prop_name.startswith("statisticalCodeIds"):
             return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
+
+        mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
+        if folio_prop_name == "callNumber":
+            return self.get_call_number(mapped_value)
         elif folio_prop_name == "instanceId":
             return self.get_instance_ids(mapped_value, index_or_id)
         elif mapped_value:
