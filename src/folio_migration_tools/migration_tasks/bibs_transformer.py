@@ -23,10 +23,50 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
+        name: Annotated[
+            str,
+            Field(
+                description=(
+                    "Name of this migration task. The name is being used to call the specific "
+                    "task, and to distinguish tasks of similar types"
+                )
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description=("The type of migration task you want to perform"),
+            ),
+        ]
+        files: Annotated[
+            List[FileDefinition],
+            Field(
+                title="Source files", description=("List of MARC21 files with authority records")
+            ),
+        ]
+        ils_flavour: Annotated[
+            IlsFlavour,
+            Field(
+                title="ILS flavour", description="The type of ILS you are migrating records from."
+            ),
+        ]
+        custom_bib_id_field: Annotated[
+            str,
+            Field(
+                title="Custom BIB ID field",
+                description=(
+                    'A string representing a MARC field with optional subfield indicated by a "$" '
+                    '(eg. "991$a") from which to draw legacy Bib ID. Use this in combination '
+                    'with `ilsFlavour: "custom"`. Defaults to "001", and is ignored for all other '
+                    "ilsFlavours."
+                ),
+            ),
+        ] = "001"
         add_administrative_notes_with_legacy_ids: Annotated[
             bool,
             Field(
+                title="Add administrative notes with legacy IDs",
                 description=(
                     "If set to true, an Administrative note will be added to the records "
                     "containing the legacy ID. Use this in order to protect the values from "
@@ -34,33 +74,26 @@ class BibsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = True
-        migration_task_type: str
-        hrid_handling: Optional[HridHandling] = HridHandling.default
-        deactivate035_from001: Optional[bool] = False
-        files: List[FileDefinition]
-        ils_flavour: IlsFlavour
-        custom_bib_id_field: Annotated[
-            str,
+        tags_to_delete: Annotated[
+            List[str],
             Field(
+                title="Tags to delete from MARC record",
                 description=(
-                    'A string representing a MARC field with optional subfield indicated by a "$" '
-                    '(eg. "991$a") from which to draw legacy Bib ID. Use this in combination '
-                    'with `ilsFlavour: "custom"`. Defaults to "001", and is ignored for all other '
-                    "ilsFlavours."
-                )
+                    "Tags in the incoming MARC authority that the process should remove "
+                    "before adding them into FOLIO. These tags will be used in the "
+                    "transformation before getting removed."
+                ),
             ),
-        ] = "001"
-        tags_to_delete: Optional[List[str]] = []
-        reset_hrid_settings: Optional[bool] = False
-        update_hrid_settings: Annotated[
+        ] = []
+        create_source_records: Annotated[
             bool,
             Field(
-                title="Update HRID settings",
-                description="At the end of the run, update FOLIO with the HRID settings",
+                title="Create source records",
+                description=(
+                    "Controls wheter or not to retain the MARC records in "
+                    "Source Record Storage."
+                ),
             ),
-        ] = True
-        create_source_records: Annotated[
-            bool, Field(description="Controls wheter or not to retain the MARC records in SRS.")
         ] = True
         parse_cataloged_date: Annotated[
             bool,
@@ -69,6 +102,25 @@ class BibsTransformer(MigrationTaskBase):
                 description=(
                     "Parse fields mapped to catalogedDate into a FOLIO accepted date string using "
                     "dateutil.parser. Verify results carefully when using"
+                ),
+            ),
+        ] = False
+        hrid_handling: Optional[HridHandling] = HridHandling.default
+        reset_hrid_settings: Optional[bool] = False
+        update_hrid_settings: Annotated[
+            bool,
+            Field(
+                title="Update HRID settings",
+                description="At the end of the run, update FOLIO with the HRID settings",
+            ),
+        ] = True
+        deactivate035_from001: Annotated[
+            bool,
+            Field(
+                title="Create 035 from 001 and 003",
+                description=(
+                    "This deactivates the FOLIO default functionality of moving the previous 001 "
+                    "into a 035, prefixed with the value from 003"
                 ),
             ),
         ] = False
