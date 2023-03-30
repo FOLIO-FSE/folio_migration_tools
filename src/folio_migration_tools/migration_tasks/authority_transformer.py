@@ -1,7 +1,6 @@
 import logging
 from typing import Annotated
 from typing import List
-from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
@@ -22,18 +21,54 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class AuthorityTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: Annotated[str, Field(description=("Name of this task"))]
+        name: Annotated[
+            str,
+            Field(
+                description=(
+                    "Name of this migration task. The name is being used to call the specific "
+                    "task, and to distinguish tasks of similar types"
+                )
+            ),
+        ]
         migration_task_type: Annotated[
-            str, Field(description=("The string represenation of this class. Do not set"))
+            str,
+            Field(
+                title="Migration task type",
+                description=("The type of migration task you want to perform"),
+            ),
         ]
         files: Annotated[
             List[FileDefinition],
-            Field(description=("List of MARC21 files with authority records")),
+            Field(
+                title="Source files", description=("List of MARC21 files with authority records")
+            ),
         ]
-        ils_flavour: IlsFlavour
-        tags_to_delete: Optional[List[str]] = []
+        ils_flavour: Annotated[
+            IlsFlavour,
+            Field(
+                title="ILS flavour", description="The type of ILS you are migrating records from."
+            ),
+        ]
+        tags_to_delete: Annotated[
+            List[str],
+            Field(
+                title="Tags to delete from MARC record",
+                description=(
+                    "Tags in the incoming MARC authority that the process should remove "
+                    "before adding them into FOLIO. These tags will be used in the "
+                    "transformation before getting removed."
+                ),
+            ),
+        ] = []
         create_source_records: Annotated[
-            bool, Field(description="Controls wheter or not to retain the MARC records in SRS.")
+            bool,
+            Field(
+                title="Create source records",
+                description=(
+                    "Controls wheter or not to retain the MARC records in "
+                    "Source Record Storage."
+                ),
+            ),
         ] = True
 
     @staticmethod
