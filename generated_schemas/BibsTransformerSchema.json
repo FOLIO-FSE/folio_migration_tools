@@ -4,17 +4,63 @@
     "properties": {
         "name": {
             "title": "Name",
+            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
+            "type": "string"
+        },
+        "migrationTaskType": {
+            "title": "Migration task type",
+            "description": "The type of migration task you want to perform",
+            "type": "string"
+        },
+        "files": {
+            "title": "Source files",
+            "description": "List of MARC21 files with authority records",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/FileDefinition"
+            }
+        },
+        "ilsFlavour": {
+            "title": "ILS flavour",
+            "description": "The type of ILS you are migrating records from.",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/IlsFlavour"
+                }
+            ]
+        },
+        "customBibIdField": {
+            "title": "Custom BIB ID field",
+            "description": "A string representing a MARC field with optional subfield indicated by a \"$\" (eg. \"991$a\") from which to draw legacy Bib ID. Use this in combination with `ilsFlavour: \"custom\"`. Defaults to \"001\", and is ignored for all other ilsFlavours.",
+            "default": "001",
             "type": "string"
         },
         "addAdministrativeNotesWithLegacyIds": {
-            "title": "Addadministrativenoteswithlegacyids",
+            "title": "Add administrative notes with legacy IDs",
             "description": "If set to true, an Administrative note will be added to the records containing the legacy ID. Use this in order to protect the values from getting overwritten by overlays,",
             "default": true,
             "type": "boolean"
         },
-        "migrationTaskType": {
-            "title": "Migrationtasktype",
-            "type": "string"
+        "tagsToDelete": {
+            "title": "Tags to delete from MARC record",
+            "description": "Tags in the incoming MARC authority that the process should remove before adding them into FOLIO. These tags will be used in the transformation before getting removed.",
+            "default": [],
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "createSourceRecords": {
+            "title": "Create source records",
+            "description": "Controls wheter or not to retain the MARC records in Source Record Storage.",
+            "default": true,
+            "type": "boolean"
+        },
+        "parseCatalogedDate": {
+            "title": "Parse cataloged date",
+            "description": "Parse fields mapped to catalogedDate into a FOLIO accepted date string using dateutil.parser. Verify results carefully when using",
+            "default": false,
+            "type": "boolean"
         },
         "hridHandling": {
             "default": "default",
@@ -23,35 +69,6 @@
                     "$ref": "#/definitions/HridHandling"
                 }
             ]
-        },
-        "deactivate035From001": {
-            "title": "Deactivate035From001",
-            "default": false,
-            "type": "boolean"
-        },
-        "files": {
-            "title": "Files",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
-        },
-        "ilsFlavour": {
-            "$ref": "#/definitions/IlsFlavour"
-        },
-        "customBibIdField": {
-            "title": "Custombibidfield",
-            "description": "A string representing a MARC field with optional subfield indicated by a \"$\" (eg. \"991$a\") from which to draw legacy Bib ID. Use this in combination with `ilsFlavour: \"custom\"`. Defaults to \"001\", and is ignored for all other ilsFlavours.",
-            "default": "001",
-            "type": "string"
-        },
-        "tagsToDelete": {
-            "title": "Tagstodelete",
-            "default": [],
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
         },
         "resetHridSettings": {
             "title": "Resethridsettings",
@@ -64,15 +81,9 @@
             "default": true,
             "type": "boolean"
         },
-        "createSourceRecords": {
-            "title": "Createsourcerecords",
-            "description": "Controls wheter or not to retain the MARC records in SRS.",
-            "default": true,
-            "type": "boolean"
-        },
-        "parseCatalogedDate": {
-            "title": "Parse cataloged date",
-            "description": "Parse fields mapped to catalogedDate into a FOLIO accepted date string using dateutil.parser. Verify results carefully when using",
+        "deactivate035From001": {
+            "title": "Create 035 from 001 and 003",
+            "description": "This deactivates the FOLIO default functionality of moving the previous 001 into a 035, prefixed with the value from 003",
             "default": false,
             "type": "boolean"
         }
@@ -84,15 +95,6 @@
         "ilsFlavour"
     ],
     "definitions": {
-        "HridHandling": {
-            "title": "HridHandling",
-            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
-            "enum": [
-                "default",
-                "preserve001"
-            ],
-            "type": "string"
-        },
         "FileDefinition": {
             "title": "FileDefinition",
             "type": "object",
@@ -134,6 +136,15 @@
                 "tagf990a",
                 "custom",
                 "none"
+            ],
+            "type": "string"
+        },
+        "HridHandling": {
+            "title": "HridHandling",
+            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
+            "enum": [
+                "default",
+                "preserve001"
             ],
             "type": "string"
         }
