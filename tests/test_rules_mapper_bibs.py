@@ -65,7 +65,7 @@ def default_map(file_name, xpath, the_mapper: BibsRulesMapper):
     }
     file_path = f"./tests/test_data/default/{file_name}"
     record = pymarc.parse_xml_to_array(file_path)[0]
-    file_def = FileDefinition(file_name="", suppressed=False, staff_suppressed=False)
+    file_def = FileDefinition(file_name="", discovery_suppressed=False, staff_suppressed=False)
     result = the_mapper.parse_record(record, file_def, ["legacy_id"])[0]
     the_mapper.perform_additional_parsing(result, record, ["legacy_id"], file_def)
     root = etree.parse(file_path)
@@ -83,7 +83,7 @@ def default_map_suppression(file_name, xpath, the_mapper):
     }
     file_path = f"./tests/test_data/default/{file_name}"
     record = pymarc.parse_xml_to_array(file_path)[0]
-    file_def = FileDefinition(file_name="", suppressed=True, staff_suppressed=True)
+    file_def = FileDefinition(file_name="", discovery_suppressed=True, staff_suppressed=True)
     result = the_mapper.parse_record(record, file_def, ["legacy_id"])[0]
     root = etree.parse(file_path)
     data = ""

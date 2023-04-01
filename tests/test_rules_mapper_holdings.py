@@ -79,7 +79,9 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
         record = next(reader)
         ids = RulesMapperHoldings.get_legacy_ids(mapper, record, 1)
         res = mapper.parse_record(
-            record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False), ids
+            record,
+            FileDefinition(file_name="", discovery_suppressed=False, staff_suppressed=False),
+            ids,
         )[0]
         assert res
         assert res["permanentLocationId"] == "f34d27c6-a8eb-461b-acd6-5dea81771e70"

@@ -49,7 +49,13 @@ class ItemsTransformer(MigrationTaskBase):
         item_statuses_map_file_name: str
         call_number_type_map_file_name: str
         reset_hrid_settings: Optional[bool] = False
-        never_update_hrid_settings: Optional[bool] = False
+        update_hrid_settings: Annotated[
+            bool,
+            Field(
+                title="Update HRID settings",
+                description="At the end of the run, update FOLIO with the HRID settings",
+            ),
+        ] = True
         boundwith_relationship_file_path: Annotated[
             str,
             Field(
@@ -185,7 +191,7 @@ class ItemsTransformer(MigrationTaskBase):
         )
         if (
             self.task_configuration.reset_hrid_settings
-            and not self.task_configuration.never_update_hrid_settings
+            and self.task_configuration.update_hrid_settings
         ):
             hrid_handler = HRIDHandler(
                 self.folio_client, HridHandling.default, self.mapper.migration_report, True

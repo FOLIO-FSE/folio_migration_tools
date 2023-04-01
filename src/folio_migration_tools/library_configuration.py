@@ -22,10 +22,19 @@ class HridHandling(str, Enum):
 
 
 class FileDefinition(BaseModel):
-    file_name: str
-    suppressed: Optional[bool] = False
-    staff_suppressed: Optional[bool] = False
-    service_point_id: Optional[str] = ""
+    file_name: Annotated[
+        str,
+        Field(
+            title="File name",
+            description=(
+                "Name of the file to be processed. "
+                "The location of the file depends on the context"
+            ),
+        ),
+    ] = ""
+    discovery_suppressed: Annotated[bool, Field(title="Discovery suppressed")] = False
+    staff_suppressed: Annotated[bool, Field(title="Staff suppressed")] = False
+    service_point_id: Annotated[str, Field(title="Service point ID")] = ""
 
 
 class IlsFlavour(str, Enum):
