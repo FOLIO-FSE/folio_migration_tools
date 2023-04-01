@@ -474,7 +474,7 @@ def test_should_add_notes_500_510_to_notes_list(mapper):
     so = [note["staffOnly"] for note in record[0]["notes"]]
     print(so)
     for s in so:
-        assert type(s) is bool
+        assert isinstance(s, bool)
     assert '"Embedded application development for home and industry."--Cover' in notes
 
     assert (

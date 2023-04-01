@@ -722,6 +722,79 @@ def test_validate_required_properties_obj(mocked_folio_client: FolioClient):
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert folio_rec["electronicAccessObj"]["uri"] == "some_link"
 
+def test_validate_required_properties_array_object_with_object_and_strings(mocked_folio_client: FolioClient):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "contacts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["firstName"],
+                    "properties": {
+                        "firstName": {"type": "string"},
+                        "lastName": {"type": "string"},
+                        "addresses": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "addressLine1": {"type": "string"},
+                                    "addressLine2": {"type": "string"},
+                                },
+                                "required": ["addressLine1"]
+                            },
+                        },
+                    },
+                },
+            }
+        },
+    }
+
+    record = {
+        "id": "id1",
+        "fname": "",
+        "contact_address_line1": "My Street",
+        "contact_address2_line1": "My other street",
+        "contact2_address_line1": "Yet another street",
+        "contact_address_town": "Gothenburg",
+        "contact_address_types": "support<delimiter>sales"
+        }
+    
+    org_map = {
+        "data": [
+            {
+                "folio_field": "contacts[0].firstName",
+                "legacy_field": "fname",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].addressLine1",
+                "legacy_field": "contact_address_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].addresses[0].categories",
+                "legacy_field": "contact_address_types",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    contact = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert "contacts" not in folio_rec
 
 def test_validate_required_properties_item_notes_split_on_delimiter_notes(
     mocked_folio_client: FolioClient,
@@ -928,6 +1001,163 @@ def test_validate_remove_and_report_incomplete_object_property(mocked_folio_clie
 
     folio_rec, folio_id = mapper.do_map(record3, record3["id"], FOLIONamespaces.organizations)
     assert "interfaces" not in folio_rec
+
+
+def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_folio_client):
+    # 531
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "name": {"description": "The name of this organization", "type": "string"},
+            "contacts": {
+                "id": "contact",
+                "description": "An array of contact record IDs",
+                "type": "array",
+                "items": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "description": "A contact record",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "description": "The unique id of this contact",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string",
+                        },
+                        "firstName": {
+                            "description": "The first name of this contact person",
+                            "type": "string",
+                        },
+                        "lastName": {
+                            "description": "The last name of this contact person",
+                            "type": "string",
+                        },
+                        "emails": {
+                            "id": "emailAddresses",
+                            "description": "The list of emails for this contact person",
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "$ref": "email.json",
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "description": "An email record",
+                                "properties": {
+                                    "id": {
+                                        "description": "The unique id of this email",
+                                        "$ref": "../../common/schemas/uuid.json",
+                                    },
+                                    "value": {
+                                        "description": "The value for this email",
+                                        "type": "string",
+                                    },
+                                    "description": {
+                                        "description": "The description for this email",
+                                        "type": "string",
+                                    },
+                                    "isPrimary": {
+                                        "description": "Used to set this email as primary for the contact",
+                                        "type": "boolean",
+                                    },
+                                    "categories": {
+                                        "id": "categories",
+                                        "description": "The list of categories for this organization email",
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                    "language": {
+                                        "description": "The language for this organization email",
+                                        "type": "string",
+                                    },
+                                },
+                                "additionalProperties": False,
+                                "required": ["value"],
+                            },
+                        },
+                    },
+                        "inactive": {
+                        "description": "Used to indicate that a contact is no longer active",
+                        "type": "boolean",
+                        "default": False
+                    },
+                    "additionalProperties": False,
+                    "required": ["firstName", "lastName"],
+                },
+            },
+        },
+    }
+
+    record = {
+        "id": "test_validate_required_properites_in_array_objects_with_sub_objects",
+        "name": "My Org",
+        "contact_person1_f": "Jane",
+        "contact_person1_l": "",
+        "contact_person1_e": "myemai1@myemail.com",
+        "contact_person2_f": "John",
+        "contact_person2_l": "James",
+        "contact_person2_e": "myemail2@myemail.com",
+    }
+
+    org_map = {
+        "data": [
+            {
+                "folio_field": "name",
+                "legacy_field": "name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].lastName",
+                "legacy_field": "",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].firstName",
+                "legacy_field": "contact_person1_f",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[0].emails[0].value",
+                "legacy_field": "contact_person1_e",
+                "value": "",
+                "description": "",
+            },
+                        {
+                "folio_field": "contacts[1].lastName",
+                "legacy_field": "contact_person2_l",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[1].firstName",
+                "legacy_field": "contact_person2_f",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "contacts[1].emails[0].value",
+                "legacy_field": "contact_person2_e",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema, org_map, mocked_folio_client)
+    org, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert len(org["contacts"]) == 1
 
 
 def test_multiple_repeated_split_on_delimiter_electronic_access(mocked_folio_client):
@@ -3317,7 +3547,6 @@ def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client: Folio
     assert folio_rec["streets"][2] == "Yet another street"
 
 
-# TODO Make this run successfully.
 def test_map_array_object_array_object_array_string(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",

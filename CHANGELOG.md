@@ -1,5 +1,73 @@
 # Changelog
 
+## 1.7.9 (30/03/2023)
+
+#### Inventory
+
+- [**Inventory**] Implement condition set_contributor_type_text [#555](https://github.com/FOLIO-FSE/folio_migration_tools/issues/555)
+- [**Inventory**] When matching of Contributor type string fails, add the string to the freetext field of the contributor type. i [#523](https://github.com/FOLIO-FSE/folio_migration_tools/issues/523)
+- [**Inventory**] Make sure cataloged dates mapped are properly formatted. [#385](https://github.com/FOLIO-FSE/folio_migration_tools/issues/385)
+- [**Inventory**] Implement Bound-with mapping for Voyager [#380](https://github.com/FOLIO-FSE/folio_migration_tools/issues/380)
+
+#### Migration Reports
+
+- [**Migration Reports**][**Organizations**][**Inventory**] Include legacy values mapped to array subproperties in Mapped legacy fields [#543](https://github.com/FOLIO-FSE/folio_migration_tools/issues/543)
+
+#### Orders
+
+- [**Orders**] Implement Notes handling for Composite Orders [#530](https://github.com/FOLIO-FSE/folio_migration_tools/issues/530)
+
+#### Simplify migration process
+
+- [**Simplify migration process**][**performance**] Improve performance for ItemsTransformer by calling super().get_prop() only when needed. [#569](https://github.com/FOLIO-FSE/folio_migration_tools/issues/569)
+
+#### Support for changes in FOLIO
+
+- [**Support for changes in FOLIO**] implement new bib rule feature: AlternativeMapping [#498](https://github.com/FOLIO-FSE/folio_migration_tools/issues/498)
+- [**Support for changes in FOLIO**] Implement condition set_contributor_type_id_by_code_or_name for bibs [#497](https://github.com/FOLIO-FSE/folio_migration_tools/issues/497)
+
+#### Tool enhancements
+
+- [**Tool enhancements**][**performance**] Introduce setting in Batchposter for toggling reposting of records [#558](https://github.com/FOLIO-FSE/folio_migration_tools/issues/558)
+- [**Tool enhancements**] Update "ilsFlavour" handling for legacy Bib ID to support merged records for MOBIUS [#546](https://github.com/FOLIO-FSE/folio_migration_tools/issues/546)
+
+#### Users
+
+- [**Users**] Add requestPreference object schema to user schema [#549](https://github.com/FOLIO-FSE/folio_migration_tools/issues/549)
+
+#### bug
+
+- [**bug**][**Users**] Empty user dates are returned as today's date  [#575](https://github.com/FOLIO-FSE/folio_migration_tools/issues/575)
+- [**bug**][**Inventory**] HRID settings fail to update at the end of transformation [#550](https://github.com/FOLIO-FSE/folio_migration_tools/issues/550)
+- [**bug**] Make validation of required properties work for arrays containing objects/arrays [#531](https://github.com/FOLIO-FSE/folio_migration_tools/issues/531)
+- [**bug**] Re-posting Inventory records to FOLIO over the Batch API:s renders in HTTP 409:s [#250](https://github.com/FOLIO-FSE/folio_migration_tools/issues/250)
+- [**bug**] Some legacy fields on items does not get reported into the legacy mapping report even though they are mapped [#84](https://github.com/FOLIO-FSE/folio_migration_tools/issues/84)
+- [**bug**][**Migration Reports**] main_items.py does not seem to count all available legacy fields [#79](https://github.com/FOLIO-FSE/folio_migration_tools/issues/79)
+
+#### closed
+
+- [**closed**] Create release tag [#570](https://github.com/FOLIO-FSE/folio_migration_tools/issues/570)
+- [**closed**] Fix unclosed StringIO objects in mapping_file_mapper_base tests [#563](https://github.com/FOLIO-FSE/folio_migration_tools/issues/563)
+- [**closed**] Add requests and yaml to folio_migration_tools requirements [#552](https://github.com/FOLIO-FSE/folio_migration_tools/issues/552)
+- [**closed**] Make sure all FileMappers uses MappingFileMapperBase.get_legacy_value [#513](https://github.com/FOLIO-FSE/folio_migration_tools/issues/513)
+
+#### duplicate
+
+- [**duplicate**][**Orders**] Make Batchposter post Composite POs/POLs [#526](https://github.com/FOLIO-FSE/folio_migration_tools/issues/526)
+- [**duplicate**][**Support for changes in FOLIO**] implement Condition concat_subfields_by_name [#499](https://github.com/FOLIO-FSE/folio_migration_tools/issues/499)
+
+#### wontfix
+
+- [**wontfix**][**async-support**] Repost of records in failed batches should be multithreaded [#540](https://github.com/FOLIO-FSE/folio_migration_tools/issues/540)
+- [**wontfix**][**Support for changes in FOLIO**] Adapt tools to Morning Glory [#329](https://github.com/FOLIO-FSE/folio_migration_tools/issues/329)
+
+---
+
+## v_1_7_8 (05/03/2023)
+*No changelog for this release.*
+
+---
+
 ## v_1_7_6 (04/03/2023)
 
 #### Organizations
@@ -336,7 +404,7 @@
 
 ---
 
-## 1_4_6 (24/06/2022)
+## 1_4_6 (23/06/2022)
 
 #### closed
 
@@ -540,26 +608,3 @@ Batchposter now allows running multiple files of the same object type in one run
 
 
 **Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/kiwi_1_1...1.0.4
----
-
-## Kiwi 1.1 (31/03/2022)
-## What's Changed
-* Adds use_logging parameter to BatchPoster by @jermnelson in https://github.com/FOLIO-FSE/folio_migration_tools/pull/173
-* Fixes to MFHD and User notes. by @fontanka16 in https://github.com/FOLIO-FSE/folio_migration_tools/pull/185
-
-## Fixes the following issues and bugs:
-* #156 Add notes to users through extradata
-* #165 Bug: Item transformation: Don't add a "notes" object when there is no a "note" property
-* #167 Bug: mapping_file_mapper_base.py: object is excluded from array if non-required sub-property is ""
-* #174 Make scripts create separate extradata files per task
-* #175 Reset extradata file when running a task 
-* #178 Bug: Fix issue with srs mfhd ids
-* #180 Bug: Bound-with-holdings does not come over from previously run holdings
-* #181 Handle MFHD with illegal lengths in 008:s
-* #182 Bug: Holdings migrating scripts updates/resets the HRID counters when HRIDs are not controlled by the script
-* #184 Bug: User notes are created even thought they have no content
-
-**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/kiwi_1_0...kiwi_1_1
----
-
-## Kiwi 1.0 (16/03/2022)

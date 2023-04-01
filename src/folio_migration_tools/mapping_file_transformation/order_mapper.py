@@ -74,12 +74,19 @@ class CompositeOrderMapper(MappingFileMapperBase):
         self.notes_mapper.migration_report = self.migration_report
 
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id):
-        mapped_value = super().get_prop(legacy_order, folio_prop_name, index_or_id)
         if folio_prop_name.endswith(".acquisitionMethod"):
             mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
             return mapped_val["folio_id"]
 
-        elif folio_prop_name == "vendor":
+        elif re.compile(r"compositePoLines\[(\d+)\]\.id").fullmatch(folio_prop_name):
+            return str(uuid.uuid4())
+
+        elif re.compile(r"notes\[\d+\]\.").match(folio_prop_name):
+            return ""
+
+        mapped_value = super().get_prop(legacy_order, folio_prop_name, index_or_id)
+
+        if folio_prop_name == "vendor":
             if mapped_value in self.vendor_code_map:
                 self.migration_report.add_general_statistics(
                     "Successfully matched Vendor against code"
@@ -90,12 +97,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 Helper.log_data_issue(
                     index_or_id, "Vendor code not found among migrated Organizations", mapped_value
                 )
-
-        elif re.compile("compositePoLines\[(\d+)\]\.id").fullmatch(folio_prop_name):
-            return str(uuid.uuid4())
-
-        elif re.compile(r"notes\[\d+\]\.").match(folio_prop_name):
-            return ""
 
         elif folio_prop_name.endswith(".instanceId"):
             if mapped_value in self.instance_id_map:
