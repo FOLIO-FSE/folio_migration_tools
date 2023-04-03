@@ -1,7 +1,6 @@
 import logging
 from typing import Annotated
 from typing import List
-from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
@@ -105,15 +104,37 @@ class BibsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = False
-        hrid_handling: Optional[HridHandling] = HridHandling.default
-        reset_hrid_settings: Optional[bool] = False
-        update_hrid_settings: Annotated[
+        hrid_handling: Annotated[
+            HridHandling,
+            Field(
+                title="HRID Handling",
+                description=(
+                    "Setting to default will make FOLIO generate HRIDs and move the existing "
+                    "001:s into a 035, concatenated with the 003. Choosing preserve001 means "
+                    "the 001:s will remain in place, and that they will also become the HRIDs"
+                ),
+            ),
+        ] = HridHandling.default
+        reset_hrid_settings: Annotated[
             bool,
             Field(
-                title="Update HRID settings",
-                description="At the end of the run, update FOLIO with the HRID settings",
+                title="Reset HRID settings",
+                description=(
+                    "Setting to true means the task will "
+                    "reset the HRID counters for this particular record type"
+                ),
             ),
-        ] = True
+        ] = False
+        never_update_hrid_settings: Annotated[
+            bool,
+            Field(
+                title="Do not update HRID Settings",
+                description=(
+                    "Setting to true will prevent the task from storing "
+                    "the current HRID settings back to FOLIO"
+                ),
+            ),
+        ] = False
         deactivate035_from001: Annotated[
             bool,
             Field(
