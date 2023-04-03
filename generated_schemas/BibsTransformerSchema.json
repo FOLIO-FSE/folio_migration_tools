@@ -63,6 +63,8 @@
             "type": "boolean"
         },
         "hridHandling": {
+            "title": "HRID Handling",
+            "description": "Setting to default will make FOLIO generate HRIDs and move the existing 001:s into a 035, concatenated with the 003. Choosing preserve001 means the 001:s will remain in place, and that they will also become the HRIDs",
             "default": "default",
             "allOf": [
                 {
@@ -71,14 +73,15 @@
             ]
         },
         "resetHridSettings": {
-            "title": "Resethridsettings",
+            "title": "Reset HRID settings",
+            "description": "Setting to true means the task will reset the HRID counters for this particular record type",
             "default": false,
             "type": "boolean"
         },
-        "updateHridSettings": {
-            "title": "Update HRID settings",
-            "description": "At the end of the run, update FOLIO with the HRID settings",
-            "default": true,
+        "neverUpdateHridSettings": {
+            "title": "Do not update HRID Settings",
+            "description": "Setting to true will prevent the task from storing the current HRID settings back to FOLIO",
+            "default": false,
             "type": "boolean"
         },
         "deactivate035From001": {
