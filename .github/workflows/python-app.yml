@@ -33,7 +33,7 @@ jobs:
 
     - name: Run the nox test session
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.TESTS_GITHUB_TOKEN }}
       run: |
         nox -rs tests
 
