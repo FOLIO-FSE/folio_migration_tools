@@ -4,22 +4,25 @@
     "properties": {
         "name": {
             "title": "Name",
+            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
             "type": "string"
-        },
-        "legacyIdMarcPath": {
-            "title": "Legacyidmarcpath",
-            "type": "string"
-        },
-        "deduplicateHoldingsStatements": {
-            "title": "Deduplicateholdingsstatements",
-            "default": true,
-            "type": "boolean"
         },
         "migrationTaskType": {
-            "title": "Migrationtasktype",
+            "title": "Migration task type",
+            "description": "The type of migration task you want to perform",
             "type": "string"
         },
+        "files": {
+            "title": "Source files",
+            "description": "List of MARC21 files with authority records",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/FileDefinition"
+            }
+        },
         "hridHandling": {
+            "title": "HRID Handling",
+            "description": "Setting to default will make FOLIO generate HRIDs and move the existing 001:s into a 035, concatenated with the 003. Choosing preserve001 means the 001:s will remain in place, and that they will also become the HRIDs",
             "default": "default",
             "allOf": [
                 {
@@ -28,28 +31,10 @@
             ]
         },
         "deactivate035From001": {
-            "title": "Deactivate035From001",
+            "title": "Create 035 from 001 and 003",
+            "description": "This deactivates the FOLIO default functionality of moving the previous 001 into a 035, prefixed with the value from 003",
             "default": false,
             "type": "boolean"
-        },
-        "files": {
-            "title": "Files",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
-        },
-        "locationMapFileName": {
-            "title": "Locationmapfilename",
-            "type": "string"
-        },
-        "defaultCallNumberTypeName": {
-            "title": "Defaultcallnumbertypename",
-            "type": "string"
-        },
-        "fallbackHoldingsTypeId": {
-            "title": "Fallbackholdingstypeid",
-            "type": "string"
         },
         "holdingsTypeUuidForBoundwiths": {
             "title": "Holdings Type for Boundwith Holdings",
@@ -64,14 +49,9 @@
             "type": "string"
         },
         "createSourceRecords": {
-            "title": "Createsourcerecords",
-            "description": "Controls wheter or not to retain the MARC records in SRS.",
+            "title": "Create source records",
+            "description": "Controls wheter or not to retain the MARC records in Source Record Storage.",
             "default": true,
-            "type": "boolean"
-        },
-        "resetHridSettings": {
-            "title": "Resethridsettings",
-            "default": false,
             "type": "boolean"
         },
         "updateHridSettings": {
@@ -79,27 +59,50 @@
             "description": "At the end of the run, update FOLIO with the HRID settings",
             "default": true,
             "type": "boolean"
+        },
+        "resetHridSettings": {
+            "title": "Reset HRID settings",
+            "description": "Setting to true means the task will reset the HRID counters for this particular record type",
+            "default": false,
+            "type": "boolean"
+        },
+        "legacyIdMarcPath": {
+            "title": "Path to legacy id in the records",
+            "description": "The path to the field where the legacy id is located. Example syntax: '001' or '951$c'",
+            "type": "string"
+        },
+        "deduplicateHoldingsStatements": {
+            "title": "Deduplicate holdings statements",
+            "description": "If set to False, duplicate holding statements within the same record will remain in place",
+            "default": true,
+            "type": "boolean"
+        },
+        "locationMapFileName": {
+            "title": "Path to location map file",
+            "description": "Must be a TSV file located in the mapping_files folder",
+            "type": "string"
+        },
+        "defaultCallNumberTypeName": {
+            "title": "Default callnumber type name",
+            "description": "The name of the callnumber type that will be used as fallback",
+            "type": "string"
+        },
+        "fallbackHoldingsTypeId": {
+            "title": "Fallback holdings type id",
+            "description": "The UUID of the Holdings type that will be used for unmapped values",
+            "type": "string"
         }
     },
     "required": [
         "name",
-        "legacyIdMarcPath",
         "migrationTaskType",
         "files",
+        "legacyIdMarcPath",
         "locationMapFileName",
         "defaultCallNumberTypeName",
         "fallbackHoldingsTypeId"
     ],
     "definitions": {
-        "HridHandling": {
-            "title": "HridHandling",
-            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
-            "enum": [
-                "default",
-                "preserve001"
-            ],
-            "type": "string"
-        },
         "FileDefinition": {
             "title": "FileDefinition",
             "type": "object",
@@ -126,6 +129,15 @@
                     "type": "string"
                 }
             }
+        },
+        "HridHandling": {
+            "title": "HridHandling",
+            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
+            "enum": [
+                "default",
+                "preserve001"
+            ],
+            "type": "string"
         }
     }
 }
