@@ -3,7 +3,6 @@ import csv
 import logging
 from typing import Annotated
 from typing import List
-from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
@@ -22,16 +21,49 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class HoldingsMarcTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        legacy_id_marc_path: str
-        deduplicate_holdings_statements: Optional[bool] = True
-        migration_task_type: str
-        hrid_handling: Optional[HridHandling] = HridHandling.default
-        deactivate035_from001: Optional[bool] = False
-        files: List[FileDefinition]
-        location_map_file_name: str
-        default_call_number_type_name: str
-        fallback_holdings_type_id: str
+        name: Annotated[
+            str,
+            Field(
+                description=(
+                    "Name of this migration task. The name is being used to call the specific "
+                    "task, and to distinguish tasks of similar types"
+                )
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description=("The type of migration task you want to perform"),
+            ),
+        ]
+        files: Annotated[
+            List[FileDefinition],
+            Field(
+                title="Source files", description=("List of MARC21 files with authority records")
+            ),
+        ]
+        hrid_handling: Annotated[
+            HridHandling,
+            Field(
+                title="HRID Handling",
+                description=(
+                    "Setting to default will make FOLIO generate HRIDs and move the existing "
+                    "001:s into a 035, concatenated with the 003. Choosing preserve001 means "
+                    "the 001:s will remain in place, and that they will also become the HRIDs"
+                ),
+            ),
+        ] = HridHandling.default
+        deactivate035_from001: Annotated[
+            bool,
+            Field(
+                title="Create 035 from 001 and 003",
+                description=(
+                    "This deactivates the FOLIO default functionality of moving the previous 001 "
+                    "into a 035, prefixed with the value from 003"
+                ),
+            ),
+        ] = False
         holdings_type_uuid_for_boundwiths: Annotated[
             str,
             Field(
@@ -53,9 +85,15 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             ),
         ] = ""
         create_source_records: Annotated[
-            bool, Field(description="Controls wheter or not to retain the MARC records in SRS.")
+            bool,
+            Field(
+                title="Create source records",
+                description=(
+                    "Controls wheter or not to retain the MARC records in "
+                    "Source Record Storage."
+                ),
+            ),
         ] = True
-        reset_hrid_settings: Optional[bool] = False
         update_hrid_settings: Annotated[
             bool,
             Field(
@@ -63,6 +101,57 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 description="At the end of the run, update FOLIO with the HRID settings",
             ),
         ] = True
+        reset_hrid_settings: Annotated[
+            bool,
+            Field(
+                title="Reset HRID settings",
+                description=(
+                    "Setting to true means the task will "
+                    "reset the HRID counters for this particular record type"
+                ),
+            ),
+        ] = False
+        legacy_id_marc_path: Annotated[
+            str,
+            Field(
+                title="Path to legacy id in the records",
+                description=(
+                    "The path to the field where the legacy id is located. "
+                    "Example syntax: '001' or '951$c'"
+                ),
+            ),
+        ]
+        deduplicate_holdings_statements: Annotated[
+            bool,
+            Field(
+                title="Deduplicate holdings statements",
+                description=(
+                    "If set to False, duplicate holding statements within the same record will "
+                    "remain in place"
+                ),
+            ),
+        ] = True
+        location_map_file_name: Annotated[
+            str,
+            Field(
+                title="Path to location map file",
+                description="Must be a TSV file located in the mapping_files folder",
+            ),
+        ]
+        default_call_number_type_name: Annotated[
+            str,
+            Field(
+                title="Default callnumber type name",
+                description="The name of the callnumber type that will be used as fallback",
+            ),
+        ]
+        fallback_holdings_type_id: Annotated[
+            str,
+            Field(
+                title="Fallback holdings type id",
+                description="The UUID of the Holdings type that will be used for unmapped values",
+            ),
+        ]
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
