@@ -78,10 +78,10 @@
             "default": false,
             "type": "boolean"
         },
-        "neverUpdateHridSettings": {
-            "title": "Do not update HRID Settings",
-            "description": "Setting to true will prevent the task from storing the current HRID settings back to FOLIO",
-            "default": false,
+        "updateHridSettings": {
+            "title": "Update HRID settings",
+            "description": "At the end of the run, update FOLIO with the HRID settings",
+            "default": true,
             "type": "boolean"
         },
         "deactivate035From001": {
