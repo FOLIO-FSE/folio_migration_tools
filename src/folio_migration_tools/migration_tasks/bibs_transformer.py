@@ -125,16 +125,13 @@ class BibsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = False
-        never_update_hrid_settings: Annotated[
+        update_hrid_settings: Annotated[
             bool,
             Field(
-                title="Do not update HRID Settings",
-                description=(
-                    "Setting to true will prevent the task from storing "
-                    "the current HRID settings back to FOLIO"
-                ),
+                title="Update HRID settings",
+                description="At the end of the run, update FOLIO with the HRID settings",
             ),
-        ] = False
+        ] = True
         deactivate035_from001: Annotated[
             bool,
             Field(
