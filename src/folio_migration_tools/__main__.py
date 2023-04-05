@@ -2,8 +2,8 @@ import json
 import logging
 import sys
 
+import httpx
 import humps
-import requests.exceptions
 from argparse_prompt import PromptParser
 from pydantic import ValidationError
 
@@ -102,9 +102,9 @@ def main():
             logging.info("Work done. Shutting down")
             sys.exit(0)
             # task_obj.wrap_up()
-    except requests.exceptions.SSLError:
+    except httpx.SSLError:
         print("\nSSL error. Are you connected to the Internet and the VPN?")
-    except requests.exceptions.ConnectionError as connection_error:
+    except httpx.ConnectionError as connection_error:
         print(
             f"\nConnection Error when connecting to {connection_error.request.url}. "
             "Are you connectet to the Internet/VPN? Do you need to update DNS settings?"

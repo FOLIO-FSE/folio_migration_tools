@@ -6,10 +6,10 @@ import sys
 import urllib.parse
 import uuid
 
-import requests
+import httpx
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
-from requests.exceptions import HTTPError
+from httpx import HTTPError
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
@@ -163,7 +163,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas/"
             )
 
-            req = requests.get(f"{acq_models_path}/{object}.json", headers=github_headers)
+            req = httpx.get(
+                f"{acq_models_path}/{object}.json",
+                headers=github_headers,
+                follow_redirects=True,
+                timeout=None,
+            )
             req.raise_for_status()
 
             object_schema = json.loads(req.text)
@@ -171,7 +176,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return CompositeOrderMapper.build_extended_object(
                 object_schema, acq_models_path, github_headers
             )
-        except requests.exceptions.HTTPError as http_error:
+        except httpx.HTTPError as http_error:
             logging.critical(f"Halting! \t{http_error}")
             sys.exit(2)
 
@@ -201,7 +206,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         # Get metadata for the latest release
         latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
-        req = requests.get(f"{latest_release_path}", headers=github_headers)
+        req = httpx.get(
+            f"{latest_release_path}", headers=github_headers, follow_redirects=True, timeout=None
+        )
         req.raise_for_status()
         latest_release = json.loads(req.text)
 
@@ -211,7 +218,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         # Get the tree for the latest release
         tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
-        req = requests.get(tree_path, headers=github_headers)
+        req = httpx.get(tree_path, headers=github_headers, follow_redirects=True, timeout=None)
         req.raise_for_status()
         release_tree = json.loads(req.text)
 
@@ -220,7 +227,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         # Get the tree for the ramls folder
         ramls_path = f"{github_path}/{owner}/{repo}/git/trees/{ramls_sha}"
-        req = requests.get(ramls_path, headers=github_headers)
+        req = httpx.get(ramls_path, headers=github_headers, follow_redirects=True, timeout=None)
         req.raise_for_status()
         ramls_tree = json.loads(req.text)
 
@@ -333,7 +340,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
             if schema_url.endswith("metadata.schema"):
                 schema_url = f"{base_raml}schemas/metadata.schema"
 
-            req = requests.get(schema_url, headers=github_headers)
+            req = httpx.get(
+                schema_url, headers=github_headers, follow_redirects=True, timeout=None
+            )
             req.raise_for_status()
             return dict(property, **json.loads(req.text))
         except Exception as ee:
@@ -345,7 +354,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
         try:
             u1 = urllib.parse.urlparse(submodule_path)
             schema_url = urllib.parse.urljoin(u1.geturl(), property["items"]["$ref"])
-            req = requests.get(schema_url, headers=github_headers)
+            req = httpx.get(
+                schema_url, headers=github_headers, follow_redirects=True, timeout=None
+            )
             req.raise_for_status()
             return dict(property["items"], **json.loads(req.text))
         except Exception as ee:

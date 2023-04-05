@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-import requests
+import httpx
 
 super_schema: dict = {
     "/location-units/campuses": {},
@@ -95,7 +95,7 @@ def get_ref_data_from_github_folder(owner, repo, folder_path: str):
         }
 
         latest_path = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
-        req = requests.get(latest_path, headers=github_headers)
+        req = httpx.get(latest_path, headers=github_headers)
         req.raise_for_status()
         latest = json.loads(req.text)
         # print(json.dumps(latest, indent=4))
@@ -104,13 +104,13 @@ def get_ref_data_from_github_folder(owner, repo, folder_path: str):
             f"https://api.github.com/repos/{owner}/{repo}/contents{folder_path}?ref={latest_tag}"
         )
         # print(latest_path)
-        req = requests.get(path, headers=github_headers)
+        req = httpx.get(path, headers=github_headers)
         req.raise_for_status()
         file_list = [x["name"] for x in json.loads(req.text) if x["type"] == "file"]
         github_path = "https://raw.githubusercontent.com"
         for file_name in file_list:
             file_path = f"{github_path}/{owner}/{repo}/{latest_tag}{folder_path}/{file_name}"
-            resp = requests.get(file_path, headers=github_headers)
+            resp = httpx.get(file_path, headers=github_headers)
             resp.raise_for_status()
             ret_arr.append(json.loads(resp.text))
         logging.debug(folder_path)
