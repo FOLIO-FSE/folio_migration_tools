@@ -269,3 +269,62 @@ def test_set_default_call_number_type_if_empty():
         mocked_rules_mapper_holdings, with_callno_type_specified
     )
     assert with_callno_type_specified["callNumberTypeId"] == "22156b02-785f-51c0-8723-416512cd42d9"
+
+
+def test_create_source_records_equals_false():
+    folio = mocked_classes.mocked_folio_client()
+    lib = LibraryConfiguration(
+        okapi_url=folio.okapi_url,
+        tenant_id=folio.tenant_id,
+        okapi_username=folio.username,
+        okapi_password=folio.password,
+        folio_release=FolioRelease.morning_glory,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="I have no clue",
+        base_folder="/",
+    )
+    conf = HoldingsMarcTransformer.TaskConfiguration(
+        name="test",
+        migration_task_type="HoldingsTransformer",
+        hrid_handling=HridHandling.default,
+        files=[],
+        ils_flavour=IlsFlavour.voyager,
+        legacy_id_marc_path="001",
+        location_map_file_name="",
+        default_call_number_type_name="Dewey Decimal classification",
+        fallback_holdings_type_id="03c9c400-b9e3-4a07-ac0e-05ab470233ed",
+        create_source_records=False,
+    )
+    parent_id_map: dict[str, tuple] = {}
+    location_map = [
+        {"legacy_code": "jnlDesk", "folio_code": "KU/CC/DI/2"},
+        {"legacy_code": "*", "folio_code": "KU/CC/DI/2"},
+    ]
+    mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map, [])
+    mapper.folio_client = folio
+    mapper.migration_report = MigrationReport()
+    path = "./tests/test_data/mfhd/holding.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record: Record = None
+        mapper.parent_id_map = {
+            "7611780": (
+                "7611780",
+                "9d1673a3-a546-5afa-b0fb-5ab971f73eca",
+                "in00000000005",
+            )
+        }
+        record = next(reader)
+        ids = RulesMapperHoldings.get_legacy_ids(mapper, record, 1)
+        res = mapper.parse_record(
+            record, FileDefinition(file_name="", suppressed=False, staff_suppressed=False), ids
+        )[0]
+        assert res
+        assert res["permanentLocationId"] == "f34d27c6-a8eb-461b-acd6-5dea81771e70"
+        assert res.get("hrid", False) == False
+        assert len(res["administrativeNotes"]) > 0
+        assert res["callNumber"] == "QB611 .C44"
+        assert res["callNumberTypeId"] == "95467209-6d7b-468b-94df-0f5d7ad2747d"

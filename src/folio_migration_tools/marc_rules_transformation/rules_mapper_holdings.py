@@ -253,9 +253,12 @@ class RulesMapperHoldings(RulesMapperBase):
         self.pick_first_location_if_many(folio_holding, legacy_ids)
         self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
         HoldingsHelper.handle_notes(folio_holding)
-        self.hrid_handler.handle_hrid(
-            FOLIONamespaces.holdings, folio_holding, marc_record, legacy_ids
-        )
+        if self.task_configuration.create_source_records:
+            self.hrid_handler.handle_hrid(
+                FOLIONamespaces.holdings, folio_holding, marc_record, legacy_ids
+            )
+        else:
+            del folio_holding["hrid"]
         if not folio_holding.get("instanceId", ""):
             raise TransformationRecordFailedError(
                 "".join(folio_holding.get("formerIds", [])),
