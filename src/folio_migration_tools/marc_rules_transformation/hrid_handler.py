@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Set
 
-import requests
+import httpx
 from folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from pymarc import Field
@@ -156,9 +156,9 @@ class HRIDHandler:
             self.hrid_settings["holdings"]["startNumber"] = self.holdings_hrid_counter
             self.hrid_settings["items"]["startNumber"] = self.items_hrid_counter
             url = self.folio_client.okapi_url + self.hrid_path
-            resp = requests.put(
+            resp = httpx.put(
                 url,
-                data=json.dumps(self.hrid_settings),
+                json=self.hrid_settings,
                 headers=self.folio_client.okapi_headers,
             )
             resp.raise_for_status()

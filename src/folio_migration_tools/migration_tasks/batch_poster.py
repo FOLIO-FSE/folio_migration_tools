@@ -9,7 +9,7 @@ from typing import Annotated
 from typing import List
 from uuid import uuid4
 
-import requests
+import httpx
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
@@ -103,67 +103,73 @@ class BatchPoster(MigrationTaskBase):
         self.failed_fields: set = set()
         self.num_failures = 0
         self.num_posted = 0
+        self.okapi_headers = self.folio_client.okapi_headers
 
     def do_work(self):
-        try:
-            batch = []
-            if self.task_configuration.object_type == "SRS":
-                self.create_snapshot()
-            with open(self.folder_structure.failed_recs_path, "w") as failed_recs_file:
-                for file_def in self.task_configuration.files:
-                    path = self.folder_structure.results_folder / file_def.file_name
-                    with open(path) as rows:
-                        logging.info("Running %s", path)
-                        last_row = ""
-                        for self.processed, row in enumerate(rows, start=1):
-                            last_row = row
-                            if row.strip():
-                                try:
-                                    if self.task_configuration.object_type == "Extradata":
-                                        self.post_extra_data(row, self.processed, failed_recs_file)
-                                    elif not self.api_info["is_batch"]:
-                                        self.post_single_records(
-                                            row, self.processed, failed_recs_file
+        with httpx.Client(
+            timeout=None, headers=self.folio_client.okapi_headers
+        ) as self.http_client:
+            try:
+                batch = []
+                if self.task_configuration.object_type == "SRS":
+                    self.create_snapshot()
+                with open(self.folder_structure.failed_recs_path, "w") as failed_recs_file:
+                    for file_def in self.task_configuration.files:
+                        path = self.folder_structure.results_folder / file_def.file_name
+                        with open(path) as rows:
+                            logging.info("Running %s", path)
+                            last_row = ""
+                            for self.processed, row in enumerate(rows, start=1):
+                                last_row = row
+                                if row.strip():
+                                    try:
+                                        if self.task_configuration.object_type == "Extradata":
+                                            self.post_extra_data(
+                                                row, self.processed, failed_recs_file
+                                            )
+                                        elif not self.api_info["is_batch"]:
+                                            self.post_single_records(
+                                                row, self.processed, failed_recs_file
+                                            )
+                                        else:
+                                            batch = self.post_record_batch(
+                                                batch, failed_recs_file, row
+                                            )
+                                    except UnicodeDecodeError as unicode_error:
+                                        self.handle_unicode_error(unicode_error, last_row)
+                                    except TransformationProcessError as tpe:
+                                        self.handle_generic_exception(
+                                            tpe,
+                                            last_row,
+                                            batch,
+                                            self.processed,
+                                            failed_recs_file,
                                         )
-                                    else:
-                                        batch = self.post_record_batch(
-                                            batch, failed_recs_file, row
+                                        logging.critical("Halting %s", tpe)
+                                        print(f"\n\t{tpe.message}")
+                                        sys.exit(1)
+                                    except TransformationRecordFailedError as exception:
+                                        self.handle_generic_exception(
+                                            exception,
+                                            last_row,
+                                            batch,
+                                            self.processed,
+                                            failed_recs_file,
                                         )
-                                except UnicodeDecodeError as unicode_error:
-                                    self.handle_unicode_error(unicode_error, last_row)
-                                except TransformationProcessError as tpe:
-                                    self.handle_generic_exception(
-                                        tpe,
-                                        last_row,
-                                        batch,
-                                        self.processed,
-                                        failed_recs_file,
-                                    )
-                                    logging.critical("Halting %s", tpe)
-                                    print(f"\n\t{tpe.message}")
-                                    sys.exit(1)
-                                except TransformationRecordFailedError as exception:
-                                    self.handle_generic_exception(
-                                        exception,
-                                        last_row,
-                                        batch,
-                                        self.processed,
-                                        failed_recs_file,
-                                    )
-                                    batch = []
+                                        batch = []
 
-                if self.task_configuration.object_type != "Extradata" and any(batch):
-                    try:
-                        self.post_batch(batch, failed_recs_file, self.processed)
-                    except Exception as exception:
-                        self.handle_generic_exception(
-                            exception, last_row, batch, self.processed, failed_recs_file
-                        )
-                logging.info("Done posting %s records. ", (self.processed))
-        except Exception as ee:
-            if self.task_configuration.object_type == "SRS":
-                self.commit_snapshot()
-            raise ee
+                    if self.task_configuration.object_type != "Extradata" and any(batch):
+                        try:
+                            self.post_batch(batch, failed_recs_file, self.processed)
+                        except Exception as exception:
+                            self.handle_generic_exception(
+                                exception, last_row, batch, self.processed, failed_recs_file
+                            )
+                    logging.info("Done posting %s records. ", (self.processed))
+            except Exception as ee:
+                if self.task_configuration.object_type == "SRS":
+                    self.commit_snapshot()
+                raise ee
 
     def post_record_batch(self, batch, failed_recs_file, row):
         json_rec = json.loads(row.split("\t")[-1])
@@ -234,9 +240,7 @@ class BatchPoster(MigrationTaskBase):
             )
 
     def post_objects(self, url, body):
-        return requests.post(
-            url, headers=self.folio_client.okapi_headers, data=body.encode("utf-8")
-        )
+        return self.http_client.post(url, data=body.encode("utf-8"))
 
     def handle_generic_exception(self, exception, last_row, batch, num_records, failed_recs_file):
         logging.error("%s", exception)
@@ -383,9 +387,7 @@ class BatchPoster(MigrationTaskBase):
             payload = {"records": list(batch), "totalRecords": len(batch)}
         else:
             payload = {self.api_info["object_name"]: batch}
-        return requests.post(
-            url, data=json.dumps(payload), headers=self.folio_client.okapi_headers
-        )
+        return self.http_client.post(url, data=json.dumps(payload))
 
     def wrap_up(self):
         logging.info("Done. Wrapping up")
@@ -465,9 +467,7 @@ class BatchPoster(MigrationTaskBase):
         }
         try:
             url = f"{self.folio_client.okapi_url}/source-storage/snapshots"
-            res = requests.post(
-                url, data=json.dumps(snapshot), headers=self.folio_client.okapi_headers
-            )
+            res = self.http_client.post(url, data=json.dumps(snapshot))
             res.raise_for_status()
             logging.info("Posted Snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
             get_url = f"{self.folio_client.okapi_url}/source-storage/snapshots/{self.snapshot_id}"
@@ -475,7 +475,7 @@ class BatchPoster(MigrationTaskBase):
             while not getted:
                 logging.info("Sleeping while waiting for the snapshot to get created")
                 time.sleep(5)
-                res = requests.get(get_url, headers=self.folio_client.okapi_headers)
+                res = self.http_client.get(get_url)
                 if res.status_code == 200:
                     getted = True
                 else:
@@ -488,9 +488,7 @@ class BatchPoster(MigrationTaskBase):
         snapshot = {"jobExecutionId": self.snapshot_id, "status": "COMMITTED"}
         try:
             url = f"{self.folio_client.okapi_url}/source-storage/snapshots/{self.snapshot_id}"
-            res = requests.put(
-                url, data=json.dumps(snapshot), headers=self.folio_client.okapi_headers
-            )
+            res = self.http_client.put(url, data=json.dumps(snapshot))
             res.raise_for_status()
             logging.info("Posted Committed snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
         except Exception:

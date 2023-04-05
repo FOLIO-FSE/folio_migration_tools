@@ -4,10 +4,9 @@ import os
 import re
 import sys
 
-import requests
+import httpx
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
-from requests.exceptions import HTTPError
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -209,7 +208,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
             acq_models_path = f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas"
 
-            req = requests.get(f"{acq_models_path}/{object}.json", headers=github_headers)
+            req = httpx.get(f"{acq_models_path}/{object}.json", headers=github_headers)
             req.raise_for_status()
 
             object_schema = json.loads(req.text)
@@ -221,7 +220,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
             return extended_object_schema
 
-        except requests.exceptions.HTTPError as http_error:
+        except httpx.HTTPError as http_error:
             logging.critical(f"Halting! \t{http_error}")
             sys.exit(2)
 
@@ -249,7 +248,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         # Get metadata for the latest release
         latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
-        req = requests.get(f"{latest_release_path}", headers=github_headers)
+        req = httpx.get(f"{latest_release_path}", headers=github_headers)
         req.raise_for_status()
         latest_release = json.loads(req.text)
 
@@ -259,7 +258,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         # Get the tree for the latest release
         tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
-        req = requests.get(tree_path, headers=github_headers)
+        req = httpx.get(tree_path, headers=github_headers)
         req.raise_for_status()
         release_tree = json.loads(req.text)
 
@@ -268,7 +267,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         # Get the tree for the ramls folder
         ramls_path = f"{github_path}/{owner}/{repo}/git/trees/{ramls_sha}"
-        req = requests.get(ramls_path, headers=github_headers)
+        req = httpx.get(ramls_path, headers=github_headers)
         req.raise_for_status()
         ramls_tree = json.loads(req.text)
 
@@ -357,7 +356,7 @@ class OrganizationMapper(MappingFileMapperBase):
                     ref_object = property_level1["$ref"]
                     schema_url = f"{submodule_path}/{ref_object}"
 
-                    req = requests.get(schema_url, headers=github_headers)
+                    req = httpx.get(schema_url, headers=github_headers)
                     req.raise_for_status()
 
                     property_level1 = dict(property_level1, **json.loads(req.text))
@@ -368,7 +367,7 @@ class OrganizationMapper(MappingFileMapperBase):
                     ref_object = property_level1["items"]["$ref"]
                     schema_url = f"{submodule_path}/{ref_object}"
 
-                    req = requests.get(schema_url, headers=github_headers)
+                    req = httpx.get(schema_url, headers=github_headers)
                     req.raise_for_status()
 
                     property_level1["items"] = dict(
@@ -377,7 +376,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
             return object_schema
 
-        except HTTPError as he:
+        except httpx.HTTPError as he:
             logging.error(he)
 
     @staticmethod

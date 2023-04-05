@@ -7,7 +7,7 @@ import traceback
 from typing import Dict
 from urllib.error import HTTPError
 
-import requests
+import httpx
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_dict import InsensitiveDictReader
@@ -166,16 +166,16 @@ class ReservesMigrator(MigrationTaskBase):
         full_url = f"{self.folio_client.okapi_url}{url}"
         try:
             if verb == "PUT":
-                resp = requests.put(
+                resp = httpx.put(
                     full_url,
                     headers=self.folio_client.okapi_headers,
-                    data=json.dumps(data_dict),
+                    json=data_dict,
                 )
             elif verb == "POST":
-                resp = requests.post(
+                resp = httpx.post(
                     full_url,
                     headers=self.folio_client.okapi_headers,
-                    data=json.dumps(data_dict),
+                    json=data_dict,
                 )
             else:
                 raise TransformationProcessError("Bad verb supplied. This is a code issue.")

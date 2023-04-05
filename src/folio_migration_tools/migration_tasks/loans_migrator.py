@@ -11,7 +11,7 @@ from typing import Optional
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
 
-import requests
+import httpx
 from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
@@ -152,26 +152,31 @@ class LoansMigrator(MigrationTaskBase):
             logging.info("SMTP connection is disabled...")
 
     def do_work(self):
-        logging.info("Starting")
-        starting_index = (
-            self.task_configuration.starting_row - 1
-            if self.task_configuration.starting_row > 0
-            else 0
-        )
-        if self.task_configuration.starting_row > 1:
-            logging.info(f"Skipping {(starting_index)} records")
-        for num_loans, legacy_loan in enumerate(self.valid_legacy_loans[starting_index:], start=1):
-            t0_migration = time.time()
-            self.migration_report.add_general_statistics("Processed pre-validated loans")
-            try:
-                self.checkout_single_loan(legacy_loan)
-            except Exception as ee:
-                logging.exception(
-                    f"Error in row {num_loans}  Item barcode: {legacy_loan.item_barcode} "
-                    f"Patron barcode: {legacy_loan.patron_barcode} {ee}"
-                )
-            if num_loans % 25 == 0:
-                logging.info(f"{timings(self.t0, t0_migration, num_loans)} {num_loans}")
+        with httpx.Client(
+            timeout=None, headers=self.folio_client.okapi_headers
+        ) as self.http_client:
+            logging.info("Starting")
+            starting_index = (
+                self.task_configuration.starting_row - 1
+                if self.task_configuration.starting_row > 0
+                else 0
+            )
+            if self.task_configuration.starting_row > 1:
+                logging.info(f"Skipping {(starting_index)} records")
+            for num_loans, legacy_loan in enumerate(
+                self.valid_legacy_loans[starting_index:], start=1
+            ):
+                t0_migration = time.time()
+                self.migration_report.add_general_statistics("Processed pre-validated loans")
+                try:
+                    self.checkout_single_loan(legacy_loan)
+                except Exception as ee:
+                    logging.exception(
+                        f"Error in row {num_loans}  Item barcode: {legacy_loan.item_barcode} "
+                        f"Patron barcode: {legacy_loan.patron_barcode} {ee}"
+                    )
+                if num_loans % 25 == 0:
+                    logging.info(f"{timings(self.t0, t0_migration, num_loans)} {num_loans}")
 
     def checkout_single_loan(self, legacy_loan: LegacyLoan):
         """Checks a legacy loan out. Retries once if it fails.
@@ -456,10 +461,10 @@ class LoansMigrator(MigrationTaskBase):
             loan_to_put["loanDate"] = out_date.isoformat()
             loan_to_put["renewalCount"] = renewal_count
             url = f"{self.folio_client.okapi_url}/circulation/loans/{loan_to_put['id']}"
-            req = requests.put(
+            req = self.http_client.put(
                 url,
                 headers=self.folio_client.okapi_headers,
-                data=json.dumps(loan_to_put),
+                json=loan_to_put,
             )
             if req.status_code == 422:
                 error_message = json.loads(req.text)["errors"][0]["message"]
@@ -537,7 +542,7 @@ class LoansMigrator(MigrationTaskBase):
             # Get Item by barcode, update status.
             item_path = f'item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
             item_url = f"{self.folio_client.okapi_url}/{item_path}"
-            resp = requests.get(item_url, headers=self.folio_client.okapi_headers)
+            resp = self.http_client.get(item_url, headers=self.folio_client.okapi_headers)
             resp.raise_for_status()
             data = resp.json()
             folio_item = data["items"][0]
@@ -590,7 +595,7 @@ class LoansMigrator(MigrationTaskBase):
 
     def get_user_by_barcode(self, barcode):
         url = f'{self.folio_client.okapi_url}/users?query=(barcode=="{barcode}")'
-        resp = requests.get(url, headers=self.folio_client.okapi_headers)
+        resp = self.http_client.get(url, headers=self.folio_client.okapi_headers)
         resp.raise_for_status()
         data = resp.json()
         return data["users"][0]
@@ -599,16 +604,16 @@ class LoansMigrator(MigrationTaskBase):
         full_url = f"{self.folio_client.okapi_url}{url}"
         try:
             if verb == "PUT":
-                resp = requests.put(
+                resp = self.http_client.put(
                     full_url,
                     headers=self.folio_client.okapi_headers,
-                    data=json.dumps(data_dict),
+                    json=data_dict,
                 )
             elif verb == "POST":
-                resp = requests.post(
+                resp = self.http_client.post(
                     full_url,
                     headers=self.folio_client.okapi_headers,
-                    data=json.dumps(data_dict),
+                    json=data_dict,
                 )
             else:
                 raise Exception("Bad verb")
@@ -643,8 +648,8 @@ class LoansMigrator(MigrationTaskBase):
             api_path = f"{folio_loan['id']}/change-due-date"
             api_url = f"{self.folio_client.okapi_url}/circulation/loans/{api_path}"
             body = {"dueDate": du_parser.isoparse(str(legacy_loan.due_date)).isoformat()}
-            req = requests.post(
-                api_url, headers=self.folio_client.okapi_headers, data=json.dumps(body)
+            req = self.http_client.post(
+                api_url, headers=self.folio_client.okapi_headers, json=body
             )
             if req.status_code == 422:
                 error_message = json.loads(req.text)["errors"][0]["message"]
