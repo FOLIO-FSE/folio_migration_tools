@@ -50,28 +50,27 @@
             "type": "object",
             "properties": {
                 "file_name": {
-                    "title": "File Name",
+                    "title": "File name",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "default": "",
                     "type": "string"
                 },
-                "suppressed": {
-                    "title": "Suppressed",
+                "discovery_suppressed": {
+                    "title": "Discovery suppressed",
                     "default": false,
                     "type": "boolean"
                 },
                 "staff_suppressed": {
-                    "title": "Staff Suppressed",
+                    "title": "Staff suppressed",
                     "default": false,
                     "type": "boolean"
                 },
                 "service_point_id": {
-                    "title": "Service Point Id",
+                    "title": "Service point ID",
                     "default": "",
                     "type": "string"
                 }
-            },
-            "required": [
-                "file_name"
-            ]
+            }
         }
     }
 }

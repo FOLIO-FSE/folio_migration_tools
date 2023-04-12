@@ -4,16 +4,16 @@
     "properties": {
         "name": {
             "title": "Name",
-            "description": "Name of this task",
+            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
             "type": "string"
         },
         "migrationTaskType": {
-            "title": "Migrationtasktype",
-            "description": "The string represenation of this class. Do not set",
+            "title": "Migration task type",
+            "description": "The type of migration task you want to perform",
             "type": "string"
         },
         "files": {
-            "title": "Files",
+            "title": "Source files",
             "description": "List of MARC21 files with authority records",
             "type": "array",
             "items": {
@@ -21,10 +21,17 @@
             }
         },
         "ilsFlavour": {
-            "$ref": "#/definitions/IlsFlavour"
+            "title": "ILS flavour",
+            "description": "The type of ILS you are migrating records from.",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/IlsFlavour"
+                }
+            ]
         },
         "tagsToDelete": {
-            "title": "Tagstodelete",
+            "title": "Tags to delete from MARC record",
+            "description": "Tags in the incoming MARC authority that the process should remove before adding them into FOLIO. These tags will be used in the transformation before getting removed.",
             "default": [],
             "type": "array",
             "items": {
@@ -32,8 +39,8 @@
             }
         },
         "createSourceRecords": {
-            "title": "Createsourcerecords",
-            "description": "Controls wheter or not to retain the MARC records in SRS.",
+            "title": "Create source records",
+            "description": "Controls wheter or not to retain the MARC records in Source Record Storage.",
             "default": true,
             "type": "boolean"
         }
@@ -50,28 +57,27 @@
             "type": "object",
             "properties": {
                 "file_name": {
-                    "title": "File Name",
+                    "title": "File name",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "default": "",
                     "type": "string"
                 },
-                "suppressed": {
-                    "title": "Suppressed",
+                "discovery_suppressed": {
+                    "title": "Discovery suppressed",
                     "default": false,
                     "type": "boolean"
                 },
                 "staff_suppressed": {
-                    "title": "Staff Suppressed",
+                    "title": "Staff suppressed",
                     "default": false,
                     "type": "boolean"
                 },
                 "service_point_id": {
-                    "title": "Service Point Id",
+                    "title": "Service point ID",
                     "default": "",
                     "type": "string"
                 }
-            },
-            "required": [
-                "file_name"
-            ]
+            }
         },
         "IlsFlavour": {
             "title": "IlsFlavour",

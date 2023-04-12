@@ -550,7 +550,7 @@ class RulesMapperBase(MapperBase):
     def handle_suppression(
         self, folio_record, file_def: FileDefinition, only_discovery_suppress: bool = False
     ):
-        folio_record["discoverySuppress"] = file_def.suppressed
+        folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             Blurbs.Suppression,
             f'Suppressed from discovery = {folio_record["discoverySuppress"]}',

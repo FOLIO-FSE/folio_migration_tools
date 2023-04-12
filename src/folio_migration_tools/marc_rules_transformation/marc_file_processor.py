@@ -118,7 +118,7 @@ class MarcFileProcessor:
     def save_srs_record(
         self,
         marc_record: Record,
-        file_def,
+        file_def: FileDefinition,
         folio_rec,
         legacy_ids: List[str],
         object_type: FOLIONamespaces,
@@ -155,7 +155,7 @@ class MarcFileProcessor:
             marc_record,
             folio_rec,
             legacy_ids,
-            file_def.suppressed,
+            file_def.discovery_suppressed,
         )
         self.mapper.migration_report.add_general_statistics("SRS records written to disk")
 
