@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.7.10 (14/04/2023)
+
+### Orders
+
+- [**Orders**] Added orders support to BatchPoster task [#391](https://github.com/FOLIO-FSE/folio_migration_tools/issues/391)
+- [**Orders**] Fixed issued with mapping numbers and integers in purchasOrderLines objects on composite purchase orders [#599](https://github.com/FOLIO-FSE/folio_migration_tools/issues/599)
+
+### Inventory
+
+- [**Inventory**] Remove HRIDs from FOLIO Holdings records when not creating MFHD SRS [#596](https://github.com/FOLIO-FSE/folio_migration_tools/issues/596)
+
+### Bugs
+
+- [**bug**] Nolana and Orchid are not recognized as valid FOLIO releases [#601](https://github.com/FOLIO-FSE/folio_migration_tools/issues/601)
+
 ## 1.7.9 (30/03/2023)
 
 #### Inventory
@@ -599,12 +614,3 @@ Batchposter now allows running multiple files of the same object type in one run
 -  [**closed**] Use the mechanism for logging data issues for open loans and open requests [#194](https://github.com/FOLIO-FSE/folio_migration_tools/issues/194)
 -  [**closed**] Loans migrations are not handling the fact that the source data is not in UTC [#179](https://github.com/FOLIO-FSE/folio_migration_tools/issues/179)
 -  [**closed**] Add setting in config for the timezone for dates transactional data [#176](https://github.com/FOLIO-FSE/folio_migration_tools/issues/176)
-
----
-
-## 1.0.4 Pypi release (04/04/2022)
-<!-- Release notes generated using configuration in .github/release.yml at main -->
-
-
-
-**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/kiwi_1_1...1.0.4
