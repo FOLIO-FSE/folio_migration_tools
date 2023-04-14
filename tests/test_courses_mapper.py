@@ -32,7 +32,7 @@ def mapper(pytestconfig) -> CoursesMapper:
         tenant_id=tenant_id,
         okapi_username=username,
         okapi_password=password,
-        folio_release=FolioRelease.morning_glory,
+        folio_release=FolioRelease.orchid,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",
