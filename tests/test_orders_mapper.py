@@ -90,6 +90,24 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
                 "rules": {"replaceValues": {"EBSCO": "Electronic Resource"}},
             },
             {
+                "folio_field": "compositePoLines[0].cost.quantityPhysical",
+                "legacy_field": "quantity_physical",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].cost.quantityElectronic",
+                "legacy_field": "",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].cost.poLineEstimatedPrice",
+                "legacy_field": "price",
+                "value": "",
+                "description": "",
+            },
+            {
                 "folio_field": "compositePoLines[0].cost.currency",
                 "legacy_field": "",
                 "value": "USD",
@@ -256,6 +274,8 @@ def test_composite_order_with_one_pol_mapping(mapper):
         "type": "One-Time",
         "TITLE": "Once upon a time...",
         "bibnumber": "1",
+        "quantity_physical": "1",
+        "price": "125.00",
     }
     composite_order_with_pol, idx = mapper.do_map(
         data, data["order_number"], FOLIONamespaces.orders
@@ -271,6 +291,10 @@ def test_composite_order_with_one_pol_mapping(mapper):
         == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
     )
     assert composite_order_with_pol["compositePoLines"][0]["cost"]["currency"] == "USD"
+    assert composite_order_with_pol["compositePoLines"][0]["cost"]["quantityPhysical"] == "1"
+    assert (
+        composite_order_with_pol["compositePoLines"][0]["cost"]["poLineEstimatedPrice"] == "125.00"
+    )
 
 
 def test_one_order_one_pol_multiple_notes(mapper):
