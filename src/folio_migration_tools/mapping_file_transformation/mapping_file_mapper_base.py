@@ -311,7 +311,7 @@ class MappingFileMapperBase(MapperBase):
                         folio_object, schema_property_name, schema_property
                     )
 
-                elif schema_property["items"].get("type", "") == "string":
+                elif schema_property["items"].get("type", "") in ["string", "number", "integer"]:
                     self.map_string_array_props(
                         legacy_object,
                         schema_property_name,
@@ -439,17 +439,16 @@ class MappingFileMapperBase(MapperBase):
                     child_property["items"]["properties"],
                 )
 
-            elif (
-                child_property.get("type", "") == "array"
-                and child_property.get("items", {}).get("type", "") == "string"
-            ):
+            elif child_property.get("type", "") == "array" and child_property.get("items", {}).get(
+                "type", ""
+            ) in ["string", "number", "integer"]:
                 self.map_string_array_props(
                     legacy_object,
                     f"{schema_property_name}.{child_property_name}",
                     folio_object,
                     index_or_id,
                 )
-            elif child_property.get("type", "") == "string":
+            elif child_property.get("type", "") in ["string", "number", "integer"]:
                 path = sub_prop_path.split("].")[-1]
                 if p := self.get_prop(legacy_object, sub_prop_path, index_or_id):
                     set_deep(folio_object, f"{path}", p)
@@ -519,7 +518,8 @@ class MappingFileMapperBase(MapperBase):
                     elif (
                         sub_prop_name in sub_properties
                         and sub_properties[sub_prop_name].get("type", "") == "array"
-                        and sub_properties[sub_prop_name]["items"].get("type", "") == "string"
+                        and sub_properties[sub_prop_name]["items"].get("type", "")
+                        in ["string", "number", "integer"]
                     ):
                         # We have not reached the end of the prop path
                         for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
