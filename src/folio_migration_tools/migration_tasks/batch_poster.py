@@ -572,6 +572,13 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "total_records": False,
             "addSnapshotId": False,
         },
+        "Orders": {
+            "object_name": "",
+            "api_endpoint": "/orders/composite-orders",
+            "is_batch": False,
+            "total_records": False,
+            "addSnapshotId": False,
+        },
     }
 
     try:
