@@ -144,7 +144,12 @@ class Conditions:
             raise TransformationProcessError("", "No class_types in FOLIO")
 
     def setup_reference_data_for_auth(self):
-        if self.folio_release not in [FolioRelease.morning_glory, FolioRelease.lotus]:
+        if self.folio_release not in [
+            FolioRelease.orchid,
+            FolioRelease.nolana,
+            FolioRelease.morning_glory,
+            FolioRelease.lotus,
+        ]:
             self.authority_source_files = list(
                 self.folio.folio_get_all(
                     "/authority-source-files", "authoritySourceFiles", self.folio.cql_all, 1000

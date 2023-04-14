@@ -22,7 +22,7 @@ def mapper(pytestconfig) -> ItemMapper:
         tenant_id=tenant_id,
         okapi_username=username,
         okapi_password=password,
-        folio_release=FolioRelease.morning_glory,
+        folio_release=FolioRelease.orchid,
         library_name="Item Tester Library",
         log_level_debug=False,
         iteration_identifier="Test!",
