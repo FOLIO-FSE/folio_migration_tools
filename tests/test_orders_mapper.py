@@ -120,6 +120,18 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
                 "description": "",
             },
             {
+                "folio_field": "compositePoLines[0].locations[0].quantity",
+                "legacy_field": "copies",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].locations[0].locationId",
+                "legacy_field": "location",
+                "value": "",
+                "description": "",
+            },
+            {
                 "folio_field": "notes[0].domain",
                 "legacy_field": "Not mapped",
                 "value": "orders",
@@ -179,6 +191,10 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         {"vendor": "EBSCO", "folio_value": "Purchase"},
         {"vendor": "*", "folio_value": "Purchase"},
     ]
+    location_map = [
+        {"location": "order", "folio_code": "E"},
+        {"location": "*", "folio_code": "KU/CC/DI/O"},
+    ]
     return CompositeOrderMapper(
         mock_folio_client,
         lib_config,
@@ -188,7 +204,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         "",
         "",
         "",
-        "",
+        location_map,
         "",
         "",
     )
@@ -258,7 +274,13 @@ def test_parse_record_mapping_file(mapper):
 
 
 def test_composite_order_mapping(mapper):
-    data = {"order_number": "o123", "vendor": "EBSCO", "type": "One-Time"}
+    data = {
+        "order_number": "o123",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "copies": "",
+        "location": "",
+    }
 
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
     assert composite_order["id"] == "6bf8d907-054d-53ad-9031-7a45887fcafa"
@@ -276,6 +298,8 @@ def test_composite_order_with_one_pol_mapping(mapper):
         "bibnumber": "1",
         "quantity_physical": "1",
         "price": "125.00",
+        "copies": "2",
+        "location": "order",
     }
     composite_order_with_pol, idx = mapper.do_map(
         data, data["order_number"], FOLIONamespaces.orders
@@ -295,6 +319,11 @@ def test_composite_order_with_one_pol_mapping(mapper):
     assert (
         composite_order_with_pol["compositePoLines"][0]["cost"]["poLineEstimatedPrice"] == "125.00"
     )
+    assert (
+        composite_order_with_pol["compositePoLines"][0]["locations"][0]["locationId"]
+        == "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
+    )
+    assert composite_order_with_pol["compositePoLines"][0]["locations"][0]["quantity"] == "2"
 
 
 def test_one_order_one_pol_multiple_notes(mapper):
@@ -305,6 +334,8 @@ def test_one_order_one_pol_multiple_notes(mapper):
         "type": "One-Time",
         "TITLE": "Once upon a time...",
         "bibnumber": "1",
+        "copies": "",
+        "location": "",
         "note1": "Hello, hello, hello!",
         "note2": "Make it work!",
         "order_note": "Buy only important stuff.",
@@ -336,6 +367,8 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
             "type": "One-Time",
             "TITLE": "Once upon a time...",
             "bibnumber": "1",
+            "copies": "",
+            "location": "",
             "note1": "Hello, hello, hello!",
             "note2": "Make it work!",
         },
@@ -346,6 +379,8 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
             "type": "One-Time",
             "TITLE": "Sunset Beach: the comic",
             "bibnumber": "2",
+            "copies": "",
+            "location": "",
             "note1": "Purchased at local yard sale.",
         },
     ]
