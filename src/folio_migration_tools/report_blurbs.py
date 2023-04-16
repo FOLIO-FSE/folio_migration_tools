@@ -237,6 +237,10 @@ class Blurbs:
     TemporaryLocationMapping = ("Temporary location mapping", "")
     TemporaryLoanTypeMapping = ("Temporary Loan type mapping", "")
     PermanentLoanTypeMapping = ("Permanent Loan type mapping", "")
+    OrderLineLocationMapping = (
+        "Order line location mapping",
+        "This is the holdings location for for the order line (used to create holdings records if settings are configured to do so)",
+    )
     StatisticalCodeMapping = ("Statistical code mapping", "")
     HoldingsRecordIdMapping = ("Holdings IDs mapped", "")
     UnmappedProperties = ("Unmapped properties", "")

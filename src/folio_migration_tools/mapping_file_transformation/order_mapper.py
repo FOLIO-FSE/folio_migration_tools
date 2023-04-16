@@ -62,6 +62,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
             Blurbs.AcquisitionMethodMapping,
         )
         logging.info("Init done")
+        self.location_mapping = RefDataMapping(
+            self.folio_client,
+            "/locations",
+            "locations",
+            location_map,
+            "code",
+            Blurbs.OrderLineLocationMapping,
+        )
 
         self.folio_client: FolioClient = folio_client
         self.notes_mapper: NotesMapper = NotesMapper(
@@ -85,6 +93,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return ""
 
         mapped_value = super().get_prop(legacy_order, folio_prop_name, index_or_id)
+
+        if folio_prop_name.endswith(".locationId"):
+            return self.get_mapped_ref_data_value(
+                self.location_mapping,
+                legacy_order,
+                folio_prop_name,
+                index_or_id,
+                True,
+            )
 
         if folio_prop_name == "vendor":
             if mapped_value in self.vendor_code_map:
