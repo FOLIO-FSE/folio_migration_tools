@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.11 (16/04/2023)
+
+### Orders
+
+- [**Orders**] Added location mapping for purchase order line locations in composite purchas orders mapping
 ## 1.7.10 (14/04/2023)
 
 ### Orders
