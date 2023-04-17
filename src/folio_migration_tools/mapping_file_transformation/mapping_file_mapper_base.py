@@ -256,12 +256,14 @@ class MappingFileMapperBase(MapperBase):
                 )
                 for map_entry in map_entries
             ).strip()
-        elif len(map_entries) == 1:
-            return MappingFileMapperBase.get_legacy_value(
+        else:
+            legacy_value = MappingFileMapperBase.get_legacy_value(
                 legacy_object, map_entries[0], self.migration_report, index_or_id
             )
-        elif schema_default_value:
-            return schema_default_value
+            if legacy_value:
+                return legacy_value
+            else:
+                return schema_default_value
 
     def do_map(
         self,
@@ -355,6 +357,7 @@ class MappingFileMapperBase(MapperBase):
 
         # Value mapped from the Legacy field(s)
         value = legacy_object.get(mapping_file_entry["legacy_field"], "")
+        
         if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
             if replaced_val := mapping_file_entry["rules"]["replaceValues"].get(value, ""):
                 migration_report.add(
@@ -626,9 +629,10 @@ class MappingFileMapperBase(MapperBase):
         self, legacy_object, property_name, folio_object, index_or_id, schema_property
     ):
         if self.has_basic_property(legacy_object, property_name):  # is there a match in the csv?
-            if mapped_prop := self.get_prop(
+            mapped_prop = self.get_prop(
                 legacy_object, property_name, index_or_id, schema_property.get("default", "")
-            ):
+            )
+            if mapped_prop or isinstance(mapped_prop, bool):
                 self.validate_enums(
                     mapped_prop,
                     schema_property,
@@ -638,12 +642,6 @@ class MappingFileMapperBase(MapperBase):
                 )
                 folio_object[property_name] = mapped_prop
             self.report_legacy_mapping(self.legacy_basic_property(property_name), True, True)
-        # elif "default" in schema_property:
-        #     folio_object[property_name] = schema_property["default"]
-        #     self.migration_report.add(
-        #         Blurbs.DefaultValuesAdded,
-        #         f"From Schema: {property_name} -> {schema_property['default']}",
-        #     )
 
     @staticmethod
     def _get_delimited_file_reader(source_file, file_name: Path):
@@ -708,17 +706,10 @@ class MappingFileMapperBase(MapperBase):
         if folio_prop_name in self.mapped_from_values:
             return True
         legacy_mappings = self.legacy_record_mappings.get(folio_prop_name, [])
+
         return (
             any(legacy_mappings)
             and any(legacy_mapping not in empty_vals for legacy_mapping in legacy_mappings)
-            and any(
-                legacy_object.get(legacy_mapping["legacy_field"], "")
-                or (
-                    "fallback_legacy_field" in legacy_mapping
-                    and legacy_object.get(legacy_mapping["fallback_legacy_field"], "")
-                )
-                for legacy_mapping in legacy_mappings
-            )
         )
 
     @staticmethod

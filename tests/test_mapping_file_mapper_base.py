@@ -4360,14 +4360,14 @@ def test_add_default_from_schema(mocked_folio_client: FolioClient):
     assert folio_recs[0]["workflowStatus"] == "Pending"
     assert folio_recs[0]["compositePoLines"][0]["checkinItems"] == False
     assert folio_recs[0]["compositePoLines"][0]["receiptStatus"] == "Pending"
-    assert folio_recs[0]["compositePoLines"][0]["cost"] == "percentage"
+    assert folio_recs[0]["compositePoLines"][0]["cost"]["discountType"] == "percentage"
 
 
     # The second record should get the vaues specified in the mapped fields
     assert folio_recs[1]["approved"] == True
     assert folio_recs[1]["workflowStatus"] == "Open"
-    assert folio_recs[0]["compositePoLines"][0]["checkinItems"] == True
-    assert folio_recs[0]["compositePoLines"][0]["receiptStatus"] == "Ongoing"
-    assert folio_recs[0]["compositePoLines"][0]["cost"] == "amount"
+    assert folio_recs[1]["compositePoLines"][0]["checkinItems"] == True
+    assert folio_recs[1]["compositePoLines"][0]["receiptStatus"] == "Ongoing"
+    assert folio_recs[1]["compositePoLines"][0]["cost"]["discountType"] == "amount"
 
 
