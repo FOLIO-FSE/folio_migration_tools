@@ -168,8 +168,12 @@ class Blurbs:
     )
     UserGroupMapping = ("User group mapping", "")
     DefaultValuesAdded = (
-        "Default values added",
-        "The values below was added to all records from the value field in the mapping file instead of coming from the source records",
+        "Default values from mapping added",
+        "The values below were added to all records from the 'value' field in the mapping file, overriding any mapped values from the source data.",
+    )
+    FolioDefaultValuesAdded = (
+        "FOLIO default values added",
+        "The below FOLIO default values were added to records that had no mapped value in the source data.",
     )
     UsersPerPatronType = ("Users per patron type", "")
     MappedLocations = ("Mapped Locations", "")
