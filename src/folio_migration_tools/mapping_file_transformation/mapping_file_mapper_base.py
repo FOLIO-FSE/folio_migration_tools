@@ -264,7 +264,7 @@ class MappingFileMapperBase(MapperBase):
                 return legacy_value
             else:
                 self.migration_report.add(
-                    Blurbs.DefaultValuesAdded,
+                    Blurbs.FolioDefaultValuesAdded,
                     f"{schema_default_value} added to {folio_prop_name}",
                 )
                 return schema_default_value
