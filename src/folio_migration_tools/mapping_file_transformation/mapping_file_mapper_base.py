@@ -263,6 +263,10 @@ class MappingFileMapperBase(MapperBase):
             if legacy_value:
                 return legacy_value
             else:
+                self.migration_report.add(
+                    Blurbs.DefaultValuesAdded,
+                    f"{schema_default_value} added to {folio_prop_name}",
+                )
                 return schema_default_value
 
     def do_map(
@@ -357,7 +361,7 @@ class MappingFileMapperBase(MapperBase):
 
         # Value mapped from the Legacy field(s)
         value = legacy_object.get(mapping_file_entry["legacy_field"], "")
-        
+
         if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
             if replaced_val := mapping_file_entry["rules"]["replaceValues"].get(value, ""):
                 migration_report.add(
@@ -707,9 +711,8 @@ class MappingFileMapperBase(MapperBase):
             return True
         legacy_mappings = self.legacy_record_mappings.get(folio_prop_name, [])
 
-        return (
-            any(legacy_mappings)
-            and any(legacy_mapping not in empty_vals for legacy_mapping in legacy_mappings)
+        return any(legacy_mappings) and any(
+            legacy_mapping not in empty_vals for legacy_mapping in legacy_mappings
         )
 
     @staticmethod
