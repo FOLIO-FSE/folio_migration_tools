@@ -140,7 +140,7 @@ class CoursesMapper(MappingFileMapperBase):
         else:
             del instructor["userId"]
 
-    def get_prop(self, legacy_item, folio_prop_name, index_or_id):
+    def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
         if folio_prop_name == "courselisting.termId":
             return self.get_mapped_ref_data_value(
                 self.terms_map,
@@ -157,7 +157,9 @@ class CoursesMapper(MappingFileMapperBase):
                 index_or_id,
                 False,
             )
-        elif mapped_value := super().get_prop(legacy_item, folio_prop_name, index_or_id):
+        elif mapped_value := super().get_prop(
+            legacy_item, folio_prop_name, index_or_id, schema_default_value
+        ):
             return mapped_value
         else:
             self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")

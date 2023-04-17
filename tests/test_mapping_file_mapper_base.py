@@ -2855,12 +2855,18 @@ def test_default_false(mocked_folio_client: FolioClient):
             },
         },
     }
-    record = {"id": "id1", "delivery_method": "Offline"}
+    record = {"id": "id1", "delivery_method": "Offline", "vendor_yesno":""}
     the_map = {
         "data": [
             {
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "isVendor",
+                "legacy_field": "vendor_yesno",
                 "value": "",
                 "description": "",
             },
@@ -3028,12 +3034,18 @@ def test_default_true(mocked_folio_client: FolioClient):
             },
         },
     }
-    record = {"id": "id1", "delivery_method": "Offline"}
+    record = {"id": "id1", "delivery_method": "Offline", "is_vendor": ""}
     the_map = {
         "data": [
             {
                 "folio_field": "legacyIdentifier",
                 "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "isVendor",
+                "legacy_field": "is_vendor",
                 "value": "",
                 "description": "",
             },
@@ -3886,7 +3898,7 @@ def test_get_prop_same_as_get_legacy_value_mapped_value():
     mock_self.record_map = {"data": [mapping_file_entry]}
     mock_self.mapped_from_legacy_data = {"title": "title"}
     mock_self.migration_report = MigrationReport()
-    res2 = MappingFileMapperBase.get_prop(mock_self, legacy_object, "title", "")
+    res2 = MappingFileMapperBase.get_prop(mock_self, legacy_object, "title", "", "")
     assert res == res2
 
 
@@ -3911,7 +3923,7 @@ def test_get_prop_concatenated():
     mock_self.record_map = {"data": mapping_file_entries}
     mock_self.mapped_from_legacy_data = {"title": ["firstname", "lastname"]}
     mock_self.migration_report = MigrationReport()
-    res2 = MappingFileMapperBase.get_prop(mock_self, legacy_object, "title", "")
+    res2 = MappingFileMapperBase.get_prop(mock_self, legacy_object, "title", "", "")
     assert res2 == "Leif Randt"
 
 
@@ -4011,7 +4023,7 @@ def test_get_prop(mocked_folio_client):
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    res = mapper.get_prop(legacy_object, "title", "")
+    res = mapper.get_prop(legacy_object, "title", "", "")
     assert res == "Alpha Omega"
 
 
@@ -4036,7 +4048,7 @@ def test_get_prop_one_value(mocked_folio_client):
         ]
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    res = mapper.get_prop(legacy_object, "title", "")
+    res = mapper.get_prop(legacy_object, "title", "", "")
     assert res == "Alpha Beta"
 
 
@@ -4195,7 +4207,7 @@ def test_get_prop_22(mocked_folio_client: FolioClient):
         mock_library_conf,
         True,
     )
-    prop = mapper.get_prop(legacy_record, "username", "1")
+    prop = mapper.get_prop(legacy_record, "username", "1","")
     assert prop == "user_name_1"
 
 

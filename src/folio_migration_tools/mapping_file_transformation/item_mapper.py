@@ -147,7 +147,7 @@ class ItemMapper(MappingFileMapperBase):
                 }
         logging.info(json.dumps(statuses, indent=True))
 
-    def get_prop(self, legacy_item, folio_prop_name, index_or_id):
+    def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
 
         if folio_prop_name == "permanentLocationId":
             return self.get_mapped_ref_data_value(
@@ -211,7 +211,9 @@ class ItemMapper(MappingFileMapperBase):
             )
             return statistical_code_id
 
-        mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
+        mapped_value = super().get_prop(
+            legacy_item, folio_prop_name, index_or_id, schema_default_value
+        )
         if folio_prop_name == "status.name":
             return self.transform_status(mapped_value)
         elif folio_prop_name == "barcode":
