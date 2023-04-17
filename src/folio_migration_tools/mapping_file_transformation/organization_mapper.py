@@ -66,7 +66,7 @@ class OrganizationMapper(MappingFileMapperBase):
         self.notes_mapper.migration_report = self.migration_report
 
     # Commence the mapping work
-    def get_prop(self, legacy_organization, folio_prop_name, index_or_id):
+    def get_prop(self, legacy_organization, folio_prop_name, index_or_id, schema_default_value):
         value_tuple = (
             legacy_organization,
             index_or_id,
@@ -107,7 +107,9 @@ class OrganizationMapper(MappingFileMapperBase):
         ):
             return "replace_with_interface_id"
 
-        return super().get_prop(legacy_organization, folio_prop_name, index_or_id)
+        return super().get_prop(
+            legacy_organization, folio_prop_name, index_or_id, schema_default_value
+        )
 
     def set_up_reference_data_mapping(
         self,
