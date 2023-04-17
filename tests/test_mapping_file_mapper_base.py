@@ -722,7 +722,10 @@ def test_validate_required_properties_obj(mocked_folio_client: FolioClient):
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert folio_rec["electronicAccessObj"]["uri"] == "some_link"
 
-def test_validate_required_properties_array_object_with_object_and_strings(mocked_folio_client: FolioClient):
+
+def test_validate_required_properties_array_object_with_object_and_strings(
+    mocked_folio_client: FolioClient,
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -744,7 +747,7 @@ def test_validate_required_properties_array_object_with_object_and_strings(mocke
                                     "addressLine1": {"type": "string"},
                                     "addressLine2": {"type": "string"},
                                 },
-                                "required": ["addressLine1"]
+                                "required": ["addressLine1"],
                             },
                         },
                     },
@@ -760,9 +763,9 @@ def test_validate_required_properties_array_object_with_object_and_strings(mocke
         "contact_address2_line1": "My other street",
         "contact2_address_line1": "Yet another street",
         "contact_address_town": "Gothenburg",
-        "contact_address_types": "support<delimiter>sales"
-        }
-    
+        "contact_address_types": "support<delimiter>sales",
+    }
+
     org_map = {
         "data": [
             {
@@ -795,6 +798,7 @@ def test_validate_required_properties_array_object_with_object_and_strings(mocke
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert "contacts" not in folio_rec
+
 
 def test_validate_required_properties_item_notes_split_on_delimiter_notes(
     mocked_folio_client: FolioClient,
@@ -1080,10 +1084,10 @@ def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_f
                             },
                         },
                     },
-                        "inactive": {
+                    "inactive": {
                         "description": "Used to indicate that a contact is no longer active",
                         "type": "boolean",
-                        "default": False
+                        "default": False,
                     },
                     "additionalProperties": False,
                     "required": ["firstName", "lastName"],
@@ -1129,7 +1133,7 @@ def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_f
                 "value": "",
                 "description": "",
             },
-                        {
+            {
                 "folio_field": "contacts[1].lastName",
                 "legacy_field": "contact_person2_l",
                 "value": "",
@@ -4193,3 +4197,177 @@ def test_get_prop_22(mocked_folio_client: FolioClient):
     )
     prop = mapper.get_prop(legacy_record, "username", "1")
     assert prop == "user_name_1"
+
+
+def test_add_default_from_schema(mocked_folio_client: FolioClient):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "An order record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "poNumber": {
+                "description": "A human readable ID assigned to this purchase order",
+                "type": "string",
+            },
+            "id": {"description": "UUID of this purchase order", "type": "string"},
+            "approved": {
+                "description": "whether or not the purchase order has been approved",
+                "type": "boolean",
+                "default": False,
+            },
+            "workflowStatus": {
+                "description": "the workflow status for this purchase order",
+                "type": "string",
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "enum": ["Pending", "Open", "Closed"],
+                "default": "Pending",
+            },
+            "compositePoLines": {
+                "description": "a list of completely de-referenced purchase order lines",
+                "id": "compositePoLines",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "description": "composite purchase order line with dereferenced/expanded orders fields",
+                    "properties": {
+                        "id": {
+                            "description": "UUID identifying this purchase order line",
+                            "type": "string",
+                        },
+                        "title": {"description": "title of the material", "type": "string"},
+                        "checkinItems": {
+                            "description": "if true this will toggle the Check-in workflow for details associated with this PO line",
+                            "type": "boolean",
+                            "default": False,
+                        },
+                        "receiptStatus": {
+                            "description": "The purchase order line receipt status",
+                            "type": "object",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "enum": [
+                                "Awaiting Receipt",
+                                "Cancelled",
+                                "Fully Received",
+                                "Partially Received",
+                                "Pending",
+                                "Receipt Not Required",
+                                "Ongoing",
+                            ],
+                            "default": "Pending",
+                        },
+                        "cost": {
+                            "type": "object",
+                            "properties": {
+                                "discountType": {
+                                    "description": "Percentage or amount discount type",
+                                    "type": "string",
+                                    "enum": ["amount", "percentage"],
+                                    "default": "percentage",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+
+    order_map = {
+        "data": [
+            {
+                "folio_field": "approved",
+                "legacy_field": "approval_yesno",
+                "value": "",
+                "description": "",
+                "rules": {"replaceValues": {"yes": True, "no": False}},
+            },
+            {
+                "folio_field": "workflowStatus",
+                "legacy_field": "workflow_status",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "poNumber",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].title",
+                "legacy_field": "title",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].checkinItems",
+                "legacy_field": "checkin_items",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].receiptStatus",
+                "legacy_field": "receipt_status",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].cost.discountType",
+                "legacy_field": "cost_discount_type",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    data = [
+        {
+            "approval_yesno": "",
+            "workflow_status": "",
+            "id": "test_add_default_from_schema_1",
+            "title": "my book 1",
+            "checkin_items": "",
+            "receipt_status": "",
+            "cost_discount_type": "",
+        },
+        {
+            "approval_yesno": "yes",
+            "workflow_status": "Open",
+            "id": "test_add_default_from_schema_2",
+            "title": "my book 2",
+            "checkin_items": True,
+            "receipt_status": "Ongoing",
+            "cost_discount_type": "amount",
+        },
+    ]
+    mapper = MyTestableFileMapper(schema, order_map, mocked_folio_client)
+
+    folio_recs = []
+
+    for record in data:
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.orders)
+        folio_recs.append(folio_rec)
+
+    # The first record, which had no values in the mapped fields, should get defaults
+    assert folio_recs[0]["approved"] == False
+    assert folio_recs[0]["workflowStatus"] == "Pending"
+    assert folio_recs[0]["compositePoLines"][0]["checkinItems"] == False
+    assert folio_recs[0]["compositePoLines"][0]["receiptStatus"] == "Pending"
+    assert folio_recs[0]["compositePoLines"][0]["cost"] == "percentage"
+
+
+    # The second record should get the vaues specified in the mapped fields
+    assert folio_recs[1]["approved"] == True
+    assert folio_recs[1]["workflowStatus"] == "Open"
+    assert folio_recs[0]["compositePoLines"][0]["checkinItems"] == True
+    assert folio_recs[0]["compositePoLines"][0]["receiptStatus"] == "Ongoing"
+    assert folio_recs[0]["compositePoLines"][0]["cost"] == "amount"
+
+
