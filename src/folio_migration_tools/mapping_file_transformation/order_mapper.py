@@ -81,7 +81,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         self.notes_mapper.migration_report = self.migration_report
 
-    def get_prop(self, legacy_order, folio_prop_name: str, index_or_id):
+    def get_prop(self, legacy_order, folio_prop_name: str, index_or_id, schema_default_value):
         if folio_prop_name.endswith(".acquisitionMethod"):
             mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
             return mapped_val["folio_id"]
@@ -92,7 +92,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
         elif re.compile(r"notes\[\d+\]\.").match(folio_prop_name):
             return ""
 
-        mapped_value = super().get_prop(legacy_order, folio_prop_name, index_or_id)
+        mapped_value = super().get_prop(
+            legacy_order, folio_prop_name, index_or_id, schema_default_value
+        )
 
         if folio_prop_name.endswith(".locationId"):
             return self.get_mapped_ref_data_value(

@@ -239,7 +239,7 @@ class MappingFileMapperBase(MapperBase):
         )
         return ""
 
-    def get_prop(self, legacy_object, folio_prop_name, index_or_id):
+    def get_prop(self, legacy_object, folio_prop_name, index_or_id, schema_default_value):
         legacy_item_keys = self.mapped_from_legacy_data.get(folio_prop_name, [])
         map_entries = list(
             MappingFileMapperBase.get_map_entries_by_folio_prop_name(
@@ -256,10 +256,12 @@ class MappingFileMapperBase(MapperBase):
                 )
                 for map_entry in map_entries
             ).strip()
-        else:
+        elif len(map_entries) == 1:
             return MappingFileMapperBase.get_legacy_value(
                 legacy_object, map_entries[0], self.migration_report, index_or_id
             )
+        elif schema_default_value:
+            return schema_default_value
 
     def do_map(
         self,
@@ -450,10 +452,14 @@ class MappingFileMapperBase(MapperBase):
                 )
             elif child_property.get("type", "") in ["string", "number", "integer"]:
                 path = sub_prop_path.split("].")[-1]
-                if p := self.get_prop(legacy_object, sub_prop_path, index_or_id):
+                if p := self.get_prop(
+                    legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
+                ):
                     set_deep(folio_object, f"{path}", p)
                 # temp_object[child_property_name] = p
-            elif p := self.get_prop(legacy_object, sub_prop_path, index_or_id):
+            elif p := self.get_prop(
+                legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
+            ):
                 set_deep(folio_object, sub_prop_path, p)
         if temp_object:
             set_deep(folio_object, schema_property_name, temp_object)
@@ -487,7 +493,12 @@ class MappingFileMapperBase(MapperBase):
                     prop_path = f"{prop_name}[{i}].{sub_prop_name}"
                     if prop_path in self.folio_keys:
                         # We have reached the end of the prop path?
-                        res = self.get_prop(legacy_object, prop_path, index_or_id)
+                        res = self.get_prop(
+                            legacy_object,
+                            prop_path,
+                            index_or_id,
+                            sub_properties[sub_prop_name].get("default", ""),
+                        )
                         self.report_legacy_mapping(
                             self.legacy_basic_property(prop_path), True, True
                         )
@@ -523,7 +534,12 @@ class MappingFileMapperBase(MapperBase):
                     ):
                         # We have not reached the end of the prop path
                         for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
-                            res = self.get_prop(legacy_object, array_path, index_or_id)
+                            res = self.get_prop(
+                                legacy_object,
+                                array_path,
+                                index_or_id,
+                                sub_properties[sub_prop_name].get("default", ""),
+                            )
                             self.validate_enums(
                                 res, sub_prop, sub_prop_name, index_or_id, required
                             )
@@ -576,7 +592,9 @@ class MappingFileMapperBase(MapperBase):
         keys_to_map = [k for k in self.folio_keys if k.startswith(prop)]
         for prop_name in keys_to_map:
             if prop_name in self.folio_keys and self.has_property(legacy_object, prop_name):
-                if mapped_prop := self.get_prop(legacy_object, prop_name, index_or_id):
+                if mapped_prop := self.get_prop(
+                    legacy_object, prop_name, index_or_id, prop.get("default", "")
+                ):
                     self.add_values_to_string_array(
                         prop,
                         folio_object,
@@ -608,7 +626,9 @@ class MappingFileMapperBase(MapperBase):
         self, legacy_object, property_name, folio_object, index_or_id, schema_property
     ):
         if self.has_basic_property(legacy_object, property_name):  # is there a match in the csv?
-            if mapped_prop := self.get_prop(legacy_object, property_name, index_or_id):
+            if mapped_prop := self.get_prop(
+                legacy_object, property_name, index_or_id, schema_property.get("default", "")
+            ):
                 self.validate_enums(
                     mapped_prop,
                     schema_property,
@@ -618,12 +638,12 @@ class MappingFileMapperBase(MapperBase):
                 )
                 folio_object[property_name] = mapped_prop
             self.report_legacy_mapping(self.legacy_basic_property(property_name), True, True)
-        elif "default" in schema_property:
-            folio_object[property_name] = schema_property["default"]
-            self.migration_report.add(
-                Blurbs.DefaultValuesAdded,
-                f"From Schema: {property_name} -> {schema_property['default']}",
-            )
+        # elif "default" in schema_property:
+        #     folio_object[property_name] = schema_property["default"]
+        #     self.migration_report.add(
+        #         Blurbs.DefaultValuesAdded,
+        #         f"From Schema: {property_name} -> {schema_property['default']}",
+        #     )
 
     @staticmethod
     def _get_delimited_file_reader(source_file, file_name: Path):

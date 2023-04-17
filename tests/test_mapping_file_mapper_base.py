@@ -37,8 +37,8 @@ class MyTestableFileMapper(MappingFileMapperBase):
             mock_conf,
         )
 
-    def get_prop(self, legacy_item, folio_prop_name, index_or_id):
-        return super().get_prop(legacy_item, folio_prop_name, index_or_id)
+    def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
+        return super().get_prop(legacy_item, folio_prop_name, index_or_id, schema_default_value)
 
 
 def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client: FolioClient):
