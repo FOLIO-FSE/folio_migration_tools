@@ -169,6 +169,7 @@ class MappingFileMapperBase(MapperBase):
                 k["legacy_field"] not in empty_vals
                 # and k["folio_field"] != "legacyIdentifier"
                 or k.get("value", "") not in empty_vals
+                or isinstance(k.get("value", ""), bool)
             )
         ]
 
@@ -260,7 +261,7 @@ class MappingFileMapperBase(MapperBase):
             legacy_value = MappingFileMapperBase.get_legacy_value(
                 legacy_object, map_entries[0], self.migration_report, index_or_id
             )
-            if legacy_value:
+            if legacy_value or isinstance(legacy_value, bool):
                 return legacy_value
             else:
                 self.migration_report.add(
@@ -599,9 +600,7 @@ class MappingFileMapperBase(MapperBase):
         keys_to_map = [k for k in self.folio_keys if k.startswith(prop)]
         for prop_name in keys_to_map:
             if prop_name in self.folio_keys and self.has_property(legacy_object, prop_name):
-                if mapped_prop := self.get_prop(
-                    legacy_object, prop_name, index_or_id, prop.get("default", "")
-                ):
+                if mapped_prop := self.get_prop(legacy_object, prop_name, index_or_id, ""):
                     self.add_values_to_string_array(
                         prop,
                         folio_object,

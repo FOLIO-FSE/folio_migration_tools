@@ -126,8 +126,10 @@ class UserMapper(MappingFileMapperBase):
                 )
             yield row
 
-    def get_prop(self, legacy_user, folio_prop_name, index_or_id):
-        mapped_value = super().get_prop(legacy_user, folio_prop_name, index_or_id)
+    def get_prop(self, legacy_user, folio_prop_name, index_or_id, schema_default_value):
+        mapped_value = super().get_prop(
+            legacy_user, folio_prop_name, index_or_id, schema_default_value
+        )
         if folio_prop_name == "personal.addresses.id":
             return ""
         elif folio_prop_name == "patronGroup":

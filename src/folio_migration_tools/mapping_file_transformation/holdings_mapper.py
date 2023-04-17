@@ -55,7 +55,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 Blurbs.CallNumberTypeMapping,
             )
 
-    def get_prop(self, legacy_item, folio_prop_name, index_or_id):
+    def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
         if folio_prop_name == "permanentLocationId":
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
         elif folio_prop_name == "callNumberTypeId":
@@ -63,7 +63,9 @@ class HoldingsMapper(MappingFileMapperBase):
         elif folio_prop_name.startswith("statisticalCodeIds"):
             return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
 
-        mapped_value = super().get_prop(legacy_item, folio_prop_name, index_or_id)
+        mapped_value = super().get_prop(
+            legacy_item, folio_prop_name, index_or_id, schema_default_value
+        )
         if folio_prop_name == "callNumber":
             return self.get_call_number(mapped_value)
         elif folio_prop_name == "instanceId":

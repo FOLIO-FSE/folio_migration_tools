@@ -1089,7 +1089,7 @@ def test_remove_preferred_first_name_if_empty(mocked_folio_client):
     assert "preferredFirstName" not in folio_user["personal"]
 
 
-def test_boolean_values_explicitly_true(mocked_folio_client):
+def test_boolean_values_static_value_true(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -1107,36 +1107,6 @@ def test_boolean_values_explicitly_true(mocked_folio_client):
             {
                 "folio_field": "personal.addresses[0].addressLine1",
                 "legacy_field": "HOMEADDRESS1",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressLine2",
-                "legacy_field": "HOMEADDRESS2",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressTypeId",
-                "legacy_field": "Not mapped",
-                "value": "Home",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].city",
-                "legacy_field": "HOMECITY",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].postalCode",
-                "legacy_field": "HOMEZIP",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].region",
-                "legacy_field": "HOMESTATE",
                 "value": "",
                 "description": "",
             },
@@ -1179,52 +1149,7 @@ def test_boolean_values_explicitly_true(mocked_folio_client):
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
 
 
-@pytest.mark.slow
-def test_boolean_values_explicitly_true_json_string(mocked_folio_client):
-    user_map_str = '{ "data": [{ "folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""}, { "folio_field": "username", "legacy_field": "user_name", "value": "", "description": "" }, { "folio_field": "externalSystemId", "legacy_field": "ext_id", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine1", "legacy_field": "HOMEADDRESS1", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine2", "legacy_field": "HOMEADDRESS2", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressTypeId", "legacy_field": "Not mapped", "value": "Home", "description": "" }, { "folio_field": "personal.addresses[0].city", "legacy_field": "HOMECITY", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].postalCode", "legacy_field": "HOMEZIP", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].region", "legacy_field": "HOMESTATE", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].primaryAddress", "legacy_field": "Not mapped", "value": true, "description": "" } ] }'  # noqa
-    user_map = json.loads(user_map_str)
-    legacy_user_record = {
-        "ext_id": "externalid_1",
-        "user_name": "user_name_1",
-        "HOMEADDRESS1": "Line 1",
-        "HOMEADDRESS2": "Line 2",
-        "HOMEZIP": "12345",
-        "HOMESTATE": "Sjuhärad",
-        "HOMECITY": "Fritsla",
-        "id": "1",
-    }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
-    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
-    mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_folio_client
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
-    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
-    assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
-
-
-def test_boolean_values_explicitly_false_json_string(mocked_folio_client):
-    user_map_str = '{ "data": [{ "folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},  { "folio_field": "username", "legacy_field": "user_name", "value": "", "description": "" }, { "folio_field": "externalSystemId", "legacy_field": "ext_id", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine1", "legacy_field": "HOMEADDRESS1", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressLine2", "legacy_field": "HOMEADDRESS2", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].addressTypeId", "legacy_field": "Not mapped", "value": "Home", "description": "" }, { "folio_field": "personal.addresses[0].city", "legacy_field": "HOMECITY", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].postalCode", "legacy_field": "HOMEZIP", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].region", "legacy_field": "HOMESTATE", "value": "", "description": "" }, { "folio_field": "personal.addresses[0].primaryAddress", "legacy_field": "Not mapped", "value": false, "description": "" } ] }'  # noqa: E501, B950
-    user_map = json.loads(user_map_str)
-    legacy_user_record = {
-        "ext_id": "externalid_1",
-        "user_name": "user_name_1",
-        "HOMEADDRESS1": "Line 1",
-        "HOMEADDRESS2": "Line 2",
-        "HOMEZIP": "12345",
-        "HOMESTATE": "Sjuhärad",
-        "HOMECITY": "Fritsla",
-        "id": "1",
-    }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
-    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
-    mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_folio_client
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
-    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
-    assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
-
-
-def test_boolean_values_explicitly_true_string(mocked_folio_client):
+def test_boolean_values_static_value_false(mocked_folio_client):
     user_map = {
         "data": [
             {
@@ -1242,218 +1167,6 @@ def test_boolean_values_explicitly_true_string(mocked_folio_client):
             {
                 "folio_field": "personal.addresses[0].addressLine1",
                 "legacy_field": "HOMEADDRESS1",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressLine2",
-                "legacy_field": "HOMEADDRESS2",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressTypeId",
-                "legacy_field": "Not mapped",
-                "value": "Home",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].city",
-                "legacy_field": "HOMECITY",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].postalCode",
-                "legacy_field": "HOMEZIP",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].region",
-                "legacy_field": "HOMESTATE",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].primaryAddress",
-                "legacy_field": "Not mapped",
-                "value": "true",
-                "description": "",
-            },
-            {
-                "folio_field": "legacyIdentifier",
-                "legacy_field": "id",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.lastName",
-                "legacy_field": "",
-                "value": "Last name",
-                "description": "",
-            },
-        ]
-    }
-    legacy_user_record = {
-        "ext_id": "externalid_1",
-        "user_name": "user_name_1",
-        "HOMEADDRESS1": "Line 1",
-        "HOMEADDRESS2": "Line 2",
-        "HOMEZIP": "12345",
-        "HOMESTATE": "Sjuhärad",
-        "HOMECITY": "Fritsla",
-        "id": "1",
-    }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
-    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
-    mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_folio_client
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
-    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
-
-    assert folio_user["personal"]["addresses"][0]["primaryAddress"] == "true"
-
-
-def test_boolean_values_explicitly_false_string(mocked_folio_client):
-    user_map = {
-        "data": [
-            {
-                "folio_field": "username",
-                "legacy_field": "user_name",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "externalSystemId",
-                "legacy_field": "ext_id",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressLine1",
-                "legacy_field": "HOMEADDRESS1",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressLine2",
-                "legacy_field": "HOMEADDRESS2",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressTypeId",
-                "legacy_field": "Not mapped",
-                "value": "Home",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].city",
-                "legacy_field": "HOMECITY",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].postalCode",
-                "legacy_field": "HOMEZIP",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].region",
-                "legacy_field": "HOMESTATE",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].primaryAddress",
-                "legacy_field": "Not mapped",
-                "value": "false",
-                "description": "",
-            },
-            {
-                "folio_field": "legacyIdentifier",
-                "legacy_field": "id",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.lastName",
-                "legacy_field": "",
-                "value": "Last name",
-                "description": "",
-            },
-        ]
-    }
-    legacy_user_record = {
-        "ext_id": "externalid_1",
-        "user_name": "user_name_1",
-        "HOMEADDRESS1": "Line 1",
-        "HOMEADDRESS2": "Line 2",
-        "HOMEZIP": "12345",
-        "HOMESTATE": "Sjuhärad",
-        "HOMECITY": "Fritsla",
-        "id": "1",
-    }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
-    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
-    mock_library_conf.multi_field_delimiter = "<delimiter>"
-    mock_folio = mocked_folio_client
-    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
-    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
-
-    assert folio_user["personal"]["addresses"][0]["primaryAddress"] == "false"
-
-
-def test_boolean_values_explicitly_false(mocked_folio_client):
-    user_map = {
-        "data": [
-            {
-                "folio_field": "username",
-                "legacy_field": "user_name",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "externalSystemId",
-                "legacy_field": "ext_id",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressLine1",
-                "legacy_field": "HOMEADDRESS1",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressLine2",
-                "legacy_field": "HOMEADDRESS2",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].addressTypeId",
-                "legacy_field": "Not mapped",
-                "value": "Home",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].city",
-                "legacy_field": "HOMECITY",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].postalCode",
-                "legacy_field": "HOMEZIP",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "personal.addresses[0].region",
-                "legacy_field": "HOMESTATE",
                 "value": "",
                 "description": "",
             },
@@ -1477,6 +1190,7 @@ def test_boolean_values_explicitly_false(mocked_folio_client):
             },
         ]
     }
+
     legacy_user_record = {
         "ext_id": "externalid_1",
         "user_name": "user_name_1",
@@ -1493,8 +1207,8 @@ def test_boolean_values_explicitly_false(mocked_folio_client):
     mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
-
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
+
 
 
 def test_json_load_s_booleans(mocked_folio_client):
