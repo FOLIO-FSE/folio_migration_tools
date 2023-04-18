@@ -2912,6 +2912,7 @@ def test_map_booleans(mocked_folio_client: FolioClient):
 
     # Mapped with replaceValues
     assert isinstance(folio_recs[3]["trueOrFalse"], bool) and folio_recs[3]["trueOrFalse"] is True
+    # TODO figure out why the below fails, part of #504
     # assert isinstance(folio_recs[4]["trueOrFalse"], bool) and folio_recs[4]["trueOrFalse"] is False
 
     # Mapped source data contians strings "true"/"false"
