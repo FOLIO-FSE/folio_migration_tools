@@ -1210,7 +1210,6 @@ def test_boolean_values_static_value_false(mocked_folio_client):
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
 
 
-
 def test_json_load_s_booleans(mocked_folio_client):
     json_str = '{"a": true, "b": "true", "c": false, "d": "false", "e": "True", "f": "False"}'
     my_json = json.loads(json_str)
