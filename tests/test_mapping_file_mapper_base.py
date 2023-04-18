@@ -2908,7 +2908,10 @@ def test_map_booleans(mocked_folio_client: FolioClient):
     # No source data value, gets schema default value False
     assert isinstance(folio_recs[2]["trueOrFalse"], bool) and folio_recs[2]["trueOrFalse"] is False
     # No source data value, gets mapped fallback value False
-    assert isinstance(folio_recs[2]["trueOrFalseFallback"], bool) and folio_recs[2]["trueOrFalseFallback"] is False
+    assert (
+        isinstance(folio_recs[2]["trueOrFalseFallback"], bool)
+        and folio_recs[2]["trueOrFalseFallback"] is False
+    )
 
     # Mapped with replaceValues
     assert isinstance(folio_recs[3]["trueOrFalse"], bool) and folio_recs[3]["trueOrFalse"] is True
@@ -2917,7 +2920,9 @@ def test_map_booleans(mocked_folio_client: FolioClient):
 
     # Mapped source data contians strings "true"/"false"
     assert isinstance(folio_recs[5]["trueOrFalse"], str) and folio_recs[5]["trueOrFalse"] == "true"
-    assert isinstance(folio_recs[6]["trueOrFalse"], str) and folio_recs[6]["trueOrFalse"] == "false"
+    assert (
+        isinstance(folio_recs[6]["trueOrFalse"], str) and folio_recs[6]["trueOrFalse"] == "false"
+    )
 
 
 def test_default_false(mocked_folio_client: FolioClient):
