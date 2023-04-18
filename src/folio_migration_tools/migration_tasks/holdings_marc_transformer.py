@@ -40,7 +40,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         files: Annotated[
             List[FileDefinition],
             Field(
-                title="Source files", description=("List of MARC21 files with authority records")
+                title="Source files", description=("List of MARC21 files with holdings records")
             ),
         ]
         hrid_handling: Annotated[
