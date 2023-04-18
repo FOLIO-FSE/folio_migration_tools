@@ -326,7 +326,7 @@ def test_create_source_records_equals_false():
         )[0]
         assert res
         assert res["permanentLocationId"] == "f34d27c6-a8eb-461b-acd6-5dea81771e70"
-        assert res.get("hrid", False) == False
+        assert res.get("hrid", False) is False
         assert len(res["administrativeNotes"]) > 0
         assert res["callNumber"] == "QB611 .C44"
         assert res["callNumberTypeId"] == "95467209-6d7b-468b-94df-0f5d7ad2747d"

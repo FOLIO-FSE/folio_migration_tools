@@ -2836,6 +2836,89 @@ def test_map_enums_invalid_not_required_deeper_level(mocked_folio_client):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
+def test_map_booleans(mocked_folio_client: FolioClient):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A generic record",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "trueOrFalse": {
+                "id": "trueOrFalse",
+                "description": "Is it true or is it false?",
+                "type": "boolean",
+                "default": False,
+            },
+            "trueOrFalseFallback": {
+                "id": "trueOrFalseFallback",
+                "description": "Is it true or is it false?",
+                "type": "boolean",
+            },
+        },
+    }
+    records = [
+        {"id": "idi0", "true_or_false": True},
+        {"id": "idi1", "true_or_false": False},
+        {"id": "idi2", "true_or_false": ""},
+        {"id": "idi3", "true_or_false": "yes"},
+        {"id": "idi4", "true_or_false": "no"},
+        {"id": "idi5", "true_or_false": "true"},
+        {"id": "idi6", "true_or_false": "false"},
+    ]
+
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "trueOrFalse",
+                "legacy_field": "true_or_false",
+                "value": "",
+                "description": "",
+                "rules": {"replaceValues": {"yes": True, "no": False}},
+            },
+            {
+                "folio_field": "trueOrFalseFallback",
+                "legacy_field": "true_or_false",
+                "value": False,
+                "description": "",
+            },
+        ]
+    }
+
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_recs = []
+
+    for record in records:
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+        folio_recs.append(folio_rec)
+
+    # Mapped source data contians booleans True/False
+    assert isinstance(folio_recs[0]["trueOrFalse"], bool) and folio_recs[0]["trueOrFalse"] is True
+    assert isinstance(folio_recs[1]["trueOrFalse"], bool) and folio_recs[1]["trueOrFalse"] is False
+
+    # No source data value, gets schema default value False
+    assert isinstance(folio_recs[2]["trueOrFalse"], bool) and folio_recs[2]["trueOrFalse"] is False
+    # No source data value, gets mapped fallback value False
+    assert isinstance(folio_recs[2]["trueOrFalseFallback"], bool) and folio_recs[2]["trueOrFalseFallback"] is False
+
+    # Mapped with replaceValues
+    assert isinstance(folio_recs[3]["trueOrFalse"], bool) and folio_recs[3]["trueOrFalse"] is True
+    # assert isinstance(folio_recs[4]["trueOrFalse"], bool) and folio_recs[4]["trueOrFalse"] is False
+
+    # Mapped source data contians strings "true"/"false"
+    assert isinstance(folio_recs[5]["trueOrFalse"], str) and folio_recs[5]["trueOrFalse"] == "true"
+    assert isinstance(folio_recs[6]["trueOrFalse"], str) and folio_recs[6]["trueOrFalse"] == "false"
+
+
 def test_default_false(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -2855,7 +2938,7 @@ def test_default_false(mocked_folio_client: FolioClient):
             },
         },
     }
-    record = {"id": "id1", "delivery_method": "Offline", "vendor_yesno":""}
+    record = {"id": "id1", "delivery_method": "Offline", "vendor_yesno": ""}
     the_map = {
         "data": [
             {
@@ -4207,7 +4290,7 @@ def test_get_prop_22(mocked_folio_client: FolioClient):
         mock_library_conf,
         True,
     )
-    prop = mapper.get_prop(legacy_record, "username", "1","")
+    prop = mapper.get_prop(legacy_record, "username", "1", "")
     assert prop == "user_name_1"
 
 
@@ -4368,18 +4451,15 @@ def test_add_default_from_schema(mocked_folio_client: FolioClient):
         folio_recs.append(folio_rec)
 
     # The first record, which had no values in the mapped fields, should get defaults
-    assert folio_recs[0]["approved"] == False
+    assert folio_recs[0]["approved"] is False
     assert folio_recs[0]["workflowStatus"] == "Pending"
-    assert folio_recs[0]["compositePoLines"][0]["checkinItems"] == False
+    assert folio_recs[0]["compositePoLines"][0]["checkinItems"] is False
     assert folio_recs[0]["compositePoLines"][0]["receiptStatus"] == "Pending"
     assert folio_recs[0]["compositePoLines"][0]["cost"]["discountType"] == "percentage"
 
-
     # The second record should get the vaues specified in the mapped fields
-    assert folio_recs[1]["approved"] == True
+    assert folio_recs[1]["approved"] is True
     assert folio_recs[1]["workflowStatus"] == "Open"
-    assert folio_recs[1]["compositePoLines"][0]["checkinItems"] == True
+    assert folio_recs[1]["compositePoLines"][0]["checkinItems"] is True
     assert folio_recs[1]["compositePoLines"][0]["receiptStatus"] == "Ongoing"
     assert folio_recs[1]["compositePoLines"][0]["cost"]["discountType"] == "amount"
-
-
