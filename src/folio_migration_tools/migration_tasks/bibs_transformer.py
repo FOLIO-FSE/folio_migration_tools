@@ -35,13 +35,14 @@ class BibsTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Migration task type",
-                description=("The type of migration task you want to perform"),
+                description=("The type of migration task you want to perform."),
             ),
         ]
         files: Annotated[
             List[FileDefinition],
             Field(
-                title="Source files", description=("List of MARC21 files with authority records")
+                title="Source files",
+                description=("List of files with MARC21 bibliographic records."),
             ),
         ]
         ils_flavour: Annotated[
