@@ -42,7 +42,7 @@ class BibsTransformer(MigrationTaskBase):
             List[FileDefinition],
             Field(
                 title="Source files",
-                description=("List of files with MARC21 bibliographic records."),
+                description=("List of MARC21 files with bibliographic records."),
             ),
         ]
         ils_flavour: Annotated[
