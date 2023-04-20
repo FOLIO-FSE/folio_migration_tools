@@ -102,9 +102,7 @@ def main():
             logging.info("Work done. Shutting down")
             sys.exit(0)
             # task_obj.wrap_up()
-    except httpx.SSLError:
-        print("\nSSL error. Are you connected to the Internet and the VPN?")
-    except httpx.ConnectionError as connection_error:
+    except httpx.HTTPError as connection_error:
         print(
             f"\nConnection Error when connecting to {connection_error.request.url}. "
             "Are you connectet to the Internet/VPN? Do you need to update DNS settings?"
