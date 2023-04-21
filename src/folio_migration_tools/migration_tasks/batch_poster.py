@@ -659,9 +659,9 @@ def get_human_readable(size, precision=2):
     return "%.*f%s" % (precision, size, suffixes[suffix_index])
 
 
-def get_req_size(response):
+def get_req_size(response: httpx.Response):
     size = response.request.method
-    size += response.request.url
+    size += str(response.request.url)
     size += "\r\n".join(f"{k}{v}" for k, v in response.request.headers.items())
     size += response.request.body or []
     return get_human_readable(len(size.encode("utf-8")))
