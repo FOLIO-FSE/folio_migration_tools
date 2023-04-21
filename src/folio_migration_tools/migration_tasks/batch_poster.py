@@ -663,5 +663,5 @@ def get_req_size(response: httpx.Response):
     size = response.request.method
     size += str(response.request.url)
     size += "\r\n".join(f"{k}{v}" for k, v in response.request.headers.items())
-    size += response.request.content or []
+    size += response.request.content.decode("utf-8") or ""
     return get_human_readable(len(size.encode("utf-8")))
