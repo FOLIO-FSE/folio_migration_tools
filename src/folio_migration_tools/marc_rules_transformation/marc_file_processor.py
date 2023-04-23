@@ -173,7 +173,7 @@ class MarcFileProcessor:
                 "", "No 852 in record when storing new location code", ""
             )
         first_852 = marc_record.get_fields("852")[0]
-        # first_852.delete_subfield("b")
+        first_852.delete_subfield("b")
         while old_b := first_852.delete_subfield("b"):
             first_852.add_subfield("x", old_b, 0)
             self.mapper.migration_report.add(
