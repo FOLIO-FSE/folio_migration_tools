@@ -10,8 +10,8 @@ from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from httpx import HTTPError
 from pydantic import Field
-from requests import HTTPError
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
