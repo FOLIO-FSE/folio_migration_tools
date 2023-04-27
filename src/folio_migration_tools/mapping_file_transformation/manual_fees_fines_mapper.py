@@ -25,6 +25,7 @@ class ManualFeesFinesMapper(MappingFileMapperBase):
         feesfines_type_map,
         library_configuration: LibraryConfiguration,
         task_configuration,
+        ignore_legacy_identifier: bool = True
     ):
         self.folio_client: FolioClient = folio_client
         self.user_cache: dict = {}
@@ -35,11 +36,12 @@ class ManualFeesFinesMapper(MappingFileMapperBase):
 
         super().__init__(
             folio_client,
-            self.get_composite_feefine_schema,
+            self.composite_feefine_schema,
             feesfines_map,
             None,
             FOLIONamespaces.account,
             library_configuration,
+            ignore_legacy_identifier
         )
 
         self.feesfines_map = feesfines_map
@@ -50,7 +52,7 @@ class ManualFeesFinesMapper(MappingFileMapperBase):
                 "/owners",
                 "owners",
                 feesfines_owner_map,
-                "label",
+                "owner",
                 Blurbs.FeeFineOnwerMapping,
             )
         else:
@@ -59,8 +61,8 @@ class ManualFeesFinesMapper(MappingFileMapperBase):
         if feesfines_type_map:
             self.feesfines_type_map = RefDataMapping(
                 self.folio_client,
-                "/coursereserves/departments",
-                "departments",
+                "/feefines",
+                "feefines",
                 feesfines_type_map,
                 "feeFineType",
                 Blurbs.FeeFineTypesMapping,
@@ -81,7 +83,7 @@ class ManualFeesFinesMapper(MappingFileMapperBase):
             ) from ee
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
-        if folio_prop_name == "account.feeFineOwner":
+        if folio_prop_name == "account.ownerId":
             return self.get_mapped_ref_data_value(
                 self.feesfines_owner_map,
                 legacy_item,
@@ -89,7 +91,7 @@ class ManualFeesFinesMapper(MappingFileMapperBase):
                 index_or_id,
                 False,
             )
-        elif folio_prop_name == "account.feeFineType":
+        elif folio_prop_name == "account.feeFineId":
             return self.get_mapped_ref_data_value(
                 self.feesfines_type_map,
                 legacy_item,

@@ -96,7 +96,8 @@ class ManualFeesFinesTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.account
                     )
                     self.mapper.perform_additional_mappings((folio_rec, legacy_id))
-
+                    self.mapper.report_folio_mapping(folio_rec, self.mapper.organization_schema)
+                    
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
