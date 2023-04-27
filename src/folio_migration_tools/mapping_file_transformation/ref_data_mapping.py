@@ -215,5 +215,7 @@ def get_mapped_legacy_keys(mapping):
             "folio_name",
             "legacy_code",
             "folio_value",
+            "folio_owner",
+            "folio_feeFineType",
         ]
     ]

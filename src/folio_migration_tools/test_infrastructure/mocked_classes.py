@@ -110,6 +110,52 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "code": "fb",
             },
         ]
+    elif ref_data_path == "/owners":
+        yield from [
+            {
+                "owner": "The Best Fee Fine Owner",
+                "desc": "She really is!",
+                "servicePointOwner": [
+                    {"value": "a77b55e7-f9f3-40a1-83e0-241bc606a826", "label": "lisatest"}
+                ],
+                "id": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+            },
+            {
+                "owner": "The Other Fee Fine Owner",
+                "desc": "heeey",
+                "servicePointOwner": [
+                    {"value": "1543c345-dcaf-4367-84a8-853d95837a3b", "label": "lisatest2 :) <3 "}
+                ],
+                "id": "62a0eb54-de96-46ee-b184-5be6c8114a19",
+            },
+        ]
+    elif ref_data_path == "/feefines":
+        yield from [
+            {
+                "automatic": False,
+                "feeFineType": "Coffee spill",
+                "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+                "id": "6e8dc178-f667-45cd-90b5-338c78c3a85c",
+            },
+            {
+                "automatic": False,
+                "feeFineType": "Coffee spill",
+                "ownerId": "62a0eb54-de96-46ee-b184-5be6c8114a19",
+                "id": "031836ec-521a-4493-9f76-0e02c2e7d241",
+            },
+            {
+                "automatic": False,
+                "feeFineType": "Replacement library card",
+                "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+                "id": "8936606d-223b-428e-9a70-4b8105f60cdb",
+            },
+            {
+                "automatic": True,
+                "feeFineType": "Replacement processing fee",
+                "id": "d20df2fb-45fd-4184-b238-0d25747ffdd9",
+            },
+        ]
+
     elif ref_data_path == "/users" and query == '?query=(externalSystemId=="Some external id")':
         yield from [{"id": "some id", "barcode": "some barcode", "patronGroup": "some group"}]
     elif ref_data_path in super_schema:
