@@ -141,7 +141,7 @@ class CirculationHelper:
                     f"Item Barcode:{legacy_loan.item_barcode}"
                 )
                 return TransactionResult(False, False, "", error_message, error_message)
-            req = httpx.post(url, headers=self.folio_client.okapi_headers, json=data)
+            req = httpx.post(url, headers=self.folio_client.okapi_headers, json=data, timeout=None)
             if req.status_code == 422:
                 error_message_from_folio = json.loads(req.text)["errors"][0]["message"]
                 stat_message = error_message_from_folio
@@ -255,7 +255,7 @@ class CirculationHelper:
                     "comment": "Migrated from legacy system",
                 }
             }
-            req = httpx.post(url, headers=folio_client.okapi_headers, json=data)
+            req = httpx.post(url, headers=folio_client.okapi_headers, json=data, timeout=None)
             logging.debug(f"POST {req.status_code}\t{url}\t{json.dumps(data)}")
             if str(req.status_code) == "422":
                 message = json.loads(req.text)["errors"][0]["message"]
@@ -309,7 +309,9 @@ class CirculationHelper:
             loan_to_put["loanDate"] = extend_out_date.isoformat()
             url = f"{folio_client.okapi_url}/circulation/loans/{loan_to_put['id']}"
 
-            req = httpx.put(url, headers=folio_client.okapi_headers, json=loan_to_put)
+            req = httpx.put(
+                url, headers=folio_client.okapi_headers, json=loan_to_put, timeout=None
+            )
             logging.info(
                 "%s\tPUT Extend loan %s to %s\t %s",
                 req.status_code,
