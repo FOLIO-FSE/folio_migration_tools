@@ -28,21 +28,21 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 class ManualFeeFinesTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
         name: str
-        feesfines_map_path: str
+        feefines_map: str
         migration_task_type: str
         files: List[FileDefinition]
-        feesfines_file: FileDefinition
-        feesfines_owner_map: Optional[str]
-        feesfines_type_map: Optional[str]
-        
+        feefines_owner_map: Optional[str]
+        feefines_type_map: Optional[str]
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
-        return FOLIONamespaces.account
+        return FOLIONamespaces.feefines
 
     def __init__(
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
+        use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
 
@@ -52,43 +52,48 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         self.files = self.list_source_files()
         self.total_records = 0
 
-        self.feesfines_map = self.setup_records_map(
-            self.folder_structure.mapping_files_folder / self.task_configuration.feesfines_map_path
+        self.feefines_map = self.setup_records_map(
+            self.folder_structure.mapping_files_folder / self.task_configuration.feefines_map
         )
 
         self.results_path = self.folder_structure.created_objects_path
         self.failed_files: List[str] = []
 
+        self.folio_keys = []
+        self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+            self.feefines_map
+        )
+
         self.mapper = ManualFeeFinesMapper(
             self.folio_client,
             self.library_configuration,
             self.task_configuration,
-            self.feesfines_map,
-            feesfines_owner_map=self.load_ref_data_mapping_file(
-                "feesfines_owner",
+            self.feefines_map,
+            feefines_owner_map=self.load_ref_data_mapping_file(
+                "account.ownerId",
                 self.folder_structure.mapping_files_folder
-                / self.task_configuration.feesfines_owner_map,
+                / self.task_configuration.feefines_owner_map,
                 self.folio_keys,
                 False,
             ),
-            feesfines_type_map=self.load_ref_data_mapping_file(
-                "feesfines_type",
+            feefines_type_map=self.load_ref_data_mapping_file(
+                "account.feeFineId",
                 self.folder_structure.mapping_files_folder
-                / self.task_configuration.feesfines_type_map,
+                / self.task_configuration.feefines_type_map,
                 self.folio_keys,
                 False,
             ),
-            ignore_legacy_identifier=True
+            ignore_legacy_identifier=True,
         )
 
     def list_source_files(self):
         files = [
             self.folder_structure.data_folder / self.object_type_name / f.file_name
-            for f in self.task_config.files
+            for f in self.task_configuration.files
             if isfile(self.folder_structure.data_folder / self.object_type_name / f.file_name)
         ]
         if not any(files):
-            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            ret_str = ",".join(f.file_name for f in self.task_configuration.files)
             raise TransformationProcessError(
                 f"Files {ret_str} not found in"
                 "{self.folder_structure.data_folder} / {self.object_type_name}"
@@ -97,32 +102,44 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         for filename in files:
             logging.info("\t%s", filename)
         return files
-    
+
     def do_work(self):
-        logging.info("Starting")
-        full_path = (
-            self.folder_structure.legacy_records_folder
-            / self.task_configuration.fessfines_file.file_name
-        )
-        logging.info("Processing %s", full_path)
-        start = time.time()
-        with open(full_path, encoding="utf-8-sig") as records_file:
-            for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
+        logging.info("Getting started!")
+        for file in self.files:
+            logging.info("Processing %s", file)
+            try:
+                self.process_single_file(file)
+            except Exception as ee:
+                error_str = (
+                    f"Processing of {file} failed:\n{ee}."
+                    "Check source files for empty rows or missing reference data"
+                )
+                logging.exception(error_str)
+                self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
+                sys.exit()
+
+    def process_single_file(self, filename):
+        with open(filename, encoding="utf-8-sig") as records_file:
+            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            start = time.time()
+
+            for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
                 try:
                     if idx == 0:
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
-                        self.mapper.verify_legacy_record(record, idx)
 
                     folio_rec, legacy_id = self.mapper.do_map(
-                        record, f"row {idx}", FOLIONamespaces.account
+                        record, f"row {idx}", FOLIONamespaces.feefines
                     )
 
-                    self.mapper.perform_additional_mappings((folio_rec, legacy_id))
+                    # self.mapper.perform_additional_mapping((folio_rec, legacy_id))
 
-                    self.mapper.report_folio_mapping(folio_rec, self.mapper.organization_schema)
-                    
-                    self.mapper.store_objects((folio_rec, legacy_id))
+                    self.mapper.report_folio_mapping(
+                        folio_rec, self.mapper.composite_feefine_schema
+                    )
+
+                    self.mapper.store_objects(folio_rec)
 
                     if idx == 0:
                         logging.info("First FOLIO record:")
@@ -139,13 +156,13 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     sys.exit(1)
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
+
                 self.mapper.migration_report.add(
                     Blurbs.GeneralStatistics,
-                    f"Number of Legacy items in {full_path}",
+                    "Number of rows in source file",
                 )
-                self.mapper.migration_report.add_general_statistics(
-                    "Number of legacy items in total"
-                )
+                self.mapper.migration_report.add_general_statistics("Number of records in total")
+
                 self.print_progress(idx, start)
 
     def wrap_up(self):
@@ -156,12 +173,12 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
             )
         self.clean_out_empty_logs()
 
-    
-def timings(t0, t0func, num_objects):
-    avg = (time.time() - t0) / num_objects
-    elapsed = time.time() - t0
-    elapsed_func = time.time() - t0func
-    return (
-        f"Total objects: {num_objects}\tTotal elapsed: {elapsed:.2f}\t"
-        f"Average per object: {avg:.2f}s\tElapsed this time: {elapsed_func:.2f}"
-    )
+
+# def timings(t0, t0func, num_objects):
+#     avg = (time.time() - t0) / num_objects
+#     elapsed = time.time() - t0
+#     elapsed_func = time.time() - t0func
+#     return (
+#         f"Total objects: {num_objects}\tTotal elapsed: {elapsed:.2f}\t"
+#         f"Average per object: {avg:.2f}s\tElapsed this time: {elapsed_func:.2f}"
+#     )
