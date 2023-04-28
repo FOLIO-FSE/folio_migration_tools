@@ -215,13 +215,13 @@ class MigrationTaskBase:
     def setup_records_map(self, mapping_file_path):
         with open(mapping_file_path) as mapping_file:
             field_map = json.load(mapping_file)
-            logging.info("%s fields in mapping file map", len(field_map["data"]))
+            logging.info("%s fields present in record mapping file", len(field_map["data"]))
             mapped_fields = (
                 f
                 for f in field_map["data"]
                 if f["legacy_field"] and f["legacy_field"] != "Not mapped"
             )
-            logging.info("%s Mapped fields in mapping file map", len(list(mapped_fields)))
+            logging.info("%s fields mapped in record mapping file", len(list(mapped_fields)))
             return field_map
 
     def log_and_exit_if_too_many_errors(self, error: TransformationRecordFailedError, idx):
