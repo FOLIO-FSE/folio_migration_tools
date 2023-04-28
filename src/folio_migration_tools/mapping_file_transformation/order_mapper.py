@@ -102,7 +102,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 legacy_order,
                 folio_prop_name,
                 index_or_id,
-                True,
+                False,
             )
 
         if folio_prop_name == "vendor":
