@@ -74,20 +74,24 @@ def test_basic_mapping(mapper: ManualFeeFinesMapper):
     data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "213",
-        "item_barcode": "546",
+        "patron_barcode": "some barcode",
+        "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
         "type": "spill",
     }
 
-    res, uuid = mapper.do_map(data, 1, FOLIONamespaces.account)
+    res, uuid = mapper.do_map(data, 1, FOLIONamespaces.feefines)
 
     assert res["feefineaction"]["accountId"] == res["account"]["id"]
     assert res["account"]["amount"] == "100"
+    assert res["account"]["userId"] == "a FOLIO user uuid"
+    assert res["account"]["itemId"] == "a FOLIO item uuid"
     assert res["account"]["feeFineId"] == "031836ec-521a-4493-9f76-0e02c2e7d241"
     assert res["account"]["ownerId"] == "5abfff3f-50eb-432a-9a43-21f8f7a70194"
+    assert res["feefineaction"]["userId"] == "a FOLIO user uuid"
     assert res["feefineaction"]["dateAction"] == "2023-01-02"
+
 
 def test_perform_additional_mapping(mapper: ManualFeeFinesMapper):
     data = {
@@ -100,8 +104,7 @@ def test_perform_additional_mapping(mapper: ManualFeeFinesMapper):
             "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
             "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
         },
-        "feefineaction": {
-            "dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
+        "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
     }
 
     res = mapper.perform_additional_mapping(data)
@@ -118,45 +121,51 @@ def test_store_objects(mapper: ManualFeeFinesMapper):
     mocked_feefines_mapper.migration_report = Mock(spec=MigrationReport)
     mocked_feefines_mapper.current_folio_record = {}
 
-    fee_fines_objects = [
-        {
-            "account": {
-                "amount": "100",
-                "remaining": "50",
-                "paymentStatus": {"name": "Outstanding"},
-                "userId": "213",
-                "itemId": "546",
-                "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
-                "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
-                "id": "48c4ce63-1f9f-4440-acf7-6aa3ac281c9b",
+    feefines_tuples = [
+        (
+            {
+                "account": {
+                    "amount": "100",
+                    "remaining": "50",
+                    "paymentStatus": {"name": "Outstanding"},
+                    "userId": "213",
+                    "itemId": "546",
+                    "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
+                    "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+                    "id": "48c4ce63-1f9f-4440-acf7-6aa3ac281c9b",
+                },
+                "feefineaction": {
+                    "dateAction": "2023-01-02",
+                    "accountId": "48c4ce63-1f9f-4440-acf7-6aa3ac281c9b",
+                    "userId": "213",
+                },
             },
-            "feefineaction": {
-                "dateAction": "2023-01-02",
-                "accountId": "48c4ce63-1f9f-4440-acf7-6aa3ac281c9b",
-                "userId": "213",
+            "124",
+        ),
+        (
+            {
+                "account": {
+                    "amount": "20",
+                    "remaining": "20",
+                    "paymentStatus": {"name": "Outstanding"},
+                    "userId": "213",
+                    "itemId": "546",
+                    "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
+                    "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+                    "id": "f9cfd725-9c97-4646-ae4f-b7edaf96b34f",
+                },
+                "feefineaction": {
+                    "dateAction": "2023-04-05",
+                    "accountId": "f9cfd725-9c97-4646-ae4f-b7edaf96b34f",
+                    "userId": "213",
+                },
             },
-        },
-        {
-            "account": {
-                "amount": "20",
-                "remaining": "20",
-                "paymentStatus": {"name": "Outstanding"},
-                "userId": "213",
-                "itemId": "546",
-                "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
-                "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
-                "id": "f9cfd725-9c97-4646-ae4f-b7edaf96b34f",
-            },
-            "feefineaction": {
-                "dateAction": "2023-04-05",
-                "accountId": "f9cfd725-9c97-4646-ae4f-b7edaf96b34f",
-                "userId": "213",
-            },
-        },
+            "456",
+        ),
     ]
 
-    for object in fee_fines_objects:
-        ManualFeeFinesMapper.store_objects(mocked_feefines_mapper, object)
+    for tuple in feefines_tuples:
+        ManualFeeFinesMapper.store_objects(mocked_feefines_mapper, tuple)
 
     assert str(mocked_feefines_mapper.extradata_writer.cache).count("account\\t") == 2
     assert str(mocked_feefines_mapper.extradata_writer.cache).count("feefineaction\\t") == 2
