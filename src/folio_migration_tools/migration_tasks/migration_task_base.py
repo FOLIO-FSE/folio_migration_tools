@@ -272,6 +272,7 @@ class MigrationTaskBase:
             folio_property_name in folio_keys
             or required
             or folio_property_name.startswith("statisticalCodeIds")
+            or folio_property_name.startswith("locationMap")
         ):
             try:
                 with open(map_file_path) as map_file:
