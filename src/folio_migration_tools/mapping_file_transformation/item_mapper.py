@@ -148,7 +148,6 @@ class ItemMapper(MappingFileMapperBase):
         logging.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
-
         if folio_prop_name == "permanentLocationId":
             return self.get_mapped_ref_data_value(
                 self.location_mapping,
