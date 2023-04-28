@@ -16,16 +16,16 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
 from folio_migration_tools.report_blurbs import Blurbs
 
 
-class ManualFeesFinesMapper(MappingFileMapperBase):
+class ManualFeeFinesMapper(MappingFileMapperBase):
     def __init__(
         self,
         folio_client: FolioClient,
+        library_configuration: LibraryConfiguration,
+        task_configuration,
         feesfines_map,
         feesfines_owner_map,
         feesfines_type_map,
-        library_configuration: LibraryConfiguration,
-        task_configuration,
-        ignore_legacy_identifier: bool = True
+        ignore_legacy_identifier: bool = True,
     ):
         self.folio_client: FolioClient = folio_client
         self.user_cache: dict = {}
@@ -72,18 +72,25 @@ class ManualFeesFinesMapper(MappingFileMapperBase):
 
     def store_objects(self, composite_feefine):
         try:
-            self.extradata_writer.write("account", composite_feefine[0]["account"])
+            self.extradata_writer.write("account", composite_feefine["account"])
             self.migration_report.add_general_statistics("Stored account")
-            self.extradata_writer.write("feefineaction", composite_feefine[0]["feefineaction"])
+            self.extradata_writer.write("feefineaction", composite_feefine["feefineaction"])
             self.migration_report.add_general_statistics("Stored feefineactions")
 
         except Exception as ee:
             raise TransformationRecordFailedError(
-                composite_feefine[1], "Failed when storing", ee
+                composite_feefine, "Failed when storing", ee
             ) from ee
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
-        if folio_prop_name == "account.ownerId":
+        
+        if folio_prop_name == "account.id":
+            return index_or_id
+        
+        elif folio_prop_name == "feefineaction.accountId":
+            return index_or_id
+        
+        elif folio_prop_name == "account.ownerId":
             return self.get_mapped_ref_data_value(
                 self.feesfines_owner_map,
                 legacy_item,
@@ -110,6 +117,8 @@ class ManualFeesFinesMapper(MappingFileMapperBase):
         
     def perform_additional_mapping(self, composite_feefine):
         composite_feefine["finefeefineaction"]["accountId"] = composite_feefine["account"]["id"]
+        
+        return composite_feefine
 
     def get_composite_feefine_schema(self) -> Dict[str, Any]:
         return {

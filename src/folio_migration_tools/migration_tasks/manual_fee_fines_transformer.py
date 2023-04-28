@@ -4,6 +4,8 @@ import logging
 import sys
 import time
 import traceback
+from os.path import isfile
+from typing import List
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -12,8 +14,8 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
-from folio_migration_tools.mapping_file_transformation.manual_fees_fines_mapper import (
-    ManualFeesFinesMapper,
+from folio_migration_tools.mapping_file_transformation.manual_fee_fines_mapper import (
+    ManualFeeFinesMapper,
 )
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -23,15 +25,16 @@ from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
-class ManualFeesFinesTransformer(MigrationTaskBase):
+class ManualFeeFinesTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
         name: str
         feesfines_map_path: str
         migration_task_type: str
+        files: List[FileDefinition]
         feesfines_file: FileDefinition
         feesfines_owner_map: Optional[str]
         feesfines_type_map: Optional[str]
-
+        
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.account
@@ -56,9 +59,10 @@ class ManualFeesFinesTransformer(MigrationTaskBase):
         self.results_path = self.folder_structure.created_objects_path
         self.failed_files: List[str] = []
 
-        self.mapper = ManualFeesFinesMapper(
+        self.mapper = ManualFeeFinesMapper(
             self.folio_client,
             self.library_configuration,
+            self.task_configuration,
             self.feesfines_map,
             feesfines_owner_map=self.load_ref_data_mapping_file(
                 "feesfines_owner",
@@ -74,8 +78,26 @@ class ManualFeesFinesTransformer(MigrationTaskBase):
                 self.folio_keys,
                 False,
             ),
+            ignore_legacy_identifier=True
         )
 
+    def list_source_files(self):
+        files = [
+            self.folder_structure.data_folder / self.object_type_name / f.file_name
+            for f in self.task_config.files
+            if isfile(self.folder_structure.data_folder / self.object_type_name / f.file_name)
+        ]
+        if not any(files):
+            ret_str = ",".join(f.file_name for f in self.task_config.files)
+            raise TransformationProcessError(
+                f"Files {ret_str} not found in"
+                "{self.folder_structure.data_folder} / {self.object_type_name}"
+            )
+        logging.info("Files to process:")
+        for filename in files:
+            logging.info("\t%s", filename)
+        return files
+    
     def do_work(self):
         logging.info("Starting")
         full_path = (
@@ -95,13 +117,16 @@ class ManualFeesFinesTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.account
                     )
+
                     self.mapper.perform_additional_mappings((folio_rec, legacy_id))
+
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.organization_schema)
                     
+                    self.mapper.store_objects((folio_rec, legacy_id))
+
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
-                    self.mapper.store_objects((folio_rec, legacy_id))
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -131,7 +156,7 @@ class ManualFeesFinesTransformer(MigrationTaskBase):
             )
         self.clean_out_empty_logs()
 
-
+    
 def timings(t0, t0func, num_objects):
     avg = (time.time() - t0) / num_objects
     elapsed = time.time() - t0
