@@ -32,8 +32,8 @@ class Blurbs:
     Trivia = ("Trivia", "")
     LeaderManipulation = ("Leader manipulation", "")
     TermsMapping = ("Terms Mapping", "Reference data mapping for Terms.")
-    FeeFineOnwerMapping = ("Terms Mapping", "Reference data mapping for Fee/Fine Owners.")
-    FeeFineTypesMapping = ("Terms Mapping", "Reference data mapping for Fee/Fine Types.")
+    FeeFineOnwerMapping = ("Fee/Fine Owner mapping", "Reference data mapping for Fee/Fine Owners.")
+    FeeFineTypesMapping = ("Fee/Fyne Type mapping", "Reference data mapping for Fee/Fine Types.")
     CategoriesMapping = (
         "Organization contact categories",
         "Reference data mapping for contacts, addresses, emails, and phones numbers.",
