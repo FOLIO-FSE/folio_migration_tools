@@ -168,6 +168,7 @@ class MapperBase:
         index_or_id,
         folio_property_name="",
         prevent_default=False,
+        return_uuid_and_name=False
     ):
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
@@ -190,6 +191,8 @@ class MapperBase:
                     f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
                 ),
             )
+            if return_uuid_and_name:
+                return right_mapping[f"folio_{ref_data_mapping.key_type}"], right_mapping["folio_id"]
             return right_mapping["folio_id"]
         except StopIteration:
             if prevent_default:

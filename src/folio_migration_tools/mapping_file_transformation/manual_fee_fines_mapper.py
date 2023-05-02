@@ -1,7 +1,9 @@
+import logging
 import uuid
 from typing import Any
 from typing import Dict
 
+from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
@@ -104,11 +106,16 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 False,
             )
 
-        elif folio_prop_name == "feefineaction.accountId":
-            return index_or_id
-
-        elif folio_prop_name == "feefineaction.id":
-            return str(uuid.uuid4())
+        elif folio_prop_name == "account.itemId":
+            return self.get_matching_uuid_from_folio(
+                self.item_cache,
+                "/item-storage/items",
+                "barcode",
+                super().get_prop(
+                    legacy_object, folio_prop_name, index_or_id, schema_default_value
+                ),
+                "items",
+            )
 
         elif folio_prop_name == "account.userId" or folio_prop_name == "feefineaction.userId":
             return self.get_matching_uuid_from_folio(
@@ -121,15 +128,19 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 "users",
             )
 
-        elif folio_prop_name == "account.itemId":
-            return self.get_matching_uuid_from_folio(
-                self.item_cache,
-                "/item-storage/items",
-                "barcode",
+        elif folio_prop_name == "feefineaction.id":
+            return str(uuid.uuid4())
+
+        elif folio_prop_name == "feefineaction.accountId":
+            return index_or_id
+
+        elif folio_prop_name == "feefineaction.dateAction":
+            self.parse_date(
+                folio_prop_name,
+                index_or_id,
                 super().get_prop(
                     legacy_object, folio_prop_name, index_or_id, schema_default_value
                 ),
-                "items",
             )
 
         elif mapped_value := super().get_prop(
@@ -142,7 +153,9 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             return ""
 
     def perform_additional_mapping(self, feefine):
-        pass
+        # Set these values for all feefines created
+        feefine["feefineaction"]["source"] = self.folio_client.username
+        feefine["feefineaction"]["notify"] = False
 
         return feefine
 
@@ -172,3 +185,12 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 return None
         else:
             return cache[match_value]
+
+    def parse_date(self, index_or_id, mapped_value, folio_prop_name: str):
+        try:
+            format_date = parse(mapped_value, fuzzy=True)
+            return format_date.isoformat()
+        except Exception as exception:
+            raise TransformationRecordFailedError(
+                index_or_id, f"{folio_prop_name} could not be parsed as a date: ", mapped_value
+            ) from exception
