@@ -12,6 +12,9 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.manual_fee_fines_mapper import (
     ManualFeeFinesMapper,
 )
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.manual_fee_fines_transformer import (
     ManualFeeFinesTransformer,
@@ -86,28 +89,33 @@ def test_basic_mapping(mapper: ManualFeeFinesMapper):
     assert res["feefineaction"]["accountId"] == res["account"]["id"]
     assert res["account"]["amount"] == "100"
     assert res["account"]["userId"] == "a FOLIO user uuid"
-    assert res["account"]["itemId"] == "a FOLIO item uuid"
+    assert res["account"]["itemId"] == "a FOLIO user uuid"
     assert res["account"]["feeFineId"] == "031836ec-521a-4493-9f76-0e02c2e7d241"
     assert res["account"]["ownerId"] == "5abfff3f-50eb-432a-9a43-21f8f7a70194"
     assert res["feefineaction"]["userId"] == "a FOLIO user uuid"
-    assert res["feefineaction"]["dateAction"] == "2023-01-02"
+    assert res["feefineaction"]["dateAction"] == "2023-01-02T00:00:00"
 
 
 def test_perform_additional_mapping(mapper: ManualFeeFinesMapper):
+
     data = {
         "account": {
             "amount": "100",
             "remaining": "50",
             "paymentStatus": {"name": "Outstanding"},
-            "userId": "213",
-            "itemId": "546",
+            "userId": "a FOLIO user uuid",
+            "itemId": "a FOLIO item uuid",
             "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
             "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
         },
         "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
     }
 
-    res = mapper.perform_additional_mapping(data)
+    res = mapper.perform_additional_mapping(data, leg)
+    assert res["account"]["feeFineId"] == "031836ec-521a-4493-9f76-0e02c2e7d241"
+    assert res["account"]["feeFineType"] == "Coffee spill"
+    assert res["account"]["ownerId"] == "5abfff3f-50eb-432a-9a43-21f8f7a70194"
+    assert res["account"]["feeFineOwner"] == "The Best Fee Fine Owner"
 
     assert res
 
