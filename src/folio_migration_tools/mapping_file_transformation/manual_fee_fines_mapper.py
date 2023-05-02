@@ -215,13 +215,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             ) from ee
 
     def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
-        feefine["feefineaction"]["source"] = self.folio_client.username
-        feefine["feefineaction"]["notify"] = False
-        feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
-        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
-        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
-
-        # Add some name values to make things look nice in the UI
+        # Add some name values to ensure nice UI behaviour 
         feefine["account"]["feeFineOwner"] = [
             owner["owner"]
             for owner in self.feefines_owner_map.ref_data
@@ -234,7 +228,12 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             if type["id"] == feefine["account"]["feeFineId"]
         ][0]
         feefine["account"]["feeFineType"] = type_name
-        feefine["feefineaction"]["balance"] = type_name
+        feefine["feefineaction"]["typeAction"] = type_name
+
+        feefine["feefineaction"]["source"] = self.folio_client.username
+        feefine["feefineaction"]["notify"] = False
+        feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
+        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
 
 
 
