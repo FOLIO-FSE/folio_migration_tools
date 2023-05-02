@@ -8,6 +8,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
 
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -91,34 +92,16 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
 
         elif folio_prop_name == "account.ownerId":
             return self.get_mapped_ref_data_value(
-                self.feefines_owner_map,
-                legacy_object,
-                index_or_id,
-                folio_prop_name,
-                False,
-            )
-        elif folio_prop_name == "account.feeFineId":
-            return self.get_mapped_ref_data_value(
-                self.feefines_type_map,
-                legacy_object,
-                index_or_id,
-                folio_prop_name,
-                False,
+                self.feefines_owner_map, legacy_object, index_or_id, folio_prop_name, False
             )
 
-        elif folio_prop_name == "account.itemId":
-            return self.get_matching_uuid_from_folio(
-                self.item_cache,
-                "/item-storage/items",
-                "barcode",
-                super().get_prop(
-                    legacy_object, folio_prop_name, index_or_id, schema_default_value
-                ),
-                "items",
+        elif folio_prop_name == "account.feeFineId":
+            return self.get_mapped_ref_data_value(
+                self.feefines_type_map, legacy_object, index_or_id, folio_prop_name, False
             )
 
         elif folio_prop_name == "account.userId" or folio_prop_name == "feefineaction.userId":
-            return self.get_matching_uuid_from_folio(
+            return self.get_matching_record_from_folio(
                 self.user_cache,
                 "/users",
                 "barcode",
@@ -135,12 +118,13 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             return index_or_id
 
         elif folio_prop_name == "feefineaction.dateAction":
-            self.parse_date(
+            return self.parse_date(
                 folio_prop_name,
                 index_or_id,
                 super().get_prop(
                     legacy_object, folio_prop_name, index_or_id, schema_default_value
                 ),
+                legacy_object,
             )
 
         elif mapped_value := super().get_prop(
@@ -151,13 +135,6 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         else:
             self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")
             return ""
-
-    def perform_additional_mapping(self, feefine):
-        # Set these values for all feefines created
-        feefine["feefineaction"]["source"] = self.folio_client.username
-        feefine["feefineaction"]["notify"] = False
-
-        return feefine
 
     def get_composite_feefine_schema(self) -> Dict[str, Any]:
         return {
@@ -171,26 +148,61 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             }
         }
 
-    def get_matching_uuid_from_folio(
+    def get_matching_record_from_folio(
         self, cache: dict, path: str, match_property: str, match_value: str, result_type: str
     ):
         if match_value not in cache:
             query = f'?query=({match_property}=="{match_value}")'
-            if matching_object := next(
+            if matching_record := next(
                 self.folio_client.folio_get_all(path, result_type, query), None
             ):
-                cache[match_value] = matching_object["id"]
-                return matching_object["id"]
+                cache[match_value] = matching_record
+                return matching_record
             else:
                 return None
         else:
             return cache[match_value]
 
-    def parse_date(self, index_or_id, mapped_value, folio_prop_name: str):
+    def parse_date(self, folio_prop_name: str, index_or_id, mapped_value, legacy_object):
         try:
             format_date = parse(mapped_value, fuzzy=True)
             return format_date.isoformat()
         except Exception as exception:
-            raise TransformationRecordFailedError(
-                index_or_id, f"{folio_prop_name} could not be parsed as a date: ", mapped_value
+            raise TransformationFieldMappingError(
+                index_or_id, f"Invalid {folio_prop_name} date for {legacy_object} ", mapped_value
             ) from exception
+
+    def perform_additional_mapping(self, feefine, legacy_object):
+        # Set these values for all feefines created
+        feefine["feefineaction"]["source"] = self.folio_client.username
+        feefine["feefineaction"]["notify"] = False
+
+        # Add some name values to make things look nice in the UI
+        feefine["account"]["feeFineOwner"] = [
+            owner["owner"]
+            for owner in self.feefines_owner_map.ref_data
+            if owner["id"] == feefine["account"]["ownerId"]
+        ][0]
+        feefine["account"]["feeFineType"] = [
+            type["feeFineType"]
+            for type in self.feefines_type_map.ref_data
+            if type["id"] == feefine["account"]["feeFineId"]
+        ][0]
+
+        # Add item data from FOLIO if available
+        if folio_item := self.get_matching_record_from_folio(
+            self.item_cache,
+            "/item-storage/items",
+            "barcode",
+            super().get_prop(legacy_object, "account.itemId", "", ""),
+            "items",
+        ):
+
+            feefine["account"]["itemId"] = folio_item.get("id")
+            feefine["account"]["title"] = folio_item.get("title")
+            feefine["account"]["callNumber"] = folio_item.get("callNumber")
+            feefine["account"]["materialType"] = folio_item.get("materialType.name")
+            feefine["account"]["materialTypeId"] = folio_item.get("materialType.id")
+            feefine["account"]["location"] = folio_item.get("location.name")
+
+        return feefine
