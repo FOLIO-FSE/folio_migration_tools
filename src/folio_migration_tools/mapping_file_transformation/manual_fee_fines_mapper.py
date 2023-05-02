@@ -29,6 +29,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         feefines_map,
         feefines_owner_map,
         feefines_type_map,
+        service_point_map,
         ignore_legacy_identifier: bool = True,
     ):
         self.folio_client: FolioClient = folio_client
@@ -74,6 +75,18 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         else:
             self.feefines_type_map = None
 
+        if service_point_map:
+            self.service_point_map = RefDataMapping(
+                self.folio_client,
+                "/service-points",
+                "servicepoints",
+                service_point_map,
+                "name",
+                Blurbs.FeeFineServicePointTypesMapping,
+            )
+        else:
+            self.service_point_map = None
+
     def store_objects(self, composite_feefine):
         try:
             self.extradata_writer.write("account", composite_feefine["account"])
@@ -87,28 +100,24 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             ) from ee
 
     def get_prop(self, legacy_object, folio_prop_name, index_or_id, schema_default_value):
-        if folio_prop_name == "account.id":
+        if folio_prop_name == "account.id" or folio_prop_name == "feefineaction.accountId":
             return index_or_id
 
         elif folio_prop_name == "account.amount" or folio_prop_name == "account.remaining":
-            legacy_sum = super().get_prop(
-                legacy_object, folio_prop_name, index_or_id, schema_default_value
+            return self.parse_sum_as_float(
+                index_or_id,
+                super().get_prop(
+                    legacy_object, folio_prop_name, index_or_id, schema_default_value
+                ),
+                folio_prop_name,
             )
-            try:
-                return float(legacy_sum)
-            except Exception as ee:
-                raise TransformationRecordFailedError(
-                    index_or_id,
-                    f"Values mapped to '{folio_prop_name}' may only contain numbers/decimals.",
-                    legacy_sum,
-                ) from ee
 
-        elif folio_prop_name == "account.ownerId":
+        elif folio_prop_name == "account.ownerId" and self.feefines_owner_map:
             return self.get_mapped_ref_data_value(
                 self.feefines_owner_map, legacy_object, index_or_id, folio_prop_name, False
             )
 
-        elif folio_prop_name == "account.feeFineId":
+        elif folio_prop_name == "account.feeFineId" and self.feefines_type_map:
             return self.get_mapped_ref_data_value(
                 self.feefines_type_map, legacy_object, index_or_id, folio_prop_name, False
             )
@@ -123,13 +132,15 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                     legacy_object, folio_prop_name, index_or_id, schema_default_value
                 ),
                 "users",
-            )
+            )["id"]
 
         elif folio_prop_name == "feefineaction.id":
             return str(uuid.uuid4())
 
-        elif folio_prop_name == "feefineaction.accountId":
-            return index_or_id
+        elif folio_prop_name == "feefineaction.createdAt" and self.service_point_map:
+            return self.get_mapped_ref_data_value(
+                self.service_point_map, legacy_object, index_or_id, folio_prop_name, False
+            )
 
         elif folio_prop_name == "feefineaction.dateAction":
             return self.parse_date(
@@ -147,7 +158,6 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             return mapped_value
 
         else:
-            self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")
             return ""
 
     def get_composite_feefine_schema(self) -> Dict[str, Any]:
@@ -194,10 +204,21 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 index_or_id, f"Invalid {folio_prop_name} date for {legacy_object} ", mapped_value
             ) from exception
 
+    def parse_sum_as_float(self, index_or_id, legacy_sum, folio_prop_name):
+        try:
+            return float(legacy_sum)
+        except Exception as ee:
+            raise TransformationRecordFailedError(
+                index_or_id,
+                f"Values mapped to '{folio_prop_name}' may only contain numbers/decimals.",
+                legacy_sum,
+            ) from ee
+
     def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
-        # Set these values for all feefines created
         feefine["feefineaction"]["source"] = self.folio_client.username
         feefine["feefineaction"]["notify"] = False
+        feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
+        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
 
         # Add some name values to make things look nice in the UI
         feefine["account"]["feeFineOwner"] = [
@@ -223,6 +244,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
 
             feefine["account"]["itemId"] = folio_item.get("id", "")
             feefine["account"]["title"] = folio_item.get("title", "")
+            feefine["account"]["barcode"] = folio_item.get("barcode", "")
             feefine["account"]["callNumber"] = folio_item.get("callNumber", "")
             feefine["account"]["materialType"] = folio_item.get("materialType", {}).get("name")
             feefine["account"]["materialTypeId"] = folio_item.get("materialType", {}).get("id")
@@ -231,7 +253,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             feefine["account"].pop("itemId")
 
         # Add the full legacy item dict to the comment field
-        if feefine["feefineaction"]["comments"]:
+        if feefine["feefineaction"].get("comments"):
             feefine["feefineaction"]["comments"] = (
                 ("STAFF : " + feefine["feefineaction"]["comments"])
                 + " "

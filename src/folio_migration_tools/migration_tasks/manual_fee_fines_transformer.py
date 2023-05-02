@@ -12,6 +12,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.manual_fee_fines_mapper import (
@@ -33,6 +34,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         files: List[FileDefinition]
         feefines_owner_map: Optional[str]
         feefines_type_map: Optional[str]
+        service_point_map: Optional[str]
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -83,6 +85,13 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.folio_keys,
                 False,
             ),
+            service_point_map=self.load_ref_data_mapping_file(
+                "feefineaction.createdAt",
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.service_point_map,
+                self.folio_keys,
+                False,
+            ),
             ignore_legacy_identifier=True,
         )
 
@@ -129,12 +138,14 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                         logging.info("First legacy record:")
                         logging.info(json.dumps(record, indent=4))
 
+                    self.mapper.report_legacy_mapping_no_schema(record)
+                    
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.feefines
                     )
 
                     self.mapper.perform_additional_mapping(f"row {idx}", folio_rec, record)
-
+                    
                     self.mapper.report_folio_mapping(
                         folio_rec, self.mapper.composite_feefine_schema
                     )
@@ -166,19 +177,22 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.print_progress(idx, start)
 
     def wrap_up(self):
+        logging.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
-        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            self.mapper.migration_report.write_migration_report(
-                "Manual fees/fines migration report", report_file, self.mapper.start_datetime
+        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
+            logging.info(
+                "Writing migration- and mapping report to %s",
+                self.folder_structure.migration_reports_file,
             )
+            self.mapper.migration_report.write_migration_report(
+                "Manual fee/fine transformation report", migration_report_file, self.start_datetime
+            )
+
+            Helper.print_mapping_report(
+                migration_report_file,
+                self.total_records,
+                self.mapper.mapped_folio_fields,
+                self.mapper.mapped_legacy_fields,
+            )
+
         self.clean_out_empty_logs()
-
-
-# def timings(t0, t0func, num_objects):
-#     avg = (time.time() - t0) / num_objects
-#     elapsed = time.time() - t0
-#     elapsed_func = time.time() - t0func
-#     return (
-#         f"Total objects: {num_objects}\tTotal elapsed: {elapsed:.2f}\t"
-#         f"Average per object: {avg:.2f}s\tElapsed this time: {elapsed_func:.2f}"
-#     )
