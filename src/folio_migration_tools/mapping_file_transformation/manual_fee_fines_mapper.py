@@ -219,6 +219,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         feefine["feefineaction"]["notify"] = False
         feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
         feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
+        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
 
         # Add some name values to make things look nice in the UI
         feefine["account"]["feeFineOwner"] = [
@@ -226,11 +227,16 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             for owner in self.feefines_owner_map.ref_data
             if owner["id"] == feefine["account"]["ownerId"]
         ][0]
-        feefine["account"]["feeFineType"] = [
+
+        type_name = [
             type["feeFineType"]
             for type in self.feefines_type_map.ref_data
             if type["id"] == feefine["account"]["feeFineId"]
         ][0]
+        feefine["account"]["feeFineType"] = type_name
+        feefine["feefineaction"]["balance"] = type_name
+
+
 
         # Add item data from FOLIO if available
         if folio_item := self.get_matching_record_from_folio(
