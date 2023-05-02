@@ -283,7 +283,7 @@ def test_basic_mapping_without_ref_data(mapper_without_refdata: ManualFeeFinesMa
         "billed_date": "2023-01-02",
     }
 
-    res, uuid = mapper_without_refdata.do_map(data, 1, FOLIONamespaces.feefines)
+    res, uuid = mapper_without_refdata.do_map(data, 1, FOLIONamespaces.fees_fines)
 
     assert res["account"]["feeFineId"] == "a_hardcoded_default_uuid"
     assert res["account"]["ownerId"] == "a_hardcoded_default_uuid"
@@ -302,7 +302,7 @@ def test_basic_mapping_with_ref_data(mapper_with_refdata: ManualFeeFinesMapper):
         "type": "spill",
     }
 
-    res, uuid = mapper_with_refdata.do_map(data, 1, FOLIONamespaces.feefines)
+    res, uuid = mapper_with_refdata.do_map(data, 1, FOLIONamespaces.fees_fines)
 
     assert res["feefineaction"]["accountId"] == res["account"]["id"]
     assert res["account"]["amount"] == 100.0
@@ -326,7 +326,7 @@ def test_basic_mapping_with_invalid_sum(mapper_with_refdata: ManualFeeFinesMappe
     }
 
     with pytest.raises(TransformationRecordFailedError):
-        res, uuid = mapper_with_refdata.do_map(data, 2, FOLIONamespaces.feefines)
+        res, uuid = mapper_with_refdata.do_map(data, 2, FOLIONamespaces.fees_fines)
         assert not res
 
 

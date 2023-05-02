@@ -38,7 +38,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
-        return FOLIONamespaces.feefines
+        return FOLIONamespaces.fees_fines
 
     def __init__(
         self,
@@ -141,7 +141,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     self.mapper.report_legacy_mapping_no_schema(record)
 
                     folio_rec, legacy_id = self.mapper.do_map(
-                        record, f"row {idx}", FOLIONamespaces.feefines
+                        record, f"row {idx}", FOLIONamespaces.fees_fines
                     )
 
                     self.mapper.perform_additional_mapping(f"row {idx}", folio_rec, record)

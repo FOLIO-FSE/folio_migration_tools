@@ -42,7 +42,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             self.composite_feefine_schema,
             feefines_map,
             None,
-            FOLIONamespaces.feefines,
+            FOLIONamespaces.fees_fines,
             library_configuration,
             ignore_legacy_identifier,
         )
