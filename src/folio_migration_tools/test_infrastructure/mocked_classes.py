@@ -156,6 +156,20 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
             },
         ]
 
+    elif ref_data_path == "/service-points":
+        yield from [
+            {
+                "id": "finance_office_uuid",
+                "name": "Finance Office",
+                "code": "fo",
+            },
+            {
+                "id": "library_main_desk_uuid",
+                "name": "Library Main Desk",
+                "code": "lmd",
+            }
+        ]
+
     elif ref_data_path == "/users" and query == '?query=(externalSystemId=="Some external id")':
         yield from [{"id": "some id", "barcode": "some barcode", "patronGroup": "some group"}]
 
