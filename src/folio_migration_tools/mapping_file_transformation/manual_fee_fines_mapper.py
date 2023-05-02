@@ -1,11 +1,9 @@
-import logging
 import uuid
 from typing import Any
 from typing import Dict
 
 from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
@@ -215,7 +213,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             ) from ee
 
     def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
-        # Add some name values to ensure nice UI behaviour 
+        # Add some name values to ensure nice UI behaviour
         feefine["account"]["feeFineOwner"] = [
             owner["owner"]
             for owner in self.feefines_owner_map.ref_data
@@ -234,8 +232,6 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         feefine["feefineaction"]["notify"] = False
         feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
         feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
-
-
 
         # Add item data from FOLIO if available
         if folio_item := self.get_matching_record_from_folio(

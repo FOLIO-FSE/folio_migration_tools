@@ -139,13 +139,13 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                         logging.info(json.dumps(record, indent=4))
 
                     self.mapper.report_legacy_mapping_no_schema(record)
-                    
+
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.feefines
                     )
 
                     self.mapper.perform_additional_mapping(f"row {idx}", folio_rec, record)
-                    
+
                     self.mapper.report_folio_mapping(
                         folio_rec, self.mapper.composite_feefine_schema
                     )

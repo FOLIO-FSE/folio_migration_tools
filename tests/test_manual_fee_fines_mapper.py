@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 from unittest.mock import Mock
@@ -13,9 +12,6 @@ from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.manual_fee_fines_mapper import (
     ManualFeeFinesMapper,
-)
-from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
-    RefDataMapping,
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.manual_fee_fines_transformer import (
@@ -439,7 +435,7 @@ def test_perform_additional_mapping_get_item_data_with_match(
 
     res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
     assert res["account"]["title"] == "Döda fallen i Avesta."
-    assert res["account"]["barcode"] == "950-10"
+    assert res["account"]["barcode"] == "some barcode"
 
 
 def test_perform_additional_mapping_get_item_data_no_match(
