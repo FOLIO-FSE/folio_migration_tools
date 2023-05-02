@@ -90,6 +90,19 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         if folio_prop_name == "account.id":
             return index_or_id
 
+        elif folio_prop_name == "account.amount" or folio_prop_name == "account.remaining":
+            legacy_sum = super().get_prop(
+                legacy_object, folio_prop_name, index_or_id, schema_default_value
+            )
+            try:
+                return float(legacy_sum)
+            except Exception as ee:
+                raise TransformationRecordFailedError(
+                    index_or_id,
+                    f"Values mapped to '{folio_prop_name}' may only contain numbers/decimals.",
+                    legacy_sum,
+                ) from ee
+
         elif folio_prop_name == "account.ownerId":
             return self.get_mapped_ref_data_value(
                 self.feefines_owner_map, legacy_object, index_or_id, folio_prop_name, False
@@ -217,4 +230,24 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         else:
             feefine["account"].pop("itemId")
 
+        # Add the full legacy item dict to the comment field
+        if feefine["feefineaction"]["comments"]:
+            feefine["feefineaction"]["comments"] = (
+                ("STAFF : " + feefine["feefineaction"]["comments"])
+                + " "
+                + self.stringify_legacy_object(legacy_object)
+            )
+
+        else:
+            feefine["feefineaction"]["comments"] = self.stringify_legacy_object(legacy_object)
+
         return feefine
+
+    def stringify_legacy_object(self, legacy_object):
+        legacy_string = (
+            "MIGRATION NOTE : This fee/fine was migrated to FOLIO from a previous "
+            "library management system. The following is the original data: "
+        )
+        for key, value in legacy_object.items():
+            legacy_string += f"{key.title()}: {value}; "
+        return legacy_string.strip().strip(";")
