@@ -102,6 +102,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
 
         elif folio_prop_name == "account.userId" or folio_prop_name == "feefineaction.userId":
             return self.get_matching_record_from_folio(
+                index_or_id,
                 self.user_cache,
                 "/users",
                 "barcode",
@@ -149,7 +150,13 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         }
 
     def get_matching_record_from_folio(
-        self, cache: dict, path: str, match_property: str, match_value: str, result_type: str
+        self,
+        index_or_id,
+        cache: dict,
+        path: str,
+        match_property: str,
+        match_value: str,
+        result_type: str,
     ):
         if match_value not in cache:
             query = f'?query=({match_property}=="{match_value}")'
@@ -159,7 +166,9 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 cache[match_value] = matching_record
                 return matching_record
             else:
-                return None
+                raise TransformationFieldMappingError(
+                    index_or_id, f"No matching {result_type} for {match_property}", match_value
+                )
         else:
             return cache[match_value]
 
@@ -172,7 +181,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 index_or_id, f"Invalid {folio_prop_name} date for {legacy_object} ", mapped_value
             ) from exception
 
-    def perform_additional_mapping(self, feefine, legacy_object):
+    def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
         # Set these values for all feefines created
         feefine["feefineaction"]["source"] = self.folio_client.username
         feefine["feefineaction"]["notify"] = False
@@ -191,18 +200,21 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
 
         # Add item data from FOLIO if available
         if folio_item := self.get_matching_record_from_folio(
+            index_or_id,
             self.item_cache,
-            "/item-storage/items",
+            "/inventory/items",
             "barcode",
             super().get_prop(legacy_object, "account.itemId", "", ""),
             "items",
         ):
 
-            feefine["account"]["itemId"] = folio_item.get("id")
-            feefine["account"]["title"] = folio_item.get("title")
-            feefine["account"]["callNumber"] = folio_item.get("callNumber")
-            feefine["account"]["materialType"] = folio_item.get("materialType.name")
-            feefine["account"]["materialTypeId"] = folio_item.get("materialType.id")
-            feefine["account"]["location"] = folio_item.get("location.name")
+            feefine["account"]["itemId"] = folio_item.get("id", "")
+            feefine["account"]["title"] = folio_item.get("title", "")
+            feefine["account"]["callNumber"] = folio_item.get("callNumber", "")
+            feefine["account"]["materialType"] = folio_item.get("materialType", {}).get("name")
+            feefine["account"]["materialTypeId"] = folio_item.get("materialType", {}).get("id")
+            feefine["account"]["location"] = folio_item.get("effectiveLocation", {}).get("name")
+        else:
+            feefine["account"].pop("itemId")
 
         return feefine
