@@ -133,7 +133,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.feefines
                     )
 
-                    self.mapper.perform_additional_mapping(folio_rec, record)
+                    self.mapper.perform_additional_mapping(f"row {idx}", folio_rec, record)
 
                     self.mapper.report_folio_mapping(
                         folio_rec, self.mapper.composite_feefine_schema

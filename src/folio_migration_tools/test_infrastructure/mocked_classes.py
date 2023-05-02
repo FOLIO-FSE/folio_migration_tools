@@ -162,8 +162,23 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
     elif ref_data_path == "/users" and query == '?query=(barcode=="some barcode")':
         yield from [{"id": "a FOLIO user uuid"}]
 
-    elif ref_data_path == "/item-storage/items" and query == '?query=(barcode=="some barcode")':
-        yield from [{"id": "a FOLIO item uuid"}]
+    elif ref_data_path == "/inventory/items" and query == '?query=(barcode=="some barcode")':
+        yield from [
+            {
+                "id": "a FOLIO item uuid",
+                "title": "Döda fallen i Avesta.",
+                "barcode": "some barcode",
+                "callNumber": "QB611 .C44",
+                "materialType": {
+                    "id": "4eea3f27-8910-46fc-9666-e2b44326c2b8",
+                    "name": "sound recording",
+                },
+                "effectiveLocation": {
+                    "id": "2e48e713-17f3-4c13-a9f8-23845bb210a4",
+                    "name": "Reading room",
+                },
+            }
+        ]
 
     elif ref_data_path in super_schema:
         yield from super_schema.get(ref_data_path)

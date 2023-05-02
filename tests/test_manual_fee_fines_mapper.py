@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -96,28 +97,92 @@ def test_basic_mapping(mapper: ManualFeeFinesMapper):
     assert res["feefineaction"]["dateAction"] == "2023-01-02T00:00:00"
 
 
-def test_perform_additional_mapping(mapper: ManualFeeFinesMapper):
+def test_perform_additional_mapping_get_refdata_names(mapper: ManualFeeFinesMapper):
+    legacy_data = {
+        "total_amount": "100",
+        "remaining_amount": "50",
+        "patron_barcode": "some barcode",
+        "item_barcode": "some barcode",
+        "billed_date": "2023-01-02",
+        "lending_library": "library1",
+        "type": "spill",
+    }
 
-    data = {
+    folio_feefine = {
         "account": {
             "amount": "100",
             "remaining": "50",
             "paymentStatus": {"name": "Outstanding"},
             "userId": "a FOLIO user uuid",
-            "itemId": "a FOLIO item uuid",
+            "itemId": "some barcode",
             "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
             "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
         },
         "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
     }
 
-    res = mapper.perform_additional_mapping(data, leg)
+    res = mapper.perform_additional_mapping(folio_feefine, legacy_data)
     assert res["account"]["feeFineId"] == "031836ec-521a-4493-9f76-0e02c2e7d241"
     assert res["account"]["feeFineType"] == "Coffee spill"
     assert res["account"]["ownerId"] == "5abfff3f-50eb-432a-9a43-21f8f7a70194"
     assert res["account"]["feeFineOwner"] == "The Best Fee Fine Owner"
+    assert res["account"]["title"] == "Döda fallen i Avesta."
 
-    assert res
+
+def test_perform_additional_mapping_get_item_data_with_match(mapper: ManualFeeFinesMapper):
+    legacy_data = {
+        "total_amount": "100",
+        "remaining_amount": "50",
+        "patron_barcode": "some barcode",
+        "item_barcode": "some barcode",
+        "billed_date": "2023-01-02",
+        "lending_library": "library1",
+        "type": "spill",
+    }
+
+    folio_feefine = {
+        "account": {
+            "amount": "100",
+            "remaining": "50",
+            "paymentStatus": {"name": "Outstanding"},
+            "userId": "a FOLIO user uuid",
+            "itemId": "some barcode",
+            "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
+            "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+        },
+        "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
+    }
+
+    res = mapper.perform_additional_mapping(folio_feefine, legacy_data)
+    assert res["account"]["title"] == "Döda fallen i Avesta."
+
+
+def test_perform_additional_mapping_get_item_data_no_match(mapper: ManualFeeFinesMapper):
+    legacy_data = {
+        "total_amount": "100",
+        "remaining_amount": "50",
+        "patron_barcode": "some barcode",
+        "item_barcode": "another barcode",
+        "billed_date": "2023-01-02",
+        "lending_library": "library1",
+        "type": "spill",
+    }
+
+    folio_feefine = {
+        "account": {
+            "amount": "100",
+            "remaining": "50",
+            "paymentStatus": {"name": "Outstanding"},
+            "userId": "a FOLIO user uuid",
+            "itemId": "some barcode",
+            "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
+            "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+        },
+        "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
+    }
+    with pytest.raises(TransformationFieldMappingError):
+        res = mapper.perform_additional_mapping("row 1", folio_feefine, legacy_data)
+        assert "itemId" not in res
 
 
 def test_store_objects(mapper: ManualFeeFinesMapper):
