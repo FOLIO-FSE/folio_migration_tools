@@ -167,7 +167,7 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "id": "library_main_desk_uuid",
                 "name": "Library Main Desk",
                 "code": "lmd",
-            }
+            },
         ]
 
     elif ref_data_path == "/users" and query == '?query=(externalSystemId=="Some external id")':
