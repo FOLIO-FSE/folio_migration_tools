@@ -31,10 +31,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         ignore_legacy_identifier: bool = True,
     ):
         self.folio_client: FolioClient = folio_client
-        self.user_cache: dict = {}
-        self.item_cache: dict = {}
         self.composite_feefine_schema = self.get_composite_feefine_schema()
-
         self.task_configuration = task_configuration
 
         super().__init__(
@@ -48,6 +45,8 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         )
 
         self.feefines_map = feefines_map
+        self.user_cache: dict = {}
+        self.item_cache: dict = {}
 
         if feefines_owner_map:
             self.feefines_owner_map = RefDataMapping(
@@ -191,6 +190,9 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                     index_or_id, f"No matching {result_type} for {match_property}", match_value
                 )
         else:
+            self.migration_report.add_general_statistics(
+                f"{result_type.title()} associated with multiple fees/fines"
+            )
             return cache[match_value]
 
     def parse_date(self, folio_prop_name: str, index_or_id, mapped_value, legacy_object):

@@ -278,7 +278,7 @@ def test_basic_mapping_without_ref_data(mapper_without_refdata: ManualFeeFinesMa
     data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
     }
@@ -294,7 +294,7 @@ def test_basic_mapping_with_ref_data(mapper_with_refdata: ManualFeeFinesMapper):
     data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -318,7 +318,7 @@ def test_basic_mapping_with_invalid_sum(mapper_with_refdata: ManualFeeFinesMappe
     data = {
         "total_amount": "100 NAD",
         "remaining_amount": "50 NAD",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -336,7 +336,7 @@ def test_perform_additional_mapping_add_stringified_legacy_object(
     legacy_data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -373,7 +373,7 @@ def test_perform_additional_mapping_get_refdata_names(mapper_with_refdata: Manua
     legacy_data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -401,13 +401,35 @@ def test_perform_additional_mapping_get_refdata_names(mapper_with_refdata: Manua
     assert res["account"]["feeFineOwner"] == "The Best Fee Fine Owner"
 
 
+def test_get_matching_record_from_folio(mapper_without_refdata: ManualFeeFinesMapper):
+    mocked_feefines_mapper = Mock(spec=ManualFeeFinesMapper)
+    mocked_feefines_mapper.user_cache = {}
+    matches = []
+
+    user_barcodes = ["u123", "u456", "u123", "BarcodeNotInFOLIO"]
+
+    with pytest.raises(TransformationFieldMappingError):
+        for barcode in user_barcodes:
+            match = ManualFeeFinesMapper.get_matching_record_from_folio(
+                mapper_without_refdata,
+                3,
+                mocked_feefines_mapper.user_cache,
+                "/users",
+                "barcode",
+                barcode,
+                "users",
+            )
+            matches.append(match)
+        assert len(matches) == 3
+
+
 def test_perform_additional_mapping_get_item_data_with_match(
     mapper_with_refdata: ManualFeeFinesMapper,
 ):
     legacy_data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -444,7 +466,7 @@ def test_perform_additional_mapping_get_item_data_no_match(
     legacy_data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "another barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -483,7 +505,7 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
                 "amount": "100",
                 "remaining": "50",
                 "paymentStatus": {"name": "Outstanding"},
-                "userId": "213",
+                "userId": "user456",
                 "itemId": "546",
                 "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
                 "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
@@ -492,7 +514,7 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
             "feefineaction": {
                 "dateAction": "2023-01-02",
                 "accountId": "48c4ce63-1f9f-4440-acf7-6aa3ac281c9b",
-                "userId": "213",
+                "userId": "user456",
             },
         },
         {
@@ -500,7 +522,7 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
                 "amount": "20",
                 "remaining": "20",
                 "paymentStatus": {"name": "Outstanding"},
-                "userId": "213",
+                "userId": "user456",
                 "itemId": "546",
                 "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
                 "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
@@ -509,7 +531,7 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
             "feefineaction": {
                 "dateAction": "2023-04-05",
                 "accountId": "f9cfd725-9c97-4646-ae4f-b7edaf96b34f",
-                "userId": "213",
+                "userId": "user456",
             },
         },
     ]
