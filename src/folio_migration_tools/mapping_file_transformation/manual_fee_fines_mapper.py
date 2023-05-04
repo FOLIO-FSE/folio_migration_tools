@@ -174,6 +174,51 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             }
         }
 
+    def get_tenant_timezone(self):
+        config_path = (
+            "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
+        )
+        try:
+            tenant_timezone_str = json.loads(
+                self.folio_client.folio_get_single_object(config_path)["configs"][0]["value"]
+            )["timezone"]
+            logging.info("Tenant timezone is: %s", tenant_timezone_str)
+            return ZoneInfo(tenant_timezone_str)
+        except TypeError as te:
+            raise TransformationProcessError(
+                "",
+                "Failed to fetch Tenant Locale Settings. "
+                "Is your library configuration correct?",
+            ) from te
+        except KeyError as ke:
+            raise TransformationProcessError(
+                "",
+                "Failed to parse Tenant Locale Settings. "
+                "Is the Tenant Locale config correctly formatted?",
+            ) from ke
+
+    def parse_date_with_tenant_timezone(self, folio_prop_name: str, index_or_id, mapped_value):
+        try:
+            format_date = dateutil_parser.parse(mapped_value, fuzzy=True)
+            if format_date.tzinfo != tz.UTC:
+                format_date = format_date.replace(tzinfo=self.tenant_timezone)
+            return format_date.isoformat()
+
+        except Exception as exception:
+            raise TransformationFieldMappingError(
+                index_or_id, f"Invalid {folio_prop_name} date", mapped_value
+            ) from exception
+
+    def parse_sum_as_float(self, index_or_id, legacy_sum, folio_prop_name):
+        try:
+            return float(legacy_sum)
+        except Exception as ee:
+            raise TransformationRecordFailedError(
+                index_or_id,
+                f"Values mapped to '{folio_prop_name}' may only contain numbers/decimals.",
+                legacy_sum,
+            ) from ee
+
     def get_matching_record_from_folio(
         self,
         index_or_id,
@@ -200,30 +245,23 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             )
             return cache[match_value]
 
-    def parse_date_with_tenant_timezone(self, folio_prop_name: str, index_or_id, mapped_value):
-        try:
-            format_date = dateutil_parser.parse(mapped_value, fuzzy=True)
-            if format_date.tzinfo != tz.UTC:
-                format_date = format_date.replace(tzinfo=self.tenant_timezone)
-            return format_date.isoformat()
-        
-        except Exception as exception:
-            raise TransformationFieldMappingError(
-                index_or_id, f"Invalid {folio_prop_name} date", mapped_value
-            ) from exception
-
-    def parse_sum_as_float(self, index_or_id, legacy_sum, folio_prop_name):
-        try:
-            return float(legacy_sum)
-        except Exception as ee:
-            raise TransformationRecordFailedError(
-                index_or_id,
-                f"Values mapped to '{folio_prop_name}' may only contain numbers/decimals.",
-                legacy_sum,
-            ) from ee
+    def stringify_legacy_object(self, legacy_object):
+        legacy_string = (
+            "MIGRATION NOTE : This fee/fine was migrated to FOLIO from a previous "
+            "library management system. The following is the original data: "
+        )
+        for key, value in legacy_object.items():
+            legacy_string += f"{key.title()}: {value}; "
+        return legacy_string.strip().strip(";")
 
     def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
-        # Add some name values to ensure nice UI behaviour
+        # Set the account status to Open/Closed based on remainign amount
+        if feefine["account"]["remaining"] > 0:
+            feefine["account"]["status"]["name"] = "Open"
+        else:
+            feefine["account"]["status"]["name"] = "Closed"
+
+        # Add some name values to make it look nice in the UI
         feefine["account"]["feeFineOwner"] = [
             owner["owner"]
             for owner in self.feefines_owner_map.ref_data
@@ -270,40 +308,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 + " "
                 + self.stringify_legacy_object(legacy_object)
             )
-
         else:
             feefine["feefineaction"]["comments"] = self.stringify_legacy_object(legacy_object)
 
         return feefine
-
-    def stringify_legacy_object(self, legacy_object):
-        legacy_string = (
-            "MIGRATION NOTE : This fee/fine was migrated to FOLIO from a previous "
-            "library management system. The following is the original data: "
-        )
-        for key, value in legacy_object.items():
-            legacy_string += f"{key.title()}: {value}; "
-        return legacy_string.strip().strip(";")
-
-    def get_tenant_timezone(self):
-        config_path = (
-            "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
-        )
-        try:
-            tenant_timezone_str = json.loads(
-                self.folio_client.folio_get_single_object(config_path)["configs"][0]["value"]
-            )["timezone"]
-            logging.info("Tenant timezone is: %s", tenant_timezone_str)
-            return ZoneInfo(tenant_timezone_str)
-        except TypeError as te:
-            raise TransformationProcessError(
-                "",
-                "Failed to fetch Tenant Locale Settings. "
-                "Is your library configuration correct?",
-            ) from te
-        except KeyError as ke:
-            raise TransformationProcessError(
-                "",
-                "Failed to parse Tenant Locale Settings. "
-                "Is the Tenant Locale config correctly formatted?",
-            ) from ke
