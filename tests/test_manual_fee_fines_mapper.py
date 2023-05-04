@@ -136,8 +136,6 @@ def mapper_with_refdata(pytestconfig) -> ManualFeeFinesMapper:
         {"type": "*", "folio_name": "Finance Office"},
     ]
 
-    tenant_timezone = ""
-
     mock_task_config = Mock(spec=ManualFeeFinesTransformer.TaskConfiguration)
 
     return ManualFeeFinesMapper(
@@ -148,7 +146,6 @@ def mapper_with_refdata(pytestconfig) -> ManualFeeFinesMapper:
         feesfines_owner_map,
         feesfines_type_map,
         service_points_map,
-        tenant_timezone,
         ignore_legacy_identifier=True,
     )
 
@@ -309,11 +306,11 @@ def test_basic_mapping_with_ref_data(mapper_with_refdata: ManualFeeFinesMapper):
 
     assert res["feefineaction"]["accountId"] == res["account"]["id"]
     assert res["account"]["amount"] == 100.0
-    assert res["account"]["userId"] == "a FOLIO user uuid"
+    assert res["account"]["userId"] == "user123"
     assert res["account"]["feeFineId"] == "031836ec-521a-4493-9f76-0e02c2e7d241"
     assert res["account"]["ownerId"] == "5abfff3f-50eb-432a-9a43-21f8f7a70194"
-    assert res["feefineaction"]["userId"] == "a FOLIO user uuid"
-    assert res["feefineaction"]["dateAction"] == "2023-01-02T00:00:00"
+    assert res["feefineaction"]["userId"] == "user123"
+    assert res["feefineaction"]["dateAction"] == "2023-01-02T00:00:00-05:00"
     assert res["feefineaction"]["createdAt"] == "finance_office_uuid"
 
 
@@ -349,8 +346,8 @@ def test_perform_additional_mapping_add_stringified_legacy_object(
 
     folio_feefine = {
         "account": {
-            "amount": "100",
-            "remaining": "50",
+            "amount": 100,
+            "remaining": 50,
             "paymentStatus": {"name": "Outstanding"},
             "userId": "a FOLIO user uuid",
             "itemId": "some barcode",
@@ -374,8 +371,8 @@ def test_perform_additional_mapping_add_stringified_legacy_object(
 
 def test_perform_additional_mapping_get_refdata_names(mapper_with_refdata: ManualFeeFinesMapper):
     legacy_data = {
-        "total_amount": "100",
-        "remaining_amount": "50",
+        "total_amount": 100,
+        "remaining_amount": 50,
         "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
@@ -386,8 +383,8 @@ def test_perform_additional_mapping_get_refdata_names(mapper_with_refdata: Manua
 
     folio_feefine = {
         "account": {
-            "amount": "100",
-            "remaining": "50",
+            "amount": 100,
+            "remaining": 50,
             "paymentStatus": {"name": "Outstanding"},
             "userId": "a FOLIO user uuid",
             "itemId": "some barcode",
@@ -430,8 +427,8 @@ def test_perform_additional_mapping_get_item_data_with_match(
     mapper_with_refdata: ManualFeeFinesMapper,
 ):
     legacy_data = {
-        "total_amount": "100",
-        "remaining_amount": "50",
+        "total_amount": 100,
+        "remaining_amount": 50,
         "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
@@ -442,8 +439,8 @@ def test_perform_additional_mapping_get_item_data_with_match(
 
     folio_feefine = {
         "account": {
-            "amount": "100",
-            "remaining": "50",
+            "amount": 100,
+            "remaining": 50,
             "paymentStatus": {"name": "Outstanding"},
             "userId": "a FOLIO user uuid",
             "itemId": "some barcode",
@@ -467,8 +464,8 @@ def test_perform_additional_mapping_get_item_data_no_match(
     mapper_with_refdata: ManualFeeFinesMapper,
 ):
     legacy_data = {
-        "total_amount": "100",
-        "remaining_amount": "50",
+        "total_amount": 100,
+        "remaining_amount": 50,
         "patron_barcode": "u123",
         "item_barcode": "another barcode",
         "billed_date": "2023-01-02",
@@ -478,8 +475,8 @@ def test_perform_additional_mapping_get_item_data_no_match(
 
     folio_feefine = {
         "account": {
-            "amount": "100",
-            "remaining": "50",
+            "amount": 100,
+            "remaining": 50,
             "paymentStatus": {"name": "Outstanding"},
             "userId": "a FOLIO user uuid",
             "itemId": "some barcode",
@@ -491,6 +488,42 @@ def test_perform_additional_mapping_get_item_data_no_match(
     with pytest.raises(TransformationFieldMappingError):
         res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
         assert "itemId" not in res
+
+def test_perform_additional_mapping_set_status(
+    mapper_with_refdata: ManualFeeFinesMapper,
+):
+    legacy_object = {"item_barcode": ""}
+
+    folio_feefine_1 = {
+        "account": {
+            "amount": 100.0,
+            "remaining": 50.0,
+            "paymentStatus": {"name": "Outstanding"},
+            "userId": "u123",
+            "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
+            "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+        },
+        "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
+    }
+
+    res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine_1, legacy_object)
+
+    assert res["account"]["status"]["name"] == "Open"
+
+    folio_feefine_2 = {
+        "account": {
+            "amount": 70.0,
+            "remaining": 0,
+            "paymentStatus": {"name": "Fully paid"},
+            "userId": "u123",
+            "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
+            "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+        },
+        "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
+    }
+
+    res = mapper_with_refdata.perform_additional_mapping("row 2", folio_feefine_2, legacy_object)
+    assert res["account"]["status"]["name"] == "Closed"
 
 
 def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):

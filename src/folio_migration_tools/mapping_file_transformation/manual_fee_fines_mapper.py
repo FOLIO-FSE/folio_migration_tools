@@ -245,23 +245,20 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             )
             return cache[match_value]
 
-    def stringify_legacy_object(self, legacy_object):
-        legacy_string = (
-            "MIGRATION NOTE : This fee/fine was migrated to FOLIO from a previous "
-            "library management system. The following is the original data: "
-        )
-        for key, value in legacy_object.items():
-            legacy_string += f"{key.title()}: {value}; "
-        return legacy_string.strip().strip(";")
-
     def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
         # Set the account status to Open/Closed based on remainign amount
         if feefine["account"]["remaining"] > 0:
-            feefine["account"]["status"]["name"] = "Open"
+            feefine["account"]["status"] = {"name": "Open"}
         else:
-            feefine["account"]["status"]["name"] = "Closed"
+            feefine["account"]["status"] = {"name": "Closed"}
 
-        # Add some name values to make it look nice in the UI
+        # Add standard values
+        feefine["feefineaction"]["source"] = self.folio_client.username
+        feefine["feefineaction"]["notify"] = False
+        feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
+        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
+
+        # Add name values for reference data
         feefine["account"]["feeFineOwner"] = [
             owner["owner"]
             for owner in self.feefines_owner_map.ref_data
@@ -276,32 +273,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         feefine["account"]["feeFineType"] = type_name
         feefine["feefineaction"]["typeAction"] = type_name
 
-        feefine["feefineaction"]["source"] = self.folio_client.username
-        feefine["feefineaction"]["notify"] = False
-        feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
-        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
-
-        # Add item data from FOLIO if available
-        if folio_item := self.get_matching_record_from_folio(
-            index_or_id,
-            self.item_cache,
-            "/inventory/items",
-            "barcode",
-            super().get_prop(legacy_object, "account.itemId", "", ""),
-            "items",
-        ):
-
-            feefine["account"]["itemId"] = folio_item.get("id", "")
-            feefine["account"]["title"] = folio_item.get("title", "")
-            feefine["account"]["barcode"] = folio_item.get("barcode", "")
-            feefine["account"]["callNumber"] = folio_item.get("callNumber", "")
-            feefine["account"]["materialType"] = folio_item.get("materialType", {}).get("name")
-            feefine["account"]["materialTypeId"] = folio_item.get("materialType", {}).get("id")
-            feefine["account"]["location"] = folio_item.get("effectiveLocation", {}).get("name")
-        else:
-            feefine["account"].pop("itemId")
-
-        # Add the full legacy item dict to the comment field
+        # Always add the full legacy item dict to the comment field
         if feefine["feefineaction"].get("comments"):
             feefine["feefineaction"]["comments"] = (
                 ("STAFF : " + feefine["feefineaction"]["comments"])
@@ -311,4 +283,39 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         else:
             feefine["feefineaction"]["comments"] = self.stringify_legacy_object(legacy_object)
 
+        # Add item data from FOLIO if available
+        if feefine["account"].get("itemId"):
+            self.enrich_with_folio_item_data(
+                index_or_id, feefine,
+                super().get_prop(legacy_object, "account.itemId", "", ""),
+            )
+
         return feefine
+    
+    def stringify_legacy_object(self, legacy_object):
+        legacy_string = (
+            "MIGRATION NOTE : This fee/fine was migrated to FOLIO from a previous "
+            "library management system. The following is the original data: "
+        )
+        for key, value in legacy_object.items():
+            legacy_string += f"{key.title()}: {value}; "
+        return legacy_string.strip().strip(";")
+
+    def enrich_with_folio_item_data(self, index_or_id, feefine, item_barcode):
+        if folio_item := self.get_matching_record_from_folio(
+            index_or_id,
+            self.item_cache,
+            "/inventory/items",
+            "barcode",
+            item_barcode,
+            "items",
+        ):
+            feefine["account"]["itemId"] = folio_item.get("id", "")
+            feefine["account"]["title"] = folio_item.get("title", "")
+            feefine["account"]["barcode"] = folio_item.get("barcode", "")
+            feefine["account"]["callNumber"] = folio_item.get("callNumber", "")
+            feefine["account"]["materialType"] = folio_item.get("materialType", {}).get("name")
+            feefine["account"]["materialTypeId"] = folio_item.get("materialType", {}).get("id")
+            feefine["account"]["location"] = folio_item.get("effectiveLocation", {}).get("name")
+        else:
+            feefine["account"].pop("itemId")
