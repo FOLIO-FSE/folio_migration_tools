@@ -408,9 +408,8 @@ def test_get_matching_record_from_folio(mapper_without_refdata: ManualFeeFinesMa
 
     user_barcodes = ["u123", "u456", "u123", "BarcodeNotInFOLIO"]
 
-    with pytest.raises(TransformationFieldMappingError):
-        for barcode in user_barcodes:
-            match = ManualFeeFinesMapper.get_matching_record_from_folio(
+    for barcode in user_barcodes:
+        match = ManualFeeFinesMapper.get_matching_record_from_folio(
                 mapper_without_refdata,
                 3,
                 mocked_feefines_mapper.user_cache,
@@ -419,8 +418,8 @@ def test_get_matching_record_from_folio(mapper_without_refdata: ManualFeeFinesMa
                 barcode,
                 "users",
             )
-            matches.append(match)
-        assert len(matches) == 3
+        matches.append(match)
+    assert len(matches) == 3
 
 
 def test_perform_additional_mapping_get_item_data_with_match(
@@ -479,15 +478,14 @@ def test_perform_additional_mapping_get_item_data_no_match(
             "remaining": 50,
             "paymentStatus": {"name": "Outstanding"},
             "userId": "a FOLIO user uuid",
-            "itemId": "some barcode",
+            "itemId": "some barcode not in FOLIO",
             "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
             "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
         },
         "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
     }
-    with pytest.raises(TransformationFieldMappingError):
-        res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
-        assert "itemId" not in res
+    res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
+    assert "itemId" not in res
 
 
 def test_perform_additional_mapping_set_status(

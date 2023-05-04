@@ -10,6 +10,7 @@ from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
@@ -110,12 +111,13 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
                 sys.exit()
 
-    def process_single_file(self, filename):
-        with open(filename, encoding="utf-8-sig") as records_file:
+    def process_single_file(self, file_def: FileDefinition):
+        full_path = self.folder_structure.legacy_records_folder / file_def.file_name
+        with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics("Number of files processed")
             start = time.time()
 
-            for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
+            for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
                 try:
                     if idx == 0:
                         logging.info("First legacy record:")
@@ -124,10 +126,10 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     self.mapper.report_legacy_mapping_no_schema(record)
 
                     folio_rec, legacy_id = self.mapper.do_map(
-                        record, f"row {idx}", FOLIONamespaces.fees_fines
+                        record, f"row {idx + 1}", FOLIONamespaces.fees_fines
                     )
 
-                    self.mapper.perform_additional_mapping(f"row {idx}", folio_rec, record)
+                    self.mapper.perform_additional_mapping(f"row {idx + 1}", folio_rec, record)
 
                     self.mapper.report_folio_mapping(
                         folio_rec, self.mapper.composite_feefine_schema
@@ -143,13 +145,16 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as data_error:
                     self.mapper.handle_transformation_record_failed_error(idx, data_error)
+                except TransformationFieldMappingError as mapping_error:
+                    self.mapper.handle_transformation_field_mapping_error(idx, mapping_error)
+                
                 except AttributeError as attribute_error:
                     traceback.print_exc()
                     logging.fatal(attribute_error)
                     logging.info("Quitting...")
                     sys.exit(1)
-                except Exception as excepion:
-                    self.mapper.handle_generic_exception(idx, excepion)
+                except Exception as exception:
+                    self.mapper.handle_generic_exception(idx, exception)
 
                 self.mapper.migration_report.add(
                     Blurbs.GeneralStatistics,

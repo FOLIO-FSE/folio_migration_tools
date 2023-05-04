@@ -10,7 +10,6 @@ from dateutil import tz
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -106,15 +105,6 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         if folio_prop_name == "account.id" or folio_prop_name == "feefineaction.accountId":
             return index_or_id
 
-        elif folio_prop_name == "account.amount" or folio_prop_name == "account.remaining":
-            return self.parse_sum_as_float(
-                index_or_id,
-                super().get_prop(
-                    legacy_object, folio_prop_name, index_or_id, schema_default_value
-                ),
-                folio_prop_name,
-            )
-
         elif folio_prop_name == "account.ownerId" and self.feefines_owner_map:
             return self.get_mapped_ref_data_value(
                 self.feefines_owner_map, legacy_object, index_or_id, folio_prop_name, False
@@ -125,33 +115,12 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 self.feefines_type_map, legacy_object, index_or_id, folio_prop_name, False
             )
 
-        elif folio_prop_name == "account.userId" or folio_prop_name == "feefineaction.userId":
-            return self.get_matching_record_from_folio(
-                index_or_id,
-                self.user_cache,
-                "/users",
-                "barcode",
-                super().get_prop(
-                    legacy_object, folio_prop_name, index_or_id, schema_default_value
-                ),
-                "users",
-            )["id"]
-
         elif folio_prop_name == "feefineaction.id":
             return str(uuid.uuid4())
 
         elif folio_prop_name == "feefineaction.createdAt" and self.service_point_map:
             return self.get_mapped_ref_data_value(
                 self.service_point_map, legacy_object, index_or_id, folio_prop_name, False
-            )
-
-        elif folio_prop_name == "feefineaction.dateAction":
-            return self.parse_date_with_tenant_timezone(
-                folio_prop_name,
-                index_or_id,
-                super().get_prop(
-                    legacy_object, folio_prop_name, index_or_id, schema_default_value
-                ),
             )
 
         elif mapped_value := super().get_prop(
@@ -203,11 +172,14 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             if format_date.tzinfo != tz.UTC:
                 format_date = format_date.replace(tzinfo=self.tenant_timezone)
             return format_date.isoformat()
-
-        except Exception as exception:
-            raise TransformationFieldMappingError(
-                index_or_id, f"Invalid {folio_prop_name} date", mapped_value
-            ) from exception
+        except Exception:
+            logging.log(
+                26,
+                "DATA ISSUE\t%s\t%s\t%s",
+                index_or_id,
+                "Not a valid date",
+                mapped_value,
+            )
 
     def parse_sum_as_float(self, index_or_id, legacy_sum, folio_prop_name):
         try:
@@ -215,7 +187,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         except Exception as ee:
             raise TransformationRecordFailedError(
                 index_or_id,
-                f"Values mapped to '{folio_prop_name}' may only contain numbers/decimals.",
+                f"Values mapped to '{folio_prop_name}' must only contain numbers/decimals.",
                 legacy_sum,
             ) from ee
 
@@ -228,68 +200,57 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         match_value: str,
         result_type: str,
     ):
-        if match_value not in cache:
+        if match_value in cache:
+            return cache[match_value]
+        else:
             query = f'?query=({match_property}=="{match_value}")'
             if matching_record := next(
                 self.folio_client.folio_get_all(path, result_type, query), None
             ):
                 cache[match_value] = matching_record
                 return matching_record
-            else:
-                raise TransformationFieldMappingError(
-                    index_or_id, f"No matching {result_type} for {match_property}", match_value
-                )
+
+    def get_folio_user_uuid(self, index_or_id, user_barcode):
+        if matching_user := self.get_matching_record_from_folio(
+            index_or_id, self.user_cache, "/users", "barcode", user_barcode, "users"
+        ):
+            return matching_user["id"]
         else:
-            self.migration_report.add_general_statistics(
-                f"{result_type.title()} associated with multiple fees/fines"
+            raise TransformationRecordFailedError(
+                index_or_id,
+                "No matching user in FOLIO for barcode",
+                user_barcode,
             )
-            return cache[match_value]
 
     def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
-        # Set the account status to Open/Closed based on remainign amount
-        if feefine["account"]["remaining"] > 0:
-            feefine["account"]["status"] = {"name": "Open"}
-        else:
-            feefine["account"]["status"] = {"name": "Closed"}
 
-        # Add standard values
-        feefine["feefineaction"]["source"] = self.folio_client.username
-        feefine["feefineaction"]["notify"] = False
-        feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
-        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
+        # Parse dates and floats
+        feefine["account"]["amount"] = self.parse_sum_as_float(
+            index_or_id, feefine["account"].get("amount"), "account.amount"
+        )
+        feefine["account"]["remaining"] = self.parse_sum_as_float(
+            index_or_id, feefine["account"].get("remaining"), "account.remaining"
+        )
 
-        # Add name values for reference data
-        feefine["account"]["feeFineOwner"] = [
-            owner["owner"]
-            for owner in self.feefines_owner_map.ref_data
-            if owner["id"] == feefine["account"]["ownerId"]
-        ][0]
-
-        type_name = [
-            type["feeFineType"]
-            for type in self.feefines_type_map.ref_data
-            if type["id"] == feefine["account"]["feeFineId"]
-        ][0]
-        feefine["account"]["feeFineType"] = type_name
-        feefine["feefineaction"]["typeAction"] = type_name
-
-        # Always add the full legacy item dict to the comment field
-        if feefine["feefineaction"].get("comments"):
-            feefine["feefineaction"]["comments"] = (
-                ("STAFF : " + feefine["feefineaction"]["comments"])
-                + " "
-                + self.stringify_legacy_object(legacy_object)
+        if feefine["feefineaction"]:
+            feefine["feefineaction"]["dateAction"] = self.parse_date_with_tenant_timezone(
+                "feefineaction.dateAction",
+                index_or_id,
+                feefine["feefineaction"].get("dateAction"),
             )
-        else:
-            feefine["feefineaction"]["comments"] = self.stringify_legacy_object(legacy_object)
+
+        # Link to FOLIO user
+        feefine["account"]["userId"] = self.get_folio_user_uuid(
+            index_or_id,
+            feefine["account"]["userId"],
+        )
+        feefine["feefineaction"]["userId"] = feefine["account"]["userId"]
 
         # Add item data from FOLIO if available
-        if feefine["account"].get("itemId"):
-            self.enrich_with_folio_item_data(
-                index_or_id,
-                feefine,
-                super().get_prop(legacy_object, "account.itemId", "", ""),
-            )
+        if item_barcode := feefine["account"].get("itemId"):
+            self.enrich_with_folio_item_data(index_or_id, feefine, item_barcode)
+
+        self.add_additional_fields_and_values(feefine, legacy_object)
 
         return feefine
 
@@ -320,3 +281,50 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             feefine["account"]["location"] = folio_item.get("effectiveLocation", {}).get("name")
         else:
             feefine["account"].pop("itemId")
+            logging.log(
+                26,
+                "DATA ISSUE\t%s\t%s\t%s",
+                index_or_id,
+                "No matching item in FOLIO for barcode",
+                item_barcode,
+            )
+
+    def add_additional_fields_and_values(self, feefine, legacy_object):
+        # Set the account status to Open/Closed based on remainign amount
+        if feefine["account"]["remaining"] > 0:
+            feefine["account"]["status"] = {"name": "Open"}
+        else:
+            feefine["account"]["status"] = {"name": "Closed"}
+
+        # Add name values for reference data
+        feefine["account"]["feeFineOwner"] = [
+            owner["owner"]
+            for owner in self.feefines_owner_map.ref_data
+            if owner["id"] == feefine["account"]["ownerId"]
+        ][0]
+
+        type_name = [
+            type["feeFineType"]
+            for type in self.feefines_type_map.ref_data
+            if type["id"] == feefine["account"]["feeFineId"]
+        ][0]
+        feefine["account"]["feeFineType"] = type_name
+        feefine["feefineaction"]["typeAction"] = type_name
+
+        # Add standard values
+        feefine["feefineaction"]["source"] = self.folio_client.username
+        feefine["feefineaction"]["notify"] = False
+        feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
+        feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
+
+        # Always add the full legacy item dict to the comment field
+        if feefine["feefineaction"].get("comments"):
+            feefine["feefineaction"]["comments"] = (
+                ("STAFF : " + feefine["feefineaction"]["comments"])
+                + " "
+                + self.stringify_legacy_object(legacy_object)
+            )
+        else:
+            feefine["feefineaction"]["comments"] = self.stringify_legacy_object(legacy_object)
+
+        return feefine
