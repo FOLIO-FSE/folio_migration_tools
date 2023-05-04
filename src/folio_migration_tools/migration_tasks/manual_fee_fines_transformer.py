@@ -51,13 +51,13 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         super().__init__(library_config, task_configuration, use_logging)
         self.object_type_name = self.get_object_type().name
         self.task_configuration = task_configuration
-        self.files = self.list_source_files()
+        self.check_source_files(
+            self.folder_structure.legacy_records_folder, self.task_configuration.files
+        )
         self.total_records = 0
-
         self.feefines_map = self.setup_records_map(
             self.folder_structure.mapping_files_folder / self.task_configuration.feefines_map
         )
-
         self.results_path = self.folder_structure.created_objects_path
         self.failed_files: List[str] = []
 
@@ -95,26 +95,9 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
             ignore_legacy_identifier=True,
         )
 
-    def list_source_files(self):
-        files = [
-            self.folder_structure.data_folder / self.object_type_name / f.file_name
-            for f in self.task_configuration.files
-            if isfile(self.folder_structure.data_folder / self.object_type_name / f.file_name)
-        ]
-        if not any(files):
-            ret_str = ",".join(f.file_name for f in self.task_configuration.files)
-            raise TransformationProcessError(
-                f"Files {ret_str} not found in"
-                "{self.folder_structure.data_folder} / {self.object_type_name}"
-            )
-        logging.info("Files to process:")
-        for filename in files:
-            logging.info("\t%s", filename)
-        return files
-
     def do_work(self):
         logging.info("Getting started!")
-        for file in self.files:
+        for file in self.task_configuration.files:
             logging.info("Processing %s", file)
             try:
                 self.process_single_file(file)

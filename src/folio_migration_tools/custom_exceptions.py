@@ -64,7 +64,8 @@ class TransformationProcessError(TransfomationError):
     def __init__(
         self,
         index_or_id,
-        message="Critical Process issue. Transformation failed.",
+        message="Critical Process issue. Transformation failed."
+        " Check configuration, mapping files and reference data",
         data_value="",
     ):
         self.index_or_id = index_or_id
