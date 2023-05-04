@@ -136,6 +136,8 @@ def mapper_with_refdata(pytestconfig) -> ManualFeeFinesMapper:
         {"type": "*", "folio_name": "Finance Office"},
     ]
 
+    tenant_timezone = ""
+
     mock_task_config = Mock(spec=ManualFeeFinesTransformer.TaskConfiguration)
 
     return ManualFeeFinesMapper(
@@ -146,6 +148,7 @@ def mapper_with_refdata(pytestconfig) -> ManualFeeFinesMapper:
         feesfines_owner_map,
         feesfines_type_map,
         service_points_map,
+        tenant_timezone,
         ignore_legacy_identifier=True,
     )
 
@@ -280,7 +283,7 @@ def test_basic_mapping_without_ref_data(mapper_without_refdata: ManualFeeFinesMa
         "remaining_amount": "50",
         "patron_barcode": "u123",
         "item_barcode": "some barcode",
-        "billed_date": "2023-01-02",
+        "billed_date": "2023-05-02",
     }
 
     res, uuid = mapper_without_refdata.do_map(data, 1, FOLIONamespaces.fees_fines)
@@ -541,3 +544,14 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
 
     assert str(mocked_feefines_mapper.extradata_writer.cache).count("account\\t") == 2
     assert str(mocked_feefines_mapper.extradata_writer.cache).count("feefineaction\\t") == 2
+
+
+def test_parse_date(mapper_without_refdata: ManualFeeFinesMapper):
+    parsed_date = ManualFeeFinesMapper.parse_date_with_tenant_timezone(
+        mapper_without_refdata, "feefineaction.dateAction", "test_parse_date_id", "2022-05-22T17:00:00"
+    )
+    assert parsed_date == "2022-05-22T17:00:00-04:00"
+
+def test_get_tenant_timezone(mapper_without_refdata: ManualFeeFinesMapper):
+    timezome = ManualFeeFinesMapper.get_tenant_timezone(mapper_without_refdata)
+    assert timezome.key == "America/New_York"

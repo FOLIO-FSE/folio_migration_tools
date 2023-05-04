@@ -1,12 +1,17 @@
+import json
+import logging
 import uuid
 from typing import Any
 from typing import Dict
+from zoneinfo import ZoneInfo
 
-from dateutil.parser import parse
+from dateutil import parser as dateutil_parser
+from dateutil import tz
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -33,6 +38,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         self.folio_client: FolioClient = folio_client
         self.composite_feefine_schema = self.get_composite_feefine_schema()
         self.task_configuration = task_configuration
+        self.tenant_timezone = self.get_tenant_timezone()
 
         super().__init__(
             folio_client,
@@ -140,13 +146,12 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             )
 
         elif folio_prop_name == "feefineaction.dateAction":
-            return self.parse_date(
+            return self.parse_date_with_tenant_timezone(
                 folio_prop_name,
                 index_or_id,
                 super().get_prop(
                     legacy_object, folio_prop_name, index_or_id, schema_default_value
                 ),
-                legacy_object,
             )
 
         elif mapped_value := super().get_prop(
@@ -195,13 +200,16 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             )
             return cache[match_value]
 
-    def parse_date(self, folio_prop_name: str, index_or_id, mapped_value, legacy_object):
+    def parse_date_with_tenant_timezone(self, folio_prop_name: str, index_or_id, mapped_value):
         try:
-            format_date = parse(mapped_value, fuzzy=True)
+            format_date = dateutil_parser.parse(mapped_value, fuzzy=True)
+            if format_date.tzinfo != tz.UTC:
+                format_date = format_date.replace(tzinfo=self.tenant_timezone)
             return format_date.isoformat()
+        
         except Exception as exception:
             raise TransformationFieldMappingError(
-                index_or_id, f"Invalid {folio_prop_name} date for {legacy_object} ", mapped_value
+                index_or_id, f"Invalid {folio_prop_name} date", mapped_value
             ) from exception
 
     def parse_sum_as_float(self, index_or_id, legacy_sum, folio_prop_name):
@@ -276,3 +284,26 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         for key, value in legacy_object.items():
             legacy_string += f"{key.title()}: {value}; "
         return legacy_string.strip().strip(";")
+
+    def get_tenant_timezone(self):
+        config_path = (
+            "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
+        )
+        try:
+            tenant_timezone_str = json.loads(
+                self.folio_client.folio_get_single_object(config_path)["configs"][0]["value"]
+            )["timezone"]
+            logging.info("Tenant timezone is: %s", tenant_timezone_str)
+            return ZoneInfo(tenant_timezone_str)
+        except TypeError as te:
+            raise TransformationProcessError(
+                "",
+                "Failed to fetch Tenant Locale Settings. "
+                "Is your library configuration correct?",
+            ) from te
+        except KeyError as ke:
+            raise TransformationProcessError(
+                "",
+                "Failed to parse Tenant Locale Settings. "
+                "Is the Tenant Locale config correctly formatted?",
+            ) from ke
