@@ -58,8 +58,8 @@ class TransformationRecordFailedError(TransfomationError):
 
 
 class TransformationProcessError(TransfomationError):
-    """Raised when the mapping fails due to disconnects in ref data.
-    This error should take the process to a halt"""
+    """Raised when the transformation fails due to incorrect configuraiton,
+     mapping or reference data. This error should take the process to a halt."""
 
     def __init__(
         self,
@@ -74,6 +74,6 @@ class TransformationProcessError(TransfomationError):
 
     def __str__(self):
         return (
-            f"Critical Process issue. Check mapping files and reference data "
+            f"Critical Process issue. Check configuration, mapping files and reference data"
             f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
         )
