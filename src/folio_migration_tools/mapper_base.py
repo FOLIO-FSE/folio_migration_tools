@@ -239,7 +239,7 @@ class MapperBase:
     def handle_transformation_record_failed_error(
         self, records_processed: int, error: TransformationRecordFailedError
     ):
-        self.migration_report.add(Blurbs.GeneralStatistics, "Records failed due to an error")
+        self.migration_report.add(Blurbs.GeneralStatistics, "FAILED Records failed due to an error")
         error.index_or_id = error.index_or_id or records_processed
         error.log_it()
         self.num_criticalerrors += 1

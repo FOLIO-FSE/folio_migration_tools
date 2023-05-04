@@ -156,12 +156,6 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 except Exception as exception:
                     self.mapper.handle_generic_exception(idx, exception)
 
-                self.mapper.migration_report.add(
-                    Blurbs.GeneralStatistics,
-                    "Number of rows in source file",
-                )
-                self.mapper.migration_report.add_general_statistics("Number of records in total")
-
                 self.print_progress(idx, start)
 
     def wrap_up(self):

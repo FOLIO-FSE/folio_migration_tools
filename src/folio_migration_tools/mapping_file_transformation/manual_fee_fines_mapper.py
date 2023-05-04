@@ -92,9 +92,9 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
     def store_objects(self, composite_feefine):
         try:
             self.extradata_writer.write("account", composite_feefine["account"])
-            self.migration_report.add_general_statistics("Stored account")
+            self.migration_report.add_general_statistics("TOTAL Accounts created")
             self.extradata_writer.write("feefineaction", composite_feefine["feefineaction"])
-            self.migration_report.add_general_statistics("Stored feefineactions")
+            self.migration_report.add_general_statistics("TOTAL Feefineactions created")
 
         except Exception as ee:
             raise TransformationRecordFailedError(
@@ -173,6 +173,10 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 format_date = format_date.replace(tzinfo=self.tenant_timezone)
             return format_date.isoformat()
         except Exception:
+            self.migration_report.add(
+                Blurbs.GeneralStatistics,
+                "DATA ISSUE Invalid dates",
+            )
             logging.log(
                 26,
                 "DATA ISSUE\t%s\t%s\t%s",
@@ -185,6 +189,10 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         try:
             return float(legacy_sum)
         except Exception as ee:
+            self.migration_report.add(
+                Blurbs.GeneralStatistics,
+                "DATA ISSUE Invalid sum (amount/remaining)",
+            )
             raise TransformationRecordFailedError(
                 index_or_id,
                 f"Values mapped to '{folio_prop_name}' must only contain numbers/decimals.",
@@ -216,6 +224,10 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         ):
             return matching_user["id"]
         else:
+            self.migration_report.add(
+                Blurbs.GeneralStatistics,
+                "DATA ISSUE Users not in FOLIO",
+            )
             raise TransformationRecordFailedError(
                 index_or_id,
                 "No matching user in FOLIO for barcode",
@@ -225,12 +237,15 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
     def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
 
         # Parse dates and floats
-        feefine["account"]["amount"] = self.parse_sum_as_float(
-            index_or_id, feefine["account"].get("amount"), "account.amount"
-        )
-        feefine["account"]["remaining"] = self.parse_sum_as_float(
-            index_or_id, feefine["account"].get("remaining"), "account.remaining"
-        )
+        try:
+            feefine["account"]["amount"] = self.parse_sum_as_float(
+                index_or_id, feefine["account"].get("amount"), "account.amount"
+            )
+            feefine["account"]["remaining"] = self.parse_sum_as_float(
+                index_or_id, feefine["account"].get("remaining"), "account.remaining"
+            )
+        except:
+            raise
 
         if feefine["feefineaction"]:
             feefine["feefineaction"]["dateAction"] = self.parse_date_with_tenant_timezone(
@@ -281,6 +296,10 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             feefine["account"]["location"] = folio_item.get("effectiveLocation", {}).get("name")
         else:
             feefine["account"].pop("itemId")
+            self.migration_report.add(
+                Blurbs.GeneralStatistics,
+                "DATA ISSUE Items not in FOLIO",
+            )
             logging.log(
                 26,
                 "DATA ISSUE\t%s\t%s\t%s",
