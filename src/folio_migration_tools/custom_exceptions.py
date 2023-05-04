@@ -59,7 +59,7 @@ class TransformationRecordFailedError(TransfomationError):
 
 class TransformationProcessError(TransfomationError):
     """Raised when the transformation fails due to incorrect configuraiton,
-     mapping or reference data. This error should take the process to a halt."""
+    mapping or reference data. This error should take the process to a halt."""
 
     def __init__(
         self,

@@ -286,12 +286,13 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         # Add item data from FOLIO if available
         if feefine["account"].get("itemId"):
             self.enrich_with_folio_item_data(
-                index_or_id, feefine,
+                index_or_id,
+                feefine,
                 super().get_prop(legacy_object, "account.itemId", "", ""),
             )
 
         return feefine
-    
+
     def stringify_legacy_object(self, legacy_object):
         legacy_string = (
             "MIGRATION NOTE : This fee/fine was migrated to FOLIO from a previous "

@@ -489,6 +489,7 @@ def test_perform_additional_mapping_get_item_data_no_match(
         res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
         assert "itemId" not in res
 
+
 def test_perform_additional_mapping_set_status(
     mapper_with_refdata: ManualFeeFinesMapper,
 ):
@@ -581,9 +582,13 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
 
 def test_parse_date(mapper_without_refdata: ManualFeeFinesMapper):
     parsed_date = ManualFeeFinesMapper.parse_date_with_tenant_timezone(
-        mapper_without_refdata, "feefineaction.dateAction", "test_parse_date_id", "2022-05-22T17:00:00"
+        mapper_without_refdata,
+        "feefineaction.dateAction",
+        "test_parse_date_id",
+        "2022-05-22T17:00:00",
     )
     assert parsed_date == "2022-05-22T17:00:00-04:00"
+
 
 def test_get_tenant_timezone(mapper_without_refdata: ManualFeeFinesMapper):
     timezome = ManualFeeFinesMapper.get_tenant_timezone(mapper_without_refdata)

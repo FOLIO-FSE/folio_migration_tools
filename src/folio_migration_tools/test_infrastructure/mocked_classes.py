@@ -219,21 +219,9 @@ def folio_get_single_object_mocked(*args, **kwargs):
         return {
             "configs": [
                 {
-                    "id": "4fd2a50a-1477-4685-b7ba-1edf51dfc4da",
-                    "module": "ORG",
-                    "configName": "localeSettings",
-                    "enabled": True,
-                    "value": '{"locale":"en-US-u-nu-latn","timezone":"America/New_York","currency":"USD"}',
-                    "metadata": {
-                        "createdDate": "2022-12-13T09:57:11.658+00:00",
-                        "createdByUserId": "2ab89151-55d2-4a96-96a7-d5d8066e4044",
-                        "updatedDate": "2023-05-04T11:05:46.719+00:00",
-                        "updatedByUserId": "2ab89151-55d2-4a96-96a7-d5d8066e4044",
-                    },
+                    "value": '{"timezone":"America/New_York"}',
                 }
-            ],
-            "totalRecords": 1,
-            "resultInfo": {"totalRecords": 1, "facets": [], "diagnostics": []},
+            ]
         }
 
     elif args[0] in super_schema:
