@@ -36,3 +36,15 @@ def test_clean_user_all_true():
     }
     UserTransformer.clean_user(folio_user, "id")
     assert any(a["primaryAddress"] is not True for a in folio_user["personal"]["addresses"])
+
+def test_clean_user_no_primary_info():
+    folio_user = {
+        "personal": {
+            "addresses": [
+                {"id": "some id"},
+                {"id": "some other id"},
+            ]
+        }
+    }
+    UserTransformer.clean_user(folio_user, "id")
+    assert any(a["primaryAddress"] is not True for a in folio_user["personal"]["addresses"])

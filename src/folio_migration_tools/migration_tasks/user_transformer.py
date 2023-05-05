@@ -182,13 +182,30 @@ class UserTransformer(MigrationTaskBase):
     @staticmethod
     def clean_user(folio_user, index_or_id):
         if addresses := folio_user.get("personal", {}).get("addresses", []):
-            # More than one primary address
-            if primaries := [a for a in addresses if a["primaryAddress"] is True]:
-                for primary in primaries[1:]:
-                    primary["primaryAddress"] = False
-            else:
-                # No primary address
-                addresses[0]["primaryAddress"] = True
+            primary_not_set = [
+                a for a in addresses if not isinstance(a.get("primaryAddress"), bool)
+            ]
+            primary_is_true = [a for a in primary_not_set if a["primaryAddress"] is True]
+
+            if len(primary_not_set) != 0 and len(primary_is_true) != 1:
+                for a in primary_not_set:
+                    a["primaryAddress"] = False
+
+                if primaries := [a for a in addresses if a["primaryAddress"] is True]:
+                    for primary in primaries[1:]:
+                        primary["primaryAddress"] = False
+                else:
+                    # No primary address
+                    addresses[0]["primaryAddress"] = True
+
+                logging.log(
+                    26,
+                    "DATA ISSUE\t%s\t%s\t%s",
+                    index_or_id,
+                    "Too many/too few primary addresses for user: ",
+                    addresses,
+                )
+
         # TODO: Consider removing the object metadata construct globally in MappingFileMapperBase
         if folio_user.get("metadata", {}):
             del folio_user["metadata"]
