@@ -120,13 +120,14 @@ class MigrationTaskBase:
         if files and len(files) < len(file_defs):
             raise TransformationProcessError(
                 "",
-                f"Some files listed in task configuration not found in {source_path}.",
+                f"Some files listed in task configuration not found in {source_path}."
+                f"Listed files: {ret_str}",
             )
         if not any(files):
             raise TransformationProcessError(
                 "",
-                "None of the files listed in task configuration found in"
-                f" {source_path}: {ret_str}",
+                f"None of the files listed in task configuration found in {source_path}."
+                f"Listed files: {ret_str}",
             )
         logging.info("Files to process:")
         for filename in files:
