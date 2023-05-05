@@ -102,10 +102,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             ) from ee
 
     def get_prop(self, legacy_object, folio_prop_name, index_or_id, schema_default_value):
-        if folio_prop_name == "account.id" or folio_prop_name == "feefineaction.accountId":
-            return index_or_id
-
-        elif folio_prop_name == "account.ownerId" and self.feefines_owner_map:
+        if folio_prop_name == "account.ownerId" and self.feefines_owner_map:
             return self.get_mapped_ref_data_value(
                 self.feefines_owner_map, legacy_object, index_or_id, folio_prop_name, False
             )
@@ -115,13 +112,31 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 self.feefines_type_map, legacy_object, index_or_id, folio_prop_name, False
             )
 
-        elif folio_prop_name == "feefineaction.id":
-            return str(uuid.uuid4())
-
         elif folio_prop_name == "feefineaction.createdAt" and self.service_point_map:
             return self.get_mapped_ref_data_value(
                 self.service_point_map, legacy_object, index_or_id, folio_prop_name, False
             )
+
+        elif folio_prop_name == "account.amount" or folio_prop_name == "account.remaining":
+            return self.parse_sum_as_float(
+                index_or_id,
+                super().get_prop(
+                    legacy_object, folio_prop_name, index_or_id, schema_default_value
+                ),
+                folio_prop_name,
+            )
+
+        elif folio_prop_name == "feefineaction.dateAction":
+            return self.parse_date_with_tenant_timezone(
+                "feefineaction.dateAction",
+                index_or_id,
+                super().get_prop(
+                    legacy_object, folio_prop_name, index_or_id, schema_default_value
+                ),
+            )
+
+        elif folio_prop_name == "feefineaction.id":
+            return str(uuid.uuid4())
 
         elif mapped_value := super().get_prop(
             legacy_object, folio_prop_name, index_or_id, schema_default_value
@@ -181,7 +196,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 26,
                 "DATA ISSUE\t%s\t%s\t%s",
                 index_or_id,
-                "Not a valid date",
+                f"{folio_prop_name} Not a valid date.",
                 mapped_value,
             )
 
@@ -191,11 +206,11 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         except Exception as ee:
             self.migration_report.add(
                 Blurbs.GeneralStatistics,
-                "DATA ISSUE Invalid sum (amount/remaining)",
+                "DATA ISSUE Invalid sum",
             )
             raise TransformationRecordFailedError(
                 index_or_id,
-                f"Values mapped to '{folio_prop_name}' must only contain numbers/decimals.",
+                f"{folio_prop_name} Value must only contain numbers/decimals.",
                 legacy_sum,
             ) from ee
 
@@ -234,40 +249,25 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 user_barcode,
             )
 
-    def perform_additional_mapping(self, index_or_id, feefine, legacy_object):
-
-        # Parse dates and floats
-        try:
-            feefine["account"]["amount"] = self.parse_sum_as_float(
-                index_or_id, feefine["account"].get("amount"), "account.amount"
-            )
-            feefine["account"]["remaining"] = self.parse_sum_as_float(
-                index_or_id, feefine["account"].get("remaining"), "account.remaining"
-            )
-        except:
-            raise
-
-        if feefine["feefineaction"]:
-            feefine["feefineaction"]["dateAction"] = self.parse_date_with_tenant_timezone(
-                "feefineaction.dateAction",
-                index_or_id,
-                feefine["feefineaction"].get("dateAction"),
-            )
+    def perform_additional_mapping(self, index_or_id, composite_feefine, legacy_object):
+        # Generate account ID
+        composite_feefine["account"]["id"] = composite_feefine["id"]
+        composite_feefine["feefineaction"]["accountId"] = composite_feefine["id"]
 
         # Link to FOLIO user
-        feefine["account"]["userId"] = self.get_folio_user_uuid(
+        composite_feefine["account"]["userId"] = self.get_folio_user_uuid(
             index_or_id,
-            feefine["account"]["userId"],
+            composite_feefine["account"]["userId"],
         )
-        feefine["feefineaction"]["userId"] = feefine["account"]["userId"]
+        composite_feefine["feefineaction"]["userId"] = composite_feefine["account"]["userId"]
 
         # Add item data from FOLIO if available
-        if item_barcode := feefine["account"].get("itemId"):
-            self.enrich_with_folio_item_data(index_or_id, feefine, item_barcode)
+        if item_barcode := composite_feefine["account"].get("itemId"):
+            self.enrich_with_folio_item_data(index_or_id, composite_feefine, item_barcode)
 
-        self.add_additional_fields_and_values(feefine, legacy_object)
+        self.add_additional_fields_and_values(composite_feefine, legacy_object)
 
-        return feefine
+        return composite_feefine
 
     def stringify_legacy_object(self, legacy_object):
         legacy_string = (
@@ -309,34 +309,19 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             )
 
     def add_additional_fields_and_values(self, feefine, legacy_object):
-        # Set the account status to Open/Closed based on remainign amount
-        if feefine["account"]["remaining"] > 0:
-            feefine["account"]["status"] = {"name": "Open"}
-        else:
-            feefine["account"]["status"] = {"name": "Closed"}
-
-        # Add name values for reference data
-        feefine["account"]["feeFineOwner"] = [
-            owner["owner"]
-            for owner in self.feefines_owner_map.ref_data
-            if owner["id"] == feefine["account"]["ownerId"]
-        ][0]
-
-        type_name = [
-            type["feeFineType"]
-            for type in self.feefines_type_map.ref_data
-            if type["id"] == feefine["account"]["feeFineId"]
-        ][0]
-        feefine["account"]["feeFineType"] = type_name
-        feefine["feefineaction"]["typeAction"] = type_name
-
         # Add standard values
         feefine["feefineaction"]["source"] = self.folio_client.username
         feefine["feefineaction"]["notify"] = False
         feefine["feefineaction"]["amountAction"] = feefine["account"]["amount"]
         feefine["feefineaction"]["balance"] = feefine["account"]["remaining"]
 
-        # Always add the full legacy item dict to the comment field
+        # Set the account status to Open/Closed based on remainign amount
+        if feefine["account"]["remaining"] > 0:
+            feefine["account"]["status"] = {"name": "Open"}
+        else:
+            feefine["account"]["status"] = {"name": "Closed"}
+
+        # Add the full legacy item dict to the comment field
         if feefine["feefineaction"].get("comments"):
             feefine["feefineaction"]["comments"] = (
                 ("STAFF : " + feefine["feefineaction"]["comments"])
@@ -345,5 +330,22 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             )
         else:
             feefine["feefineaction"]["comments"] = self.stringify_legacy_object(legacy_object)
+
+        # Add name values from reference data mapping
+        if self.feefines_owner_map:
+            feefine["account"]["feeFineOwner"] = [
+                owner["owner"]
+                for owner in self.feefines_owner_map.ref_data
+                if owner["id"] == feefine["account"]["ownerId"]
+            ][0]
+
+        if self.feefines_type_map:
+            type_name = [
+                type["feeFineType"]
+                for type in self.feefines_type_map.ref_data
+                if type["id"] == feefine["account"]["feeFineId"]
+            ][0]
+            feefine["account"]["feeFineType"] = type_name
+            feefine["feefineaction"]["typeAction"] = type_name
 
         return feefine

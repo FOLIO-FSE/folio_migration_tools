@@ -4,7 +4,6 @@ import logging
 import sys
 import time
 import traceback
-from os.path import isfile
 from typing import List
 from typing import Optional
 
@@ -125,21 +124,21 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
 
                     self.mapper.report_legacy_mapping_no_schema(record)
 
-                    folio_rec, legacy_id = self.mapper.do_map(
-                        record, f"row {idx + 1}", FOLIONamespaces.fees_fines
+                    composite_feefine, legacy_id = self.mapper.do_map(
+                        record, f"Row {idx + 1}", FOLIONamespaces.fees_fines
                     )
 
-                    self.mapper.perform_additional_mapping(f"row {idx + 1}", folio_rec, record)
+                    self.mapper.perform_additional_mapping(legacy_id, composite_feefine, record)
 
                     self.mapper.report_folio_mapping(
-                        folio_rec, self.mapper.composite_feefine_schema
+                        composite_feefine, self.mapper.composite_feefine_schema
                     )
 
-                    self.mapper.store_objects(folio_rec)
+                    self.mapper.store_objects(composite_feefine)
 
                     if idx == 0:
                         logging.info("First FOLIO record:")
-                        logging.info(json.dumps(folio_rec, indent=4))
+                        logging.info(json.dumps(composite_feefine, indent=4))
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -147,7 +146,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     self.mapper.handle_transformation_record_failed_error(idx, data_error)
                 except TransformationFieldMappingError as mapping_error:
                     self.mapper.handle_transformation_field_mapping_error(idx, mapping_error)
-                
+
                 except AttributeError as attribute_error:
                     traceback.print_exc()
                     logging.fatal(attribute_error)
