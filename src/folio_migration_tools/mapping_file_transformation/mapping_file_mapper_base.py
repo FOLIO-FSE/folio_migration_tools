@@ -189,7 +189,13 @@ class MappingFileMapperBase(MapperBase):
         accept_duplicate_ids: bool = False,
     ):
         if self.ignore_legacy_identifier:
-            return ({}, str(uuid.uuid4()))
+            return (
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": "object",
+                },
+                index_or_id,
+            )
 
         if not (
             legacy_id := " ".join(
