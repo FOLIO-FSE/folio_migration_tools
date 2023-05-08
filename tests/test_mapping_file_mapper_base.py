@@ -2836,7 +2836,7 @@ def test_map_enums_invalid_not_required_deeper_level(mocked_folio_client):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
-def test_map_booleans(mocked_folio_client: FolioClient):
+def test_map_booleans_regular_mapping(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A generic record",
@@ -2853,21 +2853,71 @@ def test_map_booleans(mocked_folio_client: FolioClient):
                 "type": "boolean",
                 "default": False,
             },
-            "trueOrFalseFallback": {
-                "id": "trueOrFalseFallback",
+        },
+    }
+    records = [
+        {"id": "idi0", "true_or_false": True},
+        {"id": "idi1", "true_or_false": False},
+        {"id": "idi2", "true_or_false": "true"},
+        {"id": "idi3", "true_or_false": "false"},
+    ]
+
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "trueOrFalse",
+                "legacy_field": "true_or_false",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
+    folio_recs = []
+
+    for record in records:
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+        folio_recs.append(folio_rec)
+
+    assert isinstance(folio_recs[0]["trueOrFalse"], bool) and folio_recs[0]["trueOrFalse"] is True
+    assert isinstance(folio_recs[1]["trueOrFalse"], bool) and folio_recs[1]["trueOrFalse"] is False
+
+    # This is what happens if the mapped source data contians strings "true"/"false"
+    # Some FOLIO API endpoints may still interpret "true"/"false" as Boolean values
+    assert isinstance(folio_recs[2]["trueOrFalse"], str) and folio_recs[2]["trueOrFalse"] == "true"
+    assert (
+        isinstance(folio_recs[3]["trueOrFalse"], str) and folio_recs[3]["trueOrFalse"] == "false"
+    )
+
+
+def test_map_booleans_with_replace_values(mocked_folio_client: FolioClient):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A generic record",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "trueOrFalse": {
+                "id": "trueOrFalse",
                 "description": "Is it true or is it false?",
                 "type": "boolean",
             },
         },
     }
     records = [
-        {"id": "idi0", "true_or_false": True},
-        {"id": "idi1", "true_or_false": False},
-        {"id": "idi2", "true_or_false": ""},
-        {"id": "idi3", "true_or_false": "yes"},
-        {"id": "idi4", "true_or_false": "no"},
-        {"id": "idi5", "true_or_false": "true"},
-        {"id": "idi6", "true_or_false": "false"},
+        {"id": "test_map_booleans_with_replace_values1", "true_or_false": "yes"},
+        {"id": "test_map_booleans_with_replace_values2", "true_or_false": "no"},
     ]
 
     the_map = {
@@ -2885,12 +2935,6 @@ def test_map_booleans(mocked_folio_client: FolioClient):
                 "description": "",
                 "rules": {"replaceValues": {"yes": True, "no": False}},
             },
-            {
-                "folio_field": "trueOrFalseFallback",
-                "legacy_field": "true_or_false",
-                "value": False,
-                "description": "",
-            },
         ]
     }
 
@@ -2901,50 +2945,43 @@ def test_map_booleans(mocked_folio_client: FolioClient):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
         folio_recs.append(folio_rec)
 
-    # Mapped source data contians booleans True/False
     assert isinstance(folio_recs[0]["trueOrFalse"], bool) and folio_recs[0]["trueOrFalse"] is True
     assert isinstance(folio_recs[1]["trueOrFalse"], bool) and folio_recs[1]["trueOrFalse"] is False
 
-    # No source data value, gets schema default value False
-    assert isinstance(folio_recs[2]["trueOrFalse"], bool) and folio_recs[2]["trueOrFalse"] is False
-    # No source data value, gets mapped fallback value False
-    assert (
-        isinstance(folio_recs[2]["trueOrFalseFallback"], bool)
-        and folio_recs[2]["trueOrFalseFallback"] is False
-    )
 
-    # Mapped with replaceValues
-    assert isinstance(folio_recs[3]["trueOrFalse"], bool) and folio_recs[3]["trueOrFalse"] is True
-    # TODO figure out why the below fails, part of #504
-    # assert isinstance(folio_recs[4]["trueOrFalse"], bool) and folio_recs[4]["trueOrFalse"] is False
-
-    # Mapped source data contians strings "true"/"false"
-    assert isinstance(folio_recs[5]["trueOrFalse"], str) and folio_recs[5]["trueOrFalse"] == "true"
-    assert (
-        isinstance(folio_recs[6]["trueOrFalse"], str) and folio_recs[6]["trueOrFalse"] == "false"
-    )
-
-
-def test_default_false(mocked_folio_client: FolioClient):
-    schema = {
-        "$schema": "http://json-schema.org/draft-04/schema#",
-        "description": "The record of an organization",
-        "type": "object",
+def test_map_booeleans_set_schema_default(mocked_folio_client: FolioClient):
+    schema_default_false = {
         "properties": {
             "id": {
                 "description": "The unique UUID for this organization",
                 "$ref": "../../common/schemas/uuid.json",
                 "type": "string",
             },
-            "isVendor": {
-                "id": "isVendor",
-                "description": "Used to indicate that this organization is also a vendor",
+            "trueOrFalse": {
+                "id": "trueOrFalse",
+                "description": "Is it true or is it false?",
                 "type": "boolean",
                 "default": False,
             },
         },
     }
-    record = {"id": "id1", "delivery_method": "Offline", "vendor_yesno": ""}
+    schema_default_true = {
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "trueOrFalse": {
+                "id": "trueOrFalse",
+                "description": "Is it true or is it false?",
+                "type": "boolean",
+                "default": True,
+            },
+        },
+    }
+
+    record = {"id": "id1", "true_or_false": ""}
     the_map = {
         "data": [
             {
@@ -2954,8 +2991,51 @@ def test_default_false(mocked_folio_client: FolioClient):
                 "description": "",
             },
             {
-                "folio_field": "isVendor",
-                "legacy_field": "vendor_yesno",
+                "folio_field": "trueOrFalse",
+                "legacy_field": "true_or_false",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    mapper = MyTestableFileMapper(schema_default_false, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert isinstance(folio_rec["trueOrFalse"], bool) and folio_rec["trueOrFalse"] is False
+
+    mapper = MyTestableFileMapper(schema_default_true, the_map, mocked_folio_client)
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+    assert isinstance(folio_rec["trueOrFalse"], bool) and folio_rec["trueOrFalse"] is True
+
+
+def test_map_booleans_schema_default_false_and_mapped_to_true(mocked_folio_client: FolioClient):
+    schema = {
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "trueOrFalse": {
+                "id": "trueOrFalse",
+                "description": "Is it true or is it false?",
+                "type": "boolean",
+                "default": False,
+            },
+        },
+    }
+
+    record = {"id": "id1", "true_or_false": True}
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "trueOrFalse",
+                "legacy_field": "true_or_false",
                 "value": "",
                 "description": "",
             },
@@ -2963,10 +3043,10 @@ def test_default_false(mocked_folio_client: FolioClient):
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
-    assert folio_rec["isVendor"] is False
+    assert folio_rec["trueOrFalse"] is True
 
 
-def test_default_false_and_mapped_to_true(mocked_folio_client: FolioClient):
+def test_map_booleans_schema_default_false_and_value_set_to_true(mocked_folio_client: FolioClient):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -2977,15 +3057,15 @@ def test_default_false_and_mapped_to_true(mocked_folio_client: FolioClient):
                 "$ref": "../../common/schemas/uuid.json",
                 "type": "string",
             },
-            "isVendor": {
-                "id": "isVendor",
-                "description": "Used to indicate that this organization is also a vendor",
+            "trueOrFalse": {
+                "id": "trueOrFalse",
+                "description": "Is it true or is it false?",
                 "type": "boolean",
                 "default": False,
             },
         },
     }
-    record = {"id": "id1", "is_vendor": True}
+    record = {"id": "id1", "true_or_false": ""}
     the_map = {
         "data": [
             {
@@ -2995,49 +3075,8 @@ def test_default_false_and_mapped_to_true(mocked_folio_client: FolioClient):
                 "description": "",
             },
             {
-                "folio_field": "isVendor",
-                "legacy_field": "is_vendor",
-                "value": "",
-                "description": "",
-            },
-        ]
-    }
-    mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
-    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
-    assert folio_rec["isVendor"] is True
-
-
-def test_default_false_and_value_set_to_true(mocked_folio_client: FolioClient):
-    schema = {
-        "$schema": "http://json-schema.org/draft-04/schema#",
-        "description": "The record of an organization",
-        "type": "object",
-        "properties": {
-            "id": {
-                "description": "The unique UUID for this organization",
-                "$ref": "../../common/schemas/uuid.json",
-                "type": "string",
-            },
-            "isVendor": {
-                "id": "isVendor",
-                "description": "Used to indicate that this organization is also a vendor",
-                "type": "boolean",
-                "default": False,
-            },
-        },
-    }
-    record = {"id": "id1"}
-    the_map = {
-        "data": [
-            {
-                "folio_field": "legacyIdentifier",
-                "legacy_field": "id",
-                "value": "",
-                "description": "",
-            },
-            {
-                "folio_field": "isVendor",
-                "legacy_field": "",
+                "folio_field": "trueOrFalse",
+                "legacy_field": "true_or_false",
                 "value": True,
                 "description": "",
             },
@@ -3045,7 +3084,7 @@ def test_default_false_and_value_set_to_true(mocked_folio_client: FolioClient):
     }
     mapper = MyTestableFileMapper(schema, the_map, mocked_folio_client)
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
-    assert folio_rec["isVendor"] is True
+    assert folio_rec["trueOrFalse"] is True
 
 
 def test_default_no_defaults_on_subprops(mocked_folio_client: FolioClient):
