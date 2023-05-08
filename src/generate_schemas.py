@@ -85,7 +85,7 @@ def generate_extended_folio_object_schema(args):
         outfile.write(json.dumps(composite_order_schema, indent=4))
         outfile.write("\n")
 
-    composite_fee_fine_schema = ManualFeeFinesMapper.get_composite_feefine_schema()
+    composite_fee_fine_schema = ManualFeeFinesMapper.get_composite_feefine_schema(None)
     with open(os.path.join(args.results_path, "compositeFeeFineSchema.json"), "w") as outfile:
         outfile.write(json.dumps(composite_fee_fine_schema, indent=4))
         outfile.write("\n")
