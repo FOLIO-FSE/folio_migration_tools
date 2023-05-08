@@ -319,10 +319,10 @@ These configuration pieces in the configuration file determines the behaviour
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
 | migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
 | organizationMapPath  | Any string  | location of the Organizations mapping file in the mapping_files folder  |
-| organizationTypesMapPath  | Any string   | Location of the Location mapping file in the mapping_files folder  |
-| addressCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
-| emailCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
-| phoneCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
+| organizationTypesMapPath  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
+| addressCategoriesMapPath  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
+| emailCategoriesMapPath  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
+| phoneCategoriesMapPath  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
 | files  | Objects with filename and boolean  | List of filenames containing the organization source data  |
 
 ## Syntax to run
@@ -340,24 +340,30 @@ See documentation for posting above. Note that any linked contacts, interfaces, 
 This migration task allows you to create static, so-called "manual" fees/fines in FOLIO. These are different from "automatic" fees/fines, which are generated and incremented automatically for open loans by FOLIO's BL pocesses. To avoid "duplicating" fees/fines during migration, we recmmend only creating manual fees/fines for charges that are not related to open loans.
 ## Mapping best practices
 ### Account and feefineAction
-Behind the scenes, a manual fee/fine in FOLIO is made up of one "account" and one or more "feeFineActions". In it's current implementation, this migration task creates one accoount and one feeFineAction for each row in the source data file. Below is an example of how you may map your source data to this structure: 
+Behind the scenes, a manual fee/fine in FOLIO is made up of one "account" and one or more "feeFineActions". In its current implementation, this migration task creates one accoount and one feeFineAction for each row in the source data file. Check out the migration_example repo for a tried and tested example of how you can map your source data to this structure: https://github.com/FOLIO-FSE/migration_example/blob/main/mapping_files/manual_feefines_map.json
+
 ### Status and Payment status
 This migration task allows you to map your fees/fines to any of the allowed Payment statuses. The overall Fee/Fine/Status will however be set to Open if the remaining amount > 0, else to Closed.
+### Reference data mapping
+This task allows you to specify up to three reference data mapping files: Fee fien owners, Fee fine types, and Service points. All of the reference data files are optional, so if you prefer you can set them to "" in the task configuration and instead add the UUID of the prefered owner/type/service point as a value in the mapping file.
+
+> Be aware that:
+> - The Fee/fine type assigned to the fee/fine must be associated with the Fee/fine owner assigned to the fee/fine. The migration task does not validate this, so your mapping must take this into account.
+> - FOLIO allows you to create multiple Fee/fine types with identical names. The reference data mapping requires the names to be unique (#616).
 
 ## Configuration
 These configuration pieces in the configuration file determines the behaviour
 ```
 {
-    "name": "transform_organizations",
-    "migrationTaskType": "OrganizationTransformer",
-    "organizationMapPath": "organizations_map.json",
-    "organizationTypesMapPath": "organizations_types_mapping.tsv",
-    "addressCategoriesMapPath": "address_categories_map.tsv",
-    "emailCategoriesMapPath": "email_categories_map.tsv",
-    "phoneCategoriesMapPath": "phone_categories_map.tsv",
+    "name": "transform_manual_feefines",
+    "migrationTaskType": "ManualFeeFinesTransformer",
+    "feefinesMap": "manual_feefines_map.json",
+    "feefinesOwnerMap": "feefine_owners.tsv",
+    "feefinesTypeMap": "feefine_types.tsv",
+    "servicePointMap": "feefines_service_points.tsv",
     "files": [
         {
-            "file_name": "organizations_export.tsv"
+            "file_name": "test_feefines.tsv"
         }
     ]
 }
@@ -368,12 +374,11 @@ These configuration pieces in the configuration file determines the behaviour
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
 | migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
-| organizationMapPath  | Any string  | location of the Organizations mapping file in the mapping_files folder  |
-| organizationTypesMapPath  | Any string   | Location of the Location mapping file in the mapping_files folder  |
-| addressCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
-| emailCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
-| phoneCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
-| files  | Objects with filename and boolean  | List of filenames containing the organization source data  |
+| feefinesMap  | Any string  | location of the fee/fine mapping file in the mapping_files folder  |
+| feefinesOwnerMap  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
+| feefinesTypeMap  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
+| servicePointMap  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
+| files  | Objects with filename and boolean  | List of filenames containing the fee/fine source data  |
 
 ## Syntax to run
 ``` 
@@ -381,4 +386,16 @@ python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/ex
 ```
 # Post transformed Manual fees/fines to FOLIO
 See documentation for posting above. Note that all of the transformed fee/fine information is stored in the fees_fines.extradata file. 
-¨
+```
+{
+    "name": "post_feefines",
+    "migrationTaskType": "BatchPoster",
+    "objectType": "Extradata",
+    "batchSize": 1,
+    "files": [
+        {
+            "file_name": "extradata_transform_manual_feefines.extradata"
+        }
+    ]
+}
+```
