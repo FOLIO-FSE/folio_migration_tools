@@ -329,3 +329,56 @@ These configuration pieces in the configuration file determines the behaviour
 ``` 
 python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
 ```
+
+# Post transformed Organizations to FOLIO
+See documentation for posting above. Note that any linked contacts, interfaces, credentials and notes will be in the "organizations.extradata" file. The "extradata" file should be posted after the "folio_organisations" file.
+¨
+
+# Transform CSV/TSV files into FOLIO Manual fees/fines
+## General considerations
+### Manual (static) fees/fines vd Automatic (incrementing) fees/fnes
+This migration task allows you to create static, so-called "manual" fees/fines in FOLIO. These are different from "automatic" fees/fines, which are generated and incremented automatically for open loans by FOLIO's BL pocesses. To avoid "duplicating" fees/fines during migration, we recmmend only creating manual fees/fines for charges that are not related to open loans.
+## Mapping best practices
+### Account and feefineAction
+Behind the scenes, a manual fee/fine in FOLIO is made up of one "account" and one or more "feeFineActions". In it's current implementation, this migration task creates one accoount and one feeFineAction for each row in the source data file. Below is an example of how you may map your source data to this structure: 
+### Status and Payment status
+This migration task allows you to map your fees/fines to any of the allowed Payment statuses. The overall Fee/Fine/Status will however be set to Open if the remaining amount > 0, else to Closed.
+
+## Configuration
+These configuration pieces in the configuration file determines the behaviour
+```
+{
+    "name": "transform_organizations",
+    "migrationTaskType": "OrganizationTransformer",
+    "organizationMapPath": "organizations_map.json",
+    "organizationTypesMapPath": "organizations_types_mapping.tsv",
+    "addressCategoriesMapPath": "address_categories_map.tsv",
+    "emailCategoriesMapPath": "email_categories_map.tsv",
+    "phoneCategoriesMapPath": "phone_categories_map.tsv",
+    "files": [
+        {
+            "file_name": "organizations_export.tsv"
+        }
+    ]
+}
+
+```
+## Explanation of parameters
+| Parameter  | Possible values  | Explanation  | 
+| ------------- | ------------- | ------------- |
+| Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
+| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| organizationMapPath  | Any string  | location of the Organizations mapping file in the mapping_files folder  |
+| organizationTypesMapPath  | Any string   | Location of the Location mapping file in the mapping_files folder  |
+| addressCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
+| emailCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
+| phoneCategoriesMapPath  | Any string   | location of the mapping file in the mapping_files folder  |
+| files  | Objects with filename and boolean  | List of filenames containing the organization source data  |
+
+## Syntax to run
+``` 
+python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
+```
+# Post transformed Manual fees/fines to FOLIO
+See documentation for posting above. Note that all of the transformed fee/fine information is stored in the fees_fines.extradata file. 
+¨
