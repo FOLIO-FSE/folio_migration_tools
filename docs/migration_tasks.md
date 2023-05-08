@@ -340,7 +340,7 @@ See documentation for posting above. Note that any linked contacts, interfaces, 
 This migration task allows you to create static, so-called "manual" fees/fines in FOLIO. These are different from "automatic" fees/fines, which are generated and incremented automatically for open loans by FOLIO's BL pocesses. To avoid "duplicating" fees/fines during migration, we recmmend only creating manual fees/fines for charges that are not related to open loans.
 ## Mapping best practices
 ### Account and feefineAction
-Behind the scenes, a manual fee/fine in FOLIO is made up of one "account" and one or more "feeFineActions". In its current implementation, this migration task creates one accoount and one feeFineAction for each row in the source data file. Check out the migration_example repo for a tried and tested example of how you can map your source data to this structure: https://github.com/FOLIO-FSE/migration_example/blob/main/mapping_files/manual_feefines_map.json
+Behind the scenes, a manual fee/fine in FOLIO is made up of one "account" and one or more "feeFineActions". In its current implementation, this migration task creates one accoount and one feeFineAction for each row in the source data file. Check out the migration_example repo for a tried and tested example of how you can map your source data to this structure: [manual_feefines_map.json](https://github.com/FOLIO-FSE/migration_example/blob/main/mapping_files/manual_feefines_map.json)
 
 ### Status and Payment status
 This migration task allows you to map your fees/fines to any of the allowed Payment statuses. The overall Fee/Fine/Status will however be set to Open if the remaining amount > 0, else to Closed.
