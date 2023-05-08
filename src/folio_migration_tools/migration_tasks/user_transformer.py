@@ -181,34 +181,34 @@ class UserTransformer(MigrationTaskBase):
 
     @staticmethod
     def clean_user(folio_user, index_or_id):
+        # TODO: Consider removing the object metadata construct globally in MappingFileMapperBase
+        if folio_user.get("metadata", {}):
+            del folio_user["metadata"]
+
+        # Make sure the user has exactly one primary address
         if addresses := folio_user.get("personal", {}).get("addresses", []):
-            primary_not_set = [
-                a for a in addresses if not isinstance(a.get("primaryAddress"), bool)
-            ]
-            primary_is_true = [a for a in primary_not_set if a["primaryAddress"] is True]
+            primary_true = []
+            for address in addresses:
+                if "primaryAddress" not in address:
+                    address["primaryAddress"] = False
+                elif (
+                    isinstance(address["primaryAddress"], bool)
+                    and address["primaryAddress"] is True
+                ):
+                    primary_true.append(address)
 
-            if len(primary_not_set) != 0 and len(primary_is_true) != 1:
-                for a in primary_not_set:
-                    a["primaryAddress"] = False
-
-                if primaries := [a for a in addresses if a["primaryAddress"] is True]:
-                    for primary in primaries[1:]:
-                        primary["primaryAddress"] = False
-                else:
-                    # No primary address
-                    addresses[0]["primaryAddress"] = True
-
+            if len(primary_true) < 1:
+                addresses[0]["primaryAddress"] = True
+            elif len(primary_true) > 1:
                 logging.log(
                     26,
                     "DATA ISSUE\t%s\t%s\t%s",
                     index_or_id,
-                    "Too many/too few primary addresses for user: ",
-                    addresses,
+                    "Too many addresses mapped as primary. Setting first one to primary.",
+                    primary_true,
                 )
-
-        # TODO: Consider removing the object metadata construct globally in MappingFileMapperBase
-        if folio_user.get("metadata", {}):
-            del folio_user["metadata"]
+                for pt in primary_true[1:]:
+                    pt["primaryAddress"] = False
 
 
 def print_email_warning():
