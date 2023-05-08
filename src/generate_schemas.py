@@ -8,6 +8,9 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.courses_mapper import (
     CoursesMapper,
 )
+from folio_migration_tools.mapping_file_transformation.manual_fee_fines_mapper import (
+    ManualFeeFinesMapper,
+)
 from folio_migration_tools.mapping_file_transformation.order_mapper import (
     CompositeOrderMapper,
 )
@@ -80,6 +83,11 @@ def generate_extended_folio_object_schema(args):
         os.path.join(args.results_path, "compositePurchaseOrderLineSchema.json"), "w"
     ) as outfile:
         outfile.write(json.dumps(composite_order_schema, indent=4))
+        outfile.write("\n")
+
+    composite_fee_fine_schema = ManualFeeFinesMapper.get_composite_feefine_schema()
+    with open(os.path.join(args.results_path, "compositeFeeFineSchema.json"), "w") as outfile:
+        outfile.write(json.dumps(composite_fee_fine_schema, indent=4))
         outfile.write("\n")
 
 
