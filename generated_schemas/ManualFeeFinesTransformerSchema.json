@@ -1,0 +1,72 @@
+{
+    "title": "TaskConfiguration",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "type": "string"
+        },
+        "feefinesMap": {
+            "title": "Feefinesmap",
+            "type": "string"
+        },
+        "migrationTaskType": {
+            "title": "Migrationtasktype",
+            "type": "string"
+        },
+        "files": {
+            "title": "Files",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/FileDefinition"
+            }
+        },
+        "feefinesOwnerMap": {
+            "title": "Feefinesownermap",
+            "type": "string"
+        },
+        "feefinesTypeMap": {
+            "title": "Feefinestypemap",
+            "type": "string"
+        },
+        "servicePointMap": {
+            "title": "Servicepointmap",
+            "type": "string"
+        }
+    },
+    "required": [
+        "name",
+        "feefinesMap",
+        "migrationTaskType",
+        "files"
+    ],
+    "definitions": {
+        "FileDefinition": {
+            "title": "FileDefinition",
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "title": "File name",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "default": "",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "title": "Discovery suppressed",
+                    "default": false,
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "title": "Staff suppressed",
+                    "default": false,
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "title": "Service point ID",
+                    "default": "",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

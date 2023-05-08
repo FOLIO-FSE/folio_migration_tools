@@ -91,7 +91,7 @@
     "definitions": {
         "HridHandling": {
             "title": "HridHandling",
-            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
+            "description": "Enum determining how the HRID generation should be handled.\n        - default: Enumerates the HRID, building on the current value in the HRID settings\n        - preserve001: Takes the 001 and uses this as the HRID.\n\n    Args:\n        str (_type_): _description_\n        Enum (_type_): _description_\n    ",
             "enum": [
                 "default",
                 "preserve001"

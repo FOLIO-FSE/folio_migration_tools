@@ -84,7 +84,9 @@
             "description": "An enumeration.",
             "enum": [
                 "lotus",
-                "morning-glory"
+                "morning-glory",
+                "nolana",
+                "orchid"
             ],
             "type": "string"
         }

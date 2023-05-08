@@ -81,7 +81,7 @@
         },
         "IlsFlavour": {
             "title": "IlsFlavour",
-            "description": "",
+            "description": " ",
             "enum": [
                 "aleph",
                 "voyager",

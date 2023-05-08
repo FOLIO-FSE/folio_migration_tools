@@ -1,0 +1,282 @@
+{
+    "properties": {
+        "account": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "title": "Account schema",
+            "description": "User fines/fees account",
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "Amount of the fine/fee",
+                    "javaType": "org.folio.rest.domain.MonetaryValue",
+                    "type": "number"
+                },
+                "remaining": {
+                    "description": "Remaining of the fine/fee",
+                    "javaType": "org.folio.rest.domain.MonetaryValue",
+                    "type": "number"
+                },
+                "dateCreated": {
+                    "description": "Date and time the account of the fine/fee was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "dateUpdated": {
+                    "description": "Date and time the account of the fine/fee was updated",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "status": {
+                    "description": "Overall status of the fee/fine",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "description": "Name of the status (values used are Open and Closed)",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                },
+                "paymentStatus": {
+                    "description": "Overall status of the payment/waive/transfer/refund/cancel",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "description": "Name of the status",
+                            "enum": [
+                                "Outstanding",
+                                "Paid partially",
+                                "Paid fully",
+                                "Waived partially",
+                                "Waived fully",
+                                "Transferred partially",
+                                "Transferred fully",
+                                "Refunded partially",
+                                "Refunded fully",
+                                "Credited fully",
+                                "Credited partially",
+                                "Cancelled item returned",
+                                "Cancelled item renewed",
+                                "Cancelled item declared lost",
+                                "Cancelled as error",
+                                "Suspended claim returned"
+                            ],
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                },
+                "feeFineType": {
+                    "description": "Fee/fine that is up to the desecration of the user",
+                    "type": "string"
+                },
+                "feeFineOwner": {
+                    "description": "Owner of the fee/fine defined by the library and is associated with specific fees/fines",
+                    "type": "string"
+                },
+                "title": {
+                    "description": "The title associated with the item",
+                    "type": "string"
+                },
+                "callNumber": {
+                    "description": "Identifier (Call number) assigned to an item",
+                    "type": "string"
+                },
+                "barcode": {
+                    "description": "Text, with input likely validated by the barcode scanner",
+                    "type": "string"
+                },
+                "materialType": {
+                    "description": "Material type what define what type of thing the item is",
+                    "type": "string"
+                },
+                "itemStatus": {
+                    "description": "The status of the item",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "description": "Name of the item state",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                },
+                "location": {
+                    "description": "Effective location is used to know the current home location for the item",
+                    "type": "string"
+                },
+                "metadata": {
+                    "description": "Metadata about creation to user fine/fee account, provided by the server",
+                    "type": "object",
+                    "$ref": "raml-util/schemas/metadata.schema"
+                },
+                "dueDate": {
+                    "description": "Date time when the item is due to be returned",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "returnedDate": {
+                    "description": "Date time when the item is returned and the loan ends, if the user does not have a loan associated, hyphen (-) is added as default",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "loanId": {
+                    "description": "ID of the loan",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "userId": {
+                    "description": "ID of the user",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "itemId": {
+                    "description": "ID of the item",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "materialTypeId": {
+                    "description": "ID of the materialType",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "feeFineId": {
+                    "description": "ID of the fee/fine",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "ownerId": {
+                    "description": "ID of the owner",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "id": {
+                    "description": "User fine/fee account id, UUID",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "holdingsRecordId": {
+                    "description": "Item field: item.holdingsRecordId",
+                    "$ref": "raml-util/schemas/uuid.schema",
+                    "readonly": true
+                },
+                "instanceId": {
+                    "description": "Holdings record field: holdingsRecord.instanceId",
+                    "$ref": "raml-util/schemas/uuid.schema",
+                    "readonly": true
+                },
+                "contributors": {
+                    "type": "array",
+                    "description": "List of contributors",
+                    "minItems": 0,
+                    "items": {
+                        "javaType": "org.folio.rest.jaxrs.model.ContributorData",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Personal name, corporate name, meeting name"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "name"
+                        ]
+                    }
+                },
+                "loanPolicyId": {
+                    "description": "Loan policy ID",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "overdueFinePolicyId": {
+                    "description": "Overdue fine policy ID",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "lostItemFeePolicyId": {
+                    "description": "Lost item fee policy ID",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "processId": {
+                    "description": "Randomly generated UUID added to fees/fines created in scope of the same process (e.g. same check-in or same scheduled Lost Item Fee generation job run)",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "amount",
+                "remaining",
+                "paymentStatus",
+                "userId",
+                "feeFineId",
+                "ownerId",
+                "id"
+            ]
+        },
+        "feefineaction": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "title": "Fee/fine actions schema",
+            "description": "Transactions or activities associated with a user fee/fine account",
+            "type": "object",
+            "properties": {
+                "dateAction": {
+                    "description": "Date and time the transaction of the fine/fee was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "typeAction": {
+                    "description": "Type of activity including the type of transaction",
+                    "type": "string"
+                },
+                "comments": {
+                    "description": "Additional information entered as part of the activity or on this screen as a 'Staff info only' activity",
+                    "type": "string"
+                },
+                "notify": {
+                    "description": "A flag to determine if a patron should be notified or not",
+                    "type": "boolean"
+                },
+                "amountAction": {
+                    "description": "Amount of activity",
+                    "javaType": "org.folio.rest.domain.MonetaryValue",
+                    "type": "number"
+                },
+                "balance": {
+                    "description": "Calculated amount of remaining balance based on original fee/fine and what has been paid/waived/tranferred/refunded",
+                    "javaType": "org.folio.rest.domain.MonetaryValue",
+                    "type": "number"
+                },
+                "transactionInformation": {
+                    "description": "Number or other transaction id related to payment",
+                    "type": "string"
+                },
+                "createdAt": {
+                    "description": "Location where activity took place (from login information)",
+                    "type": "string"
+                },
+                "source": {
+                    "description": "Person who processed activity (from login information)",
+                    "type": "string"
+                },
+                "paymentMethod": {
+                    "description": "Overall status of the action-setting",
+                    "type": "string"
+                },
+                "accountId": {
+                    "description": "ID of the accounts",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "userId": {
+                    "description": "ID of the user",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                },
+                "id": {
+                    "description": "Fine/fee action id, UUID",
+                    "$ref": "raml-util/schemas/uuid.schema"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "accountId",
+                "userId"
+            ]
+        }
+    }
+}

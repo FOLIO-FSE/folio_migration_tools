@@ -9,12 +9,12 @@
         },
         "migrationTaskType": {
             "title": "Migration task type",
-            "description": "The type of migration task you want to perform",
+            "description": "The type of migration task you want to perform.",
             "type": "string"
         },
         "files": {
             "title": "Source files",
-            "description": "List of MARC21 files with authority records",
+            "description": "List of MARC21 files with bibliographic records.",
             "type": "array",
             "items": {
                 "$ref": "#/definitions/FileDefinition"
@@ -127,7 +127,7 @@
         },
         "IlsFlavour": {
             "title": "IlsFlavour",
-            "description": "",
+            "description": " ",
             "enum": [
                 "aleph",
                 "voyager",
@@ -144,7 +144,7 @@
         },
         "HridHandling": {
             "title": "HridHandling",
-            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
+            "description": "Enum determining how the HRID generation should be handled.\n        - default: Enumerates the HRID, building on the current value in the HRID settings\n        - preserve001: Takes the 001 and uses this as the HRID.\n\n    Args:\n        str (_type_): _description_\n        Enum (_type_): _description_\n    ",
             "enum": [
                 "default",
                 "preserve001"
