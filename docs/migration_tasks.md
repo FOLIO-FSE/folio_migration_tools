@@ -336,7 +336,7 @@ See documentation for posting above. Note that any linked contacts, interfaces, 
 
 # Transform CSV/TSV files into FOLIO Manual fees/fines
 ## General considerations
-### Manual (static) fees/fines vd Automatic (incrementing) fees/fnes
+### Manual (static) fees/fines vs Automatic (incrementing) fees/fnes
 This migration task allows you to create static, so-called "manual" fees/fines in FOLIO. These are different from "automatic" fees/fines, which are generated and incremented automatically for open loans by FOLIO's BL pocesses. To avoid "duplicating" fees/fines during migration, we recmmend only creating manual fees/fines for charges that are not related to open loans.
 ## Mapping best practices
 ### Account and feefineAction
