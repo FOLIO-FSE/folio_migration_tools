@@ -140,6 +140,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     "No matching bib/instance for bibliographic record ID:",
                     mapped_value,
                 )
+                return None
+
         return mapped_value
 
     def setup_vendor_code_map(self):
