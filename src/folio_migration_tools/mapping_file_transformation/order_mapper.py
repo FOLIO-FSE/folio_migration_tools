@@ -11,6 +11,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from requests.exceptions import HTTPError
 
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -108,24 +109,26 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if folio_prop_name == "vendor":
             if mapped_value in self.vendor_code_map:
                 self.migration_report.add_general_statistics(
-                    "Successfully matched Vendor against code"
+                    "Vendors matched to FOLIO Organizations"
                 )
                 return self.vendor_code_map[mapped_value]
             else:
-                self.migration_report.add_general_statistics("Orders without assigned vendor")
-                Helper.log_data_issue(
-                    index_or_id, "Vendor code not found among migrated Organizations", mapped_value
+                self.migration_report.add_general_statistics(
+                    "DATA ISSUE Vendors not matched to FOLIO Organizations"
+                )
+                raise TransformationRecordFailedError(
+                    index_or_id, "No matching organizaiton in FOLIO for vendor code", mapped_value
                 )
 
         elif folio_prop_name.endswith(".instanceId"):
             if mapped_value in self.instance_id_map:
                 self.migration_report.add_general_statistics(
-                    "Instance ID mapped from previously migrated bib records"
+                    "Instances matched to migrated bib records"
                 )
                 return self.instance_id_map.get(mapped_value)[1]
             else:
                 self.migration_report.add_general_statistics(
-                    "Bib id not found in list over migrated bibs."
+                    "Instances not matched to migrated bib records"
                 )
                 Helper.log_data_issue(
                     index_or_id, "Bib id not found in list over migrated bibs.", mapped_value
