@@ -165,7 +165,9 @@ class OrdersTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.orders, True
                     )
-                    self.mapper.migration_report.add_general_statistics("TOTAL Purchase Order Lines created")
+                    self.mapper.migration_report.add_general_statistics(
+                        "TOTAL Purchase Order Lines created"
+                    )
 
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
 
@@ -258,6 +260,8 @@ class OrdersTransformer(MigrationTaskBase):
                 self.current_folio_record.get("compositePoLines", []).extend(
                     folio_rec.get("compositePoLines", [])
                 )
-                self.mapper.migration_report.add_general_statistics("Rows merged to create Purchase Orders")
+                self.mapper.migration_report.add_general_statistics(
+                    "Rows merged to create Purchase Orders"
+                )
             for key in diff.affected_paths:
                 self.mapper.migration_report.add(Blurbs.DiffsBetweenOrders, key)
