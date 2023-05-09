@@ -78,7 +78,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
             },
             {
                 "folio_field": "compositePoLines[0].acquisitionMethod",
-                "legacy_field": "vendor",
+                "legacy_field": "acqmethod",
                 "value": "",
                 "description": "",
             },
@@ -188,8 +188,8 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         ]
     }
     acg_method_map = [
-        {"vendor": "EBSCO", "folio_value": "Purchase"},
-        {"vendor": "*", "folio_value": "Purchase"},
+        {"acqmethod": "p", "folio_value": "Purchase"},
+        {"acqmethod": "*", "folio_value": "Other"},
     ]
     location_map = [
         {"location": "order", "folio_code": "E"},
@@ -280,6 +280,7 @@ def test_composite_order_mapping(mapper):
         "type": "One-Time",
         "copies": "",
         "location": "",
+        "acqmethod": "p",
     }
 
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
@@ -300,6 +301,7 @@ def test_composite_order_with_one_pol_mapping(mapper):
         "price": "125.00",
         "copies": "2",
         "location": "order",
+        "acqmethod": "p",
     }
     composite_order_with_pol, idx = mapper.do_map(
         data, data["order_number"], FOLIONamespaces.orders
@@ -339,6 +341,7 @@ def test_one_order_one_pol_multiple_notes(mapper):
         "note1": "Hello, hello, hello!",
         "note2": "Make it work!",
         "order_note": "Buy only important stuff.",
+        "acqmethod": "p",
     }
     mapper.extradata_writer.cache = []
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders, True)
@@ -371,6 +374,7 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
             "location": "",
             "note1": "Hello, hello, hello!",
             "note2": "Make it work!",
+            "acqmethod": "p",
         },
         {
             "row_number": "o124-2",
@@ -382,6 +386,7 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
             "copies": "",
             "location": "",
             "note1": "Purchased at local yard sale.",
+            "acqmethod": "g",
         },
     ]
 
