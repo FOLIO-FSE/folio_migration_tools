@@ -11,6 +11,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from requests.exceptions import HTTPError
 
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -39,13 +40,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
         funds_expense_class_map=None,
     ):
         # Get organization schema
-        composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
+        self.composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-orders", "mod-orders", "composite_purchase_order"
         )
 
         super().__init__(
             folio_client,
-            composite_order_schema,
+            self.composite_order_schema,
             composite_order_map,
             None,
             FOLIONamespaces.orders,
@@ -83,18 +84,19 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id, schema_default_value):
         if folio_prop_name.endswith(".acquisitionMethod"):
-            mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
-            return mapped_val["folio_id"]
+            return self.get_mapped_ref_data_value(
+                self.acquisitions_methods_mapping,
+                legacy_order,
+                folio_prop_name,
+                index_or_id,
+                False,
+            )
 
         elif re.compile(r"compositePoLines\[(\d+)\]\.id").fullmatch(folio_prop_name):
             return str(uuid.uuid4())
 
         elif re.compile(r"notes\[\d+\]\.").match(folio_prop_name):
             return ""
-
-        mapped_value = super().get_prop(
-            legacy_order, folio_prop_name, index_or_id, schema_default_value
-        )
 
         if folio_prop_name.endswith(".locationId"):
             return self.get_mapped_ref_data_value(
@@ -105,31 +107,41 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 False,
             )
 
+        mapped_value = super().get_prop(
+            legacy_order, folio_prop_name, index_or_id, schema_default_value
+        )
+
         if folio_prop_name == "vendor":
             if mapped_value in self.vendor_code_map:
                 self.migration_report.add_general_statistics(
-                    "Successfully matched Vendor against code"
+                    "Vendors matched to FOLIO Organizations"
                 )
                 return self.vendor_code_map[mapped_value]
             else:
-                self.migration_report.add_general_statistics("Orders without assigned vendor")
-                Helper.log_data_issue(
-                    index_or_id, "Vendor code not found among migrated Organizations", mapped_value
+                self.migration_report.add_general_statistics(
+                    "DATA ISSUE Vendors not matched to FOLIO Organizations"
+                )
+                raise TransformationRecordFailedError(
+                    index_or_id, "No matching organizaiton in FOLIO for vendor code", mapped_value
                 )
 
         elif folio_prop_name.endswith(".instanceId"):
             if mapped_value in self.instance_id_map:
                 self.migration_report.add_general_statistics(
-                    "Instance ID mapped from previously migrated bib records"
+                    "Instances matched to migrated bib records"
                 )
                 return self.instance_id_map.get(mapped_value)[1]
             else:
                 self.migration_report.add_general_statistics(
-                    "Bib id not found in list over migrated bibs."
+                    "Instances not matched to migrated bib records"
                 )
                 Helper.log_data_issue(
-                    index_or_id, "Bib id not found in list over migrated bibs.", mapped_value
+                    index_or_id,
+                    "No matching bib/instance for bibliographic record ID:",
+                    mapped_value,
                 )
+                return None
+
         return mapped_value
 
     def setup_vendor_code_map(self):
@@ -331,7 +343,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     )
                     property_level1["items"] = p2
                 elif property_level1.get("type") == "string" and property_level1.get("$ref"):
-                    logging.info("Fecthing referenced schema for object %s", property_name_level1)
+                    logging.info("Fetching referenced schema for object %s", property_name_level1)
                     actual_path = urllib.parse.urljoin(
                         f"{submodule_path}", object_schema.get("$ref", "")
                     )

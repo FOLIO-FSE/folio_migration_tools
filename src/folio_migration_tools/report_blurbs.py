@@ -22,7 +22,7 @@ class Blurbs:
         "PO-Line creation",
         "Report on how PO-Line creation went, what merge criterias were used, etc",
     )
-    AcquisitionMethodMapping = ("Acquisition Method Mapping", "")
+    AcquisitionMethodMapping = ("POL Acquisition Method Mapping", "")
     MalformedInterfaceUri = (
         "Malformed interface URIs",
         "Interfaces with malformed URIs will not be migrated. See data issues log.\nFOLIO Interface URIs must start with one of the following: 'ftp://', 'sftp://', 'http://', 'https://'.",
@@ -248,8 +248,8 @@ class Blurbs:
     TemporaryLoanTypeMapping = ("Temporary Loan type mapping", "")
     PermanentLoanTypeMapping = ("Permanent Loan type mapping", "")
     OrderLineLocationMapping = (
-        "Order line location mapping",
-        "This is the holdings location for for the order line (used to create holdings records if settings are configured to do so)",
+        "POL location mapping",
+        "This is the location for for the purchase order line.",
     )
     StatisticalCodeMapping = ("Statistical code mapping", "")
     HoldingsRecordIdMapping = ("Holdings IDs mapped", "")

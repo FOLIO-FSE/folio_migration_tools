@@ -165,6 +165,11 @@ class OrdersTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.orders, True
                     )
+                    self.mapper.migration_report.add_general_statistics(
+                        "TOTAL Purchase Order Lines created"
+                    )
+
+                    self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
 
                     # Add notes
                     self.mapper.notes_mapper.map_notes(
@@ -199,6 +204,7 @@ class OrdersTransformer(MigrationTaskBase):
             )
             logging.info("Storing last record to disk")
             Helper.write_to_file(results_file, self.current_folio_record)
+            self.mapper.migration_report.add_general_statistics("TOTAL Purchase Orders created")
 
     def do_work(self):
         logging.info("Getting started!")
@@ -224,7 +230,7 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                "Orders and Orderlines Transformation Report",
+                "Pruchase Orders and Purchase Order Lines Transformation Report",
                 migration_report_file,
                 self.start_datetime,
             )
@@ -244,7 +250,7 @@ class OrdersTransformer(MigrationTaskBase):
         if folio_rec["id"] != self.current_folio_record["id"]:
             # Writes record to file
             Helper.write_to_file(results_file, self.current_folio_record)
-            self.mapper.migration_report.add_general_statistics("Orders written to disk")
+            self.mapper.migration_report.add_general_statistics("TOTAL Purchase Orders created")
             self.current_folio_record = folio_rec
 
         else:
@@ -254,6 +260,8 @@ class OrdersTransformer(MigrationTaskBase):
                 self.current_folio_record.get("compositePoLines", []).extend(
                     folio_rec.get("compositePoLines", [])
                 )
-                self.mapper.migration_report.add_general_statistics("PO-lines merged into one PO")
+                self.mapper.migration_report.add_general_statistics(
+                    "Rows merged to create Purchase Orders"
+                )
             for key in diff.affected_paths:
                 self.mapper.migration_report.add(Blurbs.DiffsBetweenOrders, key)

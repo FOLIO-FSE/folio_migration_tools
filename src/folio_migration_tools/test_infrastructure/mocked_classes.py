@@ -82,6 +82,7 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
         yield from [
             {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "value": "Purchase"},
             {"id": "fc54327d-fd60-4f6a-ba37-a4375511b91b", "value": "Theft"},
+            {"id": "fc54327d-fd60-4f6a-ba37-a437551sarfs91b", "value": "Other"},
         ]
 
     elif ref_data_path == "/groups":
