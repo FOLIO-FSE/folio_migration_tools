@@ -84,18 +84,19 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id, schema_default_value):
         if folio_prop_name.endswith(".acquisitionMethod"):
-            mapped_val = self.acquisitions_methods_mapping.get_ref_data_mapping(legacy_order)
-            return mapped_val["folio_id"]
+            return self.get_mapped_ref_data_value(
+                self.acquisitions_methods_mapping,
+                legacy_order,
+                folio_prop_name,
+                index_or_id,
+                False,
+            )
 
         elif re.compile(r"compositePoLines\[(\d+)\]\.id").fullmatch(folio_prop_name):
             return str(uuid.uuid4())
 
         elif re.compile(r"notes\[\d+\]\.").match(folio_prop_name):
             return ""
-
-        mapped_value = super().get_prop(
-            legacy_order, folio_prop_name, index_or_id, schema_default_value
-        )
 
         if folio_prop_name.endswith(".locationId"):
             return self.get_mapped_ref_data_value(
@@ -105,6 +106,10 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 index_or_id,
                 False,
             )
+        
+        mapped_value = super().get_prop(
+            legacy_order, folio_prop_name, index_or_id, schema_default_value
+        )
 
         if folio_prop_name == "vendor":
             if mapped_value in self.vendor_code_map:
@@ -131,7 +136,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     "Instances not matched to migrated bib records"
                 )
                 Helper.log_data_issue(
-                    index_or_id, "Bib id not found in list over migrated bibs.", mapped_value
+                    index_or_id,
+                    "No matching bib/instance for bibliographic record ID:",
+                    mapped_value,
                 )
         return mapped_value
 
@@ -334,7 +341,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     )
                     property_level1["items"] = p2
                 elif property_level1.get("type") == "string" and property_level1.get("$ref"):
-                    logging.info("Fecthing referenced schema for object %s", property_name_level1)
+                    logging.info("Fetching referenced schema for object %s", property_name_level1)
                     actual_path = urllib.parse.urljoin(
                         f"{submodule_path}", object_schema.get("$ref", "")
                     )
