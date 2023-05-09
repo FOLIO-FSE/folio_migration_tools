@@ -106,7 +106,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 index_or_id,
                 False,
             )
-        
+
         mapped_value = super().get_prop(
             legacy_order, folio_prop_name, index_or_id, schema_default_value
         )
