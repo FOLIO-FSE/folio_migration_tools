@@ -1210,6 +1210,96 @@ def test_boolean_values_static_value_false(mocked_folio_client):
     assert folio_user["personal"]["addresses"][0]["primaryAddress"] is False
 
 
+def test_boolean_values_mapped_value(mocked_folio_client):
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.addresses[0].addressLine1",
+                "legacy_field": "HOMEADDRESS1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.addresses[0].primaryAddress",
+                "legacy_field": "primary_yes_no",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+
+    legacy_user_records = [
+        {
+            "ext_id": "externalid_1",
+            "user_name": "user_name_1",
+            "HOMEADDRESS1": "Line 1",
+            "HOMEADDRESS2": "Line 2",
+            "HOMEZIP": "12345",
+            "HOMESTATE": "Sjuhärad",
+            "HOMECITY": "Fritsla",
+            "id": "test_boolean_values_mapped_value_1",
+            "primary_yes_no": True,
+        },
+        {
+            "ext_id": "externalid_2",
+            "user_name": "user_name_2",
+            "HOMEADDRESS1": "Line 1",
+            "HOMEADDRESS2": "Line 2",
+            "HOMEZIP": "12345",
+            "HOMESTATE": "Sjuhärad",
+            "HOMECITY": "Fritsla",
+            "id": "test_boolean_values_mapped_value_2",
+            "primary_yes_no": False,
+        },
+    ]
+
+    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_folio_client
+    user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
+
+    folio_user, index_or_id = user_mapper.do_map(
+        legacy_user_records[0], legacy_user_records[0]["id"], FOLIONamespaces.users
+    )
+    assert (
+        isinstance(folio_user["personal"]["addresses"][0]["primaryAddress"], bool)
+        and folio_user["personal"]["addresses"][0]["primaryAddress"] is True
+    )
+
+    folio_user, index_or_id = user_mapper.do_map(
+        legacy_user_records[1], legacy_user_records[1]["id"], FOLIONamespaces.users
+    )
+    assert (
+        isinstance(folio_user["personal"]["addresses"][0]["primaryAddress"], bool)
+        and folio_user["personal"]["addresses"][0]["primaryAddress"] is False
+    )
+
+
 def test_json_load_s_booleans(mocked_folio_client):
     json_str = '{"a": true, "b": "true", "c": false, "d": "false", "e": "True", "f": "False"}'
     my_json = json.loads(json_str)

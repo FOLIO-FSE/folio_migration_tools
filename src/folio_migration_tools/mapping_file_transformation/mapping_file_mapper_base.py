@@ -370,7 +370,8 @@ class MappingFileMapperBase(MapperBase):
         value = legacy_object.get(mapping_file_entry["legacy_field"], "")
 
         if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
-            if replaced_val := mapping_file_entry["rules"]["replaceValues"].get(value, ""):
+            replaced_val = mapping_file_entry["rules"]["replaceValues"].get(value, "")
+            if replaced_val or isinstance(replaced_val, bool):
                 migration_report.add(
                     Blurbs.FieldMappingDetails,
                     (
