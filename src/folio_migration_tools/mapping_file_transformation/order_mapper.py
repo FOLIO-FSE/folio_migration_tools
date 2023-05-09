@@ -39,13 +39,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
         funds_expense_class_map=None,
     ):
         # Get organization schema
-        composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
+        self.composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-orders", "mod-orders", "composite_purchase_order"
         )
 
         super().__init__(
             folio_client,
-            composite_order_schema,
+            self.composite_order_schema,
             composite_order_map,
             None,
             FOLIONamespaces.orders,

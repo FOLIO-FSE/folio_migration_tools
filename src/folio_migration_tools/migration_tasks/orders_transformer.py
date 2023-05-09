@@ -166,6 +166,8 @@ class OrdersTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.orders, True
                     )
 
+                    self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
+
                     # Add notes
                     self.mapper.notes_mapper.map_notes(
                         record,
@@ -199,6 +201,7 @@ class OrdersTransformer(MigrationTaskBase):
             )
             logging.info("Storing last record to disk")
             Helper.write_to_file(results_file, self.current_folio_record)
+            self.mapper.migration_report.add_general_statistics("Orders written to disk")
 
     def do_work(self):
         logging.info("Getting started!")
