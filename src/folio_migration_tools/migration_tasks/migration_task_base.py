@@ -115,16 +115,19 @@ class MigrationTaskBase:
 
         """
         files = [source_path / f.file_name for f in file_defs if isfile(source_path / f.file_name)]
-        if len(files) < len(file_defs):
+        ret_str = ", ".join(f.file_name for f in file_defs)
+
+        if files and len(files) < len(file_defs):
             raise TransformationProcessError(
                 "",
-                "Not all files listed in configuration found on disk",
+                f"Some files listed in task configuration not found in {source_path}."
+                f"Listed files: {ret_str}",
             )
         if not any(files):
-            ret_str = ",".join(f.file_name for f in file_defs)
             raise TransformationProcessError(
                 "",
-                f"Files {ret_str} not found in {source_path / 'items'}",
+                f"None of the files listed in task configuration found in {source_path}."
+                f"Listed files: {ret_str}",
             )
         logging.info("Files to process:")
         for filename in files:

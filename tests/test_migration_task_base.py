@@ -13,13 +13,16 @@ def test_load_id_map():
 
 
 def test_list_source_files():
-    with pytest.raises(TransformationProcessError, match=r".* not found in .*"):
+    with pytest.raises(
+        TransformationProcessError,
+        match=r"None of the files listed in task configuration found in .*",
+    ):
         MigrationTaskBase.check_source_files(Path("./tests/test_data/default/"), [])
 
 
 def test_list_source_files_one_file():
     with pytest.raises(
-        TransformationProcessError, match=r"Not all files listed in configuration found on disk"
+        TransformationProcessError, match=r"Some files listed in task configuration not found in"
     ):
         MigrationTaskBase.check_source_files(
             Path("./tests/test_data/default/"),

@@ -189,7 +189,13 @@ class MappingFileMapperBase(MapperBase):
         accept_duplicate_ids: bool = False,
     ):
         if self.ignore_legacy_identifier:
-            return ({}, str(uuid.uuid4()))
+            return (
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": "object",
+                },
+                index_or_id,
+            )
 
         if not (
             legacy_id := " ".join(
@@ -684,10 +690,12 @@ class MappingFileMapperBase(MapperBase):
         logging.info("Source data file contains %d rows", total_rows)
         logging.info("Source data file contains %d empty rows", empty_rows)
         self.migration_report.set(
-            Blurbs.GeneralStatistics, "Total rows in {}".format(file_name.name), total_rows
+            Blurbs.GeneralStatistics, "Number of rows in {}".format(file_name.name), total_rows
         )
         self.migration_report.set(
-            Blurbs.GeneralStatistics, "Empty rows in {}".format(file_name.name), empty_rows
+            Blurbs.GeneralStatistics,
+            "Number of empty rows in {}".format(file_name.name),
+            empty_rows,
         )
         try:
             yield from reader

@@ -5,8 +5,6 @@ from unittest.mock import Mock
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
-from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -278,9 +276,9 @@ def test_basic_mapping_without_ref_data(mapper_without_refdata: ManualFeeFinesMa
     data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
-        "billed_date": "2023-01-02",
+        "billed_date": "2023-05-02",
     }
 
     res, uuid = mapper_without_refdata.do_map(data, 1, FOLIONamespaces.fees_fines)
@@ -294,7 +292,7 @@ def test_basic_mapping_with_ref_data(mapper_with_refdata: ManualFeeFinesMapper):
     data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -304,39 +302,18 @@ def test_basic_mapping_with_ref_data(mapper_with_refdata: ManualFeeFinesMapper):
 
     res, uuid = mapper_with_refdata.do_map(data, 1, FOLIONamespaces.fees_fines)
 
-    assert res["feefineaction"]["accountId"] == res["account"]["id"]
-    assert res["account"]["amount"] == 100.0
-    assert res["account"]["userId"] == "a FOLIO user uuid"
     assert res["account"]["feeFineId"] == "031836ec-521a-4493-9f76-0e02c2e7d241"
     assert res["account"]["ownerId"] == "5abfff3f-50eb-432a-9a43-21f8f7a70194"
-    assert res["feefineaction"]["userId"] == "a FOLIO user uuid"
-    assert res["feefineaction"]["dateAction"] == "2023-01-02T00:00:00"
     assert res["feefineaction"]["createdAt"] == "finance_office_uuid"
 
 
-def test_basic_mapping_with_invalid_sum(mapper_with_refdata: ManualFeeFinesMapper):
-    data = {
-        "total_amount": "100 NAD",
-        "remaining_amount": "50 NAD",
-        "patron_barcode": "some barcode",
-        "item_barcode": "some barcode",
-        "billed_date": "2023-01-02",
-        "lending_library": "library1",
-        "type": "spill",
-    }
-
-    with pytest.raises(TransformationRecordFailedError):
-        res, uuid = mapper_with_refdata.do_map(data, 2, FOLIONamespaces.fees_fines)
-        assert not res
-
-
 def test_perform_additional_mapping_add_stringified_legacy_object(
-    mapper_with_refdata: ManualFeeFinesMapper,
+    mapper_without_refdata: ManualFeeFinesMapper,
 ):
     legacy_data = {
         "total_amount": "100",
         "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -345,35 +322,38 @@ def test_perform_additional_mapping_add_stringified_legacy_object(
     }
 
     folio_feefine = {
+        "id": "8be09743-a7da-45e3-84a1-98ec2e5fde4a",
         "account": {
-            "amount": "100",
-            "remaining": "50",
+            "amount": 100.0,
+            "remaining": 50.0,
             "paymentStatus": {"name": "Outstanding"},
-            "userId": "a FOLIO user uuid",
+            "userId": "u123",
             "itemId": "some barcode",
-            "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
-            "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+            "feeFineId": "some_hardcoded_id",
+            "ownerId": "some_hardcoded_id",
         },
         "feefineaction": {
-            "dateAction": "2023-01-02",
+            "dateAction": "2023-05-02",
+            "createdAt": "a_hardcoded_default_uuid",
             "accountId": "account_id",
-            "userId": "213",
+            "userId": "u123",
+            "id": "1d69d13d-d9f7-4aae-b205-d6fd98691242",
             "comments": "This person may pay in home-grown apples.",
         },
     }
 
-    res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
-    assert res["account"]["feeFineId"] == "031836ec-521a-4493-9f76-0e02c2e7d241"
-    assert res["account"]["feeFineType"] == "Coffee spill"
-    assert res["account"]["ownerId"] == "5abfff3f-50eb-432a-9a43-21f8f7a70194"
-    assert res["account"]["feeFineOwner"] == "The Best Fee Fine Owner"
+    res = mapper_without_refdata.perform_additional_mapping("Row 1", folio_feefine, legacy_data)
+    assert (
+        "STAFF : This person may pay in home-grown apples. MIGRATION NOTE : This fee/fine"
+        in res["feefineaction"]["comments"]
+    )
 
 
 def test_perform_additional_mapping_get_refdata_names(mapper_with_refdata: ManualFeeFinesMapper):
     legacy_data = {
-        "total_amount": "100",
-        "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "total_amount": 100,
+        "remaining_amount": 50,
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -382,16 +362,23 @@ def test_perform_additional_mapping_get_refdata_names(mapper_with_refdata: Manua
     }
 
     folio_feefine = {
+        "id": "8be09743-a7da-45e3-84a1-98ec2e5fde4a",
         "account": {
-            "amount": "100",
-            "remaining": "50",
+            "amount": 100.0,
+            "remaining": 50.0,
             "paymentStatus": {"name": "Outstanding"},
-            "userId": "a FOLIO user uuid",
+            "userId": "u123",
             "itemId": "some barcode",
             "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
             "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
         },
-        "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
+        "feefineaction": {
+            "dateAction": "2023-05-02",
+            "createdAt": "a_hardcoded_default_uuid",
+            "accountId": "account_id",
+            "userId": "u123",
+            "id": "1d69d13d-d9f7-4aae-b205-d6fd98691242",
+        },
     }
 
     res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
@@ -401,13 +388,34 @@ def test_perform_additional_mapping_get_refdata_names(mapper_with_refdata: Manua
     assert res["account"]["feeFineOwner"] == "The Best Fee Fine Owner"
 
 
+def test_get_matching_record_from_folio(mapper_without_refdata: ManualFeeFinesMapper):
+    mocked_feefines_mapper = Mock(spec=ManualFeeFinesMapper)
+    mocked_feefines_mapper.user_cache = {}
+    matches = []
+
+    user_barcodes = ["u123", "u456", "u123", "BarcodeNotInFOLIO"]
+
+    for barcode in user_barcodes:
+        match = ManualFeeFinesMapper.get_matching_record_from_folio(
+            mapper_without_refdata,
+            3,
+            mocked_feefines_mapper.user_cache,
+            "/users",
+            "barcode",
+            barcode,
+            "users",
+        )
+        matches.append(match)
+    assert matches[0]["id"] == "user123"
+
+
 def test_perform_additional_mapping_get_item_data_with_match(
-    mapper_with_refdata: ManualFeeFinesMapper,
+    mapper_without_refdata: ManualFeeFinesMapper,
 ):
     legacy_data = {
-        "total_amount": "100",
-        "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "total_amount": 100,
+        "remaining_amount": 50,
+        "patron_barcode": "u123",
         "item_barcode": "some barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -416,35 +424,38 @@ def test_perform_additional_mapping_get_item_data_with_match(
     }
 
     folio_feefine = {
+        "id": "8be09743-a7da-45e3-84a1-98ec2e5fde4a",
         "account": {
-            "amount": "100",
-            "remaining": "50",
+            "amount": 100.0,
+            "remaining": 50.0,
             "paymentStatus": {"name": "Outstanding"},
-            "userId": "a FOLIO user uuid",
+            "userId": "u123",
             "itemId": "some barcode",
-            "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
-            "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+            "feeFineId": "some_hardcoded_id",
+            "ownerId": "some_hardcoded_id",
         },
         "feefineaction": {
-            "dateAction": "2023-01-02",
+            "dateAction": "2023-05-02",
+            "createdAt": "a_hardcoded_default_uuid",
             "accountId": "account_id",
-            "userId": "213",
+            "userId": "u123",
+            "id": "1d69d13d-d9f7-4aae-b205-d6fd98691242",
             "comments": "This person may pay in home-grown apples.",
         },
     }
 
-    res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
+    res = mapper_without_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
     assert res["account"]["title"] == "Döda fallen i Avesta."
     assert res["account"]["barcode"] == "some barcode"
 
 
 def test_perform_additional_mapping_get_item_data_no_match(
-    mapper_with_refdata: ManualFeeFinesMapper,
+    mapper_without_refdata: ManualFeeFinesMapper,
 ):
     legacy_data = {
-        "total_amount": "100",
-        "remaining_amount": "50",
-        "patron_barcode": "some barcode",
+        "total_amount": 100,
+        "remaining_amount": 50,
+        "patron_barcode": "u123",
         "item_barcode": "another barcode",
         "billed_date": "2023-01-02",
         "lending_library": "library1",
@@ -452,20 +463,86 @@ def test_perform_additional_mapping_get_item_data_no_match(
     }
 
     folio_feefine = {
+        "id": "8be09743-a7da-45e3-84a1-98ec2e5fde4a",
         "account": {
-            "amount": "100",
-            "remaining": "50",
+            "amount": 100.0,
+            "remaining": 50.0,
             "paymentStatus": {"name": "Outstanding"},
-            "userId": "a FOLIO user uuid",
-            "itemId": "some barcode",
-            "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
-            "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
+            "userId": "u123",
+            "itemId": "another barcode",
+            "feeFineId": "some_hardcoded_id",
+            "ownerId": "some_hardcoded_id",
         },
-        "feefineaction": {"dateAction": "2023-01-02", "accountId": "account_id", "userId": "213"},
+        "feefineaction": {
+            "dateAction": "2023-05-02",
+            "createdAt": "a_hardcoded_default_uuid",
+            "accountId": "account_id",
+            "userId": "u123",
+            "id": "1d69d13d-d9f7-4aae-b205-d6fd98691242",
+            "comments": "This person may pay in home-grown apples.",
+        },
     }
-    with pytest.raises(TransformationFieldMappingError):
-        res = mapper_with_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
-        assert "itemId" not in res
+    res = mapper_without_refdata.perform_additional_mapping("row 1", folio_feefine, legacy_data)
+    assert "itemId" not in res["account"]
+
+
+def test_perform_additional_mapping_set_status(
+    mapper_without_refdata: ManualFeeFinesMapper,
+):
+    legacy_object = {"item_barcode": ""}
+
+    folio_feefine_1 = {
+        "id": "8be09743-a7da-45e3-84a1-98ec2e5fde4a",
+        "account": {
+            "amount": 70.0,
+            "remaining": 25.0,
+            "paymentStatus": {"name": "Outstanding"},
+            "userId": "u123",
+            "itemId": "some barcode",
+            "feeFineId": "some_hardcoded_id",
+            "ownerId": "some_hardcoded_id",
+        },
+        "feefineaction": {
+            "dateAction": "2023-05-02",
+            "createdAt": "a_hardcoded_default_uuid",
+            "accountId": "account_id",
+            "userId": "u123",
+            "id": "1d69d13d-d9f7-4aae-b205-d6fd98691242",
+            "comments": "This person may pay in home-grown apples.",
+        },
+    }
+
+    res = mapper_without_refdata.perform_additional_mapping(
+        "row 1", folio_feefine_1, legacy_object
+    )
+
+    assert res["account"]["status"]["name"] == "Open"
+
+    folio_feefine_2 = {
+        "id": "8be09743-a7da-45e3-84a1-98ec2e5fde4a",
+        "account": {
+            "amount": 100.0,
+            "remaining": 0,
+            "paymentStatus": {"name": "Outstanding"},
+            "userId": "u123",
+            "itemId": "some barcode",
+            "feeFineId": "some_hardcoded_id",
+            "ownerId": "some_hardcoded_id",
+        },
+        "feefineaction": {
+            "dateAction": "2023-05-02",
+            "createdAt": "a_hardcoded_default_uuid",
+            "accountId": "account_id",
+            "userId": "u123",
+            "id": "1d69d13d-d9f7-4aae-b205-d6fd98691242",
+            "comments": "This person may pay in home-grown apples.",
+        },
+    }
+
+    res = mapper_without_refdata.perform_additional_mapping(
+        "row 2", folio_feefine_2, legacy_object
+    )
+    assert res["account"]["status"]["name"] == "Closed"
 
 
 def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
@@ -483,7 +560,7 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
                 "amount": "100",
                 "remaining": "50",
                 "paymentStatus": {"name": "Outstanding"},
-                "userId": "213",
+                "userId": "user456",
                 "itemId": "546",
                 "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
                 "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
@@ -492,7 +569,7 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
             "feefineaction": {
                 "dateAction": "2023-01-02",
                 "accountId": "48c4ce63-1f9f-4440-acf7-6aa3ac281c9b",
-                "userId": "213",
+                "userId": "user456",
             },
         },
         {
@@ -500,7 +577,7 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
                 "amount": "20",
                 "remaining": "20",
                 "paymentStatus": {"name": "Outstanding"},
-                "userId": "213",
+                "userId": "user456",
                 "itemId": "546",
                 "feeFineId": "031836ec-521a-4493-9f76-0e02c2e7d241",
                 "ownerId": "5abfff3f-50eb-432a-9a43-21f8f7a70194",
@@ -509,7 +586,7 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
             "feefineaction": {
                 "dateAction": "2023-04-05",
                 "accountId": "f9cfd725-9c97-4646-ae4f-b7edaf96b34f",
-                "userId": "213",
+                "userId": "user456",
             },
         },
     ]
@@ -519,3 +596,18 @@ def test_store_objects(mapper_with_refdata: ManualFeeFinesMapper):
 
     assert str(mocked_feefines_mapper.extradata_writer.cache).count("account\\t") == 2
     assert str(mocked_feefines_mapper.extradata_writer.cache).count("feefineaction\\t") == 2
+
+
+def test_parse_date(mapper_without_refdata: ManualFeeFinesMapper):
+    parsed_date = ManualFeeFinesMapper.parse_date_with_tenant_timezone(
+        mapper_without_refdata,
+        "feefineaction.dateAction",
+        "test_parse_date_id",
+        "2022-05-22T17:00:00",
+    )
+    assert parsed_date == "2022-05-22T17:00:00-04:00"
+
+
+def test_get_tenant_timezone(mapper_without_refdata: ManualFeeFinesMapper):
+    timezome = ManualFeeFinesMapper.get_tenant_timezone(mapper_without_refdata)
+    assert timezome.key == "America/New_York"

@@ -173,8 +173,10 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
     elif ref_data_path == "/users" and query == '?query=(externalSystemId=="Some external id")':
         yield from [{"id": "some id", "barcode": "some barcode", "patronGroup": "some group"}]
 
-    elif ref_data_path == "/users" and query == '?query=(barcode=="some barcode")':
-        yield from [{"id": "a FOLIO user uuid"}]
+    elif ref_data_path == "/users" and query == '?query=(barcode=="u123")':
+        yield from [{"id": "user123", "barcode": "u123", "patronGroup": "some group"}]
+    elif ref_data_path == "/users" and query == '?query=(barcode=="u456")':
+        yield from [{"id": "user456", "barcode": "u456", "patronGroup": "some group"}]
 
     elif ref_data_path == "/inventory/items" and query == '?query=(barcode=="some barcode")':
         yield from [
@@ -210,6 +212,18 @@ def folio_get_single_object_mocked(*args, **kwargs):
             "items": {"prefix": "pref", "startNumber": 1},
             "commonRetainLeadingZeroes": True,
         }
+
+    elif (
+        args[0] == "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
+    ):
+        return {
+            "configs": [
+                {
+                    "value": '{"timezone":"America/New_York"}',
+                }
+            ]
+        }
+
     elif args[0] in super_schema:
         return super_schema.get(args[0])
 
