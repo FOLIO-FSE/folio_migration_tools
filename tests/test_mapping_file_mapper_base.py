@@ -1954,6 +1954,55 @@ def test_map_string_array_second_level_split_values(mocked_folio_client: FolioCl
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert folio_rec["firstLevel"]["stringArray"] == ["my note 2", "my note 3"]
 
+    
+def test_map_string_array_second_level_split_values_with_replace_values(
+    mocked_folio_client: FolioClient,
+):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A holdings record",
+        "type": "object",
+        "required": [],
+        "properties": {
+            "firstLevel": {
+                "type": "object",
+                "properties": {
+                    "stringArray": {
+                        "type": "array",
+                        "description": "",
+                        "items": {"type": "string"},
+                        "uniqueItems": True,
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+    fake_item_map = {
+        "data": [
+
+            {
+                "folio_field": "firstLevel.stringArray[0]",
+                "legacy_field": "category",
+                "value": "",
+                "description": "",
+                "rules": {"replaceValues": {"kn": "Cute Kitten", "py": "Pretty Puppy"}}
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    record = {"id": "test_map_string_array_second_level_split_values_with_replaceValues", "category": "kn<delimiter>py"}
+    # Loop to make sure the right order occurs the first time.
+
+    tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)
+    folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
+    assert folio_rec["firstLevel"]["stringArray"] == ["Cute Kitten", "Pretty Puppy"]
+
 
 def test_map_array_of_objects_with_string_array(mocked_folio_client: FolioClient):
     schema = {
@@ -4026,6 +4075,8 @@ def test_get_prop_same_as_get_legacy_value_mapped_value():
     mock_self.record_map = {"data": [mapping_file_entry]}
     mock_self.mapped_from_legacy_data = {"title": "title"}
     mock_self.migration_report = MigrationReport()
+    mock_self.library_configuration = Mock(spec=LibraryConfiguration)
+    mock_self.library_configuration.multi_field_delimiter = "<delimiter>"
     res2 = MappingFileMapperBase.get_prop(mock_self, legacy_object, "title", "", "")
     assert res == res2
 
@@ -4051,6 +4102,8 @@ def test_get_prop_concatenated():
     mock_self.record_map = {"data": mapping_file_entries}
     mock_self.mapped_from_legacy_data = {"title": ["firstname", "lastname"]}
     mock_self.migration_report = MigrationReport()
+    mock_self.library_configuration = Mock(spec=LibraryConfiguration)
+    mock_self.library_configuration.multi_field_delimiter = "<delimiter>"
     res2 = MappingFileMapperBase.get_prop(mock_self, legacy_object, "title", "", "")
     assert res2 == "Leif Randt"
 
