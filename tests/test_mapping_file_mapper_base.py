@@ -1954,7 +1954,7 @@ def test_map_string_array_second_level_split_values(mocked_folio_client: FolioCl
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert folio_rec["firstLevel"]["stringArray"] == ["my note 2", "my note 3"]
 
-    
+
 def test_map_string_array_second_level_split_values_with_replace_values(
     mocked_folio_client: FolioClient,
 ):
@@ -1980,13 +1980,12 @@ def test_map_string_array_second_level_split_values_with_replace_values(
     }
     fake_item_map = {
         "data": [
-
             {
                 "folio_field": "firstLevel.stringArray[0]",
                 "legacy_field": "category",
                 "value": "",
                 "description": "",
-                "rules": {"replaceValues": {"kn": "Cute Kitten", "py": "Pretty Puppy"}}
+                "rules": {"replaceValues": {"kn": "Cute Kitten", "py": "Pretty Puppy"}},
             },
             {
                 "folio_field": "legacyIdentifier",
@@ -1996,7 +1995,10 @@ def test_map_string_array_second_level_split_values_with_replace_values(
             },
         ]
     }
-    record = {"id": "test_map_string_array_second_level_split_values_with_replaceValues", "category": "kn<delimiter>py"}
+    record = {
+        "id": "test_map_string_array_second_level_split_values_with_replaceValues",
+        "category": "kn<delimiter>py",
+    }
     # Loop to make sure the right order occurs the first time.
 
     tfm = MyTestableFileMapper(schema, fake_item_map, mocked_folio_client)

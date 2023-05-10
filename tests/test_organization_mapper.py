@@ -232,6 +232,7 @@ def test_contacts_category_refdata_mapping_single(mapper):
         "e193b0d1-4674-4a9e-818b-375f013d963f"
     ]
 
+
 def test_contacts_categories_replacevalue_multiple(mapper):
     data = {
         "name": "The Vendor",  # String, required
