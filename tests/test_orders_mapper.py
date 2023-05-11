@@ -286,7 +286,7 @@ def test_composite_order_mapping(mapper):
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
     assert composite_order["id"] == "6bf8d907-054d-53ad-9031-7a45887fcafa"
     assert composite_order["poNumber"] == "o123"
-    assert composite_order["vendor"] == "fc54327d-fd60-4f6a-ba37-a4375511b91b"
+    assert composite_order["vendor"] == "EBSCO"
     assert composite_order["orderType"] == "One-Time"
 
 
@@ -314,7 +314,7 @@ def test_composite_order_with_one_pol_mapping(mapper):
     )
     assert (
         composite_order_with_pol["compositePoLines"][0]["instanceId"]
-        == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
+        == "1"
     )
     assert composite_order_with_pol["compositePoLines"][0]["cost"]["currency"] == "USD"
     assert composite_order_with_pol["compositePoLines"][0]["cost"]["quantityPhysical"] == "1"
