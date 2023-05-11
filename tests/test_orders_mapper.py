@@ -421,3 +421,40 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
         str(mapper.extradata_writer.cache).count(composite_orders[1]["compositePoLines"][0]["id"])
         == 1
     )
+
+
+def test_perform_additional_mapping(mapper):
+    folio_po = {
+        "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
+        "metadata": {
+            "createdDate": "2023-05-11T09:58:44.250",
+            "createdByUserId": "f6a6a201-51f6-46f7-b671-c2813cd0558e",
+            "updatedDate": "2023-05-11T09:58:44.250",
+            "updatedByUserId": "f6a6a201-51f6-46f7-b671-c2813cd0558e",
+        },
+        "poNumber": "o124",
+        "orderType": "One-Time",
+        "vendor": "EBSCO",
+        "compositePoLines": [
+            {
+                "locations": [
+                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
+                ],
+                "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
+                "instanceId": "1",
+                "acquisitionMethod": "837d04b6-d81c-4c49-9efd-2f62515999b3",
+                "cost": {
+                    "currency": "USD",
+                    "quantityPhysical": "1",
+                    "poLineEstimatedPrice": "125.00",
+                },
+                "orderFormat": "Electronic Resource",
+                "source": "API",
+                "titleOrPackage": "Once upon a time...",
+            }
+        ],
+    }
+
+    folio_po = mapper.perform_additional_mapping("1", folio_po)
+    assert folio_po["vendor"] == "some id"
+    assert folio_po["compositePoLines"][0]["instanceId"] == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
