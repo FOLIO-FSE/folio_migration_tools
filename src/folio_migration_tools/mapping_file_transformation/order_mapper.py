@@ -30,6 +30,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         composite_order_map: dict,
+        organizations_id_map: dict,
         instance_id_map: dict,
         acquisition_method_map,
         payment_status_map,
@@ -54,7 +55,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         logging.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
-        self.organization_cache = {}
+        self.organizations_id_map = organizations_id_map
+        self.folio_organization_cache = {}
 
         self.acquisitions_methods_mapping = RefDataMapping(
             self.folio_client,
@@ -114,14 +116,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
 
         return mapped_value
-
-    def setup_vendor_code_map(self):
-        yield from [
-            (entry["code"], entry["id"])
-            for entry in self.folio_client.get_all(
-                "/organizations-storage/organizations", "organizations"
-            )
-        ]
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
@@ -365,19 +359,10 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
 
         # Replace legacy bib ID with instance UUID from map
-        legacy_bib_id = composite_order["compositePoLines"][0].pop("instanceId", "")
-        if matching_instance := self.instance_id_map.get(legacy_bib_id):
+        bib_id = composite_order["compositePoLines"][0].pop("instanceId", "")
+        if matching_instance := self.get_folio_intance_uuid(index_or_id, bib_id):
             composite_order["compositePoLines"][0]["instanceId"] = matching_instance[1]
-            self.migration_report.add_general_statistics("Bib IDs matched to migrated instances")
-        else:
-            self.migration_report.add_general_statistics(
-                "Bib IDs not matched to migrated instances"
-            )
-            Helper.log_data_issue(
-                index_or_id,
-                "No matching instance for bibliographic record ID:",
-                legacy_bib_id,
-            )
+            
         return composite_order
 
     def get_matching_record_from_folio(
@@ -400,15 +385,19 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 return matching_record
 
     def get_folio_organization_uuid(self, index_or_id, org_code):
-        if matching_org := self.get_matching_record_from_folio(
+        if self.organizations_id_map:
+            if matching_org := self.organizations_id_map.get(org_code):
+                return matching_org[1]
+        
+        elif matching_org := self.get_matching_record_from_folio(
             index_or_id,
-            self.organization_cache,
+            self.folio_organization_cache,
             "/organizations-storage/organizations",
             "code",
             org_code,
             "organizations",
         ):
-            return matching_org["id"]
+            return matching_org[1]
         else:
             self.migration_report.add(
                 Blurbs.GeneralStatistics,
@@ -418,4 +407,18 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 index_or_id,
                 "No matching Organization in FOLIO for barcode",
                 org_code,
+            )
+
+    def get_folio_intance_uuid(self, index_or_id, bib_id):
+        if matching_instance := self.instance_id_map.get(bib_id):
+            self.migration_report.add_general_statistics("POLs linked to instances")
+            return matching_instance[1]
+        else:
+            self.migration_report.add_general_statistics(
+                "POL bib IDs not matched to migrated instances"
+            )
+            Helper.log_data_issue(
+                index_or_id,
+                "No matching instance for bib record ID",
+                bib_id,
             )
