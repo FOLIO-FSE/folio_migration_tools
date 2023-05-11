@@ -392,7 +392,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             )
             if matching_org := self.organizations_id_map.get(org_code):
                 return matching_org[1]
-        
+
         if matching_org := self.get_matching_record_from_folio(
             index_or_id,
             self.folio_organization_cache,
@@ -406,7 +406,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 "Organizations not in ID map, linked using FOLIO lookup",
             )
             return matching_org["id"]
-        
+
         else:
             self.migration_report.add(
                 Blurbs.PurchaseOrderVendorLinking,

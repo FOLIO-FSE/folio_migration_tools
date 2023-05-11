@@ -315,10 +315,7 @@ def test_composite_order_with_one_pol_mapping(mapper):
     assert (
         composite_order_with_pol["compositePoLines"][0]["titleOrPackage"] == "Once upon a time..."
     )
-    assert (
-        composite_order_with_pol["compositePoLines"][0]["instanceId"]
-        == "1"
-    )
+    assert composite_order_with_pol["compositePoLines"][0]["instanceId"] == "1"
     assert composite_order_with_pol["compositePoLines"][0]["cost"]["currency"] == "USD"
     assert composite_order_with_pol["compositePoLines"][0]["cost"]["quantityPhysical"] == "1"
     assert (
@@ -455,6 +452,7 @@ def test_perform_additional_mapping_get_org_from_folio(mapper):
     folio_po = mapper.perform_additional_mapping("1", folio_po)
     assert folio_po["vendor"] == "some id"
 
+
 def test_perform_additional_mapping_org_and_instance_uuids_from_id_maps(mapper):
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
@@ -484,7 +482,6 @@ def test_perform_additional_mapping_org_and_instance_uuids_from_id_maps(mapper):
     folio_po = mapper.perform_additional_mapping("1", folio_po)
     assert folio_po["vendor"] == "bbf61aa3-05ea-5d15-99c8-e3e547001543"
     assert folio_po["compositePoLines"][0]["instanceId"] == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
-
 
 
 def test_perform_additional_mapping_org_uuid_no_match(mapper):
