@@ -67,6 +67,9 @@ class OrganizationTransformer(MigrationTaskBase):
 
         self.results_path = self.folder_structure.created_objects_path
         self.failed_files: List[str] = []
+        self.organizations_id_map = self.load_id_map(
+            self.folder_structure.organizations_id_map_path
+        )
 
         self.folio_keys = []
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
@@ -155,6 +158,9 @@ class OrganizationTransformer(MigrationTaskBase):
                         FOLIONamespaces.organizations,
                     )
                     folio_rec = self.clean_org(folio_rec)
+                    self.organizations_id_map[legacy_id] = self.mapper.get_id_map_tuple(
+                        legacy_id, folio_rec, self.object_type
+                    )
 
                     Helper.write_to_file(results_file, folio_rec)
 
@@ -225,6 +231,9 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.mapper.mapped_legacy_fields,
             )
 
+            self.mapper.save_id_map_file(
+                self.folder_structure.organizations_id_map_path, self.organizations_id_map
+            )
         self.clean_out_empty_logs()
 
         logging.info("All done!")
