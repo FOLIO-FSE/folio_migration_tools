@@ -63,8 +63,7 @@ class NotesMapper(MappingFileMapperBase):
                     self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
                 else:
                     self.migration_report.add_general_statistics(
-                        "Notes without content that were discarded. Set some default "
-                        "value if you only intend to set the note title"
+                        "Number of discarded notes with no content"
                     )
 
     def get_notes_schema(self):

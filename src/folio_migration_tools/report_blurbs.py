@@ -251,6 +251,14 @@ class Blurbs:
         "POL location mapping",
         "This is the location for for the purchase order line.",
     )
+    PurchaseOrderVendorLinking = (
+        "Linked Organizations",
+        "All purchase orders must be linked to an organization.",
+    )
+    PurchaseOrderInstanceLinking = (
+        "Linked Instances",
+        "Purchase Oreder Lines can but do not have to be linked to instances",
+    )
     StatisticalCodeMapping = ("Statistical code mapping", "")
     HoldingsRecordIdMapping = ("Holdings IDs mapped", "")
     UnmappedProperties = ("Unmapped properties", "")
