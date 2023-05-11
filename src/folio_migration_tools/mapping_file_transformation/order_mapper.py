@@ -54,8 +54,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         logging.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
-        logging.info("Fetching organizations from FOLIO...")
-        self.vendor_code_map = dict(self.setup_vendor_code_map())
+        self.organization_cache = {}
+
         self.acquisitions_methods_mapping = RefDataMapping(
             self.folio_client,
             "/orders/acquisition-methods",
@@ -112,37 +112,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
         mapped_value = super().get_prop(
             legacy_order, folio_prop_name, index_or_id, schema_default_value
         )
-
-        if folio_prop_name == "vendor":
-            if mapped_value in self.vendor_code_map:
-                self.migration_report.add_general_statistics(
-                    "Vendors matched to FOLIO Organizations"
-                )
-                return self.vendor_code_map[mapped_value]
-            else:
-                self.migration_report.add_general_statistics(
-                    "DATA ISSUE Vendors not matched to FOLIO Organizations"
-                )
-                raise TransformationRecordFailedError(
-                    index_or_id, "No matching organizaiton in FOLIO for vendor code", mapped_value
-                )
-
-        elif folio_prop_name.endswith(".instanceId"):
-            if mapped_value in self.instance_id_map:
-                self.migration_report.add_general_statistics(
-                    "Instances matched to migrated bib records"
-                )
-                return self.instance_id_map.get(mapped_value)[1]
-            else:
-                self.migration_report.add_general_statistics(
-                    "Instances not matched to migrated bib records"
-                )
-                Helper.log_data_issue(
-                    index_or_id,
-                    "No matching bib/instance for bibliographic record ID:",
-                    mapped_value,
-                )
-                return None
 
         return mapped_value
 
@@ -388,3 +357,65 @@ class CompositeOrderMapper(MappingFileMapperBase):
         except Exception as ee:
             logging.error(ee)
             return {}
+
+    def perform_additional_mapping(self, index_or_id, composite_order):
+        # Get organization UUID from FOLIO
+        composite_order["vendor"] = self.get_folio_organization_uuid(
+            index_or_id, composite_order.get("vendor")
+        )
+
+        # Replace legacy bib ID with instance UUID from map
+        legacy_bib_id = composite_order["compositePoLines"][0].pop("instanceId", "")
+        if matching_instance := self.instance_id_map.get(legacy_bib_id):
+            composite_order["compositePoLines"][0]["instanceId"] = matching_instance[1]
+            self.migration_report.add_general_statistics("Bib IDs matched to migrated instances")
+        else:
+            self.migration_report.add_general_statistics(
+                "Bib IDs not matched to migrated instances"
+            )
+            Helper.log_data_issue(
+                index_or_id,
+                "No matching instance for bibliographic record ID:",
+                legacy_bib_id,
+            )
+        return composite_order
+
+    def get_matching_record_from_folio(
+        self,
+        index_or_id,
+        cache: dict,
+        path: str,
+        match_property: str,
+        match_value: str,
+        result_type: str,
+    ):
+        if match_value in cache:
+            return cache[match_value]
+        else:
+            query = f'?query=({match_property}=="{match_value}")'
+            if matching_record := next(
+                self.folio_client.folio_get_all(path, result_type, query), None
+            ):
+                cache[match_value] = matching_record
+                return matching_record
+
+    def get_folio_organization_uuid(self, index_or_id, org_code):
+        if matching_org := self.get_matching_record_from_folio(
+            index_or_id,
+            self.organization_cache,
+            "/organizations-storage/organizations",
+            "code",
+            org_code,
+            "organizations",
+        ):
+            return matching_org["id"]
+        else:
+            self.migration_report.add(
+                Blurbs.GeneralStatistics,
+                "DATA ISSUE Organization not in FOLIO",
+            )
+            raise TransformationRecordFailedError(
+                index_or_id,
+                "No matching Organization in FOLIO for barcode",
+                org_code,
+            )

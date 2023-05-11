@@ -165,13 +165,12 @@ class OrdersTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.orders, True
                     )
+                    self.mapper.perform_additional_mapping(legacy_id, folio_rec)
+
                     self.mapper.migration_report.add_general_statistics(
                         "TOTAL Purchase Order Lines created"
                     )
-
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
-
-                    # Add notes
                     self.mapper.notes_mapper.map_notes(
                         record,
                         legacy_id,
