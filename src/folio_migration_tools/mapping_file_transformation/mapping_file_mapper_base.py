@@ -259,13 +259,21 @@ class MappingFileMapperBase(MapperBase):
             self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
             return " ".join(
                 MappingFileMapperBase.get_legacy_value(
-                    legacy_object, map_entry, self.migration_report, index_or_id
+                    legacy_object,
+                    map_entry,
+                    self.migration_report,
+                    index_or_id,
+                    self.library_configuration.multi_field_delimiter,
                 )
                 for map_entry in map_entries
             ).strip()
         else:
             legacy_value = MappingFileMapperBase.get_legacy_value(
-                legacy_object, map_entries[0], self.migration_report, index_or_id
+                legacy_object,
+                map_entries[0],
+                self.migration_report,
+                index_or_id,
+                self.library_configuration.multi_field_delimiter,
             )
             if legacy_value or isinstance(legacy_value, bool):
                 return legacy_value
@@ -354,6 +362,7 @@ class MappingFileMapperBase(MapperBase):
         mapping_file_entry: dict,
         migration_report: MigrationReport,
         index_or_id: str = "",
+        multi_field_delimiter="",
     ):
         # Mapping from value fields has preceedence and does not get involved in post processing
         if mapping_file_entry.get("value", "") or isinstance(
@@ -370,7 +379,15 @@ class MappingFileMapperBase(MapperBase):
         value = legacy_object.get(mapping_file_entry["legacy_field"], "")
 
         if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
-            replaced_val = mapping_file_entry["rules"]["replaceValues"].get(value, "")
+            if multi_field_delimiter and multi_field_delimiter in value:
+                replaced_split_values = [
+                    mapping_file_entry["rules"]["replaceValues"].get(sv, "")
+                    for sv in value.split(multi_field_delimiter)
+                ]
+                replaced_val = multi_field_delimiter.join(replaced_split_values)
+            else:
+                replaced_val = mapping_file_entry["rules"]["replaceValues"].get(value, "")
+
             if replaced_val or isinstance(replaced_val, bool):
                 migration_report.add(
                     Blurbs.FieldMappingDetails,

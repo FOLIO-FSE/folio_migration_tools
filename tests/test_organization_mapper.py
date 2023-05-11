@@ -233,11 +233,10 @@ def test_contacts_category_refdata_mapping_single(mapper):
     ]
 
 
-@pytest.mark.skip(reason="Requires #542")
 def test_contacts_categories_replacevalue_multiple(mapper):
     data = {
         "name": "The Vendor",  # String, required
-        "code": "test_contacts_categories_replacevalue_single",  # String, required
+        "code": "test_contacts_categories_replacevalue_multiple",  # String, required
         "status": "Active",  # Enum, required
         "contact_person_f": "Joey",
         "contact_person_l": "Janeway",
