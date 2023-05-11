@@ -361,8 +361,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
         # Replace legacy bib ID with instance UUID from map
         bib_id = composite_order["compositePoLines"][0].pop("instanceId", "")
         if matching_instance := self.get_folio_intance_uuid(index_or_id, bib_id):
-            composite_order["compositePoLines"][0]["instanceId"] = matching_instance[1]
-            
+            composite_order["compositePoLines"][0]["instanceId"] = matching_instance
+
         return composite_order
 
     def get_matching_record_from_folio(
@@ -386,10 +386,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     def get_folio_organization_uuid(self, index_or_id, org_code):
         if self.organizations_id_map:
+            self.migration_report.add(
+                Blurbs.PurchaseOrderVendorLinking,
+                "Organizations linked using organizations_id_map",
+            )
             if matching_org := self.organizations_id_map.get(org_code):
                 return matching_org[1]
         
-        elif matching_org := self.get_matching_record_from_folio(
+        if matching_org := self.get_matching_record_from_folio(
             index_or_id,
             self.folio_organization_cache,
             "/organizations-storage/organizations",
@@ -397,28 +401,37 @@ class CompositeOrderMapper(MappingFileMapperBase):
             org_code,
             "organizations",
         ):
-            return matching_org[1]
+            self.migration_report.add(
+                Blurbs.PurchaseOrderVendorLinking,
+                "Organizations not in ID map, linked using FOLIO lookup",
+            )
+            return matching_org["id"]
+        
         else:
             self.migration_report.add(
-                Blurbs.GeneralStatistics,
-                "DATA ISSUE Organization not in FOLIO",
+                Blurbs.PurchaseOrderVendorLinking,
+                "Organization identifier not in ID map/FOLIO (RECORD FAILED)",
             )
             raise TransformationRecordFailedError(
                 index_or_id,
-                "No matching Organization in FOLIO for barcode",
+                "No matching Organization for organization identifier",
                 org_code,
             )
 
     def get_folio_intance_uuid(self, index_or_id, bib_id):
         if matching_instance := self.instance_id_map.get(bib_id):
-            self.migration_report.add_general_statistics("POLs linked to instances")
+            self.migration_report.add(
+                Blurbs.PurchaseOrderInstanceLinking,
+                "Instance linked using instances_id_map",
+            )
             return matching_instance[1]
         else:
-            self.migration_report.add_general_statistics(
-                "POL bib IDs not matched to migrated instances"
+            self.migration_report.add(
+                Blurbs.PurchaseOrderInstanceLinking,
+                "Istance not linked - bib identifier not in instances_id_map",
             )
             Helper.log_data_issue(
                 index_or_id,
-                "No matching instance for bib record ID",
+                "No matching instance for bib identifier",
                 bib_id,
             )

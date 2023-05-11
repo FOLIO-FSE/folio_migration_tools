@@ -77,6 +77,13 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
         and query == '?query=(code=="EBSCO")'
     ):
         yield from [{"id": "some id", "code": "some code", "name": "EBSCO Information Services"}]
+
+    elif (
+        ref_data_path == "/organizations-storage/organizations"
+        and query == '?query=(code=="LisasAwesomeStartup")'
+    ):
+        yield from []
+
     elif ref_data_path == "/organizations-storage/organizations":
         yield from [
             {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "code": "GOBI"},

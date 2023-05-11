@@ -3,6 +3,7 @@ import logging
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -42,6 +43,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         multi_field_delimiter="^-^",
     )
     instance_id_map = {"1": ["1", "ae1daef2-ddea-4d87-a434-3aa98ed3e687", "1"]}
+    organizations_id_map = {"BAE": ["BAE", "bbf61aa3-05ea-5d15-99c8-e3e547001543", "1"]}
     composite_order_map = {
         "data": [
             {
@@ -199,6 +201,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         mock_folio_client,
         lib_config,
         composite_order_map,
+        organizations_id_map,
         instance_id_map,
         acg_method_map,
         "",
@@ -423,15 +426,9 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
     )
 
 
-def test_perform_additional_mapping(mapper):
+def test_perform_additional_mapping_get_org_from_folio(mapper):
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
-        "metadata": {
-            "createdDate": "2023-05-11T09:58:44.250",
-            "createdByUserId": "f6a6a201-51f6-46f7-b671-c2813cd0558e",
-            "updatedDate": "2023-05-11T09:58:44.250",
-            "updatedByUserId": "f6a6a201-51f6-46f7-b671-c2813cd0558e",
-        },
         "poNumber": "o124",
         "orderType": "One-Time",
         "vendor": "EBSCO",
@@ -457,4 +454,95 @@ def test_perform_additional_mapping(mapper):
 
     folio_po = mapper.perform_additional_mapping("1", folio_po)
     assert folio_po["vendor"] == "some id"
+
+def test_perform_additional_mapping_org_and_instance_uuids_from_id_maps(mapper):
+    folio_po = {
+        "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
+        "poNumber": "o124",
+        "orderType": "One-Time",
+        "vendor": "BAE",
+        "compositePoLines": [
+            {
+                "locations": [
+                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
+                ],
+                "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
+                "instanceId": "1",
+                "acquisitionMethod": "837d04b6-d81c-4c49-9efd-2f62515999b3",
+                "cost": {
+                    "currency": "USD",
+                    "quantityPhysical": "1",
+                    "poLineEstimatedPrice": "125.00",
+                },
+                "orderFormat": "Electronic Resource",
+                "source": "API",
+                "titleOrPackage": "Once upon a time...",
+            }
+        ],
+    }
+
+    folio_po = mapper.perform_additional_mapping("1", folio_po)
+    assert folio_po["vendor"] == "bbf61aa3-05ea-5d15-99c8-e3e547001543"
     assert folio_po["compositePoLines"][0]["instanceId"] == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
+
+
+
+def test_perform_additional_mapping_org_uuid_no_match(mapper):
+    folio_po = {
+        "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
+        "poNumber": "o124",
+        "orderType": "One-Time",
+        "vendor": "LisasAwesomeStartup",
+        "compositePoLines": [
+            {
+                "locations": [
+                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
+                ],
+                "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
+                "instanceId": "1",
+                "acquisitionMethod": "837d04b6-d81c-4c49-9efd-2f62515999b3",
+                "cost": {
+                    "currency": "USD",
+                    "quantityPhysical": "1",
+                    "poLineEstimatedPrice": "125.00",
+                },
+                "orderFormat": "Electronic Resource",
+                "source": "API",
+                "titleOrPackage": "Once upon a time...",
+            }
+        ],
+    }
+    with pytest.raises(TransformationRecordFailedError):
+        folio_po = mapper.perform_additional_mapping("1", folio_po)
+        assert not folio_po
+
+
+def test_perform_additional_mapping_instance_uuid_no_match(mapper):
+    folio_po = {
+        "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
+        "poNumber": "o124",
+        "orderType": "One-Time",
+        "vendor": "BAE",
+        "compositePoLines": [
+            {
+                "locations": [
+                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
+                ],
+                "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
+                "instanceId": "myunpublishedbook",
+                "acquisitionMethod": "837d04b6-d81c-4c49-9efd-2f62515999b3",
+                "cost": {
+                    "currency": "USD",
+                    "quantityPhysical": "1",
+                    "poLineEstimatedPrice": "125.00",
+                },
+                "orderFormat": "Electronic Resource",
+                "source": "API",
+                "titleOrPackage": "Once upon a time...",
+            }
+        ],
+    }
+
+    folio_po = mapper.perform_additional_mapping("1", folio_po)
+
+    assert "instanceId" not in folio_po["compositePoLines"][0]
