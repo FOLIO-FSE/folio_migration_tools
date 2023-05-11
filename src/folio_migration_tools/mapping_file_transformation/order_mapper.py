@@ -410,7 +410,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         else:
             self.migration_report.add(
                 Blurbs.PurchaseOrderVendorLinking,
-                "Organization identifier not in ID map/FOLIO (RECORD FAILED)",
+                "RECORD FAILED Organization identifier not in ID map/FOLIO",
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -422,13 +422,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if matching_instance := self.instance_id_map.get(bib_id):
             self.migration_report.add(
                 Blurbs.PurchaseOrderInstanceLinking,
-                "Instance linked using instances_id_map",
+                "Instances linked using instances_id_map",
             )
             return matching_instance[1]
         else:
             self.migration_report.add(
                 Blurbs.PurchaseOrderInstanceLinking,
-                "Istance not linked - bib identifier not in instances_id_map",
+                "Bib identifier not in instances_id_map, no instance linked",
             )
             Helper.log_data_issue(
                 index_or_id,

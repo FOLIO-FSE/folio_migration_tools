@@ -253,7 +253,7 @@ class Blurbs:
     )
     PurchaseOrderVendorLinking = (
         "Linked Organizations",
-        "All purchase orders must be linked to an organization.",
+        "All purchase orders MUST be linked to an organization.",
     )
     PurchaseOrderInstanceLinking = (
         "Linked Instances",
