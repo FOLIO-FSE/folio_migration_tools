@@ -52,7 +52,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
             FOLIONamespaces.orders,
             library_configuration,
         )
+        logging.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
+        logging.info("Fetching organizations from FOLIO...")
         self.vendor_code_map = dict(self.setup_vendor_code_map())
         self.acquisitions_methods_mapping = RefDataMapping(
             self.folio_client,
