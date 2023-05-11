@@ -72,6 +72,11 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
             {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "name": "Consortium"},
             {"id": "fc54327d-fd60-4f6a-ba37-a4375511b91b", "name": "Unspecified"},
         ]
+    elif (
+        ref_data_path == "/organizations-storage/organizations"
+        and query == '?query=(code=="EBSCO")'
+    ):
+        yield from [{"id": "some id", "code": "some code", "name": "EBSCO Information Services"}]
     elif ref_data_path == "/organizations-storage/organizations":
         yield from [
             {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "code": "GOBI"},
@@ -173,7 +178,6 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
 
     elif ref_data_path == "/users" and query == '?query=(externalSystemId=="Some external id")':
         yield from [{"id": "some id", "barcode": "some barcode", "patronGroup": "some group"}]
-
     elif ref_data_path == "/users" and query == '?query=(barcode=="u123")':
         yield from [{"id": "user123", "barcode": "u123", "patronGroup": "some group"}]
     elif ref_data_path == "/users" and query == '?query=(barcode=="u456")':
