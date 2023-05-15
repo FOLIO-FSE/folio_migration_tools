@@ -360,7 +360,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         # Replace legacy bib ID with instance UUID from map
         bib_id = composite_order["compositePoLines"][0].pop("instanceId", "")
-        if matching_instance := self.get_folio_intance_uuid(index_or_id, bib_id):
+        if matching_instance := self.get_folio_instance_uuid(index_or_id, bib_id):
             composite_order["compositePoLines"][0]["instanceId"] = matching_instance
 
         return composite_order
@@ -418,7 +418,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 org_code,
             )
 
-    def get_folio_intance_uuid(self, index_or_id, bib_id):
+    def get_folio_instance_uuid(self, index_or_id, bib_id):
         if matching_instance := self.instance_id_map.get(bib_id):
             self.migration_report.add(
                 Blurbs.PurchaseOrderInstanceLinking,

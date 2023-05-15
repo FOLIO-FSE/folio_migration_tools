@@ -257,7 +257,7 @@ class Blurbs:
     )
     PurchaseOrderInstanceLinking = (
         "Linked Instances",
-        "Purchase Oreder Lines can but do not have to be linked to instances",
+        "Purchase Order Lines can but do not have to be linked to instances",
     )
     StatisticalCodeMapping = ("Statistical code mapping", "")
     HoldingsRecordIdMapping = ("Holdings IDs mapped", "")
