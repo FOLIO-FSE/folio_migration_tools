@@ -33,7 +33,7 @@ profile = "black"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-folioclient = "^0.50.0rc1"
+folioclient = "^0.50.0"
 pyhumps = "^3.7.3"
 defusedxml = "^0.7.1"
 python-dateutil = "^2.8.2"
