@@ -4,6 +4,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -54,6 +55,16 @@ class HoldingsMapper(MappingFileMapperBase):
                 "name",
                 Blurbs.CallNumberTypeMapping,
             )
+
+    def perform_additional_mappings(self, folio_rec, file_def):
+        self.handle_suppression(folio_rec, file_def)
+
+    def handle_suppression(self, folio_record, file_def: FileDefinition):
+        folio_record["discoverySuppress"] = file_def.discovery_suppressed
+        self.migration_report.add(
+            Blurbs.Suppression,
+            f'Suppressed from discovery = {folio_record["discoverySuppress"]}',
+        )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
         if folio_prop_name == "permanentLocationId":
