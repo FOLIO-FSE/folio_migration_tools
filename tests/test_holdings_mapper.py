@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
@@ -435,3 +436,16 @@ def test_get_call_number_5():
     mocked_mapper = Mock(spec=HoldingsMapper)
     res = HoldingsMapper.get_call_number(mocked_mapper, call_number)
     assert res == call_number
+
+
+def test_perform_additional_mappings(mapper: HoldingsMapper):
+    file_config = Mock(spec=FileDefinition)
+    file_config_2 = Mock(spec=FileDefinition)
+    file_config.discovery_suppressed = True
+    file_config_2.discovery_suppressed = False
+    suppressed_holdings = {"id": "12345", "instanceId": "12345", "permanentLocationId": "12345"}
+    unsuppressed_holdings = {"id": "54321", "instanceId": "12345", "permanentLocationId": "12345"}
+    mapper.perform_additional_mappings(suppressed_holdings, file_config)
+    mapper.perform_additional_mappings(unsuppressed_holdings, file_config_2)
+    assert suppressed_holdings["discoverySuppress"] is True
+    assert unsuppressed_holdings["discoverySuppress"] is False
