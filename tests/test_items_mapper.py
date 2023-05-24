@@ -1,6 +1,9 @@
+from unittest.mock import Mock
+
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
@@ -68,6 +71,19 @@ def test_item_mapping(mapper):
     assert item["barcode"] == "000000950000010"
 
     assert "mat" in mapper.mapped_legacy_fields
+
+
+def test_perform_additional_mappings(mapper: ItemMapper):
+    file_config = Mock(spec=FileDefinition)
+    file_config_2 = Mock(spec=FileDefinition)
+    file_config.discovery_suppressed = True
+    file_config_2.discovery_suppressed = False
+    suppressed_holdings = {"id": "12345", "holdingsId": "12345", "permanentLoanTypeId": "12345"}
+    unsuppressed_holdings = {"id": "54321", "holdingsId": "12345", "permanentLoanTypeId": "12345"}
+    mapper.perform_additional_mappings(suppressed_holdings, file_config)
+    mapper.perform_additional_mappings(unsuppressed_holdings, file_config_2)
+    assert suppressed_holdings["discoverySuppress"] is True
+    assert unsuppressed_holdings["discoverySuppress"] is False
 
 
 # Shared map
