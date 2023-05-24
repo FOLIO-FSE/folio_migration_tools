@@ -116,6 +116,7 @@ class HoldingsHelper:
         extend_list("formerIds", holdings_record, incoming_holdings)
         extend_list("electronicAccess", holdings_record, incoming_holdings)
         HoldingsHelper.remove_empty_holdings_statements(holdings_record)
+        merge_boolean("discoverySuppress", holdings_record, incoming_holdings)
         return holdings_record
 
     @staticmethod
@@ -166,3 +167,13 @@ def extend_list(
 
 def dedupe(list_of_dicts):
     return [dict(t) for t in {tuple(d.items()) for d in list_of_dicts}]
+
+
+def merge_boolean(prop_name: str, holdings_record: dict, incoming_holdings: dict):
+    if (
+        holdings_record.get(prop_name, False) is True
+        and incoming_holdings.get(prop_name, False) is True
+    ):
+        holdings_record[prop_name] = True
+    else:
+        holdings_record[prop_name] = False
