@@ -150,20 +150,27 @@ class HoldingsStatementsParser:
             TransformationFieldMappingError: _description_
         """
         for f in marc_record.get_fields(field_textual):
-            if "a" not in f and "z" not in f and "x" not in f:
+            codes = [sf.code for sf in f.subfields]
+            if "a" not in codes and "z" not in codes and "x" not in codes:
                 raise TransformationFieldMappingError(
                     legacy_ids,
                     f"{field_textual} subfields a, x, and z missing from field",
                     f,
                 )
-            if not (f["a"] or f["z"] or f["x"]):
+            if not (len(f.get_subfields("a")) == 0 or
+                    len(f.get_subfields("z")) == 0 or
+                    len(f.get_subfields("x")) == 0):
                 raise TransformationFieldMappingError(
                     legacy_ids,
                     f"{field_textual} a,x and z are all empty",
                     f,
                 )
             return_dict["statements"].append(
-                {"statement": (f["a"] or ""), "note": (f["z"] or ""), "staffNote": (f["x"] or "")}
+                {
+                    "statement": "".join(f.get_subfields('a')), 
+                    "note": "".join(f.get_subfields("z")), 
+                    "staffNote": "".join(f.get_subfields("x"))
+                }
             )
             return_dict["migration_report"].append(
                 ("Holdings statements", f"From {field_textual}")
