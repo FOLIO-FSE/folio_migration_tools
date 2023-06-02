@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import pytest
 from pymarc import Field
 from pymarc import Record
+from pymarc import Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
@@ -26,7 +27,7 @@ def test_add_mapped_location_code_to_record_one_852_no_b():
         Field(
             tag="852",
             indicators=["0", "1"],
-            subfields=["a", "code1", "c", "code2"],
+            subfields=[Subfield(code="a", value="code1"), Subfield(code="c", value="code2")],
         )
     )
     folio_rec = {"permanentLocationId": "new_loc"}
@@ -50,7 +51,7 @@ def test_add_mapped_location_code_to_record_one_852_two_b():
         Field(
             tag="852",
             indicators=["0", "1"],
-            subfields=["b", "code1", "b", "code2"],
+            subfields=[Subfield(code="b", value="code1"), Subfield(code="b", value="code2")],
         )
     )
     folio_rec = {"permanentLocationId": "new_loc"}
@@ -75,7 +76,7 @@ def test_add_mapped_location_code_to_record_one_852_one_b():
         Field(
             tag="852",
             indicators=["0", "1"],
-            subfields=["b", "code1"],
+            subfields=[Subfield(code="b", value="code1")],
         )
     )
     folio_rec = {"permanentLocationId": "new_loc"}
@@ -99,14 +100,14 @@ def test_add_mapped_location_code_to_record_two_852_one_b():
         Field(
             tag="852",
             indicators=["0", "1"],
-            subfields=["b", "code1"],
+            subfields=[Subfield(code="b", value="code1")],
         )
     )
     record.add_field(
         Field(
             tag="852",
             indicators=["0", "1"],
-            subfields=["b", "code2"],
+            subfields=[Subfield(code="b", value="code2")],
         )
     )
     folio_rec = {"permanentLocationId": "new_loc"}

@@ -5,6 +5,7 @@ import pytest
 from pymarc import Field
 from pymarc import MARCReader
 from pymarc import Record
+from pymarc import Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import FileDefinition
@@ -160,13 +161,13 @@ def test_get_legacy_id_001_wrong_order():
     record.add_field(
         Field(
             tag="951",
-            subfields=["b", "bid"],
+            subfields=[Subfield(code="b", value="bid")],
         )
     )
     record.add_field(
         Field(
             tag="951",
-            subfields=["c", "cid"],
+            subfields=[Subfield(code="c", value="cid")],
         )
     )
     record.add_field(Field(tag="001", data="0001"))
@@ -185,13 +186,13 @@ def test_get_legacy_id_001_right_order():
     record.add_field(
         Field(
             tag="951",
-            subfields=["c", "cid"],
+            subfields=[Subfield(code="c", value="cid")],
         )
     )
     record.add_field(
         Field(
             tag="951",
-            subfields=["b", "bid"],
+            subfields=[Subfield(code="b", value="bid")],
         )
     )
     record.add_field(Field(tag="001", data="0001"))

@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 from pymarc import Field
+from pymarc import Subfield
 
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 
@@ -19,12 +20,9 @@ def test_condition():
         tag="245",
         indicators=["0", "1"],
         subfields=[
-            "a",
-            "value",
-            "b",
-            "from journeyman to master /",
-            "q",
-            "stuff to concatenate",
+            Subfield(code="a", value="value"),
+            Subfield(code="b", value="from journeyman to master /"),
+            Subfield(code="q", value="stuff to concatenate"),
         ],
     )
     res = Conditions.condition_concat_subfields_by_name(
