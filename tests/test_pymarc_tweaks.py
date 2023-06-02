@@ -14,7 +14,7 @@ def test_escapes_with_json():
         title = record["245"]["a"]
         assert title == '[HAROLD DAVID "HAL" SANDY AND WILDA BARMORE SANDY COLLECTION].]'
 
-        dumped_title = json.dumps({"title": record.title()})
+        dumped_title = json.dumps({"title": record.title})
         assert (
             dumped_title
             == '{"title": "[HAROLD DAVID \\"HAL\\" SANDY AND WILDA BARMORE SANDY COLLECTION].]"}'

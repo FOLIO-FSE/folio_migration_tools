@@ -62,7 +62,7 @@ def test_basic(mapper: AuthorityMapper, caplog):
         assert auth["personalNameTitle"] == "Ericsson, Leif KE, 1964-"
         assert auth["id"] == "54ac1b25-aa36-566b-a688-030a745ae080"
         assert all(id["identifierTypeId"] and id["value"] for id in auth["identifiers"])
-        assert len(auth["identifiers"]) == 2
+        assert len(auth["identifiers"]) == 1
         assert auth["source"] == "MARC"
         assert mapper.mapped_folio_fields["personalNameTitle"] == [1]
         assert mapper.mapped_folio_fields["personalName"] == [1]
