@@ -8,6 +8,7 @@ from dateutil.parser import parse
 from pymarc import Field
 from pymarc import MARCReader
 from pymarc import Record
+from pymarc import Subfield
 
 from folio_migration_tools.report_blurbs import Blurbs
 
@@ -165,7 +166,11 @@ def test_create_entity_empty_props(mapper: BibsRulesMapper):
     marc_field = Field(
         tag="100",
         indicators=["1", " "],
-        subfields=["a", "De Geer, Jan,", "d", "1918-2007", "0", "280552"],
+        subfields=[
+            Subfield(code="a", value="De Geer, Jan,"),
+            Subfield(code="d", value="1918-2007"),
+            Subfield(code="0", value="280552"),
+        ],
     )
     entity = mapper.create_entity(entity_mappings, marc_field, "contributors", "apa")
     assert "authorityId" not in entity
@@ -173,16 +178,42 @@ def test_create_entity_empty_props(mapper: BibsRulesMapper):
 
 def test_get_instance_format_ids_no_rda(mapper, caplog):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "", "b", ""]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "", "b", ""]))
+    record.add_field(
+        pymarc.Field(
+            tag="337", subfields=[Subfield(code="a", value=""), Subfield(code="b", value="")]
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="338", subfields=[Subfield(code="a", value=""), Subfield(code="b", value="")]
+        )
+    )
     res = mapper.get_instance_format_ids(record, "legacy_id_99")
     assert not any(res)
 
 
 def test_get_instance_format_ids_empty_values_are_ignored(mapper, caplog):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "", "b", "", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", "rdacarrier"]))
+    record.add_field(
+        pymarc.Field(
+            tag="337",
+            subfields=[
+                Subfield(code="a", value=""),
+                Subfield(code="b", value=""),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value=""),
+                Subfield(code="b", value=""),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
+    )
     res = mapper.get_instance_format_ids(record, "legacy_id_99")
     assert not any(res)
 
@@ -190,10 +221,24 @@ def test_get_instance_format_ids_empty_values_are_ignored(mapper, caplog):
 def test_get_instance_format_ids_three_digit_values_are_ignored(mapper, caplog):
     record = pymarc.Record()
     record.add_field(
-        pymarc.Field(tag="337", subfields=["a", "aaa", "b", "aaa", "2", "rdacarrier"])
+        pymarc.Field(
+            tag="337",
+            subfields=[
+                Subfield(code="a", value="aaa"),
+                Subfield(code="b", value="aaa"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
     )
     record.add_field(
-        pymarc.Field(tag="338", subfields=["a", "aaa", "b", "aaa", "2", "rdacarrier"])
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value="aaa"),
+                Subfield(code="b", value="aaa"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
     )
     res = BibsRulesMapper.get_instance_format_ids(mapper, record, "legacy_id_99")
     assert not any(res)
@@ -202,10 +247,24 @@ def test_get_instance_format_ids_three_digit_values_are_ignored(mapper, caplog):
 def test_get_instance_format_ids_338b_is_mapped(mapper: BibsRulesMapper, caplog):
     record = pymarc.Record()
     record.add_field(
-        pymarc.Field(tag="337", subfields=["a", "ignored", "b", "ignored", "2", "rdacarrier"])
+        pymarc.Field(
+            tag="337",
+            subfields=[
+                Subfield(code="a", value="ignored"),
+                Subfield(code="b", value="ignored"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
     )
     record.add_field(
-        pymarc.Field(tag="338", subfields=["a", "ignored", "b", "sb", "2", "rdacarrier"])
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value="ignored"),
+                Subfield(code="b", value="sb"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
     )
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
     assert any(res)
@@ -213,29 +272,93 @@ def test_get_instance_format_ids_338b_is_mapped(mapper: BibsRulesMapper, caplog)
 
 def test_get_instance_format_ids_one_338_two_337(mapper, caplog):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
+    record.add_field(
+        pymarc.Field(
+            tag="337",
+            subfields=[Subfield(code="a", value="audio"), Subfield(code="2", value="rdacarrier")],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="337",
+            subfields=[Subfield(code="a", value="audio"), Subfield(code="2", value="rdacarrier")],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value="audio belt"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
+    )
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
     assert len(res) == 1
 
 
 def test_get_instance_format_ids_two_338_two_337(mapper):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
+    record.add_field(
+        pymarc.Field(
+            tag="337",
+            subfields=[Subfield(code="a", value="audio"), Subfield(code="2", value="rdacarrier")],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="337",
+            subfields=[Subfield(code="a", value="audio"), Subfield(code="2", value="rdacarrier")],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value="audio belt"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value="audio belt"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
+    )
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
     assert len(res) == 2
 
 
 def test_get_instance_format_ids_two_338a_one_337(mapper: BibsRulesMapper):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
     record.add_field(
-        pymarc.Field(tag="338", subfields=["a", "audio belt", "b", "ab", "2", "rdacarrier"])
+        pymarc.Field(
+            tag="337",
+            subfields=[Subfield(code="a", value="audio"), Subfield(code="2", value="rdacarrier")],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value="audio belt"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value="audio belt"),
+                Subfield(code="b", value="ab"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
     )
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
     assert len(res) == 2
@@ -243,8 +366,21 @@ def test_get_instance_format_ids_two_338a_one_337(mapper: BibsRulesMapper):
 
 def test_get_instance_format_ids_338a_is_mapped(mapper):
     record = pymarc.Record()
-    record.add_field(pymarc.Field(tag="337", subfields=["a", "audio", "2", "rdacarrier"]))
-    record.add_field(pymarc.Field(tag="338", subfields=["a", "audio belt", "2", "rdacarrier"]))
+    record.add_field(
+        pymarc.Field(
+            tag="337",
+            subfields=[Subfield(code="a", value="audio"), Subfield(code="2", value="rdacarrier")],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="338",
+            subfields=[
+                Subfield(code="a", value="audio belt"),
+                Subfield(code="2", value="rdacarrier"),
+            ],
+        )
+    )
     mocked_mapper = Mock(spec=BibsRulesMapper)
     mocked_mapper.migration_report = MigrationReport()
     res = list(mapper.get_instance_format_ids(record, "legacy_id_99"))
@@ -252,25 +388,48 @@ def test_get_instance_format_ids_338a_is_mapped(mapper):
 
 
 def test_f338_source_is_rda_carrier(mapper):
-    field = pymarc.Field(tag="338", subfields=["a", "", "b", ""])
+    field = pymarc.Field(
+        tag="338", subfields=[Subfield(code="a", value=""), Subfield(code="b", value="")]
+    )
     res = mapper.f338_source_is_rda_carrier(field)
     assert not res
 
 
 def test_f338_source_is_rda_carrier_2(mapper):
-    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", " "])
+    field = pymarc.Field(
+        tag="338",
+        subfields=[
+            Subfield(code="a", value=""),
+            Subfield(code="b", value=""),
+            Subfield(code="2", value=" "),
+        ],
+    )
     res = mapper.f338_source_is_rda_carrier(field)
     assert not res
 
 
 def test_f338_source_is_rda_carrier_3(mapper):
-    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", "rdacarrier"])
+    field = pymarc.Field(
+        tag="338",
+        subfields=[
+            Subfield(code="a", value=""),
+            Subfield(code="b", value=""),
+            Subfield(code="2", value="rdacarrier"),
+        ],
+    )
     res = mapper.f338_source_is_rda_carrier(field)
     assert res
 
 
 def test_f338_source_is_rda_carrier_4(mapper):
-    field = pymarc.Field(tag="338", subfields=["a", "", "b", "", "2", " rdacarrier"])
+    field = pymarc.Field(
+        tag="338",
+        subfields=[
+            Subfield(code="a", value=""),
+            Subfield(code="b", value=""),
+            Subfield(code="2", value=" rdacarrier"),
+        ],
+    )
     res = mapper.f338_source_is_rda_carrier(field)
     assert res
 
@@ -352,7 +511,9 @@ def test_parse_cataloged_date():
 def test_required_properties_electronic_access_missing_u(mapper: BibsRulesMapper, caplog):
     with pytest.raises(TransformationFieldMappingError):
         bad_856 = Field(
-            tag="856", indicators=["0", "0"], subfields=["y", "URL to some fancy place"]
+            tag="856",
+            indicators=["0", "0"],
+            subfields=[Subfield(code="y", value="URL to some fancy place")],
         )
         mapping_856 = mapper.mappings["856"][0]
         folio_record: dict = {}
@@ -363,7 +524,12 @@ def test_required_properties_electronic_access_missing_u(mapper: BibsRulesMapper
 def test_required_properties_electronic_access_empty_u(mapper: BibsRulesMapper, caplog):
     with pytest.raises(TransformationFieldMappingError):
         bad_856 = Field(
-            tag="856", indicators=["0", "0"], subfields=["u", "", "y", "URL to some fancy place"]
+            tag="856",
+            indicators=["0", "0"],
+            subfields=[
+                Subfield(code="u", value=""),
+                Subfield(code="y", value="URL to some fancy place"),
+            ],
         )
         mapping_856 = mapper.mappings["856"][0]
         folio_record: dict = {}
@@ -373,7 +539,7 @@ def test_required_properties_electronic_access_empty_u(mapper: BibsRulesMapper, 
 @pytest.mark.skip(reason="Need to validate the entity before creating it")
 def test_required_properties_classification_empty_a(mapper: BibsRulesMapper, caplog):
     with pytest.raises(TransformationFieldMappingError):
-        bad_082 = Field(tag="082", indicators=["0", "0"], subfields=["a", ""])
+        bad_082 = Field(tag="082", indicators=["0", "0"], subfields=[Subfield(code="a", value="")])
         mapping_082 = mapper.mappings["082"][0]
         folio_record: dict = {}
         mapper.handle_entity_mapping(bad_082, mapping_082, folio_record, ["reqprop_entity_1"])
@@ -381,7 +547,7 @@ def test_required_properties_classification_empty_a(mapper: BibsRulesMapper, cap
 
 def test_required_properties_classification_empty_a(mapper: BibsRulesMapper, caplog):
     """Temporary test for entity testing"""
-    bad_082 = Field(tag="082", indicators=["0", "0"], subfields=["a", ""])
+    bad_082 = Field(tag="082", indicators=["0", "0"], subfields=[Subfield(code="a", value="")])
     mapping_082 = mapper.mappings["082"][0]
     folio_record: dict = {}
     mapper.handle_entity_mapping(bad_082, mapping_082, folio_record, ["reqprop_entity_1"])
@@ -391,7 +557,9 @@ def test_required_properties_classification_empty_a(mapper: BibsRulesMapper, cap
 @pytest.mark.skip(reason="Need to validate the entity before creating it")
 def test_required_properties_classification_missing_a(mapper: BibsRulesMapper, caplog):
     with pytest.raises(TransformationFieldMappingError):
-        bad_082 = Field(tag="082", indicators=["0", "0"], subfields=["z", "garbage field"])
+        bad_082 = Field(
+            tag="082", indicators=["0", "0"], subfields=[Subfield(code="z", value="garbage field")]
+        )
         mapping_082 = mapper.mappings["082"][0]
         folio_record: dict = {}
         mapper.handle_entity_mapping(bad_082, mapping_082, folio_record, ["reqprop_entity_1"])

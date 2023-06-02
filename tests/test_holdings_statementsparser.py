@@ -1,6 +1,7 @@
 # content of test_sample.py
 import pymarc
 from pymarc import Field
+from pymarc import Subfield
 
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -11,7 +12,7 @@ def get_sfs(fieldstring: str) -> list[str]:
     sfs = []
     s = fieldstring.split("$")[1:]
     for sf in s:
-        sfs.extend([sf[0], sf[1:]])
+        sfs.extend([Subfield(code=sf[0], value=sf[1:])])
     tag = fieldstring[1:4]
     ind1 = fieldstring[5]
     ind1 = " " if ind1 == "\\" else ind1
@@ -90,12 +91,26 @@ def test_linked_fields_1():
     pattern_field = Field(
         tag="853",
         indicators=["0", "1"],
-        subfields=["8", "1", "a", "v.", "b", "no.", "i", "(year)", "j", "(month)", "k", "(day)"],
+        subfields=[
+            Subfield(code="8", value="1"),
+            Subfield(code="a", value="v."),
+            Subfield(code="b", value="no."),
+            Subfield(code="i", value="(year)"), 
+            Subfield(code="j", value="(month)"),
+            Subfield(code="k", value="(day)")
+        ],
     )
     linked_value_field = Field(
         tag="863",
         indicators=["0", "1"],
-        subfields=["8", "1.1", "a", "253", "b", "2", "i", "2006", "j", "01", "k", "09"],
+        subfields=[
+            Subfield(code="8", value="1.1"),
+            Subfield(code="a", value="253"),
+            Subfield(code="b", value="2"),
+            Subfield(code="i", value="2006"),
+            Subfield(code="j", value="01"),
+            Subfield(code="k", value="09")
+        ],
     )
 
     stmt = "v.253:no.2 (2006:Jan. 09)"  # "v.253:no.2 (Jan. 09, 2006)"
@@ -107,17 +122,35 @@ def test_linked_fields_2():
     pattern_field = Field(
         tag="853",
         indicators=["0", "1"],
-        subfields=["8", "1", "a", "v.", "b", "no.", "i", "(year)", "j", "(month)"],
+        subfields=[
+            Subfield(code="8", value="1"),
+            Subfield(code="a", value="v."),
+            Subfield(code="b", value="no."),
+            Subfield(code="i", value="(year)"),
+            Subfield(code="j", value="(month)")
+        ],
     )
     linked_value_field1 = Field(
         tag="863",
         indicators=["0", "1"],
-        subfields=["8", "1.1", "a", "34", "b", "48", "i", "2005", "j", "11"],
+        subfields=[
+            Subfield(code="8", value="1.1"),
+            Subfield(code="a", value="34"),
+            Subfield(code="b", value="48"),
+            Subfield(code="i", value="2005"),
+            Subfield(code="j", value="11")
+        ],
     )
     linked_value_field2 = Field(
         tag="863",
         indicators=["0", "1"],
-        subfields=["8", "1.2", "a", "35", "b", "2", "i", "2006", "j", "01"],
+        subfields=[
+            Subfield(code="8", value="1.2"),
+            Subfield(code="a", value="35"),
+            Subfield(code="b", value="2"),
+            Subfield(code="i", value="2006"),
+            Subfield(code="j", value="01")
+        ],
     )
 
     stmt = "v.34:no.48 (2005:Nov.)"
@@ -132,24 +165,24 @@ def test_linked_fields_3():
     pattern_field = Field(
         tag="853",
         indicators=["0", "1"],
-        subfields=["8", "1", "a", "v.", "b", "", "i", "(year)", "j", "(month)"],
+        subfields=[
+            Subfield(code="8", value="1"),
+            Subfield(code="a", value="v."),
+            Subfield(code="b", value=""),
+            Subfield(code="i", value="(year)"),
+            Subfield(code="j", value="(month)")
+        ],
     )
     linked_value_field1 = Field(
         tag="863",
         indicators=["0", "1"],
         subfields=[
-            "8",
-            "1.1",
-            "a",
-            "110-111",
-            "b",
-            "3-3",
-            "i",
-            "2003-2004",
-            "j",
-            "05/06",
-            "w",
-            "n",
+            Subfield(code="8", value="1.1"),
+            Subfield(code="a", value="110-111"),
+            Subfield(code="b", value="3-3"),
+            Subfield(code="i", value="2003-2004"),
+            Subfield(code="j", value="05/06"),
+            Subfield(code="w", value="n"),
         ],
     )
 
@@ -162,24 +195,24 @@ def test_linked_fields_4():
     pattern_field = Field(
         tag="853",
         indicators=["0", "1"],
-        subfields=["8", "1", "a", "v.", "b", "no.", "i", "(year)", "j", "(season)"],
+        subfields=[
+            Subfield(code="8", value="1"),
+            Subfield(code="a", value="v."),
+            Subfield(code="b", value="no."),
+            Subfield(code="i", value="(year)"),
+            Subfield(code="j", value="(season)")
+        ],
     )
     linked_value_field1 = Field(
         tag="863",
         indicators=["0", "1"],
         subfields=[
-            "8",
-            "1.1",
-            "a",
-            "22-41",
-            "b",
-            "1-4",
-            "i",
-            "1992-2011",
-            "j",
-            "21-23",
-            "z",
-            "Print copy cancelled in 2011.",
+            Subfield(code="8", value="1.1"),
+            Subfield(code="a", value="22-41"),
+            Subfield(code="b", value="1-4"),
+            Subfield(code="i", value="1992-2011"),
+            Subfield(code="j", value="21-23"),
+            Subfield(code="z", value="Print copy cancelled in 2011."),
         ],
     )
 
@@ -192,16 +225,17 @@ def test_linked_fields_5():
     pattern_field = Field(
         tag="853",
         indicators=["0", "1"],
-        subfields=["8", "1", "i", "(year)"],
+        subfields=[
+            Subfield(code="8", value="1"),
+            Subfield(code="i", value="(year)")
+        ],
     )
     linked_value_field1 = Field(
         tag="863",
         indicators=["0", "1"],
         subfields=[
-            "8",
-            "1.1",
-            "i",
-            "1946-1947",
+            Subfield(code="8", value="1.1"),
+            Subfield(code="i", value="1946-1947"),
         ],
     )
 
@@ -214,12 +248,23 @@ def test_linked_fields_6():
     pattern_field = Field(
         tag="853",
         indicators=["0", "1"],
-        subfields=["8", "1", "a", "v.", "b", "no.", "i", "(year)", "j", "(month)"],
+        subfields=[
+            Subfield(code="8", value="1"), 
+            Subfield(code="a", value="v."),
+            Subfield(code="b", value="no."),
+            Subfield(code="i", value="(year)"),
+            Subfield(code="j", value="(month)")],
     )
     linked_value_field1 = Field(
         tag="863",
         indicators=["0", "1"],
-        subfields=["8", "1.1", "a", "1-48", "b", "1-4", "i", "1966-2014", "j", "11"],
+        subfields=[
+            Subfield(code="8", value="1.1"),
+            Subfield(code="a", value="1-48"),
+            Subfield(code="b", value="1-4"),
+            Subfield(code="i", value="1966-2014"),
+            Subfield(code="j", value="11")
+        ],
     )
 
     stmt = "v.1:no.1 (1966:Nov.) - v.48:no.4 (2014:Nov.)"
@@ -231,12 +276,24 @@ def test_linked_fields_7():
     pattern_field = Field(
         tag="853",
         indicators=["0", "1"],
-        subfields=["8", "1", "a", "v.", "b", " ", "i", "(year)", "j", "(month)"],
+        subfields=[
+            Subfield(code="8", value="1"),
+            Subfield(code="a", value="v."),
+            Subfield(code="b", value=" "),
+            Subfield(code="i", value="(year)"),
+            Subfield(code="j", value="(month)")
+        ],
     )
     linked_value_field1 = Field(
         tag="863",
         indicators=["0", "1"],
-        subfields=["8", "1.1", "a", "111-111", "b", "5-6", "i", "2004", "j", "09/10-11/12"],
+        subfields=[
+            Subfield(code="8", value="1.1"),
+            Subfield(code="a", value="111-111"),
+            Subfield(code="b", value="5-6"),
+            Subfield(code="i", value="2004"),
+            Subfield(code="j", value="09/10-11/12")
+        ],
     )
 
     stmt = "v.111:5 (2004:Sep./Oct.) - v.111:6 (2004:Nov./Dec.)"

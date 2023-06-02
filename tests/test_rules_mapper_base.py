@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
+from pymarc import Subfield
 from pymarc.reader import MARCReader
 from pymarc.record import Field
 from pymarc.record import Record
@@ -61,12 +62,9 @@ def test_get_first_subfield_value():
         tag="100",
         indicators=["0", "1"],
         subfields=[
-            "e",
-            "puppeteer",
-            "e",
-            "assistant puppeteer",
-            "e",
-            "Executive Vice Puppeteer",
+            Subfield(code="e", value="puppeteer"),
+            Subfield(code="e", value="assistant puppeteer"),
+            Subfield(code="e", value="Executive Vice Puppeteer"),
         ],
     )
     assert marc_field.get_subfields("j", "e")[0] == "puppeteer"
@@ -87,18 +85,15 @@ def test_remove_subfields():
         tag="338",
         indicators=["0", "1"],
         subfields=[
-            "b",
-            "ac",
-            "b",
-            "ab",
-            "i",
-            "ba",
+            Subfield(code="b", value="ac"),
+            Subfield(code="b", value="ab"),
+            Subfield(code="i", value="ba"),
         ],
     )
     new_field = RulesMapperBase.remove_repeated_subfields(marc_field)
     assert len(new_field.subfields_as_dict()) == len(marc_field.subfields_as_dict())
-    assert len(marc_field.subfields) == 6
-    assert len(new_field.subfields) == 4
+    assert len(marc_field.subfields) == 3
+    assert len(new_field.subfields) == 2
 
 
 def test_date_from_008_holding():
@@ -156,8 +151,8 @@ def test_grouped():
             assert isinstance(tf, Field)
             assert tf.tag == "020"
             assert tf.subfields in [
-                ["a", "0870990004 (v. 1)", "c", "20sek"],
-                ["a", "0870990020 (v. 2)", "c", "20sek"],
+                [Subfield(code="a", value="0870990004 (v. 1)"), Subfield(code="c", value="20sek")],
+                [Subfield(code="a", value="0870990020 (v. 2)"), Subfield(code="c", value="20sek")],
             ]
 
         for field in f020s:

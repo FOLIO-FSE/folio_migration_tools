@@ -16,6 +16,7 @@ from folioclient import FolioClient
 from pymarc import Field
 from pymarc import Leader
 from pymarc import Record
+from pymarc import Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -269,6 +270,8 @@ class RulesMapperBase(MapperBase):
         self.report_legacy_mapping(marc_field.tag, True, mapped)
 
     def report_source_and_links(self, marc_field: Field):
+        if marc_field.is_control_field():
+            return
         for subfield_2 in marc_field.get_subfields("2"):
             self.migration_report.add(
                 Blurbs.AuthoritySources, f"Source of heading or term: {subfield_2.split(' ')[0]}"
@@ -630,12 +633,13 @@ class RulesMapperBase(MapperBase):
         results = []
         for sf, sf_vals in marc_field.subfields_as_dict().items():
             if len(sf_vals) == 1:
-                unique_subfields.extend([sf, sf_vals[0]])
+                unique_subfields.append(Subfield(code=sf, value=sf_vals[0]))
             else:
-                repeated_subfields.extend([sf, sf_val] for sf_val in sf_vals)
+                repeated_subfields.extend([Subfield(code=sf, value=sf_val) for sf_val in sf_vals])
         if any(repeated_subfields):
             for repeated_subfield in repeated_subfields:
-                new_subfields = [repeated_subfield[0], repeated_subfield[1], *unique_subfields]
+                new_subfields = [repeated_subfield]
+                new_subfields.extend(unique_subfields)
                 temp_field = Field(
                     tag=marc_field.tag,
                     indicators=marc_field.indicators,
@@ -664,7 +668,7 @@ class RulesMapperBase(MapperBase):
         """
         new_subfields = []
         for sf, sf_vals in marc_field.subfields_as_dict().items():
-            new_subfields.extend([sf, sf_vals[0]])
+            new_subfields.extend([Subfield(code=sf, value=sf_vals[0])])
         return Field(
             tag=marc_field.tag,
             indicators=marc_field.indicators,
