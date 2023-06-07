@@ -7,6 +7,7 @@ from folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from pymarc import Field
 from pymarc import Record
+from pymarc import Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
@@ -123,7 +124,7 @@ class HRIDHandler:
                 new_035 = Field(
                     tag="035",
                     indicators=[" ", " "],
-                    subfields=["a", str_035],
+                    subfields=[Subfield(code="a", value=str_035)],
                 )
                 marc_record.add_ordered_field(new_035)
                 migration_report.add(Blurbs.HridHandling, "Added 035 from 001")

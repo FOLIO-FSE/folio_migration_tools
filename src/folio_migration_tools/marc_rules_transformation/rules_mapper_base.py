@@ -702,7 +702,10 @@ class RulesMapperBase(MapperBase):
             Field(
                 tag="999",
                 indicators=["f", "f"],
-                subfields=["i", folio_record["id"], "s", srs_id],
+                subfields=[
+                    Subfield(code="i", value=folio_record["id"]),
+                    Subfield(code="s", value=srs_id),
+                ],
             )
         )
         # Since they all should be UTF encoded, make the leader align.
