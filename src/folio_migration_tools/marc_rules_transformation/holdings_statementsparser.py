@@ -157,9 +157,11 @@ class HoldingsStatementsParser:
                     f"{field_textual} subfields a, x, and z missing from field",
                     f,
                 )
-            if not (len(f.get_subfields("a")) == 0 or
-                    len(f.get_subfields("z")) == 0 or
-                    len(f.get_subfields("x")) == 0):
+            if not (
+                len(f.get_subfields("a")) == 0
+                or len(f.get_subfields("z")) == 0
+                or len(f.get_subfields("x")) == 0
+            ):
                 raise TransformationFieldMappingError(
                     legacy_ids,
                     f"{field_textual} a,x and z are all empty",
@@ -167,9 +169,9 @@ class HoldingsStatementsParser:
                 )
             return_dict["statements"].append(
                 {
-                    "statement": "".join(f.get_subfields('a')), 
-                    "note": "".join(f.get_subfields("z")), 
-                    "staffNote": "".join(f.get_subfields("x"))
+                    "statement": "".join(f.get_subfields("a")),
+                    "note": "".join(f.get_subfields("z")),
+                    "staffNote": "".join(f.get_subfields("x")),
                 }
             )
             return_dict["migration_report"].append(

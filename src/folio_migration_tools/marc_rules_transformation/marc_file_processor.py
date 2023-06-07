@@ -7,6 +7,7 @@ from typing import List
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Field
 from pymarc import Record
+from pymarc import Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -145,7 +146,7 @@ class MarcFileProcessor:
                     new_035 = Field(
                         tag="035",
                         indicators=[" ", " "],
-                        subfields=["a", former_id],
+                        subfields=[Subfield(code="a", value=former_id)],
                     )
                     marc_record.add_ordered_field(new_035)
         self.mapper.save_source_record(
