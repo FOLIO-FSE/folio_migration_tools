@@ -316,6 +316,7 @@ def test_should_add_identifiers_010_019_020_022_024_028_035(mapper):
     ]
     expected_identifiers = [
         "(OCoLC)ocn898162644",
+        "19049386",
         "PJC 222013 Paris Jazz Corner Productions",
         "1234-1231",
         "62874189",
