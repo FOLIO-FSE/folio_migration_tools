@@ -18,6 +18,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -129,21 +130,36 @@ class LoansMigrator(MigrationTaskBase):
         logging.info("Init completed")
 
     def check_smtp_config(self):
-        okapi_config_base_path = "/configurations/entries"
-        okapi_config_query = "(module=={}%20and%20configName=={}%20and%20code=={})"
-        okapi_config_limit = 1000
-        okapi_config_module = "SMTP_SERVER"
-        okapi_config_name = "smtp"
-        okapi_config_code = "EMAIL_SMTP_HOST_DISABLED"
-        smtp_config_path = (
-            okapi_config_base_path
-            + "?"
-            + str(okapi_config_limit)
-            + "&query="
-            + okapi_config_query.format(okapi_config_module, okapi_config_name, okapi_config_code)
-        )
+        if self.library_configuration.folio_release.lower() == FolioRelease.morning_glory:
+            logging.warn("DEPRECATED: Morning Glory support will be removed in a future release!")
+            okapi_config_base_path = "/configurations/entries"
+            okapi_config_query = "(module=={}%20and%20configName=={}%20and%20code=={})"
+            okapi_config_limit = 1000
+            okapi_config_module = "SMTP_SERVER"
+            okapi_config_name = "smtp"
+            okapi_config_code = "EMAIL_SMTP_HOST_DISABLED"
+            smtp_config_path = (
+                okapi_config_base_path
+                + "?"
+                + str(okapi_config_limit)
+                + "&query="
+                + okapi_config_query.format(
+                    okapi_config_module, okapi_config_name, okapi_config_code
+                )
+            )
+            smtp_config_disabled = self.folio_client.folio_get_single_object(smtp_config_path)[
+                "configs"
+            ]
+        else:
+            try:
+                smtp_config = self.folio_client.folio_get_single_object("/smtp-configuration")[
+                    "smtpConfigurations"
+                ][0]
+                smtp_config_disabled = "disabled" in smtp_config["host"].lower()
+            except IndexError:
+                smtp_config_disabled = True
         print_smtp_warning()
-        if not self.folio_client.folio_get_single_object(smtp_config_path)["configs"]:
+        if not smtp_config_disabled:
             logging.warn("SMTP connection not disabled...")
             for i in range(10, 0, -1):
                 sys.stdout.write("Pausing for {:02d} seconds. Press Ctrl+C to exit...\r".format(i))
