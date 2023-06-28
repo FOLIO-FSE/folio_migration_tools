@@ -15,6 +15,7 @@ from folio_migration_tools.custom_exceptions import TransformationRecordFailedEr
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
 from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
@@ -253,7 +254,10 @@ class RulesMapperHoldings(RulesMapperBase):
         self.pick_first_location_if_many(folio_holding, legacy_ids)
         self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
         HoldingsHelper.handle_notes(folio_holding)
-        if self.task_configuration.create_source_records:
+        if (
+            self.task_configuration.create_source_records
+            or self.task_configuration.hrid_handling == HridHandling.preserve001
+        ):
             self.hrid_handler.handle_hrid(
                 FOLIONamespaces.holdings, folio_holding, marc_record, legacy_ids
             )
