@@ -31,11 +31,11 @@ class HRIDHandler:
         self.handling: HridHandling = handling
         self.migration_report: MigrationReport = migration_report
         self.hrid_settings = self.folio_client.folio_get_single_object(self.hrid_path)
-        self.instance_hrid_prefix = self.hrid_settings["instances"]["prefix"]
+        self.instance_hrid_prefix = self.hrid_settings["instances"].get("prefix", "")
         self.instance_hrid_counter = self.hrid_settings["instances"]["startNumber"]
-        self.holdings_hrid_prefix = self.hrid_settings["holdings"]["prefix"]
+        self.holdings_hrid_prefix = self.hrid_settings["holdings"].get("prefix", "")
         self.holdings_hrid_counter = self.hrid_settings["holdings"]["startNumber"]
-        self.items_hrid_prefix = self.hrid_settings["items"]["prefix"]
+        self.items_hrid_prefix = self.hrid_settings["items"].get("prefix", "")
         self.items_hrid_counter = self.hrid_settings["items"]["startNumber"]
         self.common_retain_leading_zeroes: bool = self.hrid_settings["commonRetainLeadingZeroes"]
         logging.info(f"HRID handling is set to: '{self.handling}'")
