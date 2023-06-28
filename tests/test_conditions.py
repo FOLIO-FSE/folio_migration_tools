@@ -15,7 +15,7 @@ def test_condition_trim_period():
 
 def test_condition_concat_subfields_by_name():
     mock = Mock(spec=Conditions)
-    parameter = {"subfieldsToConcat": ["q"]}
+    parameter = {"subfieldsToConcat": ["q"], "subfieldsToStopConcat": ["z"]}
     legacy_id = "legacy_id"
     marc_field = Field(
         tag="245",
@@ -24,6 +24,8 @@ def test_condition_concat_subfields_by_name():
             Subfield(code="a", value="value"),
             Subfield(code="b", value="from journeyman to master /"),
             Subfield(code="q", value="stuff to concatenate"),
+            Subfield(code="z", value="stop here"),
+            Subfield(code="q", value="more stuff to concatenate"),
         ],
     )
     res = Conditions.condition_concat_subfields_by_name(
