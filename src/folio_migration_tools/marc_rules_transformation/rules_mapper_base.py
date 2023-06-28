@@ -180,7 +180,7 @@ class RulesMapperBase(MapperBase):
         stripped_conds = mapping["rules"][0]["conditions"][0]["type"].split(",")
         condition_types = list(map(str.strip, stripped_conds))
         parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
-        if mapping.get("applyRulesOnConcatenatedData", ""):
+        if mapping.get("applyRulesOnConcatenatedData", ""):  # TODO: implement subfieldDelimiter
             value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
             return self.apply_rule(legacy_id, value, condition_types, marc_field, parameter)
         elif mapping.get("subfield", []):
@@ -189,7 +189,7 @@ class RulesMapperBase(MapperBase):
                 self.apply_rule(legacy_id, x, condition_types, marc_field, parameter)
                 for x in subfields
             ]
-            return " ".join(set(x))
+            return " ".join(dict.fromkeys(x))  # Create an ordered set of unique values before join
         else:
             value1 = marc_field.format_field() if marc_field else ""
             return self.apply_rule(legacy_id, value1, condition_types, marc_field, parameter)
