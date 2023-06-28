@@ -253,7 +253,15 @@ class Conditions:
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
         subfields_to_concat = parameter.get("subfieldsToConcat", [])
-        concat_string = " ".join(marc_field.get_subfields(*subfields_to_concat))
+        subfields_to_stop_concat = parameter.get("subfieldsToStopConcat", [])
+        concat_subfields = []
+        for t in marc_field.subfields:
+            if t[0] in subfields_to_concat:
+                if t[0] not in subfields_to_stop_concat:
+                    concat_subfields.append(t[1])
+                else:
+                    break
+        concat_string = " ".join(concat_subfields)
         return f"{value} {concat_string}"
 
     def condition_get_value_if_subfield_is_empty(
@@ -647,7 +655,7 @@ class Conditions:
                 if normalized_subfield in [cont_type["code"], cont_type["name"]]:
                     return cont_type["name"]
         try:
-            marc_field.get_subfields("j", "e")[0]
+            return value
         except IndexError as ee:
             return ""
 
