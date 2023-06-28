@@ -255,12 +255,12 @@ class Conditions:
         subfields_to_concat = parameter.get("subfieldsToConcat", [])
         subfields_to_stop_concat = parameter.get("subfieldsToStopConcat", [])
         concat_subfields = []
-        for t in marc_field.subfields:
-            if t[0] in subfields_to_concat:
-                if t[0] not in subfields_to_stop_concat:
-                    concat_subfields.append(t[1])
-                else:
-                    break
+        subfields = marc_field.subfields
+        for t in subfields:
+            if t[0] in subfields_to_stop_concat:
+                break
+            elif t[0] in subfields_to_concat:
+                concat_subfields.append(t[1])
         concat_string = " ".join(concat_subfields)
         return f"{value} {concat_string}"
 
