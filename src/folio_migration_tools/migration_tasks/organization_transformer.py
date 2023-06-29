@@ -9,6 +9,7 @@ from hashlib import sha1
 from os.path import isfile
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
@@ -75,39 +76,57 @@ class OrganizationTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.organization_map
         )
+        orgTypeCats: Tuple = ()
+        addressCats: Tuple = ()
+        emailCats: Tuple = ()
+        phoneCats: Tuple = ()
 
-        self.mapper = OrganizationMapper(
-            self.folio_client,
-            self.library_configuration,
-            self.organization_map,
-            self.load_ref_data_mapping_file(
+        if self.task_configuration.organization_types_map_path:
+            orgTypeCats = self.load_ref_data_mapping_file(
                 "organizationTypes",
                 self.folder_structure.mapping_files_folder
                 / self.task_configuration.organization_types_map_path,
                 self.folio_keys,
                 False,
-            ),
-            self.load_ref_data_mapping_file(
-                "addresses[0].categories[0]",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.address_categories_map_path,
-                self.folio_keys,
-                False,
-            ),
-            self.load_ref_data_mapping_file(
-                "emails[0].categories[0]",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.email_categories_map_path,
-                self.folio_keys,
-                False,
-            ),
-            self.load_ref_data_mapping_file(
-                "phoneNumbers[0].categories[0]",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.phone_categories_map_path,
-                self.folio_keys,
-                False,
-            ),
+            )
+        if self.task_configuration.address_categories_map_path:
+            addressCats = (
+                self.load_ref_data_mapping_file(
+                    "addresses[0].categories[0]",
+                    self.folder_structure.mapping_files_folder
+                    / self.task_configuration.address_categories_map_path,
+                    self.folio_keys,
+                    False,
+                ),
+            )
+        if self.task_configuration.email_categories_map_path:
+            emailCats = (
+                self.load_ref_data_mapping_file(
+                    "emails[0].categories[0]",
+                    self.folder_structure.mapping_files_folder
+                    / self.task_configuration.email_categories_map_path,
+                    self.folio_keys,
+                    False,
+                ),
+            )
+        if self.task_configuration.phone_categories_map_path:
+            phoneCats = (
+                self.load_ref_data_mapping_file(
+                    "phoneNumbers[0].categories[0]",
+                    self.folder_structure.mapping_files_folder
+                    / self.task_configuration.phone_categories_map_path,
+                    self.folio_keys,
+                    False,
+                ),
+            )
+        self.mapper = OrganizationMapper(
+            self.folio_client,
+            self.library_configuration,
+            self.organization_map,
+            orgTypeCats,
+            addressCats,
+            emailCats,
+            phoneCats,
         )
 
         self.embedded_extradata_object_cache: set = set()

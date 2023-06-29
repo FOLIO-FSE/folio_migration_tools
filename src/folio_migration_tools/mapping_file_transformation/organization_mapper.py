@@ -73,28 +73,34 @@ class OrganizationMapper(MappingFileMapperBase):
         )
 
         # Perfrom reference data mappings
-        if folio_prop_name == "organizationTypes":
+        if self.organization_types_map and folio_prop_name == "organizationTypes":
             return self.get_mapped_ref_data_value(
                 self.organization_types_map,
                 *value_tuple,
                 False,
             )
 
-        elif re.compile("addresses\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+        elif self.address_categories_map and re.compile(
+            "addresses\[(\d+)\]\.categories\[(\d+)\]"
+        ).fullmatch(folio_prop_name):
             return self.get_mapped_ref_data_value(
                 self.address_categories_map,
                 *value_tuple,
                 False,
             )
 
-        elif re.compile("emails\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+        elif self.email_categories_map and re.compile(
+            "emails\[(\d+)\]\.categories\[(\d+)\]"
+        ).fullmatch(folio_prop_name):
             return self.get_mapped_ref_data_value(
                 self.email_categories_map,
                 *value_tuple,
                 False,
             )
 
-        elif re.compile("phoneNumbers\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+        elif self.phone_categories_map and re.compile(
+            "phoneNumbers\[(\d+)\]\.categories\[(\d+)\]"
+        ).fullmatch(folio_prop_name):
             return self.get_mapped_ref_data_value(
                 self.phone_categories_map,
                 *value_tuple,
