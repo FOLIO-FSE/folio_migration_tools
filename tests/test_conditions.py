@@ -1,5 +1,6 @@
 from unittest.mock import Mock
 
+from folioclient import FolioClient
 from pymarc import Field
 from pymarc import Subfield
 
@@ -12,9 +13,9 @@ def test_condition_trim_period():
     assert res == "value with period"
 
 
-def test_condition():
+def test_condition_concat_subfields_by_name():
     mock = Mock(spec=Conditions)
-    parameter = {"subfieldsToConcat": ["q"]}
+    parameter = {"subfieldsToConcat": ["q"], "subfieldsToStopConcat": ["z"]}
     legacy_id = "legacy_id"
     marc_field = Field(
         tag="245",
@@ -23,9 +24,48 @@ def test_condition():
             Subfield(code="a", value="value"),
             Subfield(code="b", value="from journeyman to master /"),
             Subfield(code="q", value="stuff to concatenate"),
+            Subfield(code="z", value="stop here"),
+            Subfield(code="q", value="more stuff to concatenate"),
         ],
     )
     res = Conditions.condition_concat_subfields_by_name(
-        legacy_id, mock, "value", parameter, marc_field
+        mock, legacy_id, "value", parameter, marc_field
     )
     assert res == "value stuff to concatenate"
+
+
+def test_condition_set_contributor_type_text():
+    mock = Mock(spec=Conditions)
+    folio = Mock(spec=FolioClient)
+    folio.contributor_types = [{"code": "ed", "name": "editor"}]
+    mock.folio = folio
+    legacy_id = "legacy_id"
+    marc_fields = [
+        Field(
+            tag="100",
+            indicators=["1", ""],
+            subfields=[
+                Subfield(code="a", value="Schmitt, John Jacob Jingleheimer"),
+                Subfield(code="e", value="singer,"),
+                Subfield(code="e", value="shouter."),
+            ],
+        ),
+        Field(
+            tag="700",
+            indicators=["1", ""],
+            subfields=[
+                Subfield(code="a", value="Scmitt, John Jacob Jingleheimer"),
+                Subfield(code="e", value="editor."),
+            ],
+        ),
+    ]
+    value_100 = " ".join(marc_fields[0].get_subfields("e"))
+    value_700 = " ".join(marc_fields[1].get_subfields("e"))
+    res_100 = Conditions.condition_set_contributor_type_text(
+        mock, legacy_id, value_100, {}, marc_fields[0]
+    )
+    assert res_100 == "singer, shouter."
+    res_700 = Conditions.condition_set_contributor_type_text(
+        mock, legacy_id, value_700, {}, marc_fields[1]
+    )
+    assert res_700 == "editor"

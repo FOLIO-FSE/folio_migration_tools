@@ -95,9 +95,9 @@ def test_linked_fields_1():
             Subfield(code="8", value="1"),
             Subfield(code="a", value="v."),
             Subfield(code="b", value="no."),
-            Subfield(code="i", value="(year)"), 
+            Subfield(code="i", value="(year)"),
             Subfield(code="j", value="(month)"),
-            Subfield(code="k", value="(day)")
+            Subfield(code="k", value="(day)"),
         ],
     )
     linked_value_field = Field(
@@ -109,7 +109,7 @@ def test_linked_fields_1():
             Subfield(code="b", value="2"),
             Subfield(code="i", value="2006"),
             Subfield(code="j", value="01"),
-            Subfield(code="k", value="09")
+            Subfield(code="k", value="09"),
         ],
     )
 
@@ -127,7 +127,7 @@ def test_linked_fields_2():
             Subfield(code="a", value="v."),
             Subfield(code="b", value="no."),
             Subfield(code="i", value="(year)"),
-            Subfield(code="j", value="(month)")
+            Subfield(code="j", value="(month)"),
         ],
     )
     linked_value_field1 = Field(
@@ -138,7 +138,7 @@ def test_linked_fields_2():
             Subfield(code="a", value="34"),
             Subfield(code="b", value="48"),
             Subfield(code="i", value="2005"),
-            Subfield(code="j", value="11")
+            Subfield(code="j", value="11"),
         ],
     )
     linked_value_field2 = Field(
@@ -149,7 +149,7 @@ def test_linked_fields_2():
             Subfield(code="a", value="35"),
             Subfield(code="b", value="2"),
             Subfield(code="i", value="2006"),
-            Subfield(code="j", value="01")
+            Subfield(code="j", value="01"),
         ],
     )
 
@@ -170,7 +170,7 @@ def test_linked_fields_3():
             Subfield(code="a", value="v."),
             Subfield(code="b", value=""),
             Subfield(code="i", value="(year)"),
-            Subfield(code="j", value="(month)")
+            Subfield(code="j", value="(month)"),
         ],
     )
     linked_value_field1 = Field(
@@ -200,7 +200,7 @@ def test_linked_fields_4():
             Subfield(code="a", value="v."),
             Subfield(code="b", value="no."),
             Subfield(code="i", value="(year)"),
-            Subfield(code="j", value="(season)")
+            Subfield(code="j", value="(season)"),
         ],
     )
     linked_value_field1 = Field(
@@ -225,10 +225,7 @@ def test_linked_fields_5():
     pattern_field = Field(
         tag="853",
         indicators=["0", "1"],
-        subfields=[
-            Subfield(code="8", value="1"),
-            Subfield(code="i", value="(year)")
-        ],
+        subfields=[Subfield(code="8", value="1"), Subfield(code="i", value="(year)")],
     )
     linked_value_field1 = Field(
         tag="863",
@@ -249,11 +246,12 @@ def test_linked_fields_6():
         tag="853",
         indicators=["0", "1"],
         subfields=[
-            Subfield(code="8", value="1"), 
+            Subfield(code="8", value="1"),
             Subfield(code="a", value="v."),
             Subfield(code="b", value="no."),
             Subfield(code="i", value="(year)"),
-            Subfield(code="j", value="(month)")],
+            Subfield(code="j", value="(month)"),
+        ],
     )
     linked_value_field1 = Field(
         tag="863",
@@ -263,7 +261,7 @@ def test_linked_fields_6():
             Subfield(code="a", value="1-48"),
             Subfield(code="b", value="1-4"),
             Subfield(code="i", value="1966-2014"),
-            Subfield(code="j", value="11")
+            Subfield(code="j", value="11"),
         ],
     )
 
@@ -281,7 +279,7 @@ def test_linked_fields_7():
             Subfield(code="a", value="v."),
             Subfield(code="b", value=" "),
             Subfield(code="i", value="(year)"),
-            Subfield(code="j", value="(month)")
+            Subfield(code="j", value="(month)"),
         ],
     )
     linked_value_field1 = Field(
@@ -292,7 +290,7 @@ def test_linked_fields_7():
             Subfield(code="a", value="111-111"),
             Subfield(code="b", value="5-6"),
             Subfield(code="i", value="2004"),
-            Subfield(code="j", value="09/10-11/12")
+            Subfield(code="j", value="09/10-11/12"),
         ],
     )
 

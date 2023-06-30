@@ -1,6 +1,89 @@
 # Changelog
 
-## 1.7.9 (30/03/2023)
+## v1.8.1 (29/06/2023)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Other Changes
+* Update Pymarc Dependency by @jermnelson in https://github.com/FOLIO-FSE/folio_migration_tools/pull/643
+* 639 implement discoverysuppress from file definition for delimited holdings and items by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/640
+* Updating smtp check in loans migrator and bumping codecov action version by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/646
+* Removing failure points for hrid prefix settings being empty by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/650
+* Contributor type text mapping and source=FOLIO holdings hrid handling fixes by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/649
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_0...v_1_8_1
+---
+
+## v_1_8_0 (16/05/2023)
+
+#### Good first issue
+
+- [**Good first issue**][**Documentation**] Update annotations for Bib and MFHD transformer tasks to change wording of files object description [#598](https://github.com/FOLIO-FSE/folio_migration_tools/issues/598)
+
+#### Orders
+
+- [**Orders**] Orders, alternative implementation: fetch and cache vendors only when needed [#634](https://github.com/FOLIO-FSE/folio_migration_tools/issues/634)
+- [**Orders**] Orders report missing Mapped FOLIO fields + total number created is one too few [#627](https://github.com/FOLIO-FSE/folio_migration_tools/issues/627)
+- [**Orders**] acquisitionMethod reference data wildcard mapping not working [#626](https://github.com/FOLIO-FSE/folio_migration_tools/issues/626)
+- [**Orders**] Implement Location mapping for Orders [#515](https://github.com/FOLIO-FSE/folio_migration_tools/issues/515)
+
+#### Organizations
+
+- [**Organizations**] Organizations transformer should create organizaitons_id_map [#635](https://github.com/FOLIO-FSE/folio_migration_tools/issues/635)
+
+#### Simplify migration process
+
+- [**Simplify migration process**] Make the *SV-based mappers add default values from the schemas [#501](https://github.com/FOLIO-FSE/folio_migration_tools/issues/501)
+
+#### Tool enhancements
+
+- [**Tool enhancements**] Replace the current use of requests with something that is faster and more modern... [#553](https://github.com/FOLIO-FSE/folio_migration_tools/issues/553)
+- [**Tool enhancements**][**Organizations**] Make mapping_file_mapper_base split value by subfield delimiter before applying replaceValues rule [#542](https://github.com/FOLIO-FSE/folio_migration_tools/issues/542)
+- [**Tool enhancements**][**Orders**] Add Composite Purchase Orders to BatchPoster [#391](https://github.com/FOLIO-FSE/folio_migration_tools/issues/391)
+- [**Tool enhancements**] Create Composite Purchase Order Mapper Class [#390](https://github.com/FOLIO-FSE/folio_migration_tools/issues/390)
+- [**Tool enhancements**] Include open fee-fines migration into migration_tools [#163](https://github.com/FOLIO-FSE/folio_migration_tools/issues/163)
+
+#### bug
+
+- [**bug**] Read The Docs build is failing: "Could not import extension sphinx.builders.linkcheck" [#625](https://github.com/FOLIO-FSE/folio_migration_tools/issues/625)
+- [**bug**][**Users**] Error when transforming users with addresses [#620](https://github.com/FOLIO-FSE/folio_migration_tools/issues/620)
+- [**bug**][**Orders**] Location map not being loaded properly in migration_task_base [#612](https://github.com/FOLIO-FSE/folio_migration_tools/issues/612)
+- [**bug**] Verify that mapping of boolean values works across *SV-based mappers [#504](https://github.com/FOLIO-FSE/folio_migration_tools/issues/504)
+
+#### closed
+
+- [**closed**] Orders: log that setup process is loading instance map and fetching organizations [#632](https://github.com/FOLIO-FSE/folio_migration_tools/issues/632)
+- [**closed**] Add documentation for Fee/fine transformation [#623](https://github.com/FOLIO-FSE/folio_migration_tools/issues/623)
+- [**closed**] Fees/fines: adjust actionDate to reflect local tenant timezone [#619](https://github.com/FOLIO-FSE/folio_migration_tools/issues/619)
+- [**closed**] Fail fees/fines without a Status (UI-required) [#618](https://github.com/FOLIO-FSE/folio_migration_tools/issues/618)
+- [**closed**] Unmapped fields with a fixed value do not undergo the reference data mapping [#614](https://github.com/FOLIO-FSE/folio_migration_tools/issues/614)
+
+---
+
+## v_1_7_11 (16/04/2023)
+
+#### Orders
+
+- [**Orders**] Added location mapping for PoL locations [#515](https://github.com/FOLIO-FSE/folio_migration_tools/issues/515)
+
+---
+
+## v_1_7_10 (14/04/2023)
+#### Orders
+
+- [**Orders**] Added orders support to BatchPoster task [#391](https://github.com/FOLIO-FSE/folio_migration_tools/issues/391)
+- [**Orders**] Fixed issued with mapping numbers and integers in purchasOrderLines objects on composite purchase orders [#599](https://github.com/FOLIO-FSE/folio_migration_tools/issues/599)
+
+#### Inventory
+
+- [**Inventory**] Remove HRIDs from FOLIO Holdings records when not creating MFHD SRS [#596](https://github.com/FOLIO-FSE/folio_migration_tools/issues/596)
+
+#### Bugs
+
+- [**bug**] Nolana and Orchid are not recognized as valid FOLIO releases [#601](https://github.com/FOLIO-FSE/folio_migration_tools/issues/601)
+---
+
+## v_1_7_9_post1 (30/03/2023)
 
 #### Inventory
 
@@ -556,55 +639,3 @@
 #### reporting
 
 - [**reporting**] Create proper report on suppression for all objects [#145](https://github.com/FOLIO-FSE/folio_migration_tools/issues/145)
-
----
-
-## 1_2_2 (27/04/2022)
-### breaking changes
-Batchposter now allows running multiple files of the same object type in one run, so configuration has changed to facilitate that.
-#### bug
-
-- [**bug**][**wontfix**] Merged BW Holdings are losing their BW part links [#215](https://github.com/FOLIO-FSE/folio_migration_tools/issues/215)
-
-#### simplify_migration_process
-
-- [**simplify_migration_process**] Make BatchPoster more responsive to failing batches  [#108](https://github.com/FOLIO-FSE/folio_migration_tools/issues/108)
-
----
-
-## 1_2_0 (22/04/2022)
-- [**closed**] Halt when instance id maps are empty [#214](https://github.com/FOLIO-FSE/folio_migration_tools/issues/214)
-- [**closed**] Add reporting on legacy fields that get concatenated from being mapped to the same folio field [#212](https://github.com/FOLIO-FSE/folio_migration_tools/issues/212)
-- [**closed**] Report on date parsing results for User expiration and enrollment dates [#209](https://github.com/FOLIO-FSE/folio_migration_tools/issues/209)
-- [**closed**] Add numeric values to sys.exit() calls [#208](https://github.com/FOLIO-FSE/folio_migration_tools/issues/208)
-- [**closed**] test monday status updates [#204](https://github.com/FOLIO-FSE/folio_migration_tools/issues/204)
-- [**enhancement/new feature**] Use the mechanism for logging data issues for open loans and open requests [#194](https://github.com/FOLIO-FSE/folio_migration_tools/issues/194)
-- [**enhancement/new feature**] Include open requests migration to migration tools [#162](https://github.com/FOLIO-FSE/folio_migration_tools/issues/162)
-- [**enhancement/new feature**] Include Open Loans migrations to migration tools [#161](https://github.com/FOLIO-FSE/folio_migration_tools/issues/161)
-- [**simplify_migration_process**] Make the Batchposter handle the failed  batches, running the failed batches one-by-one and only store the "true failures" to disk. [#129](https://github.com/FOLIO-FSE/folio_migration_tools/issues/129)
-- [**simplify_migration_process**] Speed up loans migration [#126](https://github.com/FOLIO-FSE/folio_migration_tools/issues/126)
-- [**simplify_migration_process**] Make it possible to add multiple files to one batchposter run. [#109](https://github.com/FOLIO-FSE/folio_migration_tools/issues/109)
-- [**enhancement/new feature**][**simplify_migration_process**] Validate that all mapped legacy fields correspond to a header in the data [#107](https://github.com/FOLIO-FSE/folio_migration_tools/issues/107)
-- [**wontfix**][**new_folio_functionality**] Add support for migrating MARC Authority records [#90](https://github.com/FOLIO-FSE/folio_migration_tools/issues/90)
-
----
-
-## 1_1_0 (13/04/2022)
-- [**closed**] Consistently handle due time for III day loans to avoid duedate earlier outdate error [#188](https://github.com/FOLIO-FSE/folio_migration_tools/issues/188)
-- [**enhancement/new feature**][**simplify_migration_process**] Publish MARC21-to-FOLIO as Package to PyPi [#77](https://github.com/FOLIO-FSE/folio_migration_tools/issues/77)
--  [**closed**] Speed up loans migration [#126](https://github.com/FOLIO-FSE/folio_migration_tools/issues/126)
--  [**closed**] Include Open Loans migrations to migration tools [#161](https://github.com/FOLIO-FSE/folio_migration_tools/issues/161)
--  [**closed**] Include open requests migration to migration tools [#162](https://github.com/FOLIO-FSE/folio_migration_tools/issues/162)
--  [**won't fix**] Add support for migrating MARC Authority records [#90](https://github.com/FOLIO-FSE/folio_migration_tools/issues/90)
--  [**closed**] Use the mechanism for logging data issues for open loans and open requests [#194](https://github.com/FOLIO-FSE/folio_migration_tools/issues/194)
--  [**closed**] Loans migrations are not handling the fact that the source data is not in UTC [#179](https://github.com/FOLIO-FSE/folio_migration_tools/issues/179)
--  [**closed**] Add setting in config for the timezone for dates transactional data [#176](https://github.com/FOLIO-FSE/folio_migration_tools/issues/176)
-
----
-
-## 1.0.4 Pypi release (04/04/2022)
-<!-- Release notes generated using configuration in .github/release.yml at main -->
-
-
-
-**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/kiwi_1_1...1.0.4
