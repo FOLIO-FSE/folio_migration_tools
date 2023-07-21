@@ -41,13 +41,12 @@ def test_fetch_interfaces_schemas_from_github_happy_path():
 
 # Mock mapper object
 @pytest.fixture(scope="session", autouse=True)
-def mapper(pytestconfig) -> OrganizationMapper:
+def mapper(request, pytestconfig) -> OrganizationMapper:
     okapi_url = "okapi_url"
     tenant_id = "tenant_id"
     username = "username"
     password = "password"  # noqa: S105
 
-    print("init")
     mock_folio_client = mocked_classes.mocked_folio_client()
 
     lib_config = LibraryConfiguration(
@@ -94,6 +93,13 @@ def mapper(pytestconfig) -> OrganizationMapper:
         {"organization_types": "*", "folio_name": "Unspecified"},
     ]
 
+    if hasattr(request, "param"):
+        if not request.param["use_type_maps"]:
+            organization_types_map = []
+            address_categories_map = []
+            email_categories_map = []
+            phone_categories_map = []
+
     return OrganizationMapper(
         mock_folio_client,
         lib_config,
@@ -109,6 +115,19 @@ def test_parse_record_mapping_file(mapper):
     folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(organization_map)
 
     assert folio_keys
+
+
+@pytest.mark.parametrize("mapper", [{"use_type_maps": False}], indirect=["mapper"])
+def test_no_type_maps(mapper):
+    data["code"] = "o1"
+
+    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+
+    # Test string values mapping
+
+    assert organization["code"] == "o1"
+    assert organization["description"] == "Good stuff!"
+    assert organization["status"] == "Active"
 
 
 def test_organization_mapping(mapper):
