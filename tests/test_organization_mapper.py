@@ -94,11 +94,15 @@ def mapper(request, pytestconfig) -> OrganizationMapper:
     ]
 
     if hasattr(request, "param"):
-        if not request.param["use_type_maps"]:
-            organization_types_map = []
-            address_categories_map = []
-            email_categories_map = []
-            phone_categories_map = []
+        maps = [
+            organization_types_map,
+            address_categories_map,
+            email_categories_map,
+            phone_categories_map,
+        ]
+        num = request.param - 1
+        for m in maps[:num]:
+            m.clear()
 
     return OrganizationMapper(
         mock_folio_client,
@@ -117,19 +121,7 @@ def test_parse_record_mapping_file(mapper):
     assert folio_keys
 
 
-@pytest.mark.parametrize("mapper", [{"use_type_maps": False}], indirect=["mapper"])
-def test_no_type_maps(mapper):
-    data["code"] = "o1"
-
-    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-
-    # Test string values mapping
-
-    assert organization["code"] == "o1"
-    assert organization["description"] == "Good stuff!"
-    assert organization["status"] == "Active"
-
-
+@pytest.mark.parametrize("mapper", [1, 2, 3, 4], indirect=["mapper"])
 def test_organization_mapping(mapper):
     data["code"] = "o1"
 

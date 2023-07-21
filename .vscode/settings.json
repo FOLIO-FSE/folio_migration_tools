@@ -1,41 +1,55 @@
 {
-    "python.linting.pylintEnabled": false,
-    "python.linting.enabled": true,
-    "python.testing.pytestArgs": [
-        "tests"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true,
-    "python.analysis.extraPaths": [
-        "./src",
-        "./tests/infrastructure"
-    ],
-    "python.formatting.blackArgs": [
-        "--line-length=99"
-    ],
-    "python.formatting.provider": "black",
-    "python.languageServer": "Pylance",
-    "python.linting.flake8Args": [
-        "--max-line-length=99",
-        "--ignore=E203,W503 ",
-        "--select=B,B9,BLK,C,DAR,E,F,S,W"
-    ],
-    "python.linting.flake8Enabled": true,
-    "python.linting.mypyEnabled": true,
-    "python.sortImports.args": [
-        "--profile",
-        "black",
-        "--force-single-line-imports"
-    ],
-    "[python]": {
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": true
-        }
+  "python.linting.pylintEnabled": false,
+  "python.linting.enabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python.analysis.extraPaths": ["./src", "./tests/infrastructure"],
+  "python.formatting.blackArgs": ["--line-length=99"],
+  "python.formatting.provider": "none",
+  "python.languageServer": "Pylance",
+  "python.linting.flake8Args": [
+    "--max-line-length=99",
+    "--ignore=E203,W503 ",
+    "--select=B,B9,BLK,C,DAR,E,F,S,W"
+  ],
+  "python.linting.flake8Enabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.sortImports.args": [
+    "--profile",
+    "black",
+    "--force-single-line-imports"
+  ],
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": true
     },
-    "grammarly.selectors": [
-        {
-            "language": "markdown",
-            "scheme": "file"
-        }
-    ],
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "grammarly.selectors": [
+    {
+      "language": "markdown",
+      "scheme": "file"
+    }
+  ],
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#79ae6d",
+    "activityBar.background": "#79ae6d",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#5b68a4",
+    "activityBarBadge.foreground": "#e7e7e7",
+    "commandCenter.border": "#e7e7e799",
+    "sash.hoverBorder": "#79ae6d",
+    "statusBar.background": "#5f9653",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#79ae6d",
+    "statusBarItem.remoteBackground": "#5f9653",
+    "statusBarItem.remoteForeground": "#e7e7e7",
+    "titleBar.activeBackground": "#5f9653",
+    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.inactiveBackground": "#5f965399",
+    "titleBar.inactiveForeground": "#e7e7e799"
+  },
+  "peacock.color": "#5f9653"
 }
