@@ -100,9 +100,13 @@ def mapper(request, pytestconfig) -> OrganizationMapper:
             email_categories_map,
             phone_categories_map,
         ]
-        num = request.param - 1
-        for m in maps[:num]:
-            m.clear()
+        if request.param == 0:
+            for m in maps:
+                m.clear()
+        else:
+            num = request.param - 1
+            for m in maps[:num]:
+                m.clear()
 
     return OrganizationMapper(
         mock_folio_client,
@@ -121,7 +125,7 @@ def test_parse_record_mapping_file(mapper):
     assert folio_keys
 
 
-@pytest.mark.parametrize("mapper", [1, 2, 3, 4], indirect=["mapper"])
+@pytest.mark.parametrize("mapper", [0, 1, 2, 3, 4], indirect=["mapper"])
 def test_organization_mapping(mapper):
     data["code"] = "o1"
 
