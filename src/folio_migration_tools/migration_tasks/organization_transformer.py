@@ -76,21 +76,21 @@ class OrganizationTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.organization_map
         )
-        orgTypeCats: Tuple = ()
-        addressCats: Tuple = ()
-        emailCats: Tuple = ()
-        phoneCats: Tuple = ()
+        org_type_cats: Tuple = ()
+        address_cats: Tuple = ()
+        email_cats: Tuple = ()
+        phone_cats: Tuple = ()
 
-        if self.task_configuration.organization_types_map_path:
-            orgTypeCats = self.load_ref_data_mapping_file(
+        if len(self.task_configuration.organization_types_map_path):
+            org_type_cats = self.load_ref_data_mapping_file(
                 "organizationTypes",
                 self.folder_structure.mapping_files_folder
                 / self.task_configuration.organization_types_map_path,
                 self.folio_keys,
                 False,
             )
-        if self.task_configuration.address_categories_map_path:
-            addressCats = (
+        if len(self.task_configuration.address_categories_map_path):
+            address_cats = (
                 self.load_ref_data_mapping_file(
                     "addresses[0].categories[0]",
                     self.folder_structure.mapping_files_folder
@@ -99,8 +99,8 @@ class OrganizationTransformer(MigrationTaskBase):
                     False,
                 ),
             )
-        if self.task_configuration.email_categories_map_path:
-            emailCats = (
+        if len(self.task_configuration.email_categories_map_path):
+            email_cats = (
                 self.load_ref_data_mapping_file(
                     "emails[0].categories[0]",
                     self.folder_structure.mapping_files_folder
@@ -109,8 +109,8 @@ class OrganizationTransformer(MigrationTaskBase):
                     False,
                 ),
             )
-        if self.task_configuration.phone_categories_map_path:
-            phoneCats = (
+        if len(self.task_configuration.phone_categories_map_path):
+            phone_cats = (
                 self.load_ref_data_mapping_file(
                     "phoneNumbers[0].categories[0]",
                     self.folder_structure.mapping_files_folder
@@ -123,10 +123,10 @@ class OrganizationTransformer(MigrationTaskBase):
             self.folio_client,
             self.library_configuration,
             self.organization_map,
-            orgTypeCats,
-            addressCats,
-            emailCats,
-            phoneCats,
+            org_type_cats,
+            address_cats,
+            email_cats,
+            phone_cats,
         )
 
         self.embedded_extradata_object_cache: set = set()
