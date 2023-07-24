@@ -494,11 +494,12 @@ def test_no_type_maps():
     mocked_organization_transformer.embedded_extradata_object_cache = set()
     mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
     mocked_organization_transformer.extradata_writer.cache = []
-    mocked_organization_transformer.TaskConfiguration.task_configuration.address_categories_map = (
-        ""
-    )
-    mocked_organization_transformer.TaskConfiguration.task_configuration.email_categories_map = ""
-    mocked_organization_transformer.TaskConfiguration.task_configuration.phone_categories_map = ""
+    task_configuration = mocked_organization_transformer.TaskConfiguration.task_configuration
+    task_configuration.organization_types_map_path = ""
+    task_configuration.address_categories_map_path = ""
+    task_configuration.email_categories_map_path = ""
+    task_configuration.phone_categories_map_path = ""
+    mocked_organization_transformer.TaskConfiguration.task_configuration = task_configuration
     mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
 
     mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
