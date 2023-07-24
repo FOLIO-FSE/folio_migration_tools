@@ -487,3 +487,35 @@ def test_contact_remove_incomplete_object():
     )
 
     assert len(organization["contacts"]) == 1
+
+
+def test_no_type_maps():
+    mocked_organization_transformer = Mock(spec=OrganizationTransformer)
+    mocked_organization_transformer.embedded_extradata_object_cache = set()
+    mocked_organization_transformer.extradata_writer = ExtradataWriter(Path(""))
+    mocked_organization_transformer.extradata_writer.cache = []
+    mocked_organization_transformer.TaskConfiguration.task_configuration.address_categories_map = (
+        ""
+    )
+    mocked_organization_transformer.TaskConfiguration.task_configuration.email_categories_map = ""
+    mocked_organization_transformer.TaskConfiguration.task_configuration.phone_categories_map = ""
+    mocked_organization_transformer.mapper = Mock(spec=OrganizationMapper)
+
+    mocked_organization_transformer.mapper.migration_report = Mock(spec=MigrationReport)
+    organization = {
+        "name": "YourCompany",
+        "code": "YC",
+        "status": "Active",
+        "contacts": [
+            {
+                "firstName": "June",
+                "lastName": "Day",
+                "addresses": [{"addressLine1": "MyStreet"}, {"city": "Stockholm"}],
+                "phoneNumbers": [{"phoneNumber": "123"}],
+                "emailAddresses": [{"value": "andme(at)me.com"}],
+            },
+        ],
+        "interfaces": [],
+    }
+
+    assert len(organization["contacts"]) == 1
