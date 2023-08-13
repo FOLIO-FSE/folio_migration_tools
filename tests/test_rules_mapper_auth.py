@@ -61,6 +61,7 @@ def test_basic(mapper: AuthorityMapper, caplog):
         assert auth["personalName"] == "Ericsson, Leif KE, 1964-"
         assert auth["personalNameTitle"] == "Ericsson, Leif KE, 1964-"
         assert auth["id"] == "54ac1b25-aa36-566b-a688-030a745ae080"
+        assert auth["naturalId"] == "363723"
         assert all(id["identifierTypeId"] and id["value"] for id in auth["identifiers"])
         assert len(auth["identifiers"]) == 2
         assert auth["source"] == "MARC"
@@ -86,6 +87,8 @@ def test_saft(mapper: AuthorityMapper, caplog):
         record: Record = None
         record = next(reader)
         auth = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])[0]
+        assert auth["naturalId"] == "n2008028538"
+        assert auth["sourceFileId"] == "af045f2f-e851-4613-984c-4bc13430454a"
         assert "Yu, Tanling" in auth["sftPersonalName"]
         assert "于丹翎" in auth["sftPersonalName"]
         assert mapper.mapped_folio_fields["personalNameTitle"] == [1]

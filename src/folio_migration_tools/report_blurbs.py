@@ -274,3 +274,7 @@ class Blurbs:
         "",
     )
     MaterialTypeMapping = ("Mapped Material Types", "")
+    AuthoritySourceFileMapping = (
+        "Authority Source File Mapping Results",
+        "Mappings based on FOLIO authority `naturalId` alpha prefix",
+    )
