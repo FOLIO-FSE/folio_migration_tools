@@ -140,10 +140,10 @@ class AuthorityMapper(RulesMapperBase):
         HRIDHandler.handle_035_generation(
             marc_record, legacy_ids, self.migration_report, False, False
         )
-        self.map_source_file_and_natural_id(marc_record, legacy_ids, folio_authority)
+        self.map_source_file_and_natural_id(marc_record, folio_authority)
         return folio_authority
 
-    def map_source_file_and_natural_id(self, marc_record, legacy_ids, folio_authority):
+    def map_source_file_and_natural_id(self, marc_record, folio_authority):
         """Implement source file and natural ID mappings according to MODDICORE-283"""
         match_prefix_patt = re.compile("^[A-Za-z]+")
         natural_id = None
