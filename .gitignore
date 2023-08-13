@@ -121,3 +121,5 @@ source_data/
 
 .env.json
 poetry.lock
+.DS_Store
+*.mrk

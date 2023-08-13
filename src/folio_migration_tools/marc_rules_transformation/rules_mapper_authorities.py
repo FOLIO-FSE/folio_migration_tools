@@ -1,6 +1,7 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
 import logging
+import re
 import time
 import uuid
 from typing import List
@@ -20,6 +21,7 @@ from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHan
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
+from folio_migration_tools.report_blurbs import Blurbs
 
 
 class AuthorityMapper(RulesMapperBase):
@@ -64,6 +66,8 @@ class AuthorityMapper(RulesMapperBase):
         logging.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-authority"
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
+        self.source_file_mapping = {}
+        self.setup_source_file_mapping()
         self.start = time.time()
 
     def get_legacy_ids(self, marc_record: Record, idx: int) -> List[str]:
@@ -136,8 +140,53 @@ class AuthorityMapper(RulesMapperBase):
         HRIDHandler.handle_035_generation(
             marc_record, legacy_ids, self.migration_report, False, False
         )
-
+        self.map_source_file_and_natural_id(marc_record, legacy_ids, folio_authority)
         return folio_authority
+
+    def map_source_file_and_natural_id(self, marc_record, legacy_ids, folio_authority):
+        """Implement source file and natural ID mappings according to MODDICORE-283"""
+        match_prefix_patt = re.compile("^[A-Za-z]+")
+        natural_id = None
+        source_file_id = None
+        if has_010 := marc_record.get("010"):
+            if has_010a := has_010.get_subfields("a"):
+                for a_subfield in has_010a:
+                    natural_id_prefix = match_prefix_patt.match(a_subfield)
+                    if natural_id_prefix and (
+                        source_file := self.source_file_mapping.get(
+                            natural_id_prefix.group(0), None
+                        )
+                    ):
+                        natural_id = "".join(a_subfield.split())
+                        source_file_id = source_file["id"]
+                        self.migration_report.add_general_statistics("naturalId mapped from 010$a")
+                        self.migration_report.add(
+                            Blurbs.AuthoritySourceFileMapping,
+                            f"{source_file['name']} -- {natural_id_prefix.group(0)} -- 010$a",
+                            number=1,
+                        )
+                        break
+        if not source_file_id:
+            natural_id = "".join(marc_record["001"].data.split())
+            self.migration_report.add_general_statistics("naturalId mapped from 001")
+            natural_id_prefix = match_prefix_patt.match(natural_id)
+            if natural_id_prefix:
+                if source_file := self.source_file_mapping.get(natural_id_prefix.group(0), None):
+                    source_file_id = source_file["id"]
+                    self.migration_report.add(
+                        Blurbs.AuthoritySourceFileMapping,
+                        f"{source_file['name']} -- {natural_id_prefix.group(0)} -- 001",
+                        number=1,
+                    )
+        folio_authority["naturalId"] = natural_id
+        if source_file_id:
+            folio_authority["sourceFileId"] = source_file_id
+
+    def setup_source_file_mapping(self):
+        if self.folio_client.authority_source_files:
+            for source_file in self.folio_client.authority_source_files:
+                for sf_code in source_file.get("codes", []):
+                    self.source_file_mapping[sf_code] = source_file
 
     def perform_additional_parsing(
         self,
