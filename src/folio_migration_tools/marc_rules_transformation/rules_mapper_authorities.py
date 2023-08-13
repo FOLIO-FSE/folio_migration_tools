@@ -148,24 +148,22 @@ class AuthorityMapper(RulesMapperBase):
         match_prefix_patt = re.compile("^[A-Za-z]+")
         natural_id = None
         source_file_id = None
-        if has_010 := marc_record.get("010"):
-            if has_010a := has_010.get_subfields("a"):
-                for a_subfield in has_010a:
-                    natural_id_prefix = match_prefix_patt.match(a_subfield)
-                    if natural_id_prefix and (
-                        source_file := self.source_file_mapping.get(
-                            natural_id_prefix.group(0), None
-                        )
-                    ):
-                        natural_id = "".join(a_subfield.split())
-                        source_file_id = source_file["id"]
-                        self.migration_report.add_general_statistics("naturalId mapped from 010$a")
-                        self.migration_report.add(
-                            Blurbs.AuthoritySourceFileMapping,
-                            f"{source_file['name']} -- {natural_id_prefix.group(0)} -- 010$a",
-                            number=1,
-                        )
-                        break
+        has_010 = marc_record.get("010")
+        if has_010 and (has_010a := has_010.get_subfields("a")):
+            for a_subfield in has_010a:
+                natural_id_prefix = match_prefix_patt.match(a_subfield)
+                if natural_id_prefix and (
+                    source_file := self.source_file_mapping.get(natural_id_prefix.group(0), None)
+                ):
+                    natural_id = "".join(a_subfield.split())
+                    source_file_id = source_file["id"]
+                    self.migration_report.add_general_statistics("naturalId mapped from 010$a")
+                    self.migration_report.add(
+                        Blurbs.AuthoritySourceFileMapping,
+                        f"{source_file['name']} -- {natural_id_prefix.group(0)} -- 010$a",
+                        number=1,
+                    )
+                    break
         if not source_file_id:
             natural_id = "".join(marc_record["001"].data.split())
             self.migration_report.add_general_statistics("naturalId mapped from 001")
