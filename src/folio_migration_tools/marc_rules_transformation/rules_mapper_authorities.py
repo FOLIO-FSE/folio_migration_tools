@@ -13,6 +13,7 @@ from folioclient import FolioClient
 from pymarc import Record
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
@@ -141,6 +142,7 @@ class AuthorityMapper(RulesMapperBase):
             marc_record, legacy_ids, self.migration_report, False, False
         )
         self.map_source_file_and_natural_id(marc_record, folio_authority)
+        self.handle_leader_17(marc_record, legacy_ids)
         return folio_authority
 
     def map_source_file_and_natural_id(self, marc_record, folio_authority):
@@ -185,6 +187,14 @@ class AuthorityMapper(RulesMapperBase):
             for source_file in self.folio_client.authority_source_files:
                 for sf_code in source_file.get("codes", []):
                     self.source_file_mapping[sf_code] = source_file
+
+    def handle_leader_17(self, marc_record, legacy_ids):
+        leader_17 = marc_record.leader[17] or "Empty"
+        self.migration_report.add(Blurbs.AuthorityEncodingLevel, f"Original value: {leader_17}")
+        if leader_17 not in ["n", "o"]:
+            Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
+            marc_record.leader = f"{marc_record.leader[:17]}n{marc_record.leader[18:]}"
+            self.migration_report.add(Blurbs.AuthorityEncodingLevel, f"Changed {leader_17} to n")
 
     def perform_additional_parsing(
         self,

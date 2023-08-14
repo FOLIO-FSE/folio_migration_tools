@@ -278,3 +278,7 @@ class Blurbs:
         "Authority Source File Mapping Results",
         "Mappings based on FOLIO authority `naturalId` alpha prefix",
     )
+    AuthorityEncodingLevel = (
+        "Encoding level (leader pos 17)",
+        "Library action: **All values that are not n or o will be set to n. If this is not what you want, you need to correct these values in your system. **<br/>An overview of the Encoding levels (Leader position 17) present in your source data.  Allowed values according to the MARC standard are n or o",
+    )

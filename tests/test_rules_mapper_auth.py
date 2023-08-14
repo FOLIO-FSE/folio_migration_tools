@@ -96,3 +96,16 @@ def test_saft(mapper: AuthorityMapper, caplog):
         assert mapper.mapped_folio_fields["identifiers.identifierTypeId"] == [1]
         assert mapper.mapped_folio_fields["personalName"] == [1]
         assert mapper.mapped_folio_fields["sftPersonalName"] == [1]
+
+
+def test_invalid_ldr_17(mapper: AuthorityMapper, caplog):
+    path = "./tests/test_data/auth_918643_invalid_ldr17.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record: Record = None
+        record = next(reader)
+        assert record.leader[17] == " "
+        _ = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])[0]
+        assert record.leader[17] == "n"
