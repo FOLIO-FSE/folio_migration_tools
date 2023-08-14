@@ -466,7 +466,7 @@ class BibsRulesMapper(RulesMapperBase):
         languages = {
             str(lang): None
             for lang in self.filter_langs(
-                filter(None, list(languages.keys())), marc_record, legacy_id
+                list(filter(None, languages.keys())), marc_record, legacy_id
             )
             if lang
         }
