@@ -67,7 +67,7 @@ def default_map(file_name, xpath, the_mapper: BibsRulesMapper):
     record = pymarc.parse_xml_to_array(file_path)[0]
     file_def = FileDefinition(file_name="", discovery_suppressed=False, staff_suppressed=False)
     result = the_mapper.parse_record(record, file_def, ["legacy_id"])[0]
-    the_mapper.perform_additional_parsing(result, record, ["legacy_id"], file_def)
+    # the_mapper.perform_additional_parsing(result, record, ["legacy_id"], file_def)
     root = etree.parse(file_path)
     data = ""
     for element in root.xpath(xpath, namespaces=ns):
@@ -271,6 +271,11 @@ def test_should_add_languages_041_a_to_the_languages_list_ignores_non_iso_langua
         assert lang_code not in record[0]["languages"]
     for lang_code in lang_codes:
         assert lang_code in record[0]["languages"]
+    lang_order = {lang: idx for idx, lang in enumerate(record[0]["languages"])}
+    assert lang_order["fre"] == 0
+    assert lang_order["ger"] == 1
+    assert lang_order["eng"] == 2
+    assert lang_order["ita"] == 3
 
 
 def test_should_add_language_found_in_008_where_there_is_no_041(mapper):
