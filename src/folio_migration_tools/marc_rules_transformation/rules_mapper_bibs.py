@@ -162,7 +162,11 @@ class BibsRulesMapper(RulesMapperBase):
 
     def handle_languages(self, folio_instance, marc_record, legacy_ids):
         if "languages" in folio_instance:
-            folio_instance["languages"].extend(self.get_languages(marc_record, legacy_ids))
+            orig_languages = {lang: None for lang in folio_instance["languages"]}
+            orig_languages.update(
+                {lang: None for lang in self.get_languages(marc_record, legacy_ids)}
+            )
+            folio_instance["languages"] = list(orig_languages.keys())
         else:
             folio_instance["languages"] = self.get_languages(marc_record, legacy_ids)
         folio_instance["languages"] = list(
@@ -438,10 +442,10 @@ class BibsRulesMapper(RulesMapperBase):
         return ""
 
     def get_languages_041(self, marc_record, legacy_id):
-        languages = set()
+        languages = dict()
         lang_fields = marc_record.get_fields("041")
         if not any(lang_fields):
-            return set()
+            return dict()
         subfields = "abdefghjkmn"
         for lang_tag in lang_fields:
             if "2" in lang_tag:
@@ -454,14 +458,16 @@ class BibsRulesMapper(RulesMapperBase):
                 lang_code = str(lang_code).lower().replace(" ", "")
                 langlength = len(lang_code)
                 if langlength == 3:
-                    languages.add(lang_code.replace(" ", ""))
+                    languages[lang_code.replace(" ", "")] = None
                 elif langlength > 3 and langlength % 3 == 0:
                     lc = lang_code.replace(" ", "")
-                    new_codes = (lc[i : i + 3] for i in range(0, len(lc), 3))
+                    new_codes = {lc[i : i + 3] for i in range(0, len(lc), 3)}
                     languages.update(new_codes)
-                    languages.discard(lang_code)
-            languages.update()
-        languages = set(self.filter_langs(filter(None, languages), marc_record, legacy_id))
+        languages = {
+            str(lang): None
+            for lang in self.filter_langs(filter(None, languages.keys()), marc_record, legacy_id)
+            if lang
+        }
         return languages
 
     def get_languages(self, marc_record: Record, legacy_id: str) -> List[str]:
@@ -475,10 +481,10 @@ class BibsRulesMapper(RulesMapperBase):
             List[str]: _description_
         """
         languages = self.get_languages_041(marc_record, legacy_id)
-        languages.add(self.get_languages_008(marc_record))
-        for lang in languages:
+        languages[self.get_languages_008(marc_record)] = None
+        for lang in languages.keys():
             self.migration_report.add(Blurbs.LanguagesInRecords, lang)
-        return list(languages)
+        return list(languages.keys())
 
     def fetch_language_codes(self) -> Generator[str, None, None]:
         """Loads the  list of standardized language codes from LoC
