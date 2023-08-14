@@ -67,7 +67,7 @@ class AuthorityMapper(RulesMapperBase):
         logging.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-authority"
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
-        self.source_file_mapping = {}
+        self.source_file_mapping: dict = {}
         self.setup_source_file_mapping()
         self.start = time.time()
 
