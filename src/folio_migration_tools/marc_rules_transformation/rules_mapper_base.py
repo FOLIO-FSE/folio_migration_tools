@@ -131,7 +131,10 @@ class RulesMapperBase(MapperBase):
             # Adding stuff without rules/Conditions.
             # Might need more complex mapping for arrays etc
             if any(mapping["subfield"]):
-                value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+                values = self.handle_sub_field_delimiters(
+                    ",".join(legacy_ids), mapping, marc_field
+                )
+                value = " ".join(values)
             else:
                 value = marc_field.format_field() if marc_field else ""
             self.add_value_to_target(folio_record, target, [value])
@@ -172,13 +175,13 @@ class RulesMapperBase(MapperBase):
                     marc_record["008"].data,
                 )
 
-    def _handle_sub_field_delimiters(
+    def handle_sub_field_delimiters(
         self,
         legacy_id: str,
         mapping,
         marc_field: pymarc.Field,
-        condition_types: List[str],
-        parameter: dict,
+        condition_types: List[str] = None,
+        parameter: dict = None,
     ):
         values: List[str] = []
         if mapping.get("subfield") and (custom_delimiters := mapping.get("subFieldDelimiter")):
@@ -207,7 +210,11 @@ class RulesMapperBase(MapperBase):
                         dict.fromkeys(
                             [
                                 self.apply_rule(
-                                    legacy_id, x, condition_types, marc_field, parameter
+                                    legacy_id,
+                                    x,
+                                    condition_types or [],
+                                    marc_field,
+                                    parameter or {},
                                 )
                                 for x in custom_delimited_string[1]
                             ]
@@ -230,7 +237,7 @@ class RulesMapperBase(MapperBase):
         values: List[str] = []
         if mapping.get("subfield"):
             values.extend(
-                self._handle_sub_field_delimiters(
+                self.handle_sub_field_delimiters(
                     legacy_id, mapping, marc_field, condition_types, parameter
                 )
             )
@@ -361,7 +368,10 @@ class RulesMapperBase(MapperBase):
                 else:
                     return [value]
             elif not mapping.get("rules", []) or not mapping["rules"][0].get("conditions", []):
-                value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+                values = self.handle_sub_field_delimiters(
+                    ",".join(legacy_ids), mapping, marc_field
+                )
+                value = " ".join(values)
             values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
             return values
         except TransformationProcessError as trpe:
