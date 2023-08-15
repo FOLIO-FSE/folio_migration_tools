@@ -172,15 +172,14 @@ class RulesMapperBase(MapperBase):
                     marc_record["008"].data,
                 )
 
-    def get_value_from_condition(
+    def _handle_sub_field_delimiters(
         self,
-        legacy_id,
+        legacy_id: str,
         mapping,
-        marc_field,
+        marc_field: pymarc.Field,
+        condition_types: List[str],
+        parameter: dict,
     ):
-        stripped_conds = mapping["rules"][0]["conditions"][0]["type"].split(",")
-        condition_types = list(map(str.strip, stripped_conds))
-        parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
         values: List[str] = []
         if mapping.get("subfield") and (custom_delimiters := mapping.get("subFieldDelimiter")):
             delimiter_map = {sub_f: " " for sub_f in mapping.get("subfield")}
@@ -217,6 +216,24 @@ class RulesMapperBase(MapperBase):
                 values = [custom_delimited_string[0].join(values)]
         elif mapping.get("subfield", []):
             values.extend(marc_field.get_subfields(*mapping["subfield"]))
+        return values
+
+    def get_value_from_condition(
+        self,
+        legacy_id,
+        mapping,
+        marc_field,
+    ):
+        stripped_conds = mapping["rules"][0]["conditions"][0]["type"].split(",")
+        condition_types = list(map(str.strip, stripped_conds))
+        parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
+        values: List[str] = []
+        if mapping.get("subfield"):
+            values.extend(
+                self._handle_sub_field_delimiters(
+                    legacy_id, mapping, marc_field, condition_types, parameter
+                )
+            )
         else:
             values.append(marc_field.format_field() if marc_field else "")
 
