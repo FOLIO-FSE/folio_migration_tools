@@ -150,11 +150,7 @@ class Conditions:
             FolioRelease.morning_glory,
             FolioRelease.lotus,
         ]:
-            self.authority_source_files = list(
-                self.folio.folio_get_all(
-                    "/authority-source-files", "authoritySourceFiles", self.folio.cql_all, 1000
-                )
-            )
+            self.authority_source_files = self.folio.authority_source_files
             logging.info(f"{len(self.authority_source_files)} \tAuthority source files")
         self.authority_note_types = list(
             self.folio.folio_get_all(

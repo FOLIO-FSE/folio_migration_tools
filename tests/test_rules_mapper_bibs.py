@@ -424,9 +424,9 @@ def test_should_add_subjects_600_610_611_630_647_648_650_651_to_the_subjects_lis
         "B.J. and the Bear. (1906) 1998. [medium] Manuscript. English New International [title]"
         in subject_values
     )
-    assert "Twentieth century Social life and customs" in subject_values
-    assert "Engineering Philosophy", subject_values
-    assert "Aix-en-Provence (France) Philosophy. Early works to 1800" in subject_values
+    assert "Twentieth century--Social life and customs" in subject_values
+    assert "Engineering--Philosophy", subject_values
+    assert "Aix-en-Provence (France)--Philosophy.--Early works to 1800" in subject_values
 
 
 def test_should_add_publications_260_abc_264_abc_to_the_publications_list(mapper):
