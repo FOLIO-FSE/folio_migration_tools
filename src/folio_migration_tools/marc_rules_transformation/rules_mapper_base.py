@@ -220,11 +220,7 @@ class RulesMapperBase(MapperBase):
         else:
             values.append(marc_field.format_field() if marc_field else "")
 
-        if mapping.get("applyRulesOnConcatenatedData", ""):
-            return self.apply_rule(
-                legacy_id, " ".join(values), condition_types, marc_field, parameter
-            )
-        elif mapping.get("subfield", []):
+        if not mapping.get("applyRulesOnConcatenatedData", "") and mapping.get("subfield", []):
             return " ".join(
                 dict.fromkeys(
                     [
