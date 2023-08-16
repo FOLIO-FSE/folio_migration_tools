@@ -192,7 +192,11 @@ class AuthorityMapper(RulesMapperBase):
         leader_17 = marc_record.leader[17] or "Empty"
         self.migration_report.add(Blurbs.AuthorityEncodingLevel, f"Original value: {leader_17}")
         if leader_17 not in ["n", "o"]:
-            Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
+            Helper.log_data_issue(
+                legacy_ids,
+                f"LDR pos. 17 is '{leader_17}'. Is this correct? Value has been changed to 'n'.",
+                marc_record.leader,
+            )
             marc_record.leader = f"{marc_record.leader[:17]}n{marc_record.leader[18:]}"
             self.migration_report.add(Blurbs.AuthorityEncodingLevel, f"Changed {leader_17} to n")
 
