@@ -461,7 +461,7 @@ class BibsRulesMapper(RulesMapperBase):
                     languages[lang_code.replace(" ", "")] = None
                 elif langlength > 3 and langlength % 3 == 0:
                     lc = lang_code.replace(" ", "")
-                    new_codes = {lc[i : i + 3] for i in range(0, len(lc), 3)}
+                    new_codes = {lc[i : i + 3]: None for i in range(0, len(lc), 3)}
                     languages.update(new_codes)
         languages = {
             str(lang): None
@@ -559,7 +559,7 @@ class BibsRulesMapper(RulesMapperBase):
             raise TransformationProcessError("", f"ILS {ils_flavour} not configured")
 
     def get_aleph_bib_id(self, marc_record: Record):
-        res = {f["b"].strip() for f in marc_record.get_fields("998") if "b" in f}
+        res = {f["b"].strip(): None for f in marc_record.get_fields("998") if "b" in f}
         if any(res):
             self.migration_report.add_general_statistics("legacy id from 998$b")
             return list(res)
