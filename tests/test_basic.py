@@ -2,6 +2,7 @@
 import ast
 import json
 import os
+import i18n
 
 import pymarc
 from folio_uuid import FOLIONamespaces
@@ -16,7 +17,6 @@ from folio_migration_tools.marc_rules_transformation.holdings_statementsparser i
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 # flake8: noqa: E501
@@ -50,9 +50,8 @@ def test_dedupe():
     assert len(rec["identifiers"]) == 3
 
 
-def test_blurbs():
-    b = Blurbs.Introduction
-    assert b[0] == "Introduction"
+def test_blurb_internationalization():
+    assert i18n.t("blurbs.Introduction.title") == "Introduction"
 
 
 def test_get_marc_record():

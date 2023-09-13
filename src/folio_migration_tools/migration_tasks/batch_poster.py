@@ -19,7 +19,6 @@ from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
@@ -249,7 +248,7 @@ class BatchPoster(MigrationTaskBase):
 
     def handle_generic_exception(self, exception, last_row, batch, num_records, failed_recs_file):
         logging.error("%s", exception)
-        self.migration_report.add(Blurbs.Details, "Generic exceptions (see log for details)")
+        self.migration_report.add("Details", "Generic exceptions (see log for details)")
         # logging.error("Failed row: %s", last_row)
         self.failed_batches += 1
         self.num_failures += len(batch)
@@ -262,7 +261,7 @@ class BatchPoster(MigrationTaskBase):
             sys.exit(1)
 
     def handle_unicode_error(self, unicode_error, last_row):
-        self.migration_report.add(Blurbs.Details, "Encoding errors")
+        self.migration_report.add("Details", "Encoding errors")
         logging.info("=========ERROR==============")
         logging.info(
             "%s Posting failed. Encoding error reading file",
@@ -313,7 +312,7 @@ class BatchPoster(MigrationTaskBase):
                         failed_user.get("externalSystemId", ""),
                         failed_user.get("errorMessage", ""),
                     )
-                    self.migration_report.add(Blurbs.Details, failed_user.get("errorMessage", ""))
+                    self.migration_report.add("Details", failed_user.get("errorMessage", ""))
             logging.info(
                 (
                     "Posting successful! Total rows: %s Total failed: %s "
@@ -416,15 +415,9 @@ class BatchPoster(MigrationTaskBase):
             logging.info("Done posting %s records. %s failed", self.num_posted, self.num_failures)
 
         run = "second time" if self.performing_rerun else "first time"
-        self.migration_report.set(
-            Blurbs.GeneralStatistics, f"Records processed {run}", self.processed
-        )
-        self.migration_report.set(
-            Blurbs.GeneralStatistics, f"Records posted {run}", self.num_posted
-        )
-        self.migration_report.set(
-            Blurbs.GeneralStatistics, f"Failed to post {run}", self.num_failures
-        )
+        self.migration_report.set("GeneralStatistics", f"Records processed {run}", self.processed)
+        self.migration_report.set("GeneralStatistics", f"Records posted {run}", self.num_posted)
+        self.migration_report.set("GeneralStatistics", f"Failed to post {run}", self.num_failures)
         self.rerun_run()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(

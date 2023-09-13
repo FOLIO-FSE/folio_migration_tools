@@ -25,7 +25,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.transaction_migration.transaction_result import (
@@ -92,12 +91,12 @@ class LoansMigrator(MigrationTaskBase):
                 logging.info("Source data file contains %d rows", total_rows)
                 logging.info("Source data file contains %d empty rows", empty_rows)
                 self.migration_report.set(
-                    Blurbs.GeneralStatistics,
+                    "GeneralStatistics",
                     f"Total rows in {loans_file_path.name}",
                     total_rows,
                 )
                 self.migration_report.set(
-                    Blurbs.GeneralStatistics,
+                    "GeneralStatistics",
                     f"Empty rows in {loans_file_path.name}",
                     empty_rows,
                 )
@@ -203,14 +202,14 @@ class LoansMigrator(MigrationTaskBase):
         res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
 
         if res_checkout.was_successful:
-            self.migration_report.add(Blurbs.Details, "Checked out on first try")
+            self.migration_report.add("Details", "Checked out on first try")
             self.migration_report.add_general_statistics("Successfully checked out")
             self.set_renewal_count(legacy_loan, res_checkout)
             self.set_new_status(legacy_loan, res_checkout)
         elif res_checkout.should_be_retried:
             res_checkout2 = self.handle_checkout_failure(legacy_loan, res_checkout)
             if res_checkout2.was_successful and res_checkout2.folio_loan:
-                self.migration_report.add(Blurbs.Details, "Checked out on second try")
+                self.migration_report.add("Details", "Checked out on second try")
                 self.migration_report.add_general_statistics("Successfully checked out")
                 logging.info("Checked out on second try")
                 self.set_renewal_count(legacy_loan, res_checkout2)
@@ -218,7 +217,7 @@ class LoansMigrator(MigrationTaskBase):
             elif legacy_loan.item_barcode not in self.failed:
                 if res_checkout2.error_message == "Aged to lost and checked out":
                     self.migration_report.add(
-                        Blurbs.Details,
+                        "Details",
                         f"Second failure: {res_checkout2.migration_report_message}",
                     )
                     logging.error(
@@ -232,14 +231,14 @@ class LoansMigrator(MigrationTaskBase):
                     )
                     logging.error("Failed on second try: %s", res_checkout2.error_message)
                     self.migration_report.add(
-                        Blurbs.Details,
+                        "Details",
                         f"Second failure: {res_checkout2.migration_report_message}",
                     )
         elif not res_checkout.should_be_retried:
             logging.error("Failed first time. No retries: %s", res_checkout.error_message)
             self.migration_report.add_general_statistics("Failed loans")
             self.migration_report.add(
-                Blurbs.Details,
+                "Details",
                 f"Failed 1st time. No retries: {res_checkout.migration_report_message}",
             )
             self.failed[legacy_loan.item_barcode] = legacy_loan
@@ -317,7 +316,7 @@ class LoansMigrator(MigrationTaskBase):
                 self.failed[loan.item_barcode] = loan
                 self.migration_report.add_general_statistics("Failed loans")
                 self.migration_report.add(
-                    Blurbs.DiscardedLoans,
+                    "DiscardedLoans",
                     f"Loans discarded. Had migrated item barcode: {has_item_barcode}. "
                     f"Had migrated user barcode: {has_patron_barcode}",
                 )
@@ -350,9 +349,7 @@ class LoansMigrator(MigrationTaskBase):
                     self.migration_report.add_general_statistics("Loans failed pre-validation")
                     self.migration_report.add_general_statistics("Failed loans")
                     for error in legacy_loan.errors:
-                        self.migration_report.add(
-                            Blurbs.DiscardedLoans, f"{error[0]} - {error[1]}"
-                        )
+                        self.migration_report.add("DiscardedLoans", f"{error[0]} - {error[1]}")
                     # Add this loan to failed loans for later correction and re-run.
                     self.failed[
                         legacy_loan.item_barcode or f"no_barcode_{legacy_loan_count}"
@@ -407,7 +404,7 @@ class LoansMigrator(MigrationTaskBase):
             return self.checkout_to_inactice_user(legacy_loan)
         else:
             self.migration_report.add(
-                Blurbs.Details,
+                "Details",
                 f"Other checkout failure: {folio_checkout.error_message}",
             )
             # First failure. Add to list of failed loans
@@ -426,7 +423,7 @@ class LoansMigrator(MigrationTaskBase):
                     f"Duplicate loans (or failed twice) Item barcode: "
                     f"{legacy_loan.item_barcode} Patron barcode: {legacy_loan.patron_barcode}"
                 )
-                self.migration_report.add(Blurbs.Details, "Duplicate loans (or failed twice)")
+                self.migration_report.add("Details", "Duplicate loans (or failed twice)")
                 del self.failed[legacy_loan.item_barcode]
             return TransactionResult(False, False, "", "", "")
 
@@ -438,10 +435,10 @@ class LoansMigrator(MigrationTaskBase):
         self.activate_user(user)
         logging.debug("Successfully Activated user")
         res = self.circulation_helper.check_out_by_barcode(legacy_loan)  # checkout_and_update
-        self.migration_report.add(Blurbs.Details, res.migration_report_message)
+        self.migration_report.add("Details", res.migration_report_message)
         self.deactivate_user(user, expiration_date)
         logging.debug("Successfully Deactivated user again")
-        self.migration_report.add(Blurbs.Details, "Handled inactive users")
+        self.migration_report.add("Details", "Handled inactive users")
         return res
 
     def handle_aged_to_lost_item(self, legacy_loan: LegacyLoan) -> TransactionResult:
@@ -463,7 +460,7 @@ class LoansMigrator(MigrationTaskBase):
             self.set_item_status(legacy_loan)
             s = "Successfully Checked out Aged to lost item and put the status back"
             logging.info(s)
-            self.migration_report.add(Blurbs.Details, s)
+            self.migration_report.add("Details", s)
             return res_checkout
 
     def update_open_loan(self, folio_loan: dict, legacy_loan: LegacyLoan):
@@ -485,18 +482,18 @@ class LoansMigrator(MigrationTaskBase):
             if req.status_code == 422:
                 error_message = json.loads(req.text)["errors"][0]["message"]
                 s = f"Update open loan error: {error_message} {req.status_code}"
-                self.migration_report.add(Blurbs.Details, s)
+                self.migration_report.add("Details", s)
                 logging.error(s)
                 return False
             elif req.status_code in [201, 204]:
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"Successfully updated open loan ({req.status_code})",
                 )
                 return True
             else:
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"Update open loan error http status: {req.status_code}",
                 )
                 req.raise_for_status()
@@ -528,10 +525,10 @@ class LoansMigrator(MigrationTaskBase):
         }
         logging.debug(f"Declare lost data: {json.dumps(data, indent=4)}")
         if self.folio_put_post(declare_lost_url, data, "POST", "Declare item as lost"):
-            self.migration_report.add(Blurbs.Details, "Successfully declared loan as lost")
+            self.migration_report.add("Details", "Successfully declared loan as lost")
         else:
             logging.error(f"Unsuccessfully declared loan {folio_loan} as lost")
-            self.migration_report.add(Blurbs.Details, "Unsuccessfully declared loan as lost")
+            self.migration_report.add("Details", "Unsuccessfully declared loan as lost")
 
     def claim_returned(self, folio_loan):
         claim_returned_url = f"/circulation/loans/{folio_loan['id']}/claim-item-returned"
@@ -543,13 +540,11 @@ class LoansMigrator(MigrationTaskBase):
         }
         logging.debug(f"Claim returned data:\t{json.dumps(data)}")
         if self.folio_put_post(claim_returned_url, data, "POST", "Declare item as lost"):
-            self.migration_report.add(
-                Blurbs.Details, "Successfully declared loan as Claimed returned"
-            )
+            self.migration_report.add("Details", "Successfully declared loan as Claimed returned")
         else:
             logging.error(f"Unsuccessfully declared loan {folio_loan} as Claimed returned")
             self.migration_report.add(
-                Blurbs.Details,
+                "Details",
                 f"Unsuccessfully declared loan {folio_loan} as Claimed returned",
             )
 
@@ -565,7 +560,7 @@ class LoansMigrator(MigrationTaskBase):
             folio_item["status"]["name"] = legacy_loan.next_item_status
             if self.update_item(folio_item):
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"Successfully set item status to {legacy_loan.next_item_status}",
                 )
                 logging.debug(
@@ -580,7 +575,7 @@ class LoansMigrator(MigrationTaskBase):
                     f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
                 )
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"Error setting item status to {legacy_loan.next_item_status}",
                 )
         except Exception as ee:
@@ -593,13 +588,13 @@ class LoansMigrator(MigrationTaskBase):
     def activate_user(self, user):
         user["active"] = True
         self.update_user(user)
-        self.migration_report.add(Blurbs.Details, "Successfully activated user")
+        self.migration_report.add("Details", "Successfully activated user")
 
     def deactivate_user(self, user, expiration_date):
         user["expirationDate"] = expiration_date
         user["active"] = False
         self.update_user(user)
-        self.migration_report.add(Blurbs.Details, "Successfully deactivated user")
+        self.migration_report.add("Details", "Successfully deactivated user")
 
     def update_item(self, item):
         url = f'/item-storage/items/{item["id"]}'
@@ -637,17 +632,17 @@ class LoansMigrator(MigrationTaskBase):
                 error_message = json.loads(resp.text)["errors"][0]["message"]
                 logging.error(error_message)
                 self.migration_report.add(
-                    Blurbs.Details, f"{action_description} error: {error_message}"
+                    "Details", f"{action_description} error: {error_message}"
                 )
                 resp.raise_for_status()
             elif resp.status_code in [201, 204]:
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"Successfully {action_description} ({resp.status_code})",
                 )
             else:
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"{action_description} error. http status: {resp.status_code}",
                 )
 
@@ -669,27 +664,25 @@ class LoansMigrator(MigrationTaskBase):
             )
             if req.status_code == 422:
                 error_message = json.loads(req.text)["errors"][0]["message"]
-                self.migration_report.add(
-                    Blurbs.Details, f"Change due date error: {error_message}"
-                )
+                self.migration_report.add("Details", f"Change due date error: {error_message}")
                 logging.info(
                     f"{error_message}\t",
                 )
-                self.migration_report.add(Blurbs.Details, error_message)
+                self.migration_report.add("Details", error_message)
                 return False
             elif req.status_code == 201:
                 self.migration_report.add(
-                    Blurbs.Details, f"Successfully changed due date ({req.status_code})"
+                    "Details", f"Successfully changed due date ({req.status_code})"
                 )
                 return True, json.loads(req.text), None
             elif req.status_code == 204:
                 self.migration_report.add(
-                    Blurbs.Details, f"Successfully changed due date ({req.status_code})"
+                    "Details", f"Successfully changed due date ({req.status_code})"
                 )
                 return True, None, None
             else:
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"Update open loan error http status: {req.status_code}",
                 )
                 req.raise_for_status()

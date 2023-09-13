@@ -21,7 +21,6 @@ from folio_migration_tools.mapping_file_transformation.notes_mapper import Notes
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class CompositeOrderMapper(MappingFileMapperBase):
@@ -64,7 +63,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "acquisitionMethods",
             acquisition_method_map,
             "value",
-            Blurbs.AcquisitionMethodMapping,
+            "AcquisitionMethodMapping",
         )
         logging.info("Init done")
         self.location_mapping = RefDataMapping(
@@ -73,7 +72,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "locations",
             location_map,
             "code",
-            Blurbs.OrderLineLocationMapping,
+            "OrderLineLocationMapping",
         )
 
         self.folio_client: FolioClient = folio_client
@@ -398,7 +397,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
     def get_folio_organization_uuid(self, index_or_id, org_code):
         if self.organizations_id_map:
             self.migration_report.add(
-                Blurbs.PurchaseOrderVendorLinking,
+                "PurchaseOrderVendorLinking",
                 "Organizations linked using organizations_id_map",
             )
             if matching_org := self.organizations_id_map.get(org_code):
@@ -413,14 +412,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "organizations",
         ):
             self.migration_report.add(
-                Blurbs.PurchaseOrderVendorLinking,
+                "PurchaseOrderVendorLinking",
                 "Organizations not in ID map, linked using FOLIO lookup",
             )
             return matching_org["id"]
 
         else:
             self.migration_report.add(
-                Blurbs.PurchaseOrderVendorLinking,
+                "PurchaseOrderVendorLinking",
                 "RECORD FAILED Organization identifier not in ID map/FOLIO",
             )
             raise TransformationRecordFailedError(
@@ -432,13 +431,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
     def get_folio_instance_uuid(self, index_or_id, bib_id):
         if matching_instance := self.instance_id_map.get(bib_id):
             self.migration_report.add(
-                Blurbs.PurchaseOrderInstanceLinking,
+                "PurchaseOrderInstanceLinking",
                 "Instances linked using instances_id_map",
             )
             return matching_instance[1]
         else:
             self.migration_report.add(
-                Blurbs.PurchaseOrderInstanceLinking,
+                "PurchaseOrderInstanceLinking",
                 "Bib identifier not in instances_id_map, no instance linked",
             )
             Helper.log_data_issue(

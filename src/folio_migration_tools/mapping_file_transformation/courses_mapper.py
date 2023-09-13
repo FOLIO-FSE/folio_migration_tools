@@ -14,7 +14,6 @@ from folio_migration_tools.mapping_file_transformation.notes_mapper import Notes
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class CoursesMapper(MappingFileMapperBase):
@@ -54,7 +53,7 @@ class CoursesMapper(MappingFileMapperBase):
                 "terms",
                 terms_map,
                 "name",
-                Blurbs.TermsMapping,
+                "TermsMapping",
             )
         else:
             self.terms_map = None
@@ -66,7 +65,7 @@ class CoursesMapper(MappingFileMapperBase):
                 "departments",
                 departments_map,
                 "name",
-                Blurbs.DepartmentsMapping,
+                "DepartmentsMapping",
             )
         else:
             self.departments_map = None
@@ -162,7 +161,7 @@ class CoursesMapper(MappingFileMapperBase):
         ):
             return mapped_value
         else:
-            self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")
+            self.migration_report.add("UnmappedProperties", f"{folio_prop_name}")
             return ""
 
     def get_composite_course_schema(self) -> Dict[str, Any]:

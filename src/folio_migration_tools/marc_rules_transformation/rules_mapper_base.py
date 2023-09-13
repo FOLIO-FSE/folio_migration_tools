@@ -27,7 +27,6 @@ from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class RulesMapperBase(MapperBase):
@@ -291,14 +290,12 @@ class RulesMapperBase(MapperBase):
     def perform_proxy_mapping(self, marc_field):
         proxy_mapping = next(iter(self.mappings.get("880", [])), [])
         if "6" not in marc_field:
-            self.migration_report.add(Blurbs.Field880Mappings, "Records without $6")
+            self.migration_report.add("Field880Mappings", "Records without $6")
             return None
         if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
             return None
         if not marc_field["6"][:3] or len(marc_field["6"][:3]) != 3:
-            self.migration_report.add(
-                Blurbs.Field880Mappings, "Records with unexpected length in $6"
-            )
+            self.migration_report.add("Field880Mappings", "Records with unexpected length in $6")
             return None
         first_three = marc_field["6"][:3]
 
@@ -311,13 +308,13 @@ class RulesMapperBase(MapperBase):
             first_three,
         )
         self.migration_report.add(
-            Blurbs.Field880Mappings,
+            "Field880Mappings",
             f"Source digits: {marc_field['6']} Target field: {target_field}",
         )
         mappings = self.mappings.get(target_field, {})
         if not mappings:
             self.migration_report.add(
-                Blurbs.Field880Mappings,
+                "Field880Mappings",
                 f"Mapping not set up for target field: {target_field} ({marc_field['6']})",
             )
         return mappings
@@ -325,7 +322,7 @@ class RulesMapperBase(MapperBase):
     def report_marc_stats(
         self, marc_field: Field, bad_tags, legacy_ids, ignored_subsequent_fields
     ):
-        self.migration_report.add(Blurbs.Trivia, "Total number of Tags processed")
+        self.migration_report.add("Trivia", "Total number of Tags processed")
         self.report_source_and_links(marc_field)
         self.report_bad_tags(marc_field, bad_tags, legacy_ids)
         mapped = marc_field.tag in self.mappings
@@ -338,7 +335,7 @@ class RulesMapperBase(MapperBase):
             return
         for subfield_2 in marc_field.get_subfields("2"):
             self.migration_report.add(
-                Blurbs.AuthoritySources, f"Source of heading or term: {subfield_2.split(' ')[0]}"
+                "AuthoritySources", f"Source of heading or term: {subfield_2.split(' ')[0]}"
             )
         for subfield_0 in marc_field.get_subfields("0"):
             code = ""
@@ -350,7 +347,7 @@ class RulesMapperBase(MapperBase):
                     code = subfield_0[: subfield_0.find(url.path)]
             if code:
                 self.migration_report.add(
-                    Blurbs.AuthoritySources, f"$0 base uri or source code: {code}"
+                    "AuthoritySources", f"$0 base uri or source code: {code}"
                 )
 
     def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
@@ -377,7 +374,7 @@ class RulesMapperBase(MapperBase):
         except TransformationProcessError as trpe:
             self.handle_transformation_process_error(self.parsed_records, trpe)
         except TransformationFieldMappingError as fme:
-            self.migration_report.add(Blurbs.FieldMappingErrors, fme.message)
+            self.migration_report.add("FieldMappingErrors", fme.message)
             fme.data_value = (
                 f"{fme.data_value} MARCField: {marc_field} Mapping: {json.dumps(mapping)}"
             )
@@ -400,7 +397,7 @@ class RulesMapperBase(MapperBase):
             and marc_field.tag != "LDR"
             and marc_field.tag not in bad_tags
         ):
-            self.migration_report.add(Blurbs.NonNumericTagsInRecord, marc_field.tag)
+            self.migration_report.add("NonNumericTagsInRecord", marc_field.tag)
             message = "Non-numeric tags in records"
             Helper.log_data_issue(legacy_ids, message, marc_field.tag)
             bad_tags.add(marc_field.tag)
@@ -485,9 +482,7 @@ class RulesMapperBase(MapperBase):
                 value = [str(parse(value[0], fuzzy=True).date())]
             except Exception as ee:
                 Helper.log_data_issue("", f"Could not parse catalogedDate: {ee}", value)
-                self.migration_report.add(
-                    Blurbs.FieldMappingErrors, "Could not parse catalogedDate"
-                )
+                self.migration_report.add("FieldMappingErrors", "Could not parse catalogedDate")
         if not target_string or target_string not in sch:
             raise TransformationFieldMappingError(
                 "",
@@ -611,7 +606,7 @@ class RulesMapperBase(MapperBase):
                 )
                 pattern = " - ".join(f"{k}:'{bool(v)}'" for k, v in entity.items())
                 self.migration_report.add(
-                    Blurbs.IncompleteEntityMapping,
+                    "IncompleteEntityMapping",
                     f"{marc_field.tag} {sfs} ->>-->> {e_parent} {pattern}  ",
                 )
                 # Experimental
@@ -622,17 +617,17 @@ class RulesMapperBase(MapperBase):
     ):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
-            Blurbs.Suppression,
+            "Suppression",
             f'Suppressed from discovery = {folio_record["discoverySuppress"]}',
         )
         if not only_discovery_suppress:
             folio_record["staffSuppress"] = file_def.staff_suppressed
             self.migration_report.add(
-                Blurbs.Suppression, f'Staff suppressed = {folio_record["staffSuppress"]} '
+                "Suppression", f'Staff suppressed = {folio_record["staffSuppress"]} '
             )
 
     def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
-        self.migration_report.add(Blurbs.PrecedingSuccedingTitles, f"{e_parent} created")
+        self.migration_report.add("PrecedingSuccedingTitles", f"{e_parent} created")
         # TODO: Make these uuids deterministic
         new_entity = {
             "id": str(uuid.uuid4()),

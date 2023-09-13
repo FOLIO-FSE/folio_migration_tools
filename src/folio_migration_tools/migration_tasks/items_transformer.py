@@ -26,7 +26,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 )
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -211,7 +210,7 @@ class ItemsTransformer(MigrationTaskBase):
                     logging.exception(error_str, stack_info=True)
                     logging.fatal("Check source files for empty rows or missing reference data.")
                     self.mapper.migration_report.add(
-                        Blurbs.FailedFiles, f"{file_def.file_name} - {exception}"
+                        "FailedFiles", f"{file_def.file_name} - {exception}"
                     )
                     logging.fatal(error_str)
                     sys.exit(1)
@@ -273,7 +272,7 @@ class ItemsTransformer(MigrationTaskBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
-                    Blurbs.GeneralStatistics,
+                    "GeneralStatistics",
                     f"Number of Legacy items in {file_def}",
                 )
                 self.mapper.migration_report.add_general_statistics(

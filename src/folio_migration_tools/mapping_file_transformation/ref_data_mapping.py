@@ -15,11 +15,11 @@ class RefDataMapping(object):
         array_name,
         the_map,
         key_type,
-        blurb,
+        blurb_id,
     ):
         self.name = array_name
         self.cache: dict = {}
-        self.blurb = blurb
+        self.blurb_id = blurb_id
         logging.info("%s reference data mapping. Initializing", self.name)
         logging.info("Fetching %s reference data from FOLIO", self.name)
         self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name, "", 1000))

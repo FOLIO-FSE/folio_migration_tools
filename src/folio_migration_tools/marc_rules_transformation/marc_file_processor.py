@@ -19,7 +19,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MarcFileProcessor:
@@ -134,7 +133,7 @@ class MarcFileProcessor:
                 )
                 marc_record["008"].data = remain
                 self.mapper.migration_report.add(
-                    Blurbs.MarcValidation,
+                    "MarcValidation",
                     f"008 lenght invalid. '{rest}' was stripped out",
                 )
             self.add_mapped_location_code_to_record(marc_record, folio_rec)
@@ -178,10 +177,10 @@ class MarcFileProcessor:
         while old_b := first_852.delete_subfield("b"):
             first_852.add_subfield("x", old_b, 0)
             self.mapper.migration_report.add(
-                Blurbs.LocationMapping, "Additional 852$b was moved to 852$x"
+                "LocationMapping", "Additional 852$b was moved to 852$x"
             )
         first_852.add_subfield("b", location_code, 0)
-        self.mapper.migration_report.add(Blurbs.LocationMapping, "Set 852 to FOLIO location code")
+        self.mapper.migration_report.add("LocationMapping", "Set 852 to FOLIO location code")
 
     def exit_on_too_many_exceptions(self):
         if (

@@ -12,7 +12,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class HoldingsMapper(MappingFileMapperBase):
@@ -44,7 +43,7 @@ class HoldingsMapper(MappingFileMapperBase):
             "locations",
             location_map,
             "code",
-            Blurbs.LocationMapping,
+            "LocationMapping",
         )
         if call_number_type_map:
             self.call_number_mapping = RefDataMapping(
@@ -53,7 +52,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 "callNumberTypes",
                 call_number_type_map,
                 "name",
-                Blurbs.CallNumberTypeMapping,
+                "CallNumberTypeMapping",
             )
 
     def perform_additional_mappings(self, folio_rec, file_def):
@@ -62,7 +61,7 @@ class HoldingsMapper(MappingFileMapperBase):
     def handle_suppression(self, folio_record, file_def: FileDefinition):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
-            Blurbs.Suppression,
+            "Suppression",
             f'Suppressed from discovery = {folio_record["discoverySuppress"]}',
         )
 
@@ -84,14 +83,14 @@ class HoldingsMapper(MappingFileMapperBase):
         elif mapped_value:
             return mapped_value
         else:
-            self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")
+            self.migration_report.add("UnmappedProperties", f"{folio_prop_name}")
             return ""
 
     def get_call_number(self, legacy_value):
         if legacy_value.startswith("[") and len(legacy_value.split(",")) > 1:
             self.migration_report.add_general_statistics("Bound-with items callnumber identified")
             self.migration_report.add(
-                Blurbs.BoundWithMappings,
+                "BoundWithMappings",
                 (f"Number of bib-level callnumbers in record: {len(legacy_value.split(','))}"),
             )
         return legacy_value
@@ -112,7 +111,7 @@ class HoldingsMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
             )
-        self.migration_report.add(Blurbs.CallNumberTypeMapping, "No Call Number Type Mapping")
+        self.migration_report.add("CallNumberTypeMapping", "No Call Number Type Mapping")
         return ""
 
     def get_instance_ids(self, legacy_value: str, index_or_id: str):
@@ -120,7 +119,7 @@ class HoldingsMapper(MappingFileMapperBase):
         return_ids = []
         legacy_bib_ids = self.get_legacy_bib_ids(legacy_value, index_or_id)
         self.migration_report.add(
-            Blurbs.BoundWithMappings,
+            "BoundWithMappings",
             f"Number of bib records referenced in item: {len(legacy_bib_ids)}",
         )
         for legacy_instance_id in legacy_bib_ids:
@@ -160,7 +159,7 @@ class HoldingsMapper(MappingFileMapperBase):
                     "Bound-with items identified by bib id"
                 )
                 self.migration_report.add(
-                    Blurbs.GeneralStatistics,
+                    "GeneralStatistics",
                     "Bib ids referenced in bound-with items",
                     new_value_len,
                 )
