@@ -1,7 +1,7 @@
 import json
 import logging
 import sys
-from os import path
+from pathlib import Path
 
 import httpx
 import humps
@@ -15,11 +15,7 @@ from folio_migration_tools.migration_tasks import migration_task_base
 
 import i18n
 
-i18n.set("file_format", "json")
-i18n.set("skip_locale_root_data", True)
-i18n.set("fallback", "en")
-i18n.set("filename_format", "{locale}.{format}")
-i18n.load_path.append(path.join(path.dirname(__file__), "../../translations"))
+i18n.load_config(Path(__file__).parents[2] / "i18n_config.py")
 
 
 def parse_args():
