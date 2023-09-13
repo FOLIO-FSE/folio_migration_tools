@@ -22,7 +22,6 @@ from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHan
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class AuthorityMapper(RulesMapperBase):
@@ -161,7 +160,7 @@ class AuthorityMapper(RulesMapperBase):
                     source_file_id = source_file["id"]
                     self.migration_report.add_general_statistics("naturalId mapped from 010$a")
                     self.migration_report.add(
-                        Blurbs.AuthoritySourceFileMapping,
+                        "AuthoritySourceFileMapping",
                         f"{source_file['name']} -- {natural_id_prefix.group(0)} -- 010$a",
                         number=1,
                     )
@@ -174,7 +173,7 @@ class AuthorityMapper(RulesMapperBase):
                 if source_file := self.source_file_mapping.get(natural_id_prefix.group(0), None):
                     source_file_id = source_file["id"]
                     self.migration_report.add(
-                        Blurbs.AuthoritySourceFileMapping,
+                        "AuthoritySourceFileMapping",
                         f"{source_file['name']} -- {natural_id_prefix.group(0)} -- 001",
                         number=1,
                     )
@@ -190,7 +189,7 @@ class AuthorityMapper(RulesMapperBase):
 
     def handle_leader_17(self, marc_record, legacy_ids):
         leader_17 = marc_record.leader[17] or "Empty"
-        self.migration_report.add(Blurbs.AuthorityEncodingLevel, f"Original value: {leader_17}")
+        self.migration_report.add("AuthorityEncodingLevel", f"Original value: {leader_17}")
         if leader_17 not in ["n", "o"]:
             Helper.log_data_issue(
                 legacy_ids,
@@ -198,7 +197,7 @@ class AuthorityMapper(RulesMapperBase):
                 marc_record.leader,
             )
             marc_record.leader = f"{marc_record.leader[:17]}n{marc_record.leader[18:]}"
-            self.migration_report.add(Blurbs.AuthorityEncodingLevel, f"Changed {leader_17} to n")
+            self.migration_report.add("AuthorityEncodingLevel", f"Changed {leader_17} to n")
 
     def perform_additional_parsing(
         self,

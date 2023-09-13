@@ -24,7 +24,6 @@ from folio_migration_tools.mapping_file_transformation.organization_mapper impor
     OrganizationMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -209,7 +208,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     "Check source files for empty rows or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
+                self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
     def wrap_up(self):
@@ -279,7 +278,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 valid_interfaces.append(interface)
             else:
                 self.mapper.migration_report.add(
-                    Blurbs.MalformedInterfaceUri,
+                    "MalformedInterfaceUri",
                     "Interfaces",
                 )
                 Helper.log_data_issue(

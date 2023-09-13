@@ -10,8 +10,6 @@ from pymarc import MARCReader
 from pymarc import Record
 from pymarc import Subfield
 
-from folio_migration_tools.report_blurbs import Blurbs
-
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
@@ -66,11 +64,8 @@ def test_handle_suppression_set_false(mapper):
     mapper.handle_suppression(folio_instance, file_def)
     assert folio_instance.get("staffSuppress") is False
     assert folio_instance.get("discoverySuppress") is False
-    assert (
-        mapper.migration_report.report[Blurbs.Suppression[0]]["Suppressed from discovery = False"]
-        == 1
-    )
-    assert mapper.migration_report.report[Blurbs.Suppression[0]]["Staff suppressed = False "] == 1
+    assert mapper.migration_report.report["Suppression"]["Suppressed from discovery = False"] == 1
+    assert mapper.migration_report.report["Suppression"]["Staff suppressed = False "] == 1
 
 
 def test_handle_suppression_set_true(mapper):
@@ -79,11 +74,8 @@ def test_handle_suppression_set_true(mapper):
     mapper.handle_suppression(folio_instance, file_def)
     assert folio_instance.get("staffSuppress") is True
     assert folio_instance.get("discoverySuppress") is True
-    assert (
-        mapper.migration_report.report[Blurbs.Suppression[0]]["Suppressed from discovery = True"]
-        == 1
-    )
-    assert mapper.migration_report.report[Blurbs.Suppression[0]]["Staff suppressed = True "] == 1
+    assert mapper.migration_report.report["Suppression"]["Suppressed from discovery = True"] == 1
+    assert mapper.migration_report.report["Suppression"]["Staff suppressed = True "] == 1
 
 
 def test_get_folio_id_by_code_except(mapper, caplog):
@@ -449,7 +441,7 @@ def test_get_folio_id_by_name(mapper, caplog):
     assert not caplog.text
     assert (
         "Successful matching on 337$a & 338$a - audio -- audio belt->audio -- audio belt"
-        in mapper.migration_report.report[Blurbs.InstanceFormat[0]]
+        in mapper.migration_report.report["InstanceFormat"]
     )
     assert res == "0d9b1c3d-2d13-4f18-9472-cc1b91bf1752"
 

@@ -11,7 +11,6 @@ from httpx import HTTPError
 
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
 from folio_migration_tools.transaction_migration.transaction_result import (
@@ -197,7 +196,7 @@ class CirculationHelper:
                     f"Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
                 )
-                self.migration_report.add(Blurbs.Details, stat_message)
+                self.migration_report.add("Details", stat_message)
                 return TransactionResult(
                     False, True, None, error_message, f"Check out error: {stat_message}"
                 )
@@ -272,7 +271,7 @@ class CirculationHelper:
                 return True
         except Exception as exception:
             logging.error(exception, exc_info=True)
-            migration_report.add(Blurbs.Details, exception)
+            migration_report.add("Details", exception)
             Helper.log_data_issue(
                 legacy_request.item_barcode,
                 exception,

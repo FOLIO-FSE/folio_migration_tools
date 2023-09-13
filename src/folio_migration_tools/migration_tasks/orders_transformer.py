@@ -24,7 +24,6 @@ from folio_migration_tools.mapping_file_transformation.order_mapper import (
     CompositeOrderMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -219,7 +218,7 @@ class OrdersTransformer(MigrationTaskBase):
                     "Check source files for empty lines or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
+                self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
     def wrap_up(self):
@@ -264,4 +263,4 @@ class OrdersTransformer(MigrationTaskBase):
                     "Rows merged to create Purchase Orders"
                 )
             for key in diff.affected_paths:
-                self.mapper.migration_report.add(Blurbs.DiffsBetweenOrders, key)
+                self.mapper.migration_report.add("DiffsBetweenOrders", key)

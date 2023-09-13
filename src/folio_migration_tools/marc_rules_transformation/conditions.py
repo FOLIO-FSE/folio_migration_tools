@@ -13,7 +13,6 @@ from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 # flake8: noqa: s
 
@@ -189,7 +188,7 @@ class Conditions:
             )
             if not t:
                 self.mapper.migration_report.add(
-                    Blurbs.ContributorTypeMapping,
+                    "ContributorTypeMapping",
                     (
                         f'Mapping failed for ${contributor_code_subfield} "{subfield}" '
                         f"({normalized_subfield}) "
@@ -202,7 +201,7 @@ class Conditions:
                 )
             else:
                 self.mapper.migration_report.add(
-                    Blurbs.ContributorTypeMapping,
+                    "ContributorTypeMapping",
                     (
                         f"Contributor type code {t[1]} found for ${contributor_code_subfield} "
                         f'"{subfield}" ({normalized_subfield}))'
@@ -219,7 +218,7 @@ class Conditions:
 
             if not t:
                 self.mapper.migration_report.add(
-                    Blurbs.ContributorTypeMapping,
+                    "ContributorTypeMapping",
                     (
                         f"Mapping failed for {marc_field.tag} ${contributor_name_subfield} "
                         f"{subfield} (Normalized: {normalized_subfield}) "
@@ -232,7 +231,7 @@ class Conditions:
                 )
             else:
                 self.mapper.migration_report.add(
-                    Blurbs.ContributorTypeMapping,
+                    "ContributorTypeMapping",
                     (
                         f"Contributor type name {t[1]} found for {marc_field.tag} "
                         f"${contributor_name_subfield} {normalized_subfield} ({subfield}) "
@@ -242,7 +241,7 @@ class Conditions:
         return ""
 
     def condition_set_holdings_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
-        self.mapper.migration_report.add(Blurbs.HoldingsTypeMapping, "Condition in rules hit")
+        self.mapper.migration_report.add("HoldingsTypeMapping", "Condition in rules hit")
         return ""
 
     def condition_concat_subfields_by_name(
@@ -266,7 +265,7 @@ class Conditions:
         if value.strip():
             return value.strip()
         self.mapper.migration_report.add(
-            Blurbs.AddedValueFromParameter,
+            "AddedValueFromParameter",
             f"Tag: {marc_field.tag}. Added value: {parameter['value']}",
         )
         return parameter["value"]
@@ -288,13 +287,13 @@ class Conditions:
                 self.folio.instance_formats, "instance_formats_code", value
             )
             self.mapper.migration_report.add(
-                Blurbs.InstanceFormat,
+                "InstanceFormat",
                 f'Successful match  - "{value}"->{t[1]}',
             )
             return t[0]
         except Exception:
             self.mapper.migration_report.add(
-                Blurbs.InstanceFormat,
+                "InstanceFormat",
                 f'Code from 338$b NOT found in FOLIO: "{value}"',
             )
 
@@ -332,7 +331,7 @@ class Conditions:
         }
         role = roles.get(marc_field.indicator2, "")
         self.mapper.migration_report.add(
-            Blurbs.MappedPublisherRoleFromIndicator2,
+            "MappedPublisherRoleFromIndicator2",
             f"{marc_field.tag} ind2 {marc_field.indicator2}->{role}",
         )
         return role
@@ -354,7 +353,7 @@ class Conditions:
                     parameter["names"][0],
                 )
             self.mapper.migration_report.add(
-                Blurbs.MappedIdentifierTypes, f"{marc_field.tag} -> {t[1]}"
+                "MappedIdentifierTypes", f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
         identifier_type = next(
@@ -368,7 +367,7 @@ class Conditions:
             ),
             None,
         )
-        self.mapper.migration_report.add(Blurbs.MappedIdentifierTypes, identifier_type["name"])
+        self.mapper.migration_report.add("MappedIdentifierTypes", identifier_type["name"])
         my_id = identifier_type["id"]
         if not my_id:
             raise TransformationFieldMappingError(
@@ -382,7 +381,7 @@ class Conditions:
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
         self.mapper.migration_report.add(
-            Blurbs.Exceptions,
+            "Exceptions",
             (
                 "Condition set_holding_note_type_id_by_name is deprecated. "
                 "Use set_holdings_note_type_id instead"
@@ -397,7 +396,7 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.holding_note_types, "holding_note_types", parameter["name"]
             )
-            self.mapper.migration_report.add(Blurbs.MappedNoteTypes, t[1])
+            self.mapper.migration_report.add("MappedNoteTypes", t[1])
             return t[0]
         except Exception as ee:
             logging.error(ee)
@@ -415,7 +414,7 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.authority_note_types, "authority_note_types", parameter["name"]
             )
-            self.mapper.migration_report.add(Blurbs.MappedNoteTypes, t[1])
+            self.mapper.migration_report.add("MappedNoteTypes", t[1])
             return t[0]
         except Exception as ee:
             logging.error(ee)
@@ -433,7 +432,7 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.class_types, "class_types", parameter["name"]
             )
-            self.mapper.migration_report.add(Blurbs.MappedClassificationTypes, t[1])
+            self.mapper.migration_report.add("MappedClassificationTypes", t[1])
             return t[0]
         except Exception:
             raise TransformationRecordFailedError(
@@ -448,9 +447,7 @@ class Conditions:
 
     def condition_set_receipt_status(self, legacy_id, value, parameter, marc_field: field.Field):
         if len(value) < 7:
-            self.mapper.migration_report.add(
-                Blurbs.ReceiptStatusMapping, f"008 is too short: {value}"
-            )
+            self.mapper.migration_report.add("ReceiptStatusMapping", f"008 is too short: {value}")
             return ""
         try:
             status_map = {
@@ -464,13 +461,13 @@ class Conditions:
             }
             mapped_value = status_map[value[6]]
             self.mapper.migration_report.add(
-                Blurbs.ReceiptStatusMapping, f"{value[6]} mapped to {mapped_value}"
+                "ReceiptStatusMapping", f"{value[6]} mapped to {mapped_value}"
             )
 
             return
         except Exception:
             self.mapper.migration_report.add(
-                Blurbs.ReceiptStatusMapping, f"{value[6]} not found in map."
+                "ReceiptStatusMapping", f"{value[6]} not found in map."
             )
             return "Unknown"
 
@@ -482,7 +479,7 @@ class Conditions:
                 self.folio.identifier_types, "identifier_types", parameter["name"]
             )
             self.mapper.migration_report.add(
-                Blurbs.MappedIdentifierTypes, f"{marc_field.tag} -> {t[1]}"
+                "MappedIdentifierTypes", f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
         except Exception as ee:
@@ -502,13 +499,11 @@ class Conditions:
                 self.folio.contrib_name_types, "contrib_name_types", parameter["name"]
             )
             self.mapper.migration_report.add(
-                Blurbs.MappedContributorNameTypes, f"{marc_field.tag} -> {t[1]}"
+                "MappedContributorNameTypes", f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
         except Exception:
-            self.mapper.migration_report.add(
-                Blurbs.UnmappedContributorNameTypes, parameter["name"]
-            )
+            self.mapper.migration_report.add("UnmappedContributorNameTypes", parameter["name"])
             return self.default_contributor_name_type
 
     def condition_set_note_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
@@ -517,7 +512,7 @@ class Conditions:
                 self.folio.instance_note_types, "instance_not_types", parameter["name"]
             )
             self.mapper.migration_report.add(
-                Blurbs.MappedNoteTypes,
+                "MappedNoteTypes",
                 f"{marc_field.tag} ({parameter.get('name', '')}) -> {t[1]}",
             )
             return t[0]
@@ -534,7 +529,7 @@ class Conditions:
             )
             if not t:
                 self.mapper.migration_report.add(
-                    Blurbs.ContributorTypeMapping,
+                    "ContributorTypeMapping",
                     f'Mapping failed for $4 "{subfield}" ({normalized_subfield}) ',
                 )
                 Helper.log_data_issue(
@@ -544,7 +539,7 @@ class Conditions:
                 )
             else:
                 self.mapper.migration_report.add(
-                    Blurbs.ContributorTypeMapping,
+                    "ContributorTypeMapping",
                     f'Contributor type code {t[1]} found for $4 "{subfield}" ({normalized_subfield}))',
                 )
                 return t[0]
@@ -557,7 +552,7 @@ class Conditions:
 
             if not t:
                 self.mapper.migration_report.add(
-                    Blurbs.ContributorTypeMapping,
+                    "ContributorTypeMapping",
                     f"Mapping failed for {marc_field.tag} $e {subfield} (Normalized: {normalized_subfield}) ",
                 )
                 Helper.log_data_issue(
@@ -567,7 +562,7 @@ class Conditions:
                 )
             else:
                 self.mapper.migration_report.add(
-                    Blurbs.ContributorTypeMapping,
+                    "ContributorTypeMapping",
                     f"Contributor type name {t[1]} found for {marc_field.tag} $e {normalized_subfield} ({subfield}) ",
                 )
                 return t[0]
@@ -580,7 +575,7 @@ class Conditions:
         self, legacy_id, value, parameter, marc_field: pymarc.Field
     ):
         self.mapper.migration_report.add(
-            Blurbs.Exceptions,
+            "Exceptions",
             (
                 "Condition set_call_number_type_by_indicator is deprecated. "
                 "Change to set_call_number_type_id"
@@ -606,7 +601,7 @@ class Conditions:
         # CallNumber type specified in $2. This needs further mapping
         if marc_field.indicator1 == "7" and "2" in marc_field:
             self.mapper.migration_report.add(
-                Blurbs.CallNumberTypeMapping,
+                "CallNumberTypeMapping",
                 f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}",
             )
             return self.default_call_number_type["id"]
@@ -615,7 +610,7 @@ class Conditions:
         call_number_type_name_temp = first_level_map.get(marc_field.indicator1, "")
         if not call_number_type_name_temp:
             self.mapper.migration_report.add(
-                Blurbs.CallNumberTypeMapping,
+                "CallNumberTypeMapping",
                 (
                     f'Unhandled call number type in ind1: "{marc_field.indicator1}". '
                     f' Returning default Callnumber type: {self.default_call_number_type["name"]}'
@@ -627,13 +622,13 @@ class Conditions:
         )
         if t:
             self.mapper.migration_report.add(
-                Blurbs.CallNumberTypeMapping,
+                "CallNumberTypeMapping",
                 f"Mapped from Indicator 1 {marc_field.indicator1} -> {t[1]}",
             )
             return t[0]
 
         self.mapper.migration_report.add(
-            Blurbs.CallNumberTypeMapping,
+            "CallNumberTypeMapping",
             (
                 "Mapping failed. Setting default CallNumber type: "
                 f'{self.default_call_number_type["name"]}'
@@ -660,7 +655,7 @@ class Conditions:
             t = self.get_ref_data_tuple_by_name(
                 self.folio.alt_title_types, "alt_title_types", parameter["name"]
             )
-            self.mapper.migration_report.add(Blurbs.MappedAlternativeTitleTypes, t[1])
+            self.mapper.migration_report.add("MappedAlternativeTitleTypes", t[1])
             return t[0]
         except Exception:
             raise TransformationProcessError(
@@ -672,7 +667,7 @@ class Conditions:
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
         self.mapper.migration_report.add(
-            Blurbs.Exceptions,
+            "Exceptions",
             (
                 "set_location_id_by_code condition used in rules. "
                 "Deprecated condition. Switch to set_permanent_location_id"
@@ -720,18 +715,16 @@ class Conditions:
             mapped_code = self.ref_data_dicts["legacy_locations"].get("*", "").strip()
             if mapped_code:
                 self.mapper.migration_report.add(
-                    Blurbs.LocationMapping, f"Fallback mapping: {value}->{mapped_code}"
+                    "LocationMapping", f"Fallback mapping: {value}->{mapped_code}"
                 )
         # Get the FOLIO UUID for the code and return it
         t = self.get_ref_data_tuple_by_code(self.folio.locations, "locations", mapped_code)
         if not t:
-            self.mapper.migration_report.add(Blurbs.LocationMapping, f"Unmapped code: '{value}'")
+            self.mapper.migration_report.add("LocationMapping", f"Unmapped code: '{value}'")
             raise TransformationRecordFailedError(
                 legacy_id, "Could not map location from legacy code", value
             )
-        self.mapper.migration_report.add(
-            Blurbs.LocationMapping, f"'{value}' ({mapped_code}) -> {t[1]}"
-        )
+        self.mapper.migration_report.add("LocationMapping", f"'{value}' ({mapped_code}) -> {t[1]}")
         return t[0]
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
@@ -758,7 +751,7 @@ class Conditions:
     def condition_set_instance_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
         if marc_field.tag not in ["008", "336"]:
             self.mapper.migration_report.add(
-                Blurbs.InstanceTypeMapping,
+                "InstanceTypeMapping",
                 (
                     f"Unhandled MARC tag {marc_field.tag}. Instance Type ID is only mapped "
                     "from 336 "
@@ -790,7 +783,7 @@ class Conditions:
             name,
         )
 
-        self.mapper.migration_report.add(Blurbs.MappedElectronicRelationshipTypes, t[1])
+        self.mapper.migration_report.add("MappedElectronicRelationshipTypes", t[1])
 
         return t[0]
 
@@ -801,7 +794,7 @@ class Conditions:
         # https://www.loc.gov/marc/bibliographic/bd541.html
         ind1 = marc_field.indicator1
         self.mapper.migration_report.add(
-            Blurbs.StaffOnlyViaIndicator,
+            "StaffOnlyViaIndicator",
             f"{marc_field.tag} indicator1: {ind1} (1 is public, all other values are Staff only)",
         )
         if ind1 != "1":

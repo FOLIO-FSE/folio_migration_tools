@@ -7,7 +7,6 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class NotesMapper(MappingFileMapperBase):
@@ -60,7 +59,7 @@ class NotesMapper(MappingFileMapperBase):
                         del note["type"]
                     self.extradata_writer.write("notes", note)
                     self.migration_report.add_general_statistics("Number of linked notes created")
-                    self.migration_report.add(Blurbs.MappedNoteTypes, note["typeId"])
+                    self.migration_report.add("MappedNoteTypes", note["typeId"])
                 else:
                     self.migration_report.add_general_statistics(
                         "Number of discarded notes with no content"

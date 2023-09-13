@@ -2,6 +2,7 @@ import copy
 import json
 import logging
 from typing import List
+import i18n
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -24,7 +25,6 @@ from folio_migration_tools.marc_rules_transformation.holdings_statementsparser i
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class RulesMapperHoldings(RulesMapperBase):
@@ -108,7 +108,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.print_progress()
         folio_holding = self.perform_initial_preparation(marc_record, legacy_ids)
 
-        self.migration_report.add(Blurbs.RecordStatus, marc_record.leader[5])
+        self.migration_report.add("RecordStatus", marc_record.leader[5])
         ignored_subsequent_fields: set = set()
         num_852s = 0
         for marc_field in marc_record:
@@ -223,7 +223,7 @@ class RulesMapperHoldings(RulesMapperBase):
             ignored_subsequent_fields (_type_): _description_
             index_or_legacy_ids (_type_): _description_
         """
-        self.migration_report.add(Blurbs.Trivia, "Total number of Tags processed")
+        self.migration_report.add("Trivia", "Total number of Tags processed")
         if marc_field.tag not in self.mappings:
             self.report_legacy_mapping(marc_field.tag, True, False)
         elif marc_field.tag not in ignored_subsequent_fields:
@@ -312,12 +312,10 @@ class RulesMapperHoldings(RulesMapperBase):
                 if res["statements"]:
                     folio_holding[key] = res["statements"]
                 for mr in res["migration_report"]:
-                    self.migration_report.add(
-                        Blurbs.HoldingsStatementsParsing, f"{mr[0]} -- {mr[1]}"
-                    )
+                    self.migration_report.add("HoldingsStatementsParsing", f"{mr[0]} -- {mr[1]}")
             except TransformationFieldMappingError as tfme:
                 Helper.log_data_issue(tfme.index_or_id, tfme.message, tfme.data_value)
-                self.migration_report.add(Blurbs.FieldMappingErrors, tfme.message)
+                self.migration_report.add("FieldMappingErrors", tfme.message)
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
@@ -340,7 +338,7 @@ class RulesMapperHoldings(RulesMapperBase):
         # type = type_map.get(ldr06, "Unknown")
         if folio_holding.get("holdingsTypeId", ""):
             self.migration_report.add(
-                Blurbs.HoldingsTypeMapping,
+                "HoldingsTypeMapping",
                 f"Already set to {folio_holding.get('holdingsTypeId')}. LDR[06] was {ldr06}",
             )
         else:
@@ -350,14 +348,14 @@ class RulesMapperHoldings(RulesMapperBase):
             ):
                 folio_holding["holdingsTypeId"] = t[0]
                 self.migration_report.add(
-                    Blurbs.HoldingsTypeMapping,
+                    "HoldingsTypeMapping",
                     f"{ldr06} -> {holdings_type} -> {t[1]} ({t[0]}",
                 )
                 if holdings_type == "Unknown":
                     Helper.log_data_issue(
                         legacy_ids,
                         (
-                            f"{Blurbs.HoldingsTypeMapping[0]} is 'unknown'. "
+                            i18n.t("blurbs.HoldingsTypeMapping.title") + " is 'unknown'. "
                             "(leader 06 is set to 'u') Check if this is correct"
                         ),
                         ldr06,
@@ -370,12 +368,12 @@ class RulesMapperHoldings(RulesMapperBase):
                     )
                 folio_holding["holdingsTypeId"] = self.fallback_holdings_type_id
                 self.migration_report.add(
-                    Blurbs.HoldingsTypeMapping,
+                    "HoldingsTypeMapping",
                     f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
                 )
                 Helper.log_data_issue(
                     legacy_ids,
-                    (f"{Blurbs.HoldingsTypeMapping[0]}. leader 06 was unmapped."),
+                    (i18n.t("blurbs.HoldingsTypeMapping.title") + ". leader 06 was unmapped."),
                     ldr06,
                 )
 

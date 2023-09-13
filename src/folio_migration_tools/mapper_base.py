@@ -21,7 +21,6 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MapperBase:
@@ -111,7 +110,7 @@ class MapperBase:
             if not right_mapping:
                 raise StopIteration()
             self.migration_report.add(
-                ref_data_mapping.blurb,
+                ref_data_mapping.blurb_id,
                 (
                     f'{" - ".join(fieldvalues)} '
                     f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
@@ -122,12 +121,12 @@ class MapperBase:
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
-                    ref_data_mapping.blurb,
+                    ref_data_mapping.blurb_id,
                     (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
                 )
                 return ""
             self.migration_report.add(
-                ref_data_mapping.blurb,
+                ref_data_mapping.blurb_id,
                 (
                     f"Unmapped (Default value was set) -- "
                     f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
@@ -184,7 +183,7 @@ class MapperBase:
             if not right_mapping:
                 raise StopIteration()
             self.migration_report.add(
-                ref_data_mapping.blurb,
+                ref_data_mapping.blurb_id,
                 (
                     f'{" - ".join(fieldvalues)} '
                     f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
@@ -194,12 +193,12 @@ class MapperBase:
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
-                    ref_data_mapping.blurb,
+                    ref_data_mapping.blurb_id,
                     (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
                 )
                 return ""
             self.migration_report.add(
-                ref_data_mapping.blurb,
+                ref_data_mapping.blurb_id,
                 (
                     f"Unmapped (Default value was set) -- "
                     f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
@@ -225,7 +224,7 @@ class MapperBase:
             ) from exception
 
     def handle_transformation_field_mapping_error(self, index_or_id, error):
-        self.migration_report.add(Blurbs.FieldMappingErrors, error)
+        self.migration_report.add("FieldMappingErrors", error)
         error.id = error.id or index_or_id
         error.log_it()
         self.migration_report.add_general_statistics("Field Mapping Errors found")
@@ -239,9 +238,7 @@ class MapperBase:
     def handle_transformation_record_failed_error(
         self, records_processed: int, error: TransformationRecordFailedError
     ):
-        self.migration_report.add(
-            Blurbs.GeneralStatistics, "FAILED Records failed due to an error"
-        )
+        self.migration_report.add("GeneralStatistics", "FAILED Records failed due to an error")
         error.index_or_id = error.index_or_id or records_processed
         error.log_it()
         self.num_criticalerrors += 1
@@ -317,9 +314,7 @@ class MapperBase:
         with open(path, "w") as legacy_map_file:
             for id_string in legacy_map.values():
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
-                self.migration_report.add(
-                    Blurbs.GeneralStatistics, "Unique ID:s written to legacy map"
-                )
+                self.migration_report.add("GeneralStatistics", "Unique ID:s written to legacy map")
         logging.info("Wrote legacy id map to %s", path)
 
     @staticmethod

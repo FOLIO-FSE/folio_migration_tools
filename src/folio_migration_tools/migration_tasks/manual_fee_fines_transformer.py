@@ -22,7 +22,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
@@ -107,7 +106,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     "Check source files for empty rows or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
+                self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
     def process_single_file(self, file_def: FileDefinition):

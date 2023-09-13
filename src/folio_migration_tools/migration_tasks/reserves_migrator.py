@@ -16,7 +16,6 @@ from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_reserve import LegacyReserve
 
@@ -89,7 +88,7 @@ class ReservesMigrator(MigrationTaskBase):
         self.extradata_writer.flush()
         for k, v in self.failed.items():
             self.failed_and_not_dupe[k] = [v.to_dict()]
-        self.migration_report.set(Blurbs.GeneralStatistics, "Failed loans", len(self.failed))
+        self.migration_report.set("GeneralStatistics", "Failed loans", len(self.failed))
         self.write_failed_reserves_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
@@ -128,7 +127,7 @@ class ReservesMigrator(MigrationTaskBase):
                 yield loan
             else:
                 self.migration_report.add(
-                    Blurbs.DiscardedLoans, "Reserve discarded. Could not find migrated barcode"
+                    "DiscardedLoans", "Reserve discarded. Could not find migrated barcode"
                 )
 
     def load_and_validate_legacy_reserves(self, reserves_reader):
@@ -145,9 +144,7 @@ class ReservesMigrator(MigrationTaskBase):
                     num_bad += 1
                     self.migration_report.add_general_statistics("Discarded reserves")
                     for error in legacy_reserve.errors:
-                        self.migration_report.add(
-                            Blurbs.DiscardedReserves, f"{error[0]} - {error[1]}"
-                        )
+                        self.migration_report.add("DiscardedReserves", f"{error[0]} - {error[1]}")
                 else:
                     yield legacy_reserve
             except ValueError as ve:
@@ -183,17 +180,17 @@ class ReservesMigrator(MigrationTaskBase):
                 error_message = json.loads(resp.text)["errors"][0]["message"]
                 logging.error(error_message)
                 self.migration_report.add(
-                    Blurbs.Details, f"{action_description} error: {error_message}"
+                    "Details", f"{action_description} error: {error_message}"
                 )
                 resp.raise_for_status()
             elif resp.status_code in [201, 204]:
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"Successfully {action_description} ({resp.status_code})",
                 )
             else:
                 self.migration_report.add(
-                    Blurbs.Details,
+                    "Details",
                     f"{action_description} error. http status: {resp.status_code}",
                 )
                 logging.error(json.dumps(data_dict))

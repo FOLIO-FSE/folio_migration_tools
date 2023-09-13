@@ -15,7 +15,6 @@ from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
 
@@ -221,7 +220,7 @@ class RequestsMigrator(MigrationTaskBase):
                 yield request
             else:
                 self.migration_report.add(
-                    Blurbs.DiscardedLoans,
+                    "DiscardedLoans",
                     f"Requests discarded. Had migrated item barcode: {has_item_barcode}. "
                     f"Had migrated user barcode: {has_patron_barcode}",
                 )
@@ -256,9 +255,7 @@ class RequestsMigrator(MigrationTaskBase):
                     num_bad += 1
                     self.migration_report.add_general_statistics("Requests with valueErrors")
                     for error in legacy_request.errors:
-                        self.migration_report.add(
-                            Blurbs.DiscardedRequests, f"{error[0]} - {error[1]}"
-                        )
+                        self.migration_report.add("DiscardedRequests", f"{error[0]} - {error[1]}")
                         Helper.log_data_issue(
                             legacy_request.item_barcode,
                             f"{error[0]} - {error[1]}",

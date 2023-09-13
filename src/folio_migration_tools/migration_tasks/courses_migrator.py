@@ -19,7 +19,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
@@ -114,7 +113,7 @@ class CoursesMigrator(MigrationTaskBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
-                    Blurbs.GeneralStatistics,
+                    "GeneralStatistics",
                     f"Number of Legacy items in {full_path}",
                 )
                 self.mapper.migration_report.add_general_statistics(

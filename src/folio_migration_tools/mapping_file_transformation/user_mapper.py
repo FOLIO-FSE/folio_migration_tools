@@ -16,7 +16,6 @@ from folio_migration_tools.mapping_file_transformation.notes_mapper import Notes
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class UserMapper(MappingFileMapperBase):
@@ -169,7 +168,7 @@ class UserMapper(MappingFileMapperBase):
             v = mapped_value
             logging.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
             fmt_string = f"Parsing error! {folio_prop_name}: {v}. The empty string was returned"
-            self.migration_report.add(Blurbs.DateTimeConversions, fmt_string)
+            self.migration_report.add("DateTimeConversions", fmt_string)
             return ""
 
     def setup_groups_mapping(self, groups_map):
@@ -180,7 +179,7 @@ class UserMapper(MappingFileMapperBase):
                 "usergroups",
                 groups_map,
                 "group",
-                Blurbs.UserGroupMapping,
+                "UserGroupMapping",
             )
         else:
             self.groups_mapping = None
@@ -193,7 +192,7 @@ class UserMapper(MappingFileMapperBase):
                 "departments",
                 departments_mapping,
                 "name",
-                Blurbs.DepartmentsMapping,
+                "DepartmentsMapping",
             )
         else:
             self.departments_mapping = None
