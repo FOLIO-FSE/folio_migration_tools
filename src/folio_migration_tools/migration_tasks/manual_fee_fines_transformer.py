@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 import traceback
+import i18n
 from typing import List
 from typing import Optional
 
@@ -165,7 +166,9 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                "Manual fee/fine transformation report", migration_report_file, self.start_datetime
+                i18n.t("Manual fee/fine transformation report"),
+                migration_report_file,
+                self.start_datetime,
             )
 
             Helper.print_mapping_report(
