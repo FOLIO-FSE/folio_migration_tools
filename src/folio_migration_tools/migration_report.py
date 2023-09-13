@@ -1,4 +1,5 @@
 import logging
+import i18n
 from datetime import datetime
 from datetime import timezone
 
@@ -61,34 +62,48 @@ class MigrationReport:
             report_file (_type_):path to file
             time_started (datetime): The datetime stamp (in utc), of when the process started
         """
-        report_file.write(f"# {report_title}   \n")
         time_finished = datetime.now(timezone.utc)
-        report_file.write(f"{Blurbs.Introduction[1]}\n")
-        report_file.write("## Timings   \n")
-        report_file.write("   \n")
-        report_file.write("Measure | Value   \n")
-        report_file.write("--- | ---:   \n")
-        report_file.write(f"Time Started: | {datetime.isoformat(time_started)}   \n")
-        report_file.write(f"Time Finished: | {datetime.isoformat(time_finished)}   \n")
-        report_file.write(f"Elapsed time: | {time_finished-time_started}   \n")
+        report_file.write(
+            "\n".join(
+                [
+                    "# " + report_title,
+                    Blurbs.Introduction[1],
+                    "## " + i18n.t("Timings"),
+                    "",
+                    i18n.t("Measure") + " | " + i18n.t("Value"),
+                    "--- | ---:",
+                    i18n.t("Time Started:") + " | " + datetime.isoformat(time_started),
+                    i18n.t("Time Finished:") + " | " + datetime.isoformat(time_finished),
+                    i18n.t("Elapsed time:") + " | " + str(time_finished - time_started),
+                ]
+            )
+        )
         logging.info(f"Elapsed time: {time_finished-time_started}")
         for a in self.report:
             blurb = self.report[a].get("blurb_tuple") or ("", "")
-            report_file.write("   \n")
-            report_file.write(f"## {blurb[0]}    \n")
-            report_file.write(f"{blurb[1]}    \n")
             report_file.write(
-                f"<details><summary>Click to expand all {len(self.report[a])} "
-                "things</summary>     \n"
+                "\n".join(
+                    [
+                        "",
+                        "## " + blurb[0],
+                        blurb[1],
+                        "<details><summary>"
+                        + i18n.t(
+                            "Click to expand all %{number} things", number=len(self.report[a])
+                        )
+                        + "</summary>",
+                        "",
+                        i18n.t("Measure") + " | " + i18n.t("Count"),
+                        "--- | ---:",
+                    ]
+                    + [
+                        f"{k or 'EMPTY'} | {self.report[a][k]:,}"
+                        for k in sorted(self.report[a], key=as_str)
+                        if k != "blurb_tuple"
+                    ]
+                    + ["</details>"]
+                )
             )
-            report_file.write("   \n")
-            report_file.write("Measure | Count   \n")
-            report_file.write("--- | ---:   \n")
-            b = self.report[a]
-            sortedlist = [(k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_tuple"]
-            for b in sortedlist:
-                report_file.write(f"{b[0] or 'EMPTY'} | {b[1]:,}   \n")
-            report_file.write("</details>   \n")
 
     def log_me(self):
         for a in self.report:
