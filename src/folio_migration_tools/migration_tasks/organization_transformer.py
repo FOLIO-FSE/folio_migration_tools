@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 import uuid
+import i18n
 from hashlib import sha1
 from os.path import isfile
 from typing import List
@@ -220,7 +221,9 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                "Ogranization transformation report", migration_report_file, self.start_datetime
+                i18n.t("Ogranization transformation report"),
+                migration_report_file,
+                self.start_datetime,
             )
 
             Helper.print_mapping_report(

@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+import i18n
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -168,7 +169,9 @@ class UserTransformer(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
-                "Users transformation report", migration_report_file, self.mapper.start_datetime
+                i18n.t("Users transformation report"),
+                migration_report_file,
+                self.mapper.start_datetime,
             )
             Helper.print_mapping_report(
                 migration_report_file,

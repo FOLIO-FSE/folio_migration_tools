@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 import traceback
+import i18n
 from typing import Dict
 from urllib.error import HTTPError
 
@@ -93,7 +94,7 @@ class ReservesMigrator(MigrationTaskBase):
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
-                "Reserves migration report", report_file, self.start_datetime
+                i18n.t("Reserves migration report"), report_file, self.start_datetime
             )
         self.clean_out_empty_logs()
 

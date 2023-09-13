@@ -3,6 +3,7 @@ import sys
 import time
 import traceback
 from typing import List
+import i18n
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Field
@@ -223,7 +224,9 @@ class MarcFileProcessor:
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                "MFHD records transformation report", report_file, self.mapper.start_datetime
+                i18n.t("MFHD records transformation report"),
+                report_file,
+                self.mapper.start_datetime,
             )
             Helper.print_mapping_report(
                 report_file,

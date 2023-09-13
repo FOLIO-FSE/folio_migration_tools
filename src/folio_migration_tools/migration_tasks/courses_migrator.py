@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 import traceback
+import i18n
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -125,7 +126,7 @@ class CoursesMigrator(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                "Courses migration report", report_file, self.mapper.start_datetime
+                i18n.t("Courses migration report"), report_file, self.mapper.start_datetime
             )
         self.clean_out_empty_logs()
 

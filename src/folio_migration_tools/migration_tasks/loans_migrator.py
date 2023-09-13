@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 import traceback
+import i18n
 from datetime import datetime
 from datetime import timedelta
 from typing import Optional
@@ -275,7 +276,7 @@ class LoansMigrator(MigrationTaskBase):
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
-                "Loans migration report", report_file, self.start_datetime
+                i18n.t("Loans migration report"), report_file, self.start_datetime
             )
         self.clean_out_empty_logs()
 

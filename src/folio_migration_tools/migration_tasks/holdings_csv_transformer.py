@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 import traceback
+import i18n
 from typing import Annotated
 from typing import List
 from typing import Optional
@@ -260,7 +261,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
-                "Holdings transformation report",
+                i18n.t("Holdings transformation report"),
                 migration_report_file,
                 self.mapper.start_datetime,
             )
