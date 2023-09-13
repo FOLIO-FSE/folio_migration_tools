@@ -462,10 +462,8 @@ def test_handle_leader_05(mapper, caplog):
         assert record.leader[5] == "s"
         BibsRulesMapper.handle_leader_05(mapper, record, ["legacy id"])
         assert record.leader[5] == "c"
-        assert (
-            "Original value: s" in mapper.migration_report.report["Record status (leader pos 5)"]
-        )
-        assert "Changed s to c" in mapper.migration_report.report["Record status (leader pos 5)"]
+        assert "Original value: s" in mapper.migration_report.report["RecordStatus"]
+        assert "Changed s to c" in mapper.migration_report.report["RecordStatus"]
 
 
 def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
@@ -485,7 +483,7 @@ def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
         assert "[東京宝塚劇場公演パンフレット. ]" in res["alternativeTitles"][0]["alternativeTitle"]
         assert "1. 7月星組公演.  淀君, シャンソン・ダムール (1959)" in res["notes"][2]["note"]
         assert "宝塚" in res["publication"][1]["place"]
-        assert "Records without $6" in mapper.migration_report.report["880 mappings"]
+        assert "Records without $6" in mapper.migration_report.report["Field880Mappings"]
 
 
 def test_parse_cataloged_date():
