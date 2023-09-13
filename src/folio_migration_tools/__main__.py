@@ -40,13 +40,23 @@ def parse_args():
         "--base_folder_path",
         help=("path to the base folder for this library. Built on migration_repo_template"),
     )
+    parser.add_argument(
+        "--report_language",
+        help=(
+            "Language to write the reports. Defaults english for untranslated languages/strings."
+        ),
+        default="en",
+        prompt=False,
+    )
     return parser.parse_args()
 
 
 def main():
     try:
         task_classes = list(inheritors(migration_task_base.MigrationTaskBase))
+
         args = parse_args()
+        i18n.set("locale", args.report_language)
         with open(args.configuration_path) as config_file_path:
             try:
                 config_file_humped = json.load(config_file_path)
