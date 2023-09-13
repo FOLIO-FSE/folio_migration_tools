@@ -97,7 +97,7 @@ class MigrationReport:
                         for k in sorted(self.report[a], key=as_str)
                         if k != "blurb_id"
                     ]
-                    + ["</details>"]
+                    + ["</details>", ""]
                 )
             )
 
