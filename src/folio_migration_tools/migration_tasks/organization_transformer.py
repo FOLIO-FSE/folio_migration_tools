@@ -282,7 +282,7 @@ class OrganizationTransformer(MigrationTaskBase):
             else:
                 self.mapper.migration_report.add(
                     "MalformedInterfaceUri",
-                    "Interfaces",
+                    i18n.t("Interfaces"),
                 )
                 Helper.log_data_issue(
                     f"{record['code']}",

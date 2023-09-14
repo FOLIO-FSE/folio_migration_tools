@@ -203,14 +203,14 @@ class LoansMigrator(MigrationTaskBase):
         res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
 
         if res_checkout.was_successful:
-            self.migration_report.add("Details", "Checked out on first try")
+            self.migration_report.add("Details", i18n.t("Checked out on first try"))
             self.migration_report.add_general_statistics("Successfully checked out")
             self.set_renewal_count(legacy_loan, res_checkout)
             self.set_new_status(legacy_loan, res_checkout)
         elif res_checkout.should_be_retried:
             res_checkout2 = self.handle_checkout_failure(legacy_loan, res_checkout)
             if res_checkout2.was_successful and res_checkout2.folio_loan:
-                self.migration_report.add("Details", "Checked out on second try")
+                self.migration_report.add("Details", i18n.t("Checked out on second try"))
                 self.migration_report.add_general_statistics("Successfully checked out")
                 logging.info("Checked out on second try")
                 self.set_renewal_count(legacy_loan, res_checkout2)
@@ -424,7 +424,7 @@ class LoansMigrator(MigrationTaskBase):
                     f"Duplicate loans (or failed twice) Item barcode: "
                     f"{legacy_loan.item_barcode} Patron barcode: {legacy_loan.patron_barcode}"
                 )
-                self.migration_report.add("Details", "Duplicate loans (or failed twice)")
+                self.migration_report.add("Details", i18n.t("Duplicate loans (or failed twice)"))
                 del self.failed[legacy_loan.item_barcode]
             return TransactionResult(False, False, "", "", "")
 
@@ -439,7 +439,7 @@ class LoansMigrator(MigrationTaskBase):
         self.migration_report.add("Details", res.migration_report_message)
         self.deactivate_user(user, expiration_date)
         logging.debug("Successfully Deactivated user again")
-        self.migration_report.add("Details", "Handled inactive users")
+        self.migration_report.add("Details", i18n.t("Handled inactive users"))
         return res
 
     def handle_aged_to_lost_item(self, legacy_loan: LegacyLoan) -> TransactionResult:
@@ -526,10 +526,10 @@ class LoansMigrator(MigrationTaskBase):
         }
         logging.debug(f"Declare lost data: {json.dumps(data, indent=4)}")
         if self.folio_put_post(declare_lost_url, data, "POST", "Declare item as lost"):
-            self.migration_report.add("Details", "Successfully declared loan as lost")
+            self.migration_report.add("Details", i18n.t("Successfully declared loan as lost"))
         else:
             logging.error(f"Unsuccessfully declared loan {folio_loan} as lost")
-            self.migration_report.add("Details", "Unsuccessfully declared loan as lost")
+            self.migration_report.add("Details", i18n.t("Unsuccessfully declared loan as lost"))
 
     def claim_returned(self, folio_loan):
         claim_returned_url = f"/circulation/loans/{folio_loan['id']}/claim-item-returned"
@@ -541,7 +541,9 @@ class LoansMigrator(MigrationTaskBase):
         }
         logging.debug(f"Claim returned data:\t{json.dumps(data)}")
         if self.folio_put_post(claim_returned_url, data, "POST", "Declare item as lost"):
-            self.migration_report.add("Details", "Successfully declared loan as Claimed returned")
+            self.migration_report.add(
+                "Details", i18n.t("Successfully declared loan as Claimed returned")
+            )
         else:
             logging.error(f"Unsuccessfully declared loan {folio_loan} as Claimed returned")
             self.migration_report.add(
@@ -589,13 +591,13 @@ class LoansMigrator(MigrationTaskBase):
     def activate_user(self, user):
         user["active"] = True
         self.update_user(user)
-        self.migration_report.add("Details", "Successfully activated user")
+        self.migration_report.add("Details", i18n.t("Successfully activated user"))
 
     def deactivate_user(self, user, expiration_date):
         user["expirationDate"] = expiration_date
         user["active"] = False
         self.update_user(user)
-        self.migration_report.add("Details", "Successfully deactivated user")
+        self.migration_report.add("Details", i18n.t("Successfully deactivated user"))
 
     def update_item(self, item):
         url = f'/item-storage/items/{item["id"]}'

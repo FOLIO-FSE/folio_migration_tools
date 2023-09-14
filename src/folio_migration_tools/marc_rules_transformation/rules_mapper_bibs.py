@@ -5,6 +5,7 @@ import sys
 import time
 import typing
 import uuid
+import i18n
 from pathlib import Path
 from typing import Generator
 from typing import List
@@ -190,12 +191,12 @@ class BibsRulesMapper(RulesMapperBase):
             if f852s and not f86xs:
                 self.migration_report.add(
                     "HoldingsGenerationFromBibs",
-                    "Records with 852s but no 86X",
+                    i18n.t("Records with 852s but no 86X"),
                 )
             elif any(f852s):
                 self.migration_report.add(
                     "HoldingsGenerationFromBibs",
-                    "Records with both 852s and at least one 86X",
+                    i18n.t("Records with both 852s and at least one 86X"),
                 )
 
             elif any(f86xs):
@@ -243,7 +244,7 @@ class BibsRulesMapper(RulesMapperBase):
             raise TransformationProcessError("", "No instance_types setup in tenant")
 
         if "336" in marc_record and "b" not in marc_record["336"]:
-            self.migration_report.add("RecourceTypeMapping", "Subfield b not in 336")
+            self.migration_report.add("RecourceTypeMapping", i18n.t("Subfield b not in 336"))
             if "a" in marc_record["336"]:
                 return_id = get_folio_id_by_name(marc_record["336"]["a"])
 
@@ -343,7 +344,7 @@ class BibsRulesMapper(RulesMapperBase):
     ):
         self.migration_report.add(
             "InstanceFormat",
-            "338$b is missing. Will try parse from 337$a and 338$a",
+            i18n.t("338$b is missing. Will try parse from 337$a and 338$a"),
         )
         for a in f_338.get_subfields("a"):
             corresponding_337 = all_337s[field_index] if field_index < len(all_337s) else None

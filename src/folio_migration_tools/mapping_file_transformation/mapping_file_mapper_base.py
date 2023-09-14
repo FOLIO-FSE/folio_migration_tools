@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import uuid
+import i18n
 from functools import reduce
 from pathlib import Path
 from typing import Dict
@@ -241,7 +242,7 @@ class MappingFileMapperBase(MapperBase):
             )
         self.migration_report.add(
             "StatisticalCodeMapping",
-            "Mapping not setup",
+            i18n.t("Mapping not setup"),
         )
         return ""
 

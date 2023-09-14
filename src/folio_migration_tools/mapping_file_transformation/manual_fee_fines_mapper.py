@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+import i18n
 from typing import Any
 from typing import Dict
 from zoneinfo import ZoneInfo
@@ -189,7 +190,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         except Exception:
             self.migration_report.add(
                 "GeneralStatistics",
-                "DATA ISSUE Invalid dates",
+                i18n.t("DATA ISSUE Invalid dates"),
             )
             logging.log(
                 26,
@@ -205,7 +206,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         except Exception as ee:
             self.migration_report.add(
                 "GeneralStatistics",
-                "DATA ISSUE Invalid sum",
+                i18n.t("DATA ISSUE Invalid sum"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -240,7 +241,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         else:
             self.migration_report.add(
                 "GeneralStatistics",
-                "DATA ISSUE Users not in FOLIO",
+                i18n.t("DATA ISSUE Users not in FOLIO"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -297,7 +298,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             feefine["account"].pop("itemId")
             self.migration_report.add(
                 "GeneralStatistics",
-                "DATA ISSUE Items not in FOLIO",
+                i18n.t("DATA ISSUE Items not in FOLIO"),
             )
             logging.log(
                 26,

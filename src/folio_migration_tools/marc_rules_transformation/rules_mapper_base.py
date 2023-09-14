@@ -4,6 +4,7 @@ import logging
 import time
 import urllib.parse
 import uuid
+import i18n
 from abc import abstractmethod
 from textwrap import wrap
 from typing import List
@@ -290,12 +291,14 @@ class RulesMapperBase(MapperBase):
     def perform_proxy_mapping(self, marc_field):
         proxy_mapping = next(iter(self.mappings.get("880", [])), [])
         if "6" not in marc_field:
-            self.migration_report.add("Field880Mappings", "Records without $6")
+            self.migration_report.add("Field880Mappings", i18n.t("Records without $6"))
             return None
         if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
             return None
         if not marc_field["6"][:3] or len(marc_field["6"][:3]) != 3:
-            self.migration_report.add("Field880Mappings", "Records with unexpected length in $6")
+            self.migration_report.add(
+                "Field880Mappings", i18n.t("Records with unexpected length in $6")
+            )
             return None
         first_three = marc_field["6"][:3]
 
@@ -322,7 +325,7 @@ class RulesMapperBase(MapperBase):
     def report_marc_stats(
         self, marc_field: Field, bad_tags, legacy_ids, ignored_subsequent_fields
     ):
-        self.migration_report.add("Trivia", "Total number of Tags processed")
+        self.migration_report.add("Trivia", i18n.t("Total number of Tags processed"))
         self.report_source_and_links(marc_field)
         self.report_bad_tags(marc_field, bad_tags, legacy_ids)
         mapped = marc_field.tag in self.mappings
@@ -482,7 +485,9 @@ class RulesMapperBase(MapperBase):
                 value = [str(parse(value[0], fuzzy=True).date())]
             except Exception as ee:
                 Helper.log_data_issue("", f"Could not parse catalogedDate: {ee}", value)
-                self.migration_report.add("FieldMappingErrors", "Could not parse catalogedDate")
+                self.migration_report.add(
+                    "FieldMappingErrors", i18n.t("Could not parse catalogedDate")
+                )
         if not target_string or target_string not in sch:
             raise TransformationFieldMappingError(
                 "",
