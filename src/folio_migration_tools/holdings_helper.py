@@ -1,5 +1,6 @@
 import json
 import logging
+import i18n
 from uuid import uuid4
 
 from folio_migration_tools import custom_exceptions
@@ -41,14 +42,19 @@ class HoldingsHelper:
             for fields_criteria in fields_criterias:
                 v = holdings_record.get(fields_criteria, "")
                 if not v:
-                    migration_report.add("HoldingsMerging", f"{fields_criteria} empty or not set")
+                    migration_report.add(
+                        "HoldingsMerging",
+                        i18n.t(
+                            "{fields_criteria} empty or not set", fields_criteria=fields_criteria
+                        ),
+                    )
                 values.append(v)
 
             if holdings_record.get("holdingsTypeId") == holdings_type_id_to_exclude_from_merging:
                 values.append(str(uuid4()))
                 migration_report.add(
                     "HoldingsMerging",
-                    "Holding prevented from merging by holdingsTypeId",
+                    i18n.t("Holding prevented from merging by holdingsTypeId"),
                 )
             return "-".join(values)
         except Exception as exception:
@@ -93,12 +99,12 @@ class HoldingsHelper:
                     )
                     migration_report.add(
                         "HoldingsMerging",
-                        "Duplicate key based on current merge criteria. Records merged",
+                        i18n.t("Duplicate key based on current merge criteria. Records merged"),
                     )
                 else:
                     migration_report.add(
                         "HoldingsMerging",
-                        "Previously transformed holdings record loaded",
+                        i18n.t("Previously transformed holdings record loaded"),
                     )
                     prev_holdings[stored_key] = stored_holding
             return prev_holdings

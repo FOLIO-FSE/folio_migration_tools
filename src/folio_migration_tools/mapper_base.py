@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 import uuid
+import i18n
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -238,7 +239,9 @@ class MapperBase:
     def handle_transformation_record_failed_error(
         self, records_processed: int, error: TransformationRecordFailedError
     ):
-        self.migration_report.add("GeneralStatistics", "FAILED Records failed due to an error")
+        self.migration_report.add(
+            "GeneralStatistics", i18n.t("FAILED Records failed due to an error")
+        )
         error.index_or_id = error.index_or_id or records_processed
         error.log_it()
         self.num_criticalerrors += 1
@@ -314,7 +317,9 @@ class MapperBase:
         with open(path, "w") as legacy_map_file:
             for id_string in legacy_map.values():
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
-                self.migration_report.add("GeneralStatistics", "Unique ID:s written to legacy map")
+                self.migration_report.add(
+                    "GeneralStatistics", i18n.t("Unique ID:s written to legacy map")
+                )
         logging.info("Wrote legacy id map to %s", path)
 
     @staticmethod

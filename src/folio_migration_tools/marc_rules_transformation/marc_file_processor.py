@@ -178,10 +178,12 @@ class MarcFileProcessor:
         while old_b := first_852.delete_subfield("b"):
             first_852.add_subfield("x", old_b, 0)
             self.mapper.migration_report.add(
-                "LocationMapping", "Additional 852$b was moved to 852$x"
+                "LocationMapping", i18n.t("Additional 852$b was moved to 852$x")
             )
         first_852.add_subfield("b", location_code, 0)
-        self.mapper.migration_report.add("LocationMapping", "Set 852 to FOLIO location code")
+        self.mapper.migration_report.add(
+            "LocationMapping", i18n.t("Set 852 to FOLIO location code")
+        )
 
     def exit_on_too_many_exceptions(self):
         if (

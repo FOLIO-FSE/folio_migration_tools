@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import time
+import i18n
 from typing import Set
 
 import httpx
@@ -175,7 +176,7 @@ class CirculationHelper:
                 elif "find user with matching barcode" in error_message_from_folio:
                     self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
                     error_message = f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
-                    stat_message = "Patron barcode not in FOLIO"
+                    stat_message = i18n.t("Patron barcode not in FOLIO")
                     return TransactionResult(
                         False,
                         False,

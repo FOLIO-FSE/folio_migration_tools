@@ -1,4 +1,5 @@
 import ast
+import i18n
 
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
@@ -111,7 +112,7 @@ class HoldingsMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
             )
-        self.migration_report.add("CallNumberTypeMapping", "No Call Number Type Mapping")
+        self.migration_report.add("CallNumberTypeMapping", i18n.t("No Call Number Type Mapping"))
         return ""
 
     def get_instance_ids(self, legacy_value: str, index_or_id: str):
@@ -160,7 +161,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 )
                 self.migration_report.add(
                     "GeneralStatistics",
-                    "Bib ids referenced in bound-with items",
+                    i18n.t("Bib ids referenced in bound-with items"),
                     new_value_len,
                 )
             return new_legacy_values

@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timezone
 from typing import Set
 from uuid import uuid4
+import i18n
 
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
@@ -256,7 +257,7 @@ class ItemMapper(MappingFileMapperBase):
             )
         self.migration_report.add(
             "CallNumberTypeMapping",
-            "Mapping not setup",
+            i18n.t("Mapping not setup"),
         )
         return ""
 

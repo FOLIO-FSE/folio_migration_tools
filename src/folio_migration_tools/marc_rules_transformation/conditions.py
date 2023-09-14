@@ -1,5 +1,6 @@
 import logging
 import re
+import i18n
 
 import pymarc
 from folioclient import FolioClient
@@ -241,7 +242,7 @@ class Conditions:
         return ""
 
     def condition_set_holdings_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
-        self.mapper.migration_report.add("HoldingsTypeMapping", "Condition in rules hit")
+        self.mapper.migration_report.add("HoldingsTypeMapping", i18n.t("Condition in rules hit"))
         return ""
 
     def condition_concat_subfields_by_name(

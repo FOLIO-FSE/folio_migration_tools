@@ -128,7 +128,7 @@ class ReservesMigrator(MigrationTaskBase):
                 yield loan
             else:
                 self.migration_report.add(
-                    "DiscardedLoans", "Reserve discarded. Could not find migrated barcode"
+                    "DiscardedLoans", i18n.t("Reserve discarded. Could not find migrated barcode")
                 )
 
     def load_and_validate_legacy_reserves(self, reserves_reader):

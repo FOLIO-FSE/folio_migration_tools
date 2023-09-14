@@ -223,7 +223,7 @@ class RulesMapperHoldings(RulesMapperBase):
             ignored_subsequent_fields (_type_): _description_
             index_or_legacy_ids (_type_): _description_
         """
-        self.migration_report.add("Trivia", "Total number of Tags processed")
+        self.migration_report.add("Trivia", i18n.t("Total number of Tags processed"))
         if marc_field.tag not in self.mappings:
             self.report_legacy_mapping(marc_field.tag, True, False)
         elif marc_field.tag not in ignored_subsequent_fields:

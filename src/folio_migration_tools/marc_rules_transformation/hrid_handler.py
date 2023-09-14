@@ -1,5 +1,6 @@
 import json
 import logging
+import i18n
 from typing import Set
 
 import httpx
@@ -77,7 +78,7 @@ class HRIDHandler:
             marc_record, legacy_ids, self.migration_report, self.deactivate035_from001
         )
         marc_record.add_ordered_field(new_001)
-        self.migration_report.add("HridHandling", "Created HRID using default settings")
+        self.migration_report.add("HridHandling", i18n.t("Created HRID using default settings"))
 
     def enumerate_hrid(self, marc_record):
         return self.handling == HridHandling.default or "001" not in marc_record
@@ -117,7 +118,7 @@ class HRIDHandler:
             migration_report.add("HridHandling", f'Values in 003: {f_003 or "Empty"}')
 
             if deactivate035_from001:
-                migration_report.add("HridHandling", "035 generation from 001 turned off")
+                migration_report.add("HridHandling", i18n.t("035 generation from 001 turned off"))
             else:
                 str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
                 new_035 = Field(
@@ -126,7 +127,7 @@ class HRIDHandler:
                     subfields=[Subfield(code="a", value=str_035)],
                 )
                 marc_record.add_ordered_field(new_035)
-                migration_report.add("HridHandling", "Added 035 from 001")
+                migration_report.add("HridHandling", i18n.t("Added 035 from 001"))
             if remove_001:
                 marc_record.remove_fields("001")
 
@@ -136,7 +137,7 @@ class HRIDHandler:
                 migration_report.add("HridHandling", s)
                 Helper.log_data_issue(legacy_ids, s, marc_record["001"])
             else:
-                migration_report.add("HridHandling", "Legacy bib records without 001")
+                migration_report.add("HridHandling", i18n.t("Legacy bib records without 001"))
 
     def hrids_not_updated(self):
         return (
@@ -206,8 +207,9 @@ class HRIDHandler:
         if value in self.unique_001s:
             self.migration_report.add(
                 "HridHandling",
-                "Duplicate 001. Creating HRID instead. "
-                "Previous 001 will be stored in a new 035 field",
+                i18n.t(
+                    "Duplicate 001. Creating HRID instead.\n Previous 001 will be stored in a new 035 field"
+                ),
             )
             self.handle_035_generation(
                 marc_record, legacy_ids, self.migration_report, self.deactivate035_from001
@@ -224,4 +226,4 @@ class HRIDHandler:
         else:
             self.unique_001s.add(value)
             folio_record["hrid"] = value
-            self.migration_report.add("HridHandling", "Took HRID from 001")
+            self.migration_report.add("HridHandling", i18n.t("Took HRID from 001"))
