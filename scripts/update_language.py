@@ -39,7 +39,7 @@ if __name__ == "__main__":
     for key in target_translations:
         if key not in source_translations:
             print(
-                "Key '{key}' in target not in source. Check if it was renamed, or if it is still needed."
+                f"Key '{key}' in target not in source. Check if it was renamed, or if it is still needed."
             )
     # Update target translations
     for key in source_translations:
