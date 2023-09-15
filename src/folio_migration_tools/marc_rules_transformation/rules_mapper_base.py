@@ -7,6 +7,7 @@ import uuid
 from abc import abstractmethod
 from textwrap import wrap
 from typing import List
+from typing import Tuple
 
 import pymarc
 from dateutil.parser import parse
@@ -130,7 +131,10 @@ class RulesMapperBase(MapperBase):
             # Adding stuff without rules/Conditions.
             # Might need more complex mapping for arrays etc
             if any(mapping["subfield"]):
-                value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+                values = self.handle_sub_field_delimiters(
+                    ",".join(legacy_ids), mapping, marc_field
+                )
+                value = " ".join(values)
             else:
                 value = marc_field.format_field() if marc_field else ""
             self.add_value_to_target(folio_record, target, [value])
@@ -171,6 +175,56 @@ class RulesMapperBase(MapperBase):
                     marc_record["008"].data,
                 )
 
+    def handle_sub_field_delimiters(
+        self,
+        legacy_id: str,
+        mapping,
+        marc_field: pymarc.Field,
+        condition_types: List[str] = None,
+        parameter: dict = None,
+    ):
+        values: List[str] = []
+        if mapping.get("subfield") and (custom_delimiters := mapping.get("subFieldDelimiter")):
+            delimiter_map = {sub_f: " " for sub_f in mapping.get("subfield")}
+            for custom_delimiter in custom_delimiters:
+                delimiter_map.update(
+                    {sub_f: custom_delimiter["value"] for sub_f in custom_delimiter["subfields"]}
+                )
+            custom_delimited_strings: List[Tuple[str, List[str]]] = []
+            subfields = mapping.get("subfield")
+            for custom_delimiter in custom_delimiters:
+                subfields_for_delimiter = [
+                    sub_f
+                    for sub_f in subfields
+                    if custom_delimiter["subfields"]
+                    and delimiter_map[sub_f] == custom_delimiter["value"]
+                ]
+                subfield_collection: Tuple[str, List[str]] = (custom_delimiter["value"], [])
+                subfield_collection[1].extend(marc_field.get_subfields(*subfields_for_delimiter))
+                custom_delimited_strings.append(subfield_collection)
+            for custom_delimited_string in custom_delimited_strings:
+                if mapping.get("applyRulesOnConcatenatedData", ""):
+                    values.extend(custom_delimited_string[1])
+                else:
+                    values.extend(
+                        dict.fromkeys(
+                            [
+                                self.apply_rule(
+                                    legacy_id,
+                                    x,
+                                    condition_types or [],
+                                    marc_field,
+                                    parameter or {},
+                                )
+                                for x in custom_delimited_string[1]
+                            ]
+                        )
+                    )
+                values = [custom_delimited_string[0].join(values)]
+        elif mapping.get("subfield", []):
+            values.extend(marc_field.get_subfields(*mapping["subfield"]))
+        return values
+
     def get_value_from_condition(
         self,
         legacy_id,
@@ -180,19 +234,29 @@ class RulesMapperBase(MapperBase):
         stripped_conds = mapping["rules"][0]["conditions"][0]["type"].split(",")
         condition_types = list(map(str.strip, stripped_conds))
         parameter = mapping["rules"][0]["conditions"][0].get("parameter", {})
-        if mapping.get("applyRulesOnConcatenatedData", ""):  # TODO: implement subfieldDelimiter
-            value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
-            return self.apply_rule(legacy_id, value, condition_types, marc_field, parameter)
-        elif mapping.get("subfield", []):
-            subfields = marc_field.get_subfields(*mapping["subfield"])
-            x = [
-                self.apply_rule(legacy_id, x, condition_types, marc_field, parameter)
-                for x in subfields
-            ]
-            return " ".join(dict.fromkeys(x))  # Create an ordered set of unique values before join
+        values: List[str] = []
+        if mapping.get("subfield"):
+            values.extend(
+                self.handle_sub_field_delimiters(
+                    legacy_id, mapping, marc_field, condition_types, parameter
+                )
+            )
         else:
-            value1 = marc_field.format_field() if marc_field else ""
-            return self.apply_rule(legacy_id, value1, condition_types, marc_field, parameter)
+            values.append(marc_field.format_field() if marc_field else "")
+
+        if not mapping.get("applyRulesOnConcatenatedData", "") and mapping.get("subfield", []):
+            return " ".join(
+                dict.fromkeys(
+                    [
+                        self.apply_rule(legacy_id, x, condition_types, marc_field, parameter)
+                        for x in values
+                    ]
+                )
+            )
+        else:
+            return self.apply_rule(
+                legacy_id, " ".join(values), condition_types, marc_field, parameter
+            )
 
     def process_marc_field(
         self,
@@ -304,7 +368,10 @@ class RulesMapperBase(MapperBase):
                 else:
                     return [value]
             elif not mapping.get("rules", []) or not mapping["rules"][0].get("conditions", []):
-                value = " ".join(marc_field.get_subfields(*mapping["subfield"]))
+                values = self.handle_sub_field_delimiters(
+                    ",".join(legacy_ids), mapping, marc_field
+                )
+                value = " ".join(values)
             values = wrap(value, 3) if mapping.get("subFieldSplit", "") else [value]
             return values
         except TransformationProcessError as trpe:
