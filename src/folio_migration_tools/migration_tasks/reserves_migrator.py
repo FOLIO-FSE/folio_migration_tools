@@ -78,7 +78,9 @@ class ReservesMigrator(MigrationTaskBase):
     def post_single_reserve(self, legacy_reserve: LegacyReserve):
         try:
             path = f"/coursereserves/courselistings/{legacy_reserve.course_listing_id}/reserves"
-            if self.folio_put_post(path, legacy_reserve.to_dict(), "POST", "Posted reserves"):
+            if self.folio_put_post(
+                path, legacy_reserve.to_dict(), "POST", i18n.t("Posted reserves")
+            ):
                 self.migration_report.add_general_statistics(
                     i18n.t("Successfully posted reserves")
                 )
