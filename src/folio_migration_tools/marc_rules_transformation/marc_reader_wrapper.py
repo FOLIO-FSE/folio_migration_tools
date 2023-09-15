@@ -111,7 +111,7 @@ class MARCReaderWrapper:
             migration_report.add(
                 "LeaderManipulation",
                 i18n.t(
-                    "Set leader 11 (Subfield code count) from {record} to 2",
+                    "Set leader 11 (Subfield code count) from %{record} to 2",
                     record=marc_record.leader[11],
                 ),
             )

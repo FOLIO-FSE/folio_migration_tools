@@ -87,7 +87,7 @@ class BibsRulesMapper(RulesMapperBase):
         if leader_05 not in ["a", "c", "d", "n", "p"]:
             marc_record.leader = f"{marc_record.leader[:5]}c{marc_record.leader[6:]}"
             self.migration_report.add(
-                "RecordStatus", i18n.t("Changed {a} to {b}", a=leader_05, b="c")
+                "RecordStatus", i18n.t("Changed %{a} to %{b}", a=leader_05, b="c")
             )
         if leader_05 == "d":
             Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)

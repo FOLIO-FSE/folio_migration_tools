@@ -291,7 +291,7 @@ class Conditions:
             )
             self.mapper.migration_report.add(
                 "InstanceFormat",
-                i18n.t('Successful match  - "{value}"->{name}', value=value, name=t[1]),
+                i18n.t("Successful match") + f'  - "{value}"->{t[1]}',
             )
             return t[0]
         except Exception:
@@ -451,7 +451,7 @@ class Conditions:
     def condition_set_receipt_status(self, legacy_id, value, parameter, marc_field: field.Field):
         if len(value) < 7:
             self.mapper.migration_report.add(
-                "ReceiptStatusMapping", i18n.t("008 is too short: {value}", value=value)
+                "ReceiptStatusMapping", i18n.t("008 is too short") + f": {value}"
             )
             return ""
         try:
@@ -587,12 +587,11 @@ class Conditions:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
                     i18n.t(
-                        "Contributor type name {name} found for {tag} $e {normalized_subfield} ({subfield}) ",
+                        "Contributor type name %{name} found for %{tag}",
                         name=t[1],
                         tag=marc_field.tag,
-                        normalized_subfield=normalized_subfield,
-                        subfield=subfield,
-                    ),
+                    )
+                    + f" $e {normalized_subfield} ({subfield}) ",
                 )
                 return t[0]
         return self.default_contributor_type["id"]
