@@ -536,7 +536,7 @@ class LoansMigrator(MigrationTaskBase):
             "servicePointId": str(self.task_configuration.fallback_service_point_id),
         }
         logging.debug(f"Declare lost data: {json.dumps(data, indent=4)}")
-        if self.folio_put_post(declare_lost_url, data, "POST", "Declare item as lost"):
+        if self.folio_put_post(declare_lost_url, data, "POST", i18n.t("Declare item as lost")):
             self.migration_report.add("Details", i18n.t("Successfully declared loan as lost"))
         else:
             logging.error(f"Unsuccessfully declared loan {folio_loan} as lost")
@@ -551,7 +551,7 @@ class LoansMigrator(MigrationTaskBase):
             "comment": "Created at migration. Date is due date + 1 day",
         }
         logging.debug(f"Claim returned data:\t{json.dumps(data)}")
-        if self.folio_put_post(claim_returned_url, data, "POST", "Declare item as lost"):
+        if self.folio_put_post(claim_returned_url, data, "POST", i18n.t("Declare item as lost")):
             self.migration_report.add(
                 "Details", i18n.t("Successfully declared loan as Claimed returned")
             )
@@ -620,11 +620,11 @@ class LoansMigrator(MigrationTaskBase):
 
     def update_item(self, item):
         url = f'/item-storage/items/{item["id"]}'
-        return self.folio_put_post(url, item, "PUT", "Update item")
+        return self.folio_put_post(url, item, "PUT", i18n.t("Update item"))
 
     def update_user(self, user):
         url = f'/users/{user["id"]}'
-        self.folio_put_post(url, user, "PUT", "Update user")
+        self.folio_put_post(url, user, "PUT", i18n.t("Update user"))
 
     def get_user_by_barcode(self, barcode):
         url = f'{self.folio_client.okapi_url}/users?query=(barcode=="{barcode}")'
