@@ -204,8 +204,12 @@ class Conditions:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
                     (
-                        f"Contributor type code {t[1]} found for ${contributor_code_subfield} "
-                        f'"{subfield}" ({normalized_subfield}))'
+                        i18n.t(
+                            'Contributor type code "%{code}" found for $%{code_subfield}',
+                            code=t[1],
+                            code_subfield=contributor_code_subfield,
+                        )
+                        + f' "{subfield}" ({normalized_subfield}))'
                     ),
                 )
                 return t[0]
@@ -554,11 +558,12 @@ class Conditions:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
                     i18n.t(
-                        'Contributor type code %{code} found for $4 "%{subfield}" (%{normalized_subfield}))',
+                        'Contributor type code "%{code}" found for $%{code_subfield}',
                         code=t[1],
-                        subfield=subfield,
+                        code_subfield="4",
                         normalized_subfield=normalized_subfield,
-                    ),
+                    )
+                    + f' "%{subfield}" (%{normalized_subfield}))',
                 )
                 return t[0]
         subfield_code = "j" if marc_field.tag in ["111", "711"] else "e"

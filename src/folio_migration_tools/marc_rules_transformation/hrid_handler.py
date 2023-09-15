@@ -178,7 +178,9 @@ class HRIDHandler:
         logging.info("Resetting Instances HRID settings to 1")
         self.instance_hrid_counter = 1
         self.migration_report.set(
-            "GeneralStatistics", "Instances HRID starting number", self.instance_hrid_counter
+            "GeneralStatistics",
+            i18n.t("Instances HRID starting number"),
+            self.instance_hrid_counter,
         )
         self.store_hrid_settings()
 
