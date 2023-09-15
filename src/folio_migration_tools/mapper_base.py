@@ -372,7 +372,9 @@ class MapperBase:
 
     def add_legacy_id_to_admin_note(self, folio_record: dict, legacy_id: str):
         if not legacy_id:
-            raise TransformationFieldMappingError(legacy_id, "Legacy id is empty", legacy_id)
+            raise TransformationFieldMappingError(
+                legacy_id, i18n.t("Legacy id is empty"), legacy_id
+            )
         if "administrativeNotes" not in folio_record:
             folio_record["administrativeNotes"] = []
         if id_string := next(

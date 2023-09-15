@@ -496,11 +496,13 @@ class RulesMapperBase(MapperBase):
         if not target_string or target_string not in sch:
             raise TransformationFieldMappingError(
                 "",
-                (
-                    f"Target string '{target_string}' not in Schema! "
-                    "Check mapping file against the schema. "
-                    f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
-                ),
+                i18n.t("Target string '%{string}' not in Schema!", string=target_string)
+                + i18n.t("Check mapping file against the schema.")
+                + " "
+                + i18n.t("Target type")
+                + f": {sch.get(target_string,{}).get('type','')} "
+                + i18n.t("Value")
+                + f": {value}",
                 "",
             )
 
