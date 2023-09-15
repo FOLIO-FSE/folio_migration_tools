@@ -459,8 +459,8 @@ class LoansMigrator(MigrationTaskBase):
                 False,
                 False,
                 legacy_loan,
-                "Aged to lost and checked out",
-                "Aged to lost and checked out",
+                i18n.t("Aged to lost and checked out"),
+                i18n.t("Aged to lost and checked out"),
             )
 
         else:
