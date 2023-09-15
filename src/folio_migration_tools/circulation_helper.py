@@ -139,7 +139,7 @@ class CirculationHelper:
         url = f"{self.folio_client.okapi_url}{path}"
         try:
             if legacy_loan.patron_barcode in self.missing_patron_barcodes:
-                error_message = "Patron barcode already detected as missing"
+                error_message = i18n.t("Patron barcode already detected as missing")
                 logging.error(
                     f"{error_message} Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
@@ -238,7 +238,7 @@ class CirculationHelper:
                 False,
                 None,
                 "5XX",
-                f"Failed checkout http status {req.status_code}",
+                i18n.t("Failed checkout http status %{code}", code=req.status_code),
             )
 
     @staticmethod
