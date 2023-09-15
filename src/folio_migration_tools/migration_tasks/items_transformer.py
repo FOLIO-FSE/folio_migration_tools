@@ -276,7 +276,7 @@ class ItemsTransformer(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
                     "GeneralStatistics",
-                    i18n.t("Number of Legacy items in {container}", container=file_def),
+                    i18n.t("Number of Legacy items in %{container}", container=file_def),
                 )
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Number of Legacy items in total")
