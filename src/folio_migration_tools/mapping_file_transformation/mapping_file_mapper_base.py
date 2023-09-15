@@ -256,7 +256,9 @@ class MappingFileMapperBase(MapperBase):
         if not any(map_entries):
             return ""
         elif len(map_entries) > 1:
-            self.migration_report.add("Details", f"{legacy_item_keys} were concatenated")
+            self.migration_report.add(
+                "Details", i18n.t("%{props} were concatenated", props=legacy_item_keys)
+            )
             return " ".join(
                 MappingFileMapperBase.get_legacy_value(
                     legacy_object,
@@ -280,7 +282,11 @@ class MappingFileMapperBase(MapperBase):
             else:
                 self.migration_report.add(
                     "FolioDefaultValuesAdded",
-                    f"{schema_default_value} added to {folio_prop_name}",
+                    i18n.t(
+                        "%{schema_value} added to %{prop_name}",
+                        schema_value=schema_default_value,
+                        prop_name=folio_prop_name,
+                    ),
                 )
                 return schema_default_value
 
@@ -371,7 +377,11 @@ class MappingFileMapperBase(MapperBase):
             value_mapped_value = mapping_file_entry.get("value")
             migration_report.add(
                 "DefaultValuesAdded",
-                f"{value_mapped_value} added to {mapping_file_entry.get('folio_field', '')}",
+                i18n.t(
+                    "%{value} added to %{entry}",
+                    value=value_mapped_value,
+                    entry=mapping_file_entry.get("folio_field", ""),
+                ),
             )
             return value_mapped_value
 

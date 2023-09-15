@@ -2,6 +2,7 @@ import csv
 import json
 import logging
 import sys
+import i18n
 
 from dateutil.parser import parse
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -167,7 +168,11 @@ class UserMapper(MappingFileMapperBase):
         except Exception as ee:
             v = mapped_value
             logging.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
-            fmt_string = f"Parsing error! {folio_prop_name}: {v}. The empty string was returned"
+            fmt_string = i18n.t(
+                "Parsing error! %{prop_name}: %{value}. The empty string was returned",
+                prop_name=folio_prop_name,
+                value=v,
+            )
             self.migration_report.add("DateTimeConversions", fmt_string)
             return ""
 

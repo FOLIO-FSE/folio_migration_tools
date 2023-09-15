@@ -1,3 +1,4 @@
+import i18n
 from typing import Any
 from typing import Dict
 
@@ -73,13 +74,13 @@ class CoursesMapper(MappingFileMapperBase):
     def store_objects(self, composite_course):
         try:
             self.extradata_writer.write("courselisting", composite_course[0]["courselisting"])
-            self.migration_report.add_general_statistics("Stored courselistings")
+            self.migration_report.add_general_statistics(i18n.t("Stored courselistings"))
             self.extradata_writer.write("course", composite_course[0]["course"])
-            self.migration_report.add_general_statistics("Stored courses")
+            self.migration_report.add_general_statistics(i18n.t("Stored courses"))
             if "instructors" in composite_course[0] and any(composite_course[0]["instructors"]):
                 for instructor in composite_course[0]["instructors"]:
                     self.extradata_writer.write("instructor", instructor)
-                    self.migration_report.add_general_statistics("Stored instructors")
+                    self.migration_report.add_general_statistics(i18n.t("Stored instructors"))
 
         except Exception as ee:
             raise TransformationRecordFailedError(
@@ -105,7 +106,7 @@ class CoursesMapper(MappingFileMapperBase):
                     if self.task_configuration.look_up_instructor:
                         self.populate_instructor_from_users(instructor)
             else:
-                self.migration_report.add_general_statistics("Missing Instructors")
+                self.migration_report.add_general_statistics(i18n.t("Missing Instructors"))
 
             # Link course to courselisting
             composite_course[0]["course"]["courseListingId"] = composite_course[0][

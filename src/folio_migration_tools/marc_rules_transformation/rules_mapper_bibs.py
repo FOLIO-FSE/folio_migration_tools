@@ -83,10 +83,12 @@ class BibsRulesMapper(RulesMapperBase):
 
     def handle_leader_05(self, marc_record, legacy_ids):
         leader_05 = marc_record.leader[5] or "Empty"
-        self.migration_report.add("RecordStatus", f"Original value: {leader_05}")
+        self.migration_report.add("RecordStatus", i18n.t("Original value") + f": {leader_05}")
         if leader_05 not in ["a", "c", "d", "n", "p"]:
             marc_record.leader = f"{marc_record.leader[:5]}c{marc_record.leader[6:]}"
-            self.migration_report.add("RecordStatus", f"Changed {leader_05} to c")
+            self.migration_report.add(
+                "RecordStatus", i18n.t("Changed {a} to {b}", a=leader_05, b="c")
+            )
         if leader_05 == "d":
             Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
 
@@ -191,18 +193,24 @@ class BibsRulesMapper(RulesMapperBase):
             if f852s and not f86xs:
                 self.migration_report.add(
                     "HoldingsGenerationFromBibs",
-                    i18n.t("Records with 852s but no 86X"),
+                    i18n.t(
+                        "Records with %{has_many}s but no %{has_no}", has_many="852", has_no="86X"
+                    ),
                 )
             elif any(f852s):
                 self.migration_report.add(
                     "HoldingsGenerationFromBibs",
-                    i18n.t("Records with both 852s and at least one 86X"),
+                    i18n.t(
+                        "Records with both %{has_many}s and at least one %{has_one}",
+                        has_one="86X",
+                        has_many="852",
+                    ),
                 )
 
             elif any(f86xs):
                 self.migration_report.add(
                     "HoldingsGenerationFromBibs",
-                    "Records without 852s but with 86X",
+                    i18n.t("Records without %{has_no}s but with %{has}", has="86X", has_no="852"),
                 )
 
     def wrap_up(self):
@@ -226,12 +234,16 @@ class BibsRulesMapper(RulesMapperBase):
             if match:
                 self.migration_report.add(
                     "RecourceTypeMapping",
-                    f"336$a - Successful matching on  {match_template} ({f336a})",
+                    "336$a - "
+                    + i18n.t("Successful matching on %{key}", key=match_template)
+                    + f" ({f336a})",
                 )
             else:
                 self.migration_report.add(
                     "RecourceTypeMapping",
-                    f"336$a - Unsuccessful matching on  {match_template} ({f336a})",
+                    "336$a - "
+                    + i18n.t("Unsuccessful matching on %{key}", key=match_template)
+                    + f" ({f336a})",
                 )
                 Helper.log_data_issue(
                     legacy_id,
@@ -259,17 +271,25 @@ class BibsRulesMapper(RulesMapperBase):
             if not t:
                 self.migration_report.add(
                     "RecourceTypeMapping",
-                    f"336$b - Code {f336_b_norm} ('{f336_b}') not found in FOLIO ",
+                    "336$b - "
+                    + i18n.t(
+                        "Code %{code} ('%{code_raw}') not found in FOLIO ",
+                        code=f336_b_norm,
+                        code_raw=f336_b,
+                    ),
                 )
                 Helper.log_data_issue(
                     legacy_id,
-                    "instance type code (336$b) not found in FOLIO",
+                    i18n.t("instance type code (%{code}) not found in FOLIO", code="336$b"),
                     f336_b,
                 )
             else:
                 self.migration_report.add(
                     "RecourceTypeMapping",
-                    f'336$b {t[1]} mapped from {marc_record["336"]["b"]}',
+                    "336$b "
+                    + i18n.t(
+                        "%{fro} mapped from %{record}", fro=t[1], record=marc_record["336"]["b"]
+                    ),
                 )
                 return_id = t[0]
 
@@ -285,7 +305,7 @@ class BibsRulesMapper(RulesMapperBase):
             match = next(f for f in self.folio_client.instance_formats if f["code"] == code)
             self.migration_report.add(
                 "InstanceFormat",
-                f"Successful match  - {code}->{match['name']}",
+                i18n.t("Successful match") + f"  - {code}->{match['name']}",
             )
             return match["id"]
         except Exception:
@@ -293,7 +313,7 @@ class BibsRulesMapper(RulesMapperBase):
             Helper.log_data_issue(legacy_id, "Instance format Code not found in FOLIO", code)
             self.migration_report.add(
                 "InstanceFormat",
-                f"Code '{code}' not found in FOLIO",
+                i18n.t("Code '%{code}' not found in FOLIO", code=code),
             )
             return ""
 
@@ -309,7 +329,12 @@ class BibsRulesMapper(RulesMapperBase):
             )
             self.migration_report.add(
                 "InstanceFormat",
-                f"Successful matching on 337$a & 338$a - {match_template}->{match['name']}",
+                i18n.t(
+                    "Successful matching on %{criteria_1} and %{criteria_2}",
+                    criteria_1="337$a",
+                    criteria_2="338$a",
+                )
+                + f" - {match_template}->{match['name']}",
             )
             return match["id"]
         except Exception:
@@ -320,7 +345,12 @@ class BibsRulesMapper(RulesMapperBase):
             )
             self.migration_report.add(
                 "InstanceFormat",
-                f"Unsuccessful matching on 337$a and 338$a - {match_template}",
+                i18n.t(
+                    "Unsuccessful matching on %{criteria_1} and %{criteria_2}",
+                    criteria_1="337$a",
+                    criteria_2="338$a",
+                )
+                + f" - {match_template}",
             )
             return ""
 
@@ -373,7 +403,9 @@ class BibsRulesMapper(RulesMapperBase):
                         corresponding_337 = all_337s[fidx] if fidx < len(all_337s) else None
                         if not corresponding_337:
                             # No matching 337. No use mapping the 338
-                            s = "No corresponding 337 to 338 even though 338$b was one character"
+                            s = i18n.t(
+                                "No corresponding 337 to 338 even though 338$b was one character"
+                            )
                             Helper.log_data_issue(legacy_id, s, b)
                             self.migration_report.add(
                                 "InstanceFormat",
@@ -387,7 +419,7 @@ class BibsRulesMapper(RulesMapperBase):
                                 else None
                             )
                             if not corresponding_b:
-                                s = "No corresponding $b in corresponding 338"
+                                s = i18n.t("No corresponding $b in corresponding 338")
                                 Helper.log_data_issue(legacy_id, s, "")
                                 self.migration_report.add("InstanceFormat", s)
                             else:
@@ -420,13 +452,15 @@ class BibsRulesMapper(RulesMapperBase):
 
             if not ret:
                 self.migration_report.add(
-                    "MatchedModesOfIssuanceCode", f"Unmatched level: {level}"
+                    "MatchedModesOfIssuanceCode", i18n.t("Unmatched level") + f": {level}"
                 )
 
                 return self.other_mode_of_issuance_id
             return ret
         except IndexError:
-            self.migration_report.add("PossibleCleaningTasks", f"No Leader[7] in {legacy_id}")
+            self.migration_report.add(
+                "PossibleCleaningTasks", i18n.t("No Leader[7] in") + f" {legacy_id}"
+            )
 
             return self.other_mode_of_issuance_id
         except StopIteration as ee:
@@ -561,12 +595,16 @@ class BibsRulesMapper(RulesMapperBase):
     def get_aleph_bib_id(self, marc_record: Record):
         res = {f["b"].strip(): None for f in marc_record.get_fields("998") if "b" in f}
         if any(res):
-            self.migration_report.add_general_statistics("legacy id from 998$b")
+            self.migration_report.add_general_statistics(
+                i18n.t("legacy id from %{fro}", fro="998$b")
+            )
             return list(res)
         else:
             try:
                 ret = [marc_record["001"].format_field().strip()]
-                self.migration_report.add_general_statistics("legacy id from 001")
+                self.migration_report.add_general_statistics(
+                    i18n.t("legacy id from %{fro}", fro="001")
+                )
                 return ret
             except Exception as e:
                 raise TransformationRecordFailedError(

@@ -122,7 +122,7 @@ class ItemMapper(MappingFileMapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            f'Suppressed from discovery = {folio_record["discoverySuppress"]}',
+            i18n.t("Suppressed from discovery") + f' = {folio_record["discoverySuppress"]}',
         )
 
     def setup_status_mapping(self, item_statuses_map):
@@ -225,7 +225,7 @@ class ItemMapper(MappingFileMapperBase):
             barcode = mapped_value
             if barcode.strip() and barcode in self.unique_barcodes:
                 Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
-                self.migration_report.add_general_statistics("Duplicate barcodes")
+                self.migration_report.add_general_statistics(i18n.t("Duplicate barcodes"))
                 return f"{barcode}-{uuid4()}"
             else:
                 if barcode.strip():
@@ -237,7 +237,7 @@ class ItemMapper(MappingFileMapperBase):
             elif f"{self.bib_id_template}{mapped_value}" in self.holdings_id_map:
                 return self.holdings_id_map[f"{self.bib_id_template}{mapped_value}"][1]
             self.migration_report.add_general_statistics(
-                "Records failed because of failed holdings",
+                i18n.t("Records failed because of failed holdings"),
             )
             s = (
                 "Holdings id referenced in legacy item "

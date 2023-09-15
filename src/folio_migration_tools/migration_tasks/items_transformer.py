@@ -224,7 +224,9 @@ class ItemsTransformer(MigrationTaskBase):
         logging.info("Processing %s", full_path)
         records_in_file = 0
         with open(full_path, encoding="utf-8-sig") as records_file:
-            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("Number of files processed")
+            )
             start = time.time()
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
                 try:
@@ -258,7 +260,7 @@ class ItemsTransformer(MigrationTaskBase):
                     # TODO: turn this into a asynchrounous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
-                        "Number of records written to disk"
+                        i18n.t("Number of records written to disk")
                     )
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.schema)
                 except TransformationProcessError as process_error:
@@ -274,10 +276,10 @@ class ItemsTransformer(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
                     "GeneralStatistics",
-                    f"Number of Legacy items in {file_def}",
+                    i18n.t("Number of Legacy items in {container}", container=file_def),
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of legacy items in total"
+                    i18n.t("Number of Legacy items in total")
                 )
                 self.print_progress(idx, start)
                 records_in_file = idx + 1

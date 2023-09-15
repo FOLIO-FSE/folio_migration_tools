@@ -1,4 +1,5 @@
 import logging
+import i18n
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
@@ -58,11 +59,13 @@ class NotesMapper(MappingFileMapperBase):
                     if "type" in note:
                         del note["type"]
                     self.extradata_writer.write("notes", note)
-                    self.migration_report.add_general_statistics("Number of linked notes created")
+                    self.migration_report.add_general_statistics(
+                        i18n.t("Number of linked notes created")
+                    )
                     self.migration_report.add("MappedNoteTypes", note["typeId"])
                 else:
                     self.migration_report.add_general_statistics(
-                        "Number of discarded notes with no content"
+                        i18n.t("Number of discarded notes with no content")
                     )
 
     def get_notes_schema(self):

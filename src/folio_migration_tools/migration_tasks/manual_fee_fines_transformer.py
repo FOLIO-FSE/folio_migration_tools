@@ -113,7 +113,9 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
     def process_single_file(self, file_def: FileDefinition):
         full_path = self.folder_structure.legacy_records_folder / file_def.file_name
         with open(full_path, encoding="utf-8-sig") as records_file:
-            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("Number of files processed")
+            )
             start = time.time()
 
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):

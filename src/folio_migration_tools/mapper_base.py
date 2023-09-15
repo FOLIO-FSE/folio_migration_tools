@@ -228,10 +228,10 @@ class MapperBase:
         self.migration_report.add("FieldMappingErrors", error)
         error.id = error.id or index_or_id
         error.log_it()
-        self.migration_report.add_general_statistics("Field Mapping Errors found")
+        self.migration_report.add_general_statistics(i18n.t("Field Mapping Errors found"))
 
     def handle_transformation_process_error(self, idx, error: TransformationProcessError):
-        self.migration_report.add_general_statistics("Transformation process error")
+        self.migration_report.add_general_statistics(i18n.t("Transformation process error"))
         logging.critical("%s\t%s", idx, error)
         print(f"\n{error.message}: {error.data_value}")
         sys.exit(1)
@@ -439,7 +439,7 @@ class MapperBase:
                 )
                 if bound_with_holding.get("hrid", ""):
                     bound_with_holding["hrid"] = f'{bound_with_holding["hrid"]}_bw_{bwidx}'
-            self.migration_report.add_general_statistics("Bound-with holdings created")
+            self.migration_report.add_general_statistics(i18n.t("Bound-with holdings created"))
             yield bound_with_holding
 
     def generate_boundwith_holding_uuid(self, holding_uuid, instance_uuid):
