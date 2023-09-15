@@ -45,7 +45,7 @@ class HoldingsHelper:
                     migration_report.add(
                         "HoldingsMerging",
                         i18n.t(
-                            "{fields_criteria} empty or not set", fields_criteria=fields_criteria
+                            "%{fields_criteria} empty or not set", fields_criteria=fields_criteria
                         ),
                     )
                 values.append(v)
