@@ -36,7 +36,9 @@ class CirculationHelper:
 
     def get_user_by_barcode(self, user_barcode):
         if user_barcode in self.missing_patron_barcodes:
-            self.migration_report.add_general_statistics("Users already detected as missing")
+            self.migration_report.add_general_statistics(
+                i18n.t("Users already detected as missing")
+            )
             logging.info("User is already detected as missing")
             return {}
         user_path = f"/users?query=barcode=={user_barcode}"
@@ -52,7 +54,9 @@ class CirculationHelper:
 
     def get_item_by_barcode(self, item_barcode):
         if item_barcode in self.missing_item_barcodes:
-            self.migration_report.add_general_statistics("Items already detected as missing")
+            self.migration_report.add_general_statistics(
+                i18n.t("Items already detected as missing")
+            )
             logging.info("Item is already detected as missing")
             return {}
         item_path = f"/item-storage/items?query=barcode=={item_barcode}"

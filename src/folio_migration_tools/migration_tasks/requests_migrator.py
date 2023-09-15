@@ -99,7 +99,7 @@ class RequestsMigrator(MigrationTaskBase):
 
     def prepare_legacy_request(self, legacy_request: LegacyRequest):
         patron = self.circulation_helper.get_user_by_barcode(legacy_request.patron_barcode)
-        self.migration_report.add_general_statistics("Patron lookups performed")
+        self.migration_report.add_general_statistics(i18n.t("Patron lookups performed"))
 
         if not patron:
             logging.error(f"No user with barcode {legacy_request.patron_barcode} found in FOLIO")
@@ -108,16 +108,20 @@ class RequestsMigrator(MigrationTaskBase):
                 "No user with barcode.",
                 f"{legacy_request.patron_barcode}",
             )
-            self.migration_report.add_general_statistics("No user with barcode found in FOLIO")
+            self.migration_report.add_general_statistics(
+                i18n.t("No user with barcode found in FOLIO")
+            )
             self.failed_requests.add(legacy_request)
             return False, legacy_request
         legacy_request.patron_id = patron.get("id")
 
         item = self.circulation_helper.get_item_by_barcode(legacy_request.item_barcode)
-        self.migration_report.add_general_statistics("Item lookups performed")
+        self.migration_report.add_general_statistics(i18n.t("Item lookups performed"))
         if not item:
             logging.error(f"No item with barcode {legacy_request.item_barcode} found in FOLIO")
-            self.migration_report.add_general_statistics("No item with barcode found in FOLIO")
+            self.migration_report.add_general_statistics(
+                i18n.t("No item with barcode found in FOLIO")
+            )
             Helper.log_data_issue(
                 f"{legacy_request.item_barcode}",
                 "No item with barcode",
@@ -126,14 +130,16 @@ class RequestsMigrator(MigrationTaskBase):
             self.failed_requests.add(legacy_request)
             return False, legacy_request
         holding = self.circulation_helper.get_holding_by_uuid(item.get("holdingsRecordId"))
-        self.migration_report.add_general_statistics("Holdings lookups performed")
+        self.migration_report.add_general_statistics(i18n.t("Holdings lookups performed"))
         legacy_request.item_id = item.get("id")
         legacy_request.holdings_record_id = item.get("holdingsRecordId")
         legacy_request.instance_id = holding.get("instanceId")
         if item["status"]["name"] in ["Available"]:
             legacy_request.request_type = "Page"
             logging.info(f'Setting request to Page, since the status is {item["status"]["name"]}')
-        self.migration_report.add_general_statistics("Valid, prepared requests, ready for posting")
+        self.migration_report.add_general_statistics(
+            i18n.t("Valid, prepared requests, ready for posting")
+        )
         return True, legacy_request
 
     def do_work(self):
@@ -152,11 +158,11 @@ class RequestsMigrator(MigrationTaskBase):
                         self.folio_client, legacy_request, self.migration_report
                     ):
                         self.migration_report.add_general_statistics(
-                            "Successfully migrated requests"
+                            i18n.t("Successfully migrated requests")
                         )
                     else:
                         self.migration_report.add_general_statistics(
-                            "Unsuccessfully migrated requests"
+                            i18n.t("Unsuccessfully migrated requests")
                         )
                         self.failed_requests.add(legacy_request)
                 if num_requests == 1:
@@ -216,17 +222,20 @@ class RequestsMigrator(MigrationTaskBase):
             has_patron_barcode = request.patron_barcode in user_barcodes
             if has_item_barcode and has_patron_barcode:
                 self.migration_report.add_general_statistics(
-                    "Requests successfully verified against migrated users and items"
+                    i18n.t("Requests successfully verified against migrated users and items")
                 )
                 yield request
             else:
                 self.migration_report.add(
                     "DiscardedLoans",
-                    f"Requests discarded. Had migrated item barcode: {has_item_barcode}. "
-                    f"Had migrated user barcode: {has_patron_barcode}",
+                    i18n.t(
+                        "Requests discarded. Had migrated item barcode: %{item_barcode}.\n Had migrated user barcode: %{patron_barcode}",
+                        item_barcode=has_item_barcode,
+                        patron_barcode=has_patron_barcode,
+                    ),
                 )
                 self.migration_report.add_general_statistics(
-                    "Requests that failed verification against migrated users and items"
+                    i18n.t("Requests that failed verification against migrated users and items")
                 )
             if not has_item_barcode:
                 Helper.log_data_issue(
@@ -245,7 +254,7 @@ class RequestsMigrator(MigrationTaskBase):
         num_bad = 0
         logging.info("Validating legacy requests in file...")
         for legacy_reques_count, legacy_request_dict in enumerate(requests_reader, start=1):
-            self.migration_report.add_general_statistics("Requests in file")
+            self.migration_report.add_general_statistics(i18n.t("Requests in file"))
             try:
                 legacy_request = LegacyRequest(
                     legacy_request_dict,
@@ -254,7 +263,9 @@ class RequestsMigrator(MigrationTaskBase):
                 )
                 if any(legacy_request.errors):
                     num_bad += 1
-                    self.migration_report.add_general_statistics("Requests with valueErrors")
+                    self.migration_report.add_general_statistics(
+                        i18n.t("Requests with valueErrors")
+                    )
                     for error in legacy_request.errors:
                         self.migration_report.add("DiscardedRequests", f"{error[0]} - {error[1]}")
                         Helper.log_data_issue(
@@ -263,7 +274,9 @@ class RequestsMigrator(MigrationTaskBase):
                             json.dumps(legacy_request.to_source_dict()),
                         )
                 else:
-                    self.migration_report.add_general_statistics("Requests with valid source data")
+                    self.migration_report.add_general_statistics(
+                        i18n.t("Requests with valid source data")
+                    )
                     yield legacy_request
             except ValueError as ve:
                 logging.exception(ve)

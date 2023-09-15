@@ -339,7 +339,12 @@ class RulesMapperHoldings(RulesMapperBase):
         if folio_holding.get("holdingsTypeId", ""):
             self.migration_report.add(
                 "HoldingsTypeMapping",
-                f"Already set to {folio_holding.get('holdingsTypeId')}. LDR[06] was {ldr06}",
+                i18n.t(
+                    "Already set to %{value}. %{leader_key} was %{leader}",
+                    value=folio_holding.get("holdingsTypeId"),
+                    leader_key="LDR[06]",
+                    leader=ldr06,
+                ),
             )
         else:
             holdings_type = self.conditions.holdings_type_map.get(ldr06, "")
@@ -369,11 +374,16 @@ class RulesMapperHoldings(RulesMapperBase):
                 folio_holding["holdingsTypeId"] = self.fallback_holdings_type_id
                 self.migration_report.add(
                     "HoldingsTypeMapping",
-                    f"A Unmapped {ldr06} -> {holdings_type} -> Unmapped",
+                    i18n.t("An Unmapped")
+                    + f" {ldr06} -> {holdings_type} -> "
+                    + i18n.t("Unmapped"),
                 )
                 Helper.log_data_issue(
                     legacy_ids,
-                    (i18n.t("blurbs.HoldingsTypeMapping.title") + ". leader 06 was unmapped."),
+                    (
+                        i18n.t("blurbs.HoldingsTypeMapping.title", locale="en")
+                        + ". leader 06 was unmapped."
+                    ),
                     ldr06,
                 )
 

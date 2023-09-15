@@ -134,7 +134,9 @@ class OrganizationTransformer(MigrationTaskBase):
         with open(filename, encoding="utf-8-sig") as records_file, open(
             self.folder_structure.created_objects_path, "w+"
         ) as results_file:
-            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("Number of files processed")
+            )
             start = time.time()
             records_processed = 0
             for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
@@ -176,10 +178,10 @@ class OrganizationTransformer(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, excepion)
 
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of objects in source data file"
+                    i18n.t("Number of objects in source data file")
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of organizations created"
+                    i18n.t("Number of organizations created")
                 )
 
                 # TODO Rewrite to base % value on number of rows in file
@@ -358,7 +360,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         if len(identical_objects) > 0:
             self.mapper.migration_report.add_general_statistics(
-                f"Number of reoccuring identical {extradata_object_type}"
+                i18n.t("Number of reoccuring identical %{type}", type=extradata_object_type)
             )
             Helper.log_data_issue(
                 f"{self.legacy_id}",
@@ -373,7 +375,7 @@ class OrganizationTransformer(MigrationTaskBase):
         self.embedded_extradata_object_cache.add(embedded_object_hash)
 
         self.mapper.migration_report.add_general_statistics(
-            f"Number of linked {extradata_object_type} created"
+            i18n.t("Number of linked %{type} created", type=extradata_object_type)
         )
 
         return extradata_object_uuid

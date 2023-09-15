@@ -92,9 +92,9 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
     def store_objects(self, composite_feefine):
         try:
             self.extradata_writer.write("account", composite_feefine["account"])
-            self.migration_report.add_general_statistics("TOTAL Accounts created")
+            self.migration_report.add_general_statistics(i18n.t("TOTAL Accounts created"))
             self.extradata_writer.write("feefineaction", composite_feefine["feefineaction"])
-            self.migration_report.add_general_statistics("TOTAL Feefineactions created")
+            self.migration_report.add_general_statistics(i18n.t("TOTAL Feefineactions created"))
 
         except Exception as ee:
             raise TransformationRecordFailedError(

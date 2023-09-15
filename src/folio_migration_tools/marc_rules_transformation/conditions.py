@@ -267,7 +267,9 @@ class Conditions:
             return value.strip()
         self.mapper.migration_report.add(
             "AddedValueFromParameter",
-            f"Tag: {marc_field.tag}. Added value: {parameter['value']}",
+            i18n.t(
+                "Tag: %{tag}. Added value: %{value}", tag=marc_field.tag, value=parameter["value"]
+            ),
         )
         return parameter["value"]
 
@@ -289,13 +291,13 @@ class Conditions:
             )
             self.mapper.migration_report.add(
                 "InstanceFormat",
-                f'Successful match  - "{value}"->{t[1]}',
+                i18n.t('Successful match  - "{value}"->{name}', value=value, name=t[1]),
             )
             return t[0]
         except Exception:
             self.mapper.migration_report.add(
                 "InstanceFormat",
-                f'Code from 338$b NOT found in FOLIO: "{value}"',
+                i18n.t('Code from 338$b NOT found in FOLIO: "%{value}"', value=value),
             )
 
             return ""
@@ -448,7 +450,9 @@ class Conditions:
 
     def condition_set_receipt_status(self, legacy_id, value, parameter, marc_field: field.Field):
         if len(value) < 7:
-            self.mapper.migration_report.add("ReceiptStatusMapping", f"008 is too short: {value}")
+            self.mapper.migration_report.add(
+                "ReceiptStatusMapping", i18n.t("008 is too short: {value}", value=value)
+            )
             return ""
         try:
             status_map = {
@@ -462,13 +466,16 @@ class Conditions:
             }
             mapped_value = status_map[value[6]]
             self.mapper.migration_report.add(
-                "ReceiptStatusMapping", f"{value[6]} mapped to {mapped_value}"
+                "ReceiptStatusMapping",
+                i18n.t(
+                    "%{value} mapped to %{mapped_value}", value=value[6], mapped_value=mapped_value
+                ),
             )
 
             return
         except Exception:
             self.mapper.migration_report.add(
-                "ReceiptStatusMapping", f"{value[6]} not found in map."
+                "ReceiptStatusMapping", i18n.t("%{value} not found in map.", value=value)
             )
             return "Unknown"
 
@@ -531,7 +538,12 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    f'Mapping failed for $4 "{subfield}" ({normalized_subfield}) ',
+                    i18n.t(
+                        'Mapping failed for %{tag} "%{subfield}" (%{normalized_subfield})',
+                        tag="$4",
+                        subfield=subfield,
+                        normalized_subfield=normalized_subfield,
+                    ),
                 )
                 Helper.log_data_issue(
                     legacy_id,
@@ -541,7 +553,12 @@ class Conditions:
             else:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    f'Contributor type code {t[1]} found for $4 "{subfield}" ({normalized_subfield}))',
+                    i18n.t(
+                        'Contributor type code %{code} found for $4 "%{subfield}" (%{normalized_subfield}))',
+                        code=t[1],
+                        subfield=subfield,
+                        normalized_subfield=normalized_subfield,
+                    ),
                 )
                 return t[0]
         subfield_code = "j" if marc_field.tag in ["111", "711"] else "e"
@@ -554,7 +571,12 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    f"Mapping failed for {marc_field.tag} $e {subfield} (Normalized: {normalized_subfield}) ",
+                    i18n.t(
+                        'Mapping failed for %{tag} "%{subfield}" (Normalized: %{normalized_subfield})',
+                        tag=f"{marc_field.tag} $e",
+                        subfield=subfield,
+                        normalized_subfield=normalized_subfield,
+                    ),
                 )
                 Helper.log_data_issue(
                     legacy_id,
@@ -564,7 +586,13 @@ class Conditions:
             else:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    f"Contributor type name {t[1]} found for {marc_field.tag} $e {normalized_subfield} ({subfield}) ",
+                    i18n.t(
+                        "Contributor type name {name} found for {tag} $e {normalized_subfield} ({subfield}) ",
+                        name=t[1],
+                        tag=marc_field.tag,
+                        normalized_subfield=normalized_subfield,
+                        subfield=subfield,
+                    ),
                 )
                 return t[0]
         return self.default_contributor_type["id"]
@@ -603,7 +631,7 @@ class Conditions:
         if marc_field.indicator1 == "7" and "2" in marc_field:
             self.mapper.migration_report.add(
                 "CallNumberTypeMapping",
-                f"Unhandled call number type in $2 (ind1 == 7) {marc_field['2']}",
+                i18n.t("Unhandled call number type in $2 (ind1 == 7)" + str(marc_field["2"])),
             )
             return self.default_call_number_type["id"]
 
@@ -613,8 +641,11 @@ class Conditions:
             self.mapper.migration_report.add(
                 "CallNumberTypeMapping",
                 (
-                    f'Unhandled call number type in ind1: "{marc_field.indicator1}". '
-                    f' Returning default Callnumber type: {self.default_call_number_type["name"]}'
+                    i18n.t(
+                        'Unhandled call number type in ind1: "%{ind1}".\n Returning default Callnumber type: %{type}',
+                        ind1=marc_field.indicator1,
+                        type=self.default_call_number_type["name"],
+                    )
                 ),
             )
             return self.default_call_number_type["id"]
@@ -624,7 +655,7 @@ class Conditions:
         if t:
             self.mapper.migration_report.add(
                 "CallNumberTypeMapping",
-                f"Mapped from Indicator 1 {marc_field.indicator1} -> {t[1]}",
+                i18n.t("Mapped from Indicator 1") + f" {marc_field.indicator1} -> {t[1]}",
             )
             return t[0]
 
@@ -716,12 +747,14 @@ class Conditions:
             mapped_code = self.ref_data_dicts["legacy_locations"].get("*", "").strip()
             if mapped_code:
                 self.mapper.migration_report.add(
-                    "LocationMapping", f"Fallback mapping: {value}->{mapped_code}"
+                    "LocationMapping", i18n.t("Fallback mapping") + f": {value}->{mapped_code}"
                 )
         # Get the FOLIO UUID for the code and return it
         t = self.get_ref_data_tuple_by_code(self.folio.locations, "locations", mapped_code)
         if not t:
-            self.mapper.migration_report.add("LocationMapping", f"Unmapped code: '{value}'")
+            self.mapper.migration_report.add(
+                "LocationMapping", i18n.t("Unmapped code") + f": '{value}'"
+            )
             raise TransformationRecordFailedError(
                 legacy_id, "Could not map location from legacy code", value
             )
@@ -796,7 +829,9 @@ class Conditions:
         ind1 = marc_field.indicator1
         self.mapper.migration_report.add(
             "StaffOnlyViaIndicator",
-            f"{marc_field.tag} indicator1: {ind1} (1 is public, all other values are Staff only)",
+            f"{marc_field.tag} indicator1: {ind1} ("
+            + i18n.t("1 is public, all other values are Staff only")
+            + ")",
         )
         if ind1 != "1":
             return "true"

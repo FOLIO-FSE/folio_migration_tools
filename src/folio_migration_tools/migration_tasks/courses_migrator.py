@@ -115,10 +115,10 @@ class CoursesMigrator(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
                     "GeneralStatistics",
-                    f"Number of Legacy items in {full_path}",
+                    i18n.t("Number of Legacy items in {container}", container=full_path),
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of legacy items in total"
+                    i18n.t("Number of Legacy items in total")
                 )
                 self.print_progress(idx, start)
 

@@ -115,7 +115,9 @@ class HRIDHandler:
         try:
             f_001 = marc_record["001"].value()
             f_003 = marc_record["003"].value().strip() if "003" in marc_record else ""
-            migration_report.add("HridHandling", f'Values in 003: {f_003 or "Empty"}')
+            migration_report.add(
+                "HridHandling", i18n.t("Values in %{field}", field="003") + f': {f_003 or "Empty"}'
+            )
 
             if deactivate035_from001:
                 migration_report.add("HridHandling", i18n.t("035 generation from 001 turned off"))
@@ -133,7 +135,7 @@ class HRIDHandler:
 
         except Exception:
             if "001" in marc_record:
-                s = "Failed to create 035 from 001"
+                s = i18n.n("Failed to create %{to} from %{fro}", to="001", fro="035")
                 migration_report.add("HridHandling", s)
                 Helper.log_data_issue(legacy_ids, s, marc_record["001"])
             else:

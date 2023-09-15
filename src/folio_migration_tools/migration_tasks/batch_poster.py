@@ -177,7 +177,9 @@ class BatchPoster(MigrationTaskBase):
             self.task_configuration.object_type in ["Instances", "Holdings", "Items"]
             and not self.task_configuration.use_safe_inventory_endpoints
         ):
-            self.migration_report.add_general_statistics("Set _version to -1 to enable upsert")
+            self.migration_report.add_general_statistics(
+                i18n.t("Set _version to -1 to enable upsert")
+            )
             json_rec["_version"] = -1
         if self.task_configuration.object_type == "SRS":
             json_rec["snapshotId"] = self.snapshot_id

@@ -312,13 +312,17 @@ class RulesMapperBase(MapperBase):
         )
         self.migration_report.add(
             "Field880Mappings",
-            f"Source digits: {marc_field['6']} Target field: {target_field}",
+            i18n.t("Source digits")
+            + f": {marc_field['6']} "
+            + i18n.t("Target field")
+            + f": {target_field}",
         )
         mappings = self.mappings.get(target_field, {})
         if not mappings:
             self.migration_report.add(
                 "Field880Mappings",
-                f"Mapping not set up for target field: {target_field} ({marc_field['6']})",
+                i18n.t("Mapping not set up for target field")
+                + f": {target_field} ({marc_field['6']})",
             )
         return mappings
 
@@ -338,7 +342,8 @@ class RulesMapperBase(MapperBase):
             return
         for subfield_2 in marc_field.get_subfields("2"):
             self.migration_report.add(
-                "AuthoritySources", f"Source of heading or term: {subfield_2.split(' ')[0]}"
+                "AuthoritySources",
+                i18n.t("Source of heading or term") + f": {subfield_2.split(' ')[0]}",
             )
         for subfield_0 in marc_field.get_subfields("0"):
             code = ""
@@ -350,7 +355,7 @@ class RulesMapperBase(MapperBase):
                     code = subfield_0[: subfield_0.find(url.path)]
             if code:
                 self.migration_report.add(
-                    "AuthoritySources", f"$0 base uri or source code: {code}"
+                    "AuthoritySources", i18n.t("$0 base uri or source code") + f": {code}"
                 )
 
     def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
@@ -389,7 +394,7 @@ class RulesMapperBase(MapperBase):
             )
             trfe.log_it()
             self.migration_report.add_general_statistics(
-                "Records failed due to an error. See data issues log for details"
+                i18n.t("Records failed due to an error. See data issues log for details")
             )
         except Exception as exception:
             self.handle_generic_exception(self.parsed_records, exception)
@@ -623,16 +628,16 @@ class RulesMapperBase(MapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            f'Suppressed from discovery = {folio_record["discoverySuppress"]}',
+            i18n.t("Suppressed from discovery") + f' = {folio_record["discoverySuppress"]}',
         )
         if not only_discovery_suppress:
             folio_record["staffSuppress"] = file_def.staff_suppressed
             self.migration_report.add(
-                "Suppression", f'Staff suppressed = {folio_record["staffSuppress"]} '
+                "Suppression", i18n.t("Staff suppressed") + f' = {folio_record["staffSuppress"]} '
             )
 
     def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
-        self.migration_report.add("PrecedingSuccedingTitles", f"{e_parent} created")
+        self.migration_report.add("PrecedingSuccedingTitles", f"{e_parent} " + i18n.t("created"))
         # TODO: Make these uuids deterministic
         new_entity = {
             "id": str(uuid.uuid4()),

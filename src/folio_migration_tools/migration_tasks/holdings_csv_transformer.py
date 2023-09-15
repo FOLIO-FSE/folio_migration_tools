@@ -254,7 +254,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         )
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
-                        "Holdings Records Written to disk"
+                        i18n.t("Holdings Records Written to disk")
                     )
             self.mapper.save_id_map_file(
                 self.folder_structure.holdings_id_map_path, self.holdings_id_map
@@ -293,7 +293,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def process_single_file(self, file_def: FileDefinition):
         full_path = self.folder_structure.data_folder / "items" / file_def.file_name
         with open(full_path, encoding="utf-8-sig") as records_file:
-            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("Number of files processed")
+            )
             start = time.time()
             records_processed = 0
             for idx, legacy_record in enumerate(self.mapper.get_objects(records_file, full_path)):
@@ -311,7 +313,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of Legacy items in file"
+                    i18n.t("Number of Legacy items in file")
                 )
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
@@ -378,7 +380,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.holdings[bw_key] = incoming_holding
                 self.mapper.create_and_write_boundwith_part(legacy_item_id, incoming_holding["id"])
                 self.mapper.migration_report.add_general_statistics(
-                    "Unique BW Holdings created from Items"
+                    i18n.t("Unique BW Holdings created from Items")
                 )
             else:
                 self.merge_holding(bw_key, incoming_holding)
@@ -389,7 +391,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     legacy_item_id, self.holdings[bw_key], self.object_type
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "BW Items found tied to previously created BW Holdings"
+                    i18n.t("BW Items found tied to previously created BW Holdings")
                 )
         else:
             # Regular holding. Merge according to criteria
@@ -401,12 +403,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             if self.holdings.get(new_holding_key, None):
                 self.mapper.migration_report.add_general_statistics(
-                    "Holdings already created from Item"
+                    i18n.t("Holdings already created from Item")
                 )
                 self.merge_holding(new_holding_key, incoming_holding)
             else:
                 self.mapper.migration_report.add_general_statistics(
-                    "Unique Holdings created from Items"
+                    i18n.t("Unique Holdings created from Items")
                 )
                 self.holdings[new_holding_key] = incoming_holding
 

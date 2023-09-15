@@ -82,7 +82,7 @@ class MarcFileProcessor:
                     )
                 Helper.write_to_file(self.created_objects_file, folio_rec)
                 self.mapper.migration_report.add_general_statistics(
-                    "Inventory records written to disk"
+                    i18n.t("Inventory records written to disk")
                 )
                 self.exit_on_too_many_exceptions()
 
@@ -135,7 +135,7 @@ class MarcFileProcessor:
                 marc_record["008"].data = remain
                 self.mapper.migration_report.add(
                     "MarcValidation",
-                    f"008 lenght invalid. '{rest}' was stripped out",
+                    i18n.t("008 length invalid. '%{rest}' was stripped out", rest=rest),
                 )
             self.add_mapped_location_code_to_record(marc_record, folio_rec)
             new_004 = Field(tag="004", data=self.parent_hrids[folio_rec["instanceId"]])
@@ -158,7 +158,7 @@ class MarcFileProcessor:
             legacy_ids,
             file_def.discovery_suppressed,
         )
-        self.mapper.migration_report.add_general_statistics("SRS records written to disk")
+        self.mapper.migration_report.add_general_statistics(i18n.t("SRS records written to disk"))
 
     def add_mapped_location_code_to_record(self, marc_record, folio_rec):
         location_code = next(
@@ -204,9 +204,11 @@ class MarcFileProcessor:
             if legacy_id not in folio_record_identifiers:
                 new_ids.add(legacy_id)
             else:
-                migration_report.add_general_statistics("Duplicate MARC record identifiers ")
+                migration_report.add_general_statistics(
+                    i18n.t("Duplicate MARC record identifiers ")
+                )
         if not any(new_ids):
-            s = "Failed records. No unique record identifiers in legacy record"
+            s = i18n.t("Failed records. No unique record identifiers in legacy record")
             migration_report.add_general_statistics(s)
             raise TransformationRecordFailedError(
                 "-".join(legacy_ids),

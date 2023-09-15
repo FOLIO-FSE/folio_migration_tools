@@ -134,12 +134,14 @@ class UserTransformer(MigrationTaskBase):
                                 logging.info("## First FOLIO  user")
                                 logging.info(json.dumps(folio_user, indent=4, sort_keys=True))
                             self.mapper.migration_report.add_general_statistics(
-                                "Successful user transformations"
+                                i18n.t("Successful user transformations")
                             )
                             if num_users % 1000 == 0:
                                 logging.info(f"{num_users} users processed.")
                         except TransformationRecordFailedError as tre:
-                            self.mapper.migration_report.add_general_statistics("Records failed")
+                            self.mapper.migration_report.add_general_statistics(
+                                i18n.t("Records failed")
+                            )
                             Helper.log_data_issue(tre.index_or_id, tre.message, tre.data_value)
                             logging.error(tre)
                         except TransformationProcessError as tpe:
@@ -155,7 +157,7 @@ class UserTransformer(MigrationTaskBase):
                             logging.error(num_users)
                             logging.error(json.dumps(legacy_user))
                             self.mapper.migration_report.add_general_statistics(
-                                "Failed user transformations"
+                                i18n.t("Failed user transformations")
                             )
                             logging.error(ee, exc_info=True)
 
