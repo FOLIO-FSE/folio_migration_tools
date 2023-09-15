@@ -41,7 +41,6 @@ if __name__ == "__main__":
     # Load new translations
     for key in found_keys:
         if key not in translations:
-            print(key)
             translations[key] = key
     # Check for missing format
     missing_format_re = re.compile(r"(?<!%)\{.*?\}")
