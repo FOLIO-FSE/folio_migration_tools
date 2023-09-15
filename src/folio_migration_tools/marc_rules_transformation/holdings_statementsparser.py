@@ -2,6 +2,7 @@ import calendar
 import contextlib
 import logging
 import re
+import i18n
 from typing import List
 
 from pymarc import Field
@@ -48,7 +49,11 @@ class HoldingsStatementsParser:
             if "8" not in pattern_field:
                 raise TransformationFieldMappingError(
                     legacy_ids,
-                    f"{pattern_tag} subfield 8 not in field",
+                    i18n.t(
+                        "%{tag} subfield %{subfield} not in field",
+                        tag=pattern_tag,
+                        subfield="8",
+                    ),
                     pattern_field,
                 )
             linked_value_fields = [
@@ -154,7 +159,9 @@ class HoldingsStatementsParser:
             if "a" not in codes and "z" not in codes and "x" not in codes:
                 raise TransformationFieldMappingError(
                     legacy_ids,
-                    f"{field_textual} subfields a, x, and z missing from field",
+                    i18n.t(
+                        "%{field} subfields a, x, and z missing from field", field=field_textual
+                    ),
                     f,
                 )
             if not (
@@ -164,7 +171,7 @@ class HoldingsStatementsParser:
             ):
                 raise TransformationFieldMappingError(
                     legacy_ids,
-                    f"{field_textual} a,x and z are all empty",
+                    i18n.t("%{field} a,x and z are all empty", field=field_textual),
                     f,
                 )
             return_dict["statements"].append(

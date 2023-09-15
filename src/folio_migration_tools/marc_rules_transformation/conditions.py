@@ -375,7 +375,7 @@ class Conditions:
         if not my_id:
             raise TransformationFieldMappingError(
                 legacy_id,
-                f"no matching identifier_types in {parameter['names']}",
+                i18n.t("no matching identifier_types in %{names}", names=parameter["names"]),
                 marc_field,
             )
         return my_id

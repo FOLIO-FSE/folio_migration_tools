@@ -3,9 +3,12 @@
   "%{action} error. http status: %{status}": "%{action} error. http status: %{status}",
   "%{action} error: %{message}": "%{action} error: %{message}",
   "%{fields_criteria} empty or not set": "%{fields_criteria} empty or not set",
+  "%{field} a,x and z are all empty": "%{field} a,x and z are all empty",
+  "%{field} subfields a, x, and z missing from field": "%{field} subfields a, x, and z missing from field",
   "%{fro} mapped from %{record}": "%{fro} mapped from %{record}",
   "%{props} were concatenated": "%{props} were concatenated",
   "%{schema_value} added to %{prop_name}": "%{schema_value} added to %{prop_name}",
+  "%{tag} subfield %{subfield} not in field": "%{tag} subfield %{subfield} not in field",
   "%{value} added to %{entry}": "%{value} added to %{entry}",
   "%{value} mapped to %{mapped_value}": "%{value} mapped to %{mapped_value}",
   "%{value} not found in map.": "%{value} not found in map.",
@@ -29,6 +32,7 @@
   "Bound-with items identified by bib id": "Bound-with items identified by bib id",
   "Change due date error": "Change due date error",
   "Changed %{a} to %{b}": "Changed %{a} to %{b}",
+  "Check mapping file against the schema.": "Check mapping file against the schema.",
   "Checked out on first try": "Checked out on first try",
   "Checked out on second try": "Checked out on second try",
   "Click to expand all %{count} things": {
@@ -49,6 +53,7 @@
   "DATA ISSUE Invalid sum": "DATA ISSUE Invalid sum",
   "DATA ISSUE Items not in FOLIO": "DATA ISSUE Items not in FOLIO",
   "DATA ISSUE Users not in FOLIO": "DATA ISSUE Users not in FOLIO",
+  "Data issue. Consider fixing the record. ": "Data issue. Consider fixing the record. ",
   "Discarded reserves": "Discarded reserves",
   "Duplicate 001. Creating HRID instead.\\n Previous 001 will be stored in a new 035 field": "Duplicate 001. Creating HRID instead.\\n Previous 001 will be stored in a new 035 field",
   "Duplicate MARC record identifiers ": "Duplicate MARC record identifiers ",
@@ -82,6 +87,7 @@
   "Item transformation report": "Item transformation report",
   "Items already detected as missing": "Items already detected as missing",
   "Legacy bib records without 001": "Legacy bib records without 001",
+  "Legacy id is empty": "Legacy id is empty",
   "Loan already in failed.": "Loan already in failed.",
   "Loans discarded. Had migrated item barcode": "Loans discarded. Had migrated item barcode",
   "Loans failed pre-validation": "Loans failed pre-validation",
@@ -191,6 +197,8 @@
   "TOTAL Purchase Orders created": "TOTAL Purchase Orders created",
   "Tag: %{tag}. Added value: %{value}": "Tag: %{tag}. Added value: %{value}",
   "Target field": "Target field",
+  "Target string '%{string}' not in Schema!": "Target string '%{string}' not in Schema!",
+  "Target type": "Target type",
   "Time Finished:": "Time Finished:",
   "Time Started:": "Time Started:",
   "Timings": "Timings",
@@ -419,5 +427,6 @@
   "instance type code (%{code}) not found in FOLIO": "instance type code (%{code}) not found in FOLIO",
   "item barcode": "item barcode",
   "legacy id from %{fro}": "legacy id from %{fro}",
-  "naturalId mapped from %{fro}": "naturalId mapped from %{fro}"
+  "naturalId mapped from %{fro}": "naturalId mapped from %{fro}",
+  "no matching identifier_types in %{names}": "no matching identifier_types in %{names}"
 }
