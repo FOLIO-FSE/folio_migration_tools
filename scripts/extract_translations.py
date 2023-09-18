@@ -25,7 +25,12 @@ if __name__ == "__main__":
     for file in source_files:
         with open(file) as f:
             src = f.read()
-        found_keys.update([x for (_, x) in internationalization_re.findall(src)])
+        found_keys.update(
+            [
+                x.encode("utf-8").decode("unicode_escape")
+                for (_, x) in internationalization_re.findall(src)
+            ]
+        )
 
     en_filename = Path(args.target_dir) / "en.json"
     with open(en_filename) as f:
