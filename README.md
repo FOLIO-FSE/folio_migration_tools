@@ -57,7 +57,7 @@ pipenv install folio-migration-tools
 ### 2. Test the installation by showing the help pages
 ```  
 pipenv run python3 -m folio_migration_tools -h
-```  
+```
 
 # FOLIO migration process
 This repo plays the main part in a process using a collection of tools. The process itself is documented in more detail, including example configuration files, at [this template repository](https://github.com/FOLIO-FSE/migration_repo_template)
@@ -67,7 +67,66 @@ In order to perform migrations according to this process, you need the following
 * Access to the [Data mapping file creator](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) web tool
 * A FOLIO tenant running the latest or the second latest version of FOLIO
 
+# Internationalization
 
+This repo uses [Python-i18n](https://github.com/danhper/python-i18n) to translate reports between languages, and to handle large strings for templates.
+
+**Any english string which will end up in a report** should be wrapped in the function `i18n.t` from `i18n`:
+
+## Keys/Usage
+
+```js
+i18n.t("Reports")+":"
+```
+
+Templating is achieved with `%{[key]}` blocks, and keyword arguments in the internationaliation:
+
+```js
+i18n.t("Code '%{code}' not found in FOLIO",code=folio_code)
+```
+
+Long strings can use a placeholder key:
+
+```js
+i18n.t("blurbs.Introduction.description")
+```
+
+With the full string in ```translations/en.json```:
+
+```json
+"blurbs.Introduction.description": "<br/>Data errors preventing records from being migrated
+```
+
+## Translations Files
+
+Translation files live in the `translations` directory, with `en.json` as the default.
+
+Extract template files with the `extract_translations` script:
+
+```bash
+python scripts/extract_translations.py
+```
+
+## Internationalizations
+
+Other langauges translations live in `translations/[locale].json`.
+For example, spanish would be `es.json`. 
+
+The keys must match the English keys, but the Values should be translated.
+
+You can update a language file's keys with:
+
+```bash
+python scripts/update_language.py --target-lang [locale]
+```
+
+Translate all new strings, which begin with `TRANSLATE`, then commit.
+
+## Tips
+
+* Internationalize entire phrases or paragraphs, not just the constitutent words. Syntax and grammar vary significantly between languages.
+* Name template variables as generically as possible in the circumstance, and check translations for reusable translations.
+* In a block with sentences separately followed by values, such as a table, you only need to translate the sentences. 
 
 # Running the scripts
 For information on syntax, what files are needed and produced by the toolkit, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template). We are building out the docs section in this repository as well:[Documentation](https://folio-migration-tools.readthedocs.io/en/latest/)
