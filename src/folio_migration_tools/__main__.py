@@ -19,7 +19,7 @@ import i18n
 i18n.load_config(Path(__file__).parents[2] / "i18n_config.py")
 
 
-def parse_args():
+def parse_args(args):
     task_classes = iter(inheritors(migration_task_base.MigrationTaskBase))
     parser = PromptParser()
     parser.add_argument(
@@ -59,14 +59,14 @@ def parse_args():
         default="en",
         prompt=False,
     )
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
 def main():
     try:
         task_classes = list(inheritors(migration_task_base.MigrationTaskBase))
 
-        args = parse_args()
+        args = parse_args(sys.argv[1:])
         i18n.set("locale", args.report_language)
         with open(args.configuration_path) as config_file_path:
             try:
