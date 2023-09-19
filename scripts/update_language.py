@@ -53,7 +53,7 @@ if __name__ == "__main__":
                         "TRANSLATE ME: " + source_translations[key][subkey]
                     )
     # Check for missing format
-    missing_format_re = re.compile(r"(?<!%)\{.*?\}")
+    missing_format_re = re.compile(r"(?<!%)\{[^\}]*\}")
     for key in target_translations:
         if isinstance(target_translations[key], str):
             if missing_format_re.search(target_translations[key]):
