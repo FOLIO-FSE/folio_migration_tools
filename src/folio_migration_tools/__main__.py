@@ -2,6 +2,7 @@ import json
 import logging
 import sys
 from pathlib import Path
+from os import environ
 
 import httpx
 import humps
@@ -21,20 +22,34 @@ i18n.load_config(Path(__file__).parents[2] / "i18n_config.py")
 def parse_args():
     task_classes = iter(inheritors(migration_task_base.MigrationTaskBase))
     parser = PromptParser()
-    parser.add_argument("configuration_path", help="Path to configuration file")
+    parser.add_argument(
+        "configuration_path",
+        help="Path to configuration file",
+        nargs="?",
+        prompt="FOLIO_MIGRATION_TOOLS_CONFIGURATION_PATH" not in environ,
+        default=environ.get("FOLIO_MIGRATION_TOOLS_CONFIGURATION_PATH"),
+    )
     tasks_string = ", ".join(sorted(tc.__name__ for tc in task_classes))
+
     parser.add_argument(
         "task_name",
         help=("Task name. Use one of: " f"{tasks_string}"),
+        nargs="?",
+        prompt="FOLIO_MIGRATION_TOOLS_TASK_NAME" not in environ,
+        default=environ.get("FOLIO_MIGRATION_TOOLS_TASK_NAME"),
     )
     parser.add_argument(
         "--okapi_password",
         help="pasword for the tenant in the configuration file",
+        prompt="FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD" not in environ,
+        default=environ.get("FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD"),
         secure=True,
     )
     parser.add_argument(
         "--base_folder_path",
         help=("path to the base folder for this library. Built on migration_repo_template"),
+        prompt="FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH" not in environ,
+        default=environ.get("FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH"),
     )
     parser.add_argument(
         "--report_language",
