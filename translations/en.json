@@ -224,7 +224,7 @@
   "Unmapped code": "Unmapped code",
   "Unmatched level": "Unmatched level",
   "Unsuccessful matching on %{criteria_1} and %{criteria_2}": "Unsuccessful matching on %{criteria_1} and %{criteria_2}",
-  "Unsuccessful matching on %{key}": "Unsuccessful matching on %{key}",
+  "Unsuccessful matching on %{criteria}": "Unsuccessful matching on %{criteria}",
   "Unsuccessfully declared loan %{loan} as Claimed returned": "Unsuccessfully declared loan %{loan} as Claimed returned",
   "Unsuccessfully declared loan as lost": "Unsuccessfully declared loan as lost",
   "Unsuccessfully migrated requests": "Unsuccessfully migrated requests",
