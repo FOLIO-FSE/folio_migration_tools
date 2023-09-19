@@ -235,7 +235,7 @@ class BibsRulesMapper(RulesMapperBase):
                 self.migration_report.add(
                     "RecourceTypeMapping",
                     "336$a - "
-                    + i18n.t("Successful matching on %{key}", key=match_template)
+                    + i18n.t("Successful matching on %{criteria}", key=match_template)
                     + f" ({f336a})",
                 )
             else:

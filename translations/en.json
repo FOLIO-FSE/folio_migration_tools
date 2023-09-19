@@ -187,7 +187,7 @@
   "Subfield b not in 336": "Subfield b not in 336",
   "Successful match": "Successful match",
   "Successful matching on %{criteria_1} and %{criteria_2}": "Successful matching on %{criteria_1} and %{criteria_2}",
-  "Successful matching on %{key}": "Successful matching on %{key}",
+  "Successful matching on %{criteria}": "Successful matching on %{criteria}",
   "Successful user transformations": "Successful user transformations",
   "Successfully %{action}": "Successfully %{action}",
   "Successfully activated user": "Successfully activated user",

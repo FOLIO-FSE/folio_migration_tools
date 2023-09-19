@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pymarc
 import pytest
+import i18n
 from dateutil.parser import parse
 from pymarc import Field
 from pymarc import MARCReader
@@ -440,7 +441,7 @@ def test_get_folio_id_by_name(mapper, caplog):
     res = mapper.get_instance_format_id_by_name("audio", "audio belt", "legacy_id_99")
     assert not caplog.text
     assert (
-        "Successful matching on 337$a & 338$a - audio -- audio belt->audio -- audio belt"
+        "Successful matching on 337$a and 338$a - audio -- audio belt->audio -- audio belt"
         in mapper.migration_report.report["InstanceFormat"]
     )
     assert res == "0d9b1c3d-2d13-4f18-9472-cc1b91bf1752"
