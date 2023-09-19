@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     source_files = Path(args.source_dir).rglob("*.py")
 
-    internationalization_re = re.compile(r"(?<=i18n.t\()\s*([\"'])(.*?[^\\])\1", re.MULTILINE)
+    internationalization_re = re.compile(r"i18n.t\(\s*([\"'])(.*?[^\\])\1", re.MULTILINE)
     found_keys: set[str] = set()
     for file in source_files:
         with open(file) as f:
