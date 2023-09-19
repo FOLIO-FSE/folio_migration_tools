@@ -235,14 +235,14 @@ class BibsRulesMapper(RulesMapperBase):
                 self.migration_report.add(
                     "RecourceTypeMapping",
                     "336$a - "
-                    + i18n.t("Successful matching on %{criteria}", key=match_template)
+                    + i18n.t("Successful matching on %{criteria}", criteria=match_template)
                     + f" ({f336a})",
                 )
             else:
                 self.migration_report.add(
                     "RecourceTypeMapping",
                     "336$a - "
-                    + i18n.t("Unsuccessful matching on %{key}", key=match_template)
+                    + i18n.t("Unsuccessful matching on %{criteria}", criteria=match_template)
                     + f" ({f336a})",
                 )
                 Helper.log_data_issue(
