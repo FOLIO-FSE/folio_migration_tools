@@ -169,7 +169,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 ("No 004 in record. The tools only support bib-mfhd linking throuh 004"),
                 legacy_ids,
             )
-        legacy_instance_id = marc_record["004"].data
+        legacy_instance_id = marc_record["004"].data.strip()
         folio_holding["formerIds"].append(f"{self.bib_id_template}{legacy_instance_id}")
         if legacy_instance_id in self.parent_id_map:
             folio_holding["instanceId"] = self.parent_id_map[legacy_instance_id][1]
