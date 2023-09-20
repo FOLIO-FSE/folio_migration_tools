@@ -914,9 +914,9 @@ def set_deep2(dictionary, key, value):
         else:
             dd = dd.setdefault(k, {})
     if name and keys and keys[0].startswith(name):
-        if len(dd) <= number:
+        if len(dd) >= number:
             dd.append({})
-        dd[number][latest] = value
+            dd[number][latest] = value
     elif latest in dd:
         for i in range(len(value)):
             if len(dd[latest]) > i and dd[latest][i] and isinstance(dd[latest][i], dict):

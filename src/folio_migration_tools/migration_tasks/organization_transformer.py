@@ -76,38 +76,27 @@ class OrganizationTransformer(MigrationTaskBase):
             self.organization_map
         )
 
+        mapping_files = {}
+        map_types = [
+            "organization_types_map_path",
+            "address_categories_map_path",
+            "email_categories_map_path",
+            "phone_categories_map_path",
+        ]
+
+        for m_type in map_types:
+            if hasattr(self.task_configuration, m_type):
+                map_path = self.folder_structure.mapping_files_folder.joinpath(
+                    getattr(self.task_configuration, m_type)
+                )
+                mapping_files[m_type.replace("_path", "")] = self.load_ref_data_mapping_file(
+                    m_type, map_path, self.folio_keys, False
+                )
+            else:
+                mapping_files[m_type] = ()
+
         self.mapper = OrganizationMapper(
-            self.folio_client,
-            self.library_configuration,
-            self.organization_map,
-            self.load_ref_data_mapping_file(
-                "organizationTypes",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.organization_types_map_path,
-                self.folio_keys,
-                False,
-            ),
-            self.load_ref_data_mapping_file(
-                "addresses[0].categories[0]",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.address_categories_map_path,
-                self.folio_keys,
-                False,
-            ),
-            self.load_ref_data_mapping_file(
-                "emails[0].categories[0]",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.email_categories_map_path,
-                self.folio_keys,
-                False,
-            ),
-            self.load_ref_data_mapping_file(
-                "phoneNumbers[0].categories[0]",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.phone_categories_map_path,
-                self.folio_keys,
-                False,
-            ),
+            self.folio_client, self.library_configuration, self.organization_map, **mapping_files
         )
 
         self.embedded_extradata_object_cache: set = set()

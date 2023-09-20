@@ -25,10 +25,10 @@ class OrganizationMapper(MappingFileMapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         organization_map: dict,
-        organization_types_map,
-        address_categories_map,
-        email_categories_map,
-        phone_categories_map,
+        organization_types_map="",
+        address_categories_map="",
+        email_categories_map="",
+        phone_categories_map="",
     ):
         # Build composite organization schema
         if os.environ.get("GITHUB_TOKEN"):
@@ -47,12 +47,14 @@ class OrganizationMapper(MappingFileMapperBase):
         )
         self.organization_schema = organization_schema
         # Set up reference data maps
-        self.set_up_reference_data_mapping(
-            organization_types_map,
-            address_categories_map,
-            email_categories_map,
-            phone_categories_map,
-        )
+        avail_maps = {
+            "organization_types_map": organization_types_map,
+            "address_categories_map": address_categories_map,
+            "email_categories_map": email_categories_map,
+            "phone_categories_map": phone_categories_map,
+        }
+
+        self.set_up_reference_data_mapping(**avail_maps)
 
         self.folio_client: FolioClient = folio_client
         self.notes_mapper: NotesMapper = NotesMapper(
@@ -71,37 +73,23 @@ class OrganizationMapper(MappingFileMapperBase):
             index_or_id,
             folio_prop_name,
         )
-
+        avail_maps = [
+            "organization_types_map",
+            "address_categories_map",
+            "email_categories_map",
+            "phone_categories_map",
+        ]
         # Perfrom reference data mappings
-        if folio_prop_name == "organizationTypes":
-            return self.get_mapped_ref_data_value(
-                self.organization_types_map,
-                *value_tuple,
-                False,
-            )
+        for m in avail_maps:
+            if hasattr(self, m) and getattr(self, m):
+                map_attr = getattr(self, m)
+                return self.get_mapped_ref_data_value(
+                    map_attr,
+                    *value_tuple,
+                    False,
+                )
 
-        elif re.compile("addresses\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
-            return self.get_mapped_ref_data_value(
-                self.address_categories_map,
-                *value_tuple,
-                False,
-            )
-
-        elif re.compile("emails\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
-            return self.get_mapped_ref_data_value(
-                self.email_categories_map,
-                *value_tuple,
-                False,
-            )
-
-        elif re.compile("phoneNumbers\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
-            return self.get_mapped_ref_data_value(
-                self.phone_categories_map,
-                *value_tuple,
-                False,
-            )
-
-        elif re.compile("interfaces\[(\d+)\]\.interfaceCredential.interfaceId").fullmatch(
+        if re.compile("interfaces\[(\d+)\]\.interfaceCredential.interfaceId").fullmatch(
             folio_prop_name
         ):
             return "replace_with_interface_id"
@@ -137,21 +125,21 @@ class OrganizationMapper(MappingFileMapperBase):
                 *categories_shared_args, address_categories_map, "value", Blurbs.CategoriesMapping
             )
         else:
-            self.address_categories_map = None
+            self.address_categories_map = ()
 
         if email_categories_map:
             self.email_categories_map = RefDataMapping(
                 *categories_shared_args, email_categories_map, "value", Blurbs.CategoriesMapping
             )
         else:
-            self.email_categories_map = None
+            self.email_categories_map = ()
 
         if phone_categories_map:
             self.phone_categories_map = RefDataMapping(
                 *categories_shared_args, phone_categories_map, "value", Blurbs.CategoriesMapping
             )
         else:
-            self.phone_categories_map = None
+            self.phone_categories_map = ()
 
         if organization_types_map:
             self.organization_types_map = RefDataMapping(
@@ -163,7 +151,7 @@ class OrganizationMapper(MappingFileMapperBase):
                 Blurbs.OrganizationTypeMapping,
             )
         else:
-            self.organization_types_map = None
+            self.organization_types_map = ()
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
