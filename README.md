@@ -71,7 +71,7 @@ In order to perform migrations according to this process, you need the following
 
 This repo uses [Python-i18n](https://github.com/danhper/python-i18n) to translate reports between languages, and to handle large strings for templates.
 
-**Any english string which will end up in a report** should be wrapped in the function `i18n.t` from `i18n`:
+**Any English string which will end up in a report** should be wrapped in the function `i18n.t` from `i18n`:
 
 ## Keys/Usage
 
@@ -110,7 +110,7 @@ python scripts/extract_translations.py
 ## Internationalizations
 
 Other langauges translations live in `translations/[locale].json`.
-For example, spanish would be `es.json`. 
+For example, Spanish would be `es.json`. 
 
 The keys must match the English keys, but the Values should be translated.
 
