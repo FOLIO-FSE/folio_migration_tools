@@ -77,20 +77,20 @@ class OrganizationTransformer(MigrationTaskBase):
         )
 
         mapping_files = {}
-        map_types = [
-            "organization_types_map_path",
-            "address_categories_map_path",
-            "email_categories_map_path",
-            "phone_categories_map_path",
-        ]
+        map_types = {
+            "organization_types_map_path": "organizationTypes",
+            "address_categories_map_path": "addresses[0].categories[0]",
+            "email_categories_map_path": "emails[0].categories[0]",
+            "phone_categories_map_path": "phoneNumbers[0].categories[0]",
+        }
 
-        for m_type in map_types:
+        for m_type in map_types.keys():
             if hasattr(self.task_configuration, m_type):
                 map_path = self.folder_structure.mapping_files_folder.joinpath(
                     getattr(self.task_configuration, m_type)
                 )
                 mapping_files[m_type.replace("_path", "")] = self.load_ref_data_mapping_file(
-                    m_type, map_path, self.folio_keys, False
+                    map_types[m_type], map_path, self.folio_keys, False
                 )
             else:
                 mapping_files[m_type] = ()
