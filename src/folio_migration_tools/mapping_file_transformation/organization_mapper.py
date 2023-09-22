@@ -47,14 +47,13 @@ class OrganizationMapper(MappingFileMapperBase):
         )
         self.organization_schema = organization_schema
         # Set up reference data maps
-        avail_maps = {
+        self.avail_maps = {
             "organization_types_map": organization_types_map,
             "address_categories_map": address_categories_map,
             "email_categories_map": email_categories_map,
             "phone_categories_map": phone_categories_map,
         }
-
-        self.set_up_reference_data_mapping(**avail_maps)
+        self.set_up_reference_data_mapping(**self.avail_maps)
 
         self.folio_client: FolioClient = folio_client
         self.notes_mapper: NotesMapper = NotesMapper(
@@ -117,13 +116,11 @@ class OrganizationMapper(MappingFileMapperBase):
             email_categories_map (_type_): _description_
             phone_categories_map (_type_): _description_
         """
-
         categories_shared_args = (
             self.folio_client,
             "/organizations-storage/categories",
             "categories",
         )
-
         if address_categories_map:
             self.address_categories_map = RefDataMapping(
                 *categories_shared_args, address_categories_map, "value", Blurbs.CategoriesMapping
