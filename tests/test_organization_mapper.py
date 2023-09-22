@@ -1,4 +1,5 @@
 import logging
+import random
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -16,6 +17,36 @@ from folio_migration_tools.test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
+
+category_maps = {
+    "address_categories_map": [
+        {"address_categories": "rt", "folio_value": "Returns"},
+        {"address_categories": "*", "folio_value": "General"},
+    ],
+    "email_categories_map": [
+        {
+            "email1_categories": "tspt",
+            "email2_categories": "*",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
+        {
+            "email1_categories": "*",
+            "email2_categories": "tspt",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
+        {"email1_categories": "*", "email_2categories": "*", "folio_value": "General"},
+    ],
+    "phone_categories_map": [
+        {"phone_categories": "mspt", "folio_value": "Moral Support"},
+        {"phone_categories": "*", "folio_value": "General"},
+    ],
+    "organization_types_map": [
+        {"organization_types": "cst", "folio_name": "Consortium"},
+        {"organization_types": "*", "folio_name": "Unspecified"},
+    ],
+}
 
 
 @pytest.mark.slow
@@ -41,7 +72,7 @@ def test_fetch_interfaces_schemas_from_github_happy_path():
 
 # Mock mapper object
 @pytest.fixture(scope="session", autouse=True)
-def mapper(pytestconfig) -> OrganizationMapper:
+def mapper(pytestconfig, category_maps=category_maps) -> OrganizationMapper:
     okapi_url = "okapi_url"
     tenant_id = "tenant_id"
     username = "username"
@@ -63,45 +94,14 @@ def mapper(pytestconfig) -> OrganizationMapper:
         multi_field_delimiter="^-^",
     )
 
-    address_categories_map = [
-        {"address_categories": "rt", "folio_value": "Returns"},
-        {"address_categories": "*", "folio_value": "General"},
-    ]
-
-    email_categories_map = [
-        {
-            "email1_categories": "tspt",
-            "email2_categories": "*",
-            "folio_value": "Technical Support",
-        },
-        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
-        {
-            "email1_categories": "*",
-            "email2_categories": "tspt",
-            "folio_value": "Technical Support",
-        },
-        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
-        {"email1_categories": "*", "email_2categories": "*", "folio_value": "General"},
-    ]
-
-    phone_categories_map = [
-        {"phone_categories": "mspt", "folio_value": "Moral Support"},
-        {"phone_categories": "*", "folio_value": "General"},
-    ]
-
-    organization_types_map = [
-        {"organization_types": "cst", "folio_name": "Consortium"},
-        {"organization_types": "*", "folio_name": "Unspecified"},
-    ]
-
     return OrganizationMapper(
         mock_folio_client,
         lib_config,
         organization_map,
-        organization_types_map,
-        address_categories_map,
-        email_categories_map,
-        phone_categories_map,
+        category_maps["organization_types_map"],
+        category_maps["address_categories_map"],
+        category_maps["email_categories_map"],
+        category_maps["phone_categories_map"],
     )
 
 
@@ -110,14 +110,26 @@ def test_parse_record_mapping_file(mapper):
     assert folio_keys
 
 
+def build_tests():
+    blank_scenario = {k: "" for k in category_maps.keys()}
+    scenarios = [blank_scenario]
+    for key in category_maps.keys():
+        new_scenario = category_maps
+        new_scenario[key] = ""
+        scenarios.append(new_scenario)
+    return scenarios
+
+
+@pytest.mark.parametrize("mapper", build_tests(), indirect=["mapper"])
 def test_organization_mapping(mapper):
-    data["code"] = "o1"
+    code = f"o{random.randrange(10000)}"
+    data["code"] = code
 
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
 
     # Test string values mapping
 
-    assert organization["code"] == "o1"
+    assert organization["code"] == code
     assert organization["description"] == "Good stuff!"
     assert organization["status"] == "Active"
 
