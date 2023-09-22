@@ -107,7 +107,6 @@ def mapper(pytestconfig) -> OrganizationMapper:
 
 def test_parse_record_mapping_file(mapper):
     folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(organization_map)
-
     assert folio_keys
 
 

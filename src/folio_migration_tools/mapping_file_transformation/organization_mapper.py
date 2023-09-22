@@ -73,15 +73,19 @@ class OrganizationMapper(MappingFileMapperBase):
             index_or_id,
             folio_prop_name,
         )
-        avail_maps = [
-            "organization_types_map",
-            "address_categories_map",
-            "email_categories_map",
-            "phone_categories_map",
-        ]
+        avail_maps = {
+            "organization_types_map": "organizationTypes",
+            "address_categories_map": r"addresses\[(\d+)\]\.categories\[(\d+)\]",
+            "email_categories_map": r"emails\[(\d+)\]\.categories\[(\d+)\]",
+            "phone_categories_map": r"phoneNumbers\[(\d+)\]\.categories\[(\d+)\]",
+        }
         # Perfrom reference data mappings
-        for m in avail_maps:
-            if hasattr(self, m) and getattr(self, m):
+        for m in avail_maps.keys():
+            if (
+                hasattr(self, m)
+                and getattr(self, m)
+                and re.compile(avail_maps[m]).fullmatch(folio_prop_name)
+            ):
                 map_attr = getattr(self, m)
                 return self.get_mapped_ref_data_value(
                     map_attr,
