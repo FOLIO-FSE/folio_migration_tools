@@ -32,7 +32,7 @@ class OrganizationMapper(MappingFileMapperBase):
     ):
         # Build composite organization schema
         if os.environ.get("GITHUB_TOKEN"):
-            logging.info("Using GITHB_TOKEN environment variable for Gihub API Access")
+            logging.info("Using GITHUB_TOKEN environment variable for Github API Access")
         organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
         )
