@@ -131,38 +131,26 @@ class OrganizationMapper(MappingFileMapperBase):
             "categories",
         )
 
-        if address_categories_map:
-            self.address_categories_map = RefDataMapping(
-                *categories_shared_args, address_categories_map, "value", "CategoriesMapping"
-            )
-        else:
-            self.address_categories_map = None
+        self.address_categories_map = RefDataMapping(
+            *categories_shared_args, address_categories_map, "value", "CategoriesMapping"
+        )
 
-        if email_categories_map:
-            self.email_categories_map = RefDataMapping(
-                *categories_shared_args, email_categories_map, "value", "CategoriesMapping"
-            )
-        else:
-            self.email_categories_map = None
+        self.email_categories_map = RefDataMapping(
+            *categories_shared_args, email_categories_map, "value", "CategoriesMapping"
+        )
 
-        if phone_categories_map:
-            self.phone_categories_map = RefDataMapping(
-                *categories_shared_args, phone_categories_map, "value", "CategoriesMapping"
-            )
-        else:
-            self.phone_categories_map = None
+        self.phone_categories_map = RefDataMapping(
+            *categories_shared_args, phone_categories_map, "value", "CategoriesMapping"
+        )
 
-        if organization_types_map:
-            self.organization_types_map = RefDataMapping(
-                self.folio_client,
-                "/organizations-storage/organization-types",
-                "organizationTypes",
-                organization_types_map,
-                "name",
-                "OrganizationTypeMapping",
-            )
-        else:
-            self.organization_types_map = None
+        self.organization_types_map = RefDataMapping(
+            self.folio_client,
+            "/organizations-storage/organization-types",
+            "organizationTypes",
+            organization_types_map,
+            "name",
+            "OrganizationTypeMapping",
+        )
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
