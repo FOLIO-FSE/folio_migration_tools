@@ -6,7 +6,6 @@ from dateutil import tz
 from dateutil.parser import parse
 
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 
 utc = ZoneInfo("UTC")
 
@@ -132,4 +131,4 @@ class LegacyLoan(object):
             self.errors.append(("UTC correction issues", "both dates"))
 
     def report(self, what_to_report: str):
-        self.migration_report.add(Blurbs.Details, what_to_report)
+        self.migration_report.add("Details", what_to_report)

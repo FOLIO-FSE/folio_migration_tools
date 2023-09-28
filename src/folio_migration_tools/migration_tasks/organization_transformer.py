@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 import uuid
+import i18n
 from hashlib import sha1
 from os.path import isfile
 from typing import List
@@ -24,7 +25,6 @@ from folio_migration_tools.mapping_file_transformation.organization_mapper impor
     OrganizationMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -134,7 +134,9 @@ class OrganizationTransformer(MigrationTaskBase):
         with open(filename, encoding="utf-8-sig") as records_file, open(
             self.folder_structure.created_objects_path, "w+"
         ) as results_file:
-            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("Number of files processed")
+            )
             start = time.time()
             records_processed = 0
             for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
@@ -176,10 +178,10 @@ class OrganizationTransformer(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, excepion)
 
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of objects in source data file"
+                    i18n.t("Number of objects in source data file")
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of organizations created"
+                    i18n.t("Number of organizations created")
                 )
 
                 # TODO Rewrite to base % value on number of rows in file
@@ -209,7 +211,7 @@ class OrganizationTransformer(MigrationTaskBase):
                     "Check source files for empty rows or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
+                self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
     def wrap_up(self):
@@ -221,7 +223,9 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                "Ogranization transformation report", migration_report_file, self.start_datetime
+                i18n.t("Ogranization transformation report"),
+                migration_report_file,
+                self.start_datetime,
             )
 
             Helper.print_mapping_report(
@@ -279,8 +283,8 @@ class OrganizationTransformer(MigrationTaskBase):
                 valid_interfaces.append(interface)
             else:
                 self.mapper.migration_report.add(
-                    Blurbs.MalformedInterfaceUri,
-                    "Interfaces",
+                    "MalformedInterfaceUri",
+                    i18n.t("Interfaces"),
                 )
                 Helper.log_data_issue(
                     f"{record['code']}",
@@ -356,7 +360,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         if len(identical_objects) > 0:
             self.mapper.migration_report.add_general_statistics(
-                f"Number of reoccuring identical {extradata_object_type}"
+                i18n.t("Number of reoccuring identical %{type}", type=extradata_object_type)
             )
             Helper.log_data_issue(
                 f"{self.legacy_id}",
@@ -371,7 +375,7 @@ class OrganizationTransformer(MigrationTaskBase):
         self.embedded_extradata_object_cache.add(embedded_object_hash)
 
         self.mapper.migration_report.add_general_statistics(
-            f"Number of linked {extradata_object_type} created"
+            i18n.t("Number of linked %{type} created", type=extradata_object_type)
         )
 
         return extradata_object_uuid

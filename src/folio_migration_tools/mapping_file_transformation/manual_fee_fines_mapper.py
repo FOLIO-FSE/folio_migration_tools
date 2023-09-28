@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+import i18n
 from typing import Any
 from typing import Dict
 from zoneinfo import ZoneInfo
@@ -19,7 +20,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class ManualFeeFinesMapper(MappingFileMapperBase):
@@ -60,7 +60,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 "owners",
                 feefines_owner_map,
                 "owner",
-                Blurbs.FeeFineOnwerMapping,
+                "FeeFineOnwerMapping",
             )
         else:
             self.feefines_owner_map = None
@@ -72,7 +72,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 "feefines",
                 feefines_type_map,
                 "feeFineType",
-                Blurbs.FeeFineTypesMapping,
+                "FeeFineTypesMapping",
             )
         else:
             self.feefines_type_map = None
@@ -84,7 +84,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
                 "servicepoints",
                 service_point_map,
                 "name",
-                Blurbs.FeeFineServicePointTypesMapping,
+                "FeeFineServicePointTypesMapping",
             )
         else:
             self.service_point_map = None
@@ -92,9 +92,9 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
     def store_objects(self, composite_feefine):
         try:
             self.extradata_writer.write("account", composite_feefine["account"])
-            self.migration_report.add_general_statistics("TOTAL Accounts created")
+            self.migration_report.add_general_statistics(i18n.t("TOTAL Accounts created"))
             self.extradata_writer.write("feefineaction", composite_feefine["feefineaction"])
-            self.migration_report.add_general_statistics("TOTAL Feefineactions created")
+            self.migration_report.add_general_statistics(i18n.t("TOTAL Feefineactions created"))
 
         except Exception as ee:
             raise TransformationRecordFailedError(
@@ -189,8 +189,8 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             return format_date.isoformat()
         except Exception:
             self.migration_report.add(
-                Blurbs.GeneralStatistics,
-                "DATA ISSUE Invalid dates",
+                "GeneralStatistics",
+                i18n.t("DATA ISSUE Invalid dates"),
             )
             logging.log(
                 26,
@@ -205,8 +205,8 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             return float(legacy_sum)
         except Exception as ee:
             self.migration_report.add(
-                Blurbs.GeneralStatistics,
-                "DATA ISSUE Invalid sum",
+                "GeneralStatistics",
+                i18n.t("DATA ISSUE Invalid sum"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -240,8 +240,8 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             return matching_user["id"]
         else:
             self.migration_report.add(
-                Blurbs.GeneralStatistics,
-                "DATA ISSUE Users not in FOLIO",
+                "GeneralStatistics",
+                i18n.t("DATA ISSUE Users not in FOLIO"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -297,8 +297,8 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         else:
             feefine["account"].pop("itemId")
             self.migration_report.add(
-                Blurbs.GeneralStatistics,
-                "DATA ISSUE Items not in FOLIO",
+                "GeneralStatistics",
+                i18n.t("DATA ISSUE Items not in FOLIO"),
             )
             logging.log(
                 26,

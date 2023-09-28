@@ -1,6 +1,7 @@
 '''Main "script."'''
 import csv
 import logging
+import i18n
 from typing import Annotated
 from typing import List
 
@@ -240,7 +241,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                "Bibliographic records transformation report",
+                i18n.t("Bibliographic records transformation report"),
                 report_file,
                 self.start_datetime,
             )

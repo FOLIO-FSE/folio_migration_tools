@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timezone
 from typing import Set
 from uuid import uuid4
+import i18n
 
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
@@ -20,7 +21,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class ItemMapper(MappingFileMapperBase):
@@ -61,7 +61,7 @@ class ItemMapper(MappingFileMapperBase):
                 "loantypes",
                 temporary_loan_type_mapping,
                 "name",
-                Blurbs.TemporaryLoanTypeMapping,
+                "TemporaryLoanTypeMapping",
             )
         self.temp_location_mapping = None
         if temporary_location_mapping:
@@ -71,7 +71,7 @@ class ItemMapper(MappingFileMapperBase):
                 "locations",
                 temporary_location_mapping,
                 "code",
-                Blurbs.TemporaryLocationMapping,
+                "TemporaryLocationMapping",
             )
 
         if item_statuses_map:
@@ -83,7 +83,7 @@ class ItemMapper(MappingFileMapperBase):
                 "callNumberTypes",
                 call_number_type_map,
                 "name",
-                Blurbs.CallNumberTypeMapping,
+                "CallNumberTypeMapping",
             )
         self.loan_type_mapping = RefDataMapping(
             self.folio_client,
@@ -91,7 +91,7 @@ class ItemMapper(MappingFileMapperBase):
             "loantypes",
             loan_type_map,
             "name",
-            Blurbs.PermanentLoanTypeMapping,
+            "PermanentLoanTypeMapping",
         )
         self.boundwith_relationship_map = self.setup_boundwith_relationship_map(
             boundwith_relationship_map
@@ -103,7 +103,7 @@ class ItemMapper(MappingFileMapperBase):
             "mtypes",
             material_type_map,
             "name",
-            Blurbs.MaterialTypeMapping,
+            "MaterialTypeMapping",
         )
 
         self.location_mapping = RefDataMapping(
@@ -112,7 +112,7 @@ class ItemMapper(MappingFileMapperBase):
             "locations",
             location_map,
             "code",
-            Blurbs.LocationMapping,
+            "LocationMapping",
         )
 
     def perform_additional_mappings(self, folio_rec, file_def):
@@ -121,8 +121,8 @@ class ItemMapper(MappingFileMapperBase):
     def handle_suppression(self, folio_record, file_def: FileDefinition):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
-            Blurbs.Suppression,
-            f'Suppressed from discovery = {folio_record["discoverySuppress"]}',
+            "Suppression",
+            i18n.t("Suppressed from discovery") + f' = {folio_record["discoverySuppress"]}',
         )
 
     def setup_status_mapping(self, item_statuses_map):
@@ -177,7 +177,7 @@ class ItemMapper(MappingFileMapperBase):
                 index_or_id,
                 True,
             )
-            self.migration_report.add(Blurbs.TemporaryLocationMapping, f"{temp_loc}")
+            self.migration_report.add("TemporaryLocationMapping", f"{temp_loc}")
             return temp_loc
         elif folio_prop_name == "materialTypeId":
             return self.get_mapped_ref_data_value(
@@ -200,9 +200,7 @@ class ItemMapper(MappingFileMapperBase):
                 index_or_id,
                 True,
             )
-            self.migration_report.add(
-                Blurbs.TemporaryLoanTypeMapping, f"{folio_prop_name} -> {ltid}"
-            )
+            self.migration_report.add("TemporaryLoanTypeMapping", f"{folio_prop_name} -> {ltid}")
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
             return self.get_mapped_ref_data_value(
@@ -213,7 +211,7 @@ class ItemMapper(MappingFileMapperBase):
                 legacy_item, folio_prop_name, index_or_id
             )
             self.migration_report.add(
-                Blurbs.StatisticalCodeMapping,
+                "StatisticalCodeMapping",
                 f"{folio_prop_name} -> {statistical_code_id}",
             )
             return statistical_code_id
@@ -227,7 +225,7 @@ class ItemMapper(MappingFileMapperBase):
             barcode = mapped_value
             if barcode.strip() and barcode in self.unique_barcodes:
                 Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
-                self.migration_report.add_general_statistics("Duplicate barcodes")
+                self.migration_report.add_general_statistics(i18n.t("Duplicate barcodes"))
                 return f"{barcode}-{uuid4()}"
             else:
                 if barcode.strip():
@@ -239,7 +237,7 @@ class ItemMapper(MappingFileMapperBase):
             elif f"{self.bib_id_template}{mapped_value}" in self.holdings_id_map:
                 return self.holdings_id_map[f"{self.bib_id_template}{mapped_value}"][1]
             self.migration_report.add_general_statistics(
-                "Records failed because of failed holdings",
+                i18n.t("Records failed because of failed holdings"),
             )
             s = (
                 "Holdings id referenced in legacy item "
@@ -249,7 +247,7 @@ class ItemMapper(MappingFileMapperBase):
         elif mapped_value:
             return mapped_value
         else:
-            self.migration_report.add(Blurbs.UnmappedProperties, f"{folio_prop_name}")
+            self.migration_report.add("UnmappedProperties", f"{folio_prop_name}")
             return ""
 
     def get_item_level_call_number_type_id(self, legacy_item, folio_prop_name: str, index_or_id):
@@ -258,12 +256,12 @@ class ItemMapper(MappingFileMapperBase):
                 self.call_number_mapping, legacy_item, index_or_id, folio_prop_name
             )
         self.migration_report.add(
-            Blurbs.CallNumberTypeMapping,
-            "Mapping not setup",
+            "CallNumberTypeMapping",
+            i18n.t("Mapping not setup"),
         )
         return ""
 
     def transform_status(self, legacy_value):
         status = self.status_mapping.get(legacy_value, "Available")
-        self.migration_report.add(Blurbs.StatusMapping, f"'{legacy_value}' -> {status}")
+        self.migration_report.add("StatusMapping", f"'{legacy_value}' -> {status}")
         return status

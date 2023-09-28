@@ -1,11 +1,11 @@
 import json
 import logging
+import i18n
 from uuid import uuid4
 
 from folio_migration_tools import custom_exceptions
 from folio_migration_tools import helper
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class HoldingsHelper:
@@ -43,15 +43,18 @@ class HoldingsHelper:
                 v = holdings_record.get(fields_criteria, "")
                 if not v:
                     migration_report.add(
-                        Blurbs.HoldingsMerging, f"{fields_criteria} empty or not set"
+                        "HoldingsMerging",
+                        i18n.t(
+                            "%{fields_criteria} empty or not set", fields_criteria=fields_criteria
+                        ),
                     )
                 values.append(v)
 
             if holdings_record.get("holdingsTypeId") == holdings_type_id_to_exclude_from_merging:
                 values.append(str(uuid4()))
                 migration_report.add(
-                    Blurbs.HoldingsMerging,
-                    "Holding prevented from merging by holdingsTypeId",
+                    "HoldingsMerging",
+                    i18n.t("Holding prevented from merging by holdingsTypeId"),
                 )
             return "-".join(values)
         except Exception as exception:
@@ -95,13 +98,13 @@ class HoldingsHelper:
                         prev_holdings[stored_key], stored_holding
                     )
                     migration_report.add(
-                        Blurbs.HoldingsMerging,
-                        "Duplicate key based on current merge criteria. Records merged",
+                        "HoldingsMerging",
+                        i18n.t("Duplicate key based on current merge criteria. Records merged"),
                     )
                 else:
                     migration_report.add(
-                        Blurbs.HoldingsMerging,
-                        "Previously transformed holdings record loaded",
+                        "HoldingsMerging",
+                        i18n.t("Previously transformed holdings record loaded"),
                     )
                     prev_holdings[stored_key] = stored_holding
             return prev_holdings

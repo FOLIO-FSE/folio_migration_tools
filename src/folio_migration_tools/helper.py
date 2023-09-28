@@ -1,5 +1,6 @@
 import json
 import logging
+import i18n
 
 
 class Helper:
@@ -7,16 +8,18 @@ class Helper:
     def print_mapping_report(
         report_file, total_records: int, mapped_folio_fields, mapped_legacy_fields
     ):
-        details_start = "<details><summary>Click to expand field report</summary>     \n\n"
-        details_end = "</details>   \n"
-        report_file.write("\n## Mapped FOLIO fields\n")
+        details_start = (
+            "<details><summary>" + i18n.t("Click to expand field report") + "</summary>\n\n"
+        )
+        details_end = "</details>\n"
+        report_file.write("\n## " + i18n.t("Mapped FOLIO fields") + "\n")
         # report_file.write(f"{blurbs[header]}\n")
 
         d_sorted = {k: mapped_folio_fields[k] for k in sorted(mapped_folio_fields)}
         report_file.write(details_start)
-
-        report_file.write("FOLIO Field | Mapped | Unmapped  \n")
-        report_file.write("--- | --- | ---:  \n")
+        columns = [i18n.t("FOLIO Field"), i18n.t("Mapped"), i18n.t("Unmapped")]
+        report_file.write(" | ".join(columns) + "\n")
+        report_file.write("|".join(len(columns) * ["---"]) + "\n")
         for k, v in d_sorted.items():
             unmapped = max(total_records - v[0], 0)
             mapped = v[0]
@@ -29,13 +32,14 @@ class Helper:
             )
         report_file.write(details_end)
 
-        report_file.write("\n## Mapped Legacy fields\n")
+        report_file.write("\n## " + i18n.t("Mapped Legacy fields") + "\n")
         # report_file.write(f"{blurbs[header]}\n")
 
         d_sorted = {k: mapped_legacy_fields[k] for k in sorted(mapped_legacy_fields)}
         report_file.write(details_start)
-        report_file.write("Legacy Field | Present | Mapped | Unmapped  \n")
-        report_file.write("--- | --- | --- | ---:  \n")
+        columns = [i18n.t("Legacy Field"), i18n.t("Present"), i18n.t("Mapped"), i18n.t("Unmapped")]
+        report_file.write("|".join(columns) + "\n")
+        report_file.write("|".join(len(columns) * ["---"]) + "\n")
         for k, v in d_sorted.items():
             present = v[0]
             present_per = "{:.1%}".format(present / total_records if total_records else 0)

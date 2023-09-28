@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import time
+import i18n
 from typing import Set
 
 import httpx
@@ -11,7 +12,6 @@ from httpx import HTTPError
 
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
 from folio_migration_tools.transaction_migration.transaction_result import (
@@ -36,7 +36,9 @@ class CirculationHelper:
 
     def get_user_by_barcode(self, user_barcode):
         if user_barcode in self.missing_patron_barcodes:
-            self.migration_report.add_general_statistics("Users already detected as missing")
+            self.migration_report.add_general_statistics(
+                i18n.t("Users already detected as missing")
+            )
             logging.info("User is already detected as missing")
             return {}
         user_path = f"/users?query=barcode=={user_barcode}"
@@ -52,7 +54,9 @@ class CirculationHelper:
 
     def get_item_by_barcode(self, item_barcode):
         if item_barcode in self.missing_item_barcodes:
-            self.migration_report.add_general_statistics("Items already detected as missing")
+            self.migration_report.add_general_statistics(
+                i18n.t("Items already detected as missing")
+            )
             logging.info("Item is already detected as missing")
             return {}
         item_path = f"/item-storage/items?query=barcode=={item_barcode}"
@@ -135,7 +139,7 @@ class CirculationHelper:
         url = f"{self.folio_client.okapi_url}{path}"
         try:
             if legacy_loan.patron_barcode in self.missing_patron_barcodes:
-                error_message = "Patron barcode already detected as missing"
+                error_message = i18n.t("Patron barcode already detected as missing")
                 logging.error(
                     f"{error_message} Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
@@ -176,7 +180,7 @@ class CirculationHelper:
                 elif "find user with matching barcode" in error_message_from_folio:
                     self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
                     error_message = f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
-                    stat_message = "Patron barcode not in FOLIO"
+                    stat_message = i18n.t("Patron barcode not in FOLIO")
                     return TransactionResult(
                         False,
                         False,
@@ -197,7 +201,7 @@ class CirculationHelper:
                     f"Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
                 )
-                self.migration_report.add(Blurbs.Details, stat_message)
+                self.migration_report.add("Details", stat_message)
                 return TransactionResult(
                     False, True, None, error_message, f"Check out error: {stat_message}"
                 )
@@ -234,7 +238,7 @@ class CirculationHelper:
                 False,
                 None,
                 "5XX",
-                f"Failed checkout http status {req.status_code}",
+                i18n.t("Failed checkout http status %{code}", code=req.status_code),
             )
 
     @staticmethod
@@ -272,7 +276,7 @@ class CirculationHelper:
                 return True
         except Exception as exception:
             logging.error(exception, exc_info=True)
-            migration_report.add(Blurbs.Details, exception)
+            migration_report.add("Details", exception)
             Helper.log_data_issue(
                 legacy_request.item_barcode,
                 exception,

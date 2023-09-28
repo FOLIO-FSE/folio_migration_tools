@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 import time
+import i18n
 from os.path import isfile
 from typing import List
 from typing import Optional
@@ -24,7 +25,6 @@ from folio_migration_tools.mapping_file_transformation.order_mapper import (
     CompositeOrderMapper,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -151,7 +151,9 @@ class OrdersTransformer(MigrationTaskBase):
         with open(filename, encoding="utf-8-sig") as records_file, open(
             self.folder_structure.created_objects_path, "w+"
         ) as results_file:
-            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("Number of files processed")
+            )
             start = time.time()
             records_processed = 0
             for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
@@ -169,7 +171,7 @@ class OrdersTransformer(MigrationTaskBase):
                     self.mapper.perform_additional_mapping(legacy_id, folio_rec)
 
                     self.mapper.migration_report.add_general_statistics(
-                        "TOTAL Purchase Order Lines created"
+                        i18n.t("TOTAL Purchase Order Lines created")
                     )
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
                     self.mapper.notes_mapper.map_notes(
@@ -204,7 +206,9 @@ class OrdersTransformer(MigrationTaskBase):
             )
             logging.info("Storing last record to disk")
             Helper.write_to_file(results_file, self.current_folio_record)
-            self.mapper.migration_report.add_general_statistics("TOTAL Purchase Orders created")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("TOTAL Purchase Orders created")
+            )
 
     def do_work(self):
         logging.info("Getting started!")
@@ -219,7 +223,7 @@ class OrdersTransformer(MigrationTaskBase):
                     "Check source files for empty lines or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
+                self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
     def wrap_up(self):
@@ -230,7 +234,7 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                "Pruchase Orders and Purchase Order Lines Transformation Report",
+                i18n.t("Pruchase Orders and Purchase Order Lines Transformation Report"),
                 migration_report_file,
                 self.start_datetime,
             )
@@ -250,7 +254,9 @@ class OrdersTransformer(MigrationTaskBase):
         if folio_rec["id"] != self.current_folio_record["id"]:
             # Writes record to file
             Helper.write_to_file(results_file, self.current_folio_record)
-            self.mapper.migration_report.add_general_statistics("TOTAL Purchase Orders created")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("TOTAL Purchase Orders created")
+            )
             self.current_folio_record = folio_rec
 
         else:
@@ -261,7 +267,7 @@ class OrdersTransformer(MigrationTaskBase):
                     folio_rec.get("compositePoLines", [])
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Rows merged to create Purchase Orders"
+                    i18n.t("Rows merged to create Purchase Orders")
                 )
             for key in diff.affected_paths:
-                self.mapper.migration_report.add(Blurbs.DiffsBetweenOrders, key)
+                self.mapper.migration_report.add("DiffsBetweenOrders", key)

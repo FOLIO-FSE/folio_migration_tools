@@ -4,13 +4,12 @@ from unittest.mock import Mock
 
 import pymarc
 import pytest
+import i18n
 from dateutil.parser import parse
 from pymarc import Field
 from pymarc import MARCReader
 from pymarc import Record
 from pymarc import Subfield
-
-from folio_migration_tools.report_blurbs import Blurbs
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
@@ -66,11 +65,8 @@ def test_handle_suppression_set_false(mapper):
     mapper.handle_suppression(folio_instance, file_def)
     assert folio_instance.get("staffSuppress") is False
     assert folio_instance.get("discoverySuppress") is False
-    assert (
-        mapper.migration_report.report[Blurbs.Suppression[0]]["Suppressed from discovery = False"]
-        == 1
-    )
-    assert mapper.migration_report.report[Blurbs.Suppression[0]]["Staff suppressed = False "] == 1
+    assert mapper.migration_report.report["Suppression"]["Suppressed from discovery = False"] == 1
+    assert mapper.migration_report.report["Suppression"]["Staff suppressed = False "] == 1
 
 
 def test_handle_suppression_set_true(mapper):
@@ -79,11 +75,8 @@ def test_handle_suppression_set_true(mapper):
     mapper.handle_suppression(folio_instance, file_def)
     assert folio_instance.get("staffSuppress") is True
     assert folio_instance.get("discoverySuppress") is True
-    assert (
-        mapper.migration_report.report[Blurbs.Suppression[0]]["Suppressed from discovery = True"]
-        == 1
-    )
-    assert mapper.migration_report.report[Blurbs.Suppression[0]]["Staff suppressed = True "] == 1
+    assert mapper.migration_report.report["Suppression"]["Suppressed from discovery = True"] == 1
+    assert mapper.migration_report.report["Suppression"]["Staff suppressed = True "] == 1
 
 
 def test_get_folio_id_by_code_except(mapper, caplog):
@@ -448,8 +441,8 @@ def test_get_folio_id_by_name(mapper, caplog):
     res = mapper.get_instance_format_id_by_name("audio", "audio belt", "legacy_id_99")
     assert not caplog.text
     assert (
-        "Successful matching on 337$a & 338$a - audio -- audio belt->audio -- audio belt"
-        in mapper.migration_report.report[Blurbs.InstanceFormat[0]]
+        "Successful matching on 337$a and 338$a - audio -- audio belt->audio -- audio belt"
+        in mapper.migration_report.report["InstanceFormat"]
     )
     assert res == "0d9b1c3d-2d13-4f18-9472-cc1b91bf1752"
 
@@ -470,10 +463,8 @@ def test_handle_leader_05(mapper, caplog):
         assert record.leader[5] == "s"
         BibsRulesMapper.handle_leader_05(mapper, record, ["legacy id"])
         assert record.leader[5] == "c"
-        assert (
-            "Original value: s" in mapper.migration_report.report["Record status (leader pos 5)"]
-        )
-        assert "Changed s to c" in mapper.migration_report.report["Record status (leader pos 5)"]
+        assert "Original value: s" in mapper.migration_report.report["RecordStatus"]
+        assert "Changed s to c" in mapper.migration_report.report["RecordStatus"]
 
 
 def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
@@ -493,7 +484,7 @@ def test_fieldReplacementBy3Digits(mapper: BibsRulesMapper, caplog):
         assert "[東京宝塚劇場公演パンフレット. ]" in res["alternativeTitles"][0]["alternativeTitle"]
         assert "1. 7月星組公演.  淀君, シャンソン・ダムール (1959)" in res["notes"][2]["note"]
         assert "宝塚" in res["publication"][1]["place"]
-        assert "Records without $6" in mapper.migration_report.report["880 mappings"]
+        assert "Records without $6" in mapper.migration_report.report["Field880Mappings"]
 
 
 def test_parse_cataloged_date():

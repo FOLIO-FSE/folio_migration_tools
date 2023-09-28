@@ -1,4 +1,5 @@
 import logging
+import i18n
 
 
 class TransfomationError(Exception):
@@ -17,8 +18,8 @@ class TransformationFieldMappingError(TransfomationError):
 
     def __str__(self):
         return (
-            f"Data issue. Consider fixing the record. "
-            f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
+            i18n.t("Data issue. Consider fixing the record. ")
+            + f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
         )
 
     def log_it(self):

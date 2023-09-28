@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 import traceback
+import i18n
 from typing import List
 from typing import Optional
 
@@ -22,7 +23,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
@@ -107,13 +107,15 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     "Check source files for empty rows or missing reference data"
                 )
                 logging.exception(error_str)
-                self.mapper.migration_report.add(Blurbs.FailedFiles, f"{file} - {ee}")
+                self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
     def process_single_file(self, file_def: FileDefinition):
         full_path = self.folder_structure.legacy_records_folder / file_def.file_name
         with open(full_path, encoding="utf-8-sig") as records_file:
-            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("Number of files processed")
+            )
             start = time.time()
 
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
@@ -166,7 +168,9 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                "Manual fee/fine transformation report", migration_report_file, self.start_datetime
+                i18n.t("Manual fee/fine transformation report"),
+                migration_report_file,
+                self.start_datetime,
             )
 
             Helper.print_mapping_report(
