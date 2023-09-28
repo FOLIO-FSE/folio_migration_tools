@@ -1,9 +1,9 @@
 import json
 import logging
-import i18n
 from typing import Set
 
 import httpx
+import i18n
 from folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from pymarc import Field
@@ -128,10 +128,14 @@ class HRIDHandler:
                     indicators=[" ", " "],
                     subfields=[Subfield(code="a", value=str_035)],
                 )
-                marc_record.add_ordered_field(new_035)
+
+                # Don't add the 035 if an identical field already exists
+                existing_035 = marc_record.get_fields("035")
+                if not any(compare_fields(new_035, e) for e in existing_035):
+                    marc_record.add_ordered_field(new_035)
                 migration_report.add("HridHandling", i18n.t("Added 035 from 001"))
             if remove_001:
-                marc_record.remove_fields("001")
+                marc_record.remove_fields("001", "003")
 
         except Exception:
             if "001" in marc_record:
@@ -231,3 +235,12 @@ class HRIDHandler:
             self.unique_001s.add(value)
             folio_record["hrid"] = value
             self.migration_report.add("HridHandling", i18n.t("Took HRID from 001"))
+
+
+def compare_fields(field1: Field, field2: Field) -> bool:
+    bool_compare = (
+        field1.tag == field2.tag
+        and field1.indicators == field2.indicators
+        and field1.subfields == field2.subfields
+    )
+    return bool_compare
