@@ -18,6 +18,37 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
+category_maps = {
+    "address_categories_map": [
+        {"address_categories": "rt", "folio_value": "Returns"},
+        {"address_categories": "*", "folio_value": "General"},
+    ],
+    "email_categories_map": [
+        {
+            "email1_categories": "tspt",
+            "email2_categories": "*",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
+        {
+            "email1_categories": "*",
+            "email2_categories": "tspt",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
+        {"email1_categories": "*", "email_2categories": "*", "folio_value": "General"},
+    ],
+    "phone_categories_map": [
+        {"phone_categories": "mspt", "folio_value": "Moral Support"},
+        {"phone_categories": "*", "folio_value": "General"},
+    ],
+    "organization_types_map": [
+        {"organization_types": "cst", "folio_name": "Consortium"},
+        {"organization_types": "*", "folio_name": "Unspecified"},
+    ],
+}
+
+
 def build_category_tests():
     blank_scenario = {k: "" for k in category_maps.keys()}
     scenarios = [blank_scenario]
