@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 import traceback
+import i18n
 from typing import Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -19,7 +20,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
     MappingFileMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
@@ -114,11 +114,11 @@ class CoursesMigrator(MigrationTaskBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
-                    Blurbs.GeneralStatistics,
-                    f"Number of Legacy items in {full_path}",
+                    "GeneralStatistics",
+                    i18n.t("Number of Legacy items in %{container}", container=full_path),
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of legacy items in total"
+                    i18n.t("Number of Legacy items in total")
                 )
                 self.print_progress(idx, start)
 
@@ -126,7 +126,7 @@ class CoursesMigrator(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                "Courses migration report", report_file, self.mapper.start_datetime
+                i18n.t("Courses migration report"), report_file, self.mapper.start_datetime
             )
         self.clean_out_empty_logs()
 

@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import uuid
+import i18n
 from functools import reduce
 from pathlib import Path
 from typing import Dict
@@ -24,7 +25,6 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 
 empty_vals = ["Not mapped", None, ""]
 
@@ -110,7 +110,7 @@ class MappingFileMapperBase(MapperBase):
                 "statisticalCodes",
                 statistical_codes_map,
                 "code",
-                Blurbs.StatisticalCodeMapping,
+                "StatisticalCodeMapping",
             )
             logging.info("Statistical codes mapping set up")
         else:
@@ -241,8 +241,8 @@ class MappingFileMapperBase(MapperBase):
                 True,
             )
         self.migration_report.add(
-            Blurbs.StatisticalCodeMapping,
-            "Mapping not setup",
+            "StatisticalCodeMapping",
+            i18n.t("Mapping not setup"),
         )
         return ""
 
@@ -256,7 +256,9 @@ class MappingFileMapperBase(MapperBase):
         if not any(map_entries):
             return ""
         elif len(map_entries) > 1:
-            self.migration_report.add(Blurbs.Details, f"{legacy_item_keys} were concatenated")
+            self.migration_report.add(
+                "Details", i18n.t("%{props} were concatenated", props=legacy_item_keys)
+            )
             return " ".join(
                 MappingFileMapperBase.get_legacy_value(
                     legacy_object,
@@ -279,8 +281,12 @@ class MappingFileMapperBase(MapperBase):
                 return legacy_value
             else:
                 self.migration_report.add(
-                    Blurbs.FolioDefaultValuesAdded,
-                    f"{schema_default_value} added to {folio_prop_name}",
+                    "FolioDefaultValuesAdded",
+                    i18n.t(
+                        "%{schema_value} added to %{prop_name}",
+                        schema_value=schema_default_value,
+                        prop_name=folio_prop_name,
+                    ),
                 )
                 return schema_default_value
 
@@ -370,8 +376,12 @@ class MappingFileMapperBase(MapperBase):
         ):
             value_mapped_value = mapping_file_entry.get("value")
             migration_report.add(
-                Blurbs.DefaultValuesAdded,
-                f"{value_mapped_value} added to {mapping_file_entry.get('folio_field', '')}",
+                "DefaultValuesAdded",
+                i18n.t(
+                    "%{value} added to %{entry}",
+                    value=value_mapped_value,
+                    entry=mapping_file_entry.get("folio_field", ""),
+                ),
             )
             return value_mapped_value
 
@@ -390,7 +400,7 @@ class MappingFileMapperBase(MapperBase):
 
             if replaced_val or isinstance(replaced_val, bool):
                 migration_report.add(
-                    Blurbs.FieldMappingDetails,
+                    "FieldMappingDetails",
                     (
                         f"Replaced {value} in {mapping_file_entry['legacy_field']} "
                         f"with {replaced_val}"
@@ -404,7 +414,7 @@ class MappingFileMapperBase(MapperBase):
             value = re.findall(my_pattern, value)[0]
         if not value and mapping_file_entry.get("fallback_legacy_field", ""):
             migration_report.add(
-                Blurbs.FieldMappingDetails,
+                "FieldMappingDetails",
                 (
                     f"Added fallback value from {mapping_file_entry['fallback_legacy_field']} "
                     f"instead of {mapping_file_entry['legacy_field']}"
@@ -415,7 +425,7 @@ class MappingFileMapperBase(MapperBase):
             ).strip()
         if not value and mapping_file_entry.get("fallback_value", ""):
             migration_report.add(
-                Blurbs.FieldMappingDetails,
+                "FieldMappingDetails",
                 (
                     f"Added fallback value {mapping_file_entry['fallback_value']} "
                     f"instead of empty {mapping_file_entry['legacy_field']}"
@@ -708,10 +718,10 @@ class MappingFileMapperBase(MapperBase):
         logging.info("Source data file contains %d rows", total_rows)
         logging.info("Source data file contains %d empty rows", empty_rows)
         self.migration_report.set(
-            Blurbs.GeneralStatistics, "Number of rows in {}".format(file_name.name), total_rows
+            "GeneralStatistics", "Number of rows in {}".format(file_name.name), total_rows
         )
         self.migration_report.set(
-            Blurbs.GeneralStatistics,
+            "GeneralStatistics",
             "Number of empty rows in {}".format(file_name.name),
             empty_rows,
         )
@@ -778,7 +788,7 @@ class MappingFileMapperBase(MapperBase):
                     missing_keys_in_record,
                 )
             else:
-                logging.info("All maped legacy fields are in the legacy object")
+                logging.info("All mapped legacy fields are in the legacy object")
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
@@ -852,7 +862,7 @@ class MappingFileMapperBase(MapperBase):
                 valid_array_objects.append(item)
             else:
                 self.migration_report.add(
-                    Blurbs.IncompleteSubPropertyRemoved,
+                    "IncompleteSubPropertyRemoved",
                     f"{schema_property_name}",
                 )
         if valid_array_objects:

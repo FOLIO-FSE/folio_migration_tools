@@ -3,6 +3,7 @@ import sys
 import time
 import traceback
 from typing import List
+import i18n
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Field
@@ -19,7 +20,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MarcFileProcessor:
@@ -82,7 +82,7 @@ class MarcFileProcessor:
                     )
                 Helper.write_to_file(self.created_objects_file, folio_rec)
                 self.mapper.migration_report.add_general_statistics(
-                    "Inventory records written to disk"
+                    i18n.t("Inventory records written to disk")
                 )
                 self.exit_on_too_many_exceptions()
 
@@ -134,8 +134,8 @@ class MarcFileProcessor:
                 )
                 marc_record["008"].data = remain
                 self.mapper.migration_report.add(
-                    Blurbs.MarcValidation,
-                    f"008 lenght invalid. '{rest}' was stripped out",
+                    "MarcValidation",
+                    i18n.t("008 length invalid. '%{rest}' was stripped out", rest=rest),
                 )
             self.add_mapped_location_code_to_record(marc_record, folio_rec)
             new_004 = Field(tag="004", data=self.parent_hrids[folio_rec["instanceId"]])
@@ -158,7 +158,7 @@ class MarcFileProcessor:
             legacy_ids,
             file_def.discovery_suppressed,
         )
-        self.mapper.migration_report.add_general_statistics("SRS records written to disk")
+        self.mapper.migration_report.add_general_statistics(i18n.t("SRS records written to disk"))
 
     def add_mapped_location_code_to_record(self, marc_record, folio_rec):
         location_code = next(
@@ -178,10 +178,12 @@ class MarcFileProcessor:
         while old_b := first_852.delete_subfield("b"):
             first_852.add_subfield("x", old_b, 0)
             self.mapper.migration_report.add(
-                Blurbs.LocationMapping, "Additional 852$b was moved to 852$x"
+                "LocationMapping", i18n.t("Additional 852$b was moved to 852$x")
             )
         first_852.add_subfield("b", location_code, 0)
-        self.mapper.migration_report.add(Blurbs.LocationMapping, "Set 852 to FOLIO location code")
+        self.mapper.migration_report.add(
+            "LocationMapping", i18n.t("Set 852 to FOLIO location code")
+        )
 
     def exit_on_too_many_exceptions(self):
         if (
@@ -202,9 +204,11 @@ class MarcFileProcessor:
             if legacy_id not in folio_record_identifiers:
                 new_ids.add(legacy_id)
             else:
-                migration_report.add_general_statistics("Duplicate MARC record identifiers ")
+                migration_report.add_general_statistics(
+                    i18n.t("Duplicate MARC record identifiers ")
+                )
         if not any(new_ids):
-            s = "Failed records. No unique record identifiers in legacy record"
+            s = i18n.t("Failed records. No unique record identifiers in legacy record")
             migration_report.add_general_statistics(s)
             raise TransformationRecordFailedError(
                 "-".join(legacy_ids),
@@ -224,7 +228,9 @@ class MarcFileProcessor:
         logging.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                "MFHD records transformation report", report_file, self.mapper.start_datetime
+                i18n.t("MFHD records transformation report"),
+                report_file,
+                self.mapper.start_datetime,
             )
             Helper.print_mapping_report(
                 report_file,

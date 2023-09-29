@@ -25,7 +25,6 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.test_infrastructure import mocked_classes
 
 xpath_245 = "//marc:datafield[@tag='245']"

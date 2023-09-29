@@ -1,5 +1,6 @@
 import logging
 import sys
+import i18n
 from io import IOBase
 from pathlib import Path
 
@@ -11,7 +12,6 @@ from folio_migration_tools.custom_exceptions import TransformationRecordFailedEr
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MARCReaderWrapper:
@@ -50,7 +50,7 @@ class MARCReaderWrapper:
     ):
         for idx, record in enumerate(reader):
             processor.mapper.migration_report.add_general_statistics(
-                "Records in file before parsing"
+                i18n.t("Records in file before parsing")
             )
             try:
                 # None = Something bad happened
@@ -66,13 +66,13 @@ class MARCReaderWrapper:
                 else:
                     MARCReaderWrapper.set_leader(record, processor.mapper.migration_report)
                     processor.mapper.migration_report.add_general_statistics(
-                        "Records successfully decoded from MARC21",
+                        i18n.t("Records successfully decoded from MARC21"),
                     )
                     processor.process_record(idx, record, source_file)
             except TransformationRecordFailedError as error:
                 error.log_it()
                 processor.mapper.migration_report.add_general_statistics(
-                    "Records that failed transformation. Check log for details",
+                    i18n.t("Records that failed transformation. Check log for details"),
                 )
             except ValueError as error:
                 logging.error(error)
@@ -82,29 +82,38 @@ class MARCReaderWrapper:
     def set_leader(marc_record: Record, migration_report: MigrationReport):
         if marc_record.leader[9] != "a":
             migration_report.add(
-                Blurbs.LeaderManipulation,
-                f"Set leader 09 (Character coding scheme) from {marc_record.leader[9]} to a",
+                "LeaderManipulation",
+                i18n.t(
+                    "Set leader 09 (Character coding scheme) from %{field} to a",
+                    field=marc_record.leader[9],
+                ),
             )
             marc_record.leader = f"{marc_record.leader[:9]}a{marc_record.leader[10:]}"
 
         if not marc_record.leader.endswith("4500"):
             migration_report.add(
-                Blurbs.LeaderManipulation,
-                f"Set leader 20-23 from {marc_record.leader[-4:]} to 4500",
+                "LeaderManipulation",
+                i18n.t("Set leader 20-23 from %{field} to 4500", field=marc_record.leader[-4:]),
             )
             marc_record.leader = f"{marc_record.leader[:-4]}4500"
 
         if marc_record.leader[10] != "2":
             migration_report.add(
-                Blurbs.LeaderManipulation,
-                f"Set leader 10 (Indicator count) from {marc_record.leader[10]} to 2",
+                "LeaderManipulation",
+                i18n.t(
+                    "Set leader 10 (Indicator count) from %{field} to 2",
+                    field=marc_record.leader[10],
+                ),
             )
             marc_record.leader = f"{marc_record.leader[:10]}2{marc_record.leader[11:]}"
 
         if marc_record.leader[11] != "2":
             migration_report.add(
-                Blurbs.LeaderManipulation,
-                f"Set leader 10 (Subfield code count) from {marc_record.leader[11]} to 2",
+                "LeaderManipulation",
+                i18n.t(
+                    "Set leader 11 (Subfield code count) from %{record} to 2",
+                    record=marc_record.leader[11],
+                ),
             )
             marc_record.leader = f"{marc_record.leader[:11]}2{marc_record.leader[12:]}"
 
@@ -113,7 +122,7 @@ def report_failed_parsing(
     reader, source_file, failed_bibs_file, idx, migration_report: MigrationReport
 ):
     migration_report.add_general_statistics(
-        "Records with encoding errors - parsing failed",
+        i18n.t("Records with encoding errors - parsing failed"),
     )
     failed_bibs_file.write(reader.current_chunk)
     raise TransformationRecordFailedError(

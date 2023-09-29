@@ -4,6 +4,7 @@ import logging
 import re
 import time
 import uuid
+import i18n
 from typing import List
 
 import pymarc
@@ -22,7 +23,6 @@ from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHan
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class AuthorityMapper(RulesMapperBase):
@@ -159,22 +159,26 @@ class AuthorityMapper(RulesMapperBase):
                 ):
                     natural_id = "".join(a_subfield.split())
                     source_file_id = source_file["id"]
-                    self.migration_report.add_general_statistics("naturalId mapped from 010$a")
+                    self.migration_report.add_general_statistics(
+                        i18n.t("naturalId mapped from %{fro}", fro="010$a")
+                    )
                     self.migration_report.add(
-                        Blurbs.AuthoritySourceFileMapping,
+                        "AuthoritySourceFileMapping",
                         f"{source_file['name']} -- {natural_id_prefix.group(0)} -- 010$a",
                         number=1,
                     )
                     break
         if not source_file_id:
             natural_id = "".join(marc_record["001"].data.split())
-            self.migration_report.add_general_statistics("naturalId mapped from 001")
+            self.migration_report.add_general_statistics(
+                i18n.t("naturalId mapped from %{fro}", fro="001")
+            )
             natural_id_prefix = match_prefix_patt.match(natural_id)
             if natural_id_prefix:
                 if source_file := self.source_file_mapping.get(natural_id_prefix.group(0), None):
                     source_file_id = source_file["id"]
                     self.migration_report.add(
-                        Blurbs.AuthoritySourceFileMapping,
+                        "AuthoritySourceFileMapping",
                         f"{source_file['name']} -- {natural_id_prefix.group(0)} -- 001",
                         number=1,
                     )
@@ -190,7 +194,9 @@ class AuthorityMapper(RulesMapperBase):
 
     def handle_leader_17(self, marc_record, legacy_ids):
         leader_17 = marc_record.leader[17] or "Empty"
-        self.migration_report.add(Blurbs.AuthorityEncodingLevel, f"Original value: {leader_17}")
+        self.migration_report.add(
+            "AuthorityEncodingLevel", i18n.t("Original value") + f": {leader_17}"
+        )
         if leader_17 not in ["n", "o"]:
             Helper.log_data_issue(
                 legacy_ids,
@@ -198,7 +204,9 @@ class AuthorityMapper(RulesMapperBase):
                 marc_record.leader,
             )
             marc_record.leader = f"{marc_record.leader[:17]}n{marc_record.leader[18:]}"
-            self.migration_report.add(Blurbs.AuthorityEncodingLevel, f"Changed {leader_17} to n")
+            self.migration_report.add(
+                "AuthorityEncodingLevel", i18n.t("Changed %{a} to %{b}", a=leader_17, b="n")
+            )
 
     def perform_additional_parsing(
         self,

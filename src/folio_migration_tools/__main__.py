@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+from pathlib import Path
 
 import httpx
 import humps
@@ -11,6 +12,10 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_tasks import *  # noqa: F403, F401
 from folio_migration_tools.migration_tasks import migration_task_base
+
+import i18n
+
+i18n.load_config(Path(__file__).parents[2] / "i18n_config.py")
 
 
 def parse_args():
@@ -24,12 +29,20 @@ def parse_args():
     )
     parser.add_argument(
         "--okapi_password",
-        help="pasword for the tenant in the configuration file",
+        help="password for the tenant in the configuration file",
         secure=True,
     )
     parser.add_argument(
         "--base_folder_path",
         help=("path to the base folder for this library. Built on migration_repo_template"),
+    )
+    parser.add_argument(
+        "--report_language",
+        help=(
+            "Language to write the reports. Defaults english for untranslated languages/strings."
+        ),
+        default="en",
+        prompt=False,
     )
     return parser.parse_args()
 
@@ -37,7 +50,9 @@ def parse_args():
 def main():
     try:
         task_classes = list(inheritors(migration_task_base.MigrationTaskBase))
+
         args = parse_args()
+        i18n.set("locale", args.report_language)
         with open(args.configuration_path) as config_file_path:
             try:
                 config_file_humped = json.load(config_file_path)

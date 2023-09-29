@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 import uuid
+import i18n
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -21,7 +22,6 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class MapperBase:
@@ -111,7 +111,7 @@ class MapperBase:
             if not right_mapping:
                 raise StopIteration()
             self.migration_report.add(
-                ref_data_mapping.blurb,
+                ref_data_mapping.blurb_id,
                 (
                     f'{" - ".join(fieldvalues)} '
                     f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
@@ -122,12 +122,12 @@ class MapperBase:
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
-                    ref_data_mapping.blurb,
+                    ref_data_mapping.blurb_id,
                     (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
                 )
                 return ""
             self.migration_report.add(
-                ref_data_mapping.blurb,
+                ref_data_mapping.blurb_id,
                 (
                     f"Unmapped (Default value was set) -- "
                     f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
@@ -184,7 +184,7 @@ class MapperBase:
             if not right_mapping:
                 raise StopIteration()
             self.migration_report.add(
-                ref_data_mapping.blurb,
+                ref_data_mapping.blurb_id,
                 (
                     f'{" - ".join(fieldvalues)} '
                     f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
@@ -194,12 +194,12 @@ class MapperBase:
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
-                    ref_data_mapping.blurb,
+                    ref_data_mapping.blurb_id,
                     (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
                 )
                 return ""
             self.migration_report.add(
-                ref_data_mapping.blurb,
+                ref_data_mapping.blurb_id,
                 (
                     f"Unmapped (Default value was set) -- "
                     f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
@@ -225,13 +225,13 @@ class MapperBase:
             ) from exception
 
     def handle_transformation_field_mapping_error(self, index_or_id, error):
-        self.migration_report.add(Blurbs.FieldMappingErrors, error)
+        self.migration_report.add("FieldMappingErrors", error)
         error.id = error.id or index_or_id
         error.log_it()
-        self.migration_report.add_general_statistics("Field Mapping Errors found")
+        self.migration_report.add_general_statistics(i18n.t("Field Mapping Errors found"))
 
     def handle_transformation_process_error(self, idx, error: TransformationProcessError):
-        self.migration_report.add_general_statistics("Transformation process error")
+        self.migration_report.add_general_statistics(i18n.t("Transformation process error"))
         logging.critical("%s\t%s", idx, error)
         print(f"\n{error.message}: {error.data_value}")
         sys.exit(1)
@@ -240,7 +240,7 @@ class MapperBase:
         self, records_processed: int, error: TransformationRecordFailedError
     ):
         self.migration_report.add(
-            Blurbs.GeneralStatistics, "FAILED Records failed due to an error"
+            "GeneralStatistics", i18n.t("FAILED Records failed due to an error")
         )
         error.index_or_id = error.index_or_id or records_processed
         error.log_it()
@@ -318,7 +318,7 @@ class MapperBase:
             for id_string in legacy_map.values():
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
                 self.migration_report.add(
-                    Blurbs.GeneralStatistics, "Unique ID:s written to legacy map"
+                    "GeneralStatistics", i18n.t("Unique ID:s written to legacy map")
                 )
         logging.info("Wrote legacy id map to %s", path)
 
@@ -372,7 +372,9 @@ class MapperBase:
 
     def add_legacy_id_to_admin_note(self, folio_record: dict, legacy_id: str):
         if not legacy_id:
-            raise TransformationFieldMappingError(legacy_id, "Legacy id is empty", legacy_id)
+            raise TransformationFieldMappingError(
+                legacy_id, i18n.t("Legacy id is empty"), legacy_id
+            )
         if "administrativeNotes" not in folio_record:
             folio_record["administrativeNotes"] = []
         if id_string := next(
@@ -439,7 +441,7 @@ class MapperBase:
                 )
                 if bound_with_holding.get("hrid", ""):
                     bound_with_holding["hrid"] = f'{bound_with_holding["hrid"]}_bw_{bwidx}'
-            self.migration_report.add_general_statistics("Bound-with holdings created")
+            self.migration_report.add_general_statistics(i18n.t("Bound-with holdings created"))
             yield bound_with_holding
 
     def generate_boundwith_holding_uuid(self, holding_uuid, instance_uuid):

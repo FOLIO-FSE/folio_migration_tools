@@ -5,6 +5,7 @@ import re
 import sys
 import urllib.parse
 import uuid
+import i18n
 
 import httpx
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -21,7 +22,6 @@ from folio_migration_tools.mapping_file_transformation.notes_mapper import Notes
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.report_blurbs import Blurbs
 
 
 class CompositeOrderMapper(MappingFileMapperBase):
@@ -64,7 +64,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "acquisitionMethods",
             acquisition_method_map,
             "value",
-            Blurbs.AcquisitionMethodMapping,
+            "AcquisitionMethodMapping",
         )
         logging.info("Init done")
         self.location_mapping = RefDataMapping(
@@ -73,7 +73,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "locations",
             location_map,
             "code",
-            Blurbs.OrderLineLocationMapping,
+            "OrderLineLocationMapping",
         )
 
         self.folio_client: FolioClient = folio_client
@@ -141,7 +141,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             }
 
             if os.environ.get("GITHUB_TOKEN"):
-                logging.info("Using GITHB_TOKEN environment variable for Gihub API Access")
+                logging.info("Using GITHUB_TOKEN environment variable for Github API Access")
                 github_headers["authorization"] = f"token {os.environ.get('GITHUB_TOKEN')}"
 
             # Start talkign to GitHub...
@@ -398,8 +398,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
     def get_folio_organization_uuid(self, index_or_id, org_code):
         if self.organizations_id_map:
             self.migration_report.add(
-                Blurbs.PurchaseOrderVendorLinking,
-                "Organizations linked using organizations_id_map",
+                "PurchaseOrderVendorLinking",
+                i18n.t("Organizations linked using organizations_id_map"),
             )
             if matching_org := self.organizations_id_map.get(org_code):
                 return matching_org[1]
@@ -413,15 +413,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "organizations",
         ):
             self.migration_report.add(
-                Blurbs.PurchaseOrderVendorLinking,
-                "Organizations not in ID map, linked using FOLIO lookup",
+                "PurchaseOrderVendorLinking",
+                i18n.t("Organizations not in ID map, linked using FOLIO lookup"),
             )
             return matching_org["id"]
 
         else:
             self.migration_report.add(
-                Blurbs.PurchaseOrderVendorLinking,
-                "RECORD FAILED Organization identifier not in ID map/FOLIO",
+                "PurchaseOrderVendorLinking",
+                i18n.t("RECORD FAILED Organization identifier not in ID map/FOLIO"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -432,14 +432,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
     def get_folio_instance_uuid(self, index_or_id, bib_id):
         if matching_instance := self.instance_id_map.get(bib_id):
             self.migration_report.add(
-                Blurbs.PurchaseOrderInstanceLinking,
-                "Instances linked using instances_id_map",
+                "PurchaseOrderInstanceLinking",
+                i18n.t("Instances linked using instances_id_map"),
             )
             return matching_instance[1]
         else:
             self.migration_report.add(
-                Blurbs.PurchaseOrderInstanceLinking,
-                "Bib identifier not in instances_id_map, no instance linked",
+                "PurchaseOrderInstanceLinking",
+                i18n.t("Bib identifier not in instances_id_map, no instance linked"),
             )
             Helper.log_data_issue(
                 index_or_id,

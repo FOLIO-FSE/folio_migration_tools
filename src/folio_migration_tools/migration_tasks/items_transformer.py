@@ -7,6 +7,7 @@ import sys
 import time
 import traceback
 import uuid
+import i18n
 from typing import Annotated
 from typing import List
 from typing import Optional
@@ -26,7 +27,6 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 )
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.report_blurbs import Blurbs
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -211,7 +211,7 @@ class ItemsTransformer(MigrationTaskBase):
                     logging.exception(error_str, stack_info=True)
                     logging.fatal("Check source files for empty rows or missing reference data.")
                     self.mapper.migration_report.add(
-                        Blurbs.FailedFiles, f"{file_def.file_name} - {exception}"
+                        "FailedFiles", f"{file_def.file_name} - {exception}"
                     )
                     logging.fatal(error_str)
                     sys.exit(1)
@@ -224,7 +224,9 @@ class ItemsTransformer(MigrationTaskBase):
         logging.info("Processing %s", full_path)
         records_in_file = 0
         with open(full_path, encoding="utf-8-sig") as records_file:
-            self.mapper.migration_report.add_general_statistics("Number of files processed")
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("Number of files processed")
+            )
             start = time.time()
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
                 try:
@@ -258,7 +260,7 @@ class ItemsTransformer(MigrationTaskBase):
                     # TODO: turn this into a asynchrounous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
-                        "Number of records written to disk"
+                        i18n.t("Number of records written to disk")
                     )
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.schema)
                 except TransformationProcessError as process_error:
@@ -273,11 +275,11 @@ class ItemsTransformer(MigrationTaskBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
-                    Blurbs.GeneralStatistics,
-                    f"Number of Legacy items in {file_def}",
+                    "GeneralStatistics",
+                    i18n.t("Number of Legacy items in %{container}", container=file_def),
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    "Number of legacy items in total"
+                    i18n.t("Number of Legacy items in total")
                 )
                 self.print_progress(idx, start)
                 records_in_file = idx + 1
@@ -333,7 +335,9 @@ class ItemsTransformer(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
-                "Item transformation report", migration_report_file, self.mapper.start_datetime
+                i18n.t("Item transformation report"),
+                migration_report_file,
+                self.mapper.start_datetime,
             )
             Helper.print_mapping_report(
                 migration_report_file,
