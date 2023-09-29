@@ -30,6 +30,7 @@ def test_arg_prompts(insecure_inputs, secure_inputs):
         "task_name": "task_name",
         "base_folder_path": "folder_path",
         "okapi_password": "okapi_password",
+        "report_language": "en",
     }
 
 
@@ -51,6 +52,7 @@ def test_args_positionally(insecure_inputs, secure_inputs):
         "task_name": "task_name",
         "base_folder_path": "folder_path",
         "okapi_password": "okapi_password",
+        "report_language": "en",
     }
 
 
@@ -63,6 +65,7 @@ def test_args_positionally(insecure_inputs, secure_inputs):
         "FOLIO_MIGRATION_TOOLS_TASK_NAME": "task_name",
         "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": "folder_path",
         "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE": "fr",
     },
 )
 def test_args_from_env(insecure_inputs, secure_inputs):
@@ -72,6 +75,7 @@ def test_args_from_env(insecure_inputs, secure_inputs):
         "task_name": "task_name",
         "base_folder_path": "folder_path",
         "okapi_password": "okapi_password",
+        "report_language": "fr",
     }
 
 
@@ -84,6 +88,7 @@ def test_args_from_env(insecure_inputs, secure_inputs):
         "FOLIO_MIGRATION_TOOLS_TASK_NAME": "not_task_name",
         "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": "not_folder_path",
         "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "not_okapi_password",
+        "FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE": "not_fr",
     },
 )
 def test_args_overriding_env(insecure_inputs, secure_inputs):
@@ -95,6 +100,8 @@ def test_args_overriding_env(insecure_inputs, secure_inputs):
             "folder_path",
             "--okapi_password",
             "okapi_password",
+            "--report_language",
+            "fr",
         ]
     )
     assert args.__dict__ == {
@@ -102,4 +109,5 @@ def test_args_overriding_env(insecure_inputs, secure_inputs):
         "task_name": "task_name",
         "base_folder_path": "folder_path",
         "okapi_password": "okapi_password",
+        "report_language": "fr",
     }

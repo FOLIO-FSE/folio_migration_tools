@@ -56,7 +56,7 @@ def parse_args(args):
         help=(
             "Language to write the reports. Defaults english for untranslated languages/strings."
         ),
-        default="en",
+        default=environ.get("FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE", "en"),
         prompt=False,
     )
     return parser.parse_args(args)
