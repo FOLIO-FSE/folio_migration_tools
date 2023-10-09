@@ -21,10 +21,14 @@ def test_inheritance():
 
 @mock.patch("getpass.getpass", create=True)
 @mock.patch("builtins.input", create=True)
+@mock.patch.dict(
+    "os.environ",
+    {},
+)
 def test_arg_prompts(insecure_inputs, secure_inputs):
     secure_inputs.side_effect = ["okapi_password"]
-    insecure_inputs.side_effect = ["config_path", "task_name", "folder_path"]
-    args = __main__.parse_args([])
+    insecure_inputs.side_effect = ["folder_path"]
+    args = __main__.parse_args(["config_path", "task_name"])
     assert args.__dict__ == {
         "configuration_path": "config_path",
         "task_name": "task_name",
@@ -36,6 +40,10 @@ def test_arg_prompts(insecure_inputs, secure_inputs):
 
 @mock.patch("getpass.getpass", create=True)
 @mock.patch("builtins.input", create=True)
+@mock.patch.dict(
+    "os.environ",
+    {},
+)
 def test_args_positionally(insecure_inputs, secure_inputs):
     args = __main__.parse_args(
         [
@@ -104,6 +112,28 @@ def test_args_overriding_env(insecure_inputs, secure_inputs):
             "fr",
         ]
     )
+    assert args.__dict__ == {
+        "configuration_path": "config_path",
+        "task_name": "task_name",
+        "base_folder_path": "folder_path",
+        "okapi_password": "okapi_password",
+        "report_language": "fr",
+    }
+
+
+@mock.patch("getpass.getpass", create=True)
+@mock.patch("builtins.input", create=True)
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_CONFIGURATION_PATH": "config_path",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": "folder_path",
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE": "fr",
+    },
+)
+def test_task_name_arg_exception(insecure_inputs, secure_inputs):
+    args = __main__.parse_args(["task_name"])
     assert args.__dict__ == {
         "configuration_path": "config_path",
         "task_name": "task_name",
