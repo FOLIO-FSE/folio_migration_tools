@@ -25,7 +25,7 @@ def parse_args(args):
     parser.add_argument(
         "configuration_path",
         help="Path to configuration file",
-        nargs="?",
+        nargs="?" if "FOLIO_MIGRATION_TOOLS_CONFIGURATION_PATH" in environ else None,
         prompt="FOLIO_MIGRATION_TOOLS_CONFIGURATION_PATH" not in environ,
         default=environ.get("FOLIO_MIGRATION_TOOLS_CONFIGURATION_PATH"),
     )
@@ -34,7 +34,7 @@ def parse_args(args):
     parser.add_argument(
         "task_name",
         help=("Task name. Use one of: " f"{tasks_string}"),
-        nargs="?",
+        nargs="?" if "FOLIO_MIGRATION_TOOLS_TASK_NAME" in environ else None,
         prompt="FOLIO_MIGRATION_TOOLS_TASK_NAME" not in environ,
         default=environ.get("FOLIO_MIGRATION_TOOLS_TASK_NAME"),
     )
