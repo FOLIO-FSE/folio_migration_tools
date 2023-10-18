@@ -24,7 +24,7 @@ def deep_merge(target_dict, source_dict, merge_keys=("name", "fileName", "file_n
                 merge_key = next((i for i in merge_keys if i in merging_list_item), None)
                 if merge_key is None:
                     target_dict[k].append(merging_list_item)
-                    next
+                    continue
                 for index, target in enumerate(target_dict[k]):
                     if target[merge_key] == merging_list_item[merge_key]:
                         target_dict[k][index] = deep_merge(
