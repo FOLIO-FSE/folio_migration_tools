@@ -57,6 +57,10 @@ class FolioRelease(str, Enum):
     morning_glory = "morning-glory"
     nolana = "nolana"
     orchid = "orchid"
+    poppy = "poppy"
+    quesnelia = "quesnelia"
+    ramsons = "ramsons"
+    sunflower = "sunflower"
 
 
 class LibraryConfiguration(BaseModel):
