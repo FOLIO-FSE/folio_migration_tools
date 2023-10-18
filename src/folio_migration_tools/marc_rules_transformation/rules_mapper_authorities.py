@@ -4,9 +4,9 @@ import logging
 import re
 import time
 import uuid
-import i18n
 from typing import List
 
+import i18n
 import pymarc
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -60,7 +60,7 @@ class AuthorityMapper(RulesMapperBase):
             folio_client,
             library_configuration,
             task_configuration,
-            self.get_authority_json_schema(folio_client),
+            self.get_authority_json_schema(folio_client, library_configuration),
             Conditions(folio_client, self, "auth", library_configuration.folio_release),
         )
         self.srs_recs: list = []
@@ -219,11 +219,19 @@ class AuthorityMapper(RulesMapperBase):
         """
         folio_authority["source"] = "MARC"
 
-    def get_authority_json_schema(self, folio_client: FolioClient):
+    def get_authority_json_schema(self, folio_client: FolioClient, library_configuration):
         """Fetches the JSON Schema for autorities"""
-        return folio_client.get_from_github(
-            "folio-org", "mod-inventory-storage", "/ramls/authorities/authority.json"
-        )
+        if library_configuration.folio_release.name.lower()[0] < "p":
+            schema = folio_client.get_from_github(
+                "folio-org", "mod-inventory-storage", "/ramls/authorities/authority.json"
+            )
+        else:
+            schema = folio_client.get_from_github(
+                "folio-org",
+                "mod-entities-links",
+                "/src/main/resources/swagger.api/schemas/authority-storage/authorityDto.yaml",
+            )
+        return schema
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
