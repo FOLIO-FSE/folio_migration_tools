@@ -1,0 +1,65 @@
+from folio_migration_tools.config_file_load import deep_merge, merge_load
+
+
+def test_single_file_config_load():
+    loaded_text = merge_load("./tests/test_data/config_files/single_file_config.json")
+    assert loaded_text == {"a": 1, "b": [1, 2, 3], "c": {"d": 4, "e": 5}}
+
+
+def test_config_dict_merge():
+    loaded_text = merge_load("./tests/test_data/config_files/config_dict_merge.json")
+    assert loaded_text == {
+        "a": 2,
+        "b": [1, 2, 3, 4],
+        "source": "single_file_config.json",
+        "c": {"d": 4, "e": 5},
+    }
+
+
+def test_config_list_item_merge():
+    loaded_text = merge_load("./tests/test_data/config_files/config_list_item_merge_source.json")
+    assert loaded_text == {
+        "a": [
+            {
+                "name": 1,
+                "value1": 2,
+                "value2": 3,
+                "value3": 4,
+            },
+            {"name": 2, "value1": 21, "value2": 22},
+            {"name": 3, "value2": 32, "value3": 23},
+        ],
+        "source": "config_list_item_merge_target.json",
+    }
+
+
+def test_config_attribute_clearing():
+    pass
+
+
+def test_config_chained_load():
+    loaded_text = merge_load("./tests/test_data/config_files/config_dict_chain.json")
+    assert loaded_text == {
+        "a": 3,
+        "b": [1, 2, 3, 4, 5],
+        "source": "config_dict_merge.json",
+        "c": {"d": 4, "e": 5},
+    }
+
+
+def test_merge_order():
+    loaded_text = merge_load("./tests/test_data/config_files/config_merge_order_source.json")
+    assert loaded_text == {
+        "a": 5,
+        "b": [1, 2, 3, 4, 5],
+        "source": ["config_dict_merge.json", "config_merge_order_target.json"],
+        "c": 5,
+    }
+
+
+def test_empty_merge():
+    assert deep_merge({}, {}) == {}
+
+
+def test_merge_clearing():
+    assert deep_merge({"a": 1, "b": 2}, {"a": None}) == {"b": 2}
