@@ -1,0 +1,7 @@
+{
+    "source": "single_file_config.json",
+    "a": 2,
+    "b": [
+        4
+    ]
+}
