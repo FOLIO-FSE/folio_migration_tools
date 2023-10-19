@@ -193,3 +193,18 @@ def test_validation_fail(capfd):
         Halting
         """
     )
+
+
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/basic_config.json", "task_name"],
+)
+def test_migration_task_exhaustion(capfd):
+    with pytest.raises(SystemExit):
+        __main__.main()
+    assert capfd.readouterr().out == dedent(
+        """\
+        Referenced task name task_name not found in the configuration file. Use one of task
+        Halting...
+        """
+    )
