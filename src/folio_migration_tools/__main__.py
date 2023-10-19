@@ -130,6 +130,7 @@ def main():
                 f"{', '.join(humps.camelize(str(x)) for x in validation_message['loc'])}"
             )
         print("Halting")
+        sys.exit(1)
     except httpx.HTTPError as connection_error:
         print(
             f"\nConnection Error when connecting to {connection_error.request.url}. "
