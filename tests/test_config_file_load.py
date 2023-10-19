@@ -58,8 +58,26 @@ def test_merge_order():
 
 
 def test_empty_merge():
+    d = {"a": 1}
     assert deep_merge({}, {}) == {}
+    assert deep_merge(d, {}) == d
+    assert deep_merge({}, d) == d
 
 
 def test_merge_clearing():
-    assert deep_merge({"a": 1, "b": 2}, {"a": None}) == {"b": 2}
+    first = {"a": 1, "b": 2}
+    assert deep_merge(first, {}) == first
+    assert deep_merge(first, {"a": None}) == {"b": 2}
+
+
+def test_merge_dict_chain():
+    assert deep_merge(deep_merge({"a": [1], "b": 2}, {"a": None}), {"a": [2]}) == {
+        "a": [2],
+        "b": 2,
+    }
+
+
+def test_deep_merging_behavior():
+    first = {"a": {"b": {"c": {"d": 1, "e": 2}}}}
+    second = {"a": {"b": {"c": {"d": 3}}}}
+    assert deep_merge(first, second) == {"a": {"b": {"c": {"d": 3, "e": 2}}}}
