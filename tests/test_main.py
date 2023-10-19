@@ -1,6 +1,10 @@
 from folio_migration_tools import __main__
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from unittest import mock
+import pytest
+from pydantic import ValidationError
+import json
+from textwrap import dedent
 
 
 def test_inheritance():
@@ -24,6 +28,7 @@ def test_inheritance():
 @mock.patch.dict(
     "os.environ",
     {},
+    clear=True,
 )
 def test_arg_prompts(insecure_inputs, secure_inputs):
     secure_inputs.side_effect = ["okapi_password"]
@@ -43,6 +48,7 @@ def test_arg_prompts(insecure_inputs, secure_inputs):
 @mock.patch.dict(
     "os.environ",
     {},
+    clear=True,
 )
 def test_args_positionally(insecure_inputs, secure_inputs):
     args = __main__.parse_args(
@@ -75,6 +81,7 @@ def test_args_positionally(insecure_inputs, secure_inputs):
         "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
         "FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE": "fr",
     },
+    clear=True,
 )
 def test_args_from_env(insecure_inputs, secure_inputs):
     args = __main__.parse_args([])
@@ -98,6 +105,7 @@ def test_args_from_env(insecure_inputs, secure_inputs):
         "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "not_okapi_password",
         "FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE": "not_fr",
     },
+    clear=True,
 )
 def test_args_overriding_env(insecure_inputs, secure_inputs):
     args = __main__.parse_args(
@@ -131,6 +139,7 @@ def test_args_overriding_env(insecure_inputs, secure_inputs):
         "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
         "FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE": "fr",
     },
+    clear=True,
 )
 def test_task_name_arg_exception(insecure_inputs, secure_inputs):
     args = __main__.parse_args(["task_name"])
@@ -141,3 +150,46 @@ def test_task_name_arg_exception(insecure_inputs, secure_inputs):
         "okapi_password": "okapi_password",
         "report_language": "fr",
     }
+
+
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/invalid_json.json", "task_name"],
+)
+def test_json_fail(capfd):
+    with pytest.raises(SystemExit):
+        __main__.main()
+    assert capfd.readouterr().out == dedent(
+        """\
+        {
+        
+        Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+        Error parsing the above JSON mapping or configruation file. Halting.
+        """
+    )
+
+
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/json_not_matching_schema.json", "task_name"],
+)
+def test_validation_fail(capfd):
+    with pytest.raises(SystemExit):
+        __main__.main()
+    assert capfd.readouterr().out == dedent(
+        """\
+        [
+          {
+            "loc": [
+              "tenant_id"
+            ],
+            "msg": "field required",
+            "type": "value_error.missing"
+          }
+        ]
+        Validation errors in configuration file:
+        ==========================================
+        field required\ttenantId
+        Halting
+        """
+    )

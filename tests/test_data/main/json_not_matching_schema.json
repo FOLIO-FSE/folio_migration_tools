@@ -1,0 +1,11 @@
+{
+    "libraryInformation": {
+        "okapiUrl": "",
+        "okapiUsername": "",
+        "libraryName": "",
+        "logLevelDebug": false,
+        "folioRelease": "poppy",
+        "iterationIdentifier": ""
+    },
+    "octopus": "squid"
+}
