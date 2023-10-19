@@ -156,10 +156,10 @@ def test_task_name_arg_exception(insecure_inputs, secure_inputs):
     "sys.argv",
     ["__main__.py", "tests/test_data/main/invalid_json.json", "task_name"],
 )
-def test_json_fail(capfd):
+def test_json_fail(capsys):
     with pytest.raises(SystemExit):
         __main__.main()
-    assert capfd.readouterr().out == dedent(
+    assert capsys.readouterr().out == dedent(
         """\
         {
         
@@ -173,10 +173,10 @@ def test_json_fail(capfd):
     "sys.argv",
     ["__main__.py", "tests/test_data/main/json_not_matching_schema.json", "task_name"],
 )
-def test_validation_fail(capfd):
+def test_validation_fail(capsys):
     with pytest.raises(SystemExit):
         __main__.main()
-    assert capfd.readouterr().out == dedent(
+    assert capsys.readouterr().out == dedent(
         """\
         [
           {
@@ -199,10 +199,10 @@ def test_validation_fail(capfd):
     "sys.argv",
     ["__main__.py", "tests/test_data/main/basic_config.json", "task_name"],
 )
-def test_migration_task_exhaustion(capfd):
+def test_migration_task_exhaustion(capsys):
     with pytest.raises(SystemExit):
         __main__.main()
-    assert capfd.readouterr().out == dedent(
+    assert capsys.readouterr().out == dedent(
         """\
         Referenced task name task_name not found in the configuration file. Use one of task
         Halting...
