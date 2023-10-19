@@ -174,6 +174,7 @@ class MigrationTaskBase:
 
         logging.Logger.data_issues = data_issues
         logger = logging.getLogger()
+        logger.propogate = True
         logger.handlers = []
         formatter = logging.Formatter(
             "%(asctime)s\t%(levelname)s\t%(message)s\t%(task_configuration_name)s"
