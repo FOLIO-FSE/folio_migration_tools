@@ -6,6 +6,8 @@ def deep_merge(target_dict, source_dict, merge_keys=("name", "fileName", "file_n
     # deep_merge
     #
     # Deeply merges nested dictionaries and lists of dictionaries.
+    # **Muatates the target_dict with the changes**, and returns it.
+    #
     # For lists, attempts to match items based on the first found key in merge_keys in each item.
     # If no key is found, or no match, the item is appended to the target list.
     #
