@@ -81,3 +81,21 @@ def test_deep_merging_behavior():
     first = {"a": {"b": {"c": {"d": 1, "e": 2}}}}
     second = {"a": {"b": {"c": {"d": 3}}}}
     assert deep_merge(first, second) == {"a": {"b": {"c": {"d": 3, "e": 2}}}}
+
+
+def test_deep_merge_list_dicts():
+    first = {"a": [{"b": "1", "c": "2"}, {"b": "3", "c": "4"}]}
+    second = {"a": [{"b": "1", "c": "3"}, {"b": "2", "c": "3"}]}
+    assert deep_merge(first, second) == {
+        "a": [
+            {"b": "1", "c": "2"},
+            {"b": "3", "c": "4"},
+            {"b": "1", "c": "3"},
+            {"b": "2", "c": "3"},
+        ]
+    }
+    first = {"a": [{"b": "1", "c": "2"}, {"b": "3", "c": "4"}]}
+    second = {"a": [{"b": "1", "c": "3"}, {"b": "2", "c": "3"}]}
+    assert deep_merge(first, second, ("b")) == {
+        "a": [{"b": "1", "c": "3"}, {"b": "3", "c": "4"}, {"b": "2", "c": "3"}]
+    }
