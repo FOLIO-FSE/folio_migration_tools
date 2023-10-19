@@ -1,0 +1,16 @@
+{
+    "libraryInformation": {
+        "okapiUrl": "",
+        "okapiUsername": "",
+        "libraryName": "",
+        "logLevelDebug": false,
+        "folioRelease": "poppy",
+        "iterationIdentifier": "",
+        "tenantId": ""
+    },
+    "migrationTasks": [
+        {
+            "name": "task"
+        }
+    ]
+}
