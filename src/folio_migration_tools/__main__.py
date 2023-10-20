@@ -85,7 +85,7 @@ def main():
                 f'configuration file. Use one of {", ".join(task_names)}'
                 "\nHalting..."
             )
-            sys.exit(2)
+            sys.exit("Task Name Not Found")
         try:
             task_class = next(
                 tc
@@ -102,11 +102,11 @@ def main():
                 "is not a valid option. Update your task to incorporate "
                 f"one of {json.dumps([tc.__name__ for tc in task_classes], indent=4)}"
             )
-            sys.exit(2)
+            sys.exit("Task Type Not Found")
         except TransformationProcessError as tpe:
             logging.critical(tpe.message)
             print(f"\n{tpe.message}: {tpe.data_value}")
-            sys.exit(1)
+            sys.exit("Transformation Failure")
         # task_obj.do_work()
         logging.info("Work done. Shutting down")
         sys.exit(0)
@@ -118,7 +118,7 @@ def main():
             f"\n{json_error}"
             f"\nError parsing the above JSON mapping or configruation file. Halting."
         )
-        sys.exit(2)
+        sys.exit("Invalid JSON")
     except ValidationError as e:
         print(e.json())
         print("Validation errors in configuration file:")
@@ -130,20 +130,20 @@ def main():
                 f"{', '.join(humps.camelize(str(x)) for x in validation_message['loc'])}"
             )
         print("Halting")
-        sys.exit(1)
+        sys.exit("JSON Not Matching Spec")
     except httpx.HTTPError as connection_error:
         print(
             f"\nConnection Error when connecting to {connection_error.request.url}. "
             "Are you connectet to the Internet/VPN? Do you need to update DNS settings?"
         )
-        sys.exit(1)
+        sys.exit("HTTP Not Connecting")
     except FileNotFoundError as fnf_error:
         print(f"\n{fnf_error.strerror}: {fnf_error.filename}")
-        sys.exit(1)
+        sys.exit("File not found")
     except Exception as ee:
         logging.exception("Unhandled exception")
         print(f"\n{ee}")
-        sys.exit(1)
+        sys.exit(ee.__class__.__name__)
 
 
 def inheritors(base_class):

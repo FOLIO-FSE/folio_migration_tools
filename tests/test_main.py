@@ -156,55 +156,28 @@ def test_task_name_arg_exception(insecure_inputs, secure_inputs):
     "sys.argv",
     ["__main__.py", "tests/test_data/main/invalid_json.json", "task_name"],
 )
-def test_json_fail(capfd):
-    with pytest.raises(SystemExit):
+def test_json_fail():
+    with pytest.raises(SystemExit) as exit_info:
         __main__.main()
-    assert capfd.readouterr().out == dedent(
-        """\
-        {
-        
-        Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
-        Error parsing the above JSON mapping or configruation file. Halting.
-        """
-    )
+
+    assert exit_info.value.args[0] == "Invalid JSON"
 
 
 @mock.patch(
     "sys.argv",
     ["__main__.py", "tests/test_data/main/json_not_matching_schema.json", "task_name"],
 )
-def test_validation_fail(capfd):
-    with pytest.raises(SystemExit):
+def test_validation_fail():
+    with pytest.raises(SystemExit) as exit_info:
         __main__.main()
-    assert capfd.readouterr().out == dedent(
-        """\
-        [
-          {
-            "loc": [
-              "tenant_id"
-            ],
-            "msg": "field required",
-            "type": "value_error.missing"
-          }
-        ]
-        Validation errors in configuration file:
-        ==========================================
-        field required\ttenantId
-        Halting
-        """
-    )
+    assert exit_info.value.args[0] == "JSON Not Matching Spec"
 
 
 @mock.patch(
     "sys.argv",
     ["__main__.py", "tests/test_data/main/basic_config.json", "task_name"],
 )
-def test_migration_task_exhaustion(capfd):
-    with pytest.raises(SystemExit):
+def test_migration_task_exhaustion():
+    with pytest.raises(SystemExit) as exit_info:
         __main__.main()
-    assert capfd.readouterr().out == dedent(
-        """\
-        Referenced task name task_name not found in the configuration file. Use one of task
-        Halting...
-        """
-    )
+    assert exit_info.value.args[0] == "Task Name Not Found"
