@@ -14,7 +14,7 @@ def raise_exception_factory(exception=Exception, *args, **kwargs):
     return thrower
 
 
-class TestException(Exception):
+class MockException(Exception):
     request = SimpleNamespace(url="http://test.com")
 
 
@@ -333,7 +333,7 @@ def test_fail_task(do_work, wrap_up):
 )
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
-@mock.patch("httpx.HTTPError", TestException)
+@mock.patch("httpx.HTTPError", MockException)
 def test_fail_http(do_work, wrap_up):
     do_work.side_effect = raise_exception_factory(httpx.HTTPError, "message")
     with pytest.raises(SystemExit) as exit_info:
