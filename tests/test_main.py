@@ -266,3 +266,25 @@ def test_execute_task(do_work, wrap_up):
     assert exit_info.value.args[0] == 0
     assert do_work.call_count == 1
     assert wrap_up.call_count == 1
+
+
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockErrorTask])
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+)
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/basic_config.json", "mock_error_task"],
+)
+@mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
+@mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
+def test_fail_task(do_work, wrap_up):
+    with pytest.raises(SystemExit) as exit_info:
+        __main__.main()
+    assert exit_info.value.args[0] == "Transformation Failure"
+    assert do_work.call_count == 0
+    assert wrap_up.call_count == 0
