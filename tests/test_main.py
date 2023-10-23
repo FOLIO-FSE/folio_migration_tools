@@ -4,6 +4,35 @@ from unittest import mock
 import pytest
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 import httpx
+from types import SimpleNamespace
+
+
+def raise_exception_factory(exception=Exception, *args, **kwargs):
+    def thrower():
+        raise exception(*args, **kwargs)
+
+    return thrower
+
+
+class TestException(Exception):
+    request = SimpleNamespace(url="http://test.com")
+
+
+class MockTask:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    @staticmethod
+    def do_work():
+        pass
+
+    @staticmethod
+    def wrap_up():
+        pass
+
+    @staticmethod
+    def TaskConfiguration(**kwargs):
+        pass
 
 
 def test_inheritance():
@@ -225,23 +254,6 @@ def test_migration_task_exhaustion():
     assert exit_info.value.args[0] == "Task Name Not Found"
 
 
-class MockTask:
-    def __init__(self, *args, **kwargs):
-        pass
-
-    @staticmethod
-    def do_work():
-        pass
-
-    @staticmethod
-    def wrap_up():
-        pass
-
-    @staticmethod
-    def TaskConfiguration(**kwargs):
-        pass
-
-
 @mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch.dict(
     "os.environ",
@@ -280,20 +292,6 @@ def test_execute_task(do_work, wrap_up):
     assert exit_info.value.args[0] == 0
     assert do_work.call_count == 1
     assert wrap_up.call_count == 1
-
-
-def raise_exception_factory(exception=Exception, *args, **kwargs):
-    def thrower():
-        raise exception(*args, **kwargs)
-
-    return thrower
-
-
-from types import SimpleNamespace
-
-
-class TestException(Exception):
-    request = SimpleNamespace(url="http://test.com")
 
 
 @mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
@@ -335,11 +333,12 @@ def test_fail_task(do_work, wrap_up):
 )
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
-def test_fail_unhandled(do_work, wrap_up):
-    do_work.side_effect = raise_exception_factory(Exception, "error_message", "error_data")
+@mock.patch("httpx.HTTPError", TestException)
+def test_fail_http(do_work, wrap_up):
+    do_work.side_effect = raise_exception_factory(httpx.HTTPError, "message")
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
-    assert exit_info.value.args[0] == "Exception"
+    assert exit_info.value.args[0] == "HTTP Not Connecting"
     assert do_work.call_count == 1
     assert wrap_up.call_count == 1
 
@@ -358,11 +357,10 @@ def test_fail_unhandled(do_work, wrap_up):
 )
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
-@mock.patch("httpx.HTTPError", TestException)
-def test_fail_http(do_work, wrap_up):
-    do_work.side_effect = raise_exception_factory(httpx.HTTPError, "message")
+def test_fail_unhandled(do_work, wrap_up):
+    do_work.side_effect = raise_exception_factory(Exception, "error_message", "error_data")
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
-    assert exit_info.value.args[0] == "HTTP Not Connecting"
+    assert exit_info.value.args[0] == "Exception"
     assert do_work.call_count == 1
     assert wrap_up.call_count == 1
