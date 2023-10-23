@@ -2,9 +2,6 @@ from folio_migration_tools import __main__
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from unittest import mock
 import pytest
-from pydantic import ValidationError
-import json
-from textwrap import dedent
 
 
 def test_inheritance():
@@ -156,6 +153,14 @@ def test_task_name_arg_exception(insecure_inputs, secure_inputs):
     "sys.argv",
     ["__main__.py", "tests/test_data/main/invalid_json.json", "task_name"],
 )
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+    clear=True,
+)
 def test_json_fail():
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
@@ -167,6 +172,14 @@ def test_json_fail():
     "sys.argv",
     ["__main__.py", "tests/test_data/main/json_not_matching_schema.json", "task_name"],
 )
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+    clear=True,
+)
 def test_validation_fail():
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
@@ -176,6 +189,14 @@ def test_validation_fail():
 @mock.patch(
     "sys.argv",
     ["__main__.py", "tests/test_data/main/basic_config.json", "task_name"],
+)
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+    clear=True,
 )
 def test_migration_task_exhaustion():
     with pytest.raises(SystemExit) as exit_info:
