@@ -92,10 +92,6 @@ def main():
                 for tc in task_classes
                 if tc.__name__ == migration_task_config["migration_task_type"]
             )
-            task_config = task_class.TaskConfiguration(**migration_task_config)
-            task_obj = task_class(task_config, library_config)
-            task_obj.do_work()
-            task_obj.wrap_up()
         except StopIteration:
             print(
                 f'Referenced task {migration_task_config["migration_task_type"]} '
@@ -103,6 +99,11 @@ def main():
                 f"one of {json.dumps([tc.__name__ for tc in task_classes], indent=4)}"
             )
             sys.exit("Task Type Not Found")
+        try:
+            task_config = task_class.TaskConfiguration(**migration_task_config)
+            task_obj = task_class(task_config, library_config)
+            task_obj.do_work()
+            task_obj.wrap_up()
         except TransformationProcessError as tpe:
             logging.critical(tpe.message)
             print(f"\n{tpe.message}: {tpe.data_value}")
