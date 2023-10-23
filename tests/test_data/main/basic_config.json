@@ -10,7 +10,12 @@
     },
     "migrationTasks": [
         {
-            "name": "task"
+            "name": "not_found_task",
+            "migrationTaskType": "no_task"
+        },
+        {
+            "name": "mock_task",
+            "migrationTaskType": "MockTask"
         }
     ]
 }
