@@ -2,6 +2,7 @@ from folio_migration_tools import __main__
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from unittest import mock
 import pytest
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 
 
 def test_inheritance():
@@ -202,3 +203,66 @@ def test_migration_task_exhaustion():
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
     assert exit_info.value.args[0] == "Task Name Not Found"
+
+
+class MockTask:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    @staticmethod
+    def do_work():
+        pass
+
+    @staticmethod
+    def wrap_up():
+        pass
+
+    @staticmethod
+    def TaskConfiguration(**kwargs):
+        pass
+
+
+class MockErrorTask(MockTask):
+    @staticmethod
+    def do_work():
+        raise TransformationProcessError("error_message", "error_data")
+
+
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+)
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/basic_config.json", "not_found_task"],
+)
+def test_task_name_type_exception():
+    with pytest.raises(SystemExit) as exit_info:
+        __main__.main()
+    assert exit_info.value.args[0] == "Task Type Not Found"
+
+
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+)
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/basic_config.json", "mock_task"],
+)
+@mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
+@mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
+def test_execute_task(do_work, wrap_up):
+    with pytest.raises(SystemExit) as exit_info:
+        __main__.main()
+    assert exit_info.value.args[0] == 0
+    assert do_work.call_count == 1
+    assert wrap_up.call_count == 1
