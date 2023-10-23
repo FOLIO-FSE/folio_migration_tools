@@ -3,6 +3,7 @@ from folio_migration_tools.migration_tasks.migration_task_base import MigrationT
 from unittest import mock
 import pytest
 from folio_migration_tools.custom_exceptions import TransformationProcessError
+from httpx import HTTPError
 
 
 def test_inheritance():
@@ -222,12 +223,6 @@ class MockTask:
         pass
 
 
-class MockErrorTask(MockTask):
-    @staticmethod
-    def do_work():
-        raise TransformationProcessError("error_message", "error_data")
-
-
 @mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch.dict(
     "os.environ",
@@ -268,7 +263,14 @@ def test_execute_task(do_work, wrap_up):
     assert wrap_up.call_count == 1
 
 
-@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockErrorTask])
+def raise_exception_factory(exception=Exception, *args, **kwargs):
+    def thrower():
+        raise exception(*args, **kwargs)
+
+    return thrower
+
+
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch.dict(
     "os.environ",
     {
@@ -278,13 +280,62 @@ def test_execute_task(do_work, wrap_up):
 )
 @mock.patch(
     "sys.argv",
-    ["__main__.py", "tests/test_data/main/basic_config.json", "mock_error_task"],
+    ["__main__.py", "tests/test_data/main/basic_config.json", "mock_task"],
 )
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
 def test_fail_task(do_work, wrap_up):
+    do_work.side_effect = raise_exception_factory(
+        TransformationProcessError, "error_message", "error_data"
+    )
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
     assert exit_info.value.args[0] == "Transformation Failure"
-    assert do_work.call_count == 0
-    assert wrap_up.call_count == 0
+    assert do_work.call_count == 1
+    assert wrap_up.call_count == 1
+
+
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+)
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/basic_config.json", "mock_task"],
+)
+@mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
+@mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
+def test_fail_unhandled(do_work, wrap_up):
+    do_work.side_effect = raise_exception_factory(Exception, "error_message", "error_data")
+    with pytest.raises(SystemExit) as exit_info:
+        __main__.main()
+    assert exit_info.value.args[0] == "Exception"
+    assert do_work.call_count == 1
+    assert wrap_up.call_count == 1
+
+
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+)
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/basic_config.json", "mock_task"],
+)
+@mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
+@mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
+def test_fail_http(do_work, wrap_up):
+    do_work.side_effect = raise_exception_factory(HTTPError, "error_message", "error_data")
+    with pytest.raises(SystemExit) as exit_info:
+        __main__.main()
+    assert exit_info.value.args[0] == "HTTP Not Connecting"
+    assert do_work.call_count == 1
+    assert wrap_up.call_count == 1
