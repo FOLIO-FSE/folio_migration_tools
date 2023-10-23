@@ -16,10 +16,6 @@
         {
             "name": "mock_task",
             "migrationTaskType": "MockTask"
-        },
-        {
-            "name": "mock_error_task",
-            "migrationTaskType": "MockErrorTask"
         }
     ]
 }
