@@ -1,9 +1,9 @@
 import json
 import logging
 import sys
-import i18n
 from typing import Optional
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -186,10 +186,6 @@ class UserTransformer(MigrationTaskBase):
 
     @staticmethod
     def clean_user(folio_user, index_or_id):
-        # TODO: Consider removing the object metadata construct globally in MappingFileMapperBase
-        if folio_user.get("metadata", {}):
-            del folio_user["metadata"]
-
         # Make sure the user has exactly one primary address
         if addresses := folio_user.get("personal", {}).get("addresses", []):
             primary_true = []
