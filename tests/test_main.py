@@ -272,7 +272,6 @@ def test_task_name_type_exception():
     assert exit_info.value.args[0] == "Task Type Not Found"
 
 
-@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch.dict(
     "os.environ",
     {
@@ -286,15 +285,15 @@ def test_task_name_type_exception():
 )
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 def test_execute_task(do_work, wrap_up):
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
     assert exit_info.value.args[0] == 0
-    assert do_work.call_count == 1
-    assert wrap_up.call_count == 1
+    do_work.assert_called_once()
+    wrap_up.assert_called_once()
 
 
-@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch.dict(
     "os.environ",
     {
@@ -306,8 +305,9 @@ def test_execute_task(do_work, wrap_up):
     "sys.argv",
     ["__main__.py", "tests/test_data/main/basic_config.json", "mock_task"],
 )
-@mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
+@mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 def test_fail_task(do_work, wrap_up):
     do_work.side_effect = raise_exception_factory(
         TransformationProcessError, "error_message", "error_data"
@@ -315,11 +315,10 @@ def test_fail_task(do_work, wrap_up):
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
     assert exit_info.value.args[0] == "Transformation Failure"
-    assert do_work.call_count == 1
-    assert wrap_up.call_count == 1
+    do_work.assert_called_once()
+    wrap_up.assert_not_called()
 
 
-@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch.dict(
     "os.environ",
     {
@@ -331,16 +330,17 @@ def test_fail_task(do_work, wrap_up):
     "sys.argv",
     ["__main__.py", "tests/test_data/main/basic_config.json", "mock_task"],
 )
-@mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
-@mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
+@mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch("httpx.HTTPError", MockException)
+@mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
+@mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 def test_fail_http(do_work, wrap_up):
     do_work.side_effect = raise_exception_factory(httpx.HTTPError, "message")
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
     assert exit_info.value.args[0] == "HTTP Not Connecting"
-    assert do_work.call_count == 1
-    assert wrap_up.call_count == 1
+    do_work.assert_called_once()
+    wrap_up.assert_not_called()
 
 
 @mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
@@ -357,10 +357,10 @@ def test_fail_http(do_work, wrap_up):
 )
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
-def test_fail_unhandled(do_work, wrap_up):
+def test_fail_unhandled(wrap_up, do_work):
     do_work.side_effect = raise_exception_factory(Exception, "error_message", "error_data")
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
     assert exit_info.value.args[0] == "Exception"
-    assert do_work.call_count == 1
-    assert wrap_up.call_count == 1
+    do_work.assert_called_once()
+    wrap_up.assert_not_called()
