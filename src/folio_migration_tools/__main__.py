@@ -108,10 +108,8 @@ def main():
             logging.critical(tpe.message)
             print(f"\n{tpe.message}: {tpe.data_value}")
             sys.exit("Transformation Failure")
-        # task_obj.do_work()
         logging.info("Work done. Shutting down")
         sys.exit(0)
-        # task_obj.wrap_up()
     except json.decoder.JSONDecodeError as json_error:
         logging.critical(json_error)
         print(json_error.doc)
