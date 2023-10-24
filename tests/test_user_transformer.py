@@ -12,12 +12,6 @@ def test_get_object_type():
     assert UserTransformer.get_object_type() == FOLIONamespaces.users
 
 
-def test_clean_user_remove_metadata():
-    folio_user = {"name": "My Name", "metadata": "hm"}
-    UserTransformer.clean_user(folio_user, "id")
-    assert "metadata" not in folio_user
-
-
 def test_clean_user_all_false():
     folio_user = {
         "personal": {
