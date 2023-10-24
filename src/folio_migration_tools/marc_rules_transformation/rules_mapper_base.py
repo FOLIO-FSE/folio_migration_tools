@@ -4,12 +4,12 @@ import logging
 import time
 import urllib.parse
 import uuid
-import i18n
 from abc import abstractmethod
 from textwrap import wrap
 from typing import List
 from typing import Tuple
 
+import i18n
 import pymarc
 from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -144,7 +144,6 @@ class RulesMapperBase(MapperBase):
         try:
             f005 = marc_record["005"].data[:14]
             parsed_date = datetime.datetime.strptime(f005, "%Y%m%d%H%M%S").isoformat()
-            folio_object["metadata"]["updatedDate"] = parsed_date
         except Exception as exception:
             if "005" in marc_record:
                 Helper.log_data_issue(
@@ -795,7 +794,6 @@ class RulesMapperBase(MapperBase):
             marc_record,
             folio_record,
             srs_id,
-            folio_client.get_metadata_construct(),
             suppress,
             record_type,
         )
@@ -856,7 +854,6 @@ class RulesMapperBase(MapperBase):
         marc_record: Record,
         folio_object: dict,
         srs_id,
-        metadata_obj,
         discovery_suppress: bool,
         record_type: FOLIONamespaces,
     ):
@@ -896,7 +893,6 @@ class RulesMapperBase(MapperBase):
             "parsedRecord": parsed_record,
             "additionalInfo": {"suppressDiscovery": discovery_suppress},
             "externalIdsHolder": id_holders.get(record_type),
-            "metadata": metadata_obj,
             "state": "ACTUAL",
             "leaderRecordStatus": parsed_record["content"]["leader"][5]
             if parsed_record["content"]["leader"][5] in [*"acdnposx"]

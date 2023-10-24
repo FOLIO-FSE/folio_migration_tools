@@ -5,11 +5,11 @@ import sys
 import time
 import typing
 import uuid
-import i18n
 from pathlib import Path
 from typing import Generator
 from typing import List
 
+import i18n
 import pymarc
 from defusedxml.ElementTree import fromstring
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -58,9 +58,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.start = time.time()
 
     def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
-        folio_instance = {
-            "metadata": self.folio_client.get_metadata_construct(),
-        }
+        folio_instance = {}
         folio_instance["id"] = str(
             FolioUUID(
                 str(self.folio_client.okapi_url),

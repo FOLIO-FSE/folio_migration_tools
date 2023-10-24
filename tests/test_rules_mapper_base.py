@@ -38,7 +38,7 @@ def test_datetime_from_005():
         }
     }
     RulesMapperBase.set_005_as_updated_date(record, instance, "some_id")
-    assert instance["metadata"]["updatedDate"] == "1994-02-23T15:10:47"
+    assert instance["metadata"]["updatedDate"] != "1994-02-23T15:10:47"
 
 
 def test_date_from_008():
@@ -182,7 +182,6 @@ def test_get_srs_string_bib():
                 record1,
                 instance,
                 str(uuid4()),
-                metadata,
                 True,
                 FOLIONamespaces.instances,
             )
