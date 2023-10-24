@@ -128,9 +128,7 @@ class AuthorityMapper(RulesMapperBase):
         return [clean_folio_authority]
 
     def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
-        folio_authority = {
-            "metadata": self.folio_client.get_metadata_construct(),
-        }
+        folio_authority = {}
         folio_authority["id"] = str(
             FolioUUID(
                 str(self.folio_client.okapi_url),
