@@ -170,10 +170,10 @@ class Conditions:
         the period is preceded by a single alpha character (eg. "John D."). Also preserves any
         trailing "-" (eg. "1981-"). This condition was introduced in Poppy.
         """
-        pattern1 = re.compile(r"^(.*?)\\s.[.]$")
-        pattern2 = re.compile(r"^(.*?)\\s.,[.]$")
+        pattern1 = re.compile(r"^(.*?)\s.[.]$")
+        pattern2 = re.compile(r"^(.*?)\s.,[.]$")
         value = value.strip()
-        if pattern1.match(value) or pattern2.match(value):
+        if pattern1.match(value) or value.endswith("-"):
             return value
         elif pattern2.match(value):
             return value.rstrip(",")

@@ -15,14 +15,16 @@ def test_condition_trim_period():
 
 def test_condition_trim_punctuation():
     mock = Mock(spec=Conditions)
-    res = Conditions.condition_trim_punctuation(None, mock, "Rockefeller, John D.,", None, None)
+    res = Conditions.condition_trim_punctuation(None, mock, "Rockefeller, John D.", None, None)
     res2 = Conditions.condition_trim_punctuation(
         None, mock, "Rockefeller, John D., 1893-, ", None, None
     )
     res3 = Conditions.condition_trim_punctuation(None, mock, "Rockefeller, John.  ", None, None)
+    res4 = Conditions.condition_trim_punctuation(None, mock, "Rockefeller, John D.,", None, None)
     assert res == "Rockefeller, John D."
     assert res2 == "Rockefeller, John D., 1893-"
     assert res3 == "Rockefeller, John"
+    assert res4 == "Rockefeller, John D."
 
 
 def test_condition_concat_subfields_by_name():
