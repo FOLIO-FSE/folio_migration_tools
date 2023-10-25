@@ -186,6 +186,9 @@ class AuthorityMapper(RulesMapperBase):
 
     def setup_source_file_mapping(self):
         if self.folio_client.authority_source_files:
+            logging.info(
+                f"{len(self.folio_client.authority_source_files)} \tAuthority source files"
+            )
             for source_file in self.folio_client.authority_source_files:
                 for sf_code in source_file.get("codes", []):
                     self.source_file_mapping[sf_code] = source_file
