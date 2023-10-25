@@ -1,7 +1,7 @@
 import logging
 import re
-import i18n
 
+import i18n
 import pymarc
 from folioclient import FolioClient
 from pymarc import field
@@ -144,14 +144,6 @@ class Conditions:
             raise TransformationProcessError("", "No class_types in FOLIO")
 
     def setup_reference_data_for_auth(self):
-        if self.folio_release not in [
-            FolioRelease.orchid,
-            FolioRelease.nolana,
-            FolioRelease.morning_glory,
-            FolioRelease.lotus,
-        ]:
-            self.authority_source_files = self.folio.authority_source_files
-            logging.info(f"{len(self.authority_source_files)} \tAuthority source files")
         self.authority_note_types = list(
             self.folio.folio_get_all(
                 "/authority-note-types", "authorityNoteTypes", self.folio.cql_all, 1000
@@ -171,6 +163,23 @@ class Conditions:
             attr = getattr(self, "condition_" + str(name))
             self.condition_cache[name] = attr
             return attr(legacy_id, value, parameter, marc_field)
+
+    def condition_trim_punctuation(self, legacy_id, value, parameter, marc_field: field.Field):
+        """
+        Strip leading and trailing whitespace, as well as any trailing commas or periods, unless
+        the period is preceded by a single alpha character (eg. "John D."). Also preserves any
+        trailing "-" (eg. "1981-"). This condition was introduced in Poppy.
+        """
+        pattern1 = re.compile(r"^(.*?)\\s.[.]$")
+        pattern2 = re.compile(r"^(.*?)\\s.,[.]$")
+        value = value.strip()
+        if pattern1.match(value) or pattern2.match(value):
+            return value
+        elif pattern2.match(value):
+            return value.rstrip(",")
+        elif value.endswith(".") or value.endswith(","):
+            return value[:-1]
+        return value
 
     def condition_trim_period(self, legacy_id, value, parameter, marc_field: field.Field):
         return value.strip().rstrip(".").rstrip(",")
