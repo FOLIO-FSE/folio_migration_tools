@@ -66,6 +66,16 @@ class FolioRelease(str, Enum):
 class LibraryConfiguration(BaseModel):
     okapi_url: str
     tenant_id: str
+    ecs_tenant_id: Annotated[
+        str,
+        Field(
+            title="ECS tenant ID",
+            description=(
+                "For use in ECS environments when the configuration file is meant to target a ",
+                "data tenant. Set to the tenant ID of the data tenant."
+            )
+        )
+    ] = ""
     okapi_username: str
     okapi_password: str
     base_folder: DirectoryPath = Field(
@@ -91,4 +101,7 @@ class LibraryConfiguration(BaseModel):
         )
     )
     iteration_identifier: str
-    add_time_stamp_to_file_names: Optional[bool] = False
+    add_time_stamp_to_file_names: Annotated[
+        bool, 
+        Field(title="Add time stamp to file names")
+    ] = False
