@@ -14,6 +14,7 @@ from folioclient import FolioClient
 from genericpath import isfile
 
 from folio_migration_tools import library_configuration
+from folio_migration_tools import task_configuration
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.extradata_writer import ExtradataWriter
@@ -35,7 +36,7 @@ class MigrationTaskBase:
     def __init__(
         self,
         library_configuration: library_configuration.LibraryConfiguration,
-        task_configuration,
+        task_configuration: task_configuration.AbstractTaskConfiguration,
         use_logging: bool = True,
     ):
         logging.info("MigrationTaskBase init")
@@ -48,6 +49,11 @@ class MigrationTaskBase:
             library_configuration.okapi_username,
             library_configuration.okapi_password,
         )
+        self.ecs_tenant_id = task_configuration.ecs_tenant_id or library_configuration.ecs_tenant_id
+        self.ecs_tenant_header = {
+            "x-okapi-tenant": self.ecs_tenant_id
+        } if self.ecs_tenant_id else {}
+        self.folio_client.okapi_headers.update(self.ecs_tenant_header)
         self.folder_structure: FolderStructure = FolderStructure(
             library_configuration.base_folder,
             self.get_object_type(),
