@@ -52,7 +52,7 @@ def test_dedupe():
 
 
 def test_blurb_internationalization():
-    i18n.load_config(Path(__file__).parents[1] / "i18n_config.py")
+    i18n.load_config(Path(__file__).parents[1] / "src/folio_migration_tools/i18n_config.py")
     assert i18n.t("blurbs.Introduction.title") == "Introduction"
 
 

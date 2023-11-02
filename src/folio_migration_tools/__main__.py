@@ -1,23 +1,20 @@
 import json
 import logging
 import sys
-from pathlib import Path
 from os import environ
+from pathlib import Path
 
 import httpx
 import humps
+import i18n
 from argparse_prompt import PromptParser
 from pydantic import ValidationError
 
+from folio_migration_tools.config_file_load import merge_load
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_tasks import *  # noqa: F403, F401
 from folio_migration_tools.migration_tasks import migration_task_base
-from folio_migration_tools.config_file_load import merge_load
-
-import i18n
-
-i18n.load_config(Path(__file__).parents[2] / "i18n_config.py")
 
 
 def parse_args(args):
@@ -68,6 +65,14 @@ def main():
         task_classes = list(inheritors(migration_task_base.MigrationTaskBase))
 
         args = parse_args(sys.argv[1:])
+        try:
+            i18n.load_config(
+                Path(
+                    environ.get(
+                        "FOLIO_MIGRATION_TOOLS_I18N_CONFIG_BASE_PATH"
+                    ) or args.base_folder_path) / "i18n_config.py")
+        except i18n.I18nFileLoadError:
+            i18n.load_config(Path(__file__).parent / "i18n_config.py")
         i18n.set("locale", args.report_language)
         config_file_humped = merge_load(args.configuration_path)
         config_file_humped["libraryInformation"]["okapiPassword"] = args.okapi_password
