@@ -1,17 +1,82 @@
 # Changelog
 
-## v1.8.1 (29/06/2023)
-<!-- Release notes generated using configuration in .github/release.yml at main -->
+## v_1_8_4 (07/11/2023)
 
-## What's Changed
-### Other Changes
-* Update Pymarc Dependency by @jermnelson in https://github.com/FOLIO-FSE/folio_migration_tools/pull/643
-* 639 implement discoverysuppress from file definition for delimited holdings and items by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/640
-* Updating smtp check in loans migrator and bumping codecov action version by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/646
-* Removing failure points for hrid prefix settings being empty by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/650
-* Contributor type text mapping and source=FOLIO holdings hrid handling fixes by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/649
+#### Questions & Decisions
 
-**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_0...v_1_8_1
+- [**Questions & Decisions**][**Inventory**] Make trimming of trailing spaces that are part of the OCLC number consistent between bib 001 and mfhd 004 [#557](https://github.com/FOLIO-FSE/folio_migration_tools/issues/557)
+
+#### Support for changes in FOLIO
+
+- [**Support for changes in FOLIO**][**Authorities**] Handle Address FOLIO Authorities Refactor rename `mod-entities-links` => `mod-authorities-manager` [#695](https://github.com/FOLIO-FSE/folio_migration_tools/issues/695)
+- [**Support for changes in FOLIO**][**Authorities**] Authority JSON spec refactored in version 27 of `mod-inventory-storage`  [#693](https://github.com/FOLIO-FSE/folio_migration_tools/issues/693)
+
+#### Tool enhancements
+
+- [**Tool enhancements**][**Support for changes in FOLIO**][**Inventory**][**marc**] Implement trim_punctuation condition for marc rules mapper [#691](https://github.com/FOLIO-FSE/folio_migration_tools/issues/691)
+- [**Tool enhancements**][**Good first issue**] Allow Reading Command Line Parameters from Enviornment Variables [#683](https://github.com/FOLIO-FSE/folio_migration_tools/issues/683)
+- [**Tool enhancements**] Migration Configuration File Inheritance [#682](https://github.com/FOLIO-FSE/folio_migration_tools/issues/682)
+- [**Tool enhancements**][**Migration Reports**] Add Localization Support to Reports [#669](https://github.com/FOLIO-FSE/folio_migration_tools/issues/669)
+
+#### closed
+
+- [**closed**] i18n changes require files not included in the package distribution [#703](https://github.com/FOLIO-FSE/folio_migration_tools/issues/703)
+- [**closed**] Bump version to 1.8.4 [#700](https://github.com/FOLIO-FSE/folio_migration_tools/issues/700)
+- [**closed**] Do not include 'metadata' objects in generated FOLIO records [#697](https://github.com/FOLIO-FSE/folio_migration_tools/issues/697)
+- [**closed**] Prevent creation of duplicate 035 entries when performing 001 -> 035 transformation [#680](https://github.com/FOLIO-FSE/folio_migration_tools/issues/680)
+- [**closed**] Remove 003 when converting 001 to 035 during instance transformation [#679](https://github.com/FOLIO-FSE/folio_migration_tools/issues/679)
+- [**closed**] Handle existing $9 for controllable MARC Bib fields when transforming legacy bibs [#673](https://github.com/FOLIO-FSE/folio_migration_tools/issues/673)
+
+---
+
+## v_1_8_3 (05/09/2023)
+
+#### closed
+
+- [**closed**] Prepare 1.8.3 release [#676](https://github.com/FOLIO-FSE/folio_migration_tools/issues/676)
+- [**closed**] Switch batch poster from using data=json.dumps(object) to json=object [#674](https://github.com/FOLIO-FSE/folio_migration_tools/issues/674)
+
+---
+
+## v_1_8_2 (23/08/2023)
+
+#### Support for changes in FOLIO
+
+- [**Support for changes in FOLIO**][**Authorities**] Implement mapping of naturalId for MARC authority records [#662](https://github.com/FOLIO-FSE/folio_migration_tools/issues/662)
+- [**Support for changes in FOLIO**] Implement Condition concat_subfields_by_name (including subfieldsToConcat and subfieldsToStopConcat)  [#326](https://github.com/FOLIO-FSE/folio_migration_tools/issues/326)
+
+#### Tool enhancements
+
+- [**Tool enhancements**][**Authorities**] Fix invalid LDR 17 values in MARC authority records [#663](https://github.com/FOLIO-FSE/folio_migration_tools/issues/663)
+
+#### closed
+
+- [**closed**] Bump version to 1.8.2 [#671](https://github.com/FOLIO-FSE/folio_migration_tools/issues/671)
+- [**closed**] Fix syntax error in language code mapping [#667](https://github.com/FOLIO-FSE/folio_migration_tools/issues/667)
+- [**closed**] Preserve language code order when mapping languages from 041 with multiple codes in MARC Bib transformer [#661](https://github.com/FOLIO-FSE/folio_migration_tools/issues/661)
+- [**closed**] Subject subfields concatenated with spaces rather than dashes as per mapping rules in MARC to Instance mapping [#655](https://github.com/FOLIO-FSE/folio_migration_tools/issues/655)
+
+---
+
+## v_1_8_1 (29/06/2023)
+
+#### Orders
+
+- [**Orders**] Implement Vendor mapping for Orders - Step 1 [#516](https://github.com/FOLIO-FSE/folio_migration_tools/issues/516)
+
+#### Support for changes in FOLIO
+
+- [**Support for changes in FOLIO**] Update Loans Migrator task to support Nolana SMTP configuration changes [#500](https://github.com/FOLIO-FSE/folio_migration_tools/issues/500)
+
+#### closed
+
+- [**closed**] Bump version to 1.8.1 [#653](https://github.com/FOLIO-FSE/folio_migration_tools/issues/653)
+- [**closed**] HridHandling.preserve001 not working when not creating source records [#652](https://github.com/FOLIO-FSE/folio_migration_tools/issues/652)
+- [**closed**] Object build routine require Instance, Holdings, Item prefix [#648](https://github.com/FOLIO-FSE/folio_migration_tools/issues/648)
+- [**closed**] Contributor data not mapped to Instances when multiple relator terms are present [#647](https://github.com/FOLIO-FSE/folio_migration_tools/issues/647)
+- [**closed**] Implement discoverySuppress from file definition for delimited holdings and items [#639](https://github.com/FOLIO-FSE/folio_migration_tools/issues/639)
+- [**closed**] Orders process hangs (~30 min) before build start [#631](https://github.com/FOLIO-FSE/folio_migration_tools/issues/631)
+
 ---
 
 ## v_1_8_0 (16/05/2023)
@@ -590,52 +655,3 @@
 #### closed
 
 - [**closed**] Multiple empty holdings statements are being generated. [#249](https://github.com/FOLIO-FSE/folio_migration_tools/issues/249)
-
----
-
-## 1_3_9 (16/05/2022)
-
-#### bug
-
-- [**bug**] Loans migration fails if you only supply the script only one of items or patron files [#247](https://github.com/FOLIO-FSE/folio_migration_tools/issues/247)
-- [**bug**] MFHD Parsing: Nonexistant holdings statements on holdingsRecords are getting created as empty lists, making them render in the UI [#243](https://github.com/FOLIO-FSE/folio_migration_tools/issues/243)
-- [**bug**] UserMapper: Concatenated fields from multiple xSV fields are not stripped from spaces before getting joined [#242](https://github.com/FOLIO-FSE/folio_migration_tools/issues/242)
-
----
-
-## 1_3_0 (11/05/2022)
-
-#### bug
-
-- [**bug**][**reporting**] Configuration error reporting reports wrong search location for MARC bibs in BibTransformer [#238](https://github.com/FOLIO-FSE/folio_migration_tools/issues/238)
-- [**bug**] Migrate open loans task skips first loan (row) when creating loams [#236](https://github.com/FOLIO-FSE/folio_migration_tools/issues/236)
-- [**bug**][**good first issue**] Improve 853/863 mapping according to feedback - Part 2 [#112](https://github.com/FOLIO-FSE/folio_migration_tools/issues/112)
-- [**bug**] Make sure that holdings callNumbers are correctly formatted for III non-boundwiths when there are boundwiths in the file [#98](https://github.com/FOLIO-FSE/folio_migration_tools/issues/98)
-
-#### closed
-
-- [**closed**] Exception TypeError being raised in rules_mapper_bibs [#232](https://github.com/FOLIO-FSE/folio_migration_tools/issues/232)
-- [**closed**] Report and halt when mapped legacy field in reference data mapping is not found in the data [#229](https://github.com/FOLIO-FSE/folio_migration_tools/issues/229)
-
-#### enhancement/new feature
-
-- [**enhancement/new feature**] Introduce Lotus support [#201](https://github.com/FOLIO-FSE/folio_migration_tools/issues/201)
-- [**enhancement/new feature**] Split string according to delimiter and create multiple fields for the elements [#183](https://github.com/FOLIO-FSE/folio_migration_tools/issues/183)
-
----
-
-## y1_2_3 (02/05/2022)
-
-#### bug
-
-- [**bug**] UTC correction increases utc difference [#223](https://github.com/FOLIO-FSE/folio_migration_tools/issues/223)
-- [**bug**] HoldingsCSVTransformer does not halt if previously_generated_holdings_files is not found [#216](https://github.com/FOLIO-FSE/folio_migration_tools/issues/216)
-
-#### closed
-
-- [**closed**] Handle issues with positions in leader20-23 [#219](https://github.com/FOLIO-FSE/folio_migration_tools/issues/219)
-- [**closed**] Implement staffSuppress for bib migrations [#206](https://github.com/FOLIO-FSE/folio_migration_tools/issues/206)
-
-#### reporting
-
-- [**reporting**] Create proper report on suppression for all objects [#145](https://github.com/FOLIO-FSE/folio_migration_tools/issues/145)
