@@ -537,7 +537,9 @@ class RulesMapperBase(MapperBase):
             if former_id in self.id_map:
                 del self.id_map[former_id]
 
-    def create_entity(self, entity_mappings, marc_field: Field, entity_parent_key, index_or_legacy_id):
+    def create_entity(
+        self, entity_mappings, marc_field: Field, entity_parent_key, index_or_legacy_id
+    ):
         entity = {}
         parent_schema_prop = self.schema.get("properties", {}).get(entity_parent_key, {})
         if parent_schema_prop.get("type", "") == "array":
