@@ -163,7 +163,7 @@ def test_create_entity_empty_props(mapper: BibsRulesMapper):
             Subfield(code="a", value="De Geer, Jan,"),
             Subfield(code="d", value="1918-2007"),
             Subfield(code="0", value="280552"),
-            Subfield(code="9", value="someid")
+            Subfield(code="9", value="someid"),
         ],
     )
     entity = mapper.create_entity(entity_mappings, marc_field, "contributors", "apa")

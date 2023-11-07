@@ -68,9 +68,11 @@ def main():
         try:
             i18n.load_config(
                 Path(
-                    environ.get(
-                        "FOLIO_MIGRATION_TOOLS_I18N_CONFIG_BASE_PATH"
-                    ) or args.base_folder_path) / "i18n_config.py")
+                    environ.get("FOLIO_MIGRATION_TOOLS_I18N_CONFIG_BASE_PATH")
+                    or args.base_folder_path
+                )
+                / "i18n_config.py"
+            )
         except i18n.I18nFileLoadError:
             i18n.load_config(Path(__file__).parent / "i18n_config.py")
         i18n.set("locale", args.report_language)
