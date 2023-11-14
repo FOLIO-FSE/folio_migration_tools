@@ -5,7 +5,6 @@ import logging
 import sys
 import time
 import traceback
-import i18n
 from datetime import datetime
 from datetime import timedelta
 from typing import Optional
@@ -13,6 +12,7 @@ from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
 
 import httpx
+import i18n
 from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
@@ -310,7 +310,12 @@ class LoansMigrator(MigrationTaskBase):
         for loan in self.semi_valid_legacy_loans:
             has_item_barcode = loan.item_barcode in item_barcodes or not any(item_barcodes)
             has_patron_barcode = loan.patron_barcode in user_barcodes or not any(user_barcodes)
-            if has_item_barcode and has_patron_barcode:
+            has_proxy_barcode = True
+            if loan.proxy_patron_barcode:
+                has_proxy_barcode = loan.proxy_patron_barcode in user_barcodes or not any(
+                    user_barcodes
+                )
+            if has_item_barcode and has_patron_barcode and has_proxy_barcode:
                 self.migration_report.add_general_statistics(
                     i18n.t("Loans verified against migrated user and item")
                 )
@@ -324,7 +329,8 @@ class LoansMigrator(MigrationTaskBase):
                     i18n.t("Loans discarded. Had migrated item barcode")
                     + f": {has_item_barcode}. "
                     + i18n.t("Had migrated user barcode")
-                    + f": {has_patron_barcode}",
+                    + f": {has_patron_barcode}"
+                    + f": {has_proxy_barcode}",
                 )
             if not has_item_barcode:
                 Helper.log_data_issue(
@@ -335,6 +341,10 @@ class LoansMigrator(MigrationTaskBase):
                     "",
                     "Loan without matched patron barcode",
                     json.dumps(loan.to_dict()),
+                )
+            if not has_proxy_barcode:
+                Helper.log_data_issue(
+                    "", "Loan without matched proxy patron barcode", json.dumps(loan.to_dict())
                 )
 
     def load_and_validate_legacy_loans(self, loans_reader, service_point_id: str) -> list:
