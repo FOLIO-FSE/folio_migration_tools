@@ -30,7 +30,7 @@ class LegacyLoan(object):
             "next_item_status",
             "service_point_id",
         ]
-        optional_headers = ["service_point_id"]
+        optional_headers = ["service_point_id", "proxy_patron_barcode"]
         legal_statuses = [
             "",
             "Aged to lost",
@@ -86,6 +86,7 @@ class LegacyLoan(object):
         # good to go, set properties
         self.item_barcode: str = legacy_loan_dict["item_barcode"].strip()
         self.patron_barcode: str = legacy_loan_dict["patron_barcode"].strip()
+        self.proxy_patron_barcode: str = legacy_loan_dict.get("proxy_patron_barcode", "")
         self.due_date: datetime = temp_date_due
         self.out_date: datetime = temp_date_out
         self.correct_for_1_day_loans()
