@@ -3,10 +3,10 @@ import json
 import logging
 import re
 import time
-import i18n
 from typing import Set
 
 import httpx
+import i18n
 from folioclient import FolioClient
 from httpx import HTTPError
 
@@ -135,6 +135,8 @@ class CirculationHelper:
                 "comment": "Migrated from legacy system",
             },
         }
+        if legacy_loan.proxy_patron_barcode:
+            data.update({"proxyUserBarcode": legacy_loan.proxy_patron_barcode})
         path = "/circulation/check-out-by-barcode"
         url = f"{self.folio_client.okapi_url}{path}"
         try:
