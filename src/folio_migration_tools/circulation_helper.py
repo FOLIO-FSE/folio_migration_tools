@@ -248,7 +248,7 @@ class CirculationHelper:
         folio_client: FolioClient, legacy_request: LegacyRequest, migration_report: MigrationReport
     ):
         try:
-            path = "/circulation/httpx"
+            path = "/circulation/requests"
             url = f"{folio_client.okapi_url}{path}"
             data = legacy_request.serialize()
             data["requestProcessingParameters"] = {
