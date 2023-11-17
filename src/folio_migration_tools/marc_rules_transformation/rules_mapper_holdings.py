@@ -2,8 +2,8 @@ import copy
 import json
 import logging
 from typing import List
-import i18n
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
@@ -181,9 +181,7 @@ class RulesMapperHoldings(RulesMapperBase):
             )
 
     def perform_initial_preparation(self, marc_record: Record, legacy_ids):
-        folio_holding: dict = {
-            "metadata": self.folio_client.get_metadata_construct(),
-        }
+        folio_holding: dict = {}
         folio_holding["id"] = str(
             FolioUUID(
                 str(self.folio_client.okapi_url),

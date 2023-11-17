@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import pytest
 
 
@@ -10,7 +11,7 @@ def pytest_addoption(parser):
     # parser.addoption("--folio_release", action="store")
 
 
-i18n_config_file = Path(__file__).parent / "i18n_config.py"
+i18n_config_file = Path(__file__).parent / "src/folio_migration_tools/i18n_config.py"
 
 
 @pytest.fixture(scope="session", autouse=True)

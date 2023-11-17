@@ -1,0 +1,15 @@
+{
+    "source": "config_list_item_merge_target.json",
+    "a": [
+        {
+            "name": 1,
+            "value1": 2,
+            "value2": 3
+        },
+        {
+            "name": 3,
+            "value2": 32,
+            "value3": 23
+        }
+    ]
+}

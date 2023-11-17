@@ -1,0 +1,7 @@
+{
+    "source": "config_dict_merge.json",
+    "a": 3,
+    "b": [
+        5
+    ]
+}

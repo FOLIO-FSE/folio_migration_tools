@@ -4,7 +4,6 @@ import json
 import logging
 import re
 import uuid
-import i18n
 from functools import reduce
 from pathlib import Path
 from typing import Dict
@@ -12,6 +11,7 @@ from typing import List
 from typing import Set
 from uuid import UUID
 
+import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
@@ -225,7 +225,6 @@ class MappingFileMapperBase(MapperBase):
         return (
             {
                 "id": generated_id,
-                "metadata": self.folio_client.get_metadata_construct(),
                 "type": "object",
             },
             legacy_id,

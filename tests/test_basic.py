@@ -2,8 +2,9 @@
 import ast
 import json
 import os
-import i18n
+from pathlib import Path
 
+import i18n
 import pymarc
 from folio_uuid import FOLIONamespaces
 from folio_uuid import FolioUUID
@@ -51,6 +52,7 @@ def test_dedupe():
 
 
 def test_blurb_internationalization():
+    i18n.load_config(Path(__file__).parents[1] / "src/folio_migration_tools/i18n_config.py")
     assert i18n.t("blurbs.Introduction.title") == "Introduction"
 
 
