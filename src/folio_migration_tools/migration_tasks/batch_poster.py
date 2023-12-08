@@ -4,13 +4,13 @@ import logging
 import sys
 import time
 import traceback
-import i18n
 from datetime import datetime
 from typing import Annotated
 from typing import List
 from uuid import uuid4
 
 import httpx
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
@@ -107,7 +107,7 @@ class BatchPoster(MigrationTaskBase):
         self.http_client = None
 
     def do_work(self):
-        with httpx.Client(timeout=None, headers=self.folio_client.okapi_headers) as httpx_client:
+        with httpx.Client(timeout=None) as httpx_client:
             self.http_client = httpx_client
             try:
                 batch = []
@@ -243,7 +243,9 @@ class BatchPoster(MigrationTaskBase):
 
     def post_objects(self, url, body):
         if self.http_client and not self.http_client.is_closed:
-            return self.http_client.post(url, data=body.encode("utf-8"))
+            return self.http_client.post(
+                url, data=body.encode("utf-8"), headers=self.folio_client.okapi_headers
+            )
         else:
             return httpx.post(
                 url, headers=self.okapi_headers, data=body.encode("utf-8"), timeout=None
@@ -395,7 +397,9 @@ class BatchPoster(MigrationTaskBase):
         else:
             payload = {self.api_info["object_name"]: batch}
         if self.http_client and not self.http_client.is_closed:
-            return self.http_client.post(url, json=payload)
+            return self.http_client.post(
+                url, json=payload, headers=self.folio_client.okapi_headers
+            )
         else:
             return httpx.post(url, headers=self.okapi_headers, json=payload, timeout=None)
 
@@ -472,7 +476,9 @@ class BatchPoster(MigrationTaskBase):
         try:
             url = f"{self.folio_client.okapi_url}/source-storage/snapshots"
             if self.http_client and not self.http_client.is_closed:
-                res = self.http_client.post(url, json=snapshot)
+                res = self.http_client.post(
+                    url, json=snapshot, headers=self.folio_client.okapi_headers
+                )
             else:
                 res = httpx.post(url, headers=self.okapi_headers, json=snapshot, timeout=None)
             res.raise_for_status()
@@ -483,7 +489,7 @@ class BatchPoster(MigrationTaskBase):
                 logging.info("Sleeping while waiting for the snapshot to get created")
                 time.sleep(5)
                 if self.http_client and not self.http_client.is_closed:
-                    res = self.http_client.get(get_url)
+                    res = self.http_client.get(get_url, headers=self.folio_client.okapi_headers)
                 else:
                     res = httpx.get(get_url, headers=self.okapi_headers, timeout=None)
                 if res.status_code == 200:
@@ -499,7 +505,9 @@ class BatchPoster(MigrationTaskBase):
         try:
             url = f"{self.folio_client.okapi_url}/source-storage/snapshots/{self.snapshot_id}"
             if self.http_client and not self.http_client.is_closed:
-                res = self.http_client.put(url, json=snapshot)
+                res = self.http_client.put(
+                    url, json=snapshot, headers=self.folio_client.okapi_headers
+                )
             else:
                 res = httpx.put(url, headers=self.okapi_headers, json=snapshot, timeout=None)
             res.raise_for_status()
