@@ -168,9 +168,7 @@ class LoansMigrator(MigrationTaskBase):
             logging.info("SMTP connection is disabled...")
 
     def do_work(self):
-        with httpx.Client(
-            timeout=None, headers=self.folio_client.okapi_headers
-        ) as self.http_client:
+        with httpx.Client(timeout=None) as self.http_client:
             logging.info("Starting")
             starting_index = (
                 self.task_configuration.starting_row - 1
