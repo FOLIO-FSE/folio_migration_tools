@@ -787,7 +787,7 @@ class MappingFileMapperBase(MapperBase):
                     missing_keys_in_record,
                 )
             else:
-                logging.info("All maped legacy fields are in the legacy object")
+                logging.info("All mapped legacy fields are in the legacy object")
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")
@@ -830,7 +830,7 @@ class MappingFileMapperBase(MapperBase):
         ):
             raise TransformationRecordFailedError(
                 index_or_id,
-                f"Allowed values for {mapped_schema_property_name}"
+                f"Allowed values for {mapped_schema_property_name} "
                 f"are {mapped_schema_property['enum']} "
                 f"Forbidden enum value found: ",
                 mapped_value,
@@ -923,9 +923,9 @@ def set_deep2(dictionary, key, value):
         else:
             dd = dd.setdefault(k, {})
     if name and keys and keys[0].startswith(name):
-        if len(dd) <= number:
+        if len(dd) >= number:
             dd.append({})
-        dd[number][latest] = value
+            dd[number][latest] = value
     elif latest in dd:
         for i in range(len(value)):
             if len(dd[latest]) > i and dd[latest][i] and isinstance(dd[latest][i], dict):

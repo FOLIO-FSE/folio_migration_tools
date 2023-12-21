@@ -86,8 +86,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
 
     elif ref_data_path == "/organizations-storage/organizations":
         yield from [
-            {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "code": "GOBI"},
-            {"id": "fc54327d-fd60-4f6a-ba37-a4375511b91b", "code": "EBSCO"},
+            {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "code": "GOBI", "status": "Active"},
+            {"id": "fc54327d-fd60-4f6a-ba37-a4375511b91b", "code": "EBSCO", "status": "Active"},
         ]
 
     elif ref_data_path == "/orders/acquisition-methods":

@@ -18,6 +18,47 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 
+category_maps = {
+    "address_categories_map": [
+        {"address_categories": "rt", "folio_value": "Returns"},
+        {"address_categories": "*", "folio_value": "General"},
+    ],
+    "email_categories_map": [
+        {
+            "email1_categories": "tspt",
+            "email2_categories": "*",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
+        {
+            "email1_categories": "*",
+            "email2_categories": "tspt",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
+        {"email1_categories": "*", "email_2categories": "*", "folio_value": "General"},
+    ],
+    "phone_categories_map": [
+        {"phone_categories": "mspt", "folio_value": "Moral Support"},
+        {"phone_categories": "*", "folio_value": "General"},
+    ],
+    "organization_types_map": [
+        {"organization_types": "cst", "folio_name": "Consortium"},
+        {"organization_types": "*", "folio_name": "Unspecified"},
+    ],
+}
+
+
+def build_category_tests():
+    blank_scenario = {k: "" for k in category_maps.keys()}
+    scenarios = [blank_scenario]
+    for key in category_maps.keys():
+        new_scenario = {**category_maps}
+        new_scenario[key] = []
+        scenarios.append(new_scenario)
+    return scenarios
+
+
 @pytest.mark.slow
 def test_fetch_org_schemas_from_github_happy_path():
     organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
@@ -40,16 +81,14 @@ def test_fetch_interfaces_schemas_from_github_happy_path():
 
 
 # Mock mapper object
-@pytest.fixture(scope="session", autouse=True)
-def mapper(pytestconfig) -> OrganizationMapper:
+@pytest.fixture(scope="function", autouse=True, params=[build_category_tests()])
+def mapper(pytestconfig, request) -> OrganizationMapper:
     okapi_url = "okapi_url"
     tenant_id = "tenant_id"
     username = "username"
     password = "password"  # noqa: S105
-
-    print("init")
     mock_folio_client = mocked_classes.mocked_folio_client()
-
+    category_maps = request.param[0]
     lib_config = LibraryConfiguration(
         okapi_url=okapi_url,
         tenant_id=tenant_id,
@@ -62,63 +101,29 @@ def mapper(pytestconfig) -> OrganizationMapper:
         base_folder="/",
         multi_field_delimiter="^-^",
     )
-
-    address_categories_map = [
-        {"address_categories": "rt", "folio_value": "Returns"},
-        {"address_categories": "*", "folio_value": "General"},
-    ]
-
-    email_categories_map = [
-        {
-            "email1_categories": "tspt",
-            "email2_categories": "*",
-            "folio_value": "Technical Support",
-        },
-        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
-        {
-            "email1_categories": "*",
-            "email2_categories": "tspt",
-            "folio_value": "Technical Support",
-        },
-        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
-        {"email1_categories": "*", "email_2categories": "*", "folio_value": "General"},
-    ]
-
-    phone_categories_map = [
-        {"phone_categories": "mspt", "folio_value": "Moral Support"},
-        {"phone_categories": "*", "folio_value": "General"},
-    ]
-
-    organization_types_map = [
-        {"organization_types": "cst", "folio_name": "Consortium"},
-        {"organization_types": "*", "folio_name": "Unspecified"},
-    ]
-
     return OrganizationMapper(
         mock_folio_client,
         lib_config,
         organization_map,
-        organization_types_map,
-        address_categories_map,
-        email_categories_map,
-        phone_categories_map,
+        category_maps["organization_types_map"],
+        category_maps["address_categories_map"],
+        category_maps["email_categories_map"],
+        category_maps["phone_categories_map"],
     )
 
 
 def test_parse_record_mapping_file(mapper):
     folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(organization_map)
-
     assert folio_keys
 
 
 def test_organization_mapping(mapper):
-    data["code"] = "o1"
-
-    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-
+    code = "o1"
+    data["code"] = code
+    mapped = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+    organization, idx = mapped
     # Test string values mapping
-
-    assert organization["code"] == "o1"
+    assert organization["code"] == code
     assert organization["description"] == "Good stuff!"
     assert organization["status"] == "Active"
 
@@ -134,12 +139,13 @@ def test_use_fallback_legacy_field_if_legacy_field_empty(mapper):
     assert organization["accounts"][0]["name"] == "Abby Books"
 
 
+# @pytest.mark.parametrize("mapper", [category_maps], indirect=["mapper"])
 def test_single_org_type_refdata_mapping(mapper):
-    data["code"] = "ov9"
+    code = "o1"
+    data["code"] = code
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-
     # Test reference data mapping
-    assert organization["organizationTypes"] == ["837d04b6-d81c-4c49-9efd-2f62515999b3"]
+    assert organization["organizationTypes"] == ["cst"]
 
 
 def test_tags_object_array(mapper):
@@ -224,13 +230,11 @@ def test_contacts_category_refdata_mapping_single(mapper):
     data["code"] = "ov10"
     data["PHONE NUM"] = "123-456"
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-
+    address_val = "c78640d5-a1ec-4721-9a1f-c6f876d4c179" if mapper.address_categories_map else "rt"
+    phone_val = "e193b0d1-4674-4a9e-818b-375f013d963f" if mapper.phone_categories_map else "mspt"
     # Test arrays of contact information
-    assert organization["addresses"][0]["categories"] == ["c78640d5-a1ec-4721-9a1f-c6f876d4c179"]
-
-    assert organization["phoneNumbers"][0]["categories"] == [
-        "e193b0d1-4674-4a9e-818b-375f013d963f"
-    ]
+    assert organization["addresses"][0]["categories"] == [address_val]
+    assert organization["phoneNumbers"][0]["categories"] == [phone_val]
 
 
 def test_contacts_categories_replacevalue_multiple(mapper):
@@ -728,7 +732,7 @@ organization_map = {
         },
         {
             "folio_field": "phoneNumbers[0].categories[0]",
-            "legacy_field": "phone_categories_map",
+            "legacy_field": "phone_categories",
             "value": "",
             "description": "",
         },
@@ -806,4 +810,34 @@ organization_map = {
             "description": "",
         },
     ]
+}
+
+category_maps = {
+    "address_categories_map": [
+        {"address_categories": "rt", "folio_value": "Returns"},
+        {"address_categories": "*", "folio_value": "General"},
+    ],
+    "email_categories_map": [
+        {
+            "email1_categories": "tspt",
+            "email2_categories": "*",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "sls", "email2_categories": "*", "folio_value": "Sales"},
+        {
+            "email1_categories": "*",
+            "email2_categories": "tspt",
+            "folio_value": "Technical Support",
+        },
+        {"email1_categories": "*", "email2_categories": "sls", "folio_value": "Sales"},
+        {"email1_categories": "*", "email_2categories": "*", "folio_value": "General"},
+    ],
+    "phone_categories_map": [
+        {"phone_categories": "mspt", "folio_value": "Moral Support"},
+        {"phone_categories": "*", "folio_value": "General"},
+    ],
+    "organization_types_map": [
+        {"organization_types": "cst", "folio_name": "Consortium"},
+        {"organization_types": "*", "folio_name": "Unspecified"},
+    ],
 }

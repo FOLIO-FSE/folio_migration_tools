@@ -1,0 +1,371 @@
+{
+    "data": [
+        {
+            "folio_field": "name",
+            "legacy_field": "name",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "code",
+            "legacy_field": "code",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "status",
+            "legacy_field": "status",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "accounts[0].accountNo",
+            "legacy_field": "account_number",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "accounts[0].name",
+            "legacy_field": "account_name",
+            "value": "",
+            "description": "",
+            "fallback_legacy_field": "name"
+        },
+        {
+            "folio_field": "accounts[0].accountStatus",
+            "legacy_field": "account_status",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "accounts[0].paymentMethod",
+            "legacy_field": "account_paymentMethod",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "addresses[0].addressLine1",
+            "legacy_field": "address_line_1",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "addresses[0].categories[0]",
+            "legacy_field": "address_categories",
+            "value": "",
+            "description": "Use ref data mapping"
+        },
+        {
+            "folio_field": "addresses[0].city",
+            "legacy_field": "address_city",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "addresses[0].isPrimary",
+            "legacy_field": "",
+            "value": True,
+            "description": ""
+        },
+        {
+            "folio_field": "addresses[0].stateRegion",
+            "legacy_field": "address_state",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "addresses[0].zipCode",
+            "legacy_field": "address_zip",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "aliases[0].description",
+            "legacy_field": "Alt name type",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "aliases[0].value",
+            "legacy_field": "Alternative Names",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "description",
+            "legacy_field": "org_note",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "contacts[0].firstName",
+            "legacy_field": "contact_person_f",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "contacts[0].lastName",
+            "legacy_field": "contact_person_l",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "contacts[0].categories[0]",
+            "legacy_field": "contact_categories",
+            "value": "",
+            "rules": {
+                "replaceValues": {
+                    "mspt": "e193b0d1-4674-4a9e-818b-375f013d963f",
+                    "sls": "604c2c9d-ed3a-46cd-bec4-69926c303b22",
+                }
+            },
+            "description": ""
+        },
+        {
+            "folio_field": "contacts[0].addresses[0].addressLine1",
+            "legacy_field": "contact_address_line1",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "contacts[0].addresses[0].city",
+            "legacy_field": "contact_address_town",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "emails[0].categories[0]",
+            "legacy_field": "email1_categories",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "emails[0].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": true,
+            "description": ""
+        },
+        {
+            "folio_field": "emails[0].value",
+            "legacy_field": "EMAIL",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "emails[1].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": false,
+            "description": ""
+        },
+        {
+            "folio_field": "emails[1].value",
+            "legacy_field": "EMAIL2",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "emails[1].categories[0]",
+            "legacy_field": "email2_categories",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "emails[2].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": false,
+            "description": ""
+        },
+        {
+            "folio_field": "emails[2].value",
+            "legacy_field": "EMAIL3",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "interfaces[0].name",
+            "legacy_field": "interface_1_name",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "interfaces[0].uri",
+            "legacy_field": "interface_1_uri",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "interfaces[0].type[0]",
+            "legacy_field": "interface_1_type",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "interfaces[0].notes",
+            "legacy_field": "interface_1_notes",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "interfaces[0].available",
+            "legacy_field": "",
+            "value": True,
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].interfaceCredential.interfaceId",
+            "legacy_field": "",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].interfaceCredential.username",
+            "legacy_field": "interface_1_username",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].interfaceCredential.password",
+            "legacy_field": "interface_1_password",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].deliveryMethod",
+            "legacy_field": "interface_1_delivery",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].statisticsFormat",
+            "legacy_field": "interface_1_statFormat",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].statisticsNotes",
+            "legacy_field": "interface_1_statNotes",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].locallyStored",
+            "legacy_field": "interface_1_localLocation",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[0].onlineLocation",
+            "legacy_field": "interface_1_onlineLocation",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[1].uri",
+            "legacy_field": "interface_2_uri",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[1].type",
+            "legacy_field": "interface_2_type",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "isVendor",
+            "legacy_field": "Not mapped",
+            "value": True,
+            "description": "",
+        },
+        {
+            "folio_field": "legacyIdentifier",
+            "legacy_field": "code",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "phoneNumbers[0].categories[0]",
+            "legacy_field": "phone_categories",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "phoneNumbers[0].isPrimary",
+            "legacy_field": "Not mapped",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "phoneNumbers[0].phoneNumber",
+            "legacy_field": "PHONE NUM",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "phoneNumbers[0].type",
+            "legacy_field": "Not mapped",
+            "value": "Mobile",
+            "description": "",
+        },
+        {
+            "folio_field": "tags.tagList[0]",
+            "legacy_field": "tgs",
+            "value": "",
+            "description": ""
+        },
+        {
+            "folio_field": "organizationTypes",
+            "legacy_field": "organization_types",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[0].domain",
+            "legacy_field": "Not mapped",
+            "value": "organizations",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[0].typeId",
+            "legacy_field": "",
+            "value": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[0].title",
+            "legacy_field": "",
+            "value": "A migrated note",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[0].content",
+            "legacy_field": "note1",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[1].domain",
+            "legacy_field": "Not mapped",
+            "value": "organizations",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[1].typeId",
+            "legacy_field": "",
+            "value": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[1].title",
+            "legacy_field": "",
+            "value": "Another note",
+            "description": "",
+        },
+        {
+            "folio_field": "notes[1].content",
+            "legacy_field": "note2",
+            "value": "",
+            "description": "",
+        }
+    ]
+}

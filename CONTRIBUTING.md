@@ -107,7 +107,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --okapi_password OKAPI_PASSWORD
-                        pasword for the tenant in the configuration file
+                        password for the tenant in the configuration file
   --base_folder_path BASE_FOLDER_PATH
                         path to the base folder for this library. Built on migration_repo_template
 ```
