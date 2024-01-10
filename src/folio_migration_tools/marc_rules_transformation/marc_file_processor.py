@@ -6,6 +6,7 @@ from typing import List
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 from pymarc import Field
 from pymarc import Record
 from pymarc import Subfield
@@ -254,6 +255,7 @@ class MarcFileProcessor:
 
     def add_legacy_ids_to_map(self, folio_rec, filtered_legacy_ids):
         for legacy_id in filtered_legacy_ids:
+            legacy_id = FolioUUID.clean_iii_identifiers(legacy_id)
             self.legacy_ids.add(legacy_id)
             if legacy_id not in self.mapper.id_map:
                 self.mapper.id_map[legacy_id] = self.mapper.get_id_map_tuple(

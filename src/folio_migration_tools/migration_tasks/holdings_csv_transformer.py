@@ -5,12 +5,13 @@ import logging
 import sys
 import time
 import traceback
-import i18n
 from typing import Annotated
 from typing import List
 from typing import Optional
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 from httpx import HTTPError
 from pydantic import Field
 
@@ -249,9 +250,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         # Prevent the first item in a boundwith to be overwritten
                         # TODO: Find out why not
                         # if legacy_id not in self.holdings_id_map:
-                        self.holdings_id_map[legacy_id] = self.mapper.get_id_map_tuple(
-                            legacy_id, holding, self.object_type
-                        )
+                        self.holdings_id_map[
+                            FolioUUID.clean_iii_identifiers(legacy_id)
+                        ] = self.mapper.get_id_map_tuple(legacy_id, holding, self.object_type)
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
                         i18n.t("Holdings Records Written to disk")

@@ -5,9 +5,10 @@ from datetime import datetime
 from datetime import timezone
 from typing import Set
 from uuid import uuid4
-import i18n
 
+import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -232,6 +233,7 @@ class ItemMapper(MappingFileMapperBase):
                     self.unique_barcodes.add(barcode)
                 return barcode
         elif folio_prop_name == "holdingsRecordId":
+            mapped_value = FolioUUID.clean_iii_identifiers(mapped_value)
             if mapped_value in self.holdings_id_map:
                 return self.holdings_id_map[mapped_value][1]
             elif f"{self.bib_id_template}{mapped_value}" in self.holdings_id_map:

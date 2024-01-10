@@ -1,7 +1,8 @@
 import ast
-import i18n
 
+import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
@@ -126,21 +127,9 @@ class HoldingsMapper(MappingFileMapperBase):
             i18n.t("Number of bib records referenced in item") + f": {len(legacy_bib_ids)}",
         )
         for legacy_instance_id in legacy_bib_ids:
-            new_legacy_value = (
-                f".{legacy_instance_id}"
-                if legacy_instance_id.startswith("b")
-                else legacy_instance_id
-            )
             if (
-                new_legacy_value not in self.instance_id_map
-                and legacy_instance_id not in self.instance_id_map
-            ):
-                self.migration_report.add_general_statistics(
-                    i18n.t("Records not matched to Instances")
-                )
-                s = "Bib id not in instance id map."
-                raise TransformationRecordFailedError(index_or_id, s, new_legacy_value)
-            else:
+                new_legacy_value := FolioUUID.clean_iii_identifiers(legacy_instance_id)
+            ) and new_legacy_value in self.instance_id_map:
                 self.migration_report.add_general_statistics(
                     i18n.t("Records matched to Instances")
                 )
@@ -148,6 +137,12 @@ class HoldingsMapper(MappingFileMapperBase):
                     legacy_instance_id
                 )
                 return_ids.append(entry[1])
+            else:
+                self.migration_report.add_general_statistics(
+                    i18n.t("Records not matched to Instances")
+                )
+                s = "Bib id not in instance id map."
+                raise TransformationRecordFailedError(index_or_id, s, new_legacy_value)
         if any(return_ids):
             return return_ids
         else:
