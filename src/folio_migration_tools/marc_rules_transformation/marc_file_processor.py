@@ -3,8 +3,8 @@ import sys
 import time
 import traceback
 from typing import List
-import i18n
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pymarc import Field
 from pymarc import Record
@@ -30,7 +30,8 @@ class MarcFileProcessor:
         self.folder_structure: FolderStructure = folder_structure
         self.mapper: RulesMapperBase = mapper
         self.created_objects_file = created_objects_file
-        self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
+        if mapper.task_configuration.create_source_records:
+            self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
         self.unique_001s: set = set()
         self.failed_records_count: int = 0
         self.records_count: int = 0
@@ -73,13 +74,14 @@ class MarcFileProcessor:
                     )
                     self.add_legacy_ids_to_map(folio_rec, filtered_legacy_ids)
 
-                    self.save_srs_record(
-                        marc_record,
-                        file_def,
-                        folio_rec,
-                        legacy_ids,
-                        self.object_type,
-                    )
+                    if self.mapper.task_configuration.create_source_records:
+                        self.save_srs_record(
+                            marc_record,
+                            file_def,
+                            folio_rec,
+                            legacy_ids,
+                            self.object_type,
+                        )
                 Helper.write_to_file(self.created_objects_file, folio_rec)
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Inventory records written to disk")
@@ -238,7 +240,8 @@ class MarcFileProcessor:
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
-        self.srs_records_file.close()
+        if self.mapper.task_configuration.create_source_records:
+            self.srs_records_file.close()
         self.mapper.wrap_up()
 
         logging.info("Transformation report written to %s", report_file.name)

@@ -143,7 +143,10 @@ class BibsRulesMapper(RulesMapperBase):
             legacy_ids (List[str]): _description_
             file_def (FileDefinition): _description_
         """
-        folio_instance["source"] = "MARC"
+        if self.task_configuration.create_source_records:
+            folio_instance["source"] = "MARC"
+        else:
+            folio_instance["source"] = "FOLIO"
         folio_instance["instanceFormatIds"] = list(
             set(self.get_instance_format_ids(marc_record, legacy_ids))
         )
