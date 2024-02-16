@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.8.5 (16/02/2024)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Other Changes
+* Updating changelog for 1.8.4 by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/708
+* Added support for proxy borrowers to loans migrator task by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/710
+* Introducing ecs tenant id handling  by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/714
+* Created remove_request_preferences parameter to User transform task by @marnold-ebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/717
+* Tweaking how the httpx client works in batchposter to fix a token expiration issue by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/725
+* Bumping version to 1.8.5 for release by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/727
+
+## New Contributors
+* @marnold-ebsco made their first contribution in https://github.com/FOLIO-FSE/folio_migration_tools/pull/717
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_4...v_1_8_5
+---
+
 ## v_1_8_4 (07/11/2023)
 
 #### Questions & Decisions
@@ -647,11 +665,3 @@
 #### enhancement/new feature
 
 - [**enhancement/new feature**][**question/decision**] Handle loans with incomplete date/time information [#226](https://github.com/FOLIO-FSE/folio_migration_tools/issues/226)
-
----
-
-## 1_3_10 (18/05/2022)
-
-#### closed
-
-- [**closed**] Multiple empty holdings statements are being generated. [#249](https://github.com/FOLIO-FSE/folio_migration_tools/issues/249)
