@@ -35,6 +35,17 @@ class FileDefinition(BaseModel):
     discovery_suppressed: Annotated[bool, Field(title="Discovery suppressed")] = False
     staff_suppressed: Annotated[bool, Field(title="Staff suppressed")] = False
     service_point_id: Annotated[str, Field(title="Service point ID")] = ""
+    create_source_records: Annotated[
+        bool,
+        Field(
+            title="Create source records",
+            description=(
+                "If set to true, the source records will be created in FOLIO. "
+                "If set to false, the source records will not be created in FOLIO. "
+                "Only applied for MARC-based transformations."
+            ),
+        ),
+    ] = True
 
 
 class IlsFlavour(str, Enum):
@@ -72,9 +83,9 @@ class LibraryConfiguration(BaseModel):
             title="ECS tenant ID",
             description=(
                 "For use in ECS environments when the configuration file is meant to target a ",
-                "data tenant. Set to the tenant ID of the data tenant."
-            )
-        )
+                "data tenant. Set to the tenant ID of the data tenant.",
+            ),
+        ),
     ] = ""
     okapi_username: str
     okapi_password: str
@@ -101,7 +112,6 @@ class LibraryConfiguration(BaseModel):
         )
     )
     iteration_identifier: str
-    add_time_stamp_to_file_names: Annotated[
-        bool, 
-        Field(title="Add time stamp to file names")
-    ] = False
+    add_time_stamp_to_file_names: Annotated[bool, Field(title="Add time stamp to file names")] = (
+        False
+    )

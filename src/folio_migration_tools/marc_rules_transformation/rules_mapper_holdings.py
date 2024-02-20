@@ -252,8 +252,11 @@ class RulesMapperHoldings(RulesMapperBase):
         self.pick_first_location_if_many(folio_holding, legacy_ids)
         self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
         HoldingsHelper.handle_notes(folio_holding)
+        create_source_records = all(
+            [file_def.create_source_records, self.task_configuration.create_source_records]
+        )
         if (
-            self.task_configuration.create_source_records
+            create_source_records
             or self.task_configuration.hrid_handling == HridHandling.preserve001
         ):
             self.hrid_handler.handle_hrid(
@@ -268,7 +271,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 "",
             )
         self.handle_suppression(folio_holding, file_def, True)
-        self.set_source_id(self.task_configuration, folio_holding, self.holdingssources)
+        self.set_source_id(self.task_configuration, folio_holding, self.holdingssources, file_def)
 
     def pick_first_location_if_many(self, folio_holding, legacy_ids: List[str]):
         if " " in folio_holding.get("permanentLocationId", ""):
@@ -282,8 +285,8 @@ class RulesMapperHoldings(RulesMapperBase):
             ]
 
     @staticmethod
-    def set_source_id(task_configuration, folio_rec, holdingssources):
-        if task_configuration.create_source_records:
+    def set_source_id(task_configuration, folio_rec, holdingssources, file_def):
+        if file_def.create_source_records and task_configuration.create_source_records:
             folio_rec["sourceId"] = holdingssources.get("MARC")
         else:
             folio_rec["sourceId"] = holdingssources.get("FOLIO")
@@ -317,8 +320,20 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
+        source_file_create_source_records = [
+            x["create_source_records"] for x in self.task_configuration.files
+        ]
+        if all(source_file_create_source_records):
+            create_source_records = self.task_configuration.create_source_records
+        else:
+            logging.info(
+                "If all source files have create_source_records set to false, "
+                "this will override the task configuration setting"
+            )
+            create_source_records = any(source_file_create_source_records)
         if self.task_configuration.update_hrid_settings:
-            if self.task_configuration.create_source_records:
+            if create_source_records:
+                logging.info("Storing HRID settings")
                 self.hrid_handler.store_hrid_settings()
             else:
                 logging.info("NOT storing HRID settings since that is managed by FOLIO")
