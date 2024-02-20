@@ -1,5 +1,6 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
+
 import logging
 import sys
 import time
@@ -143,7 +144,7 @@ class BibsRulesMapper(RulesMapperBase):
             legacy_ids (List[str]): _description_
             file_def (FileDefinition): _description_
         """
-        if self.task_configuration.create_source_records:
+        if file_def.create_source_records and self.task_configuration.create_source_records:
             folio_instance["source"] = "MARC"
         else:
             folio_instance["source"] = "FOLIO"

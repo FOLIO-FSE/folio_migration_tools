@@ -74,7 +74,10 @@ class MarcFileProcessor:
                     )
                     self.add_legacy_ids_to_map(folio_rec, filtered_legacy_ids)
 
-                    if self.mapper.task_configuration.create_source_records:
+                    if (
+                        file_def.create_source_records
+                        and self.mapper.task_configuration.create_source_records
+                    ):
                         self.save_srs_record(
                             marc_record,
                             file_def,
