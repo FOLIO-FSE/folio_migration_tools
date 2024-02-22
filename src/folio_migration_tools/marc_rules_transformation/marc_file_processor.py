@@ -129,7 +129,9 @@ class MarcFileProcessor:
         legacy_ids: List[str],
         object_type: FOLIONamespaces,
     ):
-        if not self.mapper.task_configuration.create_source_records:
+        if not all(
+            [file_def.create_source_records, self.mapper.task_configuration.create_source_records]
+        ):
             return
         if object_type in [FOLIONamespaces.holdings]:
             if "008" in marc_record and len(marc_record["008"].data) > 32:
