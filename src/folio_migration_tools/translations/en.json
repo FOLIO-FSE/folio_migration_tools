@@ -440,5 +440,6 @@
   "item barcode": "item barcode",
   "legacy id from %{fro}": "legacy id from %{fro}",
   "naturalId mapped from %{fro}": "naturalId mapped from %{fro}",
-  "no matching identifier_types in %{names}": "no matching identifier_types in %{names}"
+  "no matching identifier_types in %{names}": "no matching identifier_types in %{names}",
+  "subfield present in %{linked_value_tag} but not in %{pattern_field}": "subfield present in %{linked_value_tag} but not in %{pattern_field}"
 }
