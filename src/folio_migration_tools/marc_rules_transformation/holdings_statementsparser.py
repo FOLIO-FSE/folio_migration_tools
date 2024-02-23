@@ -2,11 +2,10 @@ import calendar
 import contextlib
 import logging
 import re
-import i18n
 from typing import List
 
-from pymarc import Field
-from pymarc import Record
+import i18n
+from pymarc import Field, Record
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 
@@ -72,9 +71,20 @@ class HoldingsStatementsParser:
 
             else:
                 for linked_value_field in linked_value_fields:
-                    parsed_dict = HoldingsStatementsParser.parse_linked_field(
-                        pattern_field, linked_value_field
-                    )
+                    try:
+                        parsed_dict = HoldingsStatementsParser.parse_linked_field(
+                            pattern_field, linked_value_field
+                        )
+                    except KeyError:
+                        raise TransformationFieldMappingError(
+                            legacy_ids,
+                            i18n.t(
+                                "subfield present in %{linked_value_tag} but not in %{pattern_field}",
+                                pattern_field=pattern_field,
+                                linked_value_tag=linked_value_field,
+                            ),
+                            pattern_field,
+                        )                        
                     if parsed_dict["hlm_stmt"]:
                         return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
                     if parsed_dict["statement"]:
