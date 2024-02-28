@@ -232,7 +232,7 @@ class HoldingsStatementsParser:
 
     @staticmethod
     def dedupe_list_of_dict(list_of_dict):
-        return [dict(t) for t in {tuple(d.items()) for d in list_of_dict}]
+        return [dict(t) for t in {tuple(d.items()): None for d in list_of_dict}]
 
     @staticmethod
     def g_m(m: int):
