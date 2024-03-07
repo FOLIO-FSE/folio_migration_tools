@@ -1,21 +1,35 @@
 # Changelog
 
-## v1.8.5 (16/02/2024)
+## v_1_8_6 (26/02/2024)
 <!-- Release notes generated using configuration in .github/release.yml at main -->
 
 ## What's Changed
 ### Other Changes
-* Updating changelog for 1.8.4 by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/708
-* Added support for proxy borrowers to loans migrator task by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/710
-* Introducing ecs tenant id handling  by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/714
-* Created remove_request_preferences parameter to User transform task by @marnold-ebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/717
-* Tweaking how the httpx client works in batchposter to fix a token expiration issue by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/725
-* Bumping version to 1.8.5 for release by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/727
+* 449 make the bibstransformer to create source=folio records without srs records by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/728
+* Added exception handling when parsing linked fields in HoldingsStatementParser.parse_linked_field() by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/730
+* Prepare v1.8.6 by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/732
 
-## New Contributors
-* @marnold-ebsco made their first contribution in https://github.com/FOLIO-FSE/folio_migration_tools/pull/717
 
-**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_4...v_1_8_5
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_5...v_1_8_6
+---
+
+## v_1_8_5 (16/02/2024)
+
+#### bug
+
+- [**bug**] Batch posting jobs against Poppy system fail after running for 10 minutes [#724](https://github.com/FOLIO-FSE/folio_migration_tools/issues/724)
+
+#### closed
+
+- [**closed**] Create 1.8.5 release [#726](https://github.com/FOLIO-FSE/folio_migration_tools/issues/726)
+- [**closed**] Add an option on user transforms to remove request preferences [#716](https://github.com/FOLIO-FSE/folio_migration_tools/issues/716)
+- [**closed**] Support proxy borrowers in loans migrator [#709](https://github.com/FOLIO-FSE/folio_migration_tools/issues/709)
+- [**closed**] Allow specifying an ECS member tenant ID at the library_configuration level [#701](https://github.com/FOLIO-FSE/folio_migration_tools/issues/701)
+
+#### wontfix
+
+- [**wontfix**][**Inventory**] Separate holdings records generate the same UUID [#397](https://github.com/FOLIO-FSE/folio_migration_tools/issues/397)
+
 ---
 
 ## v_1_8_4 (07/11/2023)
@@ -639,29 +653,3 @@
 
 - [**bug**] Holdings statements for indexes and supplementes are leaking into the regular holdings statements [#276](https://github.com/FOLIO-FSE/folio_migration_tools/issues/276)
 - [**bug**] UTF Handling of MFHD records are not handled the same way as bibs, leading to more encoding errors [#278]
-
----
-
-## 1_4_0 (04/06/2022)
-
-#### bug
-
-- [**bug**] Holdings statements generated from marc records do get deduplicated despite it should be turned off. [#274](https://github.com/FOLIO-FSE/folio_migration_tools/issues/274)
-- [**bug**] holdings statements in holdings generated from csv items are not getting deduplicated properly [#271](https://github.com/FOLIO-FSE/folio_migration_tools/issues/271)
-- [**bug**] FOLIO Client causes 403:s due to missing authentication tokens in GITHUB API requests [#266](https://github.com/FOLIO-FSE/folio_migration_tools/issues/266)
-- [**bug**] Failed bib records file overwritten for each file in bib transformation task [#252](https://github.com/FOLIO-FSE/folio_migration_tools/issues/252)
-
-#### closed
-
-- [**closed**] Add data and examples to migration_repo_template [#261](https://github.com/FOLIO-FSE/folio_migration_tools/issues/261)
-- [**closed**] Add Batchposter support for courses objects [#260](https://github.com/FOLIO-FSE/folio_migration_tools/issues/260)
-- [**closed**] Make Notes mapping more generic [#258](https://github.com/FOLIO-FSE/folio_migration_tools/issues/258)
-- [**closed**] Create migration task for reserves [#257](https://github.com/FOLIO-FSE/folio_migration_tools/issues/257)
-- [**closed**] Create Migration Task for courses [#256](https://github.com/FOLIO-FSE/folio_migration_tools/issues/256)
-- [**closed**] Add refDataMapping for Terms [#255](https://github.com/FOLIO-FSE/folio_migration_tools/issues/255)
-- [**closed**] Generate schema for "Composite Courses" [#254](https://github.com/FOLIO-FSE/folio_migration_tools/issues/254)
-- [**closed**] Update FOLIO Namespaces with course-related objects [#253](https://github.com/FOLIO-FSE/folio_migration_tools/issues/253)
-
-#### enhancement/new feature
-
-- [**enhancement/new feature**][**question/decision**] Handle loans with incomplete date/time information [#226](https://github.com/FOLIO-FSE/folio_migration_tools/issues/226)
