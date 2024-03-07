@@ -11,7 +11,6 @@ from typing import Optional
 
 from deepdiff import DeepDiff
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic.main import BaseModel
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
