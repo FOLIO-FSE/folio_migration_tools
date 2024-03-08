@@ -266,8 +266,8 @@ class MapperBase:
 
     def get_id_map_tuple(self, legacy_id: str, folio_record: dict, object_type: FOLIONamespaces):
         if object_type == FOLIONamespaces.instances:
-            return (legacy_id, folio_record["id"], folio_record["hrid"])
-        return (legacy_id, folio_record["id"])
+            return (FolioUUID.clean_iii_identifiers(legacy_id), folio_record["id"], folio_record["hrid"])
+        return (FolioUUID.clean_iii_identifiers(legacy_id), folio_record["id"])
 
     def handle_generic_exception(self, idx, excepion: Exception):
         self.num_exeptions += 1
