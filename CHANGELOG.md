@@ -1,16 +1,32 @@
 # Changelog
 
+## v_1_8_7 (25/03/2024)
+
+#### bug
+
+- [**bug**][**Inventory**] dedupe_list_of_dict method on HoldingsStatementsParser does not preserve item order [#733](https://github.com/FOLIO-FSE/folio_migration_tools/issues/733)
+
+#### closed
+
+- [**closed**] Prepare 1.8.7 Release [#739](https://github.com/FOLIO-FSE/folio_migration_tools/issues/739)
+- [**closed**] Change OrdersTransformer TaskConfiguration to inherit from AbstractTaskConfiguration [#735](https://github.com/FOLIO-FSE/folio_migration_tools/issues/735)
+
+---
+
 ## v_1_8_6 (26/02/2024)
-<!-- Release notes generated using configuration in .github/release.yml at main -->
 
-## What's Changed
-### Other Changes
-* 449 make the bibstransformer to create source=folio records without srs records by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/728
-* Added exception handling when parsing linked fields in HoldingsStatementParser.parse_linked_field() by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/730
-* Prepare v1.8.6 by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/732
+#### Inventory
 
+- [**Inventory**] Make the BibsTransformer to create Source=FOLIO records without SRS records [#449](https://github.com/FOLIO-FSE/folio_migration_tools/issues/449)
 
-**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_5...v_1_8_6
+#### bug
+
+- [**bug**][**Inventory**] Presence of mismatched 85x/86x patterns (subfields "missing") Causes MFHD transformer to fail [#729](https://github.com/FOLIO-FSE/folio_migration_tools/issues/729)
+
+#### closed
+
+- [**closed**] Prepare 1.8.6 release [#731](https://github.com/FOLIO-FSE/folio_migration_tools/issues/731)
+
 ---
 
 ## v_1_8_5 (16/02/2024)
@@ -644,12 +660,3 @@
 
 - [**reporting**] Add time duration for migration task to migration reports [#264](https://github.com/FOLIO-FSE/folio_migration_tools/issues/264)
 - [**reporting**] Create migration report for BatchPoster [#60](https://github.com/FOLIO-FSE/folio_migration_tools/issues/60)
-
----
-
-## 1_4_2 (05/06/2022)
-
-#### bug
-
-- [**bug**] Holdings statements for indexes and supplementes are leaking into the regular holdings statements [#276](https://github.com/FOLIO-FSE/folio_migration_tools/issues/276)
-- [**bug**] UTF Handling of MFHD records are not handled the same way as bibs, leading to more encoding errors [#278]
