@@ -10,14 +10,18 @@ from folioclient import FolioClient
 from pymarc.field import Field
 from pymarc.record import Record
 
-from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import HridHandling
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
+)
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -340,9 +344,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def fetch_holdings_schema(self, folio_client: FolioClient):
         logging.info("Fetching HoldingsRecord schema...")
-        return folio_client.get_from_github(
-            "folio-org", "mod-inventory-storage", "ramls/holdingsrecord.json"
-        )
+        return folio_client.get_holdings_schema()
 
     def set_holdings_type(self, marc_record: Record, folio_holding, legacy_ids: List[str]):
         # Holdings type mapping
