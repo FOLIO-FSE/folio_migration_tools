@@ -325,7 +325,7 @@ class RulesMapperHoldings(RulesMapperBase):
     def wrap_up(self):
         logging.info("Mapper wrapping up")
         source_file_create_source_records = [
-            x["create_source_records"] for x in self.task_configuration.files
+            x.get("create_source_records", True) for x in self.task_configuration.files
         ]
         if all(source_file_create_source_records):
             create_source_records = self.task_configuration.create_source_records
