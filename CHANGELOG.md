@@ -1,5 +1,13 @@
 # Changelog
 
+## v_1_8_8 (25/03/2024)
+
+#### bug
+
+- [**bug**] MARC Holdings Transformer Fails During wrap-up [#742](https://github.com/FOLIO-FSE/folio_migration_tools/issues/742)
+
+---
+
 ## v_1_8_7 (25/03/2024)
 
 #### bug
@@ -636,27 +644,3 @@
 #### improve_test_coverage
 
 - [**improve_test_coverage**] Add test files for all migration tasks [#311](https://github.com/FOLIO-FSE/folio_migration_tools/issues/311)
-
----
-
-## 1_4_4 (13/06/2022)
-
-#### bug
-
-- [**bug**] Courses transformation task halts if property utc_difference not in task config -- not reflected the migration repo template [#282](https://github.com/FOLIO-FSE/folio_migration_tools/issues/282)
-- [**bug**] UTF Handling of MFHD records are not handled the same way as bibs, leading to more encoding errors [#278](https://github.com/FOLIO-FSE/folio_migration_tools/issues/278)
-
-#### closed
-
-- [**closed**] Fetch organization schemas linked to latest mod-organizations-storage release [#234](https://github.com/FOLIO-FSE/folio_migration_tools/issues/234)
-
-#### enhancement/new feature
-
-- [**enhancement/new feature**] Allow month codes in season fields and vice versa when parsing 853/863 combos [#283](https://github.com/FOLIO-FSE/folio_migration_tools/issues/283)
-- [**enhancement/new feature**][**good first issue**] Include task name in INFO output [#245](https://github.com/FOLIO-FSE/folio_migration_tools/issues/245)
-- [**enhancement/new feature**] Create transformation task for simple organizations [#146](https://github.com/FOLIO-FSE/folio_migration_tools/issues/146)
-
-#### reporting
-
-- [**reporting**] Add time duration for migration task to migration reports [#264](https://github.com/FOLIO-FSE/folio_migration_tools/issues/264)
-- [**reporting**] Create migration report for BatchPoster [#60](https://github.com/FOLIO-FSE/folio_migration_tools/issues/60)
