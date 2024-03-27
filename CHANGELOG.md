@@ -1,5 +1,14 @@
 # Changelog
 
+## v_1_8_9 (27/03/2024)
+
+#### closed
+
+- [**closed**] Prepare 1.8.9 release [#746](https://github.com/FOLIO-FSE/folio_migration_tools/issues/746)
+- [**closed**] holdings_statementparser key errors [#744](https://github.com/FOLIO-FSE/folio_migration_tools/issues/744)
+
+---
+
 ## v_1_8_8 (25/03/2024)
 
 #### bug
@@ -617,30 +626,3 @@
 #### good first issue
 
 - [**good first issue**] Make Loans migration script clearly  WARN if SMTP is not disabled when posting new loans [#244](https://github.com/FOLIO-FSE/folio_migration_tools/issues/244)
-
----
-
-## 1_4_5 (22/06/2022)
-
-#### bug
-
-- [**bug**][**organizations**] When creating Organizations, clean out address objects where all properties, or all properties except "isPrimary", are empty [#293](https://github.com/FOLIO-FSE/folio_migration_tools/issues/293)
-- [**bug**][**wontfix**] HoldingsStatements generated from multiple items does not get extended, but instead overwritten [#287](https://github.com/FOLIO-FSE/folio_migration_tools/issues/287)
-- [**bug**] Organization transformation lacks report writing parameter [#286](https://github.com/FOLIO-FSE/folio_migration_tools/issues/286)
-- [**bug**] Don't strip leading and trailing brackets from callNumbers as these are likely to be part of the callNumber value [#269](https://github.com/FOLIO-FSE/folio_migration_tools/issues/269)
-
-#### closed
-
-- [**closed**] Request migration always fails in Kiwi (request not allowed for patron/item combination) [#302](https://github.com/FOLIO-FSE/folio_migration_tools/issues/302)
-- [**closed**] FOLIO handles preferred first names weird.  [#291](https://github.com/FOLIO-FSE/folio_migration_tools/issues/291)
-- [**closed**] Make Requests Migrator UTC offset handling DST-aware [#288](https://github.com/FOLIO-FSE/folio_migration_tools/issues/288)
-
-#### enhancement/new feature
-
-- [**enhancement/new feature**] Tie a servicepoint per loans file [#303](https://github.com/FOLIO-FSE/folio_migration_tools/issues/303)
-- [**enhancement/new feature**] Make LoansPoster UTC offset handling DST-aware [#279](https://github.com/FOLIO-FSE/folio_migration_tools/issues/279)
-- [**enhancement/new feature**] Add support for servicePointIdAtCheckout from source data of open loans [#251](https://github.com/FOLIO-FSE/folio_migration_tools/issues/251)
-
-#### improve_test_coverage
-
-- [**improve_test_coverage**] Add test files for all migration tasks [#311](https://github.com/FOLIO-FSE/folio_migration_tools/issues/311)
