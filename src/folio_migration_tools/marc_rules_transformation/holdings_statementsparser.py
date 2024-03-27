@@ -264,8 +264,8 @@ class HoldingsStatementsParser:
         year = False
         is_span = False
         for chron_level in [cl for cl in "ijkl" if cl in linked_value_field]:
-            desc = pattern_field[chron_level] or ""
-            if linked_value_field[chron_level]:
+            desc = pattern_field.get(chron_level, "")
+            if linked_value_field.get(chron_level):
                 if chron_level == "i" and desc == "(year)":
                     hlm_stmt = linked_value_field[chron_level]
                 if desc == "(year)":
@@ -305,9 +305,9 @@ class HoldingsStatementsParser:
         _to = ""
         is_span = False
         for enum_level in [el for el in "abcdef" if el in linked_value_field]:
-            desc = pattern_field[enum_level] or ""
+            desc = pattern_field.get(enum_level, "")
             desc = desc.strip() if "(" not in desc else ""
-            if linked_value_field[enum_level]:
+            if linked_value_field.get(enum_level):
                 val, *val_rest = linked_value_field[enum_level].split("-")
                 is_span = "-" in linked_value_field[enum_level] or is_span
                 _from = f"{_from}{(':' if _from else '')}{desc}{val}"
