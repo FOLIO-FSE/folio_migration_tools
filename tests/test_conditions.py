@@ -1,10 +1,12 @@
 from unittest.mock import Mock
 
-from folioclient import FolioClient
-from pymarc import Field
-from pymarc import Subfield
-
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
+from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
+    BibsRulesMapper,
+)
+from folio_migration_tools.migration_report import MigrationReport
+from folioclient import FolioClient
+from pymarc import Field, Subfield
 
 
 def test_condition_trim_period():
@@ -83,3 +85,28 @@ def test_condition_set_contributor_type_text():
         mock, legacy_id, value_700, {}, marc_fields[1]
     )
     assert res_700 == "editor"
+
+
+def test_condition_set_note_staff_only_via_indicator():
+    mock = Mock(spec=Conditions)
+    mock.mapper = Mock(spec=BibsRulesMapper)
+    mock.mapper.migration_report = Mock(spec=MigrationReport)
+    legacy_id = "legacy_id"
+    marc_field = Field(
+        tag="541",
+        indicators=["0", "0"],
+        subfields=[
+            Subfield(code="a", value="Note 1"),
+            Subfield(code="b", value="Note 2"),
+        ],
+    )
+    res_true = Conditions.condition_set_note_staff_only_via_indicator(
+        mock, legacy_id, "value", {}, marc_field
+    )
+    assert res_true == "true"
+
+    marc_field.indicators = ["1", "0"]
+    res_false = Conditions.condition_set_note_staff_only_via_indicator(
+        mock, legacy_id, "value", {}, marc_field
+    )
+    assert res_false == "false"
