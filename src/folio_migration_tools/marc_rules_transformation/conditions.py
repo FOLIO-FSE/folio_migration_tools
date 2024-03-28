@@ -6,9 +6,11 @@ import pymarc
 from folioclient import FolioClient
 from pymarc import field
 
-from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
@@ -846,6 +848,6 @@ class Conditions:
             + i18n.t("1 is public, all other values are Staff only")
             + ")",
         )
-        if ind1 != "1":
+        if ind1 == "0":
             return "true"
         return "false"
