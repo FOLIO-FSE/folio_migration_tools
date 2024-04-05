@@ -5,22 +5,24 @@ import logging
 import sys
 import time
 import traceback
-import i18n
-from typing import Annotated
-from typing import List
-from typing import Optional
+from typing import Annotated, List, Optional
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from httpx import HTTPError
 from pydantic import Field
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import HridHandling
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
 )
@@ -374,7 +376,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         """
         if len(instance_ids) > 1:
             # Is boundwith
-            bw_key = f"bw_{incoming_holding['instanceId']}_{'_'.join(sorted(instance_ids))}"
+            bw_key = (
+                f"bw_{incoming_holding['instanceId']}_{incoming_holding['permanentLocationId']}_"
+                f"{incoming_holding.get('callNumber', '')}_{'_'.join(sorted(instance_ids))}"
+            )
             if bw_key not in self.bound_with_keys:
                 self.bound_with_keys.add(bw_key)
                 self.holdings[bw_key] = incoming_holding
