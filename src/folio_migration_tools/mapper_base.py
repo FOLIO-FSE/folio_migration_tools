@@ -4,18 +4,19 @@ import json
 import logging
 import sys
 import uuid
-import i18n
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
@@ -428,8 +429,11 @@ class MapperBase:
 
             if call_number := folio_holding.get("callNumber", None):
                 if "[" in call_number:
-                    call_numbers = ast.literal_eval(str(folio_holding["callNumber"]))
-                    bound_with_holding["callNumber"] = call_numbers[bwidx]
+                    try:
+                        call_numbers = ast.literal_eval(str(folio_holding["callNumber"]))
+                        bound_with_holding["callNumber"] = call_numbers[bwidx]
+                    except SyntaxError:
+                        bound_with_holding["callNumber"] = call_number
                 else:
                     bound_with_holding["callNumber"] = call_number
             bound_with_holding["holdingsTypeId"] = bound_with_holdings_type_id

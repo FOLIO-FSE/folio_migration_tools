@@ -1,15 +1,13 @@
 import uuid
-from unittest.mock import MagicMock
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
-from folio_uuid.folio_namespaces import FOLIONamespaces
-
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.test_infrastructure import mocked_classes
+from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 def test_validate_required_properties():
@@ -77,7 +75,7 @@ def test_generate_bound_with_holding_default_single_callnumber():
     inst_1_id = "ae0c833c-e76f-53aa-975a-7ac4c2be7972"
     inst_2_id = "fae73ef8-b546-5310-b4ee-c2d68fed48c5"
     bw_rel_map = {hold_1_id: [inst_1_id, inst_2_id]}
-    holding = {"id": hold_1_id, "instanceId": inst_1_id, "callNumber": "Vna"}
+    holding = {"id": hold_1_id, "instanceId": inst_1_id, "callNumber": "Vna [vol. 1]"}
     res = list(
         MapperBase.create_bound_with_holdings(
             mocked_mapper,
@@ -87,7 +85,7 @@ def test_generate_bound_with_holding_default_single_callnumber():
         )
     )
     assert len(res) == 2
-    assert all(h["callNumber"] == "Vna" for h in res)
+    assert all(h["callNumber"] == "Vna [vol. 1]" for h in res)
 
 
 def test_generate_bound_with_holding_default_mulitple_callnumber():
@@ -98,13 +96,13 @@ def test_generate_bound_with_holding_default_mulitple_callnumber():
     inst_1_id = "ae0c833c-e76f-53aa-975a-7ac4c2be7972"
     inst_2_id = "fae73ef8-b546-5310-b4ee-c2d68fed48c5"
     bw_rel_map = {hold_1_id: [inst_1_id, inst_2_id]}
-    holding = {"id": hold_1_id, "instanceId": inst_1_id, "callNumber": '["Vna", "Vnd"]'}
+    holding = {"id": hold_1_id, "instanceId": inst_1_id, "callNumber": '["Vna [vol. 1]", "Vnd"]'}
     res = list(
         MapperBase.create_bound_with_holdings(
             mocked_mapper, holding, bw_rel_map[hold_1_id], str(uuid.uuid4())
         )
     )
-    assert res[0]["callNumber"] == "Vna"
+    assert res[0]["callNumber"] == "Vna [vol. 1]"
     assert res[1]["callNumber"] == "Vnd"
 
 
