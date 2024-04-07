@@ -9,6 +9,18 @@
 
 ---
 
+## v_1_8_10 (27/03/2024)
+
+#### bug
+
+- [**bug**] MARC Holdings Transformer Fails During wrap-up [#742](https://github.com/FOLIO-FSE/folio_migration_tools/issues/742)
+
+#### closed
+
+- [**closed**] prepare 1.8.10 release [#749](https://github.com/FOLIO-FSE/folio_migration_tools/issues/749)
+
+---
+
 ## v_1_8_8 (25/03/2024)
 
 #### bug
@@ -614,15 +626,3 @@
 #### bug
 
 - [**bug**] JSON parsing fails when 409:s are returned from batch apis [#320](https://github.com/FOLIO-FSE/folio_migration_tools/issues/320)
-
----
-
-## 1_4_6 (23/06/2022)
-
-#### closed
-
-- [**closed**] Unclear error message when you have mapped temporary locations but no location map [#315](https://github.com/FOLIO-FSE/folio_migration_tools/issues/315)
-
-#### good first issue
-
-- [**good first issue**] Make Loans migration script clearly  WARN if SMTP is not disabled when posting new loans [#244](https://github.com/FOLIO-FSE/folio_migration_tools/issues/244)
