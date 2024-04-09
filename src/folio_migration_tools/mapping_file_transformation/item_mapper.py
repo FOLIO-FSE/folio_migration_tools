@@ -1,20 +1,23 @@
 import json
 import logging
 import sys
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Set
 from uuid import uuid4
-import i18n
 
+import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -223,13 +226,14 @@ class ItemMapper(MappingFileMapperBase):
             return self.transform_status(mapped_value)
         elif folio_prop_name == "barcode":
             barcode = mapped_value
-            if barcode.strip() and barcode in self.unique_barcodes:
+            normalized_barcode = barcode.strip().lower()
+            if normalized_barcode and normalized_barcode in self.unique_barcodes:
                 Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
                 self.migration_report.add_general_statistics(i18n.t("Duplicate barcodes"))
                 return f"{barcode}-{uuid4()}"
             else:
-                if barcode.strip():
-                    self.unique_barcodes.add(barcode)
+                if normalized_barcode:
+                    self.unique_barcodes.add(normalized_barcode)
                 return barcode
         elif folio_prop_name == "holdingsRecordId":
             if mapped_value in self.holdings_id_map:
