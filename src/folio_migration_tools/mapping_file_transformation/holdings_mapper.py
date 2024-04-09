@@ -1,12 +1,14 @@
 import ast
-import i18n
 
+import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -96,6 +98,11 @@ class HoldingsMapper(MappingFileMapperBase):
                 "BoundWithMappings",
                 (f"Number of bib-level callnumbers in record: {len(legacy_value.split(','))}"),
             )
+        if legacy_value.startswith("[") and len(legacy_value.split(",")) == 1:
+            try:
+                legacy_value = ast.literal_eval(str(legacy_value))[0]
+            except SyntaxError:
+                return legacy_value
         return legacy_value
 
     def get_location_id(

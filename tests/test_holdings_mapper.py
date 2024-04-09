@@ -1,11 +1,12 @@
 from unittest.mock import Mock
 
 import pytest
-
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
 )
@@ -407,7 +408,7 @@ def test_get_call_number_1():
     call_number = "['Merrymount']"
     mocked_mapper = Mock(spec=HoldingsMapper)
     res = HoldingsMapper.get_call_number(mocked_mapper, call_number)
-    assert res == call_number
+    assert res == "Merrymount"
 
 
 def test_get_call_number_2():
