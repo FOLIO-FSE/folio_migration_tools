@@ -1,13 +1,14 @@
 from unittest.mock import Mock
 
 import pytest
-from folio_uuid.folio_namespaces import FOLIONamespaces
-
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from folio_migration_tools.test_infrastructure import mocked_classes
+from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -54,7 +55,7 @@ def mapper(pytestconfig) -> ItemMapper:
         loan_type_map,
         location_map,
         {},
-        {"000000950000010": ["000000950000010", "9e840586-a641-5932-92ef-cfde8e84f9a1"]},
+        {"000000950000010": ["000000950000010", "9e840586-a641-5932-92ef-cfde8e84f9a1"], "ABC000950000010": ["ABC000950000010", "9e840586-a641-5932-92ef-cfde8e84f9a2"], "abc000950000010": ["abc000950000010", "9e840586-a641-5932-92ef-cfde8e84f9a3"]},
         {},
         {},
         {},
@@ -71,6 +72,17 @@ def test_item_mapping(mapper):
     assert item["barcode"] == "000000950000010"
 
     assert "mat" in mapper.mapped_legacy_fields
+
+
+def test_item_mapper_duplicate_barcode(mapper):
+    data = {"barcode": "ABC000950000010", "note": "Check it out!", "lt": "ah", "mat": "oh"}
+    data2 = {"barcode": "abc000950000010", "note": "Check it out!", "lt": "ah", "mat": "oh"}
+
+    item1, idx1 = mapper.do_map(data, data["barcode"], FOLIONamespaces.items)
+    item2, idx2 = mapper.do_map(data2, data2["barcode"], FOLIONamespaces.items)
+
+    assert item1["barcode"] == "ABC000950000010"
+    assert item2["barcode"].startswith("abc000950000010-")
 
 
 def test_perform_additional_mappings(mapper: ItemMapper):
