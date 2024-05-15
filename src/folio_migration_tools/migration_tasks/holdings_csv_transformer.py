@@ -307,7 +307,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     folio_rec, legacy_id = self.mapper.do_map(
                         legacy_record, f"row # {idx}", FOLIONamespaces.holdings
                     )
-                    self.post_process_holding(folio_rec, legacy_id)
+                    self.post_process_holding(folio_rec, legacy_id, file_def)
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as error:
@@ -327,7 +327,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 f"Total records processed: {self.total_records:,}"
             )
 
-    def post_process_holding(self, folio_rec: dict, legacy_id: str):
+    def post_process_holding(self, folio_rec: dict, legacy_id: str, file_def: FileDefinition):
         HoldingsHelper.handle_notes(folio_rec)
         HoldingsHelper.remove_empty_holdings_statements(folio_rec)
 
@@ -349,6 +349,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             raise TransformationRecordFailedError(legacy_id, "No instance id in parsed record", "")
 
         for folio_holding in holdings_from_row:
+            self.mapper.perform_additional_mappings(folio_holding, file_def)
             self.merge_holding_in(folio_holding, all_instance_ids, legacy_id)
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
