@@ -6,26 +6,25 @@ import urllib.parse
 import uuid
 from abc import abstractmethod
 from textwrap import wrap
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 import i18n
 import pymarc
 from dateutil.parser import parse
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
+from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from pymarc import Field
-from pymarc import Leader
-from pymarc import Record
-from pymarc import Subfield
+from pymarc import Field, Leader, Record, Subfield
 
-from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
 
@@ -603,7 +602,9 @@ class RulesMapperBase(MapperBase):
                 marc_field = self.remove_repeated_subfields(marc_field)
             entity = self.create_entity(entity_mapping, marc_field, e_parent, legacy_ids)
             if e_parent in ["precedingTitles", "succeedingTitles"]:
-                self.create_preceding_succeeding_titles(entity, e_parent, folio_record["id"])
+                self.create_preceding_succeeding_titles(
+                    entity, e_parent, folio_record["id"], marc_field
+                )
             elif entity and (
                 all(
                     v
@@ -642,33 +643,42 @@ class RulesMapperBase(MapperBase):
                 "Suppression", i18n.t("Staff suppressed") + f' = {folio_record["staffSuppress"]} '
             )
 
-    def create_preceding_succeeding_titles(self, entity, e_parent, identifier):
-        self.migration_report.add("PrecedingSuccedingTitles", f"{e_parent} " + i18n.t("created"))
-        # TODO: Make these uuids deterministic
-        new_entity = {
-            "id": str(uuid.uuid4()),
-            "title": entity.get("title"),
-            "identifiers": [],
-        }
-        if e_parent == "precedingTitles":
-            new_entity["succeedingInstanceId"] = identifier
+    def create_preceding_succeeding_titles(
+        self, entity, e_parent: str, identifier: str, marc_field: pymarc.Field
+    ):
+        if title := entity.get("title"):
+            self.migration_report.add("PrecedingSuccedingTitles", f"{e_parent} " + i18n.t("created"))
+            # TODO: Make these uuids deterministic
+            new_entity = {
+                "id": str(uuid.uuid4()),
+                "title": title,
+                "identifiers": [],
+            }
+            if e_parent == "precedingTitles":
+                new_entity["succeedingInstanceId"] = identifier
+            else:
+                new_entity["precedingInstanceId"] = identifier
+            if new_entity.get("isbnValue", ""):
+                new_entity["identifiers"].append(
+                    {
+                        "identifierTypeId": new_entity.get("isbnId"),
+                        "value": new_entity.get("isbnValue"),
+                    }
+                )
+            if new_entity.get("issnValue", ""):
+                new_entity["identifiers"].append(
+                    {
+                        "identifierTypeId": new_entity.get("issnId"),
+                        "value": new_entity.get("issnValue"),
+                    }
+                )
+            self.extradata_writer.write(e_parent, new_entity)
         else:
-            new_entity["precedingInstanceId"] = identifier
-        if new_entity.get("isbnValue", ""):
-            new_entity["identifiers"].append(
-                {
-                    "identifierTypeId": new_entity.get("isbnId"),
-                    "value": new_entity.get("isbnValue"),
-                }
+            Helper.log_data_issue(
+                identifier,
+                f"Unable to create {e_parent} entity. Missing title.",
+                marc_field
             )
-        if new_entity.get("issnValue", ""):
-            new_entity["identifiers"].append(
-                {
-                    "identifierTypeId": new_entity.get("issnId"),
-                    "value": new_entity.get("issnValue"),
-                }
-            )
-        self.extradata_writer.write(e_parent, new_entity)
 
     def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):
         v = value
