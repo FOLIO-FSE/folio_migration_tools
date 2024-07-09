@@ -647,7 +647,9 @@ class RulesMapperBase(MapperBase):
         self, entity, e_parent: str, identifier: str, marc_field: pymarc.Field
     ):
         if title := entity.get("title"):
-            self.migration_report.add("PrecedingSuccedingTitles", f"{e_parent} " + i18n.t("created"))
+            self.migration_report.add(
+                "PrecedingSuccedingTitles", f"{e_parent} " + i18n.t("created")
+            )
             # TODO: Make these uuids deterministic
             new_entity = {
                 "id": str(uuid.uuid4()),
@@ -675,9 +677,7 @@ class RulesMapperBase(MapperBase):
             self.extradata_writer.write(e_parent, new_entity)
         else:
             Helper.log_data_issue(
-                identifier,
-                f"Unable to create {e_parent} entity. Missing title.",
-                marc_field
+                identifier, f"Unable to create {e_parent} entity. Missing title.", marc_field
             )
 
     def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):

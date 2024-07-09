@@ -45,7 +45,7 @@ class MapperBase:
         self.mapped_folio_fields: dict = {}
         self.migration_report: MigrationReport = MigrationReport()
         self.num_criticalerrors = 0
-        self.num_exeptions = 0
+        self.num_exceptions = 0
         self.mapped_legacy_fields: dict = {}
         self.schema_properties = None
 
@@ -270,18 +270,18 @@ class MapperBase:
             return (legacy_id, folio_record["id"], folio_record["hrid"])
         return (legacy_id, folio_record["id"])
 
-    def handle_generic_exception(self, idx, excepion: Exception):
-        self.num_exeptions += 1
+    def handle_generic_exception(self, idx, exception: Exception):
+        self.num_exceptions += 1
         print("\n=======ERROR===========")
         print(
-            f"Row {idx:,} failed with the following unhandled Exception: {excepion}  "
-            f"of type {type(excepion).__name__}"
+            f"Row {idx:,} failed with the following unhandled Exception: {exception}  "
+            f"of type {type(exception).__name__}"
         )
-        logging.error(excepion, exc_info=True)
-        if self.num_exeptions > 50:
+        logging.error(exception, exc_info=True)
+        if self.num_exceptions > self.library_configuration.generic_exception_threshold:
             logging.fatal(
                 "Stopping. More than %s unhandled exceptions. Code needs fixing",
-                self.num_exeptions,
+                self.num_exceptions,
             )
             sys.exit(1)
 

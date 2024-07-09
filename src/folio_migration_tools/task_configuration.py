@@ -17,9 +17,9 @@ class AbstractTaskConfiguration(BaseModel):
             title="ECS tenant ID",
             description=(
                 "The tenant ID to use when making requests to FOLIO APIs for this task, if ",
-                "different from library configuration"
-            )
-        )
+                "different from library configuration",
+            ),
+        ),
     ] = ""
 
     class Config:
