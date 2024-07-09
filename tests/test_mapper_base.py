@@ -106,6 +106,26 @@ def test_generate_bound_with_holding_default_mulitple_callnumber():
     assert res[1]["callNumber"] == "Vnd"
 
 
+def test_generate_bound_with_holding_default_mulitple_callnumber_count_mismatch():
+    mocked_mapper = Mock(spec=MapperBase)
+    mocked_mapper.folio_client = mocked_classes.mocked_folio_client()
+    mocked_mapper.migration_report = MigrationReport()
+    hold_1_id = "66db04ef-fbfb-5c45-9ed7-65a1f2495eaf"
+    inst_1_id = "ae0c833c-e76f-53aa-975a-7ac4c2be7972"
+    inst_2_id = "fae73ef8-b546-5310-b4ee-c2d68fed48c5"
+    inst_3_id = str(uuid.uuid4())
+    bw_rel_map = {hold_1_id: [inst_1_id, inst_2_id, inst_3_id]}
+    holding = {"id": hold_1_id, "instanceId": inst_1_id, "callNumber": '["Vna [vol. 1]", "Vnd"]'}
+    res = list(
+        MapperBase.create_bound_with_holdings(
+            mocked_mapper, holding, bw_rel_map[hold_1_id], str(uuid.uuid4())
+        )
+    )
+    assert res[0]["callNumber"] == "Vna [vol. 1]"
+    assert res[1]["callNumber"] == "Vnd"
+    assert res[2]["callNumber"] == "Vna [vol. 1]"
+
+
 def test_generate_and_write_bound_with_part():
     mocked_mapper = Mock(spec=MapperBase)
     mocked_writer = Mock(spec=ExtradataWriter)
