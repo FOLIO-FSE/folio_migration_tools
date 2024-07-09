@@ -6,6 +6,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import List
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -430,8 +431,11 @@ class MapperBase:
             if call_number := folio_holding.get("callNumber", None):
                 if "[" in call_number:
                     try:
-                        call_numbers = ast.literal_eval(str(folio_holding["callNumber"]))
+                        call_numbers: List = ast.literal_eval(str(folio_holding["callNumber"]))
                         bound_with_holding["callNumber"] = call_numbers[bwidx]
+                    except IndexError:
+                        if call_numbers:
+                            bound_with_holding["callNumber"] = call_numbers[0]
                     except SyntaxError:
                         bound_with_holding["callNumber"] = call_number
                 else:
