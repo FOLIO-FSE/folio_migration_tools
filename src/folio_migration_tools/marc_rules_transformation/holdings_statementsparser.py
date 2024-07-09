@@ -84,7 +84,7 @@ class HoldingsStatementsParser:
                                 linked_value_tag=linked_value_field,
                             ),
                             pattern_field,
-                        )                        
+                        )
                     if parsed_dict["hlm_stmt"]:
                         return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
                     if parsed_dict["statement"]:

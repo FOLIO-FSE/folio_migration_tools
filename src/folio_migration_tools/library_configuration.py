@@ -1,9 +1,7 @@
 from enum import Enum
-from typing import Annotated
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic.types import DirectoryPath
 
 
@@ -102,6 +100,9 @@ class LibraryConfiguration(BaseModel):
     failed_percentage_threshold: Annotated[
         int, Field(description=("Percentage of failed records until the process shuts down"))
     ] = 20
+    generic_exception_threshold: Annotated[
+        int, Field(description=("Number of generic exceptions until the process shuts down"))
+    ] = 50
     library_name: str
     log_level_debug: bool
     folio_release: FolioRelease = Field(
@@ -112,6 +113,6 @@ class LibraryConfiguration(BaseModel):
         )
     )
     iteration_identifier: str
-    add_time_stamp_to_file_names: Annotated[bool, Field(title="Add time stamp to file names")] = (
-        False
-    )
+    add_time_stamp_to_file_names: Annotated[
+        bool, Field(title="Add time stamp to file names")
+    ] = False

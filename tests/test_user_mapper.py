@@ -831,6 +831,7 @@ def test_basic_turn_off_id_and_request_preferences(mocked_folio_client):
     assert "id" not in folio_user
     assert "requestPreference" not in folio_user
 
+
 @pytest.mark.slow
 def test_basic_turn_off_request_preferences(mocked_folio_client):
     user_map = {
@@ -875,6 +876,7 @@ def test_basic_turn_off_request_preferences(mocked_folio_client):
     )
 
     assert "requestPreference" not in folio_user
+
 
 @pytest.mark.slow
 def test_one_to_one_group_mapping(mocked_folio_client):
