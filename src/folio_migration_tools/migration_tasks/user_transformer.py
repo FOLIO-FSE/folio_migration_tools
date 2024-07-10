@@ -194,21 +194,7 @@ class UserTransformer(MigrationTaskBase):
         valid_addresses = remove_empty_addresses(folio_user)
         # Make sure the user has exactly one primary address
         if valid_addresses:
-            primary_true = []
-            for address in valid_addresses:
-                if "primaryAddress" not in address:
-                    address["primaryAddress"] = False
-                elif (
-                    isinstance(address["primaryAddress"], bool)
-                    and address["primaryAddress"] is True
-                ) or (
-                    isinstance(address["primaryAddress"], str)
-                    and address["primaryAddress"].lower() == "true"
-                ):
-                    primary_true.append(address)
-                else:
-                    address["primaryAddress"] = False
-
+            primary_true = find_primary_addresses(valid_addresses)
             if len(primary_true) < 1:
                 valid_addresses[0]["primaryAddress"] = True
             elif len(primary_true) > 1:
@@ -248,3 +234,21 @@ def remove_empty_addresses(folio_user):
             if address_fields:
                 valid_addresses.append(address)
     return valid_addresses
+
+
+def find_primary_addresses(addresses):
+    primary_true = []
+    for address in addresses:
+        if "primaryAddress" not in address:
+            address["primaryAddress"] = False
+        elif (
+            isinstance(address["primaryAddress"], bool)
+            and address["primaryAddress"] is True
+        ) or (
+            isinstance(address["primaryAddress"], str)
+            and address["primaryAddress"].lower() == "true"
+        ):
+            primary_true.append(address)
+        else:
+            address["primaryAddress"] = False
+    return primary_true
