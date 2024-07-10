@@ -6,11 +6,15 @@ from typing import Optional
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -187,20 +191,34 @@ class UserTransformer(MigrationTaskBase):
 
     @staticmethod
     def clean_user(folio_user, index_or_id):
-        # Make sure the user has exactly one primary address
-        if addresses := folio_user.get("personal", {}).get("addresses", []):
-            primary_true = []
+        valid_addresses = []
+        # Remove empty addresses
+        if addresses := folio_user.get("personal", {}).pop("addresses", []):
             for address in addresses:
+                address_fields = [x for x in address.keys() if x not in ["primaryAddress", "addressTypeId", "id"]]
+                if address_fields:
+                    valid_addresses.append(address)
+        # Make sure the user has exactly one primary address
+        if valid_addresses:
+            primary_true = []
+            for address in valid_addresses:
                 if "primaryAddress" not in address:
                     address["primaryAddress"] = False
                 elif (
-                    isinstance(address["primaryAddress"], bool)
-                    and address["primaryAddress"] is True
+                    (
+                        isinstance(address["primaryAddress"], bool)
+                        and address["primaryAddress"] is True
+                    ) or (
+                        isinstance(address["primaryAddress"], str)
+                        and address["primaryAddress"].lower() == "true"
+                    )
                 ):
                     primary_true.append(address)
+                else:
+                    address["primaryAddress"] = False
 
             if len(primary_true) < 1:
-                addresses[0]["primaryAddress"] = True
+                valid_addresses[0]["primaryAddress"] = True
             elif len(primary_true) > 1:
                 logging.log(
                     26,
@@ -211,6 +229,7 @@ class UserTransformer(MigrationTaskBase):
                 )
                 for pt in primary_true[1:]:
                     pt["primaryAddress"] = False
+            folio_user["personal"]["addresses"] = valid_addresses
 
 
 def print_email_warning():
