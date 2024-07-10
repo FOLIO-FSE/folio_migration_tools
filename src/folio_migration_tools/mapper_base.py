@@ -347,7 +347,8 @@ class MapperBase:
                 "One or many required properties empty",
                 f"{json.dumps(missing)}",
             )
-        # cleaned_folio_object.pop("type", None)
+        if object_type not in [FOLIONamespaces.users]:
+            cleaned_folio_object.pop("type", None)
         return cleaned_folio_object
 
     @staticmethod
