@@ -191,13 +191,7 @@ class UserTransformer(MigrationTaskBase):
 
     @staticmethod
     def clean_user(folio_user, index_or_id):
-        valid_addresses = []
-        # Remove empty addresses
-        if addresses := folio_user.get("personal", {}).pop("addresses", []):
-            for address in addresses:
-                address_fields = [x for x in address.keys() if x not in ["primaryAddress", "addressTypeId", "id"]]
-                if address_fields:
-                    valid_addresses.append(address)
+        valid_addresses = remove_empty_addresses(folio_user)
         # Make sure the user has exactly one primary address
         if valid_addresses:
             primary_true = []
@@ -205,13 +199,11 @@ class UserTransformer(MigrationTaskBase):
                 if "primaryAddress" not in address:
                     address["primaryAddress"] = False
                 elif (
-                    (
-                        isinstance(address["primaryAddress"], bool)
-                        and address["primaryAddress"] is True
-                    ) or (
-                        isinstance(address["primaryAddress"], str)
-                        and address["primaryAddress"].lower() == "true"
-                    )
+                    isinstance(address["primaryAddress"], bool)
+                    and address["primaryAddress"] is True
+                ) or (
+                    isinstance(address["primaryAddress"], str)
+                    and address["primaryAddress"].lower() == "true"
                 ):
                     primary_true.append(address)
                 else:
@@ -243,3 +235,16 @@ def print_email_warning():
         "                                                       \n"
     )
     print(s)
+
+
+def remove_empty_addresses(folio_user):
+    valid_addresses = []
+    # Remove empty addresses
+    if addresses := folio_user.get("personal", {}).pop("addresses", []):
+        for address in addresses:
+            address_fields = [
+                x for x in address.keys() if x not in ["primaryAddress", "addressTypeId", "id"]
+            ]
+            if address_fields:
+                valid_addresses.append(address)
+    return valid_addresses
