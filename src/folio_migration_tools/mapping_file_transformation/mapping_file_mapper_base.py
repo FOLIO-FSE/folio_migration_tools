@@ -6,19 +6,18 @@ import re
 import uuid
 from functools import reduce
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Set
+from typing import Dict, List, Set
 from uuid import UUID
 
 import i18n
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
+from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
@@ -872,7 +871,7 @@ class MappingFileMapperBase(MapperBase):
 
 def skip_property(property_name, property):
     return bool(
-        property_name in ["metadata", "id", "type", "lastCheckIn"]
+        property_name in ["metadata", "id", "lastCheckIn"]
         or property_name.startswith("effective")
         or property.get("folio:isVirtual", False)
         or property.get("description", "") == "Deprecated"

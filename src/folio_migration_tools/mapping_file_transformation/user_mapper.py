@@ -2,14 +2,16 @@ import csv
 import json
 import logging
 import sys
-import i18n
 
+import i18n
 from dateutil.parser import parse
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -79,7 +81,7 @@ class UserMapper(MappingFileMapperBase):
         )
         if "personal" not in folio_user:
             folio_user["personal"] = {}
-        folio_user["personal"]["preferredContactTypeId"] = "Email"
+        folio_user["personal"]["preferredContactTypeId"] = "email"
         folio_user["active"] = True
         if folio_user.get("requestPreference"):
             folio_user["requestPreference"].update(

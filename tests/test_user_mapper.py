@@ -4,13 +4,12 @@ import uuid
 from unittest.mock import Mock
 
 import pytest
-from folio_uuid.folio_namespaces import FOLIONamespaces
-
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
+from folio_uuid.folio_namespaces import FOLIONamespaces
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
@@ -24,6 +23,12 @@ def mocked_folio_client(pytestconfig):
 def test_basic(mocked_folio_client):
     user_map = {
         "data": [
+            {
+                "folio_field": "type",
+                "legacy_field": "",
+                "value": "patron",
+                "description": "",
+            },
             {
                 "folio_field": "username",
                 "legacy_field": "user_name",
@@ -71,8 +76,9 @@ def test_basic(mocked_folio_client):
     assert folio_user["externalSystemId"] == "externalid_1"
     assert folio_user["username"] == "user_name_1"
     assert folio_user["id"] == "c2a8733b-4fbc-5ef1-ace9-f02e7b3a6f35"
-    assert folio_user["personal"]["preferredContactTypeId"] == "Email"
+    assert folio_user["personal"]["preferredContactTypeId"] == "email"
     assert folio_user["active"] is True
+    assert folio_user["type"] == "patron"
 
 
 def test_basic_all_dates(mocked_folio_client):
