@@ -6,7 +6,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folioclient import FolioClient
-from pymarc import Field, Subfield
+from pymarc import Field, Indicators, Subfield
 
 
 def test_condition_trim_period():
@@ -105,7 +105,7 @@ def test_condition_set_note_staff_only_via_indicator():
     )
     assert res_true == "true"
 
-    marc_field.indicators = ["1", "0"]
+    marc_field.indicators = Indicators(*["1", "0"])
     res_false = Conditions.condition_set_note_staff_only_via_indicator(
         mock, legacy_id, "value", {}, marc_field
     )

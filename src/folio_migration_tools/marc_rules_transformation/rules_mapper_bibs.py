@@ -7,8 +7,7 @@ import time
 import typing
 import uuid
 from pathlib import Path
-from typing import Generator
-from typing import List
+from typing import Generator, List
 
 import i18n
 import pymarc
@@ -16,14 +15,18 @@ from defusedxml.ElementTree import fromstring
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
-from pymarc.record import Record
+from pymarc.record import Leader, Record
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import IlsFlavour
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    IlsFlavour,
+    LibraryConfiguration,
+)
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
@@ -84,7 +87,7 @@ class BibsRulesMapper(RulesMapperBase):
         leader_05 = marc_record.leader[5] or "Empty"
         self.migration_report.add("RecordStatus", i18n.t("Original value") + f": {leader_05}")
         if leader_05 not in ["a", "c", "d", "n", "p"]:
-            marc_record.leader = f"{marc_record.leader[:5]}c{marc_record.leader[6:]}"
+            marc_record.leader = Leader(f"{marc_record.leader[:5]}c{marc_record.leader[6:]}")
             self.migration_report.add(
                 "RecordStatus", i18n.t("Changed %{a} to %{b}", a=leader_05, b="c")
             )

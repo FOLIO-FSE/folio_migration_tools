@@ -3,19 +3,17 @@ import json
 from uuid import uuid4
 
 import pytest
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from folioclient import FolioClient
-from pymarc import Subfield
-from pymarc.reader import MARCReader
-from pymarc.record import Field
-from pymarc.record import Record
-
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioClient
+from pymarc import Leader, Subfield
+from pymarc.reader import MARCReader
+from pymarc.record import Field, Record
 
 # flake8: noqa: E501
 
@@ -199,10 +197,10 @@ def test_get_srs_string_bad_leaders():
         record: Record = None
         record = next(reader)
         l1 = record.leader
-        record.leader = f"{record.leader[:-4]}4500"
+        record.leader = Leader(f"{record.leader[:-4]}4500")
         assert l1 != record.leader
-        assert record.leader.endswith("4500")
-        assert len(record.leader) == 24
+        assert str(record.leader).endswith("4500")
+        assert len(str(record.leader)) == 24
 
 
 def test_create_srs_uuid():
