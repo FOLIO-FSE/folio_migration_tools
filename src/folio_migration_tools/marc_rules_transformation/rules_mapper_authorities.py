@@ -11,13 +11,15 @@ import pymarc
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
-from pymarc import Record
+from pymarc import Leader, Record
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import IlsFlavour
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    IlsFlavour,
+    LibraryConfiguration,
+)
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
@@ -204,7 +206,7 @@ class AuthorityMapper(RulesMapperBase):
                 f"LDR pos. 17 is '{leader_17}'. Is this correct? Value has been changed to 'n'.",
                 marc_record.leader,
             )
-            marc_record.leader = f"{marc_record.leader[:17]}n{marc_record.leader[18:]}"
+            marc_record.leader = Leader(f"{marc_record.leader[:17]}n{marc_record.leader[18:]}")
             self.migration_report.add(
                 "AuthorityEncodingLevel", i18n.t("Changed %{a} to %{b}", a=leader_17, b="n")
             )

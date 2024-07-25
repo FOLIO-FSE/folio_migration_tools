@@ -1,14 +1,15 @@
 import logging
 import sys
-import i18n
 from io import IOBase
 from pathlib import Path
 
-from pymarc import MARCReader
-from pymarc import Record
+import i18n
+from pymarc import Leader, MARCReader, Record
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.migration_report import MigrationReport
@@ -88,14 +89,14 @@ class MARCReaderWrapper:
                     field=marc_record.leader[9],
                 ),
             )
-            marc_record.leader = f"{marc_record.leader[:9]}a{marc_record.leader[10:]}"
+            marc_record.leader = Leader(f"{marc_record.leader[:9]}a{marc_record.leader[10:]}")
 
-        if not marc_record.leader.endswith("4500"):
+        if not str(marc_record.leader).endswith("4500"):
             migration_report.add(
                 "LeaderManipulation",
                 i18n.t("Set leader 20-23 from %{field} to 4500", field=marc_record.leader[-4:]),
             )
-            marc_record.leader = f"{marc_record.leader[:-4]}4500"
+            marc_record.leader = Leader(f"{marc_record.leader[:-4]}4500")
 
         if marc_record.leader[10] != "2":
             migration_report.add(
@@ -105,7 +106,7 @@ class MARCReaderWrapper:
                     field=marc_record.leader[10],
                 ),
             )
-            marc_record.leader = f"{marc_record.leader[:10]}2{marc_record.leader[11:]}"
+            marc_record.leader = Leader(f"{marc_record.leader[:10]}2{marc_record.leader[11:]}")
 
         if marc_record.leader[11] != "2":
             migration_report.add(
@@ -115,7 +116,7 @@ class MARCReaderWrapper:
                     record=marc_record.leader[11],
                 ),
             )
-            marc_record.leader = f"{marc_record.leader[:11]}2{marc_record.leader[12:]}"
+            marc_record.leader = Leader(f"{marc_record.leader[:11]}2{marc_record.leader[12:]}")
 
 
 def report_failed_parsing(

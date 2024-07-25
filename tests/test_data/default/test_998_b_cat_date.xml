@@ -12,7 +12,7 @@
             </header>
             <metadata>
                 <record xmlns="http://www.loc.gov/MARC21/slim" type="Bibliographic">
-                    <leader> cam a 7 4500</leader>
+                    <leader>     cam a       7  4500</leader>
                     <controlfield tag="001">19049386</controlfield>
                     <controlfield tag="005">20180807151917.0</controlfield>
                     <controlfield tag="008">160107t20152016xxu|||||||||||000 ||eng| </controlfield>
