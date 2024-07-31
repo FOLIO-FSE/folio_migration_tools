@@ -105,7 +105,7 @@ def test_condition_set_note_staff_only_via_indicator():
     )
     assert res_true == "true"
 
-    marc_field.indicators = Indicators(*["1", "0"])
+    marc_field.indicators = ["1", "0"]
     res_false = Conditions.condition_set_note_staff_only_via_indicator(
         mock, legacy_id, "value", {}, marc_field
     )
