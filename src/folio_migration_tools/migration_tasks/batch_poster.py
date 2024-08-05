@@ -74,6 +74,15 @@ class BatchPoster(MigrationTaskBase):
                 )
             ),
         ] = True
+        extradata_endpoints: Annotated[
+            dict,
+            Field(
+                description=(
+                    "A dictionary of extradata endpoints. "
+                    "The key is the object type and the value is the endpoint"
+                )
+            ),
+        ] = {}
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -196,7 +205,14 @@ class BatchPoster(MigrationTaskBase):
 
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
         (object_name, data) = row.split("\t")
-        endpoint = get_extradata_endpoint(object_name, data)
+        try:
+            endpoint = get_extradata_endpoint(object_name, data)
+        except KeyError:
+            if self.task_configuration.extradata_endpoints:
+                if endpoint := self.task_configuration.extradata_endpoints.get(object_name):
+                    pass
+                else:
+                    raise
         url = f"{self.folio_client.okapi_url}/{endpoint}"
         body = data
         response = self.post_objects(url, body)
