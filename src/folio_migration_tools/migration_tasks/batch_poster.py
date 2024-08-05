@@ -5,8 +5,7 @@ import sys
 import time
 import traceback
 from datetime import datetime
-from typing import Annotated
-from typing import List
+from typing import Annotated, List
 from uuid import uuid4
 
 import httpx
@@ -14,10 +13,14 @@ import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
@@ -636,6 +639,7 @@ def get_extradata_endpoint(object_name: str, string_object: str):
         "interfaces": "organizations-storage/interfaces",
         "account": "accounts",
         "feefineaction": "feefineactions",
+        "bankInfo": "organizations/banking-information",
     }
     if object_name == "instructor":
         instructor = json.loads(string_object)
