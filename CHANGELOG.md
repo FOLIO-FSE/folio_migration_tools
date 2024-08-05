@@ -1,11 +1,33 @@
 # Changelog
 
-## v_1_8_9 (27/03/2024)
+## v_1_8_12 (31/07/2024)
+#### closed
+
+- [**closed**] Pymarc 5.2.0 breaks MARC transformer tasks [#783](https://github.com/FOLIO-FSE/folio_migration_tools/issues/783)
+
+---
+
+## v_1_8_11 (10/07/2024)
+#### Inventory
+
+- [**Inventory**] Handle bib call numbers (eg. for III items data) formatted as list string representation with only one value [#721](https://github.com/FOLIO-FSE/folio_migration_tools/issues/721)
+
+#### bug
+
+- [**bug**][**Inventory**] Holdings CSV transformer does not apply file-indicated discovery suppression [#762](https://github.com/FOLIO-FSE/folio_migration_tools/issues/762)
+- [**bug**][**Inventory**] III-style bound with fixes for multiple holdings with the same linked bibIds [#755](https://github.com/FOLIO-FSE/folio_migration_tools/issues/755)
+- [**bug**][**Inventory**] Handle call numbers containing square brackets "[]" [#754](https://github.com/FOLIO-FSE/folio_migration_tools/issues/754)
 
 #### closed
 
-- [**closed**] Prepare 1.8.9 release [#746](https://github.com/FOLIO-FSE/folio_migration_tools/issues/746)
-- [**closed**] holdings_statementparser key errors [#744](https://github.com/FOLIO-FSE/folio_migration_tools/issues/744)
+- [**closed**] Bump version to 1.8.11 [#781](https://github.com/FOLIO-FSE/folio_migration_tools/issues/781)
+- [**closed**] Unable to map user type with user_transformer/user_mapper [#779](https://github.com/FOLIO-FSE/folio_migration_tools/issues/779)
+- [**closed**] Tools have hardcoded limit of only 50 errors [#773](https://github.com/FOLIO-FSE/folio_migration_tools/issues/773)
+- [**closed**] UserTransformer creates invalid address objects [#769](https://github.com/FOLIO-FSE/folio_migration_tools/issues/769)
+- [**closed**] Handle single-item list of call numbers for III-style bound with items [#768](https://github.com/FOLIO-FSE/folio_migration_tools/issues/768)
+- [**closed**] MARC Bib transformer creates invalid preceding-succeeding-title records [#764](https://github.com/FOLIO-FSE/folio_migration_tools/issues/764)
+- [**closed**] Staff-only note mapping rules in MARC bib 5xx fields not honored by migration tools [#751](https://github.com/FOLIO-FSE/folio_migration_tools/issues/751)
+- [**closed**] Use normalized version of barcode for duplicate checks [#738](https://github.com/FOLIO-FSE/folio_migration_tools/issues/738)
 
 ---
 
@@ -18,6 +40,15 @@
 #### closed
 
 - [**closed**] prepare 1.8.10 release [#749](https://github.com/FOLIO-FSE/folio_migration_tools/issues/749)
+
+---
+
+## v_1_8_9 (27/03/2024)
+
+#### closed
+
+- [**closed**] Prepare 1.8.9 release [#746](https://github.com/FOLIO-FSE/folio_migration_tools/issues/746)
+- [**closed**] holdings_statementparser key errors [#744](https://github.com/FOLIO-FSE/folio_migration_tools/issues/744)
 
 ---
 
@@ -599,30 +630,3 @@
 #### wontfix
 
 - [**wontfix**][**reporting**] if no --base_folder_path CLI argument is supplied, assume it is the same as the root of the configuration file [#335](https://github.com/FOLIO-FSE/folio_migration_tools/issues/335)
-
----
-
-## 1_4_8 (30/08/2022)
-
-#### bug
-
-- [**bug**] Fix bugs and minor issues with loans migrations [#323](https://github.com/FOLIO-FSE/folio_migration_tools/issues/323)
-
-#### closed
-
-- [**closed**] Add toggle for updating hrid or not. [#338](https://github.com/FOLIO-FSE/folio_migration_tools/issues/338)
-- [**closed**] Honor commonRetainLeadingZeroes setting when generating instance HRIDs
-
- [#231](https://github.com/FOLIO-FSE/folio_migration_tools/issues/231)
-
-#### simplify_migration_process
-
-- [**simplify_migration_process**] Add configuration option to reset HRID settings [#105](https://github.com/FOLIO-FSE/folio_migration_tools/issues/105)
-
----
-
-## 1_4_7 (25/06/2022)
-
-#### bug
-
-- [**bug**] JSON parsing fails when 409:s are returned from batch apis [#320](https://github.com/FOLIO-FSE/folio_migration_tools/issues/320)
