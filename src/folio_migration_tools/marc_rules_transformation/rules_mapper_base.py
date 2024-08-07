@@ -5,6 +5,7 @@ import time
 import urllib.parse
 import uuid
 from abc import abstractmethod
+from copy import copy
 from textwrap import wrap
 from typing import List, Tuple
 
@@ -798,7 +799,7 @@ class RulesMapperBase(MapperBase):
         )
         # Since they all should be UTF encoded, make the leader align.
         try:
-            temp_leader = Leader(marc_record.leader)
+            temp_leader = Leader(str(marc_record.leader))
             temp_leader[9] = "a"
             marc_record.leader = temp_leader
         except Exception as ee:
