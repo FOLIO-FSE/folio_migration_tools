@@ -1,7 +1,8 @@
-from folio_uuid.folio_namespaces import FOLIONamespaces
+from unittest.mock import Mock
 
 from folio_migration_tools.migration_tasks import batch_poster
 from folio_migration_tools.migration_tasks.batch_poster import BatchPoster
+from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 def test_get_object_type():
@@ -36,9 +37,32 @@ def test_get_extradata_endpoint_interface_credential():
     extradata = 'interfaceCredential\t{"interfaceId": "7e131c38-5384-44ed-9f4a-da6ca2f36498"}'
     (object_name, data) = extradata.split("\t")
 
-    endpoint = batch_poster.get_extradata_endpoint(object_name, data)
+    batch_poster_task = Mock(spec=BatchPoster)
+    batch_poster_task.task_configuration = Mock()
+    batch_poster_task.task_configuration.extradata_endpoints = {}
+
+    endpoint = BatchPoster.get_extradata_endpoint(
+        batch_poster_task.task_configuration, object_name, data
+    )
 
     assert (
         endpoint
         == "organizations-storage/interfaces/7e131c38-5384-44ed-9f4a-da6ca2f36498/credentials"
     )
+
+
+def test_get_extradata_endpoint_from_task_configuration():
+    extradata = 'otherData\t{"otherDataId": "7e131c38-5384-44ed-9f4a-da6ca2f36498"}'
+    (object_name, data) = extradata.split("\t")
+
+    batch_poster_task = Mock(spec=BatchPoster)
+    batch_poster_task.task_configuration = Mock()
+    batch_poster_task.task_configuration.extradata_endpoints = {
+        "otherData": "otherdata-endpoint/endpoint"
+    }
+
+    endpoint = BatchPoster.get_extradata_endpoint(
+        batch_poster_task.task_configuration, object_name, data
+    )
+
+    assert endpoint == "otherdata-endpoint/endpoint"
