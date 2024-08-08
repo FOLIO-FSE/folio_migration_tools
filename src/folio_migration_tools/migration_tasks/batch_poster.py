@@ -205,14 +205,7 @@ class BatchPoster(MigrationTaskBase):
 
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
         (object_name, data) = row.split("\t")
-        try:
-            endpoint = get_extradata_endpoint(object_name, data)
-        except KeyError:
-            if self.task_configuration.extradata_endpoints:
-                if endpoint := self.task_configuration.extradata_endpoints.get(object_name):
-                    pass
-                else:
-                    raise
+        endpoint = self.get_extradata_endpoint(object_name, data)
         url = f"{self.folio_client.okapi_url}/{endpoint}"
         body = data
         response = self.post_objects(url, body)
@@ -234,6 +227,35 @@ class BatchPoster(MigrationTaskBase):
                 self.num_posted,
                 self.num_failures,
             )
+
+    @staticmethod
+    def get_extradata_endpoint(
+        task_configuration: TaskConfiguration, object_name: str, string_object: str
+    ):
+        object_types = {
+            "precedingSucceedingTitles": "preceding-succeeding-titles",
+            "precedingTitles": "preceding-succeeding-titles",
+            "succeedingTitles": "preceding-succeeding-titles",
+            "boundwithPart": "inventory-storage/bound-with-parts",
+            "notes": "notes",
+            "course": "coursereserves/courses",
+            "courselisting": "coursereserves/courselistings",
+            "contacts": "organizations-storage/contacts",
+            "interfaces": "organizations-storage/interfaces",
+            "account": "accounts",
+            "feefineaction": "feefineactions",
+            "bankInfo": "organizations/banking-information",
+        }
+        object_types.update(task_configuration.extradata_endpoints)
+        if object_name == "instructor":
+            instructor = json.loads(string_object)
+            return f'coursereserves/courselistings/{instructor["courseListingId"]}/instructors'
+
+        if object_name == "interfaceCredential":
+            credential = json.loads(string_object)
+            return f'organizations-storage/interfaces/{credential["interfaceId"]}/credentials'
+
+        return object_types[object_name]
 
     def post_single_records(self, row: str, num_records: int, failed_recs_file):
         if self.api_info["is_batch"]:
@@ -640,32 +662,6 @@ def chunks(records, number_of_chunks):
     """
     for i in range(0, len(records), number_of_chunks):
         yield records[i : i + number_of_chunks]
-
-
-def get_extradata_endpoint(object_name: str, string_object: str):
-    object_types = {
-        "precedingSucceedingTitles": "preceding-succeeding-titles",
-        "precedingTitles": "preceding-succeeding-titles",
-        "succeedingTitles": "preceding-succeeding-titles",
-        "boundwithPart": "inventory-storage/bound-with-parts",
-        "notes": "notes",
-        "course": "coursereserves/courses",
-        "courselisting": "coursereserves/courselistings",
-        "contacts": "organizations-storage/contacts",
-        "interfaces": "organizations-storage/interfaces",
-        "account": "accounts",
-        "feefineaction": "feefineactions",
-        "bankInfo": "organizations/banking-information",
-    }
-    if object_name == "instructor":
-        instructor = json.loads(string_object)
-        return f'coursereserves/courselistings/{instructor["courseListingId"]}/instructors'
-
-    if object_name == "interfaceCredential":
-        credential = json.loads(string_object)
-        return f'organizations-storage/interfaces/{credential["interfaceId"]}/credentials'
-
-    return object_types[object_name]
 
 
 def get_human_readable(size, precision=2):

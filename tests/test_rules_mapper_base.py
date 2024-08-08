@@ -1,5 +1,8 @@
 import datetime
+import io
 import json
+from unittest import mock
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -36,7 +39,7 @@ def test_datetime_from_005():
         }
     }
     RulesMapperBase.set_005_as_updated_date(record, instance, "some_id")
-    assert instance["metadata"]["updatedDate"] != "1994-02-23T15:10:47"
+    assert instance["metadata"]["updatedDate"] == "1994-02-23T15:10:47"
 
 
 def test_date_from_008():
@@ -208,3 +211,50 @@ def test_create_srs_uuid():
     assert str(created_id) == "6734f228-cba2-54c7-b129-c6437375a864"
     created_id_2 = RulesMapperBase.create_srs_id(FOLIONamespaces.instances, "some_url", "id_1")
     assert str(created_id) != str(created_id_2)
+
+
+@pytest.fixture
+def folio_record():
+    return {
+        "id": str(uuid4()),
+        "title": "Sample Title",
+    }
+
+
+@pytest.fixture
+def marc_record():
+    record = Record()
+    record.add_field(Field(tag="001", data="123456"))
+    return record
+
+
+def test_save_source_record(caplog, folio_record, marc_record):
+    record_type = FOLIONamespaces.instances
+    folio_client = Mock(spec=FolioClient)
+    folio_client.okapi_url = "https://folio-snapshot.dev.folio.org"
+    legacy_ids = ["legacy_id_1", "legacy_id_2"]
+    suppress = False
+    srs_records = []
+
+    with io.StringIO() as srs_records_file:
+        RulesMapperBase.save_source_record(
+            srs_records_file,
+            record_type,
+            folio_client,
+            marc_record,
+            folio_record,
+            legacy_ids,
+            suppress,
+        )
+        srs_records_file.seek(0)
+        srs_records.extend(srs_records_file.readlines())
+
+    log_messages = [call.message for call in caplog.records]
+    assert not any(
+        message.startswith("Something is wrong with the marc record's leader:")
+        for message in log_messages
+    )
+
+    assert len(srs_records) == 1
+    assert srs_records[0].startswith('{"id": "')
+    assert srs_records[0].endswith('"}\n')

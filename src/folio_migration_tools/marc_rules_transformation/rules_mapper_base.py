@@ -5,7 +5,6 @@ import time
 import urllib.parse
 import uuid
 from abc import abstractmethod
-from copy import copy
 from textwrap import wrap
 from typing import List, Tuple
 
@@ -14,7 +13,7 @@ import pymarc
 from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from pymarc import Field, Leader, Record, Subfield
+from pymarc import Field, Record, Subfield
 
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
@@ -144,6 +143,8 @@ class RulesMapperBase(MapperBase):
         try:
             f005 = marc_record["005"].data[:14]
             parsed_date = datetime.datetime.strptime(f005, "%Y%m%d%H%M%S").isoformat()
+            if "metadata" in folio_object:
+                folio_object["metadata"]["updatedDate"] = parsed_date
         except Exception as exception:
             if "005" in marc_record:
                 Helper.log_data_issue(
@@ -799,12 +800,10 @@ class RulesMapperBase(MapperBase):
         )
         # Since they all should be UTF encoded, make the leader align.
         try:
-            temp_leader = Leader(str(marc_record.leader))
-            temp_leader[9] = "a"
-            marc_record.leader = temp_leader
+            marc_record.leader[9] = "a"
         except Exception as ee:
             logging.exception(
-                "Something is wrong with the marc records leader: %s, %s", marc_record.leader, ee
+                "Something is wrong with the marc record's leader: %s, %s", marc_record.leader, ee
             )
         srs_record_string = RulesMapperBase.get_srs_string(
             marc_record,
