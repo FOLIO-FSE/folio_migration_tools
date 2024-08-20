@@ -5,22 +5,24 @@ import logging
 import sys
 import time
 import traceback
-from datetime import datetime
-from datetime import timedelta
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Annotated, Optional
 from urllib.error import HTTPError
-from zoneinfo import ZoneInfo
 
 import httpx
 import i18n
 from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
+from zoneinfo import ZoneInfo
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -40,6 +42,13 @@ class LoansMigrator(MigrationTaskBase):
         open_loans_files: list[FileDefinition]
         fallback_service_point_id: str
         starting_row: Optional[int] = 1
+        sync_patron_blocks: Annotated[
+            bool,
+            Field(
+                title="Sync patron blocks",
+                descriptions="If set to true, a sync job will run for automated patron blocks"
+            )
+        ] = False
         item_files: Optional[list[FileDefinition]] = []
         patron_files: Optional[list[FileDefinition]] = []
 
@@ -280,6 +289,25 @@ class LoansMigrator(MigrationTaskBase):
                 i18n.t("Loans migration report"), report_file, self.start_datetime
             )
         self.clean_out_empty_logs()
+        self.sync_patron_blocks()
+
+    def sync_patron_blocks(self):
+        if self.task_configuration.sync_patron_blocks:
+            job_payload = {
+                "scope": "full",
+            }
+            try:
+                sync_job = self.folio_client.folio_post("/automated-patron-blocks/synchronization/job", job_payload)
+                print(f"Sync job created:\n{json.dumps(sync_job)}")
+            except Exception as ee:
+                if hasattr(ee, "response"):
+                    logging.error(
+                        f"Failed to sync patron blocks: {ee.response.status_code} {ee.response.text}"
+                    )
+                else:
+                    logging.error(f"Failed to sync patron blocks: {ee}")
+        else:
+            logging.info("Skipping patron block sync")
 
     def write_failed_loans_to_file(self):
         csv_columns = [
