@@ -6,15 +6,10 @@ from pathlib import Path
 
 import i18n
 import pymarc
-from folio_uuid import FOLIONamespaces
-from folio_uuid import FolioUUID
-from pymarc import Field
+from folio_uuid import FOLIONamespaces, FolioUUID
 from pymarc.reader import MARCReader
 
 from folio_migration_tools import mapper_base
-from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
-    HoldingsStatementsParser,
-)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )

@@ -115,9 +115,7 @@ class Conditions:
         logging.info("Default Callnumber type Name:\t%s", self.default_call_number_type["name"])
 
     def setup_and_validate_holdings_types(self):
-        self.holdings_types = list(
-            self.folio.folio_get_all("/holdings-types", "holdingsTypes", "", 1000)
-        )
+        self.holdings_types = self.folio.holdings_types
         if not self.holdings_types:
             raise TransformationProcessError("", "No holdings_types in FOLIO")
         missing_holdings_types = [

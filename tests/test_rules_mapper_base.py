@@ -1,24 +1,68 @@
 import datetime
 import io
 import json
+import logging
+import logging.handlers
+from pathlib import Path
 from unittest import mock
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
-from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
-    RulesMapperBase,
-)
-from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
-    BibsRulesMapper,
-)
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 from pymarc import Leader, Subfield
 from pymarc.reader import MARCReader
 from pymarc.record import Field, Record
 
+from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.marc_rules_transformation.conditions import Conditions
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
+    RulesMapperBase,
+)
+
 # flake8: noqa: E501
+
+@pytest.fixture
+def folio_client():
+    fc = Mock(spec=FolioClient)
+    fc.okapi_url = "https://folio-snapshot.dev.folio.org"
+    fc.tenant_id = "diku"
+    fc.okapi_username = "diku_admin"
+    fc.okapi_password = "admin"
+    fc.get_from_github = FolioClient.get_from_github
+    fc.get_latest_from_github = FolioClient.get_latest_from_github
+    fc.get_module_version = FolioClient.get_module_version
+    fc.get_holdings_schema = FolioClient.get_holdings_schema
+    fc.get_instance_json_schema = FolioClient.get_instance_json_schema
+    reference_data = list(Path(__file__).parent.joinpath("test_data/reference_data").glob("*.json"))
+    for ref_data in reference_data:
+        with open(ref_data, "r") as f:
+            setattr(fc, ref_data.stem, json.load(f))
+    return fc
+
+
+@pytest.fixture
+def mapper_base(folio_client):
+    mapper_library_configuration = {
+        "okapi_url": "https://folio-snapshot.dev.folio.org",
+        "tenant_id": "diku",
+        "okapi_username": "diku_admin",
+        "okapi_password": "admin",
+        "iteration_identifier": "test",
+        "log_level_debug": False,
+        "base_folder": "/"
+    }
+    mapper_task_configuration = {
+        "name": "test",
+        "migration_task_type": "BibsTransformer",
+        "hrid_handling": "Default",
+        "files": [],
+        "ils_flavour": "field001"
+    }
+    mapper = RulesMapperBase(folio_client, mapper_library_configuration, mapper_task_configuration, {})
+    mapper.conditions = Conditions(folio_client, mapper, "any", FolioRelease.quesnelia, "Library of Congress classification")
+    return mapper
 
 
 def test_dedupe_recs():
@@ -258,3 +302,194 @@ def test_save_source_record(caplog, folio_record, marc_record):
     assert len(srs_records) == 1
     assert srs_records[0].startswith('{"id": "')
     assert srs_records[0].endswith('"}\n')
+
+
+schema_ea = {
+    "properties":{
+        "electronicAccess": {
+            "description": "List of electronic access items",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "description": "Electronic access item",
+                "javaType": "org.folio.rest.jaxrs.model.ElectronicAccessItem",
+                "additionalProperties": False,
+                "properties": {
+                    "uri": {
+                        "type": "string",
+                        "description": "uniform resource identifier (URI) is a string of characters designed for unambiguous identification of resources"
+                    },
+                    "linkText": {
+                        "type": "string",
+                        "description": "the value of the MARC tag field 856 2nd indicator, where the values are: no information provided, resource, version of resource, related resource, no display constant generated"
+                    },
+                    "materialsSpecification": {
+                        "type": "string",
+                        "description": "materials specified is used to specify to what portion or aspect of the resource the electronic location and access information applies (e.g. a portion or subset of the item is electronic, or a related electronic resource is being linked to the record)"
+                    },
+                    "publicNote": {
+                        "type": "string",
+                        "description": "URL public note to be displayed in the discovery"
+                    },
+                    "relationshipId": {
+                        "type": "string",
+                        "description": "relationship between the electronic resource at the location identified and the item described in the record as a whole"
+                    }
+                },
+                "required": [
+                    "uri"
+                ]
+            }
+        }
+    }
+}
+
+default_rule_856 = {
+    "856": [
+        {
+            "entity": [
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "set_electronic_access_relations_id"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "electronicAccess.relationshipId",
+                    "subfield": [
+                        "3",
+                        "y",
+                        "u",
+                        "z"
+                    ],
+                    "description": "Relationship between the electronic resource at the location identified and the item described in the record as a whole",
+                    "applyRulesOnConcatenatedData": True
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "electronicAccess.uri",
+                    "subfield": [
+                        "u"
+                    ],
+                    "description": "URI"
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "electronicAccess.linkText",
+                    "subfield": [
+                        "y"
+                    ],
+                    "description": "Link text"
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "electronicAccess.materialsSpecification",
+                    "subfield": [
+                        "3"
+                    ],
+                    "description": "Materials Specified"
+                },
+                {
+                    "rules": [
+                        {
+                            "conditions": [
+                                {
+                                    "type": "remove_ending_punc, trim"
+                                }
+                            ]
+                        }
+                    ],
+                    "target": "electronicAccess.publicNote",
+                    "subfield": [
+                        "z"
+                    ],
+                    "description": "URL public note"
+                }
+            ]
+        }
+    ],
+}
+
+
+def test_handle_entity_mapping_with_856_uri(mapper_base):
+    mapper = mapper_base
+    mapper.mapping_rules = default_rule_856
+    mapper.schema = schema_ea
+    marc_field = Field(
+        tag="856",
+        indicators=["4", "0"],
+        subfields=[
+            Subfield(code="u", value="http://example.com"),
+            Subfield(code="y", value="Link Text"),
+            Subfield(code="z", value="URL Public Note"),
+        ],
+    )
+    legacy_ids = ["123456"]
+    ea_record = {}
+    mapper.handle_entity_mapping(marc_field, mapper.mapping_rules['856'][0], ea_record, legacy_ids)
+    ea_record_tuples = list(ea_record.items())
+    ea_record_tuples.sort(key=lambda x: x[0])
+    compare_record = {
+        "electronicAccess": [
+            {
+                "linkText": "Link Text",
+                "publicNote": "URL Public Note",
+                "relationshipId": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
+                "uri": "http://example.com",
+            }
+        ]
+    }
+    compare_record_tuples = list(compare_record.items())
+    compare_record_tuples.sort(key=lambda x: x[0])
+    assert ea_record_tuples == compare_record_tuples
+
+
+def test_handle_entity_mapping_with_856_without_uri(mapper_base, caplog):
+    mapper = mapper_base
+    mapper.mapping_rules = default_rule_856
+    mapper.schema = schema_ea
+    DATA_ISSUE_LVL_NUM = 26
+    logging.addLevelName(DATA_ISSUE_LVL_NUM, "DATA_ISSUES")
+    marc_field = Field(
+        tag="856",
+        indicators=["4", "0"],
+        subfields=[
+            Subfield(code="u", value=""),
+            Subfield(code="y", value="Link Text"),
+            Subfield(code="z", value="URL Public Note"),
+        ],
+    )
+    folio_record = {}
+    legacy_ids = []
+    mapper.handle_entity_mapping = RulesMapperBase.handle_entity_mapping
+    mapper.handle_entity_mapping(mapper, marc_field, mapper.mapping_rules['856'][0], folio_record, legacy_ids)
+    assert "Missing required properties in entity" in caplog.text
+    assert folio_record.get("electronicAccess", []) == []
