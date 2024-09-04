@@ -491,5 +491,5 @@ def test_handle_entity_mapping_with_856_without_uri(mapper_base, caplog):
     legacy_ids = []
     mapper.handle_entity_mapping = RulesMapperBase.handle_entity_mapping
     mapper.handle_entity_mapping(mapper, marc_field, mapper.mapping_rules['856'][0], folio_record, legacy_ids)
-    assert "Missing required properties in entity" in caplog.text
+    assert "Missing one or more required property in entity" in caplog.text
     assert folio_record.get("electronicAccess", []) == []
