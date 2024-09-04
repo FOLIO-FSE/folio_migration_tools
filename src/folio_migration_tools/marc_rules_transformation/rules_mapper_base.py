@@ -580,7 +580,14 @@ class RulesMapperBase(MapperBase):
             for req_entity_prop in req_entity_props
             if req_entity_prop not in entity
         ]
-        return {} if any(missing_required_props) else entity
+        if any(missing_required_props):
+            entity = {}
+            Helper.log_data_issue(
+                index_or_legacy_id,
+                f"Missing one or more required property in entity {entity_parent_key} ({missing_required_props})",
+                marc_field,
+            )
+        return entity
 
     def handle_entity_mapping(
         self,
