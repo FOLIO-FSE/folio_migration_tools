@@ -493,3 +493,22 @@ def test_handle_entity_mapping_with_856_without_uri(mapper_base, caplog):
     mapper.handle_entity_mapping(mapper, marc_field, mapper.mapping_rules['856'][0], folio_record, legacy_ids)
     assert "Missing one or more required property in entity" in caplog.text
     assert folio_record.get("electronicAccess", []) == []
+
+
+def test_handle_entity_mapping_with_856_no_u(mapper_base, caplog):
+    mapper = mapper_base
+    mapper.mapping_rules = default_rule_856
+    mapper.schema = schema_ea
+    DATA_ISSUE_LVL_NUM = 26
+    logging.addLevelName(DATA_ISSUE_LVL_NUM, "DATA_ISSUES")
+    marc_field = Field(
+        tag="856",
+        indicators=["4", "0"],
+        subfields=[],
+    )
+    folio_record = {}
+    legacy_ids = []
+    mapper.handle_entity_mapping = RulesMapperBase.handle_entity_mapping
+    mapper.handle_entity_mapping(mapper, marc_field, mapper.mapping_rules['856'][0], folio_record, legacy_ids)
+    assert "Missing one or more required property in entity" in caplog.text
+    assert folio_record.get("electronicAccess", []) == []
