@@ -119,7 +119,7 @@ class BatchPoster(MigrationTaskBase):
         self.http_client = None
 
     def do_work(self):
-        with httpx.Client(timeout=None) as httpx_client:
+        with self.folio_client.get_folio_http_client() as httpx_client:
             self.http_client = httpx_client
             try:
                 batch = []
