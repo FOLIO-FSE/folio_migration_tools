@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "folio_migration_tools"
-version = "1.8.13"
+version = "1.8.14"
 description =  "A tool allowing you to migrate data from legacy ILS:s (Library systems) into FOLIO LSP"
 authors = ["Theodor Tolstoy <github.teddes@tolstoy.se>", "Lisa Sjögren", "Brooks Travis", "Jeremy Nelson", "Clinton Bradford"]
 license = "MIT"
@@ -43,7 +43,7 @@ pydantic = "^1.10.2"
 argparse-prompt = "^0.0.5"
 deepdiff = "^6.2.3"
 pyaml = "^21.10.1"
-httpx = "^0.23.3"
+httpx = "^0.27.2"
 python-i18n = "^0.3.9"
 
 [tool.poetry.group.dev.dependencies]

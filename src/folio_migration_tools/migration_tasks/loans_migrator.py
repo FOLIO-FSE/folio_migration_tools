@@ -5,22 +5,22 @@ import logging
 import sys
 import time
 import traceback
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 from urllib.error import HTTPError
-from zoneinfo import ZoneInfo
 
-import httpx
 import i18n
 from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from zoneinfo import ZoneInfo
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -168,7 +168,7 @@ class LoansMigrator(MigrationTaskBase):
             logging.info("SMTP connection is disabled...")
 
     def do_work(self):
-        with httpx.Client(timeout=None) as self.http_client:
+        with self.folio_client.get_folio_http_client() as self.http_client:
             logging.info("Starting")
             starting_index = (
                 self.task_configuration.starting_row - 1
