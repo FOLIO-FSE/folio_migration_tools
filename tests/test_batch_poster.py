@@ -1,8 +1,9 @@
 from unittest.mock import Mock
 
+from folio_uuid.folio_namespaces import FOLIONamespaces
+
 from folio_migration_tools.migration_tasks import batch_poster
 from folio_migration_tools.migration_tasks.batch_poster import BatchPoster
-from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 def test_get_object_type():
