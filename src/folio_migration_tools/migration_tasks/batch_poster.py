@@ -205,7 +205,7 @@ class BatchPoster(MigrationTaskBase):
 
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
         (object_name, data) = row.split("\t")
-        endpoint = self.get_extradata_endpoint(object_name, data)
+        endpoint = self.get_extradata_endpoint(self.task_configuration, object_name, data)
         url = f"{self.folio_client.okapi_url}/{endpoint}"
         body = data
         response = self.post_objects(url, body)
