@@ -5,18 +5,19 @@ import os
 import sys
 import time
 from abc import abstractmethod
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
+from genericpath import isfile
 from pathlib import Path
 
+import folioclient
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
-from genericpath import isfile
 
-from folio_migration_tools import library_configuration
-from folio_migration_tools import task_configuration
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools import library_configuration, task_configuration
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
@@ -37,18 +38,14 @@ class MigrationTaskBase:
         self,
         library_configuration: library_configuration.LibraryConfiguration,
         task_configuration: task_configuration.AbstractTaskConfiguration,
+        folio_client: folioclient.FolioClient,
         use_logging: bool = True,
     ):
         logging.info("MigrationTaskBase init")
         self.start_datetime = datetime.now(timezone.utc)
         self.task_configuration = task_configuration
         logging.info(self.task_configuration.json(indent=4))
-        self.folio_client: FolioClient = FolioClient(
-            library_configuration.okapi_url,
-            library_configuration.tenant_id,
-            library_configuration.okapi_username,
-            library_configuration.okapi_password,
-        )
+        self.folio_client: FolioClient = folio_client
         self.ecs_tenant_id = (
             task_configuration.ecs_tenant_id or library_configuration.ecs_tenant_id
         )

@@ -1,10 +1,12 @@
-from folio_migration_tools import __main__
-from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from unittest import mock
-import pytest
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-import httpx
 from types import SimpleNamespace
+from unittest import mock
+
+import httpx
+import pytest
+
+from folio_migration_tools import __main__
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 
 
 def raise_exception_factory(exception=Exception, *args, **kwargs):
@@ -32,6 +34,11 @@ class MockTask:
 
     @staticmethod
     def TaskConfiguration(**kwargs):
+        pass
+
+
+class MockFolioClient:
+    def __init__(self, *args, **kwargs):
         pass
 
 
@@ -286,12 +293,16 @@ def test_task_name_type_exception():
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
 @mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
-def test_execute_task(do_work, wrap_up):
+@mock.patch("folio_migration_tools.__main__.FolioClient")
+def test_execute_task(mock_folio_client, do_work, wrap_up):
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
     assert exit_info.value.args[0] == 0
     do_work.assert_called_once()
     wrap_up.assert_called_once()
+    mock_folio_client.assert_called_once_with(
+        "", "", "", "okapi_password"
+    )
 
 
 @mock.patch.dict(
@@ -308,7 +319,8 @@ def test_execute_task(do_work, wrap_up):
 @mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
-def test_fail_task(do_work, wrap_up):
+@mock.patch("folio_migration_tools.__main__.FolioClient")
+def test_fail_task(mock_folio_client, do_work, wrap_up):
     do_work.side_effect = raise_exception_factory(
         TransformationProcessError, "error_message", "error_data"
     )
@@ -334,7 +346,8 @@ def test_fail_task(do_work, wrap_up):
 @mock.patch("httpx.HTTPError", MockException)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
-def test_fail_http(do_work, wrap_up):
+@mock.patch("folio_migration_tools.__main__.FolioClient")
+def test_fail_http(mock_folio_client, do_work, wrap_up):
     do_work.side_effect = raise_exception_factory(httpx.HTTPError, "message")
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
@@ -357,7 +370,8 @@ def test_fail_http(do_work, wrap_up):
 )
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
-def test_fail_unhandled(wrap_up, do_work):
+@mock.patch("folio_migration_tools.__main__.FolioClient")
+def test_fail_unhandled(mock_folio_client, wrap_up, do_work):
     do_work.side_effect = raise_exception_factory(Exception, "error_message", "error_data")
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
