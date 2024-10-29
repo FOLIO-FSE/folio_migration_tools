@@ -8,6 +8,7 @@ import httpx
 import humps
 import i18n
 from argparse_prompt import PromptParser
+from folioclient import FolioClient
 from pydantic import ValidationError
 
 from folio_migration_tools.config_file_load import merge_load
@@ -45,7 +46,9 @@ def parse_args(args):
     )
     parser.add_argument(
         "--base_folder_path",
-        help=("path to the base folder for this library. Built on migration_repo_template"),
+        help=(
+            "path to the base folder for this library. Built on migration_repo_template"
+        ),
         prompt="FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH" not in environ,
         default=environ.get("FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH"),
     )
@@ -107,10 +110,16 @@ def main():
             )
             sys.exit("Task Type Not Found")
         try:
-            task_config = task_class.TaskConfiguration(**migration_task_config)
-            task_obj = task_class(task_config, library_config)
-            task_obj.do_work()
-            task_obj.wrap_up()
+            with FolioClient(
+                library_config.okapi_url,
+                library_config.tenant_id,
+                library_config.okapi_username,
+                library_config.okapi_password,
+            ) as folio_client:
+                task_config = task_class.TaskConfiguration(**migration_task_config)
+                task_obj = task_class(task_config, library_config, folio_client)
+                task_obj.do_work()
+                task_obj.wrap_up()
         except TransformationProcessError as tpe:
             logging.critical(tpe.message)
             print(f"\n{tpe.message}: {tpe.data_value}")
