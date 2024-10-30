@@ -786,7 +786,7 @@ class MappingFileMapperBase(MapperBase):
                     missing_keys_in_record,
                 )
             else:
-                logging.info("All maped legacy fields are in the legacy object")
+                logging.info("All mapped legacy fields are in the legacy object")
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")

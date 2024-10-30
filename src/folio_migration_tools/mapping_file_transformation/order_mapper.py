@@ -5,9 +5,9 @@ import re
 import sys
 import urllib.parse
 import uuid
-import i18n
 
 import httpx
+import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from httpx import HTTPError
@@ -141,7 +141,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             }
 
             if os.environ.get("GITHUB_TOKEN"):
-                logging.info("Using GITHB_TOKEN environment variable for Gihub API Access")
+                logging.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
                 github_headers["authorization"] = f"token {os.environ.get('GITHUB_TOKEN')}"
 
             # Start talkign to GitHub...

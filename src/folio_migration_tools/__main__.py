@@ -39,7 +39,7 @@ def parse_args(args):
     )
     parser.add_argument(
         "--okapi_password",
-        help="pasword for the tenant in the configuration file",
+        help="password for the tenant in the configuration file",
         prompt="FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD" not in environ,
         default=environ.get("FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD"),
         secure=True,
