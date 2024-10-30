@@ -193,7 +193,8 @@ class MigrationTaskBase:
         else:
             logger.setLevel(logging.INFO)
             stream_handler.setLevel(logging.INFO)
-            stream_handler.addFilter(ExcludeLevelFilter(30))  # Loose warnings from pymarc
+            stream_handler.addFilter(ExcludeLevelFilter(30))  # Exclude warnings from pymarc
+            logging.getLogger("httpx").setLevel(logging.WARNING) # Exclude info messages from httpx
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
@@ -303,7 +304,7 @@ class MigrationTaskBase:
                             ),
                         )
                     logging.info(
-                        "%s will be used for determinig %s",
+                        "%s will be used for determining %s",
                         ", ".join(ref_data_map[0].keys()),
                         folio_property_name,
                     )
