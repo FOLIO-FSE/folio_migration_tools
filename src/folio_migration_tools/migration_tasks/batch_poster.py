@@ -83,6 +83,15 @@ class BatchPoster(MigrationTaskBase):
                 )
             ),
         ] = {}
+        upsert: Annotated[
+            bool,
+            Field(
+                description=(
+                    "Toggles whether or not to use the upsert feature of the Inventory storage "
+                    "endpoints. Defaults to False"
+                )
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -103,6 +112,11 @@ class BatchPoster(MigrationTaskBase):
             self.task_configuration.object_type,
             self.task_configuration.use_safe_inventory_endpoints,
         )
+        self.query_params = {}
+        if self.api_info["supports_upsert"]:
+            self.query_params["upsert"] = self.task_configuration.upsert
+        elif self.task_configuration.upsert and not self.api_info["supports_upsert"]:
+            logging.info("Upsert is not supported for this object type. Query parameter will not be set.")
         self.snapshot_id = str(uuid4())
         self.failed_objects: list = []
         self.batch_size = self.task_configuration.batch_size
@@ -386,7 +400,7 @@ class BatchPoster(MigrationTaskBase):
         elif response.status_code == 400:
             # Likely a json parsing error
             logging.error(response.text)
-            raise TransformationProcessError("", "HTTP 400. Somehting is wrong. Quitting")
+            raise TransformationProcessError("", "HTTP 400. Something is wrong. Quitting")
         elif self.task_configuration.object_type == "SRS" and response.status_code >= 500:
             logging.info(
                 "Post failed. Size: %s Waiting 30s until reposting. Number of tries: %s of 5",
@@ -439,10 +453,10 @@ class BatchPoster(MigrationTaskBase):
             payload = {self.api_info["object_name"]: batch}
         if self.http_client and not self.http_client.is_closed:
             return self.http_client.post(
-                url, json=payload, headers=self.folio_client.okapi_headers
+                url, json=payload, headers=self.folio_client.okapi_headers, params=self.query_params
             )
         else:
-            return httpx.post(url, headers=self.okapi_headers, json=payload, timeout=None)
+            return httpx.post(url, headers=self.okapi_headers, json=payload, params=self.query_params, timeout=None)
 
     def wrap_up(self):
         logging.info("Done. Wrapping up")
@@ -570,6 +584,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "api_endpoint": "",
             "total_records": False,
             "addSnapshotId": False,
+            "supports_upsert": False,
         },
         "Items": {
             "object_name": "items",
@@ -581,6 +596,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
+            "supports_upsert": True,
         },
         "Holdings": {
             "object_name": "holdingsRecords",
@@ -592,6 +608,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
+            "supports_upsert": True,
         },
         "Instances": {
             "object_name": "instances",
@@ -603,6 +620,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
+            "supports_upsert": True,
         },
         "Authorities": {
             "object_name": "",
@@ -610,6 +628,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "is_batch": False,
             "total_records": False,
             "addSnapshotId": False,
+            "supports_upsert": False,
         },
         "SRS": {
             "object_name": "records",
@@ -617,6 +636,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "is_batch": True,
             "total_records": True,
             "addSnapshotId": True,
+            "supports_upsert": False,
         },
         "Users": {
             "object_name": "users",
@@ -624,6 +644,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "is_batch": True,
             "total_records": True,
             "addSnapshotId": False,
+            "supports_upsert": False,
         },
         "Organizations": {
             "object_name": "",
@@ -631,6 +652,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "is_batch": False,
             "total_records": False,
             "addSnapshotId": False,
+            "supports_upsert": False,
         },
         "Orders": {
             "object_name": "",
@@ -638,6 +660,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "is_batch": False,
             "total_records": False,
             "addSnapshotId": False,
+            "supports_upsert": False,
         },
     }
 
