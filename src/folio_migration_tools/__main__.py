@@ -110,6 +110,7 @@ def main():
             )
             sys.exit("Task Type Not Found")
         try:
+            logging.getLogger("httpx").setLevel(logging.WARNING) # Exclude info messages from httpx
             with FolioClient(
                 library_config.okapi_url,
                 library_config.tenant_id,

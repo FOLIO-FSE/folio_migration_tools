@@ -190,11 +190,11 @@ class MigrationTaskBase:
         if debug:
             logger.setLevel(logging.DEBUG)
             stream_handler.setLevel(logging.DEBUG)
+            logging.getLogger("httpx").setLevel(logging.DEBUG)
         else:
             logger.setLevel(logging.INFO)
             stream_handler.setLevel(logging.INFO)
             stream_handler.addFilter(ExcludeLevelFilter(30))  # Exclude warnings from pymarc
-            logging.getLogger("httpx").setLevel(logging.WARNING) # Exclude info messages from httpx
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
