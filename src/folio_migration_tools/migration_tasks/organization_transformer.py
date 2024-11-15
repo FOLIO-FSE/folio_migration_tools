@@ -5,19 +5,22 @@ import logging
 import sys
 import time
 import uuid
-import i18n
 from hashlib import sha1
 from os.path import isfile
-from typing import List
-from typing import Optional
+from typing import List, Optional
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -50,11 +53,12 @@ class OrganizationTransformer(MigrationTaskBase):
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
+        folio_client,
         use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
 
-        super().__init__(library_config, task_configuration, use_logging)
+        super().__init__(library_config, task_configuration, folio_client, use_logging)
         self.object_type_name = self.get_object_type().name
         self.task_configuration = task_configuration
         self.files = self.list_source_files()

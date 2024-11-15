@@ -4,17 +4,19 @@ import logging
 import sys
 import time
 import traceback
-import i18n
 from typing import Dict
 from urllib.error import HTTPError
 
 import httpx
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
@@ -35,11 +37,12 @@ class ReservesMigrator(MigrationTaskBase):
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
+        folio_client
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
         self.valid_reserves = []
-        super().__init__(library_config, task_configuration)
+        super().__init__(library_config, task_configuration, folio_client)
         with open(
             self.folder_structure.legacy_records_folder
             / task_configuration.course_reserve_file_path.file_name,

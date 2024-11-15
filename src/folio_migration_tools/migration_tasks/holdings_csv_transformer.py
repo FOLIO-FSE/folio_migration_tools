@@ -81,9 +81,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        folio_client,
         use_logging: bool = True,
     ):
-        super().__init__(library_config, task_config, use_logging)
+        super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
         try:
             self.task_config = task_config

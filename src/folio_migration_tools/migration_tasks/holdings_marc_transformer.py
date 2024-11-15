@@ -1,18 +1,19 @@
 '''Main "script."'''
 import csv
 import logging
-import i18n
-from typing import Annotated
-from typing import List
+from typing import Annotated, List
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import HridHandling
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
+)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
@@ -162,10 +163,11 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        folio_client,
         use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        super().__init__(library_config, task_config, use_logging)
+        super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
         self.holdings_types = list(
             self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
