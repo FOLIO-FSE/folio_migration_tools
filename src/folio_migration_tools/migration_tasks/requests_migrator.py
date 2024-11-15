@@ -3,17 +3,19 @@ import json
 import logging
 import sys
 import time
-import i18n
 from typing import Optional
-from zoneinfo import ZoneInfo
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from zoneinfo import ZoneInfo
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
@@ -37,11 +39,12 @@ class RequestsMigrator(MigrationTaskBase):
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
+        folio_client
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
         self.valid_legacy_requests = []
-        super().__init__(library_config, task_configuration)
+        super().__init__(library_config, task_configuration, folio_client)
         self.circulation_helper = CirculationHelper(
             self.folio_client,
             "",

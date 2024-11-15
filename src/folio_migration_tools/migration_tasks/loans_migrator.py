@@ -51,6 +51,7 @@ class LoansMigrator(MigrationTaskBase):
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
+        folio_client
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.patron_item_combos: set = set()
@@ -62,7 +63,7 @@ class LoansMigrator(MigrationTaskBase):
         self.failed_and_not_dupe: dict = {}
         self.migration_report = MigrationReport()
         self.valid_legacy_loans = []
-        super().__init__(library_config, task_configuration)
+        super().__init__(library_config, task_configuration, folio_client)
         self.circulation_helper = CirculationHelper(
             self.folio_client,
             task_configuration.fallback_service_point_id,

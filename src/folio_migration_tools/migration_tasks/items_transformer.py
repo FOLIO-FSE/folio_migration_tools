@@ -7,20 +7,22 @@ import sys
 import time
 import traceback
 import uuid
-import i18n
-from typing import Annotated
-from typing import List
-from typing import Optional
+from typing import Annotated, List, Optional
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import HridHandling
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    HridHandling,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -75,10 +77,11 @@ class ItemsTransformer(MigrationTaskBase):
         self,
         task_config: TaskConfiguration,
         library_config: LibraryConfiguration,
+        folio_client,
         use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        super().__init__(library_config, task_config, use_logging)
+        super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_config.files

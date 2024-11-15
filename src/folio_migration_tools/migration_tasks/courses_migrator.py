@@ -4,15 +4,19 @@ import logging
 import sys
 import time
 import traceback
-import i18n
 from typing import Optional
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.courses_mapper import (
     CoursesMapper,
 )
@@ -41,10 +45,11 @@ class CoursesMigrator(MigrationTaskBase):
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
+        folio_client
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.task_configuration = task_configuration
-        super().__init__(library_config, task_configuration)
+        super().__init__(library_config, task_configuration, folio_client)
         self.t0 = time.time()
         self.courses_map = self.setup_records_map(
             self.folder_structure.mapping_files_folder
