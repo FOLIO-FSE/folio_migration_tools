@@ -85,6 +85,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
             True,
         )
         self.notes_mapper.migration_report = self.migration_report
+    
+    def sanitize_po_number(self, po_number):
+        sanitized_po = re.sub(r'[^A-Za-z0-9]', '', po_number)
+        if sanitized_po != po_number:
+            logging.warning(f"Invalid characters removed from PO number: {po_number}")
+        return sanitized_po
 
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id, schema_default_value):
         if folio_prop_name.endswith(".acquisitionMethod"):
@@ -364,6 +370,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return {}
 
     def perform_additional_mapping(self, index_or_id, composite_order):
+        composite_order["poNumber"] = self.sanitize_po_number(composite_order.get("poNumber", ""))
+        
         # Get organization UUID from FOLIO
         composite_order["vendor"] = self.get_folio_organization_uuid(
             index_or_id, composite_order.get("vendor")
