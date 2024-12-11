@@ -849,3 +849,14 @@ class Conditions:
         if ind1 == "0":
             return "true"
         return "false"
+
+    def condition_set_subject_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
+        if marc_field.tag not in ["650", "651", "655"]:
+            self.mapper.migration_report.add(
+                "SubjectTypeMapping",
+                (
+                    f"Unhandled MARC tag {marc_field.tag}. Subject Type ID is only mapped "
+                    "from 650, 651 and 655 "
+                ),
+            )
+        return ""
