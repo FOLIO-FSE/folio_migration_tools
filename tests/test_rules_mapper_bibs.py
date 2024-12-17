@@ -721,3 +721,19 @@ def test_should_add_notes_550_556_to_notes_list_2(mapper):
         "Disaster recovery : a model plan for libraries and information centers. 0959328971"
         in notes
     )
+
+def test_simple_bib_map(mapper):
+    instance = {}
+    marc_record = pymarc.Record()
+    marc_record.add_field(
+        pymarc.Field(
+            tag="245",
+            indicators=["0", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Modern Electrosynthetic Methods in Organic Chemistry /"),
+                pymarc.Subfield("b", "Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."),
+            ],
+        )
+    )
+    mapper.simple_bib_map(instance, marc_record, set(), ["legacy_id"])
+    assert instance["title"] == "Modern Electrosynthetic Methods in Organic Chemistry / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."
