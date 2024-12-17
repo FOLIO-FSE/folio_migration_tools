@@ -12,6 +12,9 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.library_configuration import FileDefinition
+from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
+    MarcFileProcessor,
+)
 from folio_migration_tools.migration_report import MigrationReport
 
 
@@ -47,7 +50,7 @@ class MARCReaderWrapper:
         reader,
         source_file: FileDefinition,
         failed_records_file: IOBase,
-        processor,
+        processor: MarcFileProcessor,
     ):
         for idx, record in enumerate(reader):
             processor.mapper.migration_report.add_general_statistics(
