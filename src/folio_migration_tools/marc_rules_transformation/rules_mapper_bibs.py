@@ -642,20 +642,6 @@ class BibsRulesMapper(RulesMapperBase):
                 ) from e
 
 
-class SimpleBibsRulesMapper(BibsRulesMapper):
-    def __init__(
-        self,
-        folio_client,
-        library_configuration: LibraryConfiguration,
-        task_configuration,
-    ):
-        super().__init__(
-            folio_client,
-            library_configuration,
-            task_configuration,
-        )
-
-
 def get_unspecified_mode_of_issuance(folio_client: FolioClient):
     m_o_is = list(folio_client.modes_of_issuance)
     if not any(m_o_is):
