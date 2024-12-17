@@ -731,7 +731,7 @@ def test_simple_bib_map(mapper):
             indicators=["0", "0"],
             subfields=[
                 pymarc.Subfield("a", "Modern Electrosynthetic Methods in Organic Chemistry /"),
-                pymarc.Subfield("b", "Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."),
+                pymarc.Subfield("c", "Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."),
             ],
         )
     )
