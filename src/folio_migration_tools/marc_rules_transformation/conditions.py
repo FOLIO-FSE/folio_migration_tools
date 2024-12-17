@@ -60,6 +60,7 @@ class Conditions:
         logging.info("%s\tcontributor_types", len(self.folio.contributor_types))
         logging.info("%s\talt_title_types", len(self.folio.alt_title_types))
         logging.info("%s\tidentifier_types", len(self.folio.identifier_types))
+        logging.info("%s\tsubject_types", len(self.folio.subject_types))
         # Raise for empty settings
         if not self.folio.contributor_types:
             raise TransformationProcessError("", "No contributor_types in FOLIO")
@@ -69,6 +70,8 @@ class Conditions:
             raise TransformationProcessError("", "No identifier_types in FOLIO")
         if not self.folio.alt_title_types:
             raise TransformationProcessError("", "No alt_title_types in FOLIO")
+        if not self.folio.subject_types:
+            raise TransformationProcessError("", "No subject_types in FOLIO")
 
         # Set defaults
         logging.info("Setting defaults")
@@ -851,12 +854,14 @@ class Conditions:
         return "false"
 
     def condition_set_subject_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
-        if marc_field.tag not in ["650", "651", "655"]:
-            self.mapper.migration_report.add(
-                "SubjectTypeMapping",
-                (
-                    f"Unhandled MARC tag {marc_field.tag}. Subject Type ID is only mapped "
-                    "from 650, 651 and 655 "
-                ),
+        try:
+            t = self.get_ref_data_tuple_by_name(
+                self.folio.subject_types, "subject_types", parameter["name"]
             )
-        return ""
+            self.mapper.migration_report.add("MappedSubjectTypes", t[1])
+            return t[0]
+        except Exception:
+            raise TransformationProcessError(
+                legacy_id,
+                f"Subject type not found for {parameter['name']} {marc_field}",
+            )

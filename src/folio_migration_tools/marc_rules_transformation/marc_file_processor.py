@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import time
 import traceback
@@ -6,16 +7,15 @@ from typing import List
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from pymarc import Field
-from pymarc import Record
-from pymarc import Subfield
+from pymarc import Field, Record, Subfield
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import HridHandling
+from folio_migration_tools.library_configuration import FileDefinition, HridHandling
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
@@ -32,6 +32,8 @@ class MarcFileProcessor:
         self.created_objects_file = created_objects_file
         if mapper.task_configuration.create_source_records:
             self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
+        if mapper.task_configuration.data_import_marc:
+            self.data_import_marc_file = open(self.folder_structure.data_import_marc_path, "wb+")
         self.unique_001s: set = set()
         self.failed_records_count: int = 0
         self.records_count: int = 0
@@ -85,6 +87,12 @@ class MarcFileProcessor:
                             legacy_ids,
                             self.object_type,
                         )
+                    if self.mapper.task_configuration.data_import_marc:
+                        self.save_marc_record(
+                            marc_record,
+                            folio_rec,
+                            self.object_type
+                        )
                 Helper.write_to_file(self.created_objects_file, folio_rec)
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Inventory records written to disk")
@@ -120,6 +128,19 @@ class MarcFileProcessor:
                         and folio_rec.get("formerIds", "")
                     ):
                         self.mapper.remove_from_id_map(folio_rec.get("formerIds", []))
+
+    def save_marc_record(
+        self,
+        marc_record: Record,
+        folio_rec: dict,
+        object_type: FOLIONamespaces
+    ):
+        self.mapper.save_data_import_marc_record(
+            self.data_import_marc_file,
+            object_type,
+            marc_record,
+            folio_rec,
+        )
 
     def save_srs_record(
         self,
@@ -246,7 +267,15 @@ class MarcFileProcessor:
                 self.mapper.mapped_legacy_fields,
             )
         if self.mapper.task_configuration.create_source_records:
+            self.srs_records_file.seek(0)
+            if not self.srs_records_file.seek(0):
+                os.remove(self.srs_records_file.name)
             self.srs_records_file.close()
+        if self.mapper.task_configuration.data_import_marc:
+            self.data_import_marc_file.seek(0)
+            if not self.data_import_marc_file.read(1):
+                os.remove(self.data_import_marc_file.name)
+            self.data_import_marc_file.close()
         self.mapper.wrap_up()
 
         logging.info("Transformation report written to %s", report_file.name)

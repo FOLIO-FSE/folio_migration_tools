@@ -773,6 +773,42 @@ class RulesMapperBase(MapperBase):
         )
 
     @staticmethod
+    def save_data_import_marc_record(
+        data_import_marc_file,
+        record_type: FOLIONamespaces,
+        marc_record: Record,
+        folio_record,
+    ):
+        """Saves the source marc_record to a file to be loaded via Data Import
+
+        Args:
+            srs_records_file (_type_): _description_
+            record_type (FOLIONamespaces): _description_
+            folio_client (FolioClient): _description_
+            marc_record (Record): _description_
+            folio_record (_type_): _description_
+            legacy_ids (List[str]): _description_
+            suppress (bool): _description_
+        """
+        marc_record.add_ordered_field(
+            Field(
+                tag="999",
+                indicators=["f", "f"],
+                subfields=[
+                    Subfield(code="i", value=folio_record["id"]),
+                ],
+            )
+        )
+        # Since they all should be UTF encoded, make the leader align.
+        try:
+            marc_record.leader[9] = "a"
+        except Exception as ee:
+            logging.exception(
+                "Something is wrong with the marc record's leader: %s, %s", marc_record.leader, ee
+            )
+        data_import_marc_file.write(marc_record.as_marc())
+
+    @staticmethod
     def save_source_record(
         srs_records_file,
         record_type: FOLIONamespaces,
