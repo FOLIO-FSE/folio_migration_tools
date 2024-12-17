@@ -118,7 +118,7 @@ class BibsRulesMapper(RulesMapperBase):
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
         folio_instance = self.perform_initial_preparation(marc_record, legacy_ids)
         if self.data_import_marc:
-            self.simple_bib_map(marc_record, folio_instance, ignored_subsequent_fields, legacy_ids)
+            self.simple_bib_map(folio_instance, marc_record, ignored_subsequent_fields, legacy_ids)
         else:
             for marc_field in marc_record:
                 self.report_marc_stats(marc_field, bad_tags, legacy_ids, ignored_subsequent_fields)
@@ -152,7 +152,13 @@ class BibsRulesMapper(RulesMapperBase):
             legacy_ids (List[str]): _description_
             file_def (FileDefinition): _description_
         """
-        self.process_marc_field(folio_instnace, marc_record['245'], ignored_subsequent_fields, legacy_ids)
+        try:
+            self.process_marc_field(folio_instnace, marc_record['245'], ignored_subsequent_fields, legacy_ids)
+        except KeyError:
+            raise TransformationRecordFailedError(
+                legacy_ids,
+                "No 245 field in MARC record"
+            )
 
     def perform_additional_parsing(
         self,
