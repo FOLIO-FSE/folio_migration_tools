@@ -11,7 +11,7 @@ You can link to an Issue by saying something like "Fixes #1" -->
 - This just needs approval
 - Read the code, make suggestions
 - Fire it up and make sure it works
-- 
+-
 -->
 
 ## Task Checklist
@@ -19,7 +19,7 @@ You can link to an Issue by saying something like "Fixes #1" -->
 - [ ] Ran `nox -rs safety`.
 - [ ] Ran `pre-commit run --all-files`
 - [ ] Tests cover new or modified code.
-- [ ] Ran test suite: `nox -rs tests -- https://okapi-LATEST_BUGFEST_URI TENANT_ID USERNAME PASSWORD`
+- [ ] Ran test suite: `nox -rs tests`
 - [ ] Code runs and outputs default usage info: `cd src; poetry run python3 -m folio_migration_tools -h`
 - [ ] Documentation updated
 
