@@ -32,7 +32,7 @@ class MarcFileProcessor:
         self.created_objects_file = created_objects_file
         if mapper.task_configuration.create_source_records:
             self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
-        if mapper.task_configuration.data_import_marc:
+        if getattr(mapper.task_configuration, "data_import_marc", False):
             self.data_import_marc_file = open(self.folder_structure.data_import_marc_path, "wb+")
         self.unique_001s: set = set()
         self.failed_records_count: int = 0
@@ -87,7 +87,7 @@ class MarcFileProcessor:
                             legacy_ids,
                             self.object_type,
                         )
-                    if self.mapper.task_configuration.data_import_marc:
+                    if getattr(self.mapper.task_configuration, "data_import_marc", False):
                         self.save_marc_record(
                             marc_record,
                             folio_rec,
@@ -271,7 +271,7 @@ class MarcFileProcessor:
             if not self.srs_records_file.seek(0):
                 os.remove(self.srs_records_file.name)
             self.srs_records_file.close()
-        if self.mapper.task_configuration.data_import_marc:
+        if getattr(self.mapper.task_configuration, "data_import_marc", False):
             self.data_import_marc_file.seek(0)
             if not self.data_import_marc_file.read(1):
                 os.remove(self.data_import_marc_file.name)

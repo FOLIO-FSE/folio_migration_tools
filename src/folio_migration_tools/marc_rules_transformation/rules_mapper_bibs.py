@@ -59,7 +59,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.instance_relationship_types: dict = {}
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio_client)
         self.create_source_records = all(
-            [self.task_configuration.create_source_records, (not self.task_configuration.data_import_marc)]
+            [self.task_configuration.create_source_records, (not getattr(self.task_configuration, "data_import_marc", False))]
         )
         self.data_import_marc = self.task_configuration.data_import_marc
         self.start = time.time()
