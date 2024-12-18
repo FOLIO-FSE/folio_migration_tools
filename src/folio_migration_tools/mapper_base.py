@@ -43,7 +43,7 @@ class MapperBase:
         self.start_datetime = datetime.now(timezone.utc)
         self.folio_client: FolioClient = folio_client
         self.library_configuration: LibraryConfiguration = library_configuration
-        self.task_configuration: AbstractTaskConfiguration = None
+        self.task_configuration: AbstractTaskConfiguration
         self.mapped_folio_fields: dict = {}
         self.migration_report: MigrationReport = MigrationReport()
         self.num_criticalerrors = 0
