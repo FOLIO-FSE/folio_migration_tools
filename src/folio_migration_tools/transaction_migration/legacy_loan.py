@@ -91,7 +91,7 @@ class LegacyLoan(object):
         self.out_date: datetime = temp_date_out
         self.correct_for_1_day_loans()
         self.make_utc()
-        self.renewal_count = int(legacy_loan_dict["renewal_count"])
+        self.renewal_count = int(legacy_loan_dict.get("renewal_count", 0))
         self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
             self.errors.append(("Not an allowed status", self.next_item_status))
