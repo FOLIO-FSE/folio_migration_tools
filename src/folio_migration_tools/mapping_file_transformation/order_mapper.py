@@ -86,10 +86,20 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         self.notes_mapper.migration_report = self.migration_report
     
-    def sanitize_po_number(self, po_number):
+    def sanitize_po_number(self, po_number, existing_po_numbers):
         sanitized_po = re.sub(r'[^A-Za-z0-9]', '', po_number)
+        
         if sanitized_po != po_number:
             logging.warning(f"Invalid characters removed from PO number: {po_number}")
+        
+        # Check for potential duplicates
+        if sanitized_po in existing_po_numbers:
+            Helper.log_data_issue(
+                "Duplicate PO number detected after sanitization",
+                f"Original: {po_number}, Sanitized: {sanitized_po}"
+            )
+        
+        existing_po_numbers.add(sanitized_po)
         return sanitized_po
 
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id, schema_default_value):
@@ -370,7 +380,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return {}
 
     def perform_additional_mapping(self, index_or_id, composite_order):
-        composite_order["poNumber"] = self.sanitize_po_number(composite_order.get("poNumber", ""))
+        existing_po_numbers = set()
+
+        # Sanitize the PO number and detect duplicates
+        composite_order["poNumber"] = self.sanitize_po_number(
+            composite_order.get("poNumber", ""), existing_po_numbers
+        )
         
         # Get organization UUID from FOLIO
         composite_order["vendor"] = self.get_folio_organization_uuid(
