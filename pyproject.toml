@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "folio_migration_tools"
-version = "1.9.0a5"
+version = "1.9.0a6"
 description =  "A tool allowing you to migrate data from legacy ILS:s (Library systems) into FOLIO LSP"
 authors = ["Theodor Tolstoy <github.teddes@tolstoy.se>", "Lisa Sjögren", "Brooks Travis", "Jeremy Nelson", "Clinton Bradford"]
 license = "MIT"

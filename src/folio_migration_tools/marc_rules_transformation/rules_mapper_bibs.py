@@ -24,6 +24,7 @@ from folio_migration_tools.custom_exceptions import (
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import (
     FileDefinition,
+    HridHandling,
     IlsFlavour,
     LibraryConfiguration,
 )
@@ -62,6 +63,8 @@ class BibsRulesMapper(RulesMapperBase):
             [self.task_configuration.create_source_records, (not getattr(self.task_configuration, "data_import_marc", False))]
         )
         self.data_import_marc = self.task_configuration.data_import_marc
+        if self.data_import_marc:
+            self.hrid_handler.deactivate035_from001 = True
         self.start = time.time()
 
     def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
@@ -73,7 +76,7 @@ class BibsRulesMapper(RulesMapperBase):
                 str(legacy_ids[-1]),
             )
         )
-        if self.create_source_records:
+        if self.create_source_records or self.hrid_handler.handling == HridHandling.preserve001:
             self.hrid_handler.handle_hrid(
                 FOLIONamespaces.instances,
                 folio_instance,
