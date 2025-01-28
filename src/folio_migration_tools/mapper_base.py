@@ -444,7 +444,7 @@ class MapperBase:
                     except IndexError:
                         if call_numbers:
                             bound_with_holding["callNumber"] = call_numbers[0]
-                    except SyntaxError:
+                    except (SyntaxError, ValueError):
                         bound_with_holding["callNumber"] = call_number
                 else:
                     bound_with_holding["callNumber"] = call_number
