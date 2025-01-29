@@ -62,14 +62,9 @@ class IlsFlavour(str, Enum):
 
 
 class FolioRelease(str, Enum):
-    lotus = "lotus"
-    morning_glory = "morning-glory"
-    nolana = "nolana"
-    orchid = "orchid"
-    poppy = "poppy"
-    quesnelia = "quesnelia"
     ramsons = "ramsons"
     sunflower = "sunflower"
+    trillium = "trillium"
 
 
 class LibraryConfiguration(BaseModel):
