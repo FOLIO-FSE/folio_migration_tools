@@ -484,6 +484,39 @@ def test_perform_additional_mapping_org_and_instance_uuids_from_id_maps(mapper):
     assert folio_po["compositePoLines"][0]["instanceId"] == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
 
 
+def test_perform_additional_mapping_invalid_po_number(mapper):
+    folio_po = {
+        "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
+        "poNumber": "o-124",
+        "orderType": "One-Time",
+        "vendor": "HamAwesomeStartup",
+        "compositePoLines": [
+            {
+                "locations": [
+                    {
+                        "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+                        "quantity": "2"
+                    }
+                ],
+                "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
+                "instanceId": "1",
+                "acquisitionMethod": "837d04b6-d81c-4c49-9efd-2f62515999b3",
+                "cost": {
+                    "currency": "USD",
+                    "quantityPhysical": "1",
+                    "poLineEstimatedPrice": "125.00",
+                },
+                "orderFormat": "Electronic Resource",
+                "source": "API",
+                "titleOrPackage": "Once upon a time...",
+            }
+        ],
+    }
+    with pytest.raises(TransformationRecordFailedError):
+        folio_po = mapper.perform_additional_mapping("1", folio_po)
+        assert not folio_po
+
+
 def test_perform_additional_mapping_org_uuid_no_match(mapper):
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
