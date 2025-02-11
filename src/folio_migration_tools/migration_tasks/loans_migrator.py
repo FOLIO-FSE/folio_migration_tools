@@ -8,11 +8,11 @@ import traceback
 from datetime import datetime, timedelta
 from typing import Optional
 from urllib.error import HTTPError
+from zoneinfo import ZoneInfo
 
 import i18n
 from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from zoneinfo import ZoneInfo
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.helper import Helper
@@ -131,34 +131,13 @@ class LoansMigrator(MigrationTaskBase):
         logging.info("Init completed")
 
     def check_smtp_config(self):
-        if self.library_configuration.folio_release.lower() == FolioRelease.morning_glory:
-            logging.warn("DEPRECATED: Morning Glory support will be removed in a future release!")
-            okapi_config_base_path = "/configurations/entries"
-            okapi_config_query = "(module=={}%20and%20configName=={}%20and%20code=={})"
-            okapi_config_limit = 1000
-            okapi_config_module = "SMTP_SERVER"
-            okapi_config_name = "smtp"
-            okapi_config_code = "EMAIL_SMTP_HOST_DISABLED"
-            smtp_config_path = (
-                okapi_config_base_path
-                + "?"
-                + str(okapi_config_limit)
-                + "&query="
-                + okapi_config_query.format(
-                    okapi_config_module, okapi_config_name, okapi_config_code
-                )
-            )
-            smtp_config_disabled = self.folio_client.folio_get_single_object(smtp_config_path)[
-                "configs"
-            ]
-        else:
-            try:
-                smtp_config = self.folio_client.folio_get_single_object("/smtp-configuration")[
-                    "smtpConfigurations"
-                ][0]
-                smtp_config_disabled = "disabled" in smtp_config["host"].lower()
-            except IndexError:
-                smtp_config_disabled = True
+        try:
+            smtp_config = self.folio_client.folio_get_single_object("/smtp-configuration")[
+                "smtpConfigurations"
+            ][0]
+            smtp_config_disabled = "disabled" in smtp_config["host"].lower()
+        except IndexError:
+            smtp_config_disabled = True
         print_smtp_warning()
         if not smtp_config_disabled:
             logging.warn("SMTP connection not disabled...")
