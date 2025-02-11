@@ -5,8 +5,10 @@ from unittest.mock import Mock
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
-from folio_migration_tools.library_configuration import FolioRelease
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FolioRelease,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.courses_mapper import (
     CoursesMapper,
 )
@@ -32,7 +34,7 @@ def mapper(pytestconfig) -> CoursesMapper:
         tenant_id=tenant_id,
         okapi_username=username,
         okapi_password=password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",

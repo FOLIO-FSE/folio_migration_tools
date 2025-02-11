@@ -6,8 +6,10 @@ import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.extradata_writer import ExtradataWriter
-from folio_migration_tools.library_configuration import FolioRelease
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FolioRelease,
+    LibraryConfiguration,
+)
 from folio_migration_tools.mapping_file_transformation.manual_fee_fines_mapper import (
     ManualFeeFinesMapper,
 )
@@ -36,7 +38,7 @@ def mapper_with_refdata(pytestconfig) -> ManualFeeFinesMapper:
         tenant_id=tenant_id,
         okapi_username=username,
         okapi_password=password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",
@@ -163,7 +165,7 @@ def mapper_without_refdata(pytestconfig) -> ManualFeeFinesMapper:
         tenant_id=tenant_id,
         okapi_username=username,
         okapi_password=password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",

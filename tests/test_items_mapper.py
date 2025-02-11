@@ -1,6 +1,8 @@
 from unittest.mock import Mock
 
 import pytest
+from folio_uuid.folio_namespaces import FOLIONamespaces
+
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     FolioRelease,
@@ -8,7 +10,6 @@ from folio_migration_tools.library_configuration import (
 )
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from folio_migration_tools.test_infrastructure import mocked_classes
-from folio_uuid.folio_namespaces import FOLIONamespaces
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -26,7 +27,7 @@ def mapper(pytestconfig) -> ItemMapper:
         tenant_id=tenant_id,
         okapi_username=username,
         okapi_password=password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Item Tester Library",
         log_level_debug=False,
         iteration_identifier="Test!",
