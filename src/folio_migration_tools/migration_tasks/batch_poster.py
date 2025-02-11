@@ -187,14 +187,6 @@ class BatchPoster(MigrationTaskBase):
                                     except (FileNotFoundError, PermissionError) as ose:
                                         logging.error("Error reading file: %s", ose)
 
-                    if self.task_configuration.object_type != "Extradata" and any(batch):
-                        try:
-                            self.post_batch(batch, failed_recs_file, self.processed)
-                        except Exception as exception:
-                            self.handle_generic_exception(
-                                exception, last_row, batch, self.processed, failed_recs_file
-                            )
-                    logging.info("Done posting %s records. ", (self.processed))
                 except Exception as ee:
                     if "idx" in locals() and self.task_configuration.files[idx:]:
                         for file in self.task_configuration.files[idx:]:
@@ -207,6 +199,14 @@ class BatchPoster(MigrationTaskBase):
                                 logging.error("Error reading file: %s", ose)
                     raise ee
                 finally:
+                    if self.task_configuration.object_type != "Extradata" and any(batch):
+                        try:
+                            self.post_batch(batch, failed_recs_file, self.processed)
+                        except Exception as exception:
+                            self.handle_generic_exception(
+                                exception, last_row, batch, self.processed, failed_recs_file
+                            )
+                    logging.info("Done posting %s records. ", (self.processed))
                     if self.task_configuration.object_type == "SRS":
                         self.commit_snapshot()
 
