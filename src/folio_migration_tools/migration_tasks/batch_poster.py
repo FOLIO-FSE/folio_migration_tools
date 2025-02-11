@@ -339,6 +339,10 @@ class BatchPoster(MigrationTaskBase):
 
     def post_batch(self, batch, failed_recs_file, num_records, recursion_depth=0):
         response = self.do_post(batch)
+        if response.status_code == 401:
+            logging.error("Authorization failed (%s). Fetching new auth token...", response.text)
+            self.folio_client.login()
+            response = self.do_post(batch)
         if response.status_code == 201:
             logging.info(
                 (
