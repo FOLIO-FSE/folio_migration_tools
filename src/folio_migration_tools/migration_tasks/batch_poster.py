@@ -5,6 +5,7 @@ import sys
 import time
 import traceback
 from datetime import datetime
+from math import log
 from typing import Annotated, List
 from uuid import uuid4
 
@@ -136,12 +137,12 @@ class BatchPoster(MigrationTaskBase):
     def do_work(self):
         with self.folio_client.get_folio_http_client() as httpx_client:
             self.http_client = httpx_client
-            try:
-                batch = []
-                if self.task_configuration.object_type == "SRS":
-                    self.create_snapshot()
-                with open(self.folder_structure.failed_recs_path, "w") as failed_recs_file:
-                    for file_def in self.task_configuration.files:
+            with open(self.folder_structure.failed_recs_path, "w", encoding='utf-8') as failed_recs_file:
+                try:
+                    batch = []
+                    if self.task_configuration.object_type == "SRS":
+                        self.create_snapshot()
+                    for idx, file_def in enumerate(self.task_configuration.files):
                         path = self.folder_structure.results_folder / file_def.file_name
                         with open(path) as rows:
                             logging.info("Running %s", path)
@@ -172,9 +173,8 @@ class BatchPoster(MigrationTaskBase):
                                             self.processed,
                                             failed_recs_file,
                                         )
-                                        logging.critical("Halting %s", tpe)
-                                        print(f"\n\t{tpe.message}")
-                                        sys.exit(1)
+                                        batch = []
+                                        raise
                                     except TransformationRecordFailedError as exception:
                                         self.handle_generic_exception(
                                             exception,
@@ -184,6 +184,8 @@ class BatchPoster(MigrationTaskBase):
                                             failed_recs_file,
                                         )
                                         batch = []
+                                    except (FileNotFoundError, PermissionError) as ose:
+                                        logging.error("Error reading file: %s", ose)
 
                     if self.task_configuration.object_type != "Extradata" and any(batch):
                         try:
@@ -193,10 +195,20 @@ class BatchPoster(MigrationTaskBase):
                                 exception, last_row, batch, self.processed, failed_recs_file
                             )
                     logging.info("Done posting %s records. ", (self.processed))
-            except Exception as ee:
-                if self.task_configuration.object_type == "SRS":
-                    self.commit_snapshot()
-                raise ee
+                except Exception as ee:
+                    if "idx" in locals() and self.task_configuration.files[idx:]:
+                        for file in self.task_configuration.files[idx:]:
+                            try:
+                                with open(file, "r") as failed_file:
+                                    failed_file.seek(self.processed)
+                                    failed_recs_file.write(failed_file.read())
+                                    self.processed = 0
+                            except (FileNotFoundError, PermissionError) as ose:
+                                logging.error("Error reading file: %s", ose)
+                    raise ee
+                finally:
+                    if self.task_configuration.object_type == "SRS":
+                        self.commit_snapshot()
 
     def post_record_batch(self, batch, failed_recs_file, row):
         json_rec = json.loads(row.split("\t")[-1])
