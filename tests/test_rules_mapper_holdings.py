@@ -2,17 +2,16 @@ from unittest.mock import Mock
 
 import pymarc
 import pytest
-from pymarc import Field
-from pymarc import MARCReader
-from pymarc import Record
-from pymarc import Subfield
+from pymarc import Field, MARCReader, Record, Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
-from folio_migration_tools.library_configuration import HridHandling
-from folio_migration_tools.library_configuration import IlsFlavour
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    HridHandling,
+    IlsFlavour,
+    LibraryConfiguration,
+)
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.holdings_statementsparser import (
     HoldingsStatementsParser,
@@ -35,7 +34,7 @@ def mapper(pytestconfig) -> RulesMapperHoldings:
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",
@@ -281,7 +280,7 @@ def test_create_source_records_equals_false():
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",
@@ -340,7 +339,7 @@ def test_create_source_records_equals_false_preserve001():
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",
