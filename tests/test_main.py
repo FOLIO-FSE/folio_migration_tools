@@ -326,7 +326,7 @@ def test_fail_task(mock_folio_client, do_work, wrap_up):
     )
     with pytest.raises(SystemExit) as exit_info:
         __main__.main()
-    assert exit_info.value.args[0] == "Transformation Failure"
+    assert exit_info.value.args[0] == 1
     do_work.assert_called_once()
     wrap_up.assert_not_called()
 
