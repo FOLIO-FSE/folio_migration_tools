@@ -25,6 +25,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
 
 
 class CompositeOrderMapper(MappingFileMapperBase):
+    VALID_PO_NUMBER_CHARACTERS = r"[A-Za-z0-9]"
+
     def __init__(
         self,
         folio_client: FolioClient,
@@ -383,8 +385,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             index_or_id: str,
             po_number: str,
     ):
-        sanitized_po = re.sub(r"[^A-Za-z0-9]", "", po_number)
-        if po_number != sanitized_po:
+        if re.sub(self.VALID_PO_NUMBER_CHARACTERS, "", po_number):
             self.migration_report.add(
                 "PurchaseOrderVendorLinking",
                 i18n.t("RECORD FAILED: PO number has invalid character(s)"),
