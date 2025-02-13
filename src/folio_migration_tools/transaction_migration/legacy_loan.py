@@ -91,7 +91,8 @@ class LegacyLoan(object):
         self.out_date: datetime = temp_date_out
         self.correct_for_1_day_loans()
         self.make_utc()
-        self.renewal_count = int(legacy_loan_dict["renewal_count"])
+        self.renewal_count = 0
+        self.set_renewal_count(legacy_loan_dict)
         self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
             self.errors.append(("Not an allowed status", self.next_item_status))
@@ -100,6 +101,17 @@ class LegacyLoan(object):
             if legacy_loan_dict.get("service_point_id", "")
             else fallback_service_point_id
         )
+
+    def set_renewal_count(self, loan: dict):
+        if "renewal_count" in loan:
+            renewal_count = loan["renewal_count"]
+            try:
+                self.renewal_count = int(renewal_count)
+            except ValueError:
+                self.report(
+                    f"Unresolvable {renewal_count=} was replaced with 0.")
+        else:
+            self.report(f"Missing renewal count was replaced with 0.")
 
     def correct_for_1_day_loans(self):
         try:
