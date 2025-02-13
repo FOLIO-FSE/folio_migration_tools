@@ -163,12 +163,28 @@ def test_init_tz_5():  # Test dates with(out) DST
     )
 
 
+def test_init_renewal_count_is_missing():
+    loan_dict = {
+        "item_barcode": "the barcode with trailing space ",
+        "patron_barcode": " the barcode with leading space",
+        "due_date": "20220113 16:00",
+        "out_date": "20220113 14:00",
+        "next_item_status": "Checked out",
+    }
+    tenant_timezone = ZoneInfo("UTC")
+    migration_report = MigrationReport()
+    legacy_loan = LegacyLoan(
+        loan_dict, "", migration_report, tenant_timezone)
+    assert legacy_loan.renewal_count == 0
+
+
 def test_init_renewal_count_is_empty():
     loan_dict = {
         "item_barcode": "the barcode with trailing space ",
         "patron_barcode": " the barcode with leading space",
         "due_date": "20220113 16:00",
         "out_date": "20220113 14:00",
+        "renewal_count": "",
         "next_item_status": "Checked out",
     }
     tenant_timezone = ZoneInfo("UTC")
