@@ -3,7 +3,6 @@ import logging
 import sys
 from os import environ
 from pathlib import Path
-from sqlite3 import connect
 
 import httpx
 import humps
