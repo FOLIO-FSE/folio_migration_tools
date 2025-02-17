@@ -165,7 +165,7 @@ class ItemMapper(MappingFileMapperBase):
                 legacy_item,
                 folio_prop_name,
                 index_or_id,
-                False,
+                self.task_configuration.prevent_permanent_location_map_default,
             )
         elif folio_prop_name == "temporaryLocationId":
             if not self.temp_location_mapping:
