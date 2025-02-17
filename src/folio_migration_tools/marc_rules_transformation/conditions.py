@@ -846,7 +846,7 @@ class Conditions:
         self.mapper.migration_report.add(
             "StaffOnlyViaIndicator",
             f"{marc_field.tag} indicator1: {ind1} ("
-            + i18n.t("1 is public, all other values are Staff only")
+            + i18n.t("0 is staff-only, all other values are public")
             + ")",
         )
         if ind1 == "0":
@@ -864,4 +864,30 @@ class Conditions:
             raise TransformationProcessError(
                 legacy_id,
                 f"Subject type not found for {parameter['name']} {marc_field}",
+            )
+
+    def condition_set_subject_source_id(self, legacy_id, value, parameter, marc_field: field.Field):
+        try:
+            t = self.get_ref_data_tuple_by_name(
+                self.folio.folio_get_all("/subject-sources", "subjectSources"), "subject_sources", parameter["name"]
+            )
+            self.mapper.migration_report.add("MappedSubjectSources", t[1])
+            return t[0]
+        except Exception:
+            raise TransformationProcessError(
+                legacy_id,
+                f"Subject source not found for {parameter['name']} {marc_field}",
+            )
+
+    def condition_set_subject_source_id_by_code(self, legacy_id, value, parameter, marc_field: field.Field):
+        try:
+            t = self.get_ref_data_tuple_by_code(
+                self.folio.folio_get_all("/subject-sources", "subjectSources"), "subject_sources", value
+            )
+            self.mapper.migration_report.add("MappedSubjectSources", t[1])
+            return t[0]
+        except Exception:
+            raise TransformationProcessError(
+                legacy_id,
+                f"Subject source not found for {value} {marc_field}",
             )

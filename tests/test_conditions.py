@@ -1,9 +1,11 @@
 from operator import le
 from unittest.mock import Mock, create_autospec, patch
 
+import pytest
 from folioclient import FolioClient
 from pymarc import Field, Indicators, Subfield
 
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
@@ -114,6 +116,7 @@ def test_condition_set_note_staff_only_via_indicator():
     )
     assert res_false == "false"
 
+
 def test_condition_set_subject_type_id():
     mock = create_autospec(Conditions)
     parameter = {"name": "Topical term"}
@@ -142,3 +145,107 @@ def test_condition_set_subject_type_id():
 
     res = Conditions.get_ref_data_tuple(mock, mock.folio.subject_types, "subject_types", "Topical term", "name")
     assert res == ("d6488f88-1e74-40ce-81b5-b19a928ff5b7", "Topical term")
+
+
+def test_condition_set_subject_source_id():
+    mock = create_autospec(Conditions)
+    parameter = {"name": "Library of Congress Subject Headings"}
+    mock.mapper = Mock(spec=BibsRulesMapper)
+    mock.mapper.migration_report = Mock(spec=MigrationReport)
+    mock.folio = Mock(spec=FolioClient)
+
+    # Mock the folio_get_all method to return the desired subject sources
+    mock.folio.folio_get_all.return_value = [
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b1', 'name': 'Library of Congress Subject Headings', 'code': 'LCSH', 'source': 'folio'}
+    ]
+    mock.ref_data_dicts = {"subject_sources": mock.folio.folio_get_all.return_value}
+    mock.get_ref_data_tuple_by_name.return_value = Conditions.get_ref_data_tuple(mock, mock.folio.folio_get_all.return_value, "subject_sources", "Library of Congress Subject Headings", "name")
+
+    with patch.object(FolioClient, 'folio_get_all', return_value=mock.folio.folio_get_all.return_value):
+        res = Conditions.condition_set_subject_source_id(mock, "legacy_id", "", parameter, Field(
+            tag="650",
+            indicators=["0", "0"],
+            subfields=[
+                Subfield(code="a", value="Subject 1")
+            ],
+        ))
+        assert res == "d6488f88-1e74-40ce-81b5-b19a928ff5b1"
+
+
+def test_condition_set_subject_source_id_no_match():
+    mock = create_autospec(Conditions)
+    parameter = {"name": "Medical Subject Headings"}
+    mock.mapper = Mock(spec=BibsRulesMapper)
+    mock.mapper.migration_report = Mock(spec=MigrationReport)
+    mock.folio = Mock(spec=FolioClient)
+
+    # Mock the folio_get_all method to return the desired subject sources
+    mock.folio.folio_get_all.return_value = [
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b1', 'name': 'Library of Congress Subject Headings', 'code': 'LCSH', 'source': 'folio'}
+    ]
+    mock.ref_data_dicts = {"subject_sources": mock.folio.folio_get_all.return_value}
+    mock.get_ref_data_tuple_by_name.return_value = Conditions.get_ref_data_tuple(mock, mock.folio.folio_get_all.return_value, "subject_sources", "Medical Subject Headings", "name")
+
+    with pytest.raises(TransformationProcessError) as res_error:
+        res = Conditions.condition_set_subject_source_id(mock, "legacy_id", "", parameter, Field(
+            tag="650",
+            indicators=["0", "0"],
+            subfields=[
+                Subfield(code="a", value="Subject 1")
+            ],
+        ))
+    assert res_error.type is TransformationProcessError
+    assert res_error.value.message.startswith("Subject source not found for Medical Subject Headings")
+
+
+def test_condition_set_subject_source_id_by_code():
+    mock = create_autospec(Conditions)
+    value = "LCSH"
+    mock.mapper = Mock(spec=BibsRulesMapper)
+    mock.mapper.migration_report = Mock(spec=MigrationReport)
+    mock.folio = Mock(spec=FolioClient)
+
+    # Mock the folio_get_all method to return the desired subject sources
+    mock.folio.folio_get_all.return_value = [
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b1', 'name': 'Library of Congress Subject Headings', 'code': 'LCSH', 'source': 'folio'}
+    ]
+    mock.ref_data_dicts = {"subject_sources": mock.folio.folio_get_all.return_value}
+    mock.get_ref_data_tuple_by_code.return_value = Conditions.get_ref_data_tuple(mock, mock.folio.folio_get_all.return_value, "subject_sources", value, "code")
+
+    with patch.object(FolioClient, 'folio_get_all', return_value=mock.folio.folio_get_all.return_value):
+        res = Conditions.condition_set_subject_source_id_by_code(mock, "legacy_id", value, None, Field(
+            tag="650",
+            indicators=["0", "0"],
+            subfields=[
+                Subfield(code="a", value="Subject 1"),
+                Subfield(code="2", value="LCSH")
+            ],
+        ))
+        assert res == "d6488f88-1e74-40ce-81b5-b19a928ff5b1"
+
+
+def test_condition_set_subject_source_id_by_code_no_match():
+    mock = create_autospec(Conditions)
+    value = "MeSH"
+    mock.mapper = Mock(spec=BibsRulesMapper)
+    mock.mapper.migration_report = Mock(spec=MigrationReport)
+    mock.folio = Mock(spec=FolioClient)
+
+    # Mock the folio_get_all method to return the desired subject sources
+    mock.folio.folio_get_all.return_value = [
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b1', 'name': 'Library of Congress Subject Headings', 'code': 'LCSH', 'source': 'folio'}
+    ]
+    mock.ref_data_dicts = {"subject_sources": mock.folio.folio_get_all.return_value}
+    mock.get_ref_data_tuple_by_code.return_value = Conditions.get_ref_data_tuple(mock, mock.folio.folio_get_all.return_value, "subject_sources", value, "code")
+
+    with pytest.raises(TransformationProcessError) as res_error:
+        res = Conditions.condition_set_subject_source_id_by_code(mock, "legacy_id", value, None, Field(
+            tag="650",
+            indicators=["0", "0"],
+            subfields=[
+                Subfield(code="a", value="Subject 1"),
+                Subfield(code="2", value="MeSH")
+            ],
+        ).get('2'))
+    assert res_error.type is TransformationProcessError
+    assert res_error.value.message.startswith("Subject source not found for MeSH")
