@@ -68,6 +68,15 @@ class ItemsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
+        prevent_permanent_location_map_default: Annotated[
+            bool,
+            Field(
+                title="Prevent permanent location map default",
+                description=(
+                    "Prevent the default mapping of permanent location to the default location."
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
