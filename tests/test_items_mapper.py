@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, create_autospec
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -9,6 +9,7 @@ from folio_migration_tools.library_configuration import (
     LibraryConfiguration,
 )
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
+from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
 
 
@@ -34,6 +35,14 @@ def mapper(pytestconfig) -> ItemMapper:
         base_folder="/",
         multi_field_delimiter="^-^",
     )
+
+    task_config = create_autospec(ItemsTransformer.TaskConfiguration)
+    task_config.name = "Test Task"
+    task_config.migration_task_type = "Test Task"
+    task_config.files = [
+        FileDefinition(file_type="items", file_path="items.json", discovery_suppressed=False)
+    ]
+    task_config.prevent_permanent_location_map_default = False
 
     loan_type_map = [
         {"lt": "cst", "folio_name": "Can circulate"},
@@ -67,6 +76,7 @@ def mapper(pytestconfig) -> ItemMapper:
         {},
         lib_config,
         [],
+        task_config,
     )
 
 
@@ -102,6 +112,16 @@ def test_perform_additional_mappings(mapper: ItemMapper):
     assert suppressed_holdings["discoverySuppress"] is True
     assert unsuppressed_holdings["discoverySuppress"] is False
 
+def test_get_prop_permanent_location(mapper: ItemMapper):
+    item_data = {"barcode": "000000950000010", "note": "Check it out!", "lt": "ah", "mat": "oh", "PERM_LOCATION": "infoOff"}
+    prop = mapper.get_prop(item_data, "permanentLocationId", item_data['barcode'], "")
+    assert prop == 'b241764c-1466-4e1d-a028-1a3684a5da87'
+
+def test_get_prop_permanent_location_no_default(mapper: ItemMapper):
+    item_data = {"barcode": "000000950000010", "note": "Check it out!", "lt": "ah", "mat": "oh", "PERM_LOCATION": "invalidLoc"}
+    mapper.task_configuration.prevent_permanent_location_map_default = True
+    prop = mapper.get_prop(item_data, "permanentLocationId", item_data['barcode'], "")
+    assert prop == ""
 
 # Shared map
 
