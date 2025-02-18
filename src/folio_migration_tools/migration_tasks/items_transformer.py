@@ -200,6 +200,7 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_location_mapping,
             self.library_configuration,
             self.boundwith_relationship_map,
+            self.task_configuration
         )
         if (
             self.task_configuration.reset_hrid_settings
