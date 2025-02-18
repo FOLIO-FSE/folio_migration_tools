@@ -1,13 +1,25 @@
-[tool.poetry]
+[project]
 name = "folio_migration_tools"
 version = "1.9.0rc1"
 description =  "A tool allowing you to migrate data from legacy ILS:s (Library systems) into FOLIO LSP"
-authors = ["Theodor Tolstoy <github.teddes@tolstoy.se>", "Lisa Sjögren", "Brooks Travis", "Jeremy Nelson", "Clinton Bradford"]
+authors = [
+	{name = "Theodor Tolstoy", email = "github.teddes@tolstoy.se"},
+	{name = "Lisa Sjögren"},
+	{name = "Brooks Travis", email = "brooks.travis@gmail.com"},
+	{name = "Jeremy Nelson"},
+	{name = "Clinton Bradford"}
+]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/FOLIO-FSE/folio_migration_tools"
-repository = "https://github.com/FOLIO-FSE/folio_migration_tools"
 keywords = ["FOLIO", "ILS", "LSP", "Library Systems", "MARC21", "Library data"]
+
+[project.urls]
+documentation = "https://folio-migration-tools.readthedocs.io/en/latest/"
+homepage = "https://github.com/folio-fse/folio_migration_tools"
+repository = "https://github.com/FOLIO-FSE/folio_migration_tools"
+
+[project.scripts]
+folio-migration-tools = "folio_migration_tools.__main__:main"
 
 [tool.coverage.report]
 show_missing = false
@@ -21,12 +33,11 @@ branch = true
 source = ["folio_migration_tools"]
 
 [build-system]
-requires = ["setuptools>=42"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 99
-
 
 [tool.isort]
 profile = "black"
