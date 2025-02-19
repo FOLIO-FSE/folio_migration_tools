@@ -188,9 +188,10 @@ class BatchPoster(MigrationTaskBase):
 
                 except Exception as ee:
                     if "idx" in locals() and self.task_configuration.files[idx:]:
-                        for file in self.task_configuration.files[idx:]:
+                        for file_def in self.task_configuration.files[idx:]:
+                            path = self.folder_structure.results_folder / file_def.file_name
                             try:
-                                with open(file, "r") as failed_file:
+                                with open(path, "r") as failed_file:
                                     failed_file.seek(self.processed)
                                     failed_recs_file.write(failed_file.read())
                                     self.processed = 0
