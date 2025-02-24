@@ -249,3 +249,31 @@ def test_condition_set_subject_source_id_by_code_no_match():
         ).get('2'))
     assert res_error.type is TransformationProcessError
     assert res_error.value.message.startswith("Subject source not found for MeSH")
+
+
+def test_condition_remove_prefix_by_indicator():
+    mock = Mock(spec=Conditions)
+    marc_fields = [
+        Field(
+            tag="100",
+            indicators=["1", "0"],
+            subfields=[
+                Subfield(code="a", value="Subject 1")
+            ],
+        ),
+        Field(
+            tag="200",
+            indicators=["1", "5"],
+            subfields=[
+                Subfield(code="b", value="Subject 2")
+            ],
+        ),
+    ]
+    res100 = Conditions.condition_remove_prefix_by_indicator(
+        mock, "", "some value: /", {}, marc_fields[0]
+    )
+    assert res100 == "some value"
+    res200 = Conditions.condition_remove_prefix_by_indicator(
+        mock, "", "some value: /", {}, marc_fields[1]
+    )
+    assert res200 == "value"
