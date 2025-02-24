@@ -50,46 +50,84 @@ class BatchPoster(MigrationTaskBase):
     """
 
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        object_type: str
-        files: List[FileDefinition]
-        batch_size: int
+        name: Annotated[
+            str,
+            Field(
+                title="Task name",
+                description="The name of the task",
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="The type of migration task",
+            ),
+        ]
+        object_type: Annotated[
+            str,
+            Field(
+                title="Object type",
+                description=(
+                    "The type of object being migrated"
+                    "Examples of possible values: "
+                    "'Extradata', 'SRS', Instances', 'Holdings', 'Items'"
+                ),
+            ),
+        ]
+        files: Annotated[
+            List[FileDefinition],
+            Field(
+                title="List of files",
+                description="List of files to be processed",
+            ),
+        ]
+        batch_size: Annotated[
+            int,
+            Field(
+                title="Batch size",
+                description="The batch size for processing files",
+            ),
+        ]
         rerun_failed_records: Annotated[
             bool,
             Field(
+                title="Rerun failed records",
                 description=(
-                    "Toggles whether or not BatchPoster should try to rerun failed batches or "
-                    "just leave the failing records on disk."
-                )
+                    "Toggles whether or not BatchPoster should try to rerun "
+                    "failed batches or just leave the failing records on disk."
+                ),
             ),
         ] = True
         use_safe_inventory_endpoints: Annotated[
             bool,
             Field(
+                title="Use safe inventory endpoints",
                 description=(
-                    "Toggles the use of the safe/unsafe Inventory storage endpoints. "
-                    "Unsafe circumvents the Optimistic locking in FOLIO. Defaults to "
-                    "True (using the 'safe' options)"
-                )
+                    "Toggles the use of the safe/unsafe Inventory storage "
+                    "endpoints. Unsafe circumvents the Optimistic locking "
+                    "in FOLIO. Defaults to True (using the 'safe' options)"
+                ),
             ),
         ] = True
         extradata_endpoints: Annotated[
             dict,
             Field(
+                title="Extradata endpoints",
                 description=(
                     "A dictionary of extradata endpoints. "
                     "The key is the object type and the value is the endpoint"
-                )
+                ),
             ),
         ] = {}
         upsert: Annotated[
             bool,
             Field(
+                title="Upsert",
                 description=(
-                    "Toggles whether or not to use the upsert feature of the Inventory storage "
-                    "endpoints. Defaults to False"
-                )
+                    "Toggles whether or not to use the upsert feature "
+                    "of the Inventory storage endpoints. Defaults to False"
+                ),
             ),
         ] = False
 
