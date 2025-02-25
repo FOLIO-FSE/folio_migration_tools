@@ -4,7 +4,8 @@ import logging
 import sys
 import time
 import traceback
-from typing import Optional
+from typing import Optional, Annotated
+from pydantic import Field
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -29,13 +30,58 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class CoursesMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        composite_course_map_path: str
-        migration_task_type: str
-        courses_file: FileDefinition
-        terms_map_path: str
-        departments_map_path: str
-        look_up_instructor: Optional[bool] = False
+        name: Annotated[
+            str,
+            Field(
+                title="Task name",
+                description="The name of the task",
+            ),
+        ]
+        composite_course_map_path: Annotated[
+            str,
+            Field(
+                title="Composite course map path",
+                description="Path to the composite course map file",
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="Type of migration task",
+            ),
+        ]
+        courses_file: Annotated[
+            FileDefinition,
+            Field(
+                title="Courses file",
+                description="File containing course data",
+            ),
+        ]
+        terms_map_path: Annotated[
+            str,
+            Field(
+                title="Terms map path",
+                description="Path to the terms map file",
+            ),
+        ]
+        departments_map_path: Annotated[
+            str,
+            Field(
+                title="Departments map path",
+                description="Path to the departments map file",
+            ),
+        ]
+        look_up_instructor: Annotated[
+            Optional[bool],
+            Field(
+                title="Look up instructor",
+                description=(
+                    "Flag to indicate whether to look up instructors. "
+                    "By default is False."
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
