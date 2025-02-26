@@ -39,37 +39,125 @@ csv.register_dialect("tsv", delimiter="\t")
 
 class HoldingsCsvTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        hrid_handling: HridHandling
-        files: List[FileDefinition]
-        holdings_map_file_name: str
-        location_map_file_name: str
-        default_call_number_type_name: str
-        previously_generated_holdings_files: Optional[list[str]] = []
-        fallback_holdings_type_id: str
+        name: Annotated[
+            str,
+            Field(
+                title="Task name",
+                description="Name of the task",
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="Type of migration task",
+            ),
+        ]
+        hrid_handling: Annotated[
+            HridHandling,
+            Field(
+                title="HRID handling",
+                description=(
+                    "Determining how the HRID generation "
+                    "should be handled."
+                ),
+            ),
+        ]
+        files: Annotated[
+            List[FileDefinition],
+            Field(
+                title="Files",
+                description="List of files",
+            ),
+        ]
+        holdings_map_file_name: Annotated[
+            str,
+            Field(
+                title="Holdings map file name",
+                description="File name for holdings map",
+            ),
+        ]
+        location_map_file_name: Annotated[
+            str,
+            Field(
+                title="Location map file name",
+                description="File name for location map",
+            ),
+        ]
+        default_call_number_type_name: Annotated[
+            str,
+            Field(
+                title="Default call number type name",
+                description="Default name for call number type",
+            ),
+        ]
+        previously_generated_holdings_files: Annotated[
+            Optional[list[str]],
+            Field(
+                title="Previously generated holdings files",
+                description=(
+                    "List of previously generated holdings files. "
+                    "By default is empty list."
+                ),
+            ),
+        ] = []
+        fallback_holdings_type_id: Annotated[
+            str,
+            Field(
+                title="Fallback holdings type ID",
+                description="ID for fallback holdings type",
+            ),
+        ]
         holdings_type_uuid_for_boundwiths: Annotated[
             str,
             Field(
                 title="Holdings Type for Boundwith Holdings",
                 description=(
                     "UUID for a Holdings type (set in Settings->Inventory) "
-                    "for Bound-with Holdings)"
+                    "for Bound-with Holdings. Default is empty string."
                 ),
             ),
         ] = ""
-        call_number_type_map_file_name: Optional[str]
-        holdings_merge_criteria: Optional[list[str]] = [
+        call_number_type_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Call number type map file name",
+                description="File name for call number type map",
+            ),
+        ]
+        holdings_merge_criteria: Annotated[
+            Optional[list[str]],
+            Field(
+                title="Holdings merge criteria",
+                description=(
+                    "List of holdings merge criteria. "
+                    "Default value is "
+                    "['instanceId', 'permanentLocationId', 'callNumber']."
+                ),
+            ),
+        ] = [
             "instanceId",
             "permanentLocationId",
             "callNumber",
         ]
-        reset_hrid_settings: Optional[bool] = False
+        reset_hrid_settings: Annotated[
+            Optional[bool],
+            Field(
+                title="Reset HRID settings",
+                description=(
+                    "At the end of the run reset "
+                    "FOLIO with the HRID settings. Default is FALSE."
+                ),
+            ),
+        ] = False
         update_hrid_settings: Annotated[
             bool,
             Field(
                 title="Update HRID settings",
-                description="At the end of the run, update FOLIO with the HRID settings",
+                description=(
+                    "At the end of the run update "
+                    "FOLIO with the HRID settings. Default is TRUE."
+                ),
             ),
         ] = True
 
