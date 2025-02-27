@@ -6,9 +6,7 @@ import httpx
 import i18n
 from folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
-from pymarc import Field
-from pymarc import Record
-from pymarc import Subfield
+from pymarc import Field, Record, Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
@@ -220,7 +218,7 @@ class HRIDHandler:
                 ),
             )
             self.handle_035_generation(
-                marc_record, legacy_ids, self.migration_report, self.deactivate035_from001
+                marc_record, legacy_ids, self.migration_report, self.deactivate035_from001, False
             )
             Helper.log_data_issue(
                 legacy_ids,

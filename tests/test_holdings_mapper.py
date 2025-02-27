@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -32,7 +33,7 @@ def mapper(pytestconfig) -> HoldingsMapper:
         tenant_id=tenant_id,
         okapi_username=username,
         okapi_password=password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",

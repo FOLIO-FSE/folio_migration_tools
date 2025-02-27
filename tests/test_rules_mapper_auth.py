@@ -1,14 +1,15 @@
 import logging
 
 import pytest
-from pymarc import MARCReader
-from pymarc import Record
+from pymarc import MARCReader, Record
 
-from folio_migration_tools.library_configuration import FileDefinition
-from folio_migration_tools.library_configuration import FolioRelease
-from folio_migration_tools.library_configuration import HridHandling
-from folio_migration_tools.library_configuration import IlsFlavour
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.library_configuration import (
+    FileDefinition,
+    FolioRelease,
+    HridHandling,
+    IlsFlavour,
+    LibraryConfiguration,
+)
 from folio_migration_tools.marc_rules_transformation.rules_mapper_authorities import (
     AuthorityMapper,
 )
@@ -30,7 +31,7 @@ def mapper(pytestconfig) -> AuthorityMapper:
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
-        folio_release=FolioRelease.poppy,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",

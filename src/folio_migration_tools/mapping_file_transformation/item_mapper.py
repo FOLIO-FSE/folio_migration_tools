@@ -24,6 +24,7 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
 class ItemMapper(MappingFileMapperBase):
@@ -42,6 +43,7 @@ class ItemMapper(MappingFileMapperBase):
         temporary_location_mapping,
         library_configuration: LibraryConfiguration,
         boundwith_relationship_map,
+        task_configuration: AbstractTaskConfiguration
     ):
         item_schema = folio_client.get_item_schema()
         super().__init__(
@@ -52,6 +54,7 @@ class ItemMapper(MappingFileMapperBase):
             FOLIONamespaces.items,
             library_configuration,
         )
+        self.task_configuration = task_configuration
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map
@@ -165,7 +168,7 @@ class ItemMapper(MappingFileMapperBase):
                 legacy_item,
                 folio_prop_name,
                 index_or_id,
-                False,
+                self.task_configuration.prevent_permanent_location_map_default,
             )
         elif folio_prop_name == "temporaryLocationId":
             if not self.temp_location_mapping:

@@ -40,7 +40,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
-        folio_release=FolioRelease.orchid,
+        folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
         iteration_identifier="I have no clue",
@@ -721,3 +721,19 @@ def test_should_add_notes_550_556_to_notes_list_2(mapper):
         "Disaster recovery : a model plan for libraries and information centers. 0959328971"
         in notes
     )
+
+def test_simple_bib_map(mapper):
+    instance = {}
+    marc_record = pymarc.Record()
+    marc_record.add_field(
+        pymarc.Field(
+            tag="245",
+            indicators=["0", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Modern Electrosynthetic Methods in Organic Chemistry /"),
+                pymarc.Subfield("c", "Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."),
+            ],
+        )
+    )
+    mapper.simple_bib_map(instance, marc_record, set(), ["legacy_id"])
+    assert instance["title"] == "Modern Electrosynthetic Methods in Organic Chemistry / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."

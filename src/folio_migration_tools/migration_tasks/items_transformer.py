@@ -68,6 +68,15 @@ class ItemsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
+        prevent_permanent_location_map_default: Annotated[
+            bool,
+            Field(
+                title="Prevent permanent location map default",
+                description=(
+                    "Prevent the default mapping of permanent location to the default location."
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -191,6 +200,7 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_location_mapping,
             self.library_configuration,
             self.boundwith_relationship_map,
+            self.task_configuration
         )
         if (
             self.task_configuration.reset_hrid_settings

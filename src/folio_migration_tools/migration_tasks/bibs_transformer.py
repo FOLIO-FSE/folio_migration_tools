@@ -97,6 +97,17 @@ class BibsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = True
+        data_import_marc: Annotated[
+            bool,
+            Field(
+                title="Generate a MARC file for data import overlay of instances",
+                description=(
+                    "If set to true, the process will generate a file of binary MARC records that can"
+                    "be imported into FOLIO using the Data Import APIs. If set to false, only a file"
+                    "of FOLIO instance records (and optional SRS records) will be generated."
+                ),
+            )
+        ] = False
         parse_cataloged_date: Annotated[
             bool,
             Field(

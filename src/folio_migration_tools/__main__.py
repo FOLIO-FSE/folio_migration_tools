@@ -124,7 +124,8 @@ def main():
         except TransformationProcessError as tpe:
             logging.critical(tpe.message)
             print(f"\n{tpe.message}: {tpe.data_value}")
-            sys.exit("Transformation Failure")
+            print("Task failure. Halting.")
+            sys.exit(1)
         logging.info("Work done. Shutting down")
         sys.exit(0)
     except json.decoder.JSONDecodeError as json_error:
@@ -148,10 +149,17 @@ def main():
         print("Halting")
         sys.exit("JSON Not Matching Spec")
     except httpx.HTTPError as connection_error:
-        print(
-            f"\nConnection Error when connecting to {connection_error.request.url}. "
-            "Are you connectet to the Internet/VPN? Do you need to update DNS settings?"
-        )
+        if hasattr(connection_error, "response"):
+            print(
+                f"\nHTTP Error when connecting to {connection_error.request.url}. "
+                f"Status code: {connection_error.response.status_code}. "
+                f"\nResponse: {connection_error.response.text}"
+            )
+        else:
+            print(
+                f"\nConnection Error when connecting to {connection_error.request.url}. "
+                "Are you connected to the Internet/VPN? Do you need to update DNS settings?"
+            )
         sys.exit("HTTP Not Connecting")
     except FileNotFoundError as fnf_error:
         print(f"\n{fnf_error.strerror}: {fnf_error.filename}")

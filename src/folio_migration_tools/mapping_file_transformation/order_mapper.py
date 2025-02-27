@@ -25,6 +25,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
 
 
 class CompositeOrderMapper(MappingFileMapperBase):
+    VALID_PO_NUMBER_CHARACTERS = r"[A-Za-z0-9]"
+
     def __init__(
         self,
         folio_client: FolioClient,

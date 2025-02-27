@@ -24,6 +24,7 @@ from folio_migration_tools.custom_exceptions import (
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import (
     FileDefinition,
+    HridHandling,
     IlsFlavour,
     LibraryConfiguration,
 )
@@ -58,7 +59,12 @@ class BibsRulesMapper(RulesMapperBase):
         self.instance_relationships: dict = {}
         self.instance_relationship_types: dict = {}
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio_client)
-
+        self.create_source_records = all(
+            [self.task_configuration.create_source_records, (not getattr(self.task_configuration, "data_import_marc", False))]
+        )
+        self.data_import_marc = self.task_configuration.data_import_marc
+        if self.data_import_marc:
+            self.hrid_handler.deactivate035_from001 = True
         self.start = time.time()
 
     def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
@@ -70,12 +76,13 @@ class BibsRulesMapper(RulesMapperBase):
                 str(legacy_ids[-1]),
             )
         )
-        self.hrid_handler.handle_hrid(
-            FOLIONamespaces.instances,
-            folio_instance,
-            marc_record,
-            legacy_ids,
-        )
+        if self.create_source_records or self.hrid_handler.handling == HridHandling.preserve001:
+            self.hrid_handler.handle_hrid(
+                FOLIONamespaces.instances,
+                folio_instance,
+                marc_record,
+                legacy_ids,
+            )
         self.handle_leader_05(marc_record, legacy_ids)
         if self.task_configuration.add_administrative_notes_with_legacy_ids:
             for legacy_id in legacy_ids:
@@ -113,15 +120,18 @@ class BibsRulesMapper(RulesMapperBase):
         ignored_subsequent_fields: set = set()
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
         folio_instance = self.perform_initial_preparation(marc_record, legacy_ids)
-        for marc_field in marc_record:
-            self.report_marc_stats(marc_field, bad_tags, legacy_ids, ignored_subsequent_fields)
-            if marc_field.tag not in ignored_subsequent_fields:
-                self.process_marc_field(
-                    folio_instance,
-                    marc_field,
-                    ignored_subsequent_fields,
-                    legacy_ids,
-                )
+        if self.data_import_marc:
+            self.simple_bib_map(folio_instance, marc_record, ignored_subsequent_fields, legacy_ids)
+        else:
+            for marc_field in marc_record:
+                self.report_marc_stats(marc_field, bad_tags, legacy_ids, ignored_subsequent_fields)
+                if marc_field.tag not in ignored_subsequent_fields:
+                    self.process_marc_field(
+                        folio_instance,
+                        marc_field,
+                        ignored_subsequent_fields,
+                        legacy_ids,
+                    )
 
         self.perform_additional_parsing(folio_instance, marc_record, legacy_ids, file_def)
         clean_folio_instance = self.validate_required_properties(
@@ -131,6 +141,27 @@ class BibsRulesMapper(RulesMapperBase):
         marc_record.remove_fields(*list(bad_tags))
         self.report_folio_mapping(clean_folio_instance, self.schema)
         return [clean_folio_instance]
+
+    def simple_bib_map(self, folio_instnace: dict, marc_record: Record, ignored_subsequent_fields: set, legacy_ids: List[str]):
+        """
+        This method applies a much simplified MARC-to-instance
+        mapping to create a minimal FOLIO Instance record to be
+        used with a Data Import based MARC loading flow, rather
+        than creating SRS records during transformation.
+
+        Args:
+            folio_instnace (dict): _description_
+            marc_record (Record): _description_
+            legacy_ids (List[str]): _description_
+            file_def (FileDefinition): _description_
+        """
+        try:
+            self.process_marc_field(folio_instnace, marc_record['245'], ignored_subsequent_fields, legacy_ids)
+        except KeyError:
+            raise TransformationRecordFailedError(
+                legacy_ids,
+                "No 245 field in MARC record"
+            )
 
     def perform_additional_parsing(
         self,
@@ -220,8 +251,9 @@ class BibsRulesMapper(RulesMapperBase):
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")
-        if self.task_configuration.update_hrid_settings:
-            self.hrid_handler.store_hrid_settings()
+        if self.create_source_records:
+            if self.task_configuration.update_hrid_settings:
+                self.hrid_handler.store_hrid_settings()
 
     def get_instance_type_id(self, marc_record, legacy_id):
         return_id = ""

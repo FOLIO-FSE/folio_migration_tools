@@ -50,46 +50,84 @@ class BatchPoster(MigrationTaskBase):
     """
 
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        object_type: str
-        files: List[FileDefinition]
-        batch_size: int
+        name: Annotated[
+            str,
+            Field(
+                title="Task name",
+                description="The name of the task",
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="The type of migration task",
+            ),
+        ]
+        object_type: Annotated[
+            str,
+            Field(
+                title="Object type",
+                description=(
+                    "The type of object being migrated"
+                    "Examples of possible values: "
+                    "'Extradata', 'SRS', Instances', 'Holdings', 'Items'"
+                ),
+            ),
+        ]
+        files: Annotated[
+            List[FileDefinition],
+            Field(
+                title="List of files",
+                description="List of files to be processed",
+            ),
+        ]
+        batch_size: Annotated[
+            int,
+            Field(
+                title="Batch size",
+                description="The batch size for processing files",
+            ),
+        ]
         rerun_failed_records: Annotated[
             bool,
             Field(
+                title="Rerun failed records",
                 description=(
-                    "Toggles whether or not BatchPoster should try to rerun failed batches or "
-                    "just leave the failing records on disk."
-                )
+                    "Toggles whether or not BatchPoster should try to rerun "
+                    "failed batches or just leave the failing records on disk."
+                ),
             ),
         ] = True
         use_safe_inventory_endpoints: Annotated[
             bool,
             Field(
+                title="Use safe inventory endpoints",
                 description=(
-                    "Toggles the use of the safe/unsafe Inventory storage endpoints. "
-                    "Unsafe circumvents the Optimistic locking in FOLIO. Defaults to "
-                    "True (using the 'safe' options)"
-                )
+                    "Toggles the use of the safe/unsafe Inventory storage "
+                    "endpoints. Unsafe circumvents the Optimistic locking "
+                    "in FOLIO. Defaults to True (using the 'safe' options)"
+                ),
             ),
         ] = True
         extradata_endpoints: Annotated[
             dict,
             Field(
+                title="Extradata endpoints",
                 description=(
                     "A dictionary of extradata endpoints. "
                     "The key is the object type and the value is the endpoint"
-                )
+                ),
             ),
         ] = {}
         upsert: Annotated[
             bool,
             Field(
+                title="Upsert",
                 description=(
-                    "Toggles whether or not to use the upsert feature of the Inventory storage "
-                    "endpoints. Defaults to False"
-                )
+                    "Toggles whether or not to use the upsert feature "
+                    "of the Inventory storage endpoints. Defaults to False"
+                ),
             ),
         ] = False
 
@@ -136,12 +174,12 @@ class BatchPoster(MigrationTaskBase):
     def do_work(self):
         with self.folio_client.get_folio_http_client() as httpx_client:
             self.http_client = httpx_client
-            try:
-                batch = []
-                if self.task_configuration.object_type == "SRS":
-                    self.create_snapshot()
-                with open(self.folder_structure.failed_recs_path, "w") as failed_recs_file:
-                    for file_def in self.task_configuration.files:
+            with open(self.folder_structure.failed_recs_path, "w", encoding='utf-8') as failed_recs_file:
+                try:
+                    batch = []
+                    if self.task_configuration.object_type == "SRS":
+                        self.create_snapshot()
+                    for idx, file_def in enumerate(self.task_configuration.files):
                         path = self.folder_structure.results_folder / file_def.file_name
                         with open(path) as rows:
                             logging.info("Running %s", path)
@@ -172,9 +210,8 @@ class BatchPoster(MigrationTaskBase):
                                             self.processed,
                                             failed_recs_file,
                                         )
-                                        logging.critical("Halting %s", tpe)
-                                        print(f"\n\t{tpe.message}")
-                                        sys.exit(1)
+                                        batch = []
+                                        raise
                                     except TransformationRecordFailedError as exception:
                                         self.handle_generic_exception(
                                             exception,
@@ -184,7 +221,22 @@ class BatchPoster(MigrationTaskBase):
                                             failed_recs_file,
                                         )
                                         batch = []
+                                    except (FileNotFoundError, PermissionError) as ose:
+                                        logging.error("Error reading file: %s", ose)
 
+                except Exception as ee:
+                    if "idx" in locals() and self.task_configuration.files[idx:]:
+                        for file_def in self.task_configuration.files[idx:]:
+                            path = self.folder_structure.results_folder / file_def.file_name
+                            try:
+                                with open(path, "r") as failed_file:
+                                    failed_file.seek(self.processed)
+                                    failed_recs_file.write(failed_file.read())
+                                    self.processed = 0
+                            except (FileNotFoundError, PermissionError) as ose:
+                                logging.error("Error reading file: %s", ose)
+                    raise ee
+                finally:
                     if self.task_configuration.object_type != "Extradata" and any(batch):
                         try:
                             self.post_batch(batch, failed_recs_file, self.processed)
@@ -193,10 +245,8 @@ class BatchPoster(MigrationTaskBase):
                                 exception, last_row, batch, self.processed, failed_recs_file
                             )
                     logging.info("Done posting %s records. ", (self.processed))
-            except Exception as ee:
-                if self.task_configuration.object_type == "SRS":
-                    self.commit_snapshot()
-                raise ee
+                    if self.task_configuration.object_type == "SRS":
+                        self.commit_snapshot()
 
     def post_record_batch(self, batch, failed_recs_file, row):
         json_rec = json.loads(row.split("\t")[-1])
@@ -339,6 +389,10 @@ class BatchPoster(MigrationTaskBase):
 
     def post_batch(self, batch, failed_recs_file, num_records, recursion_depth=0):
         response = self.do_post(batch)
+        if response.status_code == 401:
+            logging.error("Authorization failed (%s). Fetching new auth token...", response.text)
+            self.folio_client.login()
+            response = self.do_post(batch)
         if response.status_code == 201:
             logging.info(
                 (

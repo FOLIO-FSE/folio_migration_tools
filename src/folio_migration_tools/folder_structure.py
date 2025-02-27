@@ -101,6 +101,9 @@ class FolderStructure:
         self.srs_records_path = (
             self.results_folder / f"folio_srs_{object_type_string}{self.file_template}.json"
         )
+        self.data_import_marc_path = (
+            self.results_folder / f"folio_marc_{object_type_string}{self.file_template}.mrc"
+        )
         self.organizations_id_map_path = (
             self.results_folder / f"{str(FOLIONamespaces.organizations.name).lower()}_id_map.json"
         )

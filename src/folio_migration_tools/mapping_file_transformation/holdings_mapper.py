@@ -101,7 +101,7 @@ class HoldingsMapper(MappingFileMapperBase):
         if legacy_value.startswith("[") and len(legacy_value.split(",")) == 1:
             try:
                 legacy_value = ast.literal_eval(str(legacy_value))[0]
-            except SyntaxError:
+            except (SyntaxError, ValueError):
                 return legacy_value
         return legacy_value
 

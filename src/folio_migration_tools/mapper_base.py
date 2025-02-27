@@ -24,6 +24,7 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
 class MapperBase:
@@ -42,7 +43,7 @@ class MapperBase:
         self.start_datetime = datetime.now(timezone.utc)
         self.folio_client: FolioClient = folio_client
         self.library_configuration: LibraryConfiguration = library_configuration
-
+        self.task_configuration: AbstractTaskConfiguration
         self.mapped_folio_fields: dict = {}
         self.migration_report: MigrationReport = MigrationReport()
         self.num_criticalerrors = 0
@@ -267,7 +268,13 @@ class MapperBase:
             sys.exit(1)
 
     def get_id_map_tuple(self, legacy_id: str, folio_record: dict, object_type: FOLIONamespaces):
-        if object_type == FOLIONamespaces.instances:
+        if all(
+            [
+                object_type == FOLIONamespaces.instances,
+                (not getattr(self.task_configuration, "data_import_marc", False)),
+                getattr(self.task_configuration, "create_source_records", True),
+            ]
+        ):
             return (legacy_id, folio_record["id"], folio_record["hrid"])
         return (legacy_id, folio_record["id"])
 
@@ -437,7 +444,7 @@ class MapperBase:
                     except IndexError:
                         if call_numbers:
                             bound_with_holding["callNumber"] = call_numbers[0]
-                    except SyntaxError:
+                    except (SyntaxError, ValueError):
                         bound_with_holding["callNumber"] = call_number
                 else:
                     bound_with_holding["callNumber"] = call_number
