@@ -1,4 +1,3 @@
-'''Main "script."'''
 import csv
 import ctypes
 import json
@@ -36,26 +35,136 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 class ItemsTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        hrid_handling: HridHandling
-        files: List[FileDefinition]
-        items_mapping_file_name: str
-        location_map_file_name: str
-        default_call_number_type_name: str
-        temp_location_map_file_name: Optional[str] = ""
-        material_types_map_file_name: str
-        loan_types_map_file_name: str
-        temp_loan_types_map_file_name: Optional[str] = ""
-        statistical_codes_map_file_name: Optional[str] = ""
-        item_statuses_map_file_name: str
-        call_number_type_map_file_name: str
-        reset_hrid_settings: Optional[bool] = False
+        name: Annotated[
+            str,
+            Field(
+                title="Task name",
+                description="Name of the task.",
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="Type of migration task.",
+            ),
+        ]
+        hrid_handling: Annotated[
+            HridHandling,
+            Field(
+                title="HRID handling",
+                description=(
+                    "Determining how the HRID generation "
+                    "should be handled."
+                ),
+            ),
+        ]
+        files: Annotated[
+            List[FileDefinition],
+            Field(
+                title="Files",
+                description="List of files.",
+            ),
+        ]
+        items_mapping_file_name: Annotated[
+            str,
+            Field(
+                title="Items mapping file name",
+                description="File name for items mapping.",
+            ),
+        ]
+        location_map_file_name: Annotated[
+            str,
+            Field(
+                title="Location map file name",
+                description="File name for location map.",
+            ),
+        ]
+        default_call_number_type_name: Annotated[
+            str,
+            Field(
+                title="Default call number type name",
+                description="Default name for call number type.",
+            ),
+        ]
+        temp_location_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Temporary location map file name",
+                description=(
+                    "Temporary file name for location map. "
+                    "Empty string by default."
+                ),
+            ),
+        ] = ""
+        material_types_map_file_name: Annotated[
+            str,
+            Field(
+                title="Material types map file name",
+                description="File name for material types map.",
+            ),
+        ]
+        loan_types_map_file_name: Annotated[
+            str,
+            Field(
+                title="Loan types map file name",
+                description="File name for loan types map.",
+            ),
+        ]
+        temp_loan_types_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Temporary loan types map file name",
+                description=(
+                    "File name for temporary loan types map. "
+                    "Empty string by default."
+                ),
+            ),
+        ] = ""
+        statistical_codes_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Statistical codes map file name",
+                description=(
+                    "File name for statistical codes map. "
+                    "Empty string by default."
+                ),
+            ),
+        ] = ""
+        item_statuses_map_file_name: Annotated[
+            str,
+            Field(
+                title="Item statuses map file name",
+                description="File name for item statuses map.",
+            ),
+        ]
+        call_number_type_map_file_name: Annotated[
+            str,
+            Field(
+                title="Call number type map file name",
+                description="File name for call number type map.",
+            ),
+        ]
+        reset_hrid_settings: Annotated[
+            Optional[bool],
+            Field(
+                title="Reset HRID settings",
+                description=(
+                    "At the end of the run "
+                    "reset FOLIO with the HRID settings. "
+                    "By default is False."
+                ),
+            ),
+        ] = False
         update_hrid_settings: Annotated[
             bool,
             Field(
                 title="Update HRID settings",
-                description="At the end of the run, update FOLIO with the HRID settings",
+                description=(
+                    "At the end of the run "
+                    "update FOLIO with the HRID settings. "
+                    "By default is True."
+                ),
             ),
         ] = True
         boundwith_relationship_file_path: Annotated[
@@ -63,8 +172,10 @@ class ItemsTransformer(MigrationTaskBase):
             Field(
                 title="Boundwith relationship file path",
                 description=(
-                    "Path to a file outlining Boundwith relationships, in the style of Voyager."
-                    " A TSV file with MFHD_ID and BIB_ID headers and values"
+                    "Path to a file outlining Boundwith relationships, "
+                    "in the style of Voyager. "
+                    "A TSV file with MFHD_ID and BIB_ID headers and values. "
+                    "By default is empty string."
                 ),
             ),
         ] = ""
@@ -73,7 +184,9 @@ class ItemsTransformer(MigrationTaskBase):
             Field(
                 title="Prevent permanent location map default",
                 description=(
-                    "Prevent the default mapping of permanent location to the default location."
+                    "Prevent the default mapping of permanent location "
+                    "to the default location. "
+                    "By default is False."
                 ),
             ),
         ] = False
