@@ -6,9 +6,10 @@ import sys
 import time
 import traceback
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Annotated, Optional
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
+from pydantic import Field
 
 import i18n
 from dateutil import parser as du_parser
@@ -35,13 +36,64 @@ from folio_migration_tools.transaction_migration.transaction_result import (
 
 class LoansMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        open_loans_files: list[FileDefinition]
-        fallback_service_point_id: str
-        starting_row: Optional[int] = 1
-        item_files: Optional[list[FileDefinition]] = []
-        patron_files: Optional[list[FileDefinition]] = []
+        name: Annotated[
+            str,
+            Field(
+                title="Task name",
+                description="The name of the task.",
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="The type of the migration task.",
+            ),
+        ]
+        open_loans_files: Annotated[
+            Optional[list[FileDefinition]],
+            Field(
+                title="Open loans files",
+                description="List of files containing open loan data."
+            ),
+        ]
+        fallback_service_point_id: Annotated[
+            str,
+            Field(
+                title="Fallback service point ID",
+                description="Identifier of the fallback service point.",
+            ),
+        ]
+        starting_row: Annotated[
+            Optional[int],
+            Field(
+                title="Starting row",
+                description=(
+                    "The starting row for data processing. "
+                    "By default is 1."
+                ),
+            ),
+        ] = 1
+        item_files: Annotated[
+            Optional[list[FileDefinition]],
+            Field(
+                title="Item files",
+                description=(
+                    "List of files containing item data. "
+                    "By default is empty list."
+                ),
+            ),
+        ] = []
+        patron_files: Annotated[
+            Optional[list[FileDefinition]],
+            Field(
+                title="Patron files",
+                description=(
+                    "List of files containing patron data. "
+                    "By default is empty list."
+                ),
+            ),
+        ] = []
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -729,7 +781,7 @@ def timings(t0, t0func, num_objects):
 
 
 def print_smtp_warning():
-    s = """
+    s = r"""
           _____   __  __   _____   ______   ___
          / ____| |  \/  | |_   _| |  __  | |__ \\
         | (___   | \  / |   | |   | |__|_|    ) |
