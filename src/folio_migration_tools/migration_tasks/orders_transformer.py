@@ -5,7 +5,8 @@ import logging
 import sys
 import time
 from os.path import isfile
-from typing import List, Optional
+from typing import List, Optional, Annotated
+from pydantic import Field
 
 import i18n
 from deepdiff import DeepDiff
@@ -26,7 +27,9 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.order_mapper import (
     CompositeOrderMapper,
 )
-from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+from folio_migration_tools.migration_tasks.migration_task_base import (
+    MigrationTaskBase,
+)
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -35,18 +38,108 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 # Read files and do some work
 class OrdersTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        files: List[FileDefinition]
-        orders_mapping_file_name: str
-        organizations_code_map_file_name: str
-        acquisition_method_map_file_name: str
-        payment_status_map_file_name: Optional[str] = ""
-        receipt_status_map_file_name: Optional[str] = ""
-        workflow_status_map_file_name: Optional[str] = ""
-        location_map_file_name: Optional[str] = ""
-        funds_map_file_name: Optional[str] = ""
-        funds_expense_class_map_file_name: Optional[str] = ""
+        name: Annotated[
+            str,
+            Field(
+                title="Task name",
+                description="The name of the task.",
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="Type of the migration task.",
+            ),
+        ]
+        files: Annotated[
+            List[FileDefinition],
+            Field(
+                title="Files",
+                description="List of the files.",
+            ),
+        ]
+        orders_mapping_file_name: Annotated[
+            str,
+            Field(
+                title="Orders Mapping File Name",
+                description="File name for orders mapping.",
+            ),
+        ]
+        organizations_code_map_file_name: Annotated[
+            str,
+            Field(
+                title="Organizations Code Map File Name",
+                description="File name for organizations code mapping.",
+            ),
+        ]
+        acquisition_method_map_file_name: Annotated[
+            str,
+            Field(
+                title="Acquisition Method Map File Name",
+                description="File name for acquisition method mapping.",
+            ),
+        ]
+        payment_status_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Payment Status Map File Name",
+                description=(
+                    "File name for payment status mapping. "
+                    "By default is empty string."
+                ),
+            ),
+        ] = ""
+        receipt_status_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Receipt Status Map File Name",
+                description=(
+                    "File name for receipt status mapping. "
+                    "By default is empty string."
+                ),
+            ),
+        ] = ""
+        workflow_status_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Workflow Status Map File Name",
+                description=(
+                    "File name for workflow status mapping. "
+                    "By default is empty string."
+                ),
+            ),
+        ] = ""
+        location_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Location Map File Name",
+                description=(
+                    "File name for location mapping. "
+                    "By default is empty string."
+                ),
+            ),
+        ] = ""
+        funds_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Funds Map File Name",
+                description=(
+                    "File name for funds mapping. "
+                    "By default is empty string."
+                ),
+            ),
+        ] = ""
+        funds_expense_class_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Funds Expense Class Map File Name",
+                description=(
+                    "File name for funds expense class mapping. "
+                    "By default is empty string."
+                ),
+            ),
+        ] = ""
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
