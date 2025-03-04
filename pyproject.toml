@@ -80,3 +80,6 @@ ipykernel = "^6.29.5"
 
 [tool.poetry.extras]
 docs = ["m2r", "sphinx", "sphinx-autodoc-typehints", "sphinx-rtd-theme", "toml"]
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
