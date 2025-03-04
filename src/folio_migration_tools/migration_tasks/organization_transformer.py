@@ -7,7 +7,8 @@ import time
 import uuid
 from hashlib import sha1
 from os.path import isfile
-from typing import List, Optional
+from typing import List, Optional, Annotated
+from pydantic import Field
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -36,14 +37,78 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 # Read files and do some work
 class OrganizationTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        files: List[FileDefinition]
-        organization_map_path: str
-        organization_types_map_path: Optional[str] = ""
-        address_categories_map_path: Optional[str] = ""
-        email_categories_map_path: Optional[str] = ""
-        phone_categories_map_path: Optional[str] = ""
+        name: Annotated[
+            str,
+            Field(
+                description=(
+                    "Name of this migration task. The name is being used to call the specific "
+                    "task, and to distinguish tasks of similar types"
+                ),
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description=(
+                    "The type of migration task you want to perform"
+                ),
+            ),
+        ]
+        files: Annotated[
+            List[FileDefinition],
+            Field(
+                title="Source files",
+                description=(
+                    "List of MARC21 files with holdings records"
+                ),
+            ),
+        ]
+        organization_map_path: Annotated[
+            str,
+            Field(
+                title="Organization map path",
+                description=(
+                    "Path to the organization map file"
+                ),
+            ),
+        ]
+        organization_types_map_path: Annotated[
+            Optional[str],
+            Field(
+                title="Organization types map path",
+                description=(
+                    "Path to the organization types map file. By default is empty string"
+                ),
+            ),
+        ] = ""
+        address_categories_map_path: Annotated[
+            Optional[str],
+            Field(
+                title="Address categories map path",
+                description=(
+                    "Path to the address categories map file. By default is empty string"
+                ),
+            ),
+        ] = ""
+        email_categories_map_path: Annotated[
+            Optional[str],
+            Field(
+                title="Email categories map path",
+                description=(
+                    "Path to the email categories map file. By default is empty string"
+                ),
+            ),
+        ] = ""
+        phone_categories_map_path: Annotated[
+            Optional[str],
+            Field(
+                title="Phone categories map path",
+                description=(
+                    "Path to the phone categories map file. By default is empty string"
+                ),
+            ),
+        ] = ""
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -178,8 +243,8 @@ class OrganizationTransformer(MigrationTaskBase):
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as error:
                     self.mapper.handle_transformation_record_failed_error(idx, error)
-                except Exception as excepion:
-                    self.mapper.handle_generic_exception(idx, excepion)
+                except Exception as exception:
+                    self.mapper.handle_generic_exception(idx, exception)
 
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Number of objects in source data file")
@@ -227,7 +292,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Ogranization transformation report"),
+                i18n.t("Organization transformation report"),
                 migration_report_file,
                 self.start_datetime,
             )
@@ -269,7 +334,7 @@ class OrganizationTransformer(MigrationTaskBase):
             if address.get("isPrimary") is True:
                 primary_address_exists = True
 
-        # If none of the existing addresses is pimrary
+        # If none of the existing addresses is primary
         # Make the first one primary
         if not primary_address_exists:
             addresses[0]["isPrimary"] = True
@@ -364,7 +429,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         if len(identical_objects) > 0:
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of reoccuring identical %{type}", type=extradata_object_type)
+                i18n.t("Number of reoccurring identical %{type}", type=extradata_object_type)
             )
             Helper.log_data_issue(
                 f"{self.legacy_id}",
