@@ -3,7 +3,8 @@ import json
 import logging
 import sys
 import time
-from typing import Optional
+from typing import Optional, Annotated
+from pydantic import Field
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -24,12 +25,60 @@ from folio_migration_tools.transaction_migration.legacy_request import LegacyReq
 
 class RequestsMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        open_requests_file: FileDefinition
-        starting_row: Optional[int] = 1
-        item_files: Optional[list[FileDefinition]] = []
-        patron_files: Optional[list[FileDefinition]] = []
+        name: Annotated[
+            str,
+            Field(
+                title="Task name",
+                description=(
+                    "Name of this migration task. The name is being used to call "
+                    "the specific task, and to distinguish tasks of similar types"
+                )
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="The type of migration task you want to perform",
+            ),
+        ]
+        open_requests_file: Annotated[
+            FileDefinition,
+            Field(
+                title="Open requests file",
+                description="File with list of open requests",
+            ),
+        ]
+        starting_row: Annotated[
+            Optional[int],
+            Field(
+                title="Starting row",
+                description=(
+                    "Row number to start processing data from. "
+                    "Optional, by default is first row"
+                ),
+            ),
+        ] = 1
+        item_files: Annotated[
+            Optional[list[FileDefinition]],
+            Field(
+                title="Item files",
+                description=(
+                    "List of files containing item data. "
+                    "Optional, by default is empty list"
+                ),
+            ),
+        ] = []
+        patron_files: Annotated[
+            Optional[list[FileDefinition]],
+            Field(
+                title="Patron files",
+                description=(
+                    "List of files containing patron data. "
+                    "Optional, by default is empty list"
+                ),
+            ),
+        ] = []
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
