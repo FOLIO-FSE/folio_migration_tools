@@ -90,6 +90,25 @@ class RulesMapperHoldings(RulesMapperBase):
                         )
         self.mappings["852"] = new_852_mapping
 
+    def integrate_supplemental_mfhd_mappings(self, new_rules):
+        try:
+            self.mappings.update(new_rules)
+        except Exception as e:
+            raise TransformationProcessError(
+                "",
+                "Failed to integrate supplemental mfhd mappings",
+                str(e),
+            )
+
+    def prep_852_notes(self, marc_record: Record):
+        for field in marc_record.get_fields("852"):
+            new_952 = Field(
+                tag="952",
+                indicators=["f", "f"],
+                subfields=field.subfields
+            )
+            marc_record.add_ordered_field(new_952)
+
     def parse_record(
         self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
     ) -> list[dict]:
@@ -111,7 +130,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
         self.print_progress()
         folio_holding = self.perform_initial_preparation(marc_record, legacy_ids)
-
+        self.prep_852_notes(marc_record)
         self.migration_report.add("RecordStatus", marc_record.leader[5])
         ignored_subsequent_fields: set = set()
         num_852s = 0
