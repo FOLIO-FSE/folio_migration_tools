@@ -1,5 +1,7 @@
 '''Main "script."'''
+
 import csv
+import json
 import logging
 from typing import Annotated, List
 
@@ -42,7 +44,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         files: Annotated[
             List[FileDefinition],
             Field(
-                title="Source files", description=("List of MARC21 files with holdings records")
+                title="Source files",
+                description=("List of MARC21 files with holdings records"),
             ),
         ]
         hrid_handling: Annotated[
@@ -154,6 +157,13 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 description="The UUID of the Holdings type that will be used for unmapped values",
             ),
         ]
+        supplemental_mfhd_mapping_rules_file: Annotated[
+            str,
+            Field(
+                title="Supplemental MFHD mapping rules file",
+                description="The name of the file in the mapping_files directory containing supplemental MFHD mapping rules",
+            ),
+        ] = ""
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -204,11 +214,13 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                     csv.DictReader(boundwith_relationship_file, dialect="tsv")
                 )
             logging.info(
-                "Rows in Bound with relationship map: %s", len(self.boundwith_relationship_map)
+                "Rows in Bound with relationship map: %s",
+                len(self.boundwith_relationship_map),
             )
 
         location_map_path = (
-            self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name
+            self.folder_structure.mapping_files_folder
+            / self.task_config.location_map_file_name
         )
         with open(location_map_path) as location_map_file:
             self.location_map = list(csv.DictReader(location_map_file, dialect="tsv"))
@@ -217,7 +229,9 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_config.files
         )
-        self.instance_id_map = self.load_id_map(self.folder_structure.instance_id_map_path, True)
+        self.instance_id_map = self.load_id_map(
+            self.folder_structure.instance_id_map_path, True
+        )
         self.mapper = RulesMapperHoldings(
             self.folio_client,
             self.location_map,
@@ -226,6 +240,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.instance_id_map,
             self.boundwith_relationship_map,
         )
+        self.add_supplemental_mfhd_mappings()
         if (
             self.task_configuration.reset_hrid_settings
             and self.task_configuration.update_hrid_settings
@@ -233,6 +248,33 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.mapper.hrid_handler.reset_holdings_hrid_counter()
         logging.info("%s Instance ids in map", len(self.instance_id_map))
         logging.info("Init done")
+
+    def add_supplemental_mfhd_mappings(self):
+        if self.task_config.supplemental_mfhd_mapping_rules_file:
+            try:
+                with open(
+                    (
+                        self.folder_structure.mapping_files_folder
+                        / self.task_config.supplemental_mfhd_mapping_rules_file
+                    ),
+                    "r",
+                ) as new_rules_file:
+                    new_rules = json.load(new_rules_file)
+                    if not isinstance(new_rules, dict):
+                        raise TransformationProcessError(
+                            "",
+                            "Supplemental MFHD mapping rules file must contain a dictionary",
+                            json.dumps(new_rules),
+                        )
+            except FileNotFoundError:
+                raise TransformationProcessError(
+                    "",
+                    "Provided supplemental MFHD mapping rules file not found",
+                    self.task_config.supplemental_mfhd_mapping_rules_file,
+                )
+        else:
+            new_rules = {}
+        self.mapper.integrate_supplemental_mfhd_mappings(new_rules)
 
     def do_work(self):
         self.do_work_marc_transformer()
