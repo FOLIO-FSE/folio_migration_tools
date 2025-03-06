@@ -4,8 +4,9 @@ import logging
 import sys
 import time
 import traceback
-from typing import Dict
+from typing import Dict, Annotated
 from urllib.error import HTTPError
+from pydantic import Field
 
 import httpx
 import i18n
@@ -25,9 +26,30 @@ from folio_migration_tools.transaction_migration.legacy_reserve import LegacyRes
 
 class ReservesMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        course_reserve_file_path: FileDefinition
+        name: Annotated[
+            str,
+            Field(
+                title="Migration task name",
+                description=(
+                    "Name of this migration task. The name is being used to call the specific "
+                    "task, and to distinguish tasks of similar types"
+                ),
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="The type of migration task you want to perform",
+            ),
+        ]
+        course_reserve_file_path: Annotated[
+            FileDefinition,
+            Field(
+                title="Course reserve file path",
+                description="Path to the file with course reserves",
+            ),
+        ]
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
