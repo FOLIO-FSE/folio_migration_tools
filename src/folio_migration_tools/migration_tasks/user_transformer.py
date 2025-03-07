@@ -1,7 +1,8 @@
 import json
 import logging
 import sys
-from typing import Optional
+from typing import Optional, Annotated
+from pydantic import Field
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -25,15 +26,84 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class UserTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
-        name: str
-        migration_task_type: str
-        group_map_path: str
-        departments_map_path: Optional[str] = ""
-        use_group_map: Optional[bool] = True
-        user_mapping_file_name: str
-        user_file: FileDefinition
-        remove_id_and_request_preferences: Optional[bool] = False
-        remove_request_preferences: Optional[bool] = False
+        name: Annotated[
+            str,
+            Field(
+                title="Migration task name",
+                description=(
+                    "Name of this migration task. The name is being used to call "
+                    "the specific task, and to distinguish tasks of similar types"
+                ),
+            ),
+        ]
+        migration_task_type: Annotated[
+            str,
+            Field(
+                title="Migration task type",
+                description="The type of migration task you want to perform",
+            ),
+        ]
+        group_map_path: Annotated[
+            str,
+            Field(
+                title="Group map path",
+                description="Define the path for group mapping",
+            )
+        ]
+        departments_map_path: Annotated[
+            Optional[str],
+            Field(
+                title="Departments map path",
+                description=(
+                    "Define the path for departments mapping. "
+                    "Optional, by dfault is empty string"
+                ),
+            )
+        ] = ""
+        use_group_map: Annotated[
+            Optional[bool],
+            Field(
+                title="Use group map",
+                description=(
+                    "Specify whether to use group mapping. "
+                    "Optional, by default is True"
+                ),
+            )
+        ] = True
+        user_mapping_file_name: Annotated[
+            str,
+            Field(
+                title="User mapping file name",
+                description="Specify the user mapping file name",
+            )
+        ]
+        user_file: Annotated[
+            FileDefinition,
+            Field(
+                title="User file",
+                description="Select the user data file",
+            )
+        ]
+        remove_id_and_request_preferences: Annotated[
+            Optional[bool],
+            Field(
+                title="Remove ID and request preferences",
+                description=(
+                    "Specify whether to remove user ID and request preferences. "
+                    "Optional, by default is False"
+                ),
+            )
+        ] = False
+        remove_request_preferences: Annotated[
+            Optional[bool],
+            Field(
+                title="Remove request preferences",
+                description=(
+                    "Specify whether to remove user request preferences. "
+                    "Optional, by default is False"
+                ),
+            )
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -128,7 +198,7 @@ class UserTransformer(MigrationTaskBase):
                                 print_email_warning()
                             folio_user, index_or_id = self.mapper.do_map(
                                 legacy_user,
-                                num_users,
+                                str(num_users),
                                 FOLIONamespaces.users,
                             )
                             folio_user = self.mapper.perform_additional_mapping(
@@ -168,9 +238,9 @@ class UserTransformer(MigrationTaskBase):
                             logging.error(ee, exc_info=True)
 
                         self.total_records = num_users
-        except FileNotFoundError as fnfe:
+        except FileNotFoundError as fn:
             logging.exception("File not found")
-            print(f"\n{fnfe}")
+            print(f"\n{fn}")
             sys.exit(1)
 
     def wrap_up(self):
@@ -214,10 +284,10 @@ class UserTransformer(MigrationTaskBase):
 def print_email_warning():
     s = (
         "  ______   __  __              _____   _         _____     ___  \n"  # noqa: E501, W605
-        " |  ____| |  \/  |     /\     |_   _| | |       / ____|   |__ \ \n"  # noqa: E501, W605
-        " | |__    | \  / |    /  \      | |   | |      | (___        ) |\n"  # noqa: E501, W605
-        " |  __|   | |\/| |   / /\ \     | |   | |       \___ \      / / \n"  # noqa: E501, W605
-        " |______| |_|  |_| /_/    \_\ |_____| |______| |_____/     (_)  \n"  # noqa: E501, W605
+        " |  ____| |  \\/  |     /\\     |_   _| | |       / ____|   |__ \\ \n"  # noqa: E501, W605
+        " | |__    | \\  / |    /  \\      | |   | |      | (___        ) |\n"  # noqa: E501, W605
+        " |  __|   | |\\/| |   / /\\ \\     | |   | |       \\___ \\      / / \n"  # noqa: E501, W605
+        " |______| |_|  |_| /_/    \\_\\ |_____| |______| |_____/     (_)  \n"  # noqa: E501, W605
         "                                                                \n"  # noqa: E501, W605
         "                                                       \n"
     )
