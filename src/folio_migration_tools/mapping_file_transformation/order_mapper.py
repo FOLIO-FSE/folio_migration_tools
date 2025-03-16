@@ -270,9 +270,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 and "$ref" in object_schema
                 and object_schema["type"] == "object"
             ):
-                submodule_path["properties"] = CompositeOrderMapper.inject_schema_by_ref(
+                object_schema["properties"] = CompositeOrderMapper.inject_schema_by_ref(
                     submodule_path, github_headers, object_schema
-                ).get("properties")
+                ).get("properties", {})#TODO: Investigate new CustomFields schema and figure out how to actually handle it
 
             for property_name_level1, property_level1 in object_schema.get(
                 "properties", {}
