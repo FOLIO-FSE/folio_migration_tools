@@ -69,7 +69,6 @@ class RulesMapperHoldings(RulesMapperBase):
         logging.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-holdings"
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
-        self.fix_853_bug_in_rules()
 
     def fix_853_bug_in_rules(self):
         f852_mappings = self.mappings["852"]
@@ -90,9 +89,10 @@ class RulesMapperHoldings(RulesMapperBase):
                         )
         self.mappings["852"] = new_852_mapping
 
-    def integrate_supplemental_mfhd_mappings(self, new_rules):
+    def integrate_supplemental_mfhd_mappings(self, new_rules={}):
         try:
             self.mappings.update(new_rules)
+            self.fix_853_bug_in_rules()
         except Exception as e:
             raise TransformationProcessError(
                 "",
@@ -102,6 +102,7 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def prep_852_notes(self, marc_record: Record):
         for field in marc_record.get_fields("852"):
+            field.subfields.sort(key=lambda x: x[0])
             new_952 = Field(
                 tag="952",
                 indicators=["f", "f"],

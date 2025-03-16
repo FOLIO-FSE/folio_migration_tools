@@ -76,6 +76,7 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
                 "in00000000005",
             )
         }
+        mapper.integrate_supplemental_mfhd_mappings()
         record = next(reader)
         ids = RulesMapperHoldings.get_legacy_ids(mapper, record, 1)
         res = mapper.parse_record(
@@ -304,6 +305,7 @@ def test_create_source_records_equals_false():
         {"legacy_code": "*", "folio_code": "KU/CC/DI/2"},
     ]
     mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map, [])
+    mapper.integrate_supplemental_mfhd_mappings()
     mapper.folio_client = folio
     mapper.migration_report = MigrationReport()
     path = "./tests/test_data/mfhd/holding.mrc"
@@ -363,6 +365,7 @@ def test_create_source_records_equals_false_preserve001():
         {"legacy_code": "*", "folio_code": "KU/CC/DI/2"},
     ]
     mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map, [])
+    mapper.integrate_supplemental_mfhd_mappings()
     mapper.folio_client = folio
     mapper.migration_report = MigrationReport()
     path = "./tests/test_data/mfhd/holding.mrc"
