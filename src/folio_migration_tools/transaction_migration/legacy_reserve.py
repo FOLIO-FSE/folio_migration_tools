@@ -1,7 +1,5 @@
 import uuid
-from typing import Dict
-from typing import List
-from typing import Tuple
+from typing import Dict, List, Tuple
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
@@ -17,9 +15,9 @@ class LegacyReserve(object):
         for h in correct_headers:
             if h not in legacy_request_dict:
                 raise TransformationProcessError(
-                    int,
+                    row,
                     "Missing header in file. The following are required:",
-                    ",".join(correct_headers),
+                    ", ".join(correct_headers),
                 )
         self.errors: List[Tuple[str, str]] = [
             ("Missing properties in legacy data", prop)
