@@ -576,3 +576,12 @@ def test_perform_additional_mapping_instance_uuid_no_match(mapper):
     folio_po = mapper.perform_additional_mapping("1", folio_po)
 
     assert "instanceId" not in folio_po["compositePoLines"][0]
+
+
+def test_is_valid_po_number():
+    assert CompositeOrderMapper.is_valid_po_number("Spam123")
+    assert not CompositeOrderMapper.is_valid_po_number("o 124")
+    assert not CompositeOrderMapper.is_valid_po_number("o-124")
+    assert not CompositeOrderMapper.is_valid_po_number("o_124")
+    assert not CompositeOrderMapper.is_valid_po_number("o.124")
+    assert not CompositeOrderMapper.is_valid_po_number("o/124")
