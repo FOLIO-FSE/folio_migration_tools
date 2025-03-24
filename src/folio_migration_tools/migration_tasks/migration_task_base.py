@@ -1,4 +1,5 @@
 import csv
+import io
 import json
 import logging
 import os
@@ -119,7 +120,11 @@ class MigrationTaskBase:
             TransformationProcessError: _description_
 
         """
-        files = [source_path / f.file_name for f in file_defs if isfile(source_path / f.file_name)]
+        files = [
+            source_path / f.file_name
+            for f in file_defs
+            if isfile(source_path / f.file_name)
+        ]
         ret_str = ", ".join(f.file_name for f in file_defs)
 
         if files and len(files) < len(file_defs):
@@ -141,7 +146,9 @@ class MigrationTaskBase:
     @staticmethod
     def load_id_map(map_path, raise_if_empty=False):
         if not isfile(map_path):
-            logging.warn("No legacy id map found at %s. Will build one from scratch", map_path)
+            logging.warn(
+                "No legacy id map found at %s. Will build one from scratch", map_path
+            )
             return {}
         id_map = {}
         loaded_rows = 0
@@ -194,7 +201,9 @@ class MigrationTaskBase:
         else:
             logger.setLevel(logging.INFO)
             stream_handler.setLevel(logging.INFO)
-            stream_handler.addFilter(ExcludeLevelFilter(30))  # Exclude warnings from pymarc
+            stream_handler.addFilter(
+                ExcludeLevelFilter(30)
+            )  # Exclude warnings from pymarc
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
@@ -225,16 +234,22 @@ class MigrationTaskBase:
     def setup_records_map(self, mapping_file_path):
         with open(mapping_file_path) as mapping_file:
             field_map = json.load(mapping_file)
-            logging.info("%s fields present in record mapping file", len(field_map["data"]))
+            logging.info(
+                "%s fields present in record mapping file", len(field_map["data"])
+            )
             mapped_fields = (
                 f
                 for f in field_map["data"]
                 if f["legacy_field"] and f["legacy_field"] != "Not mapped"
             )
-            logging.info("%s fields mapped in record mapping file", len(list(mapped_fields)))
+            logging.info(
+                "%s fields mapped in record mapping file", len(list(mapped_fields))
+            )
             return field_map
 
-    def log_and_exit_if_too_many_errors(self, error: TransformationRecordFailedError, idx):
+    def log_and_exit_if_too_many_errors(
+        self, error: TransformationRecordFailedError, idx
+    ):
         self.num_exeptions += 1
         error.log_it()
         if self.num_exeptions / (1 + idx) > 0.2 and self.num_exeptions > 5000:
@@ -250,7 +265,9 @@ class MigrationTaskBase:
         if num_processed > 1 and num_processed % 10000 == 0:
             elapsed = num_processed / (time.time() - start_time)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            logging.info(f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} ")
+            logging.info(
+                f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} "
+            )
 
     def do_work_marc_transformer(
         self,
@@ -259,7 +276,9 @@ class MigrationTaskBase:
         if self.folder_structure.failed_marc_recs_file.is_file():
             os.remove(self.folder_structure.failed_marc_recs_file)
             logging.info("Removed failed marc records file to prevent duplicating data")
-        with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
+        with open(
+            self.folder_structure.created_objects_path, "w+"
+        ) as created_records_file:
             self.processor = MarcFileProcessor(
                 self.mapper, self.folder_structure, created_records_file
             )
@@ -271,8 +290,44 @@ class MigrationTaskBase:
                     self.folder_structure,
                 )
 
+    @staticmethod
+    def verify_ref_data_mapping_file_structure(map_file: io.TextIOBase):
+        current_pos = map_file.tell()
+        try:
+            map_file.seek(0)
+            invalid_lines = []
+            valid_lines = []
+            num_of_columns = len(map_file.readline().split("\t"))
+            lines = map_file.readlines()
+            for idx, row in enumerate(lines, start=2):
+                if not row.strip():
+                    if idx == len(lines) + 1:
+                        continue
+                    else:
+                        invalid_lines.append(str(idx))
+                else:
+                    line_length = len(row.split("\t"))
+                    if line_length != num_of_columns:
+                        invalid_lines.append(str(idx))
+                    else:
+                        valid_lines.append(str(idx))
+            if invalid_lines:
+                raise TransformationProcessError(
+                    "",
+                    (
+                        f"Mapping file {map_file.name} has rows with different number "
+                        f"of columns ({'Row' if len(invalid_lines) == 1 else 'Rows'} {', '.join(invalid_lines)})"
+                    ),
+                )
+            if not valid_lines:
+                raise TransformationProcessError(
+                    "", f"Map has no rows: {map_file.name}"
+                )
+        finally:
+            map_file.seek(current_pos)
+
+    @staticmethod
     def load_ref_data_mapping_file(
-        self,
         folio_property_name: str,
         map_file_path: Path,
         folio_keys,
@@ -286,9 +341,9 @@ class MigrationTaskBase:
         ):
             try:
                 with open(map_file_path) as map_file:
+                    # Validate the structure of the mapping file
+                    MigrationTaskBase.verify_ref_data_mapping_file_structure(map_file)
                     ref_data_map = list(csv.DictReader(map_file, dialect="tsv"))
-                    if not ref_data_map:
-                        raise TransformationProcessError("", f"Map has no rows: {map_file_path}")
                     logging.info(
                         "Found %s rows in %s map",
                         len(ref_data_map),
