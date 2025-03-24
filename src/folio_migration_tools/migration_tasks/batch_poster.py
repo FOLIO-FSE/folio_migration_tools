@@ -250,14 +250,11 @@ class BatchPoster(MigrationTaskBase):
 
     def post_record_batch(self, batch, failed_recs_file, row):
         json_rec = json.loads(row.split("\t")[-1])
-        if (
-            self.task_configuration.object_type in ["Instances", "Holdings", "Items"]
-            and not self.task_configuration.use_safe_inventory_endpoints
-        ):
-            self.migration_report.add_general_statistics(
-                i18n.t("Set _version to -1 to enable upsert")
-            )
-            json_rec["_version"] = -1
+        if self.task_configuration.object_type == "ShadowInstances":
+            if json_rec['source'] == 'MARC':
+                json_rec['source'] = 'CONSORTIUM-MARC'
+            elif json_rec['source'] == 'FOLIO':
+                json_rec['source'] = 'CONSORTIUM-FOLIO'
         if self.task_configuration.object_type == "SRS":
             json_rec["snapshotId"] = self.snapshot_id
         if self.processed == 1:
@@ -666,6 +663,18 @@ def get_api_info(object_type: str, use_safe: bool = True):
             "supports_upsert": True,
         },
         "Instances": {
+            "object_name": "instances",
+            "api_endpoint": (
+                "/instance-storage/batch/synchronous"
+                if use_safe
+                else "/instance-storage/batch/synchronous-unsafe"
+            ),
+            "is_batch": True,
+            "total_records": False,
+            "addSnapshotId": False,
+            "supports_upsert": True,
+        },
+        "ShadowInstances": {
             "object_name": "instances",
             "api_endpoint": (
                 "/instance-storage/batch/synchronous"
