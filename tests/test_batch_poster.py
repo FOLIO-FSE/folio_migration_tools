@@ -19,6 +19,14 @@ def test_get_unsafe_and_safe_endpoints():
         batch_poster.get_api_info("Instances")["api_endpoint"]
         == "/instance-storage/batch/synchronous"
     )
+    assert(
+        batch_poster.get_api_info("ShadowInstances", False)["api_endpoint"]
+        == "/instance-storage/batch/synchronous-unsafe"
+    )
+    assert (
+        batch_poster.get_api_info("ShadowInstances")["api_endpoint"]
+        == "/instance-storage/batch/synchronous"
+    )
     assert (
         batch_poster.get_api_info("Holdings", False)["api_endpoint"]
         == "/holdings-storage/batch/synchronous-unsafe"
