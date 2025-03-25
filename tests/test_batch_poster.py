@@ -75,3 +75,12 @@ def test_get_extradata_endpoint_from_task_configuration():
     )
 
     assert endpoint == "otherdata-endpoint/endpoint"
+
+
+def test_set_consortium_source():
+    json_rec_marc = {"source": "MARC"}
+    json_rec_folio = {"source": "FOLIO"}
+    BatchPoster.set_consortium_source(json_rec_marc)
+    BatchPoster.set_consortium_source(json_rec_folio)
+    assert json_rec_marc["source"] == "CONSORTIUM-MARC"
+    assert json_rec_folio["source"] == "CONSORTIUM-FOLIO"

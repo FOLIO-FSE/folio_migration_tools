@@ -248,13 +248,17 @@ class BatchPoster(MigrationTaskBase):
                     if self.task_configuration.object_type == "SRS":
                         self.commit_snapshot()
 
+    @staticmethod
+    def set_consortium_source(json_rec):
+        if json_rec['source'] == 'MARC':
+            json_rec['source'] = 'CONSORTIUM-MARC'
+        elif json_rec['source'] == 'FOLIO':
+            json_rec['source'] = 'CONSORTIUM-FOLIO'
+
     def post_record_batch(self, batch, failed_recs_file, row):
         json_rec = json.loads(row.split("\t")[-1])
         if self.task_configuration.object_type == "ShadowInstances":
-            if json_rec['source'] == 'MARC':
-                json_rec['source'] = 'CONSORTIUM-MARC'
-            elif json_rec['source'] == 'FOLIO':
-                json_rec['source'] = 'CONSORTIUM-FOLIO'
+            self.set_consortium_source(json_rec)
         if self.task_configuration.object_type == "SRS":
             json_rec["snapshotId"] = self.snapshot_id
         if self.processed == 1:
