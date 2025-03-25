@@ -291,26 +291,55 @@ class MigrationTaskBase:
                 )
 
     @staticmethod
+    def validate_ref_data_mapping_lines(lines, num_of_columns):
+        """
+        Helper method to validate the structure of individual lines in a mapping file.
+
+        Args:
+            lines (list): List of lines in the mapping file
+            num_of_columns (int): Number of columns expected in each line
+
+        Returns:
+            tuple: A tuple containing a list of invalid lines and a list of valid lines
+        """
+        invalid_lines = []
+        valid_lines = []
+        for idx, row in enumerate(lines, start=2):
+            if not row.strip():
+                if idx == len(lines) + 1:
+                    continue
+                else:
+                    invalid_lines.append(str(idx))
+            else:
+                line_length = len(row.split("\t"))
+                if line_length != num_of_columns:
+                    invalid_lines.append(str(idx))
+                else:
+                    valid_lines.append(str(idx))
+        return invalid_lines, valid_lines
+
+    @staticmethod
     def verify_ref_data_mapping_file_structure(map_file: io.TextIOBase):
+        """
+        Helper method to validate the structure of a mapping file.
+
+        Args:
+            map_file (io.TextIOBase): The mapping file to validate
+
+        Raises:
+            TransformationProcessError: If the mapping file has rows with different number of columns
+
+        Returns:
+            None
+        """
         current_pos = map_file.tell()
         try:
             map_file.seek(0)
-            invalid_lines = []
-            valid_lines = []
             num_of_columns = len(map_file.readline().split("\t"))
             lines = map_file.readlines()
-            for idx, row in enumerate(lines, start=2):
-                if not row.strip():
-                    if idx == len(lines) + 1:
-                        continue
-                    else:
-                        invalid_lines.append(str(idx))
-                else:
-                    line_length = len(row.split("\t"))
-                    if line_length != num_of_columns:
-                        invalid_lines.append(str(idx))
-                    else:
-                        valid_lines.append(str(idx))
+            invalid_lines, valid_lines = MigrationTaskBase.validate_ref_data_mapping_lines(
+                lines, num_of_columns
+            )
             if invalid_lines:
                 raise TransformationProcessError(
                     "",
@@ -333,6 +362,15 @@ class MigrationTaskBase:
         folio_keys,
         required: bool = True,
     ):
+        """
+        Helper method to load a reference data mapping file.
+
+        Args:
+            folio_property_name (str): The name of the property in FOLIO
+            map_file_path (Path): The path to the mapping file
+            folio_keys (list): A list of FOLIO keys
+            required (bool): Whether the property is required or not
+        """
         if (
             folio_property_name in folio_keys
             or required
