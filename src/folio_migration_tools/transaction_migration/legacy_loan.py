@@ -3,7 +3,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from dateutil import tz
-from dateutil.parser import parse
+from dateutil.parser import parse, ParserError
 
 from folio_migration_tools.migration_report import MigrationReport
 
@@ -42,46 +42,47 @@ class LegacyLoan(object):
 
         self.tenant_timezone = tenant_timezone
         self.errors = []
+        self.row = row
         for prop in correct_headers:
             if prop not in legacy_loan_dict and prop not in optional_headers:
-                self.errors.append(("Missing properties in legacy data", prop))
+                self.errors.append((f"Missing properties in legacy data {row=}", prop))
             if (
                 prop != "next_item_status"
                 and not legacy_loan_dict.get(prop, "").strip()
                 and prop not in optional_headers
             ):
-                self.errors.append(("Empty properties in legacy data", prop))
+                self.errors.append((f"Empty properties in legacy data {row=}", prop))
         try:
             temp_date_due: datetime = parse(legacy_loan_dict["due_date"])
             if temp_date_due.tzinfo != tz.UTC:
                 temp_date_due = temp_date_due.replace(tzinfo=self.tenant_timezone)
                 self.report(
-                    f"Provided due_date is not UTC, "
-                    f"setting tzinfo to tenant timezone ({self.tenant_timezone})"
+                    f"Provided due_date is not UTC in {row=}, "
+                    f"setting tz-info to tenant timezone ({self.tenant_timezone})"
                 )
             if temp_date_due.hour == 0 and temp_date_due.minute == 0:
                 temp_date_due = temp_date_due.replace(hour=23, minute=59)
                 self.report(
-                    "Hour and minute not specified for due date. "
+                    f"Hour and minute not specified for due date in {row=}. "
                     "Assuming end of local calendar day (23:59)..."
                 )
-        except Exception as ee:
+        except (ParserError, OverflowError) as ee:
             logging.error(ee)
-            self.errors.append(("Parse date failure. Setting UTC NOW", "due_date"))
+            self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "due_date"))
             temp_date_due = datetime.now(ZoneInfo("UTC"))
         try:
             temp_date_out: datetime = parse(legacy_loan_dict["out_date"])
             if temp_date_out.tzinfo != tz.UTC:
                 temp_date_out = temp_date_out.replace(tzinfo=self.tenant_timezone)
                 self.report(
-                    f"Provided out_date is not UTC, "
-                    f"setting tzinfo to tenant timezone ({self.tenant_timezone})"
+                    f"Provided out_date is not UTC in {row=}, "
+                    f"setting tz-info to tenant timezone ({self.tenant_timezone})"
                 )
-        except Exception:
+        except (ParserError, OverflowError):
             temp_date_out = datetime.now(
                 ZoneInfo("UTC")
             )  # TODO: Consider moving this assignment block above the temp_date_due
-            self.errors.append(("Parse date failure. Setting UTC NOW", "out_date"))
+            self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "out_date"))
 
         # good to go, set properties
         self.item_barcode: str = legacy_loan_dict["item_barcode"].strip()
@@ -94,7 +95,7 @@ class LegacyLoan(object):
         self.renewal_count = self.set_renewal_count(legacy_loan_dict)
         self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
-            self.errors.append(("Not an allowed status", self.next_item_status))
+            self.errors.append((f"Not an allowed status {row=}", self.next_item_status))
         self.service_point_id = (
             legacy_loan_dict["service_point_id"]
             if legacy_loan_dict.get("service_point_id", "")
@@ -107,23 +108,19 @@ class LegacyLoan(object):
             try:
                 return int(renewal_count)
             except ValueError:
-                self.report(
-                    f"Unresolvable {renewal_count=} was replaced with 0.")
+                self.report(f"Unresolvable {renewal_count=} was replaced with 0.")
         else:
             self.report(f"Missing renewal count was replaced with 0.")
         return 0
 
     def correct_for_1_day_loans(self):
-        try:
-            if self.due_date.date() <= self.out_date.date():
-                if self.due_date.hour == 0:
-                    self.due_date = self.due_date.replace(hour=23, minute=59)
-                if self.out_date.hour == 0:
-                    self.out_date = self.out_date.replace(hour=0, minute=1)
-            if self.due_date <= self.out_date:
-                raise ValueError("Due date is before out date")
-        except Exception:
-            self.errors.append(("Time alignment issues", "both dates"))
+        if self.due_date.date() <= self.out_date.date():
+            if self.due_date.hour == 0:
+                self.due_date = self.due_date.replace(hour=23, minute=59)
+            if self.out_date.hour == 0:
+                self.out_date = self.out_date.replace(hour=0, minute=1)
+        if self.due_date <= self.out_date:
+            self.errors.append((f"Time alignment issues in {self.row=}", "both dates"))
 
     def to_dict(self):
         return {
@@ -140,8 +137,8 @@ class LegacyLoan(object):
             if self.tenant_timezone != ZoneInfo("UTC"):
                 self.due_date = self.due_date.astimezone(ZoneInfo("UTC"))
                 self.out_date = self.out_date.astimezone(ZoneInfo("UTC"))
-        except Exception:
-            self.errors.append(("UTC correction issues", "both dates"))
+        except TypeError:
+            self.errors.append((f"UTC correction issues {self.row}", "both dates"))
 
     def report(self, what_to_report: str):
         self.migration_report.add("Details", what_to_report)
