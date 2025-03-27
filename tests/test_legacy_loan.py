@@ -42,12 +42,13 @@ def test_init_tz():
     assert legacy_loan.out_date.isoformat() == "2022-01-13T20:00:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Provided due_date is not UTC, setting tzinfo to tenant timezone (America/Chicago)"
+        "Provided due_date is not UTC in row=0, "
+        "setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
-
     assert (
-        "Provided out_date is not UTC, setting tzinfo to tenant timezone (America/Chicago)"
+        "Provided out_date is not UTC in row=0, "
+        "setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
 
@@ -68,16 +69,17 @@ def test_init_tz_2():
     assert legacy_loan.out_date.isoformat() == "2019-02-22T10:53:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Hour and minute not specified for due date. Assuming end of local calendar day (23:59)..."
+        "Hour and minute not specified for due date in row=0. "
+        "Assuming end of local calendar day (23:59)..."
         in migration_report.report["Details"]
     )
 
     assert (
-        "Provided out_date is not UTC, setting tzinfo to tenant timezone (UTC)"
+        "Provided out_date is not UTC in row=0, setting tz-info to tenant timezone (UTC)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided due_date is not UTC, setting tzinfo to tenant timezone (UTC)"
+        "Provided due_date is not UTC in row=0, setting tz-info to tenant timezone (UTC)"
         in migration_report.report["Details"]
     )
 
@@ -100,11 +102,13 @@ def test_init_tz_3():
     assert legacy_loan.out_date.isoformat() == "2022-01-13T03:00:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Provided due_date is not UTC, setting tzinfo to tenant timezone (Australia/Sydney)"
+        "Provided due_date is not UTC in row=0, "
+        "setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided out_date is not UTC, setting tzinfo to tenant timezone (Australia/Sydney)"
+        "Provided out_date is not UTC in row=0, "
+        "setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
 
@@ -127,11 +131,13 @@ def test_init_tz_4():  # Test dates with(out) DST
     assert legacy_loan.out_date.isoformat() == "2022-06-13T04:00:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Provided due_date is not UTC, setting tzinfo to tenant timezone (Australia/Sydney)"
+        "Provided due_date is not UTC in row=0, "
+        "setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided out_date is not UTC, setting tzinfo to tenant timezone (Australia/Sydney)"
+        "Provided out_date is not UTC in row=0, "
+        "setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
 
@@ -154,11 +160,13 @@ def test_init_tz_5():  # Test dates with(out) DST
     assert legacy_loan.out_date.isoformat() == "2022-06-13T19:00:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Provided due_date is not UTC, setting tzinfo to tenant timezone (America/Chicago)"
+        "Provided due_date is not UTC in row=0, "
+        "setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided out_date is not UTC, setting tzinfo to tenant timezone (America/Chicago)"
+        "Provided out_date is not UTC in row=0, "
+        "setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
 
@@ -208,3 +216,26 @@ def test_init_renewal_count_is_unresolvable():
     legacy_loan = LegacyLoan(
         loan_dict, "", migration_report, tenant_timezone)
     assert legacy_loan.renewal_count == 0
+
+
+def test_to_dict() -> None:
+    loan_dict = {
+        "item_barcode": "the barcode with trailing spaces    ",
+        "patron_barcode": "   the barcode with leading spaces",
+        "due_date": "20250327",
+        "out_date": "20250327",
+        "renewal_count": "1",
+        "next_item_status": "Checked out",
+    }
+    tenant_timezone = ZoneInfo("UTC")
+    migration_report = MigrationReport()
+    legacy_loan = LegacyLoan(loan_dict, "", migration_report, tenant_timezone)
+    expected_result = {
+        "item_barcode": "the barcode with trailing spaces",
+        "patron_barcode": "the barcode with leading spaces",
+        "due_date": "2025-03-27T23:59:00+00:00",
+        "out_date": "2025-03-27T00:01:00+00:00",
+        "renewal_count": 1,
+        "next_item_status": "Checked out",
+    }
+    assert legacy_loan.to_dict() == expected_result
