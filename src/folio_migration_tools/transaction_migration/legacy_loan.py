@@ -6,6 +6,7 @@ from dateutil import tz
 from dateutil.parser import parse, ParserError
 
 from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 
 utc = ZoneInfo("UTC")
 
@@ -120,7 +121,7 @@ class LegacyLoan(object):
             if self.out_date.hour == 0:
                 self.out_date = self.out_date.replace(hour=0, minute=1)
         if self.due_date <= self.out_date:
-            self.errors.append((f"Time alignment issues in {self.row=}", "both dates"))
+            raise TransformationProcessError(self.row, "Due date is before out date")
 
     def to_dict(self):
         return {
