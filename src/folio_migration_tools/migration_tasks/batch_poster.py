@@ -260,11 +260,15 @@ class BatchPoster(MigrationTaskBase):
         """
         Synchronous wrapper for set_version_async
         """
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
+            asyncio.set_event_loop(None)  # Reset the event loop
         else:
-            asyncio.run(self.set_version_async(batch, query_api, object_type))
+            loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
 
     async def set_version_async(self, batch, query_api, object_type) -> None:
         """
