@@ -96,7 +96,7 @@ def test_set_consortium_source():
 
 @pytest.mark.asyncio
 async def test_set_version_async():
-    mock_response = AsyncMock()
+    mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
         "instances": [
