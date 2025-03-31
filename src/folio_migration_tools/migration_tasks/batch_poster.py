@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 import logging
@@ -255,6 +256,64 @@ class BatchPoster(MigrationTaskBase):
         elif json_rec['source'] == 'FOLIO':
             json_rec['source'] = 'CONSORTIUM-FOLIO'
 
+    def set_version(self, batch, query_api, object_type) -> None:
+        """
+        Synchronous wrapper for set_version_async
+        """
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
+        else:
+            asyncio.run(self.set_version_async(batch, query_api, object_type))
+
+    async def set_version_async(self, batch, query_api, object_type) -> None:
+        """
+        Fetches the current version of the records in the batch, if the record exists in FOLIO
+
+        Args:
+            batch (list): List of records to fetch versions for
+            query_api (str): The query API endpoint to use
+            object_type (str): The key in the API response that contains the records
+
+        Returns:
+            None
+        """
+        fetch_batch_size = 90
+        fetch_tasks = []
+        updates = {}
+        async with httpx.AsyncClient(base_url=self.folio_client.okapi_url) as client:
+            for i in range(0, len(batch), fetch_batch_size):
+                batch_slice = batch[i:i + fetch_batch_size]
+                fetch_tasks.append(
+                    client.get(
+                        query_api,
+                        params={
+                            "query": f"id==({' OR '.join([record['id'] for record in batch_slice if 'id' in record])})",
+                            "limit": fetch_batch_size
+                        },
+                        headers=self.folio_client.okapi_headers
+                    )
+                )
+            responses = await asyncio.gather(*fetch_tasks)
+
+            for response in responses:
+                if response.status_code == 200:
+                    response_json = await response.json()
+                    for record in response_json[object_type]:
+                        updates[record["id"]] = {
+                            "_version": record["_version"],
+                            "status": record["status"],
+                        }
+                else:
+                    logging.error(
+                        "Failed to fetch current records. HTTP %s\t%s",
+                        response.status_code,
+                        response.text,
+                    )
+        for record in batch:
+            if record["id"] in updates:
+                record.update(updates[record["id"]])
+
     def post_record_batch(self, batch, failed_recs_file, row):
         json_rec = json.loads(row.split("\t")[-1])
         if self.task_configuration.object_type == "ShadowInstances":
@@ -265,6 +324,8 @@ class BatchPoster(MigrationTaskBase):
             logging.info(json.dumps(json_rec, indent=True))
         batch.append(json_rec)
         if len(batch) == int(self.batch_size):
+            if self.query_params.get("upsert", False) and self.api_info.get("query_endpoint", ""):
+                self.set_version(batch, self.api_info['query_endpoint'], self.api_info['object_name'])
             self.post_batch(batch, failed_recs_file, self.processed)
             batch = []
         return batch
@@ -649,6 +710,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
                 if use_safe
                 else "/item-storage/batch/synchronous-unsafe"
             ),
+            "query_endpoint": "/item-storage/items",
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
@@ -661,6 +723,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
                 if use_safe
                 else "/holdings-storage/batch/synchronous-unsafe"
             ),
+            "query_endpoint": "/holdings-storage/holdings",
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
@@ -673,6 +736,7 @@ def get_api_info(object_type: str, use_safe: bool = True):
                 if use_safe
                 else "/instance-storage/batch/synchronous-unsafe"
             ),
+            "query_endpoint": "/instance-storage/instances",
             "is_batch": True,
             "total_records": False,
             "addSnapshotId": False,
