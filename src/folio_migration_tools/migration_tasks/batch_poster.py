@@ -298,7 +298,7 @@ class BatchPoster(MigrationTaskBase):
 
             for response in responses:
                 if response.status_code == 200:
-                    response_json = await response.json()
+                    response_json = response.json()
                     for record in response_json[object_type]:
                         updates[record["id"]] = {
                             "_version": record["_version"],
@@ -325,8 +325,6 @@ class BatchPoster(MigrationTaskBase):
             logging.info(json.dumps(json_rec, indent=True))
         batch.append(json_rec)
         if len(batch) == int(self.batch_size):
-            if self.query_params.get("upsert", False) and self.api_info.get("query_endpoint", ""):
-                self.set_version(batch, self.api_info['query_endpoint'], self.api_info['object_name'])
             self.post_batch(batch, failed_recs_file, self.processed)
             batch = []
         return batch
@@ -451,6 +449,8 @@ class BatchPoster(MigrationTaskBase):
         logging.info("=======================", flush=True)
 
     def post_batch(self, batch, failed_recs_file, num_records, recursion_depth=0):
+        if self.query_params.get("upsert", False) and self.api_info.get("query_endpoint", ""):
+            self.set_version(batch, self.api_info['query_endpoint'], self.api_info['object_name'])
         response = self.do_post(batch)
         if response.status_code == 401:
             logging.error("Authorization failed (%s). Fetching new auth token...", response.text)
