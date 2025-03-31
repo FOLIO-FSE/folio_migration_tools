@@ -302,8 +302,9 @@ class BatchPoster(MigrationTaskBase):
                     for record in response_json[object_type]:
                         updates[record["id"]] = {
                             "_version": record["_version"],
-                            "status": record["status"],
                         }
+                        if "status" in record:
+                            updates[record["id"]]["status"] = record["status"]
                 else:
                     logging.error(
                         "Failed to fetch current records. HTTP %s\t%s",
