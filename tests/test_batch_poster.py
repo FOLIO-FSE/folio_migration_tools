@@ -137,23 +137,63 @@ async def test_set_version_async():
         )
 
 
+@pytest.mark.asyncio
+async def test_set_version_async_one_existing_items():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {"id": "record1", "_version": 1, "status": {"name": "Available"}},
+        ]
+    }
+
+    # Mock the httpx.AsyncClient.get method
+    with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
+        # Create an instance of the BatchPoster class
+        batch_poster = create_autospec(spec=BatchPoster)
+        batch_poster.folio_client = Mock(spec=FolioClient)
+        batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+        batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
+        batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+
+        # Define test inputs
+        batch = [{"id": "record1"}, {"id": "record2"}]
+        query_api = "/item-storage/items"
+        object_type = "items"
+
+        # Act
+        await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+        # Assert
+        assert batch[0]["_version"] == 1
+        assert "_verstion" not in batch[1]
+        assert batch[0]["status"]["name"] == "Available"
+        assert "status" not in batch[1]
+        mock_get.assert_called_once_with(
+            query_api,
+            params={
+                "query": "id==(record1 OR record2)",
+                "limit": 90,
+            },
+            headers=batch_poster.folio_client.okapi_headers,
+        )
+
+
 def test_set_version():
     # Mock the asynchronous function
     with patch("folio_migration_tools.migration_tasks.batch_poster.BatchPoster.set_version_async") as mock_async:
-        mock_async.return_value = None  # Simulate no return value for the async function
+        mock_async.return_value = None
 
-        # Create an instance of the BatchPoster class
         batch_poster = create_autospec(spec=BatchPoster)
         batch_poster.set_version_async = mock_async
         batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
 
-        # Define test inputs
         batch = [{"id": "record1"}, {"id": "record2"}]
         query_api = "/instance-storage/instances"
         object_type = "instances"
 
-        # Act
         batch_poster.set_version(batch_poster, batch, query_api, object_type)
-
-        # Assert
         mock_async.assert_called_once_with(batch, query_api, object_type)
+
+        batch_poster.set_version(batch_poster, batch, query_api, object_type)
+        mock_async.assert_called_with(batch, query_api, object_type)
