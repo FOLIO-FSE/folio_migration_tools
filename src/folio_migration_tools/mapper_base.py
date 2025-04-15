@@ -6,7 +6,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -477,7 +477,7 @@ class MapperBase:
         )
 
     @staticmethod
-    def validate_location_map(location_map: List[dict], locations: List[dict]) -> None:
+    def validate_location_map(location_map: List[Dict], locations: List[Dict]) -> List[Dict]:
         mapped_codes = [x['folio_code'] for x in location_map]
         existing_codes = [x['code'] for x in locations]
         missing_codes = set(mapped_codes) - set(existing_codes)
@@ -487,8 +487,7 @@ class MapperBase:
                 f"Location map contains codes not found in locations: {', '.join(missing_codes)}",
                 "",
             )
-        else:
-            return location_map
+        return location_map
 
 
 def flatten(my_dict: dict, path=""):
