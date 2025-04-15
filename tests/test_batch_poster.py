@@ -152,8 +152,6 @@ async def test_set_version_async():
         ]
     }
 
-    # Mock the httpx.AsyncClient.get method
-    # with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
     batch_poster.folio_client = Mock(spec=FolioClient)
@@ -176,14 +174,6 @@ async def test_set_version_async():
     assert batch[1]["_version"] == 2
     assert batch[0]["status"]["name"] == "Available"
     assert batch[1]["status"]["name"] == "Checked out"
-        # mock_get.assert_called_once_with(
-        #     query_api,
-        #     params={
-        #         "query": "id==(record1 OR record2)",
-        #         "limit": 90,
-        #     },
-        #     headers=batch_poster.folio_client.okapi_headers,
-        # )
 
 
 @pytest.mark.asyncio
@@ -196,8 +186,6 @@ async def test_set_version_async_one_existing_items():
         ]
     }
 
-    # Mock the httpx.AsyncClient.get method
-    # with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
     batch_poster.folio_client = Mock(spec=FolioClient)
@@ -220,14 +208,6 @@ async def test_set_version_async_one_existing_items():
     assert "_verstion" not in batch[1]
     assert batch[0]["status"]["name"] == "Available"
     assert "status" not in batch[1]
-        # mock_get.assert_called_once_with(
-        #     query_api,
-        #     params={
-        #         "query": "id==(record1 OR record2)",
-        #         "limit": 90,
-        #     },
-        #     headers=batch_poster.folio_client.okapi_headers,
-        # )
 
 
 def test_set_version():
