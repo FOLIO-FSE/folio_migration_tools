@@ -304,25 +304,29 @@ class BatchPoster(MigrationTaskBase):
             responses = await asyncio.gather(*fetch_tasks)
 
             for response in responses:
-                if response.status_code == 200:
-                    response_json = response.json()
-                    for record in response_json[object_type]:
-                        updates[record["id"]] = {
+                self.update_record_versions(object_type, updates, response)
+        for record in batch:
+            if record["id"] in updates:
+                record.update(updates[record["id"]])
+
+    @staticmethod
+    def update_record_versions(object_type, updates, response):
+        if response.status_code == 200:
+            response_json = response.json()
+            for record in response_json[object_type]:
+                updates[record["id"]] = {
                             "_version": record["_version"],
                         }
-                        if "status" in record:
-                            updates[record["id"]]["status"] = record["status"]
-                        if "lastCheckIn" in record:
-                            updates[record["id"]]["lastCheckIn"] = record["lastCheckIn"]
-                else:
-                    logging.error(
+                if "status" in record:
+                    updates[record["id"]]["status"] = record["status"]
+                if "lastCheckIn" in record:
+                    updates[record["id"]]["lastCheckIn"] = record["lastCheckIn"]
+        else:
+            logging.error(
                         "Failed to fetch current records. HTTP %s\t%s",
                         response.status_code,
                         response.text,
                     )
-        for record in batch:
-            if record["id"] in updates:
-                record.update(updates[record["id"]])
 
     async def get_with_retry(self, client: httpx.AsyncClient, url: str, params: dict = {}):
         retries = 3
