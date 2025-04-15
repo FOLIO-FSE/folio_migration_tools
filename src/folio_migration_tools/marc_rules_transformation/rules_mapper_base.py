@@ -1000,14 +1000,11 @@ def entity_indicators_match(entity_mapping, marc_field):
         bool: True if the indicators match, False otherwise.
     """
     if indicator_rule := [x["indicators"] for x in entity_mapping if "indicators" in x]:
-        if all(
+        return all(
             [
                 (marc_field.indicator1 == indicator_rule[0]['ind1'] or indicator_rule[0]['ind1'] == "*"),
                 (marc_field.indicator2 == indicator_rule[0]['ind2'] or indicator_rule[0]['ind2'] == "*"),
             ]
-        ):
-            return True
-        else:
-            return False
+        )
     else:
         return True
