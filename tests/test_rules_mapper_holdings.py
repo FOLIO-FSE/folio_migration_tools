@@ -116,6 +116,8 @@ def test_setup_boundwith_relationship_map_empty_entries():
 def test_setup_boundwith_relationship_map_with_entries():
     mocked_mapper = Mock(spec=RulesMapperHoldings)
     mocked_mapper.folio_client = mocked_classes.mocked_folio_client()
+    mocked_mapper.parent_id_map = {"B1": [], "B2": [], "B3": [], "B4": []}
+
     file_mock = [
         {"MFHD_ID": "H1", "BIB_ID": "B1"},
         {"MFHD_ID": "H1", "BIB_ID": "B2"},

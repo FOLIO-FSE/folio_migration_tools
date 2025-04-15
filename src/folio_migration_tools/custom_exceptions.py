@@ -1,5 +1,8 @@
 import logging
+from typing import Union
 import i18n
+
+from folio_migration_tools import StrCoercible
 
 
 class TransfomationError(Exception):
@@ -10,10 +13,10 @@ class TransformationFieldMappingError(TransfomationError):
     """Raised when the a field mapping fails, but the error is not critical.
     The issue should be logged for the library to act upon it"""
 
-    def __init__(self, index_or_id="", message="", data_value=""):
+    def __init__(self, index_or_id="", message="", data_value: Union[str, StrCoercible]=""):
         self.index_or_id = index_or_id or ""
         self.message = message
-        self.data_value = data_value
+        self.data_value: Union[str, StrCoercible] = data_value
         super().__init__(self.message)
 
     def __str__(self):
@@ -38,7 +41,7 @@ class TransformationRecordFailedError(TransfomationError):
     def __init__(self, index_or_id, message="", data_value=""):
         self.index_or_id = index_or_id
         self.message = message
-        self.data_value = data_value
+        self.data_value: Union[str, StrCoercible] = data_value
         # logging.log(26, f"RECORD FAILED\t{self.id}\t{self.message}\t{self.data_value}")
         super().__init__(self.message)
 
@@ -67,7 +70,7 @@ class TransformationProcessError(TransfomationError):
         index_or_id,
         message="Critical Process issue. Transformation failed."
         " Check configuration, mapping files and reference data",
-        data_value="",
+        data_value: Union[str, StrCoercible]="",
     ):
         self.index_or_id = index_or_id
         self.message = message

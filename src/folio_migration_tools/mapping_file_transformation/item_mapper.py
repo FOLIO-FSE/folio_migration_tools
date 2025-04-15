@@ -43,7 +43,7 @@ class ItemMapper(MappingFileMapperBase):
         temporary_location_mapping,
         library_configuration: LibraryConfiguration,
         boundwith_relationship_map,
-        task_configuration: AbstractTaskConfiguration
+        task_configuration: AbstractTaskConfiguration,
     ):
         item_schema = folio_client.get_item_schema()
         super().__init__(
@@ -75,7 +75,9 @@ class ItemMapper(MappingFileMapperBase):
                 self.folio_client,
                 "/locations",
                 "locations",
-                temporary_location_mapping,
+                self.validate_location_map(
+                    temporary_location_mapping, self.folio_client.locations
+                ),
                 "code",
                 "TemporaryLocationMapping",
             )
@@ -116,7 +118,7 @@ class ItemMapper(MappingFileMapperBase):
             self.folio_client,
             "/locations",
             "locations",
-            location_map,
+            self.validate_location_map(location_map, self.folio_client.locations),
             "code",
             "LocationMapping",
         )
@@ -128,17 +130,24 @@ class ItemMapper(MappingFileMapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            i18n.t("Suppressed from discovery") + f' = {folio_record["discoverySuppress"]}',
+            i18n.t("Suppressed from discovery")
+            + f" = {folio_record['discoverySuppress']}",
         )
 
     def setup_status_mapping(self, item_statuses_map):
-        statuses = self.item_schema["properties"]["status"]["properties"]["name"]["enum"]
+        statuses = self.item_schema["properties"]["status"]["properties"]["name"][
+            "enum"
+        ]
         for mapping in item_statuses_map:
             if "folio_name" not in mapping:
-                logging.critical("folio_name is not a column in the status mapping file")
+                logging.critical(
+                    "folio_name is not a column in the status mapping file"
+                )
                 sys.exit(1)
             elif "legacy_code" not in mapping:
-                logging.critical("legacy_code is not a column in the status mapping file")
+                logging.critical(
+                    "legacy_code is not a column in the status mapping file"
+                )
                 sys.exit(1)
             elif mapping["folio_name"] not in statuses:
                 logging.critical(
@@ -153,7 +162,9 @@ class ItemMapper(MappingFileMapperBase):
                 )
                 sys.exit(1)
             elif not all(mapping.values()):
-                logging.critical("empty value in mapping %s. Check mapping file", mapping.values())
+                logging.critical(
+                    "empty value in mapping %s. Check mapping file", mapping.values()
+                )
                 sys.exit(1)
             else:
                 self.status_mapping = {
@@ -206,7 +217,9 @@ class ItemMapper(MappingFileMapperBase):
                 index_or_id,
                 True,
             )
-            self.migration_report.add("TemporaryLoanTypeMapping", f"{folio_prop_name} -> {ltid}")
+            self.migration_report.add(
+                "TemporaryLoanTypeMapping", f"{folio_prop_name} -> {ltid}"
+            )
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
             return self.get_mapped_ref_data_value(
@@ -232,7 +245,9 @@ class ItemMapper(MappingFileMapperBase):
             normalized_barcode = barcode.strip().lower()
             if normalized_barcode and normalized_barcode in self.unique_barcodes:
                 Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
-                self.migration_report.add_general_statistics(i18n.t("Duplicate barcodes"))
+                self.migration_report.add_general_statistics(
+                    i18n.t("Duplicate barcodes")
+                )
                 return f"{barcode}-{uuid4()}"
             else:
                 if normalized_barcode:
@@ -257,7 +272,9 @@ class ItemMapper(MappingFileMapperBase):
             self.migration_report.add("UnmappedProperties", f"{folio_prop_name}")
             return ""
 
-    def get_item_level_call_number_type_id(self, legacy_item, folio_prop_name: str, index_or_id):
+    def get_item_level_call_number_type_id(
+        self, legacy_item, folio_prop_name: str, index_or_id
+    ):
         if self.call_number_mapping:
             return self.get_mapped_ref_data_value(
                 self.call_number_mapping, legacy_item, index_or_id, folio_prop_name
