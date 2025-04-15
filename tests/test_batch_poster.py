@@ -161,6 +161,7 @@ async def test_set_version_async():
     batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.update_record_versions = BatchPoster.update_record_versions
 
     # Define test inputs
     batch = [{"id": "record1"}, {"id": "record2"}]
@@ -204,6 +205,7 @@ async def test_set_version_async_one_existing_items():
     batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.update_record_versions = BatchPoster.update_record_versions
 
     # Define test inputs
     batch = [{"id": "record1"}, {"id": "record2"}]
