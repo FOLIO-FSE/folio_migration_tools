@@ -132,6 +132,8 @@ class BatchPoster(MigrationTaskBase):
             ),
         ] = False
 
+    task_configuration: TaskConfiguration
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.other
@@ -289,15 +291,16 @@ class BatchPoster(MigrationTaskBase):
             for i in range(0, len(batch), fetch_batch_size):
                 batch_slice = batch[i:i + fetch_batch_size]
                 fetch_tasks.append(
-                    client.get(
+                    self.get_with_retry(
+                        client,
                         query_api,
                         params={
                             "query": f"id==({' OR '.join([record['id'] for record in batch_slice if 'id' in record])})",
                             "limit": fetch_batch_size
                         },
-                        headers=self.folio_client.okapi_headers
                     )
                 )
+
             responses = await asyncio.gather(*fetch_tasks)
 
             for response in responses:
@@ -309,6 +312,8 @@ class BatchPoster(MigrationTaskBase):
                         }
                         if "status" in record:
                             updates[record["id"]]["status"] = record["status"]
+                        if "lastCheckIn" in record:
+                            updates[record["id"]]["lastCheckIn"] = record["lastCheckIn"]
                 else:
                     logging.error(
                         "Failed to fetch current records. HTTP %s\t%s",
@@ -318,6 +323,21 @@ class BatchPoster(MigrationTaskBase):
         for record in batch:
             if record["id"] in updates:
                 record.update(updates[record["id"]])
+
+    async def get_with_retry(self, client: httpx.AsyncClient, url: str, params: dict = {}):
+        retries = 3
+        for attempt in range(retries):
+            try:
+                response = await client.get(url, params=params, headers=self.folio_client.okapi_headers)
+                response.raise_for_status()
+                return response
+            except httpx.HTTPError as e:
+                if attempt < retries - 1:
+                    logging.warning(f"Retrying due to {e}")
+                    await asyncio.sleep(2 ** attempt)
+                else:
+                    logging.error(f"Failed to connect after {retries} attempts: {e}")
+                    raise
 
     def post_record_batch(self, batch, failed_recs_file, row):
         json_rec = json.loads(row.split("\t")[-1])
@@ -449,7 +469,7 @@ class BatchPoster(MigrationTaskBase):
         )
         logging.info(last_row)
         logging.info("=========Stack trace==============")
-        traceback.logging.info_exc()
+        traceback.logging.info_exc() # type: ignore
         logging.info("=======================", flush=True)
 
     def post_batch(self, batch, failed_recs_file, num_records, recursion_depth=0):

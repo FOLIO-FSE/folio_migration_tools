@@ -1,8 +1,9 @@
 import logging
 import re
+import traceback
+from typing import Union
 
 import i18n
-import pymarc
 from folioclient import FolioClient
 from pymarc import field
 
@@ -41,8 +42,8 @@ class Conditions:
         self.folio_release: FolioRelease = folio_release
         self.filter_last_chars = r",$"
         self.folio = folio
-        self.default_contributor_type = ""
-        self.mapper = mapper
+        self.default_contributor_type: dict = {}
+        self.mapper: RulesMapperBase = mapper
         self.ref_data_dicts = {}
         if object_type == "bibs":
             self.setup_reference_data_for_all()
@@ -52,15 +53,16 @@ class Conditions:
         else:
             self.setup_reference_data_for_all()
             self.setup_reference_data_for_items_and_holdings(default_call_number_type_name)
+        self.object_type = object_type
         self.condition_cache: dict = {}
 
     def setup_reference_data_for_bibs(self):
         logging.info("Setting up reference data for bib transformation")
-        logging.info("%s\tcontrib_name_types", len(self.folio.contrib_name_types))
-        logging.info("%s\tcontributor_types", len(self.folio.contributor_types))
-        logging.info("%s\talt_title_types", len(self.folio.alt_title_types))
-        logging.info("%s\tidentifier_types", len(self.folio.identifier_types))
-        logging.info("%s\tsubject_types", len(self.folio.subject_types))
+        logging.info("%s\tcontrib_name_types", len(self.folio.contrib_name_types)) # type: ignore
+        logging.info("%s\tcontributor_types", len(self.folio.contributor_types)) # type: ignore
+        logging.info("%s\talt_title_types", len(self.folio.alt_title_types)) # type: ignore
+        logging.info("%s\tidentifier_types", len(self.folio.identifier_types)) # type: ignore
+        logging.info("%s\tsubject_types", len(self.folio.subject_types)) # type: ignore
         # Raise for empty settings
         if not self.folio.contributor_types:
             raise TransformationProcessError("", "No contributor_types in FOLIO")
@@ -75,18 +77,18 @@ class Conditions:
 
         # Set defaults
         logging.info("Setting defaults")
-        self.default_contributor_name_type = self.folio.contrib_name_types[0]["id"]
+        self.default_contributor_name_type: str = self.folio.contrib_name_types[0]["id"] # type: ignore
         logging.info("Contributor name type:\t%s", self.default_contributor_name_type)
         self.default_contributor_type = next(
-            ct for ct in self.folio.contributor_types if ct["code"] == "ctb"
+            ct for ct in self.folio.contributor_types if ct["code"] == "ctb" # type: ignore
         )
         logging.info("Contributor type:\t%s", self.default_contributor_type["id"])
 
     def setup_reference_data_for_items_and_holdings(self, default_call_number_type_name):
-        logging.info(f"{len(self.folio.locations)}\tlocations")
+        logging.info(f"{len(self.folio.locations)}\tlocations") # type: ignore
         self.default_call_number_type = {}
-        logging.info("%s\tholding_note_types", len(self.folio.holding_note_types))
-        logging.info("%s\tcall_number_types", len(self.folio.call_number_types))
+        logging.info("%s\tholding_note_types", len(self.folio.holding_note_types)) # type: ignore
+        logging.info("%s\tcall_number_types", len(self.folio.call_number_types)) # type: ignore
         self.setup_and_validate_holdings_types()
         # Raise for empty settings
         if not self.folio.holding_note_types:
@@ -98,10 +100,10 @@ class Conditions:
 
         # Set defaults
         logging.info("Defaults")
-        self.default_call_number_type = next(
+        self.default_call_number_type: dict = next(
             (
                 ct
-                for ct in self.folio.call_number_types
+                for ct in self.folio.call_number_types # type: ignore
                 if ct["name"] == default_call_number_type_name
             ),
             None,
@@ -124,7 +126,7 @@ class Conditions:
         missing_holdings_types = [
             ht
             for ht in self.holdings_type_map.values()
-            if ht not in [ht_ref["name"] for ht_ref in self.holdings_types]
+            if ht not in [ht_ref["name"] for ht_ref in self.holdings_types] # type: ignore
         ]
         if any(missing_holdings_types):
             raise TransformationProcessError(
@@ -132,15 +134,15 @@ class Conditions:
                 "Holdings types are missing from the tenant. Please set them up",
                 missing_holdings_types,
             )
-        logging.info("%s\tholdings types", len(self.holdings_types))
+        logging.info("%s\tholdings types", len(self.holdings_types)) # type: ignore
 
     def setup_reference_data_for_all(self):
-        logging.info(f"{len(self.folio.class_types)}\tclass_types")
+        logging.info(f"{len(self.folio.class_types)}\tclass_types") # type: ignore
         logging.info(
-            f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships"
+            f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships" # type: ignore
         )
         self.statistical_codes = self.folio.statistical_codes
-        logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")
+        logging.info(f"{len(self.statistical_codes)} \tstatistical_codes") # type: ignore
 
         # Raise for empty settings
         if not self.folio.class_types:
@@ -153,13 +155,13 @@ class Conditions:
             )
         )
         logging.info(f"{len(self.authority_note_types)} \tAuthority note types")
-        logging.info(f"{len(self.folio.identifier_types)} \tidentifier types")
+        logging.info(f"{len(self.folio.identifier_types)} \tidentifier types") # type: ignore
 
     def get_condition(
-        self, name, legacy_id, value, parameter=None, marc_field: field.Field = None
+        self, name, legacy_id, value, parameter=None, marc_field: Union[None, field.Field] = None
     ):
         try:
-            return self.condition_cache.get(name)(legacy_id, value, parameter, marc_field)
+            return self.condition_cache.get(name)(legacy_id, value, parameter, marc_field) # type: ignore
         # Exception should only handle the missing condition from the cache.
         # All other exceptions should propagate up
         except Exception:
@@ -375,10 +377,10 @@ class Conditions:
                 "MappedIdentifierTypes", f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
-        identifier_type = next(
+        identifier_type: dict = next(
             (
                 f
-                for f in self.folio.identifier_types
+                for f in self.folio.identifier_types # type: ignore
                 if (
                     f["name"] in parameter.get("names", "non existant")
                     or f["name"] in parameter.get("name", "non existant")
@@ -617,7 +619,7 @@ class Conditions:
         return self._extracted_from_condition_set_electronic_access_relations_id_2("8", marc_field)
 
     def condition_set_call_number_type_by_indicator(
-        self, legacy_id, value, parameter, marc_field: pymarc.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         self.mapper.migration_report.add(
             "Exceptions",
@@ -629,7 +631,7 @@ class Conditions:
         return self.condition_set_call_number_type_id(legacy_id, value, parameter, marc_field)
 
     def condition_set_call_number_type_id(
-        self, legacy_id, value, parameter, marc_field: pymarc.Field
+        self, legacy_id, value, parameter, marc_field: field.Field
     ):
         first_level_map = {
             "0": "Library of Congress classification",
@@ -690,12 +692,13 @@ class Conditions:
     ):
         for subfield in marc_field.get_subfields("4", "e"):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
-            for cont_type in self.folio.contributor_types:
+            for cont_type in self.folio.contributor_types: # type: ignore
                 if normalized_subfield in [cont_type["code"], cont_type["name"]]:
                     return cont_type["name"]
         try:
             return value
-        except IndexError as ee:
+        except IndexError:
+            logging.debug("Exception occurred: %s", traceback.format_exc())
             return ""
 
     def condition_set_alternative_title_type_id(self, legacy_id, value, parameter, marc_field):
@@ -728,7 +731,7 @@ class Conditions:
     ):
         if "legacy_locations" not in self.ref_data_dicts:
             try:
-                d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}
+                d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map} # type: ignore
                 self.ref_data_dicts["legacy_locations"] = d
                 for folio_code in d.values():
                     t = self.get_ref_data_tuple_by_code(
@@ -812,6 +815,27 @@ class Conditions:
     def condition_set_electronic_access_relations_id(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
+        """
+        This method handles the mapping of electronic access relationship IDs.
+        If the record type being mapped is FOLIO holdings, it provides an (optional) alternative
+        mapping baseed on a provided name parameter, bypassing the FOLIO MARC-to-Holdings mapping
+        engine behavior. This requires use of a supplemental mapping rules file in the
+        HoldingsMarcTransformer task definition containing the name parameter.
+        """
+        if self.object_type == "holdings" and "name" in parameter:
+            try:
+                t = self.get_ref_data_tuple_by_name(
+                    self.folio.electronic_access_relationships,
+                    "electronic_access_relationships",
+                    parameter["name"],
+                )
+                self.mapper.migration_report.add("MappedElectronicRelationshipTypes", t[1])
+                return t[0]
+            except Exception:
+                raise TransformationProcessError(
+                    legacy_id,
+                    f"Electronic access relationship not found for {parameter['name']} {marc_field}",
+                )
         return self._extracted_from_condition_set_electronic_access_relations_id_2("3", marc_field)
 
     # TODO Rename this here and in `condition_set_url_relationship` and `condition_set_electronic_access_relations_id`

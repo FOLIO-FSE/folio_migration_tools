@@ -368,12 +368,12 @@ class ItemsTransformer(MigrationTaskBase):
                     self.handle_circiulation_notes(folio_rec, self.folio_client.current_user)
                     self.handle_notes(folio_rec)
                     if folio_rec["holdingsRecordId"] in self.mapper.boundwith_relationship_map:
-                        for idx, instance_id in enumerate(
+                        for idx_, instance_id in enumerate(
                             self.mapper.boundwith_relationship_map.get(
                                 folio_rec["holdingsRecordId"]
                             )
                         ):
-                            if idx == 0:
+                            if idx_ == 0:
                                 bw_id = folio_rec["holdingsRecordId"]
                             else:
                                 bw_id = self.mapper.generate_boundwith_holding_uuid(

@@ -35,7 +35,7 @@ class MapperBase:
         self,
         library_configuration: LibraryConfiguration,
         folio_client: FolioClient,
-        parent_id_map: dict[str, tuple] = None,
+        parent_id_map: dict[str, tuple] = {},
     ):
         logging.info("MapperBase initiating")
         self.parent_id_map: dict[str, tuple] = parent_id_map
@@ -318,7 +318,14 @@ class MapperBase:
                     entry["MFHD_ID"],
                 )
             )
-            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [instance_uuid]
+            if entry["BIB_ID"] in self.parent_id_map:
+                new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [instance_uuid]
+            else:
+                raise TransformationRecordFailedError(
+                    entry["MFHD_ID"],
+                    "Boundwith relationship map contains a BIB_ID id not in the instance id map. No boundwith holdings created.",
+                    entry["BIB_ID"],
+                )
 
         return new_map
 
@@ -468,6 +475,20 @@ class MapperBase:
                 f"{holding_uuid}-{instance_uuid}",
             )
         )
+
+    @staticmethod
+    def validate_location_map(location_map: List[dict], locations: List[dict]) -> None:
+        mapped_codes = [x['folio_code'] for x in location_map]
+        existing_codes = [x['code'] for x in locations]
+        missing_codes = set(mapped_codes) - set(existing_codes)
+        if missing_codes:
+            raise TransformationProcessError(
+                "",
+                f"Location map contains codes not found in locations: {', '.join(missing_codes)}",
+                "",
+            )
+        else:
+            return location_map
 
 
 def flatten(my_dict: dict, path=""):

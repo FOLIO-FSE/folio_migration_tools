@@ -597,46 +597,48 @@ class RulesMapperBase(MapperBase):
         legacy_ids,
     ):
         entity_mapping = mapping["entity"]
-        e_parent = entity_mapping[0]["target"].split(".")[0]
-        if mapping.get("entityPerRepeatedSubfield", False):
-            for temp_field in self.grouped(marc_field):
-                entity = self.create_entity(entity_mapping, temp_field, e_parent, legacy_ids)
-                if entity and (
-                    (isinstance(entity, dict) and all(entity.values()))
-                    or (isinstance(entity, list) and all(entity))
+        if entity_indicators_match(entity_mapping, marc_field):
+            entity_mapping = [x for x in entity_mapping if "indicators" not in x]
+            e_parent = entity_mapping[0]["target"].split(".")[0]
+            if mapping.get("entityPerRepeatedSubfield", False):
+                for temp_field in self.grouped(marc_field):
+                    entity = self.create_entity(entity_mapping, temp_field, e_parent, legacy_ids)
+                    if entity and (
+                        (isinstance(entity, dict) and all(entity.values()))
+                        or (isinstance(entity, list) and all(entity))
+                    ):
+                        self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
+            else:
+                if mapping.get("ignoreSubsequentSubfields", False):
+                    marc_field = self.remove_repeated_subfields(marc_field)
+                entity = self.create_entity(entity_mapping, marc_field, e_parent, legacy_ids)
+                if e_parent in ["precedingTitles", "succeedingTitles"]:
+                    self.create_preceding_succeeding_titles(
+                        entity, e_parent, folio_record["id"], marc_field
+                    )
+                elif entity and (
+                    all(
+                        v
+                        for k, v in entity.items()
+                        if k not in ["staffOnly", "primary", "isbnValue", "issnValue"]
+                    )
+                    or e_parent in ["electronicAccess", "publication"]
+                    or (
+                        e_parent.startswith("holdingsStatements") and any(v for k, v in entity.items())
+                    )
                 ):
                     self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
-        else:
-            if mapping.get("ignoreSubsequentSubfields", False):
-                marc_field = self.remove_repeated_subfields(marc_field)
-            entity = self.create_entity(entity_mapping, marc_field, e_parent, legacy_ids)
-            if e_parent in ["precedingTitles", "succeedingTitles"]:
-                self.create_preceding_succeeding_titles(
-                    entity, e_parent, folio_record["id"], marc_field
-                )
-            elif entity and (
-                all(
-                    v
-                    for k, v in entity.items()
-                    if k not in ["staffOnly", "primary", "isbnValue", "issnValue"]
-                )
-                or e_parent in ["electronicAccess", "publication"]
-                or (
-                    e_parent.startswith("holdingsStatements") and any(v for k, v in entity.items())
-                )
-            ):
-                self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
-            else:
-                sfs = " - ".join(
-                    f"{f[0]}:{('has_value' if f[1].strip() else 'empty')}" for f in marc_field
-                )
-                pattern = " - ".join(f"{k}:'{bool(v)}'" for k, v in entity.items())
-                self.migration_report.add(
-                    "IncompleteEntityMapping",
-                    f"{marc_field.tag} {sfs} ->>-->> {e_parent} {pattern}  ",
-                )
-                # Experimental
-                # self.add_entity_to_record(entity, e_parent, rec, self.schema)
+                else:
+                    sfs = " - ".join(
+                        f"{f[0]}:{('has_value' if f[1].strip() else 'empty')}" for f in marc_field
+                    )
+                    pattern = " - ".join(f"{k}:'{bool(v)}'" for k, v in entity.items())
+                    self.migration_report.add(
+                        "IncompleteEntityMapping",
+                        f"{marc_field.tag} {sfs} ->>-->> {e_parent} {pattern}  ",
+                    )
+                    # Experimental
+                    # self.add_entity_to_record(entity, e_parent, rec, self.schema)
 
     def handle_suppression(
         self, folio_record, file_def: FileDefinition, only_discovery_suppress: bool = False
@@ -975,3 +977,37 @@ def is_array_of_strings(schema_property):
 def is_array_of_objects(schema_property):
     sc_prop_type = schema_property.get("type", "string")
     return sc_prop_type == "array" and schema_property["items"]["type"] == "object"
+
+def entity_indicators_match(entity_mapping, marc_field):
+    """
+    Check if the indicators of the entity mapping match the indicators of the MARC field.
+    Entity mappings can limit the fields they are applied to by specifying indicator values that
+    must match the provided MARC field's indicators. If the entity mapping does not specify any
+    indicator values, it is assumed to match all MARC fields. Entity indicator values can be a
+    specific value or a wildcard "*", which matches any value.
+
+    This function compares the indicators of the entity mapping with the indicators of the MARC field.
+    If the entity does not specify any indicator values, the function returns True. If the entity does
+    specify indicator values, the function checks if the MARC field's indicators match the specified
+    values or if the specified values are wildcards. If both indicators match, the function returns True;
+    otherwise, it returns False.
+
+    Args:
+        entity_mapping (dict): _description_
+        marc_field (pymarc.Field): _description_
+
+    Returns:
+        bool: True if the indicators match, False otherwise.
+    """
+    if indicator_rule := [x["indicators"] for x in entity_mapping if "indicators" in x]:
+        if all(
+            [
+                (marc_field.indicator1 == indicator_rule[0]['ind1'] or indicator_rule[0]['ind1'] == "*"),
+                (marc_field.indicator2 == indicator_rule[0]['ind2'] or indicator_rule[0]['ind2'] == "*"),
+            ]
+        ):
+            return True
+        else:
+            return False
+    else:
+        return True

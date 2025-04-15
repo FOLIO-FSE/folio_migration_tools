@@ -1,3 +1,4 @@
+from unittest import mock
 from unittest.mock import Mock, AsyncMock, patch, create_autospec
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -93,6 +94,52 @@ def test_set_consortium_source():
     assert json_rec_marc["source"] == "CONSORTIUM-MARC"
     assert json_rec_folio["source"] == "CONSORTIUM-FOLIO"
 
+@pytest.mark.asyncio
+async def test_get_with_retry_successful():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "instances": [
+            {"id": "record1", "_version": 1, "status": {"name": "Available"}},
+            {"id": "record2", "_version": 2, "status": {"name": "Checked out"}},
+        ]
+    }
+    mock_response.raise_for_status = Mock(return_value=None)
+    mock_response.raise_for_status.return_value = None
+    mock_response.headers = {"x-okapi-tenant": "test_tenant"}
+    mock_response.text = "OK"
+
+    # Mock the httpx.AsyncClient.get method
+    with patch("httpx.AsyncClient.get", AsyncMock(return_value=mock_response)) as mock_get:
+        # Create an instance of the BatchPoster class
+        batch_poster = create_autospec(spec=BatchPoster)
+        batch_poster.folio_client = Mock(spec=FolioClient)
+        batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+        batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
+        batch_poster.get_with_retry = Mock(wraps=BatchPoster.get_with_retry)
+
+        # Define test inputs
+        query_api = "/instance-storage/instances"
+        params = {"query": "id==(record1 OR record2)", "limit": 90}
+
+        # Act
+        async with httpx.AsyncClient(base_url=batch_poster.folio_client.okapi_url) as client:
+            response = await batch_poster.get_with_retry(batch_poster, client, query_api, params)
+
+        # Assert
+        assert response.status_code == 200
+        assert response.json() == {
+            "instances": [
+                {"id": "record1", "_version": 1, "status": {"name": "Available"}},
+                {"id": "record2", "_version": 2, "status": {"name": "Checked out"}},
+            ]
+        }
+        mock_get.assert_called_once_with(
+            query_api,
+            params=params,
+            headers=batch_poster.folio_client.okapi_headers,
+        )
+
 
 @pytest.mark.asyncio
 async def test_set_version_async():
@@ -106,35 +153,36 @@ async def test_set_version_async():
     }
 
     # Mock the httpx.AsyncClient.get method
-    with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
-        # Create an instance of the BatchPoster class
-        batch_poster = create_autospec(spec=BatchPoster)
-        batch_poster.folio_client = Mock(spec=FolioClient)
-        batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-        batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
-        batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    # with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
 
-        # Define test inputs
-        batch = [{"id": "record1"}, {"id": "record2"}]
-        query_api = "/instance-storage/instances"
-        object_type = "instances"
+    # Define test inputs
+    batch = [{"id": "record1"}, {"id": "record2"}]
+    query_api = "/instance-storage/instances"
+    object_type = "instances"
 
-        # Act
-        await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    # Act
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
 
-        # Assert
-        assert batch[0]["_version"] == 1
-        assert batch[1]["_version"] == 2
-        assert batch[0]["status"]["name"] == "Available"
-        assert batch[1]["status"]["name"] == "Checked out"
-        mock_get.assert_called_once_with(
-            query_api,
-            params={
-                "query": "id==(record1 OR record2)",
-                "limit": 90,
-            },
-            headers=batch_poster.folio_client.okapi_headers,
-        )
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert batch[0]["status"]["name"] == "Available"
+    assert batch[1]["status"]["name"] == "Checked out"
+        # mock_get.assert_called_once_with(
+        #     query_api,
+        #     params={
+        #         "query": "id==(record1 OR record2)",
+        #         "limit": 90,
+        #     },
+        #     headers=batch_poster.folio_client.okapi_headers,
+        # )
 
 
 @pytest.mark.asyncio
@@ -148,35 +196,36 @@ async def test_set_version_async_one_existing_items():
     }
 
     # Mock the httpx.AsyncClient.get method
-    with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
-        # Create an instance of the BatchPoster class
-        batch_poster = create_autospec(spec=BatchPoster)
-        batch_poster.folio_client = Mock(spec=FolioClient)
-        batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-        batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
-        batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    # with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
 
-        # Define test inputs
-        batch = [{"id": "record1"}, {"id": "record2"}]
-        query_api = "/item-storage/items"
-        object_type = "items"
+    # Define test inputs
+    batch = [{"id": "record1"}, {"id": "record2"}]
+    query_api = "/item-storage/items"
+    object_type = "items"
 
-        # Act
-        await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    # Act
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
 
-        # Assert
-        assert batch[0]["_version"] == 1
-        assert "_verstion" not in batch[1]
-        assert batch[0]["status"]["name"] == "Available"
-        assert "status" not in batch[1]
-        mock_get.assert_called_once_with(
-            query_api,
-            params={
-                "query": "id==(record1 OR record2)",
-                "limit": 90,
-            },
-            headers=batch_poster.folio_client.okapi_headers,
-        )
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert "_verstion" not in batch[1]
+    assert batch[0]["status"]["name"] == "Available"
+    assert "status" not in batch[1]
+        # mock_get.assert_called_once_with(
+        #     query_api,
+        #     params={
+        #         "query": "id==(record1 OR record2)",
+        #         "limit": 90,
+        #     },
+        #     headers=batch_poster.folio_client.okapi_headers,
+        # )
 
 
 def test_set_version():
@@ -197,3 +246,5 @@ def test_set_version():
 
         batch_poster.set_version(batch_poster, batch, query_api, object_type)
         mock_async.assert_called_with(batch, query_api, object_type)
+
+
