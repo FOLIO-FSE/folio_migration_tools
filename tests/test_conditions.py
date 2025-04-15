@@ -1,4 +1,3 @@
-from operator import le
 from unittest.mock import Mock, create_autospec, patch
 
 import pytest
@@ -6,28 +5,34 @@ from folioclient import FolioClient
 from pymarc import Field, Indicators, Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
+from folio_migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
+# from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
+#     RulesMapperHoldings,
+# )
 from folio_migration_tools.migration_report import MigrationReport
-from tests.test_rules_mapper_base import folio_client
+from tests.test_rules_mapper_base import folio_client as folio_client_fixture
+from folio_migration_tools.test_infrastructure.mocked_classes import mocked_folio_client
 
 
 def test_condition_trim_period():
     mock = Mock(spec=Conditions)
-    res = Conditions.condition_trim_period(None, mock, "value with period.", None, None)
+    res = Conditions.condition_trim_period(mock, None, "value with period.", None, None)
     assert res == "value with period"
 
 
 def test_condition_trim_punctuation():
     mock = Mock(spec=Conditions)
-    res = Conditions.condition_trim_punctuation(None, mock, "Rockefeller, John D.", None, None)
+    res = Conditions.condition_trim_punctuation(mock, None, "Rockefeller, John D.", None, None)
     res2 = Conditions.condition_trim_punctuation(
-        None, mock, "Rockefeller, John D., 1893-, ", None, None
+        mock, None, "Rockefeller, John D., 1893-, ", None, None
     )
-    res3 = Conditions.condition_trim_punctuation(None, mock, "Rockefeller, John.  ", None, None)
-    res4 = Conditions.condition_trim_punctuation(None, mock, "Rockefeller, John D.,", None, None)
+    res3 = Conditions.condition_trim_punctuation(mock, None, "Rockefeller, John.  ", None, None)
+    res4 = Conditions.condition_trim_punctuation(mock, None, "Rockefeller, John D.,", None, None)
     assert res == "Rockefeller, John D."
     assert res2 == "Rockefeller, John D., 1893-"
     assert res3 == "Rockefeller, John"
@@ -277,3 +282,52 @@ def test_condition_remove_prefix_by_indicator():
         mock, "", "some value: /", {}, marc_fields[1]
     )
     assert res200 == "value"
+
+
+def test_condition_set_electronic_access_relations_id(folio_client_fixture):
+    mock = create_autospec(Conditions)
+    parameter = {"name": "Component part(s) of resource"}
+    mock.mapper = Mock(spec=BibsRulesMapper)
+    mock.mapper.migration_report = Mock(spec=MigrationReport)
+    mock.folio = folio_client_fixture
+    mock.folio.folio_get_all.return_value = [
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b1', 'name': 'Component part(s) of resource', 'source': 'folio'},
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b2', 'name': 'Other version', 'source': 'folio'},
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b3', 'name': 'Version of resource', 'source': 'folio'},
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b4', 'name': 'Related resource', 'source': 'folio'},
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b5', 'name': 'No display constant generated', 'source': 'folio'},
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b6', 'name': 'Resource', 'source': 'folio'},
+    ]
+    mock.object_type = "holdings"
+    mock.ref_data_dicts = {"electronic_access_relations": mock.folio.folio_get_all.return_value}
+    mock.get_ref_data_tuple_by_name.return_value = Conditions.get_ref_data_tuple(mock, mock.folio.folio_get_all.return_value, "electronicAccessRelationships", "Component part(s) of resource", "name")
+
+    # Mock the folio_get_all method to return the desired electronic access relations
+    mock.folio.folio_get_all.return_value = [
+        {'id': 'd6488f88-1e74-40ce-81b5-b19a928ff5b1', 'name': 'Electronic access', 'source': 'folio'}
+    ]
+    mock.ref_data_dicts = {"electronic_access_relations": mock.folio.folio_get_all.return_value}
+    mock.get_ref_data_tuple_by_name.return_value = Conditions.get_ref_data_tuple(mock, mock.folio.folio_get_all.return_value, "electronic_access_relations", "Electronic access", "name")
+
+    with patch.object(FolioClient, 'folio_get_all', return_value=mock.folio.folio_get_all.return_value):
+        res = Conditions.condition_set_electronic_access_relations_id(mock, "legacy_id", "", parameter, Field(
+            tag="856",
+            indicators=["0", "0"],
+            subfields=[
+                Subfield(code="u", value="http://example.com"),
+                Subfield(code="z", value="Electronic access")
+            ],
+        ))
+        assert res == "d6488f88-1e74-40ce-81b5-b19a928ff5b1"
+
+    # mock.object_type = "instance"
+    # with patch.object(FolioClient, 'folio_get_all', return_value=mock.folio.folio_get_all.return_value):
+    #     res = Conditions.condition_set_electronic_access_relations_id(mock, "legacy_id", "", parameter, Field(
+    #         tag="856",
+    #         indicators=["0", "0"],
+    #         subfields=[
+    #             Subfield(code="u", value="http://example.com"),
+    #             Subfield(code="z", value="Electronic access")
+    #         ],
+    #     ))
+    #     assert res == "d6488f88-1e74-40ce-81b5-b19a928ff5b6"
