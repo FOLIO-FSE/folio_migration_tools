@@ -7,10 +7,10 @@ class InsensitiveDictReader(csv.DictReader):
     # spaces and to lower case.
     @property
     def fieldnames(self):
-        return [field.strip().lower() for field in csv.DictReader.fieldnames.fget(self)]
+        return [field.strip().lower() for field in csv.DictReader.fieldnames.fget(self)] # type: ignore
 
     def next(self):
-        return InsensitiveDict(csv.DictReader.next(self))
+        return InsensitiveDict(csv.DictReader.next(self)) # type: ignore
 
 
 class InsensitiveDict(dict):
