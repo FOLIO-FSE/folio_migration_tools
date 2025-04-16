@@ -75,9 +75,7 @@ class ItemMapper(MappingFileMapperBase):
                 self.folio_client,
                 "/locations",
                 "locations",
-                self.validate_location_map(
-                    temporary_location_mapping, self.folio_client.locations
-                ),
+                temporary_location_mapping,
                 "code",
                 "TemporaryLocationMapping",
             )
@@ -118,7 +116,7 @@ class ItemMapper(MappingFileMapperBase):
             self.folio_client,
             "/locations",
             "locations",
-            self.validate_location_map(location_map, self.folio_client.locations),
+            location_map,
             "code",
             "LocationMapping",
         )

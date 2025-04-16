@@ -61,7 +61,10 @@ class RulesMapperHoldings(RulesMapperBase):
         self.boundwith_relationship_map = self.setup_boundwith_relationship_map(
             boundwith_relationship_map
         )
-        self.location_map = location_map
+        self.location_map = self.validate_location_map(
+            location_map,
+            self.folio_client.locations,
+        )
         self.holdings_id_map: dict = {}
         self.ref_data_dicts: dict = {}
         self.fallback_holdings_type_id = self.task_configuration.fallback_holdings_type_id
