@@ -4563,3 +4563,82 @@ def test_add_default_from_schema(mocked_folio_client: FolioClient):
     assert folio_recs[1]["compositePoLines"][0]["checkinItems"] is True
     assert folio_recs[1]["compositePoLines"][0]["receiptStatus"] == "Ongoing"
     assert folio_recs[1]["compositePoLines"][0]["cost"]["discountType"] == "amount"
+
+def test_get_map_entries_by_folio_prop_name_with_matching_entries():
+    data = [
+        {
+            "folio_field": "title",
+            "value": "Test Value",
+            "legacy_field": "",
+            "fallback_legacy_field": "",
+            "fallback_value": "",
+        },
+        {
+            "folio_field": "title",
+            "value": "",
+            "legacy_field": "legacy_title",
+            "fallback_legacy_field": "",
+            "fallback_value": "",
+        },
+        {
+            "folio_field": "author",
+            "value": "",
+            "legacy_field": "",
+            "fallback_legacy_field": "",
+            "fallback_value": "",
+        },
+    ]
+    result = list(MappingFileMapperBase.get_map_entries_by_folio_prop_name("title", data))
+    assert len(result) == 2
+    assert result[0]["value"] == "Test Value"
+    assert result[1]["legacy_field"] == "legacy_title"
+
+
+def test_get_map_entries_by_folio_prop_name_with_no_matching_entries():
+    data = [
+        {
+            "folio_field": "author",
+            "value": "Test Author",
+            "legacy_field": "",
+            "fallback_legacy_field": "",
+            "fallback_value": "",
+        },
+        {
+            "folio_field": "publisher",
+            "value": "",
+            "legacy_field": "legacy_publisher",
+            "fallback_legacy_field": "",
+            "fallback_value": "",
+        },
+    ]
+    result = list(MappingFileMapperBase.get_map_entries_by_folio_prop_name("title", data))
+    assert len(result) == 0
+
+
+def test_get_map_entries_by_folio_prop_name_with_empty_data():
+    data = []
+    result = list(MappingFileMapperBase.get_map_entries_by_folio_prop_name("title", data))
+    assert len(result) == 0
+
+
+def test_get_map_entries_by_folio_prop_name_with_partial_matches():
+    data = [
+        {
+            "folio_field": "title",
+            "value": "",
+            "legacy_field": "",
+            "fallback_legacy_field": "",
+            "fallback_value": "",
+        },
+        {
+            "folio_field": "title",
+            "value": "Valid Value",
+            "legacy_field": "",
+            "fallback_legacy_field": "",
+            "fallback_value": "",
+        },
+    ]
+    result = list(MappingFileMapperBase.get_map_entries_by_folio_prop_name("title", data))
+    assert len(result) == 1
+    assert result[0]["value"] == "Valid Value"
+
