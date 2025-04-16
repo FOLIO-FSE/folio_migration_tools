@@ -755,12 +755,8 @@ class MappingFileMapperBase(MapperBase):
             for k in data
             if k["folio_field"] == folio_prop_name
             and any(
-                [
-                    is_set_or_bool_or_numeric(k.get("value", "")),
-                    is_set_or_bool_or_numeric(k.get("legacy_field", "")),
-                    is_set_or_bool_or_numeric(k.get("fallback_legacy_field", "")),
-                    is_set_or_bool_or_numeric(k.get("fallback_value", "")),
-                ]
+                is_set_or_bool_or_numeric(k.get(key, ""))
+                for key in ("value", "legacy_field", "fallback_legacy_field", "fallback_value")
             )
         )
 
@@ -972,4 +968,4 @@ def in_deep(dictionary, keys):
 
 
 def is_set_or_bool_or_numeric(any_value):
-    return any(isinstance(any_value, t) for t in [int, bool, float, complex]) or any_value.strip()
+    return (isinstance(any_value, str) and (any_value.strip() not in empty_vals)) or isinstance(any_value, (int, float, complex))
