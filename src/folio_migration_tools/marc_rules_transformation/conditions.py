@@ -818,7 +818,7 @@ class Conditions:
         """
         This method handles the mapping of electronic access relationship IDs.
         If the record type being mapped is FOLIO holdings, it provides an (optional) alternative
-        mapping baseed on a provided name parameter, bypassing the FOLIO MARC-to-Holdings mapping
+        mapping based on a provided name parameter, bypassing the FOLIO MARC-to-Holdings mapping
         engine behavior. This requires use of a supplemental mapping rules file in the
         HoldingsMarcTransformer task definition containing the name parameter.
         """
