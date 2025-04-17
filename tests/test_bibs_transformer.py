@@ -12,6 +12,12 @@ from folio_migration_tools.test_infrastructure.mocked_classes import (
     get_mocked_folder_structure
 )
 
+TASK_CONFIG = BibsTransformer.TaskConfiguration(
+    name="test_task",
+    migration_task_type="BibsTransformer",
+    files=[FileDefinition(file_name="test.mrc")],
+    ils_flavour=IlsFlavour.voyager
+)
 
 def test_get_object_type():
     assert BibsTransformer.get_object_type() == FOLIONamespaces.instances
@@ -27,16 +33,10 @@ def test_get_object_type():
 )
 def test_init(mock_check_source_files, _mock_folder_structure):
     mock_check_source_files.return_value = []
-    task_config = BibsTransformer.TaskConfiguration(
-        name="test_task",
-        migration_task_type="BibsTransformer",
-        files=[],
-        ils_flavour=IlsFlavour.voyager
-    )
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
-    transformer = BibsTransformer(task_config, library_config, folio_client)
-    assert transformer.task_configuration == task_config
+    transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
+    assert transformer.task_configuration == TASK_CONFIG
     assert transformer.library_configuration == library_config
     assert transformer.folio_client == folio_client
 
@@ -55,15 +55,9 @@ def test_init(mock_check_source_files, _mock_folder_structure):
 )
 def test_do_work(mock_do_work_marc_transformer, mock_check_source_files, _mock_folder_structure):
     mock_check_source_files.return_value = []
-    task_config = BibsTransformer.TaskConfiguration(
-        name="test_task",
-        migration_task_type="BibsTransformer",
-        files=[],
-        ils_flavour=IlsFlavour.voyager
-    )
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
-    transformer = BibsTransformer(task_config, library_config, folio_client)
+    transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
     transformer.processor = MagicMock()
     transformer.do_work()
     mock_do_work_marc_transformer.assert_called_once()
@@ -83,15 +77,9 @@ def test_do_work(mock_do_work_marc_transformer, mock_check_source_files, _mock_f
 )
 def test_wrap_up(mock_clean_out_empty_logs, mock_check_source_files, _mock_folder_structure):
     mock_check_source_files.return_value = []
-    task_config = BibsTransformer.TaskConfiguration(
-        name="test_task",
-        migration_task_type="BibsTransformer",
-        files=[],
-        ils_flavour=IlsFlavour.voyager
-    )
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
-    transformer = BibsTransformer(task_config, library_config, folio_client)
+    transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
     transformer.processor = MagicMock()
     transformer.wrap_up()
     mock_clean_out_empty_logs.assert_called_once()
@@ -108,12 +96,7 @@ def test_wrap_up(mock_clean_out_empty_logs, mock_check_source_files, _mock_folde
 def test_different_ils_flavours(mock_check_source_files, _mock_folder_structure):
     mock_check_source_files.return_value = []
     for ils_flavour in IlsFlavour:
-        task_config = BibsTransformer.TaskConfiguration(
-            name="test_task",
-            migration_task_type="BibsTransformer",
-            files=[],
-            ils_flavour=ils_flavour
-        )
+        task_config = TASK_CONFIG.copy(update={"ils_flavour": ils_flavour})
         library_config = get_mocked_library_config()
         folio_client = mocked_folio_client()
         transformer = BibsTransformer(task_config, library_config, folio_client)
@@ -131,15 +114,9 @@ def test_different_ils_flavours(mock_check_source_files, _mock_folder_structure)
 )
 def test_error_handling(mock_check_source_files, _mock_folder_structure):
     mock_check_source_files.return_value = []
-    task_config = BibsTransformer.TaskConfiguration(
-        name="test_task",
-        migration_task_type="BibsTransformer",
-        files=[],
-        ils_flavour=IlsFlavour.voyager
-    )
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
-    transformer = BibsTransformer(task_config, library_config, folio_client)
+    transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
     transformer.processor = MagicMock()
     # Check handling of different error types
 
@@ -154,14 +131,10 @@ def test_error_handling(mock_check_source_files, _mock_folder_structure):
 )
 def test_hrid_settings(mock_check_source_files, _mock_folder_structure):
     mock_check_source_files.return_value = []
-    task_config = BibsTransformer.TaskConfiguration(
-        name="test_task",
-        migration_task_type="BibsTransformer",
-        files=[],
-        ils_flavour=IlsFlavour.voyager,
-        reset_hrid_settings=True,
-        update_hrid_settings=True
-    )
+    task_config = TASK_CONFIG.copy(update={
+        "reset_hrid_settings": True,
+        "update_hrid_settings": True
+    })
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
     transformer = BibsTransformer(task_config, library_config, folio_client)
@@ -179,14 +152,8 @@ def test_hrid_settings(mock_check_source_files, _mock_folder_structure):
 )
 def test_marc_file_processing(mock_check_source_files, _mock_folder_structure):
     mock_check_source_files.return_value = []
-    task_config = BibsTransformer.TaskConfiguration(
-        name="test_task",
-        migration_task_type="BibsTransformer",
-        files=[FileDefinition(file_name="test.mrc")],
-        ils_flavour=IlsFlavour.voyager
-    )
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
-    transformer = BibsTransformer(task_config, library_config, folio_client)
+    transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
     transformer.processor = MagicMock()
     # Check MARC file processing
