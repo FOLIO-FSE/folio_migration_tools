@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
@@ -7,8 +6,11 @@ from folio_migration_tools.library_configuration import (
     FileDefinition,
     IlsFlavour,
 )
-from folio_migration_tools.test_infrastructure.mocked_classes import mocked_folio_client
-from tests.test_utils import get_mocked_library_config, get_mocked_folder_structure
+from folio_migration_tools.test_infrastructure.mocked_classes import (
+    mocked_folio_client,
+    get_mocked_library_config,
+    get_mocked_folder_structure
+)
 
 
 def test_get_object_type():
