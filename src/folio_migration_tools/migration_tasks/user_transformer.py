@@ -6,6 +6,7 @@ from pydantic import Field
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from art import tprint
 
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -282,16 +283,7 @@ class UserTransformer(MigrationTaskBase):
 
 
 def print_email_warning():
-    s = (
-        "  ______   __  __              _____   _         _____     ___  \n"  # noqa: E501, W605
-        " |  ____| |  \\/  |     /\\     |_   _| | |       / ____|   |__ \\ \n"  # noqa: E501, W605
-        " | |__    | \\  / |    /  \\      | |   | |      | (___        ) |\n"  # noqa: E501, W605
-        " |  __|   | |\\/| |   / /\\ \\     | |   | |       \\___ \\      / / \n"  # noqa: E501, W605
-        " |______| |_|  |_| /_/    \\_\\ |_____| |______| |_____/     (_)  \n"  # noqa: E501, W605
-        "                                                                \n"  # noqa: E501, W605
-        "                                                       \n"
-    )
-    print(s)
+    tprint("\nEMAILS?\n", space=2)
 
 
 def remove_empty_addresses(folio_user):

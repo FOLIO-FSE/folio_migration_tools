@@ -14,12 +14,12 @@ from pydantic import Field
 import i18n
 from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from art import tprint
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import (
     FileDefinition,
-    FolioRelease,
     LibraryConfiguration,
 )
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -781,11 +781,4 @@ def timings(t0, t0func, num_objects):
 
 
 def print_smtp_warning():
-    s = r"""
-          _____   __  __   _____   ______   ___
-         / ____| |  \/  | |_   _| |  __  | |__ \\
-        | (___   | \  / |   | |   | |__|_|    ) |
-         \___ \  | |\/| |   | |   | |        / /
-        |_____/  |_|  |_|   |_|   |_|       (_)
-    """  # noqa: E501, W605
-    print(s)
+    tprint("\nSMTP?\n", space=2)
