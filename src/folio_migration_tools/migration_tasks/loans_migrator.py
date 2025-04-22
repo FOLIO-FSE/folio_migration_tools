@@ -8,11 +8,13 @@ import traceback
 from datetime import datetime, timedelta
 from typing import Optional
 from urllib.error import HTTPError
+from zoneinfo import ZoneInfo
+from pydantic import Field
 
 import i18n
+from art import tprint
 from dateutil import parser as du_parser
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from zoneinfo import ZoneInfo
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.helper import Helper
@@ -750,11 +752,4 @@ def timings(t0, t0func, num_objects):
 
 
 def print_smtp_warning():
-    s = """
-          _____   __  __   _____   ______   ___
-         / ____| |  \/  | |_   _| |  __  | |__ \\
-        | (___   | \  / |   | |   | |__|_|    ) |
-         \___ \  | |\/| |   | |   | |        / /
-        |_____/  |_|  |_|   |_|   |_|       (_)
-    """  # noqa: E501, W605
-    print(s)
+    tprint("\nSMTP?\n", space=2)
