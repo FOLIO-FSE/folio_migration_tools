@@ -1,7 +1,7 @@
 # Mapping file based mapping
 
 ## The mapping file
-The mapping file is a json file, with one element, "data" that is an array of *Mapping entries*. For convenience, there is a web tool, the [Data mapping file creator](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) that simplifies the creation of these files.
+The mapping file is a json file, with one element, "data" that is an array of *Mapping entries*.
 
 A typical mapping file looks like this:
 ```

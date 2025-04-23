@@ -8,7 +8,6 @@ In order to perform migrations according to this process, you need the following
 * Python 3.9 or later
 * An Installation of [FOLIO Migration Tools](https://pypi.org/project/folio-migration-tools/). See the Installing page for information.
 * A repo created from  the template repository [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
-* Access to the [Data mapping file creator](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) web tool
 * A FOLIO tenant running the latest or the second latest version of FOLIO
 
 # FOLIO Inventory data migration process
