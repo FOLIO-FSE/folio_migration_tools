@@ -31,4 +31,8 @@ uv pip install folio_migration_tools
 Test the installation by showing the help pages 
 ```   
 folio-migration-tools -h
-```    
+```
+or
+```
+uv run python -m folio_migration_tools -h
+```

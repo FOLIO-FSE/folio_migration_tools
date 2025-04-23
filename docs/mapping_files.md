@@ -26,10 +26,10 @@ department_mapping.tsv | no | no | no | no    |  no  |   yes
 In the [mapping_files folder](https://github.com/FOLIO-FSE/migration_repo_template/tree/main/mapping_files) in the [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template) you will find example of these files
 
 ##  marc-instance-mapping-rules.json
-These are the mapping rules from MARC21 bib records to FOLIO instances. The rules are stored in the tenant, but it is good practice to keep them under version control so you can maintain the customizations as the mapping rules evolve.For more information on syntax etc, read the [documentation](https://github.com/folio-org/mod-source-record-manager/blob/master/RuleProcessorApi.md).
+These are the mapping rules from MARC21 bib records to FOLIO instances. The rules are stored in the tenant, but it is good practice to keep them under version control so you can maintain the customizations as the mapping rules evolve. For more information on syntax etc, read the [documentation](https://github.com/folio-org/mod-source-record-manager/blob/master/RuleProcessorApi.md).
 
 ## 📄 mfhd_rules.json
-This file is built out according to the [mapping rules for bibs](https://github.com/folio-org/mod-source-record-manager/blob/master/RuleProcessorApi.md). The conditions are different, and not well documented at this point. Look at the example file and refer to the mappinrules documentation 
+This file is built out according to the [mapping rules for bibs](https://github.com/folio-org/mod-source-record-manager/blob/master/RuleProcessorApi.md). The conditions are different, and not well documented at this point. Look at the example file and refer to the mapping rules documentation
 
 ## 📄 holdings_mapping.json
 Just as the item_mapping.json and the user mapping files, these files are esiest to create using the [data-mapping-file-creator tool](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation)
