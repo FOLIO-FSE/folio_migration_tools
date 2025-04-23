@@ -1,8 +1,8 @@
 # docs/conf.py
 """Sphinx configuration."""
 project = "FSE FOLIO Migration Tools"
-author = "Theodor Tolstoy"
-copyright = f"2022, {author}"
+author = "EBSCO Information Services"
+copyright = f"2025, {author}"
 extensions = ["myst_parser"]
 
 source_suffix = {

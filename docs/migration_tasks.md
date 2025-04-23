@@ -32,15 +32,18 @@ This configuration piece in the configuration file determines the behaviour
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
 | migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
 | useTenantMappingRules  | true  | Placeholder for option to use an external rules file  |
-| ilsFlavour  | any of "aleph", "voyager", "sierra", "millennium", "koha", "tag907y", "tag001", "tagf990a"  | Used to point scripts to the correct legacy identifier and other ILS-specific things  |
+| ilsFlavour  | any of "aleph", "voyager", "sierra", "millennium", "koha", "tag907y", "tag001", "tagf990a", "custom"  | Used to point scripts to the correct legacy identifier and other ILS-specific things  |
+| custom_bib_id_field  | any MARC field + subfield (eg. 991$a)  | The MARC record field (with optional $-delimited subfield) containing the legacy system ID of the record. Only used when `ilsFlavour` is "custom".  |
 | tags_to_delete  | any string  | Tags with these names will be deleted (after transformation) and not get stored in SRS  |
-| files  | Objects with filename and boolean  | Filename of the MARC21 file in the data/instances folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
+| create_source_records  | `true` or `false`  | Indicates whether the task should create a file of SRS record objects. If `false`, created instance records will be `"source": "FOLIO"`. |
+| data_import_marc  | `true` or `false`  | Use alternative MARC transformation process (new in v1.9.0+) to create `"source": "FOLIO"` instance records using a minimal map and a `.mrc` file that can be loaded via Data Import using the default Single Record Import update profile. Implicitly sets `create_source_records` to `false`  |
+| files  | Objects with `file_name`, `discoverySuppressed`, and `staffSuppressed` attributes  | `file_name` is the name of the MARC21 file in the `source_data/instances` folder. `discoverySuppressed` is a boolean (`true` or `false`) tells the tools if they should mark records as `"discoverySuppress": true`. `staffSuppressed` (`true` or `false`) tells the tools if they should mark the records as `"staffSuppress": true` |
 
 
 
 ## Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_bibs --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_bibs --base_folder PATH_TO_migration_repo_template/
 
 ```
 # Post tranformed Instances and SRS records 
@@ -78,9 +81,9 @@ These configuration pieces in the configuration file determines the behaviour
 
 ## Syntax to run
 ``` 
- python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_bibs --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_bibs --base_folder PATH_TO_migration_repo_template/
 
-  python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_srs_bibs --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_srs_bibs --base_folder PATH_TO_migration_repo_template/
 
 ```
 
@@ -119,12 +122,13 @@ This configuration piece in the configuration file determines the behaviour
 | fallbackHoldingsTypeId  | A uuid  | Fallback holdings type if mapping does not work  |
 | useTenantMappingRules  | false | boolean (true/false) NOT YET IMPLEMENTED.  |
 | hridHandling  | "default" or "preserve001"  | If default, HRIDs will be generated according to the FOLIO settings. If preserve001, the 001s will be used as hrids if possible or fallback to default settings  |
-| createSourceRecords  | boolean (true/false)  |   |
+| createSourceRecords  | boolean (true/false)  | Whether or not to create a file of SRS record objects. If `false`, created holdings records will be `"source": "FOLIO"`  |
+| supplemental_mfhd_mapping_rules_file  | Any string  | Location of a `.json` file containing MARC mapping rules for MFHD records in the `mapping_files` directory. Contents will be used to "update" the system-provided rules. Only use if `createSourceRecords` is `false`  |
 | files  | Objects with filename and boolean  | Filename of the MARC21 file in the data/holdings folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
 
 ## Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_mfhd --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_mfhd --base_folder PATH_TO_migration_repo_template/
 ```
 
 # Post tranformed MFHDs and Holdingsrecords to FOLIO 
@@ -162,9 +166,9 @@ These configuration pieces in the configuration file determines the behaviour
 
 ## Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_holdingsrecords_from_mfhd --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_holdingsrecords_from_mfhd --base_folder PATH_TO_migration_repo_template/
 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_srs_mfhds --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_srs_mfhds --base_folder PATH_TO_migration_repo_template/
 ```
 
 
@@ -212,7 +216,7 @@ These configuration pieces in the configuration file determines the behaviour
 
 ## Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_csv_holdings --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_csv_holdings --base_folder PATH_TO_migration_repo_template/
 ```
 # Post trasformed Holdingsrecords to FOLIO
 See documentation for posting above
@@ -243,7 +247,9 @@ These configuration pieces in the configuration file determines the behaviour
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
 | migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
 | itemsMappingFileName  | Any string  | location of the mapping file in the mapping_files folder  |
-| locationMapFileName  | Any string   | Location of the Location mapping file in the mapping_files folder  |
+| locationMapFileName  | Any string   | Location of the location mapping file in the mapping_files folder  |
+| prevent_permanent_location_map_default  | `true` or `false`  | If `true`, item permanent location mapping will not use the fallback (`*`) mapping  |
+| tempLocationMapFileName  | Any string   | Location of the temporary location mapping file in the mapping_files folder  |
 | callNumberTypeMapFileName  | Any string   | location of the mapping file in the mapping_files folder  |
 | materialTypesMapFileName  | Any string   | location of the mapping file in the mapping_files folder  |
 | loanTypesMapFileName  | Any string   | location of the mapping file in the mapping_files folder  |
@@ -252,7 +258,7 @@ These configuration pieces in the configuration file determines the behaviour
 
 ## Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_csv_items --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_csv_items --base_folder PATH_TO_migration_repo_template/
 ```
 
 # Post transformed Items to FOLIO
@@ -286,7 +292,7 @@ These configuration pieces in the configuration file determines the behaviour
 
 ## Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json user_transform --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json user_transform --base_folder PATH_TO_migration_repo_template/
 ```
 
 # Post transformed users to FOLIO
@@ -327,7 +333,7 @@ These configuration pieces in the configuration file determines the behaviour
 
 ## Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
 ```
 
 # Post transformed Organizations to FOLIO
@@ -382,7 +388,7 @@ These configuration pieces in the configuration file determines the behaviour
 
 ## Syntax to run
 ``` 
-python -m folio_migration_tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
+folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
 ```
 # Post transformed Manual fees/fines to FOLIO
 See documentation for posting above. Note that all of the transformed fee/fine information is stored in the fees_fines.extradata file. 
