@@ -1042,6 +1042,13 @@ def test_ref_data_departments_mapping(mocked_folio_client):
         "user_name": "user_name_1",
         "id": "1",
     }
+    legacy_user_record_2 = {
+        "dept": "Unmapped name",
+        "ext_id": "externalid_2",
+        "user_name": "user_name_2",
+        "id": "2",
+    }
+
     departments_map = [
         {"dept": "Department name", "folio_name": "FOLIO user department name"},
         {"dept": "*", "folio_name": "FOLIO fallback user department name"},
@@ -1059,7 +1066,14 @@ def test_ref_data_departments_mapping(mocked_folio_client):
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
     )
+    folio_user_2, index_or_id_2 = user_mapper.do_map(
+        legacy_user_record_2, "002", FOLIONamespaces.users
+    )
+    folio_user_2 = user_mapper.perform_additional_mapping(
+        legacy_user_record_2, folio_user_2, index_or_id_2
+    )
     assert folio_user["departments"][0] == "FOLIO user department name"
+    assert "departments" not in folio_user_2
 
 
 def test_custom_fields_mapping(mocked_folio_client):
