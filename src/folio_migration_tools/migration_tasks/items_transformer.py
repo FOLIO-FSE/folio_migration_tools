@@ -233,7 +233,8 @@ class ItemsTransformer(MigrationTaskBase):
         ).is_file():
             temporary_loan_type_mapping = self.load_ref_data_mapping_file(
                 "temporaryLoanTypeId",
-                self.folder_structure.temp_loan_type_map_path,
+                self.folder_structure.mapping_files_folder
+                / self.task_config.temp_loan_types_map_file_name,
                 self.folio_keys,
             )
         else:
