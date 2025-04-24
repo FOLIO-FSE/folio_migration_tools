@@ -158,7 +158,7 @@ class UserMapper(MappingFileMapperBase):
                 self.departments_mapping,
                 legacy_user,
                 index_or_id,
-                False,
+                True,
             )
         elif folio_prop_name in ["expirationDate", "enrollmentDate", "personal.dateOfBirth"]:
             return self.get_parsed_date(mapped_value, folio_prop_name)
