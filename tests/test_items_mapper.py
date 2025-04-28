@@ -75,7 +75,6 @@ def mapper(pytestconfig) -> ItemMapper:
         {},
         {},
         lib_config,
-        [],
         task_config,
     )
 

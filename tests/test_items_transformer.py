@@ -1,3 +1,4 @@
+from unittest.mock import Mock
 import uuid
 
 import pytest
@@ -5,6 +6,9 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
+from folio_migration_tools.test_infrastructure import mocked_classes
+import json
+from unittest.mock import mock_open, patch
 
 
 def test_handle_circiulation_notes_wrong_type():
@@ -35,3 +39,37 @@ def test_handle_circiulation_notes_happy_path():
 
 def test_get_object_type():
     assert ItemsTransformer.get_object_type() == FOLIONamespaces.items
+
+@pytest.fixture
+def items_transformer():
+    mock_config = Mock(spec=ItemsTransformer.TaskConfiguration)
+    mock_config.ecs_tenant_id = ""
+    mock_config.name = "test"
+    mock_config.boundwith_relationships_map_path = "some_path"
+    items_transformer = Mock(spec=ItemsTransformer)
+    items_transformer.folder_structure = mocked_classes.get_mocked_folder_structure()
+    items_transformer.folder_structure.boundwith_relationships_map_path = "some_path"
+    items_transformer.task_configuration = mock_config
+    return items_transformer
+
+
+def test_load_boundwith_relationships_happy_path(items_transformer):
+    mock_data = '["key1", ["value1"]]\n["key2", ["value2"]]'
+    with patch("builtins.open", mock_open(read_data=mock_data)):
+        ItemsTransformer.load_boundwith_relationships(items_transformer)
+        assert len(items_transformer.boundwith_relationship_map) == 2
+        assert items_transformer.boundwith_relationship_map["key1"] == ["value1"]
+
+
+def test_load_boundwith_relationships_file_not_found(items_transformer):
+    with patch("builtins.open", side_effect=FileNotFoundError):
+        with pytest.raises(TransformationProcessError) as excinfo:
+            ItemsTransformer.load_boundwith_relationships(items_transformer)
+        assert "Boundwith relationship file specified, but relationships file from holdings transformation not found." in str(excinfo.value)
+
+
+def test_load_boundwith_relationships_invalid_json(items_transformer):
+    mock_data = '["key1", ["value1"]\n["key2", ["value2"]]'
+    with patch("builtins.open", mock_open(read_data=mock_data)):
+        with pytest.raises(json.JSONDecodeError):
+            ItemsTransformer.load_boundwith_relationships(items_transformer)

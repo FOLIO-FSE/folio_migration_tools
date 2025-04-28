@@ -293,6 +293,17 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         logging.info("Done. Transformer Wrapping up...")
         self.extradata_writer.flush()
         self.processor.wrap_up()
+        if self.mapper.boundwith_relationship_map:
+            with open(
+                self.folder_structure.boundwith_relationships_map_path, "w+"
+            ) as boundwith_relationship_file:
+                logging.info(
+                    "Writing boundwiths relationship map to %s",
+                    boundwith_relationship_file.name,
+                )
+                for key, val in self.mapper.boundwith_relationship_map.items():
+                    boundwith_relationship_file.write(json.dumps((key, val)) + "\n")
+
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
                 i18n.t("Bibliographic records transformation report"),
