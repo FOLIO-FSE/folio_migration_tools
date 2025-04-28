@@ -139,6 +139,8 @@ class FolderStructure:
 def verify_git_ignore(gitignore: Path):
     with open(gitignore, "r+") as f:
         contents = f.read()
+        if "reports/" not in contents:
+            f.write("reports/\n")
         if "results/" not in contents:
             f.write("results/\n")
         if "archive/" not in contents:
