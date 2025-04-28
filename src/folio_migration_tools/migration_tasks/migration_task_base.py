@@ -9,6 +9,7 @@ from abc import abstractmethod
 from datetime import datetime, timezone
 from genericpath import isfile
 from pathlib import Path
+from typing import Optional
 
 import folioclient
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -54,6 +55,15 @@ class MigrationTaskBase:
             {"x-okapi-tenant": self.ecs_tenant_id} if self.ecs_tenant_id else {}
         )
         self.folio_client.okapi_headers.update(self.ecs_tenant_header)
+        self.central_folder_structure: Optional[FolderStructure] = None
+        if library_configuration.is_ecs and library_configuration.ecs_central_iteration_identifier:
+            self.central_folder_structure = FolderStructure(
+                library_configuration.base_folder,
+                FOLIONamespaces.instances,
+                task_configuration.name,
+                library_configuration.ecs_central_iteration_identifier,
+                library_configuration.add_time_stamp_to_file_names,
+            )
         self.folder_structure: FolderStructure = FolderStructure(
             library_configuration.base_folder,
             self.get_object_type(),
@@ -66,6 +76,8 @@ class MigrationTaskBase:
         self.object_type = self.get_object_type()
         try:
             self.folder_structure.setup_migration_file_structure()
+            if self.central_folder_structure:
+                self.central_folder_structure.setup_migration_file_structure()
             # Initiate Worker
         except FileNotFoundError as fne:
             logging.error(fne)
@@ -143,15 +155,47 @@ class MigrationTaskBase:
         for filename in files:
             logging.info("\t%s", filename)
 
+    def load_instance_id_map(self, raise_if_empty=True) -> dict:
+        """
+        This method handles loading instance id maps for holdings and other transformations that require it.
+        This is in the base class because multiple tasks need it. It exists because instances in an ECS environment
+        are transformed for the central and data tenants separately, but the data tenants need to know about
+        the central tenant instance ids. This is a bit of a hack, but it works for now.
+        """
+        map_files = []
+        if self.library_configuration.is_ecs and self.central_folder_structure:
+            logging.info(
+                "Loading ECS central tenant instance id map from %s", self.central_folder_structure.instance_id_map_path
+            )
+            instance_id_map = self.load_id_map(
+                self.central_folder_structure.instance_id_map_path,
+                raise_if_empty=False,
+            )
+            map_files.append(str(self.central_folder_structure.instance_id_map_path))
+            logging.info(
+                "Loading member tenant isntance id map from %s",
+                self.folder_structure.instance_id_map_path
+            )
+        instance_id_map = self.load_id_map(
+            self.folder_structure.instance_id_map_path,
+            raise_if_empty=False,
+            existing_id_map=instance_id_map,
+        )
+        map_files.append(str(self.folder_structure.instance_id_map_path))
+        if not any(instance_id_map) and raise_if_empty:
+            map_file_paths = ", ".join(map_files)
+            raise TransformationProcessError("", "Instance id map is empty", map_file_paths)
+        return instance_id_map
+
     @staticmethod
-    def load_id_map(map_path, raise_if_empty=False):
+    def load_id_map(map_path, raise_if_empty=False, existing_id_map={}):
         if not isfile(map_path):
-            logging.warn(
+            logging.warning(
                 "No legacy id map found at %s. Will build one from scratch", map_path
             )
             return {}
-        id_map = {}
-        loaded_rows = 0
+        id_map = existing_id_map
+        loaded_rows = len(id_map)
         with open(map_path) as id_map_file:
             for index, json_string in enumerate(id_map_file, start=1):
                 loaded_rows = index
@@ -159,12 +203,12 @@ class MigrationTaskBase:
                 map_tuple = json.loads(json_string)
                 if loaded_rows % 500000 == 0:
                     print(
-                        f"{loaded_rows + 1} ids loaded to map. Last Id: {map_tuple[0]}",
+                        f"{loaded_rows + 1} ids loaded to map. Last Id: {map_tuple[0]}          ",
                         end="\r",
                     )
 
                 id_map[map_tuple[0]] = map_tuple
-        logging.info("Loaded %s migrated IDs", loaded_rows)
+        logging.info("Loaded %s migrated IDs from %s", loaded_rows, id_map_file.name)
         if not any(id_map) and raise_if_empty:
             raise TransformationProcessError("", "Legacy id map is empty", map_path)
         return id_map
