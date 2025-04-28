@@ -261,6 +261,35 @@ def get_mocked_library_config():
         iteration_identifier="test_iteration"
     )
 
+def get_mocked_ecs_central_libarary_config():
+    return LibraryConfiguration(
+        okapi_url="http://localhost:9130",
+        tenant_id="test_tenant",
+        okapi_username="test_user",
+        okapi_password="test_password",
+        base_folder=Path("."),
+        library_name="Test Library",
+        log_level_debug=False,
+        folio_release=FolioRelease.sunflower,
+        iteration_identifier="central_iteration",
+        is_ecs=True,
+    )
+
+def get_mocked_ecs_member_libarary_config():
+    return LibraryConfiguration(
+        okapi_url="http://localhost:9130",
+        tenant_id="test_tenant",
+        ecs_tenant_id="test_ecs_tenant",
+        okapi_username="test_user",
+        okapi_password="test_password",
+        base_folder=Path("."),
+        library_name="Test Library",
+        log_level_debug=False,
+        folio_release=FolioRelease.sunflower,
+        iteration_identifier="member_iteration",
+        ecs_central_iteration_identifier="central_iteration",
+        is_ecs=True,
+    )
 
 def get_mocked_folder_structure():
     mock_fs = MagicMock()

@@ -4,8 +4,7 @@ import json
 import logging
 import logging.handlers
 from pathlib import Path
-from unittest import mock
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
@@ -15,7 +14,7 @@ from pymarc import Leader, Subfield
 from pymarc.reader import MARCReader
 from pymarc.record import Field, Record
 
-from folio_migration_tools.library_configuration import FolioRelease
+from folio_migration_tools.library_configuration import FolioRelease, LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
@@ -44,15 +43,19 @@ def folio_client():
 
 @pytest.fixture
 def mapper_base(folio_client):
-    mapper_library_configuration = {
-        "okapi_url": "https://folio-snapshot.dev.folio.org",
-        "tenant_id": "diku",
-        "okapi_username": "diku_admin",
-        "okapi_password": "admin",
-        "iteration_identifier": "test",
-        "log_level_debug": False,
-        "base_folder": "/"
-    }
+    mapper_library_configuration = LibraryConfiguration(
+        **{
+            "okapi_url": "https://folio-snapshot.dev.folio.org",
+            "tenant_id": "diku",
+            "okapi_username": "diku_admin",
+            "okapi_password": "admin",
+            "iteration_identifier": "test",
+            "library_name": "Test Library",
+            "folio_release": FolioRelease.sunflower,
+            "log_level_debug": False,
+            "base_folder": "/"
+        }
+    )
     mapper_task_configuration = {
         "name": "test",
         "migration_task_type": "BibsTransformer",
@@ -213,7 +216,6 @@ def test_get_srs_string_bib():
     with open(path, "rb") as marc_file:
         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
         instance = {"id": str(uuid4()), "hrid": "my hrid"}
-        metadata = {}
         id_holder = {
             "instanceId": instance["id"],
             "instanceHrid": instance["hrid"],
@@ -250,10 +252,11 @@ def test_get_srs_string_bad_leaders():
         assert len(str(record.leader)) == 24
 
 
-def test_create_srs_uuid():
-    created_id = RulesMapperBase.create_srs_id(FOLIONamespaces.holdings, "some_url", "id_1")
+def test_create_srs_uuid(mapper_base):
+    mapper_base.folio_client.okapi_url = "some_url"
+    created_id = mapper_base.create_srs_id(FOLIONamespaces.holdings, "id_1")
     assert str(created_id) == "6734f228-cba2-54c7-b129-c6437375a864"
-    created_id_2 = RulesMapperBase.create_srs_id(FOLIONamespaces.instances, "some_url", "id_1")
+    created_id_2 = mapper_base.create_srs_id(FOLIONamespaces.instances, "id_1")
     assert str(created_id) != str(created_id_2)
 
 
@@ -272,7 +275,7 @@ def marc_record():
     return record
 
 
-def test_save_source_record(caplog, folio_record, marc_record):
+def test_save_source_record(caplog, folio_record, marc_record, mapper_base):
     record_type = FOLIONamespaces.instances
     folio_client = Mock(spec=FolioClient)
     folio_client.okapi_url = "https://folio-snapshot.dev.folio.org"
@@ -281,7 +284,7 @@ def test_save_source_record(caplog, folio_record, marc_record):
     srs_records = []
 
     with io.StringIO() as srs_records_file:
-        RulesMapperBase.save_source_record(
+        mapper_base.save_source_record(
             srs_records_file,
             record_type,
             folio_client,
