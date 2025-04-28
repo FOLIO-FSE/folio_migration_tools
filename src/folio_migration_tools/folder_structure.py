@@ -120,6 +120,9 @@ class FolderStructure:
         self.id_map_path = (
             self.results_folder / f"{str(self.object_type.name).lower()}_id_map.json"
         )
+        self.boundwith_relationships_map_path = (
+            self.results_folder / "boundwith_relationships_map.json"
+        )
         # Mapping files
         self.material_type_map_path = self.mapping_files_folder / "material_types.tsv"
         self.loan_type_map_path = self.mapping_files_folder / "loan_types.tsv"

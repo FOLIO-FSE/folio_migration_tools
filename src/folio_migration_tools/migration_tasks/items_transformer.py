@@ -179,18 +179,6 @@ class ItemsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
-        get_bib_id_from_instance_id_map_for_boundwiths: Annotated[
-            bool,
-            Field(
-                title="Get BIB_ID instance id from the instance_id_map",
-                description=(
-                    "Instead of generating an instance_id based on BIB_ID value, assume "
-                    "that the corresponding value in the instance_id_map is correct. "
-                    "Useful when migrating a library into an existing ECS FOLIO environment "
-                    "where Bibs are being merged with existing records and you are constructing an "
-                    "instance_id_map for the central server via alternative means.")
-            )
-        ] = False
         prevent_permanent_location_map_default: Annotated[
             bool,
             Field(
@@ -256,20 +244,9 @@ class ItemsTransformer(MigrationTaskBase):
             )
             temporary_loan_type_mapping = None
         # Load Boundwith relationship map
-        self.boundwith_relationship_map = []
+        self.boundwith_relationship_map = {}
         if self.task_config.boundwith_relationship_file_path:
-            with open(
-                self.folder_structure.data_folder
-                / FOLIONamespaces.holdings.name
-                / self.task_config.boundwith_relationship_file_path
-            ) as boundwith_relationship_file:
-                self.boundwith_relationship_map = list(
-                    csv.DictReader(boundwith_relationship_file, dialect="tsv")
-                )
-            logging.info(
-                "Rows in Bound with relationship map: %s", len(self.boundwith_relationship_map)
-            )
-
+            self.load_boundwith_relationships()
         if (
             self.folder_structure.mapping_files_folder
             / self.task_config.temp_location_map_file_name
@@ -325,7 +302,6 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_loan_type_mapping,
             temporary_location_mapping,
             self.library_configuration,
-            self.boundwith_relationship_map,
             self.task_configuration
         )
         if (
@@ -380,9 +356,9 @@ class ItemsTransformer(MigrationTaskBase):
                     self.mapper.perform_additional_mappings(folio_rec, file_def)
                     self.handle_circiulation_notes(folio_rec, self.folio_client.current_user)
                     self.handle_notes(folio_rec)
-                    if folio_rec["holdingsRecordId"] in self.mapper.boundwith_relationship_map:
+                    if folio_rec["holdingsRecordId"] in self.boundwith_relationship_map:
                         for idx_, instance_id in enumerate(
-                            self.mapper.boundwith_relationship_map.get(
+                            self.boundwith_relationship_map.get(
                                 folio_rec["holdingsRecordId"]
                             )
                         ):
@@ -468,6 +444,22 @@ class ItemsTransformer(MigrationTaskBase):
             folio_rec["circulationNotes"] = filtered_notes
         else:
             del folio_rec["circulationNotes"]
+
+    def load_boundwith_relationships(self):
+        try:
+            with open(
+                    self.folder_structure.boundwith_relationships_map_path
+            ) as boundwith_relationship_file:
+                self.boundwith_relationship_map = dict(
+                        json.loads(x) for x in boundwith_relationship_file
+                    )
+            logging.info(
+                    "Rows in Bound with relationship map: %s", len(self.boundwith_relationship_map)
+                )
+        except FileNotFoundError:
+            raise TransformationProcessError(
+                    "", "Boundwith relationship file specified, but relationships file from holdings transformation not found. ", self.folder_structure.boundwith_relationships_map_path
+            )
 
     def wrap_up(self):
         logging.info("Done. Transformer wrapping up...")
