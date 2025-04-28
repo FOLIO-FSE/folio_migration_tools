@@ -177,7 +177,7 @@ class OrdersTransformer(MigrationTaskBase):
             self.library_configuration,
             self.orders_map,
             self.load_id_map(self.folder_structure.organizations_id_map_path, True),
-            self.load_id_map(self.folder_structure.instance_id_map_path, True),
+            self.load_instance_id_map(True),
             self.load_ref_data_mapping_file(
                 "acquisitionMethod",
                 self.folder_structure.mapping_files_folder

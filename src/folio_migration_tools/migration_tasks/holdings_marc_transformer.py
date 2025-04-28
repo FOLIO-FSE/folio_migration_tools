@@ -229,9 +229,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_config.files
         )
-        self.instance_id_map = self.load_id_map(
-            self.folder_structure.instance_id_map_path, True
-        )
+        self.instance_id_map = self.load_instance_id_map(True)
         self.mapper = RulesMapperHoldings(
             self.folio_client,
             self.location_map,
