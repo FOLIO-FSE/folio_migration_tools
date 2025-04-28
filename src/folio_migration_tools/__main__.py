@@ -62,6 +62,22 @@ def parse_args(args):
     )
     return parser.parse_args(args)
 
+def prep_library_config(args):
+        config_file_humped = merge_load(args.configuration_path)
+        config_file_humped["libraryInformation"]["okapiPassword"] = args.okapi_password
+        config_file_humped["libraryInformation"]["baseFolder"] = args.base_folder_path
+        config_file = humps.decamelize(config_file_humped)
+        library_config = LibraryConfiguration(**config_file["library_information"])
+        if library_config.ecs_tenant_id:
+            library_config.is_ecs = True
+        if library_config.ecs_tenant_id and not library_config.ecs_central_iteration_identifier:
+            print(
+                "ECS tenant ID is set, but no central iteration identifier is provided. "
+                "Please provide the central iteration identifier in the configuration file."
+            )
+            sys.exit("ECS Central Iteration Identifier Not Found")
+        return config_file, library_config
+
 
 def main():
     try:
@@ -79,19 +95,7 @@ def main():
         except i18n.I18nFileLoadError:
             i18n.load_config(Path(__file__).parent / "i18n_config.py")
         i18n.set("locale", args.report_language)
-        config_file_humped = merge_load(args.configuration_path)
-        config_file_humped["libraryInformation"]["okapiPassword"] = args.okapi_password
-        config_file_humped["libraryInformation"]["baseFolder"] = args.base_folder_path
-        config_file = humps.decamelize(config_file_humped)
-        library_config = LibraryConfiguration(**config_file["library_information"])
-        if library_config.ecs_tenant_id:
-            library_config.is_ecs = True
-        if library_config.ecs_tenant_id and not library_config.ecs_central_iteration_identifier:
-            print(
-                "ECS tenant ID is set, but no central iteration identifier is provided. "
-                "Please provide the central iteration identifier in the configuration file."
-            )
-            sys.exit("ECS Central Iteration Identifier Not Found")
+        config_file, library_config = prep_library_config(args)
         try:
             migration_task_config = next(
                 t for t in config_file["migration_tasks"] if t["name"] == args.task_name
