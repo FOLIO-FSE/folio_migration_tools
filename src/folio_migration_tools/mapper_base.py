@@ -355,12 +355,18 @@ class MapperBase:
                     "Boundwith relationship map contains a BIB_ID id not in the instance id map. No boundwith holdings created.",
                     entry["BIB_ID"],
                 )
-            if instance_uuid in parent_id_tuple:
-                new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [instance_uuid]
-            elif ecs_central_instance_uuid and ecs_central_instance_uuid in parent_id_tuple:
-                new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [ecs_central_instance_uuid]
-            else:
-                raise TransformationProcessError(
+            self.add_instance_id_to_boundwith_map(new_map, entry, mfhd_uuid, instance_uuid, ecs_central_instance_uuid, parent_id_tuple)
+        return new_map
+
+    def add_instance_id_to_boundwith_map(self, new_map, entry, mfhd_uuid, instance_uuid, ecs_central_instance_uuid, parent_id_tuple):
+        if self.task_configuration.get_bib_id_from_instance_id_map_for_boundwiths:
+            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [parent_id_tuple[1]]
+        elif instance_uuid in parent_id_tuple:
+            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [instance_uuid]
+        elif ecs_central_instance_uuid and ecs_central_instance_uuid in parent_id_tuple:
+            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [ecs_central_instance_uuid]
+        else:
+            raise TransformationProcessError(
                     entry["MFHD_ID"],
                     (
                         f"{entry['BIB_ID']} found in instances id map, but the UUID values do not match. "
@@ -369,7 +375,6 @@ class MapperBase:
                     ),
                     [entry["BIB_ID"], instance_uuid, ecs_central_instance_uuid] if ecs_central_instance_uuid else [entry["BIB_ID"], instance_uuid],
                 )
-        return new_map
 
     def save_id_map_file(self, path, legacy_map: dict):
         with open(path, "w") as legacy_map_file:

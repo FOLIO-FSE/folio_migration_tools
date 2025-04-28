@@ -89,6 +89,18 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
+        get_bib_id_from_instance_id_map_for_boundwiths: Annotated[
+            bool,
+            Field(
+                title="Get BIB_ID instance id from the instance_id_map",
+                description=(
+                    "Instead of generating an instance_id based on BIB_ID value, assume "
+                    "that the corresponding value in the instance_id_map is correct. "
+                    "Useful when migrating a library into an existing ECS FOLIO environment "
+                    "where Bibs are being merged with existing records and you are constructing an "
+                    "instance_id_map for the central server via alternative means.")
+            )
+        ] = False
         create_source_records: Annotated[
             bool,
             Field(
