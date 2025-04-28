@@ -211,7 +211,7 @@ class RulesMapperHoldings(RulesMapperBase):
         folio_holding: dict = {}
         folio_holding["id"] = str(
             FolioUUID(
-                str(self.folio_client.okapi_url),
+                self.base_string_for_folio_uuid,
                 FOLIONamespaces.holdings,
                 str(legacy_ids[0]),
             )

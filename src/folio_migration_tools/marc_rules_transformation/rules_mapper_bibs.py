@@ -71,7 +71,7 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance = {}
         folio_instance["id"] = str(
             FolioUUID(
-                str(self.folio_client.okapi_url),
+                self.base_string_for_folio_uuid,
                 FOLIONamespaces.instances,
                 str(legacy_ids[-1]),
             )

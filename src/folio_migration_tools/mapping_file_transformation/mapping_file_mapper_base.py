@@ -208,7 +208,7 @@ class MappingFileMapperBase(MapperBase):
             )
         generated_id = str(
             FolioUUID(
-                self.folio_client.okapi_url,
+                self.base_string_for_folio_uuid,
                 object_type,
                 legacy_id,
             )
