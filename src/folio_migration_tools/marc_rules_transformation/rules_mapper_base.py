@@ -810,8 +810,8 @@ class RulesMapperBase(MapperBase):
             )
         data_import_marc_file.write(marc_record.as_marc())
 
-    @staticmethod
     def save_source_record(
+        self,
         srs_records_file,
         record_type: FOLIONamespaces,
         folio_client: FolioClient,
@@ -831,7 +831,7 @@ class RulesMapperBase(MapperBase):
             legacy_ids (List[str]): _description_
             suppress (bool): _description_
         """
-        srs_id = RulesMapperBase.create_srs_id(record_type, folio_client.okapi_url, legacy_ids[-1])
+        srs_id = self.create_srs_id(record_type, legacy_ids[-1])
 
         marc_record.add_ordered_field(
             Field(
@@ -850,7 +850,7 @@ class RulesMapperBase(MapperBase):
             logging.exception(
                 "Something is wrong with the marc record's leader: %s, %s", marc_record.leader, ee
             )
-        srs_record_string = RulesMapperBase.get_srs_string(
+        srs_record_string = self.get_srs_string(
             marc_record,
             folio_record,
             srs_id,
@@ -859,8 +859,7 @@ class RulesMapperBase(MapperBase):
         )
         srs_records_file.write(f"{srs_record_string}\n")
 
-    @staticmethod
-    def create_srs_id(record_type, okapi_url: str, legacy_id: str):
+    def create_srs_id(self, record_type, legacy_id: str):
         srs_types = {
             FOLIONamespaces.holdings: FOLIONamespaces.srs_records_holdingsrecord,
             FOLIONamespaces.instances: FOLIONamespaces.srs_records_bib,
@@ -868,7 +867,13 @@ class RulesMapperBase(MapperBase):
             FOLIONamespaces.edifact: FOLIONamespaces.srs_records_edifact,
         }
 
-        return str(FolioUUID(okapi_url, srs_types.get(record_type), legacy_id))
+        return str(
+            FolioUUID(
+                self.base_string_for_folio_uuid,
+                srs_types.get(record_type),
+                legacy_id
+            )
+        )
 
     @staticmethod
     def get_bib_id_from_907y(marc_record: Record, index_or_legacy_id):
