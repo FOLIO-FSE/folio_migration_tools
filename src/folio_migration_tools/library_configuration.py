@@ -90,13 +90,20 @@ class LibraryConfiguration(BaseModel):
     )
     multi_field_delimiter: Optional[str] = "<delimiter>"
     failed_records_threshold: Annotated[
-        int, Field(description=("Number of failed records until the process shuts down"))
+        int,
+        Field(description=("Number of failed records until the process shuts down")),
     ] = 5000
     failed_percentage_threshold: Annotated[
-        int, Field(description=("Percentage of failed records until the process shuts down"))
+        int,
+        Field(
+            description=("Percentage of failed records until the process shuts down")
+        ),
     ] = 20
     generic_exception_threshold: Annotated[
-        int, Field(description=("Number of generic exceptions until the process shuts down"))
+        int,
+        Field(
+            description=("Number of generic exceptions until the process shuts down")
+        ),
     ] = 50
     library_name: str
     log_level_debug: bool
@@ -111,3 +118,34 @@ class LibraryConfiguration(BaseModel):
     add_time_stamp_to_file_names: Annotated[
         bool, Field(title="Add time stamp to file names")
     ] = False
+    use_gateway_url_for_uuids: Annotated[
+        bool,
+        Field(
+            title="Use gateway URL for UUIDs",
+            description=(
+                "If set to true (default), folio_uuid will use the gateway URL when generating deterministic UUIDs for FOLIO records. "
+                "If set to false, the UUIDs will be generated using the tenant_id (or ecs_tenant_id, if applicable)."
+            ),
+        ),
+    ] = True
+    is_ecs: Annotated[
+        bool,
+        Field(
+            title="Library is running ECS FOLIO",
+            description=(
+                "If set to true, the migration is running in an ECS environment. "
+                "If set to false (default), the migration is running in a non-ECS environment. "
+                "If ecs_tenant_id is set, this will be set to true, regardless of the value set."
+            ),
+        ),
+    ] = False
+    ecs_central_iteration_identifier: Annotated[
+        str,
+        Field(
+            title="ECS central iteration identifier",
+            description=(
+                "The iteration_identifier value from the central tenant configuration that corresponds "
+                "to this configuration's iteration_identifier. Used to access the central instances_id_map."
+            ),
+        ),
+    ] = ""
