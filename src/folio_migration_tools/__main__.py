@@ -84,6 +84,14 @@ def main():
         config_file_humped["libraryInformation"]["baseFolder"] = args.base_folder_path
         config_file = humps.decamelize(config_file_humped)
         library_config = LibraryConfiguration(**config_file["library_information"])
+        if library_config.ecs_tenant_id:
+            library_config.is_ecs = True
+        if library_config.ecs_tenant_id and not library_config.ecs_central_iteration_identifier:
+            print(
+                "ECS tenant ID is set, but no central iteration identifier is provided. "
+                "Please provide the central iteration identifier in the configuration file."
+            )
+            sys.exit("ECS Central Iteration Identifier Not Found")
         try:
             migration_task_config = next(
                 t for t in config_file["migration_tasks"] if t["name"] == args.task_name
