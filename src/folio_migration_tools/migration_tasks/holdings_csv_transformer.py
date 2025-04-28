@@ -296,18 +296,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             return holdings_map
 
-    def load_instance_id_map(self):
-        res = {}
-        with open(self.folder_structure.instance_id_map_path, "r") as instance_id_map_file:
-            for index, json_string in enumerate(instance_id_map_file):
-                # Format:{"legacy_id", "folio_id","instanceLevelCallNumber"}
-                if index % 500000 == 0:
-                    print(f"{index} instance ids loaded to map", end="\r")
-                map_object = json.loads(json_string)
-                res[map_object["legacy_id"]] = map_object
-        logging.info("Loaded %s migrated instance IDs", (index + 1))
-        return res
-
     def do_work(self):
         logging.info("Starting....")
         for file_def in self.task_config.files:
