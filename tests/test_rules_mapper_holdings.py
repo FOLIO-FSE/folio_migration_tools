@@ -93,10 +93,23 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
 
 
 def test_setup_boundwith_relationship_map_missing_entries():
-    with pytest.raises(TransformationProcessError):
-        mocked_mapper = Mock(spec=RulesMapperHoldings)
+    with pytest.raises(TransformationProcessError) as tpe:
         file_mock = [{}]
-        RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
+        mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+        mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
+        mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+        RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), {}, file_mock)
+    assert "Column MFHD_ID missing from" in str(tpe.value)
+
+
+def test_setup_boundwith_relationship_map_missing_bib_id_entries():
+    with pytest.raises(TransformationProcessError) as tpe:
+        file_mock = [{"MFHD_ID": "H1"}]
+        mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+        mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
+        mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+        RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), {}, file_mock)
+    assert "Column BIB_ID missing from" in str(tpe.value)
 
 
 def test_setup_boundwith_relationship_map_missing_entries_2():
@@ -107,26 +120,70 @@ def test_setup_boundwith_relationship_map_missing_entries_2():
 
 
 def test_setup_boundwith_relationship_map_empty_entries():
-    with pytest.raises(TransformationProcessError):
-        mocked_mapper = Mock(spec=RulesMapperHoldings)
+    with pytest.raises(TransformationProcessError) as tpe:
+        mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+        mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
+        mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
         file_mock = [{"MFHD_ID": "", "BIB_ID": ""}]
-        RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
+        RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), {}, file_mock)
+    assert "Column MFHD_ID missing from" in str(tpe.value)
+
+
+def test_setup_boundwith_relationship_map_empty_bib_id_entries():
+    with pytest.raises(TransformationProcessError) as tpe:
+        mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+        mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
+        mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+        file_mock = [{"MFHD_ID": "H1", "BIB_ID": ""}]
+        RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), {}, file_mock)
+    assert "Column BIB_ID missing from" in str(tpe.value)
+
+
+def test_setup_boundwith_relationship_map_bib_id_found_instance_id_mismatch():
+    with pytest.raises(TransformationProcessError) as tpe:
+        mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+        mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
+        mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+        file_mock = [
+            {"MFHD_ID": "H1", "BIB_ID": "B1"},
+            {"MFHD_ID": "H1", "BIB_ID": "B2"},
+            {"MFHD_ID": "H2", "BIB_ID": "B3"},
+            {"MFHD_ID": "H2", "BIB_ID": "B4"},
+        ]
+        parent_id_map = {
+            "B1": ("B1", "ae0c833c-e76f-53aa-975a-7ac4c2be7972", "in00000000001"),
+            "B2": ("B2", "fae73ef8-b546-5310-b4ee-c2d68fed48c5", "in00000000002"),
+            "B3": ("B3", "mismatch_id", "in00000000003"),
+            "B4": ("B4", "9f6d7e45-9489-5b56-ab8e-5e22ba523856", "in00000000004"),
+        }
+        RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), parent_id_map, file_mock)
+    assert "found in instances id map, but the UUID values do not match" in str(tpe.value)
 
 
 def test_setup_boundwith_relationship_map_with_entries():
-    mocked_mapper = Mock(spec=RulesMapperHoldings)
-    mocked_mapper.folio_client = mocked_classes.mocked_folio_client()
-    mocked_mapper.parent_id_map = {"B1": [], "B2": [], "B3": [], "B4": []}
-
     file_mock = [
         {"MFHD_ID": "H1", "BIB_ID": "B1"},
         {"MFHD_ID": "H1", "BIB_ID": "B2"},
         {"MFHD_ID": "H2", "BIB_ID": "B3"},
         {"MFHD_ID": "H2", "BIB_ID": "B4"},
     ]
-    res = RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
-    assert len(res) == 2
-    assert res["66db04ef-fbfb-5c45-9ed7-65a1f2495eaf"] == [
+    mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
+    mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
+    mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+    parent_id_map = {
+        "B1": ("B1", "ae0c833c-e76f-53aa-975a-7ac4c2be7972", "in00000000001"),
+        "B2": ("B2", "fae73ef8-b546-5310-b4ee-c2d68fed48c5", "in00000000002"),
+        "B3": ("B3", "096b0057-fb32-519c-9e6d-58974d64a154", "in00000000003"),
+        "B4": ("B4", "9f6d7e45-9489-5b56-ab8e-5e22ba523856", "in00000000004"),
+    }
+
+    mocked_mapper = RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), parent_id_map, file_mock)
+    mocked_mapper.folio_client = mocked_classes.mocked_folio_client()
+    mocked_mapper.parent_id_map = {"B1": [], "B2": [], "B3": [], "B4": []}
+
+    # res = RulesMapperHoldings.setup_boundwith_relationship_map(mocked_mapper, file_mock)
+    assert len(mocked_mapper.boundwith_relationship_map) == 2
+    assert mocked_mapper.boundwith_relationship_map["66db04ef-fbfb-5c45-9ed7-65a1f2495eaf"] == [
         "ae0c833c-e76f-53aa-975a-7ac4c2be7972",
         "fae73ef8-b546-5310-b4ee-c2d68fed48c5",
     ]

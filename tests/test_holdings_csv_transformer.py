@@ -25,6 +25,7 @@ def test_generate_boundwith_part(caplog):
     mock_transformer.mapper = mock_mapper
 
     mock_mapper.folio_client = mocked_classes.mocked_folio_client()
+    mock_mapper.base_string_for_folio_uuid = mocked_classes.mocked_folio_client().okapi_url
     HoldingsMapper.create_and_write_boundwith_part(mock_mapper, "legacy_id", "holding_uuid")
 
     assert any("boundwithPart\t" in ed for ed in mock_mapper.extradata_writer.cache)

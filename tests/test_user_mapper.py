@@ -5,7 +5,6 @@ from unittest.mock import Mock
 
 import pytest
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
@@ -61,7 +60,7 @@ def test_basic(mocked_folio_client):
         "id": "1",
         "homebranch": "75e59650-bbc5-4ce4-9f45-45382825fedc",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -134,7 +133,7 @@ def test_basic_all_dates(mocked_folio_client):
         "id": "1",
         "homebranch": "75e59650-bbc5-4ce4-9f45-45382825fedc",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -205,7 +204,7 @@ def test_basic_all_dates_empty_or_bad(mocked_folio_client):
         "id": "1",
         "homebranch": "75e59650-bbc5-4ce4-9f45-45382825fedc",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -265,7 +264,7 @@ def test_map_request_preference_with_replace_value(mocked_folio_client):
         "id": "1",
         "homebranch": "my place",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -320,7 +319,7 @@ def test_basic_fallback(mocked_folio_client):
         "id": "1",
         "ext_id2": "externalid_2",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -377,7 +376,7 @@ def test_basic_fallback_value(mocked_folio_client):
         "id": "1",
         "EMAIL": "",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -436,7 +435,7 @@ def test_basic_fallback_value_and_fallback_legacy_value(mocked_folio_client):
         "EMAIL": "",
         "SECONDARY EMAIL": "",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -495,7 +494,7 @@ def test_basic_fallback_value_and_fallback_legacy_value2(mocked_folio_client):
         "EMAIL": "",
         "SECONDARY EMAIL": "secondary@lost.yes",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -546,7 +545,7 @@ def test_basic_replace(mocked_folio_client):
         "id": "1",
         "ext_id2": "externalid_2",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -596,7 +595,7 @@ def test_basic_replace_no_replace(mocked_folio_client):
         "id": "1",
         "ext_id2": "externalid_2",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -660,7 +659,7 @@ def test_basic_replace_regex_match(mocked_folio_client):
         "id": "1",
         "name": "Graney, Carol Homan",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -726,7 +725,7 @@ def test_basic_replace_regex_match_no_middle(mocked_folio_client):
         "id": "1",
         "name": "Graney, Carol",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -774,7 +773,7 @@ def test_basic_fallback_all_empty(mocked_folio_client):
             "id": "1",
             "ext_id2": "",
         }
-        mock_library_conf = Mock(spec=LibraryConfiguration)
+        mock_library_conf = mocked_classes.get_mocked_library_config()
         mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
         mock_task_config.remove_id_and_request_preferences = False
         mock_task_config.remove_request_preferences = False
@@ -822,7 +821,7 @@ def test_basic_turn_off_id_and_request_preferences(mocked_folio_client):
         ]
     }
     legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1"}
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = True
     mock_task_config.remove_request_preferences = False
@@ -869,7 +868,7 @@ def test_basic_turn_off_request_preferences(mocked_folio_client):
         ]
     }
     legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1"}
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = True
@@ -926,7 +925,7 @@ def test_one_to_one_group_mapping(mocked_folio_client):
         "user_name": "user_name_1",
         "id": "1",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -985,7 +984,7 @@ def test_ref_data_group_mapping(mocked_folio_client):
         {"group": "Group name", "folio_group": "FOLIO group name"},
         {"group": "*", "folio_group": "FOLIO fallback group name"},
     ]
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -1053,7 +1052,7 @@ def test_ref_data_departments_mapping(mocked_folio_client):
         {"dept": "Department name", "folio_name": "FOLIO user department name"},
         {"dept": "*", "folio_name": "FOLIO fallback user department name"},
     ]
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -1117,7 +1116,7 @@ def test_custom_fields_mapping(mocked_folio_client):
         "user_name": "user_name_1",
         "id": "1",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -1161,7 +1160,7 @@ def test_remove_preferred_first_name_if_empty(mocked_folio_client):
         ]
     }
     legacy_user_record = {"ext_id": "externalid_1", "user_name": "user_name_1", "id": "1"}
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_folio_client
@@ -1224,7 +1223,7 @@ def test_boolean_values_static_value_true(mocked_folio_client):
         "HOMECITY": "Fritsla",
         "id": "1",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_folio_client
@@ -1285,7 +1284,7 @@ def test_boolean_values_static_value_false(mocked_folio_client):
         "HOMECITY": "Fritsla",
         "id": "1",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_folio_client
@@ -1361,7 +1360,7 @@ def test_boolean_values_mapped_value(mocked_folio_client):
         },
     ]
 
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_folio_client
@@ -1475,7 +1474,7 @@ def test_notes(mocked_folio_client):
         "user_note_title": "Some title",
         "id": "1",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
@@ -1564,7 +1563,7 @@ def test_notes_empty_field(mocked_folio_client):
         "user_note_title": "",
         "id": "1",
     }
-    mock_library_conf = Mock(spec=LibraryConfiguration)
+    mock_library_conf = mocked_classes.get_mocked_library_config()
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = False
