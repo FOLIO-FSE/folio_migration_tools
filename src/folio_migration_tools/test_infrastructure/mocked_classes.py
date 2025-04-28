@@ -247,15 +247,17 @@ def folio_get_single_object_mocked(*args, **kwargs):
 def folio_get_from_github(owner, repo, file_path):
     return FolioClient.get_latest_from_github(owner, repo, file_path, "")
 
+OKAPI_URL = "http://localhost:9130"
+LIBRARY_NAME = "Test Library"
 
 def get_mocked_library_config():
     return LibraryConfiguration(
-        okapi_url="http://localhost:9130",
+        okapi_url=OKAPI_URL,
         tenant_id="test_tenant",
         okapi_username="test_user",
         okapi_password="test_password",
         base_folder=Path("."),
-        library_name="Test Library",
+        library_name=LIBRARY_NAME,
         log_level_debug=False,
         folio_release=FolioRelease.sunflower,
         iteration_identifier="test_iteration"
@@ -263,12 +265,12 @@ def get_mocked_library_config():
 
 def get_mocked_ecs_central_libarary_config():
     return LibraryConfiguration(
-        okapi_url="http://localhost:9130",
+        okapi_url=OKAPI_URL,
         tenant_id="test_tenant",
         okapi_username="test_user",
         okapi_password="test_password",
         base_folder=Path("."),
-        library_name="Test Library",
+        library_name=LIBRARY_NAME,
         log_level_debug=False,
         folio_release=FolioRelease.sunflower,
         iteration_identifier="central_iteration",
@@ -277,13 +279,13 @@ def get_mocked_ecs_central_libarary_config():
 
 def get_mocked_ecs_member_libarary_config():
     return LibraryConfiguration(
-        okapi_url="http://localhost:9130",
+        okapi_url=OKAPI_URL,
         tenant_id="test_tenant",
         ecs_tenant_id="test_ecs_tenant",
         okapi_username="test_user",
         okapi_password="test_password",
         base_folder=Path("."),
-        library_name="Test Library",
+        library_name=LIBRARY_NAME,
         log_level_debug=False,
         folio_release=FolioRelease.sunflower,
         iteration_identifier="member_iteration",
