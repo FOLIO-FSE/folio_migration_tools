@@ -133,7 +133,7 @@ class AuthorityMapper(RulesMapperBase):
         folio_authority = {}
         folio_authority["id"] = str(
             FolioUUID(
-                str(self.folio_client.okapi_url),
+                self.base_string_for_folio_uuid,
                 FOLIONamespaces.authorities,
                 str(legacy_ids[-1]),
             )

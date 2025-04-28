@@ -121,7 +121,7 @@ class CoursesMapper(MappingFileMapperBase):
     def get_uuid(self, composite_course, object_type: FOLIONamespaces, idx: int = 0):
         return str(
             FolioUUID(
-                self.folio_client.okapi_url,
+                self.base_string_for_folio_uuid,
                 object_type,
                 composite_course[1] if idx == 0 else f"{composite_course[1]}_{idx}",
             )
