@@ -80,7 +80,7 @@ class MarcFileProcessor:
 
                     if (
                         file_def.create_source_records
-                        and self.mapper.task_configuration.create_source_records
+                        and self.mapper.create_source_records
                     ):
                         self.save_srs_record(
                             marc_record,
@@ -152,10 +152,6 @@ class MarcFileProcessor:
         legacy_ids: List[str],
         object_type: FOLIONamespaces,
     ):
-        if not all(
-            [file_def.create_source_records, self.mapper.task_configuration.create_source_records]
-        ):
-            return
         if object_type in [FOLIONamespaces.holdings]:
             if "008" in marc_record and len(marc_record["008"].data) > 32:
                 remain, rest = (
@@ -268,12 +264,12 @@ class MarcFileProcessor:
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
-        if self.mapper.task_configuration.create_source_records:
+        if hasattr(self, "srs_records_file"):
             self.srs_records_file.seek(0)
             if not self.srs_records_file.seek(0):
                 os.remove(self.srs_records_file.name)
             self.srs_records_file.close()
-        if getattr(self.mapper.task_configuration, "data_import_marc", False):
+        if hasattr(self, "data_import_marc_file"):
             self.data_import_marc_file.seek(0)
             if not self.data_import_marc_file.read(1):
                 os.remove(self.data_import_marc_file.name)
