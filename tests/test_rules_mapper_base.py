@@ -14,17 +14,19 @@ from pymarc import Leader, Subfield
 from pymarc.reader import MARCReader
 from pymarc.record import Field, Record
 
-from folio_migration_tools.library_configuration import FolioRelease, LibraryConfiguration
+from folio_migration_tools.library_configuration import FolioRelease, HridHandling, LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
+from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase
+from folio_migration_tools.test_infrastructure import mocked_classes
 
 # flake8: noqa: E501
 
 @pytest.fixture
 def folio_client():
-    fc = Mock(spec=FolioClient)
+    fc = mocked_classes.mocked_folio_client()
     fc.okapi_url = "https://folio-snapshot.dev.folio.org"
     fc.tenant_id = "diku"
     fc.okapi_username = "diku_admin"
@@ -56,13 +58,15 @@ def mapper_base(folio_client):
             "base_folder": "/"
         }
     )
-    mapper_task_configuration = {
-        "name": "test",
-        "migration_task_type": "BibsTransformer",
-        "hrid_handling": "Default",
-        "files": [],
-        "ils_flavour": "field001"
-    }
+    mapper_task_configuration = MarcTaskConfigurationBase(
+        **{
+            "name": "test",
+            "migration_task_type": "BibsTransformer",
+            "hrid_handling": HridHandling.default,
+            "files": [],
+            # "ils_flavour": "field001"
+        }
+    )
     mapper = RulesMapperBase(folio_client, mapper_library_configuration, mapper_task_configuration, {})
     mapper.conditions = Conditions(folio_client, mapper, "any", FolioRelease.ramsons, "Library of Congress classification")
     return mapper

@@ -19,12 +19,11 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
-from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase, MigrationTaskBase
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):
-    class TaskConfiguration(AbstractTaskConfiguration):
+    class TaskConfiguration(MarcTaskConfigurationBase):
         name: Annotated[
             str,
             Field(
@@ -59,16 +58,6 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 ),
             ),
         ] = HridHandling.default
-        deactivate035_from001: Annotated[
-            bool,
-            Field(
-                title="Create 035 from 001 and 003",
-                description=(
-                    "This deactivates the FOLIO default functionality of moving the previous 001 "
-                    "into a 035, prefixed with the value from 003"
-                ),
-            ),
-        ] = False
         holdings_type_uuid_for_boundwiths: Annotated[
             str,
             Field(
@@ -89,16 +78,6 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
-        create_source_records: Annotated[
-            bool,
-            Field(
-                title="Create source records",
-                description=(
-                    "Controls wheter or not to retain the MARC records in "
-                    "Source Record Storage."
-                ),
-            ),
-        ] = True
         update_hrid_settings: Annotated[
             bool,
             Field(

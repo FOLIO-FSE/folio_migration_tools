@@ -18,35 +18,11 @@ from folio_migration_tools.marc_rules_transformation.marc_file_processor import 
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
-from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
-from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase, MigrationTaskBase
 
 
 class BibsTransformer(MigrationTaskBase):
-    class TaskConfiguration(AbstractTaskConfiguration):
-        name: Annotated[
-            str,
-            Field(
-                description=(
-                    "Name of this migration task. The name is being used to call the specific "
-                    "task, and to distinguish tasks of similar types"
-                )
-            ),
-        ]
-        migration_task_type: Annotated[
-            str,
-            Field(
-                title="Migration task type",
-                description=("The type of migration task you want to perform."),
-            ),
-        ]
-        files: Annotated[
-            List[FileDefinition],
-            Field(
-                title="Source files",
-                description=("List of MARC21 files with bibliographic records."),
-            ),
-        ]
+    class TaskConfiguration(MarcTaskConfigurationBase):
         ils_flavour: Annotated[
             IlsFlavour,
             Field(
@@ -87,16 +63,6 @@ class BibsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = []
-        create_source_records: Annotated[
-            bool,
-            Field(
-                title="Create source records",
-                description=(
-                    "Controls wheter or not to retain the MARC records in "
-                    "Source Record Storage."
-                ),
-            ),
-        ] = True
         data_import_marc: Annotated[
             bool,
             Field(
@@ -107,7 +73,7 @@ class BibsTransformer(MigrationTaskBase):
                     "of FOLIO instance records (and optional SRS records) will be generated."
                 ),
             )
-        ] = False
+        ] = True
         parse_cataloged_date: Annotated[
             bool,
             Field(
@@ -118,17 +84,6 @@ class BibsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = False
-        hrid_handling: Annotated[
-            HridHandling,
-            Field(
-                title="HRID Handling",
-                description=(
-                    "Setting to default will make FOLIO generate HRIDs and move the existing "
-                    "001:s into a 035, concatenated with the 003. Choosing preserve001 means "
-                    "the 001:s will remain in place, and that they will also become the HRIDs"
-                ),
-            ),
-        ] = HridHandling.default
         reset_hrid_settings: Annotated[
             bool,
             Field(
@@ -146,16 +101,6 @@ class BibsTransformer(MigrationTaskBase):
                 description="At the end of the run, update FOLIO with the HRID settings",
             ),
         ] = True
-        deactivate035_from001: Annotated[
-            bool,
-            Field(
-                title="Create 035 from 001 and 003",
-                description=(
-                    "This deactivates the FOLIO default functionality of moving the previous 001 "
-                    "into a 035, prefixed with the value from 003"
-                ),
-            ),
-        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:

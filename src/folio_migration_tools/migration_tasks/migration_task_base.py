@@ -9,11 +9,12 @@ from abc import abstractmethod
 from datetime import datetime, timezone
 from genericpath import isfile
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, List, Optional
 
 import folioclient
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
+from pydantic import Field
 
 from folio_migration_tools import library_configuration, task_configuration
 from folio_migration_tools.custom_exceptions import (
@@ -459,6 +460,48 @@ class MigrationTaskBase:
             )
             return None
 
+
+class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
+    """Base class for MARC task configurations."""
+
+    files: Annotated[
+        List[library_configuration.FileDefinition],
+        Field(
+            title="Source files",
+            description=("List of MARC21 files with bibliographic records."),
+        ),
+    ]
+    create_source_records: Annotated[
+        bool,
+        Field(
+            title="Create source records",
+            description=(
+                "Controls wheter or not to retain the MARC records in "
+                "Source Record Storage."
+            ),
+        ),
+    ] = False
+    hrid_handling: Annotated[
+        library_configuration.HridHandling,
+        Field(
+            title="HRID Handling",
+            description=(
+                "Setting to default will make FOLIO generate HRIDs and move the existing "
+                "001:s into a 035, concatenated with the 003. Choosing preserve001 means "
+                "the 001:s will remain in place, and that they will also become the HRIDs"
+            ),
+        ),
+    ] = library_configuration.HridHandling.default
+    deactivate035_from001: Annotated[
+        bool,
+        Field(
+            title="Create 035 from 001 and 003",
+            description=(
+                "This deactivates the FOLIO default functionality of moving the previous 001 "
+                "into a 035, prefixed with the value from 003"
+            ),
+        ),
+    ] = False
 
 class ExcludeLevelFilter(logging.Filter):
     def __init__(self, level):

@@ -272,7 +272,7 @@ class MapperBase:
             [
                 object_type == FOLIONamespaces.instances,
                 (not getattr(self.task_configuration, "data_import_marc", False)),
-                getattr(self.task_configuration, "create_source_records", True),
+                getattr(self, "create_source_records", True),
             ]
         ):
             return (legacy_id, folio_record["id"], folio_record["hrid"])

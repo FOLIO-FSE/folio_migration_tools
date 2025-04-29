@@ -50,6 +50,7 @@ def mapper(pytestconfig) -> RulesMapperHoldings:
         location_map_file_name="",
         default_call_number_type_name="Dewey Decimal classification",
         fallback_holdings_type_id="03c9c400-b9e3-4a07-ac0e-05ab470233ed",
+        create_source_records=True
     )
     parent_id_map: dict[str, tuple] = {}
     location_map = [
@@ -98,6 +99,7 @@ def test_setup_boundwith_relationship_map_missing_entries():
         mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
         mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
         mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+        mock_task_configuration.create_source_records = False
         RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), {}, file_mock)
     assert "Column MFHD_ID missing from" in str(tpe.value)
 
@@ -108,6 +110,7 @@ def test_setup_boundwith_relationship_map_missing_bib_id_entries():
         mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
         mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
         mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+        mock_task_configuration.create_source_records = False
         RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), {}, file_mock)
     assert "Column BIB_ID missing from" in str(tpe.value)
 
@@ -124,6 +127,7 @@ def test_setup_boundwith_relationship_map_empty_entries():
         mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
         mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
         mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+        mock_task_configuration.create_source_records = False
         file_mock = [{"MFHD_ID": "", "BIB_ID": ""}]
         RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), {}, file_mock)
     assert "Column MFHD_ID missing from" in str(tpe.value)
@@ -134,6 +138,7 @@ def test_setup_boundwith_relationship_map_empty_bib_id_entries():
         mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
         mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
         mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+        mock_task_configuration.create_source_records = False
         file_mock = [{"MFHD_ID": "H1", "BIB_ID": ""}]
         RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), {}, file_mock)
     assert "Column BIB_ID missing from" in str(tpe.value)
@@ -149,6 +154,7 @@ def test_setup_boundwith_relationship_map_with_entries():
     mock_task_configuration = Mock(spec=HoldingsMarcTransformer.TaskConfiguration)
     mock_task_configuration.default_call_number_type_name = "Dewey Decimal classification"
     mock_task_configuration.fallback_holdings_type_id = "03c9c400-b9e3-4a07-ac0e-05ab470233ed"
+    mock_task_configuration.create_source_records = False
     parent_id_map = {
         "B1": ("B1", "ae0c833c-e76f-53aa-975a-7ac4c2be7972", "in00000000001"),
         "B2": ("B2", "fae73ef8-b546-5310-b4ee-c2d68fed48c5", "in00000000002"),
