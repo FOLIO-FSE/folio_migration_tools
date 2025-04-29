@@ -123,11 +123,11 @@ class LibraryConfiguration(BaseModel):
         Field(
             title="Use gateway URL for UUIDs",
             description=(
-                "If set to true (default), folio_uuid will use the gateway URL when generating deterministic UUIDs for FOLIO records. "
-                "If set to false, the UUIDs will be generated using the tenant_id (or ecs_tenant_id, if applicable)."
+                "If set to true, folio_uuid will use the gateway URL when generating deterministic UUIDs for FOLIO records. "
+                "If set to false (default), the UUIDs will be generated using the tenant_id (or ecs_tenant_id)."
             ),
         ),
-    ] = True
+    ] = False
     is_ecs: Annotated[
         bool,
         Field(
@@ -135,7 +135,7 @@ class LibraryConfiguration(BaseModel):
             description=(
                 "If set to true, the migration is running in an ECS environment. "
                 "If set to false (default), the migration is running in a non-ECS environment. "
-                "If ecs_tenant_id is set, this will be set to true, regardless of the value set."
+                "If ecs_tenant_id is set, this will be set to true, regardless of the value here."
             ),
         ),
     ] = False
