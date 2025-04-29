@@ -472,32 +472,6 @@ class RulesMapperHoldings(RulesMapperBase):
                 "", "Column BIB_ID missing from Boundwith relationship map", ""
             )
 
-    def get_boundwith_map_uuids(self, entry):
-        mfhd_uuid = str(
-            FolioUUID(
-                self.base_string_for_folio_uuid,
-                FOLIONamespaces.holdings,
-                entry["MFHD_ID"],
-            )
-        )
-        instance_uuid = str(
-            FolioUUID(
-                self.base_string_for_folio_uuid,
-                FOLIONamespaces.instances,
-                entry["BIB_ID"],
-            )
-        )
-        ecs_central_instance_uuid = None
-        if self.library_configuration.is_ecs and self.library_configuration.ecs_tenant_id:
-            ecs_central_instance_uuid = str(
-                FolioUUID(
-                    self.library_configuration.tenant_id,
-                    FOLIONamespaces.instances,
-                    entry["BIB_ID"],
-                )
-            )
-        return mfhd_uuid, instance_uuid, ecs_central_instance_uuid
-
     def setup_boundwith_relationship_map(self, boundwith_relationship_map):
         """
         Creates a map of MFHD_ID to BIB_ID for boundwith relationships.
@@ -513,34 +487,28 @@ class RulesMapperHoldings(RulesMapperBase):
             TransformationRecordFailedError: If BIB_ID is not in the instance id map.
         """
         new_map = {}
-        for entry in boundwith_relationship_map:
+        for idx, entry in enumerate(boundwith_relationship_map):
             self.verity_boundwith_map_entry(entry)
-            mfhd_uuid, instance_uuid, ecs_central_instance_uuid = self.get_boundwith_map_uuids(entry)
-            try:
-                parent_id_tuple = self.parent_id_map[entry["BIB_ID"]]
-            except KeyError:
-                raise TransformationRecordFailedError(
+            mfhd_uuid = str(
+                FolioUUID(
+                    self.base_string_for_folio_uuid,
+                    FOLIONamespaces.holdings,
                     entry["MFHD_ID"],
-                    "Boundwith relationship map contains a BIB_ID id not in the instance id map. No boundwith holdings created.",
-                    entry["BIB_ID"],
                 )
-            self.add_instance_id_to_boundwith_relationship_map(new_map, entry, mfhd_uuid, instance_uuid, ecs_central_instance_uuid, parent_id_tuple)
+            )
+            try:
+                parent_id_tuple = self.get_bw_instance_id_map_tuple(entry)
+                new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [parent_id_tuple[1]]
+            except TransformationRecordFailedError as trfe:
+                self.handle_transformation_record_failed_error(idx, trfe)
         return new_map
 
-    def add_instance_id_to_boundwith_relationship_map(self, new_map, entry, mfhd_uuid, instance_uuid, ecs_central_instance_uuid, parent_id_tuple):
-        if self.task_configuration.get_bib_id_from_instance_id_map_for_boundwiths:
-            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [parent_id_tuple[1]]
-        elif instance_uuid in parent_id_tuple:
-            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [instance_uuid]
-        elif ecs_central_instance_uuid and ecs_central_instance_uuid in parent_id_tuple:
-            new_map[mfhd_uuid] = new_map.get(mfhd_uuid, []) + [ecs_central_instance_uuid]
-        else:
-            raise TransformationProcessError(
+    def get_bw_instance_id_map_tuple(self, entry):
+        try:
+            return self.parent_id_map[entry["BIB_ID"]]
+        except KeyError:
+            raise TransformationRecordFailedError(
                 entry["MFHD_ID"],
-                (
-                    f"{entry['BIB_ID']} found in instances id map, but the UUID values do not match. "
-                    f"Expected \"{parent_id_tuple[1]}\" but got {[instance_uuid, ecs_central_instance_uuid] if ecs_central_instance_uuid else instance_uuid}. "
-                    "This may indicate a configuration mismatch between the BibsTransformer task and this one."
-                ),
-                [entry["BIB_ID"], instance_uuid, ecs_central_instance_uuid] if ecs_central_instance_uuid else [entry["BIB_ID"], instance_uuid],
+                "Boundwith relationship map contains a BIB_ID id not in the instance id map. No boundwith holdings created for this BIB_ID.",
+                entry["BIB_ID"],
             )
