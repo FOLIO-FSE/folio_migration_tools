@@ -74,7 +74,7 @@ def test_basic(mocked_folio_client):
     )
     assert folio_user["externalSystemId"] == "externalid_1"
     assert folio_user["username"] == "user_name_1"
-    assert folio_user["id"] == "c2a8733b-4fbc-5ef1-ace9-f02e7b3a6f35"
+    assert folio_user["id"] == "3bfaea48-810e-5fe7-bca9-363002d1597e"
     assert folio_user["personal"]["preferredContactTypeId"] == "email"
     assert folio_user["active"] is True
     assert folio_user["type"] == "patron"

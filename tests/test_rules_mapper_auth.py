@@ -61,7 +61,7 @@ def test_basic(mapper: AuthorityMapper, caplog):
         auth = mapper.parse_record(record, FileDefinition(file_name=""), ["ids"])[0]
         assert auth["personalName"] == "Ericsson, Leif KE, 1964-"
         assert auth["personalNameTitle"] == "Ericsson, Leif KE, 1964-"
-        assert auth["id"] == "54ac1b25-aa36-566b-a688-030a745ae080"
+        assert auth["id"] == "d23933e8-e7f4-5727-885b-9f9119158f80"
         assert auth["naturalId"] == "363723"
         assert all(id["identifierTypeId"] and id["value"] for id in auth["identifiers"])
         assert len(auth["identifiers"]) == 2

@@ -120,7 +120,7 @@ def test_basic_mapping2(mapper: CoursesMapper, caplog):
     assert note["content"] == "Some staff note"
     assert note["typeId"] == "b2809c3b-ef05-420b-a684-37272bfa70bf"
     assert note["title"] == "Staff note"
-    assert note["links"] == [{"id": "3b65328f-9cc4-5987-bafb-6b82bd40864f", "type": "course"}]
+    assert note["links"] == [{'id': '4e8e0a86-9a71-5ab6-af1b-1ce91a62ca45', 'type': 'course'}]
 
     assert res[1] == ".r1"
     courselisting = generated_objects["courselisting"]

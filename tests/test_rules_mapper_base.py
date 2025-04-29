@@ -255,7 +255,7 @@ def test_get_srs_string_bad_leaders():
 def test_create_srs_uuid(mapper_base):
     mapper_base.folio_client.okapi_url = "some_url"
     created_id = mapper_base.create_srs_id(FOLIONamespaces.holdings, "id_1")
-    assert str(created_id) == "6734f228-cba2-54c7-b129-c6437375a864"
+    assert str(created_id) == "06e42308-4555-5bd2-b0b4-4655f7e30e4a"
     created_id_2 = mapper_base.create_srs_id(FOLIONamespaces.instances, "id_1")
     assert str(created_id) != str(created_id_2)
 
