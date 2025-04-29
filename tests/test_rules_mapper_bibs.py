@@ -53,9 +53,35 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         files=[],
         ils_flavour=IlsFlavour.sierra,
         reset_hrid_settings=False,
+        data_import_marc=False,
+        create_source_records=True
     )
     return BibsRulesMapper(folio, lib, conf)
 
+@pytest.fixture
+def simple_mapper() -> BibsRulesMapper:
+    folio = mocked_classes.mocked_folio_client()
+    lib = LibraryConfiguration(
+        okapi_url=folio.okapi_url,
+        tenant_id=folio.tenant_id,
+        okapi_username=folio.username,
+        okapi_password=folio.password,
+        folio_release=FolioRelease.ramsons,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="I have no clue",
+        base_folder="/",
+    )
+    conf = BibsTransformer.TaskConfiguration(
+        name="test",
+        migration_task_type="BibsTransformer",
+        hrid_handling=HridHandling.default,
+        files=[],
+        ils_flavour=IlsFlavour.voyager,
+        reset_hrid_settings=False,
+        data_import_marc=True,
+    )
+    return BibsRulesMapper(folio, lib, conf)
 
 def default_map(file_name, xpath, the_mapper: BibsRulesMapper):
     ns = {
@@ -90,6 +116,14 @@ def default_map_suppression(file_name, xpath, the_mapper):
         data = " ".join([data, str(etree.tostring(element, pretty_print=True), "utf-8")])
     # print(json.dumps(rec, indent=4, sort_keys=True))
     return [result, data]
+
+
+def test_force_create_source_records_false(simple_mapper):
+    assert simple_mapper.create_source_records == False
+
+
+def test_create_source_records_true_config(mapper):
+    assert mapper.create_source_records == True
 
 
 def test_field_empty_856_and_082(mapper):

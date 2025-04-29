@@ -52,6 +52,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         files=[],
         ils_flavour=IlsFlavour.sierra,
         reset_hrid_settings=False,
+        data_import_marc=False
     )
     mapper = BibsRulesMapper(folio, lib, conf)
     mapper.folio_client = folio

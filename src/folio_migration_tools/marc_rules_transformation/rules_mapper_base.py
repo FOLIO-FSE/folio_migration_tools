@@ -51,6 +51,9 @@ class RulesMapperBase(MapperBase):
         self.item_json_schema = ""
         self.mappings: dict = {}
         self.schema_properties = None
+        self.create_source_records = all(
+            [self.task_configuration.create_source_records, (not getattr(self.task_configuration, "data_import_marc", False))]
+        )
         if hasattr(self.task_configuration, "hrid_handling"):
             self.hrid_handler = HRIDHandler(
                 folio_client,

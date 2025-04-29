@@ -10,7 +10,24 @@ def to_camel(string):
 
 
 class AbstractTaskConfiguration(BaseModel):
-    name: str
+    """Abstract class for task configuration."""
+
+    name: Annotated[
+        str,
+        Field(
+            description=(
+                "Name of this migration task. The name is being used to call the specific "
+                "task, and to distinguish tasks of similar types"
+            )
+        ),
+    ]
+    migration_task_type: Annotated[
+        str,
+        Field(
+            title="Migration task type",
+            description=("The type of migration task you want to perform."),
+        ),
+    ]
     ecs_tenant_id: Annotated[
         str,
         Field(

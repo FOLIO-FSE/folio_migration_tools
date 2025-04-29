@@ -30,7 +30,9 @@ class MarcFileProcessor:
         self.folder_structure: FolderStructure = folder_structure
         self.mapper: RulesMapperBase = mapper
         self.created_objects_file = created_objects_file
-        if mapper.task_configuration.create_source_records:
+        if mapper.create_source_records and any(
+            [x['create_source_records'] for x in mapper.task_configuration.files]
+        ):
             self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
         if getattr(mapper.task_configuration, "data_import_marc", False):
             self.data_import_marc_file = open(self.folder_structure.data_import_marc_path, "wb+")
@@ -41,7 +43,7 @@ class MarcFileProcessor:
         self.legacy_ids: set = set()
         if (
             self.object_type == FOLIONamespaces.holdings
-            and self.mapper.task_configuration.create_source_records
+            and self.mapper.create_source_records
         ):
             logging.info("Loading Parent HRID map for SRS creation")
             self.parent_hrids = {entity[1]: entity[2] for entity in mapper.parent_id_map.values()}
