@@ -159,7 +159,7 @@ def test_setup_boundwith_relationship_map_with_entries():
     mocked_mapper = RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), parent_id_map, file_mock)
 
     assert len(mocked_mapper.boundwith_relationship_map) == 2
-    assert mocked_mapper.boundwith_relationship_map["66db04ef-fbfb-5c45-9ed7-65a1f2495eaf"] == [
+    assert mocked_mapper.boundwith_relationship_map["bcddbd83-a6aa-5904-888b-13b46f0b1fcb"] == [
         "ae0c833c-e76f-53aa-975a-7ac4c2be7972",
         "fae73ef8-b546-5310-b4ee-c2d68fed48c5",
     ]

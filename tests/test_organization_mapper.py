@@ -63,6 +63,7 @@ def mapper(pytestconfig) -> OrganizationMapper:
         iteration_identifier="Test!",
         base_folder="/",
         multi_field_delimiter="^-^",
+        use_gateway_url_for_uuids=True #TODO: Update the tests to use tenant_id instead and then remove this
     )
 
     address_categories_map = [

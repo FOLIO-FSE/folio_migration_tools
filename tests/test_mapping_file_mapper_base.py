@@ -157,7 +157,7 @@ def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client: F
     folio_rec, folio_id = mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert len(folio_rec["electronicAccess"]) == 1
     assert folio_id == "32"
-    assert folio_rec["id"] == "ddafc006-e8ce-5f12-b0eb-9bb543509b78"
+    assert folio_rec["id"] == "bf204b6b-b600-5a06-9ec2-7f84f59e712e"
 
 
 def test_validate_required_properties_sub_pro_missing_uri_and_more(
@@ -1239,7 +1239,7 @@ def test_multiple_repeated_split_on_delimiter_electronic_access(mocked_folio_cli
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.holdings)
     assert len(folio_rec["electronicAccess"]) == 2
     assert folio_id == "38"
-    assert folio_rec["id"] == "02e198b2-ebc1-5d46-bf98-eaaba6aa0794"
+    assert folio_rec["id"] == "3beee1b2-27ed-5597-9522-2c463eb449c6"
 
     assert folio_rec["electronicAccess"][0]["uri"] == "uri1"
     assert folio_rec["electronicAccess"][0]["linkText"] == "title1"
@@ -3853,7 +3853,7 @@ def test_get_prop_multiple_legacy_identifiers_only_one(mocked_folio_client: Foli
     legacy_record = {"firstLevel": "user_name_1", "id": "1 1"}
     tfm = MappingFileMapperBase(mocked_folio_client, schema, record_map, None, FOLIONamespaces.holdings, mocked_classes.get_mocked_library_config())
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
-    assert folio_rec["id"] == "6ba39416-de70-591e-a45f-62c9ca4e2d98"
+    assert folio_rec["id"] == "addf3818-cd61-5edc-a243-cc205a45d46f"
 
 
 def test_get_prop_multiple_legacy_identifiers(mocked_folio_client: FolioClient):
@@ -3894,7 +3894,7 @@ def test_get_prop_multiple_legacy_identifiers(mocked_folio_client: FolioClient):
     legacy_record = {"firstLevel": "user_name_1", "id": "44", "id2": "1"}
     tfm = MappingFileMapperBase(mocked_folio_client, schema, record_map, None, FOLIONamespaces.holdings, mocked_classes.get_mocked_library_config())
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.holdings)
-    assert folio_rec["id"] == "d82d9010-6348-5225-a1e7-c3b52924e3e7"
+    assert folio_rec["id"] == "6eb3fe45-84ce-5487-9a36-720071673aca"
 
 
 def test_value_mapped_enum_properties(mocked_folio_client: FolioClient):
