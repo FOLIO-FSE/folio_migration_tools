@@ -163,6 +163,7 @@ class MigrationTaskBase:
         the central tenant instance ids. This is a bit of a hack, but it works for now.
         """
         map_files = []
+        instance_id_map = {}
         if self.library_configuration.is_ecs and self.central_folder_structure:
             logging.info(
                 "Loading ECS central tenant instance id map from %s", self.central_folder_structure.instance_id_map_path
