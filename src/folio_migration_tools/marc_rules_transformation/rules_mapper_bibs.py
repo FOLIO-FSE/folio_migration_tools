@@ -7,7 +7,7 @@ import time
 import typing
 import uuid
 from pathlib import Path
-from typing import Generator, List
+from typing import Dict, Generator, List
 
 import i18n
 import pymarc
@@ -16,6 +16,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
 from pymarc.record import Leader, Record
+from pymarc.field import Field
 
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -32,6 +33,7 @@ from folio_migration_tools.marc_rules_transformation.conditions import Condition
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
+from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase
 
 
 class BibsRulesMapper(RulesMapperBase):
@@ -40,9 +42,9 @@ class BibsRulesMapper(RulesMapperBase):
 
     def __init__(
         self,
-        folio_client,
+        folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
-        task_configuration,
+        task_configuration: MarcTaskConfigurationBase,
     ):
         super().__init__(
             folio_client,
@@ -59,15 +61,12 @@ class BibsRulesMapper(RulesMapperBase):
         self.instance_relationships: dict = {}
         self.instance_relationship_types: dict = {}
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio_client)
-        # self.create_source_records = all(
-        #     [self.task_configuration.create_source_records, (not self.task_configuration.data_import_marc)]
-        # )
         self.data_import_marc = self.task_configuration.data_import_marc
         if self.data_import_marc:
             self.hrid_handler.deactivate035_from001 = True
         self.start = time.time()
 
-    def perform_initial_preparation(self, marc_record: pymarc.Record, legacy_ids):
+    def perform_initial_preparation(self, file_def: FileDefinition, marc_record: Record, legacy_ids: List[str]):
         folio_instance = {}
         folio_instance["id"] = str(
             FolioUUID(
@@ -76,7 +75,10 @@ class BibsRulesMapper(RulesMapperBase):
                 str(legacy_ids[-1]),
             )
         )
-        if self.create_source_records or self.hrid_handler.handling == HridHandling.preserve001:
+        if (
+            all([self.create_source_records, file_def.create_source_records])
+            or self.hrid_handler.handling == HridHandling.preserve001
+        ):
             self.hrid_handler.handle_hrid(
                 FOLIONamespaces.instances,
                 folio_instance,
@@ -90,7 +92,7 @@ class BibsRulesMapper(RulesMapperBase):
 
         return folio_instance
 
-    def handle_leader_05(self, marc_record, legacy_ids):
+    def handle_leader_05(self, marc_record: Record, legacy_ids: List[str]):
         leader_05 = marc_record.leader[5] or "Empty"
         self.migration_report.add("RecordStatus", i18n.t("Original value") + f": {leader_05}")
         if leader_05 not in ["a", "c", "d", "n", "p"]:
@@ -102,14 +104,14 @@ class BibsRulesMapper(RulesMapperBase):
             Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
 
     def parse_record(
-        self, marc_record: pymarc.Record, file_def: FileDefinition, legacy_ids: List[str]
+        self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
     ) -> list[dict]:
         """Parses a bib recod into a FOLIO Inventory instance object
         Community mapping suggestion: https://bit.ly/2S7Gyp3
          This is the main function
 
         Args:
-            marc_record (pymarc.Record): _description_
+            marc_record (Record): _description_
             file_def (FileDefinition): _description_
             legacy_ids (List[str]): List of legacy ids in record
 
@@ -119,7 +121,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.print_progress()
         ignored_subsequent_fields: set = set()
         bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
-        folio_instance = self.perform_initial_preparation(marc_record, legacy_ids)
+        folio_instance = self.perform_initial_preparation(file_def, marc_record, legacy_ids)
         if self.data_import_marc:
             self.simple_bib_map(folio_instance, marc_record, ignored_subsequent_fields, legacy_ids)
         else:
@@ -198,7 +200,7 @@ class BibsRulesMapper(RulesMapperBase):
             del folio_instance["succeedingTitles"]
             self.migration_report.add("PrecedingSuccedingTitles", f"{len(succ_titles)}")
 
-    def handle_languages(self, folio_instance, marc_record, legacy_ids):
+    def handle_languages(self, folio_instance: Dict, marc_record: Record, legacy_ids: List[str]):
         if "languages" in folio_instance:
             orig_languages = {lang: None for lang in folio_instance["languages"]}
             orig_languages.update(
@@ -255,7 +257,7 @@ class BibsRulesMapper(RulesMapperBase):
             if self.task_configuration.update_hrid_settings:
                 self.hrid_handler.store_hrid_settings()
 
-    def get_instance_type_id(self, marc_record, legacy_id):
+    def get_instance_type_id(self, marc_record: Record, legacy_ids: List[str]) -> str:
         return_id = ""
 
         def get_folio_id_by_name(f336a: str):
@@ -283,7 +285,7 @@ class BibsRulesMapper(RulesMapperBase):
                     + f" ({f336a})",
                 )
                 Helper.log_data_issue(
-                    legacy_id,
+                    legacy_ids,
                     "instance type name (336$a) -Unsuccessful matching",
                     f336a,
                 )
@@ -316,7 +318,7 @@ class BibsRulesMapper(RulesMapperBase):
                     ),
                 )
                 Helper.log_data_issue(
-                    legacy_id,
+                    legacy_ids,
                     i18n.t("instance type code (%{code}) not found in FOLIO", code="336$b"),
                     f336_b,
                 )
@@ -337,7 +339,7 @@ class BibsRulesMapper(RulesMapperBase):
             return_id = t[0]
         return return_id
 
-    def get_instance_format_id_by_code(self, legacy_id: str, code: str):
+    def get_instance_format_id_by_code(self, legacy_id: List[str], code: str):
         try:
             match = next(f for f in self.folio_client.instance_formats if f["code"] == code)
             self.migration_report.add(
@@ -354,7 +356,7 @@ class BibsRulesMapper(RulesMapperBase):
             )
             return ""
 
-    def get_instance_format_id_by_name(self, f337a: str, f338a: str, legacy_id: str):
+    def get_instance_format_id_by_name(self, f337a: str, f338a: str, legacy_id: List[str]):
         f337a = f337a.lower().strip()
         f338a = f338a.lower().strip()
         match_template = f"{f337a} -- {f338a}"
@@ -391,7 +393,7 @@ class BibsRulesMapper(RulesMapperBase):
             )
             return ""
 
-    def f338_source_is_rda_carrier(self, field: pymarc.Field):
+    def f338_source_is_rda_carrier(self, field: Field):
         if "2" not in field:
             self.migration_report.add(
                 "InstanceFormat",
@@ -407,7 +409,7 @@ class BibsRulesMapper(RulesMapperBase):
         return False
 
     def get_instance_format_ids_from_a(
-        self, field_index, f_338: pymarc.Field, all_337s, legacy_id
+        self, field_index: int, f_338: Field, all_337s: List[Field], legacy_id: List[str]
     ):
         self.migration_report.add(
             "InstanceFormat",
@@ -421,7 +423,7 @@ class BibsRulesMapper(RulesMapperBase):
                 ):
                     yield fmt_id
 
-    def get_instance_format_ids(self, marc_record, legacy_id):
+    def get_instance_format_ids(self, marc_record: Record, legacy_id: List[str]):
         all_337s = marc_record.get_fields("337")
         all_338s = marc_record.get_fields("338")
         for fidx, f_338 in enumerate(all_338s):
@@ -466,7 +468,7 @@ class BibsRulesMapper(RulesMapperBase):
                                         legacy_id, combined_code
                                     )
 
-    def get_mode_of_issuance_id(self, marc_record: Record, legacy_id: List[str]) -> str:
+    def get_mode_of_issuance_id(self, marc_record: Record, legacy_ids: List[str]) -> str:
         level = marc_record.leader[7]
         try:
             name = "unspecified"
@@ -496,7 +498,7 @@ class BibsRulesMapper(RulesMapperBase):
             return ret
         except IndexError:
             self.migration_report.add(
-                "PossibleCleaningTasks", i18n.t("No Leader[7] in") + f" {legacy_id}"
+                "PossibleCleaningTasks", i18n.t("No Leader[7] in") + f" {legacy_ids}"
             )
 
             return self.other_mode_of_issuance_id
@@ -512,7 +514,7 @@ class BibsRulesMapper(RulesMapperBase):
             return "".join(marc_record["008"].data[35:38])
         return ""
 
-    def get_languages_041(self, marc_record, legacy_id):
+    def get_languages_041(self, marc_record: Record, legacy_id: List[str]) -> Dict[str, None]:
         languages = dict()
         lang_fields = marc_record.get_fields("041")
         if not any(lang_fields):
@@ -543,21 +545,21 @@ class BibsRulesMapper(RulesMapperBase):
         }
         return languages
 
-    def get_languages(self, marc_record: Record, legacy_id: str) -> List[str]:
+    def get_languages(self, marc_record: Record, legacy_id: List[str]) -> List[str]:
         """Get languages and tranforms them to correct codes
 
         Args:
-            marc_record (Record): _description_
-            legacy_id (str): _description_
+            marc_record (Record): A pymarc Record object
+            legacy_id (List[str]): A list of legacy ids from the legacy record
 
         Returns:
-            List[str]: _description_
+            List[str]: List of language codes
         """
         languages = self.get_languages_041(marc_record, legacy_id)
         languages[self.get_languages_008(marc_record)] = None
-        for lang in languages.keys():
+        for lang in languages:
             self.migration_report.add("LanguagesInRecords", lang)
-        return list(languages.keys())
+        return list(languages)
 
     def fetch_language_codes(self) -> Generator[str, None, None]:
         """Loads the  list of standardized language codes from LoC
@@ -575,7 +577,7 @@ class BibsRulesMapper(RulesMapperBase):
             yield code.text
 
     def filter_langs(
-        self, language_values: List[str], marc_record: Record, index_or_legacy_id
+        self, language_values: List[str], marc_record: Record, index_or_legacy_id: List[str]
     ) -> typing.Generator:
         forbidden_values = ["###", "zxx", "n/a", "N/A", "|||"]
         for language_value in language_values:
@@ -629,7 +631,7 @@ class BibsRulesMapper(RulesMapperBase):
         else:
             raise TransformationProcessError("", f"ILS {ils_flavour} not configured")
 
-    def get_aleph_bib_id(self, marc_record: Record):
+    def get_aleph_bib_id(self, marc_record: Record) -> List[str]:
         res = {f["b"].strip(): None for f in marc_record.get_fields("998") if "b" in f}
         if any(res):
             self.migration_report.add_general_statistics(
@@ -651,7 +653,7 @@ class BibsRulesMapper(RulesMapperBase):
                 ) from e
 
 
-def get_unspecified_mode_of_issuance(folio_client: FolioClient):
+def get_unspecified_mode_of_issuance(folio_client: FolioClient) -> str:
     m_o_is = list(folio_client.modes_of_issuance)
     if not any(m_o_is):
         logging.critical("No Modes of issuance set up in tenant. Quitting...")
@@ -684,7 +686,7 @@ def get_custom_bib_id(marc_record: Record, field_string: str):
         )
 
 
-def get_iii_bib_id(marc_record: Record):
+def get_iii_bib_id(marc_record: Record) -> List[str]:
     try:
         return [marc_record["907"]["a"]]
     except Exception as e:
