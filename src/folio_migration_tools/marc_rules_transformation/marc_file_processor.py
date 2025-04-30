@@ -3,7 +3,7 @@ import os
 import sys
 import time
 import traceback
-from typing import List
+from typing import BinaryIO, Dict, List, Set, TextIO
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -24,23 +24,23 @@ from folio_migration_tools.migration_report import MigrationReport
 
 class MarcFileProcessor:
     def __init__(
-        self, mapper: RulesMapperBase, folder_structure: FolderStructure, created_objects_file
+        self, mapper: RulesMapperBase, folder_structure: FolderStructure, created_objects_file: TextIO
     ):
         self.object_type: FOLIONamespaces = folder_structure.object_type
         self.folder_structure: FolderStructure = folder_structure
         self.mapper: RulesMapperBase = mapper
-        self.created_objects_file = created_objects_file
+        self.created_objects_file: TextIO = created_objects_file
         if mapper.create_source_records and any(
-            [x['create_source_records'] for x in mapper.task_configuration.files]
+            x.create_source_records for x in mapper.task_configuration.files
         ):
-            self.srs_records_file = open(self.folder_structure.srs_records_path, "w+")
+            self.srs_records_file: TextIO = open(self.folder_structure.srs_records_path, "w+")
         if getattr(mapper.task_configuration, "data_import_marc", False):
-            self.data_import_marc_file = open(self.folder_structure.data_import_marc_path, "wb+")
-        self.unique_001s: set = set()
+            self.data_import_marc_file: BinaryIO = open(self.folder_structure.data_import_marc_path, "wb+")
+        self.unique_001s: Set[str] = set()
         self.failed_records_count: int = 0
         self.records_count: int = 0
         self.start: float = time.time()
-        self.legacy_ids: set = set()
+        self.legacy_ids: Set[str] = set()
         if (
             self.object_type == FOLIONamespaces.holdings
             and self.mapper.create_source_records
@@ -134,7 +134,7 @@ class MarcFileProcessor:
     def save_marc_record(
         self,
         marc_record: Record,
-        folio_rec: dict,
+        folio_rec: Dict,
         object_type: FOLIONamespaces
     ):
         self.mapper.save_data_import_marc_record(
@@ -148,7 +148,7 @@ class MarcFileProcessor:
         self,
         marc_record: Record,
         file_def: FileDefinition,
-        folio_rec,
+        folio_rec: Dict,
         legacy_ids: List[str],
         object_type: FOLIONamespaces,
     ):
@@ -186,7 +186,7 @@ class MarcFileProcessor:
         )
         self.mapper.migration_report.add_general_statistics(i18n.t("SRS records written to disk"))
 
-    def add_mapped_location_code_to_record(self, marc_record, folio_rec):
+    def add_mapped_location_code_to_record(self, marc_record: Record, folio_rec: Dict):
         location_code = next(
             (
                 location["code"]
@@ -223,9 +223,9 @@ class MarcFileProcessor:
 
     @staticmethod
     def get_valid_folio_record_ids(
-        legacy_ids, folio_record_identifiers, migration_report: MigrationReport
-    ):
-        new_ids = set()
+        legacy_ids: List[str], folio_record_identifiers: Set[str], migration_report: MigrationReport
+    ) -> List[str]:
+        new_ids: Set[str] = set()
         for legacy_id in legacy_ids:
             if legacy_id not in folio_record_identifiers:
                 new_ids.add(legacy_id)
@@ -279,7 +279,7 @@ class MarcFileProcessor:
         logging.info("Transformation report written to %s", report_file.name)
         logging.info("Processor is done.")
 
-    def add_legacy_ids_to_map(self, folio_rec, filtered_legacy_ids):
+    def add_legacy_ids_to_map(self, folio_rec: Dict, filtered_legacy_ids: List[str]):
         for legacy_id in filtered_legacy_ids:
             self.legacy_ids.add(legacy_id)
             if legacy_id not in self.mapper.id_map:

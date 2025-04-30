@@ -1,7 +1,7 @@
 import copy
 import json
 import logging
-from typing import List
+from typing import Dict, List, Set
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -235,10 +235,10 @@ class RulesMapperHoldings(RulesMapperBase):
 
     def process_marc_field(
         self,
-        folio_holding: dict,
+        folio_holding: Dict,
         marc_field: Field,
-        ignored_subsequent_fields,
-        index_or_legacy_ids,
+        ignored_subsequent_fields: Set,
+        index_or_legacy_ids: List[str],
     ):
         """This overwrites the implementation for Auth and instances
 
@@ -261,7 +261,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 ignored_subsequent_fields.add(marc_field.tag)
 
     def perform_additional_mapping(
-        self, marc_record: Record, folio_holding, legacy_ids: List[str], file_def: FileDefinition
+        self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str], file_def: FileDefinition
     ):
         """_summary_
 
@@ -279,11 +279,8 @@ class RulesMapperHoldings(RulesMapperBase):
         self.pick_first_location_if_many(folio_holding, legacy_ids)
         self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
         HoldingsHelper.handle_notes(folio_holding)
-        create_source_records = all(
-            [file_def.create_source_records, self.task_configuration.create_source_records]
-        )
         if (
-            create_source_records
+            all([file_def.create_source_records, self.create_source_records])
             or self.task_configuration.hrid_handling == HridHandling.preserve001
         ):
             self.hrid_handler.handle_hrid(
@@ -298,9 +295,9 @@ class RulesMapperHoldings(RulesMapperBase):
                 "",
             )
         self.handle_suppression(folio_holding, file_def, True)
-        self.set_source_id(self.task_configuration, folio_holding, self.holdingssources, file_def)
+        self.set_source_id(self.create_source_records, folio_holding, self.holdingssources, file_def)
 
-    def pick_first_location_if_many(self, folio_holding, legacy_ids: List[str]):
+    def pick_first_location_if_many(self, folio_holding: Dict, legacy_ids: List[str]):
         if " " in folio_holding.get("permanentLocationId", ""):
             Helper.log_data_issue(
                 legacy_ids,
@@ -312,14 +309,14 @@ class RulesMapperHoldings(RulesMapperBase):
             ]
 
     @staticmethod
-    def set_source_id(task_configuration, folio_rec, holdingssources, file_def):
-        if file_def.create_source_records and task_configuration.create_source_records:
+    def set_source_id(create_source_records: bool, folio_rec: Dict, holdingssources: Dict, file_def: FileDefinition):
+        if file_def.create_source_records and create_source_records:
             folio_rec["sourceId"] = holdingssources.get("MARC")
         else:
             folio_rec["sourceId"] = holdingssources.get("FOLIO")
 
     def parse_coded_holdings_statements(
-        self, marc_record: Record, folio_holding, legacy_ids: List[str]
+        self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]
     ):
         # TODO: Should one be able to switch these things off?
         a = {
@@ -351,7 +348,7 @@ class RulesMapperHoldings(RulesMapperBase):
             x.create_source_records for x in self.task_configuration.files
         ]
         if all(source_file_create_source_records):
-            create_source_records = self.task_configuration.create_source_records
+            create_source_records = self.create_source_records
         else:
             logging.info(
                 "If all source files have create_source_records set to false, "
@@ -369,7 +366,7 @@ class RulesMapperHoldings(RulesMapperBase):
         logging.info("Fetching HoldingsRecord schema...")
         return folio_client.get_holdings_schema()
 
-    def set_holdings_type(self, marc_record: Record, folio_holding, legacy_ids: List[str]):
+    def set_holdings_type(self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]):
         # Holdings type mapping
         ldr06 = marc_record.leader[6]
         # TODO: map this better
@@ -425,7 +422,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     ldr06,
                 )
 
-    def set_default_call_number_type_if_empty(self, folio_holding):
+    def set_default_call_number_type_if_empty(self, folio_holding: Dict):
         if not folio_holding.get("callNumberTypeId", ""):
             folio_holding["callNumberTypeId"] = self.conditions.default_call_number_type["id"]
 
@@ -462,7 +459,7 @@ class RulesMapperHoldings(RulesMapperBase):
             )
         return results
 
-    def verity_boundwith_map_entry(self, entry):
+    def verity_boundwith_map_entry(self, entry: Dict):
         if "MFHD_ID" not in entry or not entry.get("MFHD_ID", ""):
             raise TransformationProcessError(
                 "", "Column MFHD_ID missing from Boundwith relationship map", ""
@@ -472,7 +469,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 "", "Column BIB_ID missing from Boundwith relationship map", ""
             )
 
-    def setup_boundwith_relationship_map(self, boundwith_relationship_map):
+    def setup_boundwith_relationship_map(self, boundwith_relationship_map: List[Dict]):
         """
         Creates a map of MFHD_ID to BIB_ID for boundwith relationships.
 
@@ -503,7 +500,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 self.handle_transformation_record_failed_error(idx, trfe)
         return new_map
 
-    def get_bw_instance_id_map_tuple(self, entry):
+    def get_bw_instance_id_map_tuple(self, entry: Dict):
         try:
             return self.parent_id_map[entry["BIB_ID"]]
         except KeyError:
