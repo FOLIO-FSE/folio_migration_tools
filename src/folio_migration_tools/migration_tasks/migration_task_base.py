@@ -462,7 +462,27 @@ class MigrationTaskBase:
 
 
 class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
-    """Base class for MARC task configurations."""
+    """
+    Base class for MARC task configurations.
+
+    Attributes:
+        files (List[library_configuration.FileDefinition]):
+            List of MARC21 files to be processed.
+
+        create_source_records (bool):
+            Controls whether or not to retain the MARC records in Source Record Storage.
+            Default is False, meaning MARC records will not be retained.
+
+        hrid_handling (library_configuration.HridHandling):
+            Determines how HRIDs are handled.
+            - 'default': FOLIO generates HRIDs and moves existing 001 fields into a 035 field, concatenated with the 003 field.
+            - 'preserve001': Keeps the 001 fields in place and uses them as HRIDs.
+            Default is 'default'.
+
+        deactivate035_from001 (bool):
+            Disables the default FOLIO functionality of moving the previous 001 field into a 035 field, prefixed with the value from 003.
+            Default is False, meaning the functionality remains active.
+    """
 
     files: Annotated[
         List[library_configuration.FileDefinition],
@@ -476,7 +496,7 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
         Field(
             title="Create source records",
             description=(
-                "Controls wheter or not to retain the MARC records in "
+                "Controls whether or not to retain the MARC records in "
                 "Source Record Storage."
             ),
         ),
