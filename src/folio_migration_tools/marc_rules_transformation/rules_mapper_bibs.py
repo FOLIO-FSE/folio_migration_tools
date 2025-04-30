@@ -339,7 +339,7 @@ class BibsRulesMapper(RulesMapperBase):
             return_id = t[0]
         return return_id
 
-    def get_instance_format_id_by_code(self, legacy_id: List[str], code: str):
+    def get_instance_format_id_by_code(self, legacy_ids: List[str], code: str):
         try:
             match = next(f for f in self.folio_client.instance_formats if f["code"] == code)
             self.migration_report.add(
@@ -349,14 +349,14 @@ class BibsRulesMapper(RulesMapperBase):
             return match["id"]
         except Exception:
             # TODO: Distinguish between generated codes and proper 338bs
-            Helper.log_data_issue(legacy_id, "Instance format Code not found in FOLIO", code)
+            Helper.log_data_issue(legacy_ids, "Instance format Code not found in FOLIO", code)
             self.migration_report.add(
                 "InstanceFormat",
                 i18n.t("Code '%{code}' not found in FOLIO", code=code),
             )
             return ""
 
-    def get_instance_format_id_by_name(self, f337a: str, f338a: str, legacy_id: List[str]):
+    def get_instance_format_id_by_name(self, f337a: str, f338a: str, legacy_ids: List[str]):
         f337a = f337a.lower().strip()
         f338a = f338a.lower().strip()
         match_template = f"{f337a} -- {f338a}"
@@ -378,7 +378,7 @@ class BibsRulesMapper(RulesMapperBase):
             return match["id"]
         except Exception:
             Helper.log_data_issue(
-                legacy_id,
+                legacy_ids,
                 "Unsuccessful matching on 337$a and 338$a",
                 match_template,
             )
