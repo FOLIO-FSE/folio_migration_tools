@@ -27,7 +27,7 @@ LOGGER.propagate = True
 def mapper(pytestconfig) -> AuthorityMapper:
     folio = mocked_classes.mocked_folio_client()
     lib = LibraryConfiguration(
-        okapi_url=folio.okapi_url,
+        okapi_url=folio.gateway_url,
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,

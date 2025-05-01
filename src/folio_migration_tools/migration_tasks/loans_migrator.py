@@ -525,7 +525,7 @@ class LoansMigrator(MigrationTaskBase):
             loan_to_put["dueDate"] = due_date.isoformat()
             loan_to_put["loanDate"] = out_date.isoformat()
             loan_to_put["renewalCount"] = renewal_count
-            url = f"{self.folio_client.okapi_url}/circulation/loans/{loan_to_put['id']}"
+            url = f"{self.folio_client.gateway_url}/circulation/loans/{loan_to_put['id']}"
             req = self.http_client.put(
                 url,
                 headers=self.folio_client.okapi_headers,
@@ -608,7 +608,7 @@ class LoansMigrator(MigrationTaskBase):
         try:
             # Get Item by barcode, update status.
             item_path = f'item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
-            item_url = f"{self.folio_client.okapi_url}/{item_path}"
+            item_url = f"{self.folio_client.gateway_url}/{item_path}"
             resp = self.http_client.get(item_url, headers=self.folio_client.okapi_headers)
             resp.raise_for_status()
             data = resp.json()
@@ -667,14 +667,14 @@ class LoansMigrator(MigrationTaskBase):
         self.folio_put_post(url, user, "PUT", i18n.t("Update user"))
 
     def get_user_by_barcode(self, barcode):
-        url = f'{self.folio_client.okapi_url}/users?query=(barcode=="{barcode}")'
+        url = f'{self.folio_client.gateway_url}/users?query=(barcode=="{barcode}")'
         resp = self.http_client.get(url, headers=self.folio_client.okapi_headers)
         resp.raise_for_status()
         data = resp.json()
         return data["users"][0]
 
     def folio_put_post(self, url, data_dict, verb, action_description=""):
-        full_url = f"{self.folio_client.okapi_url}{url}"
+        full_url = f"{self.folio_client.gateway_url}{url}"
         try:
             if verb == "PUT":
                 resp = self.http_client.put(
@@ -729,7 +729,7 @@ class LoansMigrator(MigrationTaskBase):
     def change_due_date(self, folio_loan, legacy_loan):
         try:
             api_path = f"{folio_loan['id']}/change-due-date"
-            api_url = f"{self.folio_client.okapi_url}/circulation/loans/{api_path}"
+            api_url = f"{self.folio_client.gateway_url}/circulation/loans/{api_path}"
             body = {"dueDate": du_parser.isoparse(str(legacy_loan.due_date)).isoformat()}
             req = self.http_client.post(
                 api_url, headers=self.folio_client.okapi_headers, json=body

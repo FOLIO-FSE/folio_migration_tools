@@ -1,3 +1,4 @@
+from importlib import metadata
 import json
 import logging
 import sys
@@ -38,7 +39,7 @@ def parse_args(args):
         default=environ.get("FOLIO_MIGRATION_TOOLS_TASK_NAME"),
     )
     parser.add_argument(
-        "--okapi_password",
+        "--folio_password", "--okapi_password",
         help="password for the tenant in the configuration file",
         prompt="FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD" not in environ,
         default=environ.get("FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD"),
@@ -60,11 +61,17 @@ def parse_args(args):
         default=environ.get("FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE", "en"),
         prompt=False,
     )
+    parser.add_argument(
+        "--version", "-V",
+        help="Show the version of the FOLIO Migration Tools",
+        action="store_true",
+        prompt=False,
+    )
     return parser.parse_args(args)
 
 def prep_library_config(args):
         config_file_humped = merge_load(args.configuration_path)
-        config_file_humped["libraryInformation"]["okapiPassword"] = args.okapi_password
+        config_file_humped["libraryInformation"]["okapiPassword"] = args.folio_password
         config_file_humped["libraryInformation"]["baseFolder"] = args.base_folder_path
         config_file = humps.decamelize(config_file_humped)
         library_config = LibraryConfiguration(**config_file["library_information"])
@@ -82,7 +89,11 @@ def prep_library_config(args):
 def main():
     try:
         task_classes = list(inheritors(migration_task_base.MigrationTaskBase))
-
+        if "-V" in sys.argv or "--version" in sys.argv:
+            print(
+                f"FOLIO Migration Tools: {metadata.version('folio_migration_tools')}"
+            )
+            sys.exit(0)
         args = parse_args(sys.argv[1:])
         try:
             i18n.load_config(
@@ -124,10 +135,10 @@ def main():
         try:
             logging.getLogger("httpx").setLevel(logging.WARNING) # Exclude info messages from httpx
             with FolioClient(
-                library_config.okapi_url,
+                library_config.gateway_url,
                 library_config.tenant_id,
-                library_config.okapi_username,
-                library_config.okapi_password,
+                library_config.folio_username,
+                library_config.folio_password,
             ) as folio_client:
                 task_config = task_class.TaskConfiguration(**migration_task_config)
                 task_obj = task_class(task_config, library_config, folio_client)

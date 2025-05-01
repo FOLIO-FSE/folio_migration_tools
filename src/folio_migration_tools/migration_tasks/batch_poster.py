@@ -287,7 +287,7 @@ class BatchPoster(MigrationTaskBase):
         fetch_batch_size = 90
         fetch_tasks = []
         updates = {}
-        async with httpx.AsyncClient(base_url=self.folio_client.okapi_url) as client:
+        async with httpx.AsyncClient(base_url=self.folio_client.gateway_url) as client:
             for i in range(0, len(batch), fetch_batch_size):
                 batch_slice = batch[i:i + fetch_batch_size]
                 fetch_tasks.append(
@@ -360,7 +360,7 @@ class BatchPoster(MigrationTaskBase):
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
         (object_name, data) = row.split("\t")
         endpoint = self.get_extradata_endpoint(self.task_configuration, object_name, data)
-        url = f"{self.folio_client.okapi_url}/{endpoint}"
+        url = f"{self.folio_client.gateway_url}/{endpoint}"
         body = data
         response = self.post_objects(url, body)
         if response.status_code == 201:
@@ -415,7 +415,7 @@ class BatchPoster(MigrationTaskBase):
         if self.api_info["is_batch"]:
             raise TypeError("This record type supports batch processing, use post_batch method")
         api_endpoint = self.api_info.get("api_endpoint")
-        url = f"{self.folio_client.okapi_url}{api_endpoint}"
+        url = f"{self.folio_client.gateway_url}{api_endpoint}"
         response = self.post_objects(url, row)
         if response.status_code == 201:
             self.num_posted += 1
@@ -590,7 +590,7 @@ class BatchPoster(MigrationTaskBase):
 
     def do_post(self, batch):
         path = self.api_info["api_endpoint"]
-        url = self.folio_client.okapi_url + path
+        url = self.folio_client.gateway_url + path
         if self.api_info["object_name"] == "users":
             payload = {self.api_info["object_name"]: list(batch), "totalRecords": len(batch)}
         elif self.api_info["total_records"]:
@@ -675,7 +675,7 @@ class BatchPoster(MigrationTaskBase):
             "processingStartedDate": datetime.utcnow().isoformat(timespec="milliseconds"),
         }
         try:
-            url = f"{self.folio_client.okapi_url}/source-storage/snapshots"
+            url = f"{self.folio_client.gateway_url}/source-storage/snapshots"
             if self.http_client and not self.http_client.is_closed:
                 res = self.http_client.post(
                     url, json=snapshot, headers=self.folio_client.okapi_headers
@@ -684,7 +684,7 @@ class BatchPoster(MigrationTaskBase):
                 res = httpx.post(url, headers=self.okapi_headers, json=snapshot, timeout=None)
             res.raise_for_status()
             logging.info("Posted Snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
-            get_url = f"{self.folio_client.okapi_url}/source-storage/snapshots/{self.snapshot_id}"
+            get_url = f"{self.folio_client.gateway_url}/source-storage/snapshots/{self.snapshot_id}"
             getted = False
             while not getted:
                 logging.info("Sleeping while waiting for the snapshot to get created")
@@ -704,7 +704,7 @@ class BatchPoster(MigrationTaskBase):
     def commit_snapshot(self):
         snapshot = {"jobExecutionId": self.snapshot_id, "status": "COMMITTED"}
         try:
-            url = f"{self.folio_client.okapi_url}/source-storage/snapshots/{self.snapshot_id}"
+            url = f"{self.folio_client.gateway_url}/source-storage/snapshots/{self.snapshot_id}"
             if self.http_client and not self.http_client.is_closed:
                 res = self.http_client.put(
                     url, json=snapshot, headers=self.folio_client.okapi_headers

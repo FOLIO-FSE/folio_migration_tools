@@ -35,7 +35,7 @@ xpath_245 = "//marc:datafield[@tag='245']"
 def mapper(pytestconfig) -> BibsRulesMapper:
     folio = mocked_classes.mocked_folio_client()
     lib = LibraryConfiguration(
-        okapi_url=folio.okapi_url,
+        okapi_url=folio.gateway_url,
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,

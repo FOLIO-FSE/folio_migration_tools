@@ -18,7 +18,7 @@ class TestMFHDRulesMapper(unittest.TestCase):
                 object_hook=lambda d: namedtuple("X", d.keys())(*d.values()),
             )
             cls.folio = FolioClient(
-                cls.config.okapi_url,
+                cls.config.gateway_url,
                 cls.config.tenant_id,
                 cls.config.username,
                 cls.config.password,

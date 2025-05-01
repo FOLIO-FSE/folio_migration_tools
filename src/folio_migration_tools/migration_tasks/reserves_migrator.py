@@ -190,7 +190,7 @@ class ReservesMigrator(MigrationTaskBase):
             sys.exit(1)
 
     def folio_put_post(self, url, data_dict, verb, action_description=""):
-        full_url = f"{self.folio_client.okapi_url}{url}"
+        full_url = f"{self.folio_client.gateway_url}{url}"
         try:
             if verb == "PUT":
                 resp = httpx.put(

@@ -33,7 +33,7 @@ class LegacyReserve(object):
             self.errors.append(("Missing data.", "legacy_identifier"))
         self.course_listing_id: str = str(
             FolioUUID(
-                folio_client.okapi_url,
+                folio_client.gateway_url,
                 FOLIONamespaces.course_listing,
                 legacy_request_dict["legacy_identifier"],
             )

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 from pydantic.types import DirectoryPath
@@ -68,8 +68,28 @@ class FolioRelease(str, Enum):
 
 
 class LibraryConfiguration(BaseModel):
-    okapi_url: str
-    tenant_id: str
+    gateway_url: Annotated[
+        str,
+        Field(
+            title="FOLIO API Gateway URL",
+            description=(
+                "The URL of the FOLIO API gateway instance. "
+                "You can find this in Settings > Software versions > API gateway services."
+            ),
+            alias="okapi_url"
+        ),
+    ]
+    tenant_id: Annotated[
+        str,
+        Field(
+            title="FOLIO tenant ID",
+            description=(
+                "The ID of the FOLIO tenant instance. "
+                "You can find this in Settings > Software versions > API gateway services. "
+                "In an ECS environment, this is the ID of the central tenant, for all configurations."
+            ),
+        ),
+    ]
     ecs_tenant_id: Annotated[
         str,
         Field(
@@ -80,15 +100,43 @@ class LibraryConfiguration(BaseModel):
             ),
         ),
     ] = ""
-    okapi_username: str
-    okapi_password: str
+    folio_username: Annotated[
+        str,
+        Field(
+            title="FOLIO API Gateway username",
+            description=(
+                "The username for the FOLIO user account performing the migration. "
+                "User should have a full admin permissions/roles in FOLIO. "
+            ),
+            alias="okapi_username"
+        ),
+    ]
+    folio_password: Annotated[
+        str,
+        Field(
+            title="FOLIO API Gateway password",
+            description=(
+                "The password for the FOLIO user account performing the migration. "
+            ),
+            alias="okapi_password"
+        )
+    ]
     base_folder: DirectoryPath = Field(
         description=(
             "The base folder for migration. "
             "Should ideally be a github clone of the migration_repo_template"
         )
     )
-    multi_field_delimiter: Optional[str] = "<delimiter>"
+    multi_field_delimiter: Annotated[
+        str,
+        Field(
+            title="Multi field delimiter",
+            description=(
+                "The delimiter used to separate multiple values in a single field. "
+                "This is used for delimited text (CSV/TSV) fields with multiple sub-delimited values."
+            ),
+        ),
+    ] = "<delimiter>"
     failed_records_threshold: Annotated[
         int,
         Field(description=("Number of failed records until the process shuts down")),

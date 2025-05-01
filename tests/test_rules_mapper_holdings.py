@@ -30,7 +30,7 @@ from folio_migration_tools.test_infrastructure import mocked_classes
 def mapper(pytestconfig) -> RulesMapperHoldings:
     folio = mocked_classes.mocked_folio_client()
     lib = LibraryConfiguration(
-        okapi_url=folio.okapi_url,
+        okapi_url=folio.gateway_url,
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
@@ -318,7 +318,7 @@ def test_set_default_call_number_type_if_empty():
 def test_create_source_records_equals_false():
     folio = mocked_classes.mocked_folio_client()
     lib = LibraryConfiguration(
-        okapi_url=folio.okapi_url,
+        okapi_url=folio.gateway_url,
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,
@@ -378,7 +378,7 @@ def test_create_source_records_equals_false():
 def test_create_source_records_equals_false_preserve001():
     folio = mocked_classes.mocked_folio_client()
     lib = LibraryConfiguration(
-        okapi_url=folio.okapi_url,
+        okapi_url=folio.gateway_url,
         tenant_id=folio.tenant_id,
         okapi_username=folio.username,
         okapi_password=folio.password,

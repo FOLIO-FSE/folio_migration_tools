@@ -443,7 +443,7 @@ class MapperBase:
     @property
     def base_string_for_folio_uuid(self):
         if self.library_configuration.use_gateway_url_for_uuids and not self.library_configuration.is_ecs:
-            return str(self.folio_client.okapi_url)
+            return str(self.folio_client.gateway_url)
         elif self.library_configuration.ecs_tenant_id:
             return str(self.library_configuration.ecs_tenant_id)
         else:
