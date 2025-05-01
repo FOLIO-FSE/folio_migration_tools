@@ -73,8 +73,9 @@ def test_arg_prompts(insecure_inputs, secure_inputs):
         "configuration_path": "config_path",
         "task_name": "task_name",
         "base_folder_path": "folder_path",
-        "okapi_password": "okapi_password",
+        "folio_password": "okapi_password",
         "report_language": "en",
+        "version": False,
     }
 
 
@@ -100,8 +101,9 @@ def test_args_positionally(insecure_inputs, secure_inputs):
         "configuration_path": "config_path",
         "task_name": "task_name",
         "base_folder_path": "folder_path",
-        "okapi_password": "okapi_password",
+        "folio_password": "okapi_password",
         "report_language": "en",
+        "version": False,
     }
 
 
@@ -124,8 +126,9 @@ def test_args_from_env(insecure_inputs, secure_inputs):
         "configuration_path": "config_path",
         "task_name": "task_name",
         "base_folder_path": "folder_path",
-        "okapi_password": "okapi_password",
+        "folio_password": "okapi_password",
         "report_language": "fr",
+        "version": False,
     }
 
 
@@ -159,8 +162,9 @@ def test_args_overriding_env(insecure_inputs, secure_inputs):
         "configuration_path": "config_path",
         "task_name": "task_name",
         "base_folder_path": "folder_path",
-        "okapi_password": "okapi_password",
+        "folio_password": "okapi_password",
         "report_language": "fr",
+        "version": False,
     }
 
 
@@ -182,8 +186,9 @@ def test_task_name_arg_exception(insecure_inputs, secure_inputs):
         "configuration_path": "config_path",
         "task_name": "task_name",
         "base_folder_path": "folder_path",
-        "okapi_password": "okapi_password",
+        "folio_password": "okapi_password",
         "report_language": "fr",
+        "version": False,
     }
 
 

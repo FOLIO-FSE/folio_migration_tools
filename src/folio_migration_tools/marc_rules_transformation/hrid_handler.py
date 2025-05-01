@@ -160,7 +160,7 @@ class HRIDHandler:
             self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter
             self.hrid_settings["holdings"]["startNumber"] = self.holdings_hrid_counter
             self.hrid_settings["items"]["startNumber"] = self.items_hrid_counter
-            url = self.folio_client.okapi_url + self.hrid_path
+            url = self.folio_client.gateway_url + self.hrid_path
             resp = httpx.put(
                 url,
                 json=self.hrid_settings,

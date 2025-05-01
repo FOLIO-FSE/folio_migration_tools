@@ -115,7 +115,7 @@ async def test_get_with_retry_successful():
         batch_poster = create_autospec(spec=BatchPoster)
         batch_poster.folio_client = Mock(spec=FolioClient)
         batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-        batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
+        batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
         batch_poster.get_with_retry = Mock(wraps=BatchPoster.get_with_retry)
 
         # Define test inputs
@@ -123,7 +123,7 @@ async def test_get_with_retry_successful():
         params = {"query": "id==(record1 OR record2)", "limit": 90}
 
         # Act
-        async with httpx.AsyncClient(base_url=batch_poster.folio_client.okapi_url) as client:
+        async with httpx.AsyncClient(base_url=batch_poster.folio_client.gateway_url) as client:
             response = await batch_poster.get_with_retry(batch_poster, client, query_api, params)
 
         # Assert
@@ -156,7 +156,7 @@ async def test_set_version_async():
     batch_poster = create_autospec(spec=BatchPoster)
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.update_record_versions = BatchPoster.update_record_versions
@@ -190,7 +190,7 @@ async def test_set_version_async_one_existing_items():
     batch_poster = create_autospec(spec=BatchPoster)
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.okapi_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.update_record_versions = BatchPoster.update_record_versions

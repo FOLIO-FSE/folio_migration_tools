@@ -1,6 +1,6 @@
 [project]
 name = "folio_migration_tools"
-version = "1.9.0rc10"
+version = "1.9.0rc11"
 description =  "A tool allowing you to migrate data from legacy ILS:s (Library systems) into FOLIO LSP"
 authors = [
 	{name = "Theodor Tolstoy", email = "github.teddes@tolstoy.se"},
@@ -44,7 +44,7 @@ profile = "black"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-folioclient = "^0.61.2"
+folioclient = "0.70.1"
 pyhumps = "^3.7.3"
 defusedxml = "^0.7.1"
 python-dateutil = "^2.8.2"

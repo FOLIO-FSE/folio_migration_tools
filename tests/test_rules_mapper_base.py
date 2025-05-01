@@ -27,10 +27,10 @@ from folio_migration_tools.test_infrastructure import mocked_classes
 @pytest.fixture
 def folio_client():
     fc = mocked_classes.mocked_folio_client()
-    fc.okapi_url = "https://folio-snapshot.dev.folio.org"
+    fc.gateway_url = "https://folio-snapshot.dev.folio.org"
     fc.tenant_id = "diku"
-    fc.okapi_username = "diku_admin"
-    fc.okapi_password = "admin"
+    fc.folio_username = "diku_admin"
+    fc.folio_password = "admin"
     fc.get_from_github = FolioClient.get_from_github
     fc.get_latest_from_github = FolioClient.get_latest_from_github
     fc.get_module_version = FolioClient.get_module_version
@@ -257,7 +257,7 @@ def test_get_srs_string_bad_leaders():
 
 
 def test_create_srs_uuid(mapper_base):
-    mapper_base.folio_client.okapi_url = "some_url"
+    mapper_base.folio_client.gateway_url = "some_url"
     created_id = mapper_base.create_srs_id(FOLIONamespaces.holdings, "id_1")
     assert str(created_id) == "06e42308-4555-5bd2-b0b4-4655f7e30e4a"
     created_id_2 = mapper_base.create_srs_id(FOLIONamespaces.instances, "id_1")
@@ -282,7 +282,7 @@ def marc_record():
 def test_save_source_record(caplog, folio_record, marc_record, mapper_base):
     record_type = FOLIONamespaces.instances
     folio_client = Mock(spec=FolioClient)
-    folio_client.okapi_url = "https://folio-snapshot.dev.folio.org"
+    folio_client.gateway_url = "https://folio-snapshot.dev.folio.org"
     legacy_ids = ["legacy_id_1", "legacy_id_2"]
     suppress = False
     srs_records = []

@@ -138,7 +138,7 @@ class CirculationHelper:
         if legacy_loan.proxy_patron_barcode:
             data.update({"proxyUserBarcode": legacy_loan.proxy_patron_barcode})
         path = "/circulation/check-out-by-barcode"
-        url = f"{self.folio_client.okapi_url}{path}"
+        url = f"{self.folio_client.gateway_url}{path}"
         try:
             if legacy_loan.patron_barcode in self.missing_patron_barcodes:
                 error_message = i18n.t("Patron barcode already detected as missing")
@@ -249,7 +249,7 @@ class CirculationHelper:
     ):
         try:
             path = "/circulation/requests"
-            url = f"{folio_client.okapi_url}{path}"
+            url = f"{folio_client.gateway_url}{path}"
             data = legacy_request.serialize()
             data["requestProcessingParameters"] = {
                 "overrideBlocks": {
@@ -313,7 +313,7 @@ class CirculationHelper:
             del loan_to_put["metadata"]
             loan_to_put["dueDate"] = extension_due_date.isoformat()
             loan_to_put["loanDate"] = extend_out_date.isoformat()
-            url = f"{folio_client.okapi_url}/circulation/loans/{loan_to_put['id']}"
+            url = f"{folio_client.gateway_url}/circulation/loans/{loan_to_put['id']}"
 
             req = httpx.put(
                 url, headers=folio_client.okapi_headers, json=loan_to_put, timeout=None
