@@ -85,15 +85,22 @@ def prep_library_config(args):
             sys.exit("ECS Central Iteration Identifier Not Found")
         return config_file, library_config
 
+def print_version(args):
+    if "-V" in args or "--version" in args:
+        print(
+            f"FOLIO Migration Tools: {metadata.version('folio_migration_tools')}"
+        )
+        sys.exit(0)
+    return None
+
 
 def main():
     try:
         task_classes = list(inheritors(migration_task_base.MigrationTaskBase))
-        if "-V" in sys.argv or "--version" in sys.argv:
-            print(
-                f"FOLIO Migration Tools: {metadata.version('folio_migration_tools')}"
-            )
-            sys.exit(0)
+        # Check if the script is run with the --version or -V flag
+        print_version(sys.argv)
+
+        # Parse command line arguments
         args = parse_args(sys.argv[1:])
         try:
             i18n.load_config(
