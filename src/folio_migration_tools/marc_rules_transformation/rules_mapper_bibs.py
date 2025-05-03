@@ -157,6 +157,19 @@ class BibsRulesMapper(RulesMapperBase):
             legacy_ids (List[str]): _description_
             file_def (FileDefinition): _description_
         """
+        main_entry_field_tags = ["100", "110", "111", "130"]
+        main_entry_fields = marc_record.get_fields(*main_entry_field_tags)
+        main_entry_fields.sort(key=lambda x: int(x.tag))
+        if len(main_entry_fields) > 1:
+            Helper.log_data_issue(
+                legacy_ids,
+                "Multiple main entry fields in record. Record will fail Data Import. Creating Instance anyway.",
+                main_entry_fields
+            )
+        if not main_entry_fields:
+            main_entry_fields += marc_record.get_fields("700", "710", "711", "730")
+            main_entry_fields.sort(key=lambda x: int(x.tag))
+        self.process_marc_field(folio_instnace, main_entry_fields[0], ignored_subsequent_fields, legacy_ids)
         try:
             self.process_marc_field(folio_instnace, marc_record['245'], ignored_subsequent_fields, legacy_ids)
         except KeyError:
