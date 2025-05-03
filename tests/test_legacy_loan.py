@@ -1,3 +1,4 @@
+import json
 import pytest
 from zoneinfo import ZoneInfo
 
@@ -275,4 +276,22 @@ def test_correct_for_1_day_loans_due_date_is_before_out_date() -> None:
         "0\tDue date is before out date\t"
     )
     with pytest.raises(TransformationProcessError, match=expected_err_message):
+        LegacyLoan(loan_dict, "", migration_report, tenant_timezone)
+
+def test_correct_for_1_day_loans_no_out_or_due_date_info() -> None:
+    loan_dict = {
+        "item_barcode": "the barcode with trailing spaces    ",
+        "patron_barcode": "   the barcode with leading spaces",
+        "due_date": "",
+        "out_date": "",
+        "renewal_count": "1",
+        "next_item_status": "Checked out",
+    }
+    tenant_timezone = ZoneInfo("UTC")
+    migration_report = MigrationReport()
+    expected_err_message = (
+        "Critical Process issue. Check configuration, mapping files and reference data\t"
+        f"0\tDue date is before out date, or date information is missing from both\t{json.dumps(loan_dict, indent=2)}"
+    )
+    with pytest.raises(TransformationProcessError, match=expected_err_message) as tpe:
         LegacyLoan(loan_dict, "", migration_report, tenant_timezone)
