@@ -26,7 +26,9 @@ class BibsTransformer(MigrationTaskBase):
         ils_flavour: Annotated[
             IlsFlavour,
             Field(
-                title="ILS flavour", description="The type of ILS you are migrating records from."
+                title="ILS flavour",
+                description="The type of ILS you are migrating records from.",
+                alias="ils_flavor"
             ),
         ]
         custom_bib_id_field: Annotated[
