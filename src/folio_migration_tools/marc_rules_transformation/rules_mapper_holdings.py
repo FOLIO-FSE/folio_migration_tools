@@ -443,7 +443,7 @@ class RulesMapperHoldings(RulesMapperBase):
             raise TransformationRecordFailedError(
                 legacy_ids,
                 f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrc_note_type}\t'
-                f"Not type not found in FOLIO.",
+                f"Note type not found in FOLIO.",
                 self.task_configuration.mfhd_mrc_note_type,
             ) from ee
         if self.task_configuration.include_mfhd_mrc_as_note:
