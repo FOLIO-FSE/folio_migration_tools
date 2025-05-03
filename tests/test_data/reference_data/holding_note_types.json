@@ -61,5 +61,32 @@
             "createdDate": "2024-09-04T01:54:20.728+00:00",
             "updatedDate": "2024-09-04T01:54:20.728+00:00"
         }
+    },
+    {
+        "id": "841d1873-015b-4bfb-a69f-6cbb41d925ba",
+        "name": "Original MARC holdings statements",
+        "source": "local",
+        "metadata": {
+            "createdDate": "2025-05-02T01:54:20.728+00:00",
+            "updatedDate": "2025-05-02T01:54:20.728+00:00"
+        }
+    },
+    {
+        "id": "09c1e5c9-6f11-432e-bcbe-b9e733ccce57",
+        "name": "Original MFHD Record",
+        "source": "local",
+        "metadata": {
+            "createdDate": "2025-05-02T01:54:20.728+00:00",
+            "updatedDate": "2025-05-02T01:54:20.728+00:00"
+        }
+    },
+    {
+        "id": "474120b0-d64e-4a6f-9c9c-e7d3e76f3cf5",
+        "name": "Original MFHD (MARC21)",
+        "source": "local",
+        "metadata": {
+            "createdDate": "2025-05-02T01:54:20.728+00:00",
+            "updatedDate": "2025-05-02T01:54:20.728+00:00"
+        }
     }
 ]

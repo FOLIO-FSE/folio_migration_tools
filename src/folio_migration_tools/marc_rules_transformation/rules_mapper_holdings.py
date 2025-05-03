@@ -34,7 +34,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
 class RulesMapperHoldings(RulesMapperBase):
     def __init__(
         self,
-        folio_client,
+        folio_client: FolioClient,
         location_map,
         task_configuration,
         library_configuration: LibraryConfiguration,
@@ -278,6 +278,8 @@ class RulesMapperHoldings(RulesMapperBase):
         self.set_default_call_number_type_if_empty(folio_holding)
         self.pick_first_location_if_many(folio_holding, legacy_ids)
         self.parse_coded_holdings_statements(marc_record, folio_holding, legacy_ids)
+        self.add_mfhd_as_mrk_note(marc_record, folio_holding, legacy_ids)
+        self.add_mfhd_as_mrc_note(marc_record, folio_holding, legacy_ids)
         HoldingsHelper.handle_notes(folio_holding)
         if (
             all([file_def.create_source_records, self.create_source_records])
@@ -341,6 +343,117 @@ class RulesMapperHoldings(RulesMapperBase):
             except TransformationFieldMappingError as tfme:
                 Helper.log_data_issue(tfme.index_or_id, tfme.message, tfme.data_value)
                 self.migration_report.add("FieldMappingErrors", tfme.message)
+        self.collect_mrk_statement_notes(marc_record, folio_holding, legacy_ids)
+
+    def collect_mrk_statement_notes(self, marc_record, folio_holding, legacy_ids):
+        """Collects MFHD holdings statements as MARC Maker field strings in a FOLIO holdings note
+        and adds them to the FOLIO holdings record.
+
+        This is done to preserve the information in the MARC record for future reference.
+
+        Args:
+            marc_record (Record): PyMARC record
+            folio_holding (Dict): FOLIO holdings record
+
+        """
+        if self.task_configuration.include_mrk_statements:
+            mrk_statement_notes = []
+            for field in marc_record.get_fields("853", "854", "855", "863", "864", "865", "866", "867", "868"):
+                mrk_statement_notes.append(str(field))
+            if mrk_statement_notes:
+                folio_holding["notes"] = folio_holding.get("notes", []) + self.add_mrk_statements_note(mrk_statement_notes, legacy_ids)
+
+    def add_mrk_statements_note(self, mrk_statement_notes: List[str], legacy_ids) -> List[Dict]:
+        """Creates a note from the MRK statements
+
+        Args:
+            mrk_statement_notes (List[str]): A list of MFHD holdings statements as MRK strings
+
+        Returns:
+            List: A list containing the FOLIO holdings note object (Dict)
+        """
+        holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
+            self.folio.holding_note_types, "holding_note_types", self.task_configuration.mrk_holdings_note_type
+        )
+        try:
+            holdings_note_type_id = holdings_note_type_tuple[0]
+        except Exception as ee:
+            logging.error(ee)
+            raise TransformationRecordFailedError(
+                legacy_ids,
+                f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mrk_holdings_note_type}\t'
+                f"MFHD holdings statement note type not found in FOLIO.",
+                self.task_configuration.mrk_holdings_note_type,
+            ) from ee
+        return [
+            {
+                "note": "\n".join(mrk_statement_notes),
+                "holdingsNoteTypeId": holdings_note_type_id,
+                "staffOnly": True,
+            }
+        ]
+
+    def add_mfhd_as_mrk_note(self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]):
+        """Adds the MFHD as a note to the holdings record
+
+        This is done to preserve the information in the MARC record for future reference.
+
+        Args:
+            marc_record (Record): PyMARC record
+            folio_holding (Dict): FOLIO holdings record
+        """
+        holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
+            self.folio.holding_note_types, "holding_note_types", self.task_configuration.mfhd_mrk_note_type
+        )
+        try:
+            holdings_note_type_id = holdings_note_type_tuple[0]
+        except Exception as ee:
+            logging.error(ee)
+            raise TransformationRecordFailedError(
+                legacy_ids,
+                f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrk_note_type}\t'
+                f"Not type not found in FOLIO.",
+                self.task_configuration.mfhd_mrk_note_type,
+            ) from ee
+        if self.task_configuration.include_mfhd_mrk_as_note:
+            folio_holding["notes"] = folio_holding.get("notes", []) + [
+                {
+                    "note": str(marc_record),
+                    "holdingsNoteTypeId": holdings_note_type_id,
+                    "staffOnly": True,
+                }
+            ]
+
+    def add_mfhd_as_mrc_note(self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]):
+        """Adds the MFHD as a note to the holdings record
+
+        This is done to preserve the information in the MARC record for future reference.
+
+        Args:
+            marc_record (Record): PyMARC record
+            folio_holding (Dict): FOLIO holdings record
+        """
+        holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
+            self.folio.holding_note_types, "holding_note_types", self.task_configuration.mfhd_mrc_note_type
+        )
+        try:
+            holdings_note_type_id = holdings_note_type_tuple[0]
+        except Exception as ee:
+            logging.error(ee)
+            raise TransformationRecordFailedError(
+                legacy_ids,
+                f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrc_note_type}\t'
+                f"Not type not found in FOLIO.",
+                self.task_configuration.mfhd_mrk_note_type,
+            ) from ee
+        if self.task_configuration.include_mfhd_mrc_as_note:
+            folio_holding["notes"] = folio_holding.get("notes", []) + [
+                {
+                    "note": marc_record.as_marc().decode("utf-8"),
+                    "holdingsNoteTypeId": holdings_note_type_id,
+                    "staffOnly": True,
+                }
+            ]
 
     def wrap_up(self):
         logging.info("Mapper wrapping up")

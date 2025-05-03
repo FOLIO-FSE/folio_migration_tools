@@ -1,3 +1,4 @@
+import json
 from unittest.mock import Mock
 
 import pymarc
@@ -433,3 +434,136 @@ def test_create_source_records_equals_false_preserve001():
         assert len(res["administrativeNotes"]) > 0
         assert res["callNumber"] == "QB611 .C44"
         assert res["callNumberTypeId"] == "95467209-6d7b-468b-94df-0f5d7ad2747d"
+
+
+def test_collect_mrk_statement_notes(mapper):
+    mapper.task_configuration.include_mrk_statements = True
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="853",
+            subfields=[
+                pymarc.Subfield(code="8", value="1"),
+                pymarc.Subfield(code="a", value="v."),
+                pymarc.Subfield(code="b", value="no."),
+                pymarc.Subfield(code="i", value="(year)"),
+            ],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="863",
+            subfields=[
+                pymarc.Subfield(code="8", value="1.1"),
+                pymarc.Subfield(code="a", value="1-16"),
+                pymarc.Subfield(code="b", value="1-16"),
+                pymarc.Subfield(code="i", value="1994-1998"),
+            ],
+        ),
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="866",
+            subfields=[
+                pymarc.Subfield(code="8", value="1.2"),
+                pymarc.Subfield(code="a", value="v.17no.17 (1999)-v.32no.32 (2003)"),
+            ],
+        ),
+    )
+    folio_holdings = {}
+    mapper.collect_mrk_statement_notes(record, folio_holdings, "1")
+    assert len(folio_holdings["notes"]) == 1
+    assert len(folio_holdings["notes"][0]['note'].split("\n")) == 3
+    assert folio_holdings["notes"][0]['note'] == (
+        "=853  \\\\$81$av.$bno.$i(year)\n"
+        "=863  \\\\$81.1$a1-16$b1-16$i1994-1998\n"
+        "=866  \\\\$81.2$av.17no.17 (1999)-v.32no.32 (2003)"
+    )
+    assert json.dumps(folio_holdings) == '{"notes": [{"note": "=853  \\\\\\\\$81$av.$bno.$i(year)\\n=863  \\\\\\\\$81.1$a1-16$b1-16$i1994-1998\\n=866  \\\\\\\\$81.2$av.17no.17 (1999)-v.32no.32 (2003)", "holdingsNoteTypeId": "841d1873-015b-4bfb-a69f-6cbb41d925ba", "staffOnly": true}]}'
+
+
+def test_add_mfhd_as_mrk_note(mapper):
+    mapper.task_configuration.include_mfhd_mrk_as_note = True
+    with open("./tests/test_data/mfhd/holding.mrc", "rb") as marc_file:
+        reader = pymarc.MARCReader(marc_file, hide_utf8_warnings=True)
+        record = next(reader)
+    folio_holdings = {}
+    mapper.add_mfhd_as_mrk_note(record, folio_holdings, "1")
+    mfhd_str = """=LDR  00183nx  a22000854n 4500\n=001  000000167\n=004  7611780\\\\\\\\\n=005  20190827122500.0\n=008  1601264|00008|||1001|||||0901128\n=852  0\\$bjnlDesk$hQB611$i.C44\n"""
+    assert len(folio_holdings["notes"]) == 1
+    assert folio_holdings["notes"][0]['note'] == mfhd_str
+    assert folio_holdings["notes"][0]['holdingsNoteTypeId'] == "09c1e5c9-6f11-432e-bcbe-b9e733ccce57"
+    assert json.dumps(folio_holdings) == '{"notes": [{"note": "=LDR  00183nx  a22000854n 4500\\n=001  000000167\\n=004  7611780\\\\\\\\\\\\\\\\\\n=005  20190827122500.0\\n=008  1601264|00008|||1001|||||0901128\\n=852  0\\\\$bjnlDesk$hQB611$i.C44\\n", "holdingsNoteTypeId": "09c1e5c9-6f11-432e-bcbe-b9e733ccce57", "staffOnly": true}]}'
+
+def test_add_mfhd_as_mrc_note(mapper):
+    mapper.task_configuration.include_mfhd_mrc_as_note = True
+    with open("./tests/test_data/mfhd/holding.mrc", "rb") as marc_file:
+        reader = pymarc.MARCReader(marc_file, hide_utf8_warnings=True)
+        record = next(reader)
+    folio_holdings = {}
+    mapper.add_mfhd_as_mrc_note(record, folio_holdings, "1")
+    mfhd_str = '00183nx  a22000854n 4500001001000000004001200010005001700022008003300039852002500072\x1e000000167\x1e7611780    \x1e20190827122500.0\x1e1601264|00008|||1001|||||0901128\x1e0 \x1fbjnlDesk\x1fhQB611\x1fi.C44\x1e\x1d'
+    assert len(folio_holdings["notes"]) == 1
+    assert folio_holdings["notes"][0]['note'] == mfhd_str
+    assert folio_holdings["notes"][0]['holdingsNoteTypeId'] == "474120b0-d64e-4a6f-9c9c-e7d3e76f3cf5"
+    assert json.dumps(folio_holdings) == '{"notes": [{"note": "00183nx  a22000854n 4500001001000000004001200010005001700022008003300039852002500072\\u001e000000167\\u001e7611780    \\u001e20190827122500.0\\u001e1601264|00008|||1001|||||0901128\\u001e0 \\u001fbjnlDesk\\u001fhQB611\\u001fi.C44\\u001e\\u001d", "holdingsNoteTypeId": "474120b0-d64e-4a6f-9c9c-e7d3e76f3cf5", "staffOnly": true}]}'
+
+
+def test_collect_mrk_statement_notes_false(mapper):
+    mapper.task_configuration.include_mrk_statements = False
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="853",
+            subfields=[
+                pymarc.Subfield(code="8", value="1"),
+                pymarc.Subfield(code="a", value="v."),
+                pymarc.Subfield(code="b", value="no."),
+                pymarc.Subfield(code="i", value="(year)"),
+            ],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="863",
+            subfields=[
+                pymarc.Subfield(code="8", value="1.1"),
+                pymarc.Subfield(code="a", value="1-16"),
+                pymarc.Subfield(code="b", value="1-16"),
+                pymarc.Subfield(code="i", value="1994-1998"),
+            ],
+        ),
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="866",
+            subfields=[
+                pymarc.Subfield(code="8", value="1.2"),
+                pymarc.Subfield(code="a", value="v.17no.17 (1999)-v.32no.32 (2003)"),
+            ],
+        ),
+    )
+    folio_holdings = {}
+    mapper.collect_mrk_statement_notes(record, folio_holdings, "1")
+    assert "notes" not in folio_holdings
+
+def test_add_mfhd_as_mrk_note_false(mapper):
+    mapper.task_configuration.include_mfhd_mrk_as_note = False
+    with open("./tests/test_data/mfhd/holding.mrc", "rb") as marc_file:
+        reader = pymarc.MARCReader(marc_file, hide_utf8_warnings=True)
+        record = next(reader)
+    folio_holdings = {}
+    mapper.add_mfhd_as_mrk_note(record, folio_holdings, "1")
+    mfhd_str = """=LDR  00183nx  a22000854n 4500\n=001  000000167\n=004  7611780\\\\\\\\\n=005  20190827122500.0\n=008  1601264|00008|||1001|||||0901128\n=852  0\\$bjnlDesk$hQB611$i.C44\n"""
+    assert "notes" not in folio_holdings
+
+
+def test_add_mfhd_as_mrc_note_false(mapper):
+    mapper.task_configuration.include_mfhd_mrc_as_note = False
+    with open("./tests/test_data/mfhd/holding.mrc", "rb") as marc_file:
+        reader = pymarc.MARCReader(marc_file, hide_utf8_warnings=True)
+        record = next(reader)
+    folio_holdings = {}
+    mapper.add_mfhd_as_mrc_note(record, folio_holdings, "1")
+    mfhd_str = '00183nx  a22000854n 4500001001000000004001200010005001700022008003300039852002500072\x1e000000167\x1e7611780    \x1e20190827122500.0\x1e1601264|00008|||1001|||||0901128\x1e0 \x1fbjnlDesk\x1fhQB611\x1fi.C44\x1e\x1d'
+    assert "notes" not in folio_holdings
