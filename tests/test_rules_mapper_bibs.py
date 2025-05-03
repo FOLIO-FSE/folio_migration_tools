@@ -769,5 +769,107 @@ def test_simple_bib_map(mapper):
             ],
         )
     )
+    marc_record.add_field(
+        pymarc.Field(
+            tag="100",
+            indicators=["1", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Christensen, Steen Hyldgaard"),
+                pymarc.Subfield("e", "editor"),
+            ],
+        )
+    )
     mapper.simple_bib_map(instance, marc_record, set(), ["legacy_id"])
     assert instance["title"] == "Modern Electrosynthetic Methods in Organic Chemistry / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."
+    assert instance["contributors"][0]["name"] == "Christensen, Steen Hyldgaard"
+    assert instance["contributors"][0]["contributorNameTypeId"] == "2b94c631-fca9-4892-a730-03ee529ffe2a"
+    assert instance["contributors"][0]["contributorTypeId"] == "9deb29d1-3e71-4951-9413-a80adac703d0"
+
+
+def test_simple_bib_map_no_1xx(mapper):
+    instance = {}
+    marc_record = pymarc.Record()
+    marc_record.add_field(
+        pymarc.Field(
+            tag="245",
+            indicators=["0", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Modern Electrosynthetic Methods in Organic Chemistry /"),
+                pymarc.Subfield("c", "Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."),
+            ],
+        )
+    )
+    marc_record.add_field(
+        pymarc.Field(
+            tag="700",
+            indicators=["1", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Christensen, Steen Hyldgaard"),
+                pymarc.Subfield("e", "editor"),
+            ],
+        )
+    )
+    mapper.simple_bib_map(instance, marc_record, set(), ["legacy_id"])
+    assert instance["title"] == "Modern Electrosynthetic Methods in Organic Chemistry / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."
+    assert instance["contributors"][0]["name"] == "Christensen, Steen Hyldgaard"
+    assert instance["contributors"][0]["contributorNameTypeId"] == "2b94c631-fca9-4892-a730-03ee529ffe2a"
+    assert instance["contributors"][0]["contributorTypeId"] == "9deb29d1-3e71-4951-9413-a80adac703d0"
+
+
+def test_simple_bib_map_too_many_1xx(mapper, caplog):
+    instance = {}
+    marc_record = pymarc.Record()
+    marc_record.add_field(
+        pymarc.Field(
+            tag="245",
+            indicators=["0", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Modern Electrosynthetic Methods in Organic Chemistry /"),
+                pymarc.Subfield("c", "Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."),
+            ],
+        )
+    )
+    marc_record.add_field(
+        pymarc.Field(
+            tag="100",
+            indicators=["1", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Christensen, Steen Hyldgaard"),
+                pymarc.Subfield("e", "editor"),
+            ],
+        )
+    )
+    marc_record.add_field(
+        pymarc.Field(
+            tag="110",
+            indicators=["1", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Some Organization"),
+                pymarc.Subfield("e", "publisher"),
+            ],
+        )
+    )
+    mapper.simple_bib_map(instance, marc_record, set(), ["legacy_id"])
+    assert "Multiple main entry fields in record" in caplog.text
+    assert instance["title"] == "Modern Electrosynthetic Methods in Organic Chemistry / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."
+    assert instance["contributors"][0]["name"] == "Christensen, Steen Hyldgaard"
+    assert instance["contributors"][0]["contributorNameTypeId"] == "2b94c631-fca9-4892-a730-03ee529ffe2a"
+    assert instance["contributors"][0]["contributorTypeId"] == "9deb29d1-3e71-4951-9413-a80adac703d0"
+
+
+def test_simple_bib_map_no_245(mapper):
+    instance = {}
+    marc_record = pymarc.Record()
+    marc_record.add_field(
+        pymarc.Field(
+            tag="100",
+            indicators=["1", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Christensen, Steen Hyldgaard"),
+                pymarc.Subfield("e", "editor"),
+            ],
+        )
+    )
+    with pytest.raises(TransformationRecordFailedError) as tfe:
+        mapper.simple_bib_map(instance, marc_record, set(), ["legacy_id"])
+    assert tfe.value.message == "No 245 field in MARC record"
