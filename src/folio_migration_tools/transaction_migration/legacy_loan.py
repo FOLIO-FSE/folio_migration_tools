@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -41,20 +42,21 @@ class LegacyLoan(object):
             "Lost and paid",
         ]
 
+        self.legacy_loan_dict = legacy_loan_dict
         self.tenant_timezone = tenant_timezone
         self.errors = []
         self.row = row
         for prop in correct_headers:
-            if prop not in legacy_loan_dict and prop not in optional_headers:
+            if prop not in self.legacy_loan_dict and prop not in optional_headers:
                 self.errors.append((f"Missing properties in legacy data {row=}", prop))
             if (
                 prop != "next_item_status"
-                and not legacy_loan_dict.get(prop, "").strip()
+                and not self.legacy_loan_dict.get(prop, "").strip()
                 and prop not in optional_headers
             ):
                 self.errors.append((f"Empty properties in legacy data {row=}", prop))
         try:
-            temp_date_due: datetime = parse(legacy_loan_dict["due_date"])
+            temp_date_due: datetime = parse(self.legacy_loan_dict["due_date"])
             if temp_date_due.tzinfo != tz.UTC:
                 temp_date_due = temp_date_due.replace(tzinfo=self.tenant_timezone)
                 self.report(
@@ -72,7 +74,7 @@ class LegacyLoan(object):
             self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "due_date"))
             temp_date_due = datetime.now(ZoneInfo("UTC"))
         try:
-            temp_date_out: datetime = parse(legacy_loan_dict["out_date"])
+            temp_date_out: datetime = parse(self.legacy_loan_dict["out_date"])
             if temp_date_out.tzinfo != tz.UTC:
                 temp_date_out = temp_date_out.replace(tzinfo=self.tenant_timezone)
                 self.report(
@@ -86,20 +88,20 @@ class LegacyLoan(object):
             self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "out_date"))
 
         # good to go, set properties
-        self.item_barcode: str = legacy_loan_dict["item_barcode"].strip()
-        self.patron_barcode: str = legacy_loan_dict["patron_barcode"].strip()
-        self.proxy_patron_barcode: str = legacy_loan_dict.get("proxy_patron_barcode", "")
+        self.item_barcode: str = self.legacy_loan_dict["item_barcode"].strip()
+        self.patron_barcode: str = self.legacy_loan_dict["patron_barcode"].strip()
+        self.proxy_patron_barcode: str = self.legacy_loan_dict.get("proxy_patron_barcode", "")
         self.due_date: datetime = temp_date_due
         self.out_date: datetime = temp_date_out
         self.correct_for_1_day_loans()
         self.make_utc()
-        self.renewal_count = self.set_renewal_count(legacy_loan_dict)
-        self.next_item_status = legacy_loan_dict.get("next_item_status", "").strip()
+        self.renewal_count = self.set_renewal_count(self.legacy_loan_dict)
+        self.next_item_status = self.legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
             self.errors.append((f"Not an allowed status {row=}", self.next_item_status))
         self.service_point_id = (
-            legacy_loan_dict["service_point_id"]
-            if legacy_loan_dict.get("service_point_id", "")
+            self.legacy_loan_dict["service_point_id"]
+            if self.legacy_loan_dict.get("service_point_id", "")
             else fallback_service_point_id
         )
 
@@ -121,7 +123,7 @@ class LegacyLoan(object):
             if self.out_date.hour == 0:
                 self.out_date = self.out_date.replace(hour=0, minute=1)
         if self.due_date <= self.out_date:
-            raise TransformationProcessError(self.row, "Due date is before out date")
+            raise TransformationProcessError(self.row, "Due date is before out date, or date information is missing from both", json.dumps(self.legacy_loan_dict, indent=2))
 
     def to_dict(self):
         return {
