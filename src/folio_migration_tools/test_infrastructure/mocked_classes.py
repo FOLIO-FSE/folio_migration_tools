@@ -212,6 +212,100 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
             }
         ]
 
+    elif ref_data_path == "/holdings-note-types":
+        yield from [
+            {
+                "id": "88914775-f677-4759-b57b-1a33b90b24e0",
+                "name": "Electronic bookplate",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.719+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.719+00:00"
+                }
+            },
+            {
+                "id": "c4407cc7-d79f-4609-95bd-1cefb2e2b5c5",
+                "name": "Copy note",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.722+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.722+00:00"
+                }
+            },
+            {
+                "id": "d6510242-5ec3-42ed-b593-3585d2e48fd6",
+                "name": "Action note",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.723+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.723+00:00"
+                }
+            },
+            {
+                "id": "e19eabab-a85c-4aef-a7b2-33bd9acef24e",
+                "name": "Binding",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.724+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.724+00:00"
+                }
+            },
+            {
+                "id": "db9b4787-95f0-4e78-becf-26748ce6bdeb",
+                "name": "Provenance",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.725+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.725+00:00"
+                }
+            },
+            {
+                "id": "6a41b714-8574-4084-8d64-a9373c3fbb59",
+                "name": "Reproduction",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.728+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.728+00:00"
+                }
+            },
+            {
+                "id": "b160f13a-ddba-4053-b9c4-60ec5ea45d56",
+                "name": "Note",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.728+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.728+00:00"
+                }
+            },
+            {
+                "id": "841d1873-015b-4bfb-a69f-6cbb41d925ba",
+                "name": "Original MARC holdings statements",
+                "source": "local",
+                "metadata": {
+                    "createdDate": "2025-05-02T01:54:20.728+00:00",
+                    "updatedDate": "2025-05-02T01:54:20.728+00:00"
+                }
+            },
+            {
+                "id": "09c1e5c9-6f11-432e-bcbe-b9e733ccce57",
+                "name": "Original MFHD Record",
+                "source": "local",
+                "metadata": {
+                    "createdDate": "2025-05-02T01:54:20.728+00:00",
+                    "updatedDate": "2025-05-02T01:54:20.728+00:00"
+                }
+            },
+            {
+                "id": "474120b0-d64e-4a6f-9c9c-e7d3e76f3cf5",
+                "name": "Original MFHD (MARC21)",
+                "source": "local",
+                "metadata": {
+                    "createdDate": "2025-05-02T01:54:20.728+00:00",
+                    "updatedDate": "2025-05-02T01:54:20.728+00:00"
+                }
+            }
+        ]
+
     elif ref_data_path in super_schema:
         yield from super_schema.get(ref_data_path)
     else:

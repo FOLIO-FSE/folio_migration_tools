@@ -143,6 +143,65 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 description="The name of the file in the mapping_files directory containing supplemental MFHD mapping rules",
             ),
         ] = ""
+        include_mrk_statements: Annotated[
+            bool,
+            Field(
+                title="Include MARC statements (MRK-format) as staff-only Holdings notes",
+                description=(
+                    "If set to true, the MARC statements will be included in the output as MARC Maker format fields. "
+                    "If set to false (default), the MARC statements will not be included in the output."
+                ),
+            ),
+        ] = False
+        mrk_holdings_note_type: Annotated[
+            str,
+            Field(
+                title="MARC Holdings Note type",
+                description=(
+                    "The name of the note type to use for MARC (MRK) statements. "
+                ),
+            ),
+        ] = "Original MARC holdings statements"
+        include_mfhd_mrk_as_note: Annotated[
+            bool,
+            Field(
+                title="Include MARC Record (as MARC Maker Representation) as note",
+                description=(
+                    "If set to true, the MARC statements will be included in the output as a "
+                    "(MRK) note. If set to false (default), the MARC statements will not be "
+                    "included in the output."
+                ),
+            ),
+        ] = False
+        mfhd_mrk_note_type: Annotated[
+            str,
+            Field(
+                title="MARC Record (as MARC Maker Representation) note type",
+                description=(
+                    "The name of the note type to use for MFHD (MRK) note. "
+                ),
+            ),
+        ] = "Original MFHD Record"
+        include_mfhd_mrc_as_note: Annotated[
+            bool,
+            Field(
+                title="Include MARC Record (as MARC21 decoded string) as note",
+                description=(
+                    "If set to true, the MARC record will be included in the output as a "
+                    "decoded binary MARC21 record. If set to false (default), the MARC record will not be "
+                    "included in the output."
+                ),
+            ),
+        ] = False
+        mfhd_mrc_note_type: Annotated[
+            str,
+            Field(
+                title="MARC Record (as MARC21 decoded string) note type",
+                description=(
+                    "The name of the note type to use for MFHD (MRC) note. "
+                ),
+            ),
+        ] = "Original MFHD (MARC21)"
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
