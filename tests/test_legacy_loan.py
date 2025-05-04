@@ -293,5 +293,5 @@ def test_correct_for_1_day_loans_no_out_or_due_date_info() -> None:
         "Critical Process issue. Check configuration, mapping files and reference data\t"
         f"0\tDue date is before out date, or date information is missing from both\t{json.dumps(loan_dict, indent=2)}"
     )
-    with pytest.raises(TransformationProcessError, match=expected_err_message) as tpe:
+    with pytest.raises(TransformationProcessError, match=expected_err_message):
         LegacyLoan(loan_dict, "", migration_report, tenant_timezone)
