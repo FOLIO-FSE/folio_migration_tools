@@ -857,6 +857,24 @@ def test_simple_bib_map_too_many_1xx(mapper, caplog):
     assert instance["contributors"][0]["contributorTypeId"] == "9deb29d1-3e71-4951-9413-a80adac703d0"
 
 
+def test_simple_bib_map_no_1xx_7xx(mapper):
+    instance = {}
+    marc_record = pymarc.Record()
+    marc_record.add_field(
+        pymarc.Field(
+            tag="245",
+            indicators=["0", "0"],
+            subfields=[
+                pymarc.Subfield("a", "Modern Electrosynthetic Methods in Organic Chemistry /"),
+                pymarc.Subfield("c", "Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."),
+            ],
+        )
+    )
+    mapper.simple_bib_map(instance, marc_record, set(), ["legacy_id"])
+    assert instance["title"] == "Modern Electrosynthetic Methods in Organic Chemistry / Steen Hyldgaard Christensen, Christelle Didier, Andrew Jamison, Martin Meganck, Carl Mitcham, Byron Newberry, editors."
+    assert "contributors" not in instance
+
+
 def test_simple_bib_map_no_245(mapper):
     instance = {}
     marc_record = pymarc.Record()
