@@ -79,28 +79,28 @@ class OrganizationMapper(MappingFileMapperBase):
                 False,
             )
 
-        elif re.compile("addresses\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+        elif re.compile(r"addresses\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
             return self.get_mapped_ref_data_value(
                 self.address_categories_map,
                 *value_tuple,
                 False,
             )
 
-        elif re.compile("emails\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+        elif re.compile(r"emails\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
             return self.get_mapped_ref_data_value(
                 self.email_categories_map,
                 *value_tuple,
                 False,
             )
 
-        elif re.compile("phoneNumbers\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
+        elif re.compile(r"phoneNumbers\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
             return self.get_mapped_ref_data_value(
                 self.phone_categories_map,
                 *value_tuple,
                 False,
             )
 
-        elif re.compile("interfaces\[(\d+)\]\.interfaceCredential.interfaceId").fullmatch(
+        elif re.compile(r"interfaces\[(\d+)\]\.interfaceCredential.interfaceId").fullmatch(
             folio_prop_name
         ):
             return "replace_with_interface_id"
