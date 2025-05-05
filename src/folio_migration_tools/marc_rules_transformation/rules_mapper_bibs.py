@@ -143,7 +143,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.report_folio_mapping(clean_folio_instance, self.schema)
         return [clean_folio_instance]
 
-    def simple_bib_map(self, folio_instnace: dict, marc_record: Record, ignored_subsequent_fields: set, legacy_ids: List[str]):
+    def simple_bib_map(self, folio_instance: dict, marc_record: Record, ignored_subsequent_fields: set, legacy_ids: List[str]):
         """
         This method applies a much simplified MARC-to-instance
         mapping to create a minimal FOLIO Instance record to be
@@ -151,7 +151,7 @@ class BibsRulesMapper(RulesMapperBase):
         than creating SRS records during transformation.
 
         Args:
-            folio_instnace (dict): _description_
+            folio_instance (dict): _description_
             marc_record (Record): _description_
             legacy_ids (List[str]): _description_
             file_def (FileDefinition): _description_
@@ -169,9 +169,9 @@ class BibsRulesMapper(RulesMapperBase):
             main_entry_fields += marc_record.get_fields("700", "710", "711", "730")
             main_entry_fields.sort(key=lambda x: int(x.tag))
         if main_entry_fields:
-            self.process_marc_field(folio_instnace, main_entry_fields[0], ignored_subsequent_fields, legacy_ids)
+            self.process_marc_field(folio_instance, main_entry_fields[0], ignored_subsequent_fields, legacy_ids)
         try:
-            self.process_marc_field(folio_instnace, marc_record['245'], ignored_subsequent_fields, legacy_ids)
+            self.process_marc_field(folio_instance, marc_record['245'], ignored_subsequent_fields, legacy_ids)
         except KeyError:
             raise TransformationRecordFailedError(
                 legacy_ids,
