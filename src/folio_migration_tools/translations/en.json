@@ -3,7 +3,7 @@
   "%{action} error. http status: %{status}": "%{action} error. http status: %{status}",
   "%{action} error: %{message}": "%{action} error: %{message}",
   "%{fields_criteria} empty or not set": "%{fields_criteria} empty or not set",
-  "%{field} a,x and z are all empty": "%{field} a,x and z are all empty",
+  "%{field} a, x and z are missing or empty": "%{field} a, x and z are missing or empty",
   "%{field} subfields a, x, and z missing from field": "%{field} subfields a, x, and z missing from field",
   "%{fro} mapped from %{record}": "%{fro} mapped from %{record}",
   "%{props} were concatenated": "%{props} were concatenated",
@@ -441,5 +441,6 @@
   "legacy id from %{fro}": "legacy id from %{fro}",
   "naturalId mapped from %{fro}": "naturalId mapped from %{fro}",
   "no matching identifier_types in %{names}": "no matching identifier_types in %{names}",
-  "subfield present in %{linked_value_tag} but not in %{pattern_field}": "subfield present in %{linked_value_tag} but not in %{pattern_field}"
+  "subfield present in %{linked_value_tag} but not in %{pattern_field}": "subfield present in %{linked_value_tag} but not in %{pattern_field}",
+  "Provided boundwith relationship file not found": "Provided boundwith relationship file not found"
 }

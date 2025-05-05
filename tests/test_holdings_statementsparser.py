@@ -510,3 +510,24 @@ def test_get_month():
     assert r == "Jan."
     r = HoldingsStatementsParser.get_month("05")
     assert r == "May"
+
+
+def test_get_textual_statements():
+    path = "./tests/test_data/default/mfhd_with_dupe_866s.mrc"
+    with open(path, "rb") as openfile:
+        reader = pymarc.MARCReader(openfile, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        record = next(reader)
+        return_dict = {
+            "statements": [],
+            "migration_report": [],
+        }
+        HoldingsStatementsParser.get_textual_statements(
+            record,
+            "866",
+            return_dict,
+            "1"
+        )
+        statements = set(['1943:Sept. 30,', '1943:Oct. 31.', '1943:Nov. 30.', '1943:Dec. 31,', '1944:Feb. 29,', '1944:Mar.,', '1944:Apr. 30,', '1944:May 31,', '1944:Sept. 30,', '1944:Oct.-1944:Dec. 31,', '1945:Jan.-1945:May,', '1945:Sept.-1946:May,', '1946:Apr. 30,', '1946:May 31,', '1946:Sept.,', '1946:Oct.-1946:Dec.,', '1947:Jan. 31-1947:May 31,', '1947:Sept. 30-1947:Oct. 31,', '1947:Dec.', 'COPY 2:', '1944:Mar. 31,', '1944:Oct. 31-1944:Nov. 30,', '1945:Jan. 31,', '1945:Feb. 28,', '1945:Mar. 31-1945:May 31,', '1945:Sept. 30-1945:Dec. 31,', '1946:Jan.-1946:Apr,', '1946:Oct.-1946:Dec.,', '1947:Feb. 28,', '1947:Apr. 30-1947:May 31,', '1947:Oct. 31,', '1947:Dec.', 'COPY 3:', '1945:Jan. 31,', '1945:Mar. 31,', '1945:Apr. 30-1945:May 31,', '1946:Oct.', '1947:May 31,', '1947:Oct. 31.', '1947:Dec. 31.'])
+        assert statements == set([x["statement"] for x in return_dict["statements"]])

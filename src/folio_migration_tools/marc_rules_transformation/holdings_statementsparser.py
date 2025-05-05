@@ -165,23 +165,16 @@ class HoldingsStatementsParser:
             TransformationFieldMappingError: _description_
         """
         for f in marc_record.get_fields(field_textual):
-            codes = [sf.code for sf in f.subfields]
-            if "a" not in codes and "z" not in codes and "x" not in codes:
-                raise TransformationFieldMappingError(
-                    legacy_ids,
-                    i18n.t(
-                        "%{field} subfields a, x, and z missing from field", field=field_textual
-                    ),
-                    f,
-                )
-            if not (
-                len(f.get_subfields("a")) == 0
-                or len(f.get_subfields("z")) == 0
-                or len(f.get_subfields("x")) == 0
+            if all(
+                [
+                    len("".join(f.get_subfields("a")).strip()) == 0,
+                    len("".join(f.get_subfields("z")).strip()) == 0,
+                    len("".join(f.get_subfields("x")).strip()) == 0,
+                ]
             ):
                 raise TransformationFieldMappingError(
                     legacy_ids,
-                    i18n.t("%{field} a,x and z are all empty", field=field_textual),
+                    i18n.t("%{field} a, x and z are missing or empty", field=field_textual),
                     f,
                 )
             return_dict["statements"].append(
