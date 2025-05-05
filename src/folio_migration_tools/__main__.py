@@ -157,7 +157,6 @@ def main():
             print("Task failure. Halting.")
             sys.exit(1)
         logging.info("Work done. Shutting down")
-        sys.exit(0)
     except json.decoder.JSONDecodeError as json_error:
         logging.critical(json_error)
         print(json_error.doc)
@@ -198,7 +197,7 @@ def main():
         logging.exception("Unhandled exception")
         print(f"\n{ee}")
         sys.exit(ee.__class__.__name__)
-
+    sys.exit(0)
 
 def inheritors(base_class):
     subclasses = set()
