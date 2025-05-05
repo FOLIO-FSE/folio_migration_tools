@@ -442,5 +442,6 @@
   "naturalId mapped from %{fro}": "naturalId mapped from %{fro}",
   "no matching identifier_types in %{names}": "no matching identifier_types in %{names}",
   "subfield present in %{linked_value_tag} but not in %{pattern_field}": "subfield present in %{linked_value_tag} but not in %{pattern_field}",
-  "Provided boundwith relationship file not found": "Provided boundwith relationship file not found"
+  "Provided boundwith relationship file not found": "Provided boundwith relationship file not found",
+  "Due date is before out date, or date information is missing from both": "Due date is before out date, or date information is missing from both"
 }
