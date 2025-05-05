@@ -39,7 +39,7 @@ class RulesMapperHoldings(RulesMapperBase):
         task_configuration,
         library_configuration: LibraryConfiguration,
         parent_id_map: dict,
-        boundwith_relationship_map,
+        boundwith_relationship_map_rows: List[Dict],
     ):
         self.task_configuration = task_configuration
         self.conditions = Conditions(
@@ -58,8 +58,8 @@ class RulesMapperHoldings(RulesMapperBase):
             self.conditions,
             parent_id_map,
         )
-        self.boundwith_relationship_map = self.setup_boundwith_relationship_map(
-            boundwith_relationship_map
+        self.boundwith_relationship_map: Dict = self.setup_boundwith_relationship_map(
+            boundwith_relationship_map_rows
         )
         self.location_map = self.validate_location_map(
             location_map,
