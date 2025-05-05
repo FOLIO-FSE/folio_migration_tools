@@ -402,20 +402,20 @@ class RulesMapperHoldings(RulesMapperBase):
             marc_record (Record): PyMARC record
             folio_holding (Dict): FOLIO holdings record
         """
-        holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
-            self.folio.holding_note_types, "holding_note_types", self.task_configuration.mfhd_mrk_note_type
-        )
-        try:
-            holdings_note_type_id = holdings_note_type_tuple[0]
-        except Exception as ee:
-            logging.error(ee)
-            raise TransformationRecordFailedError(
-                legacy_ids,
-                f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrk_note_type}\t'
-                f"Note type not found in FOLIO.",
-                self.task_configuration.mfhd_mrk_note_type,
-            ) from ee
         if self.task_configuration.include_mfhd_mrk_as_note:
+            holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
+                self.folio.holding_note_types, "holding_note_types", self.task_configuration.mfhd_mrk_note_type
+            )
+            try:
+                holdings_note_type_id = holdings_note_type_tuple[0]
+            except Exception as ee:
+                logging.error(ee)
+                raise TransformationRecordFailedError(
+                    legacy_ids,
+                    f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrk_note_type}\t'
+                    f"Note type not found in FOLIO.",
+                    self.task_configuration.mfhd_mrk_note_type,
+                ) from ee
             folio_holding["notes"] = folio_holding.get("notes", []) + [
                 {
                     "note": str(marc_record),
@@ -433,20 +433,20 @@ class RulesMapperHoldings(RulesMapperBase):
             marc_record (Record): PyMARC record
             folio_holding (Dict): FOLIO holdings record
         """
-        holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
-            self.folio.holding_note_types, "holding_note_types", self.task_configuration.mfhd_mrc_note_type
-        )
-        try:
-            holdings_note_type_id = holdings_note_type_tuple[0]
-        except Exception as ee:
-            logging.error(ee)
-            raise TransformationRecordFailedError(
-                legacy_ids,
-                f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrc_note_type}\t'
-                f"Note type not found in FOLIO.",
-                self.task_configuration.mfhd_mrc_note_type,
-            ) from ee
         if self.task_configuration.include_mfhd_mrc_as_note:
+            holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
+                self.folio.holding_note_types, "holding_note_types", self.task_configuration.mfhd_mrc_note_type
+            )
+            try:
+                holdings_note_type_id = holdings_note_type_tuple[0]
+            except Exception as ee:
+                logging.error(ee)
+                raise TransformationRecordFailedError(
+                    legacy_ids,
+                    f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrc_note_type}\t'
+                    f"Note type not found in FOLIO.",
+                    self.task_configuration.mfhd_mrc_note_type,
+                ) from ee
             folio_holding["notes"] = folio_holding.get("notes", []) + [
                 {
                     "note": marc_record.as_marc().decode("utf-8"),
