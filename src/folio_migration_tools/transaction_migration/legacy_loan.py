@@ -1,5 +1,6 @@
 import json
 import logging
+import i18n
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -123,7 +124,7 @@ class LegacyLoan(object):
             if self.out_date.hour == 0:
                 self.out_date = self.out_date.replace(hour=0, minute=1)
         if self.due_date <= self.out_date:
-            raise TransformationProcessError(self.row, "Due date is before out date, or date information is missing from both", json.dumps(self.legacy_loan_dict, indent=2))
+            raise TransformationProcessError(self.row, i18n.t("Due date is before out date, or date information is missing from both"), json.dumps(self.legacy_loan_dict, indent=2))
 
     def to_dict(self):
         return {
