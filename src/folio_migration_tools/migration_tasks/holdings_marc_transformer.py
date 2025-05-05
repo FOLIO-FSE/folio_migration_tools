@@ -244,17 +244,24 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         # Load Boundwith relationship map
         self.boundwith_relationship_map = []
         if self.task_config.boundwith_relationship_file_path:
-            with open(
-                self.folder_structure.legacy_records_folder
-                / self.task_config.boundwith_relationship_file_path
-            ) as boundwith_relationship_file:
-                self.boundwith_relationship_map = list(
-                    csv.DictReader(boundwith_relationship_file, dialect="tsv")
+            try:
+                with open(
+                    self.folder_structure.legacy_records_folder
+                    / self.task_config.boundwith_relationship_file_path
+                ) as boundwith_relationship_file:
+                    self.boundwith_relationship_map = list(
+                        csv.DictReader(boundwith_relationship_file, dialect="tsv")
+                    )
+                logging.info(
+                    "Rows in Bound with relationship map: %s",
+                    len(self.boundwith_relationship_map),
                 )
-            logging.info(
-                "Rows in Bound with relationship map: %s",
-                len(self.boundwith_relationship_map),
-            )
+            except FileNotFoundError:
+                raise TransformationProcessError(
+                    "",
+                    i18n.t("Provided boundwith relationship file not found"),
+                    self.task_config.boundwith_relationship_file_path,
+                )
 
         location_map_path = (
             self.folder_structure.mapping_files_folder
