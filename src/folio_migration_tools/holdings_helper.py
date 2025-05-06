@@ -40,7 +40,7 @@ class HoldingsHelper:
         try:
             values = []
             for fields_criteria in fields_criterias:
-                v = holdings_record.get(fields_criteria, "")
+                v = str(holdings_record.get(fields_criteria, ""))
                 if not v:
                     migration_report.add(
                         "HoldingsMerging",
