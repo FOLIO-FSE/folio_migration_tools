@@ -45,7 +45,6 @@ Want to contribute? Read the [CONTRIBUTING.MD](https://github.com/FOLIO-FSE/foli
 
 # Found an issue?
 If you have come across an issue, reach out on our #fse_folio_migration_tools on the [FOLIO Slack](https://folio-project.slack.com), or create an issue in the [GitHub Issue tracker](https://github.com/FOLIO-FSE/folio_migration_tools/issues)
-```
 
 
 # Tests
