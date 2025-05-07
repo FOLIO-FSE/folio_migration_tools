@@ -47,7 +47,6 @@ class RulesMapperBase(MapperBase):
         self.last_batch_time = time.time()
         self.folio_client: FolioClient = folio_client
         self.schema: dict = schema
-        # self.task_configuration = task_configuration
         self.conditions = conditions
         self.item_json_schema = ""
         self.mappings: dict = {}

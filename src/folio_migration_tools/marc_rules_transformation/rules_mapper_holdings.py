@@ -43,7 +43,6 @@ class RulesMapperHoldings(RulesMapperBase):
         boundwith_relationship_map_rows: List[Dict],
         statistical_codes_map: Optional[Dict] = None,
     ):
-        self.task_configuration = task_configuration
         self.conditions = Conditions(
             folio_client,
             self,
