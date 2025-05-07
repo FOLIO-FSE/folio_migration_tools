@@ -511,14 +511,6 @@ class MapperBase:
                     )
 
     @property
-    def is_inventory_type(self):
-        return self.get_object_type() in [
-            FOLIONamespaces.instances,
-            FOLIONamespaces.holdings,
-            FOLIONamespaces.items,
-        ]
-
-    @property
     def base_string_for_folio_uuid(self):
         if self.library_configuration.use_gateway_url_for_uuids and not self.library_configuration.is_ecs:
             return str(self.folio_client.gateway_url)
