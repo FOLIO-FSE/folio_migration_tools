@@ -14,6 +14,7 @@ class NotesMapper(MappingFileMapperBase):
     def __init__(
         self,
         library_configuration: LibraryConfiguration,
+        task_configuration,
         folio_client: FolioClient,
         record_map: dict,
         object_type: FOLIONamespaces,
@@ -28,6 +29,7 @@ class NotesMapper(MappingFileMapperBase):
             None,
             object_type,
             library_configuration,
+            task_configuration,
             ignore_legacy_identifier,
         )
 

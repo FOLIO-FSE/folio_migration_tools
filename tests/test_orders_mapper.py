@@ -5,6 +5,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import (
+    FileDefinition,
     FolioRelease,
     LibraryConfiguration,
 )
@@ -14,6 +15,7 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.order_mapper import (
     CompositeOrderMapper,
 )
+from folio_migration_tools.migration_tasks.orders_transformer import OrdersTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
@@ -43,6 +45,18 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         iteration_identifier="Test!",
         base_folder="/",
         multi_field_delimiter="^-^",
+    )
+    task_config = OrdersTransformer.TaskConfiguration(
+        name="Test",
+        migration_task_type="OrdersTransformer",
+        files=[
+            FileDefinition(
+                file_name="orders.csv",
+            )
+        ],
+        orders_mapping_file_name="orders_mapping_file.json",
+        organizations_code_map_file_name="organizations_code_map.json",
+        acquisition_method_map_file_name="acquisition_method_map.json",
     )
     instance_id_map = {"1": ["1", "ae1daef2-ddea-4d87-a434-3aa98ed3e687", "1"]}
     organizations_id_map = {"BAE": ["BAE", "bbf61aa3-05ea-5d15-99c8-e3e547001543", "1"]}
@@ -202,6 +216,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
     return CompositeOrderMapper(
         mock_folio_client,
         lib_config,
+        task_config,
         composite_order_map,
         organizations_id_map,
         instance_id_map,

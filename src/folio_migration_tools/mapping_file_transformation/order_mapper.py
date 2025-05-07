@@ -30,6 +30,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         self,
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
+        task_configuration,
         composite_order_map: dict,
         organizations_id_map: dict,
         instance_id_map: dict,
@@ -53,6 +54,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             None,
             FOLIONamespaces.orders,
             library_configuration,
+            task_configuration,
         )
         logging.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
@@ -80,6 +82,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         self.folio_client: FolioClient = folio_client
         self.notes_mapper: NotesMapper = NotesMapper(
             library_configuration,
+            None,
             self.folio_client,
             composite_order_map,
             FOLIONamespaces.note,
@@ -366,7 +369,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     def perform_additional_mapping(self, index_or_id, composite_order):
         self.validate_po_number(index_or_id, composite_order.get("poNumber"))
-        
+
         # Get organization UUID from FOLIO
         composite_order["vendor"] = self.get_folio_organization_uuid(
             index_or_id, composite_order.get("vendor")

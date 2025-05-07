@@ -67,7 +67,7 @@ def mapper_base(folio_client):
             # "ils_flavour": "field001"
         }
     )
-    mapper = RulesMapperBase(folio_client, mapper_library_configuration, mapper_task_configuration, {})
+    mapper = RulesMapperBase(folio_client, mapper_library_configuration, mapper_task_configuration, [], {})
     mapper.conditions = Conditions(folio_client, mapper, "any", FolioRelease.ramsons, "Library of Congress classification")
     return mapper
 

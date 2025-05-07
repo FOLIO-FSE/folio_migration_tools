@@ -124,10 +124,10 @@ class ItemsTransformer(MigrationTaskBase):
         statistical_codes_map_file_name: Annotated[
             Optional[str],
             Field(
-                title="Statistical codes map file name",
+                title="Statistical code map file name",
                 description=(
-                    "File name for statistical codes map. "
-                    "Empty string by default."
+                    "Path to the file containing the mapping of statistical codes. "
+                    "The file should be in TSV format with legacy_stat_code and folio_code columns."
                 ),
             ),
         ] = ""
@@ -205,6 +205,7 @@ class ItemsTransformer(MigrationTaskBase):
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
+        self.task_configuration = self.task_config
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_config.files
         )

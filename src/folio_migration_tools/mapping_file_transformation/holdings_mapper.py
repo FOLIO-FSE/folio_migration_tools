@@ -15,7 +15,7 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class HoldingsMapper(MappingFileMapperBase):
     def __init__(
@@ -26,6 +26,7 @@ class HoldingsMapper(MappingFileMapperBase):
         call_number_type_map,
         instance_id_map,
         library_configuration: LibraryConfiguration,
+        task_config: AbstractTaskConfiguration,
         statistical_codes_map=None,
     ):
         holdings_schema = folio_client.get_holdings_schema()
@@ -37,6 +38,7 @@ class HoldingsMapper(MappingFileMapperBase):
             statistical_codes_map,
             FOLIONamespaces.holdings,
             library_configuration,
+            task_config
         )
         self.holdings_map = holdings_map
 
@@ -58,8 +60,10 @@ class HoldingsMapper(MappingFileMapperBase):
                 "CallNumberTypeMapping",
             )
 
-    def perform_additional_mappings(self, folio_rec, file_def):
+    def perform_additional_mappings(self, legacy_ids, folio_rec, file_def):
         self.handle_suppression(folio_rec, file_def)
+        self.map_statistical_codes(folio_rec, file_def)
+        self.map_statistical_code_ids(legacy_ids, folio_rec)
 
     def handle_suppression(self, folio_record, file_def: FileDefinition):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
@@ -73,8 +77,8 @@ class HoldingsMapper(MappingFileMapperBase):
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
-        elif folio_prop_name.startswith("statisticalCodeIds"):
-            return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
+        # elif folio_prop_name.startswith("statisticalCodeIds"):
+        #     return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
 
         mapped_value = super().get_prop(
             legacy_item, folio_prop_name, index_or_id, schema_default_value

@@ -62,6 +62,7 @@ class AuthorityMapper(RulesMapperBase):
             folio_client,
             library_configuration,
             task_configuration,
+            None,
             self.get_authority_json_schema(folio_client, library_configuration),
             Conditions(folio_client, self, "auth", library_configuration.folio_release),
         )

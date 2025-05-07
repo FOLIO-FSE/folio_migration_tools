@@ -157,6 +157,7 @@ class OrdersTransformer(MigrationTaskBase):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.object_type_name = self.get_object_type().name
         self.task_config = task_config
+        self.task_configuration = self.task_config
         self.files = self.list_source_files()
         self.total_records = 0
         self.current_folio_record: dict = {}
@@ -175,6 +176,7 @@ class OrdersTransformer(MigrationTaskBase):
         self.mapper = CompositeOrderMapper(
             self.folio_client,
             self.library_configuration,
+            self.task_configuration,
             self.orders_map,
             self.load_id_map(self.folder_structure.organizations_id_map_path, True),
             self.load_instance_id_map(True),
