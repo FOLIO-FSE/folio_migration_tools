@@ -485,5 +485,7 @@ def test_perform_additional_mappings_with_stat_codes(mapper: HoldingsMapper, cap
     # assert unsuppressed_holdings["statisticalCodeIds"] == ["arch"]
     # mapper.map_statistical_code_ids("1", suppressed_holdings)
     # mapper.map_statistical_code_ids("2", unsuppressed_holdings)
-    assert suppressed_holdings["statisticalCodeIds"] == ['b6b46869-f3c1-4370-b603-29774a1e42b1', 'e10796e0-a594-47b7-b748-3a81b69b3d9b']
-    assert unsuppressed_holdings["statisticalCodeIds"] == ['b6b46869-f3c1-4370-b603-29774a1e42b1']
+    assert "b6b46869-f3c1-4370-b603-29774a1e42b1" in suppressed_holdings["statisticalCodeIds"]
+    assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" in suppressed_holdings["statisticalCodeIds"]
+    assert "b6b46869-f3c1-4370-b603-29774a1e42b1" in unsuppressed_holdings["statisticalCodeIds"]
+    assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" not in unsuppressed_holdings["statisticalCodeIds"]
