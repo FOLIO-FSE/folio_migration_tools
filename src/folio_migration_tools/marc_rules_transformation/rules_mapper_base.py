@@ -6,14 +6,14 @@ import urllib.parse
 import uuid
 from abc import abstractmethod
 from textwrap import wrap
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import i18n
 import pymarc
 from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from pymarc import Field, Record, Subfield
+from pymarc import Field, Optional, Record, Subfield
 
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
@@ -35,18 +35,19 @@ class RulesMapperBase(MapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         task_configuration,
+        statistical_codes_map: Optional[Dict],
         schema: dict,
         conditions=None,
         parent_id_map: dict[str, tuple] = None,
     ):
-        super().__init__(library_configuration, folio_client, parent_id_map)
+        super().__init__(library_configuration, task_configuration, folio_client, parent_id_map)
         self.parsed_records = 0
         self.id_map: dict[str, tuple] = {}
         self.start = time.time()
         self.last_batch_time = time.time()
         self.folio_client: FolioClient = folio_client
         self.schema: dict = schema
-        self.task_configuration = task_configuration
+        # self.task_configuration = task_configuration
         self.conditions = conditions
         self.item_json_schema = ""
         self.mappings: dict = {}
@@ -61,6 +62,8 @@ class RulesMapperBase(MapperBase):
                 self.migration_report,
                 self.task_configuration.deactivate035_from001,
             )
+
+        self.setup_statistical_codes_map(statistical_codes_map)
         logging.info("Current user id is %s", self.folio_client.current_user)
 
     def print_progress(self):
@@ -812,6 +815,83 @@ class RulesMapperBase(MapperBase):
                 "Something is wrong with the marc record's leader: %s, %s", marc_record.leader, ee
             )
         data_import_marc_file.write(marc_record.as_marc())
+
+
+    def map_statistical_codes(
+        self,
+        folio_record: dict,
+        file_def: FileDefinition,
+        marc_record: Record,
+    ):
+        """Map statistical codes to FOLIO instance
+
+        This method first calls the base class method to map statistical codes
+        from the file_def. Then, it checks to see if there are any MARC field
+        mappings defined in the task configuration. If so, it creates a list
+        of lists where the first element is the MARC field tag, and the remaining
+        elements are the subfields to be used for mapping. It then iterates
+        through the MARC fields, retrieves the values based on the subfields.
+        Finally, it adds the mapped codes to the folio_record's statisticalCodeIds.
+
+        Args:
+            legacy_ids (List[str]): The legacy IDs of the folio record
+            folio_record (dict): The Dictionary representation of the FOLIO record
+            marc_record (Record): The pymarc Record object
+            file_def (FileDefinition): The file definition object from which marc_record was read
+        """
+        super().map_statistical_codes(folio_record, file_def)
+        if self.task_configuration.statistical_code_mapping_fields:
+            stat_code_marc_fields = []
+            for mapping in self.task_configuration.statistical_code_mapping_fields:
+                stat_code_marc_fields.append(mapping.split("$"))
+            for field_map in stat_code_marc_fields:
+                mapped_codes = self.map_stat_codes_from_marc_field(field_map, marc_record, self.library_configuration.multi_field_delimiter)
+                folio_record['statisticalCodeIds'] = folio_record.get("statisticalCodeIds", []) + mapped_codes
+
+    @staticmethod
+    def map_stat_codes_from_marc_field(field_map: List[str], marc_record: Record, multi_field_delimiter: str="<delimiter>") -> str:
+        """Map statistical codes from MARC field to FOLIO instance.
+
+        This function extracts statistical codes from a MARC field based on the provided field map.
+        It supports multiple subfields and uses a delimiter to handle concatenated values.
+
+        Args:
+            field_map (List[str]): A list where the first element is the MARC field tag, and the remaining elements are subfields to extract values from.
+            marc_record (Record): The MARC record to process.
+            multi_field_delimiter (str): A delimiter used to concatenate multiple subfield values that should be individual mapped values.
+
+        Returns:
+            str: A string of statistical codes extracted from the MARC field, formatted as "<field>_<subfield>:<value>".
+        """
+        field_values = []
+        if len(field_map) == 2:
+            subfields = []
+            for mf in marc_record.get_fields(field_map[0]):
+                subfields.extend(
+                    multi_field_delimiter.join(
+                        mf.get_subfields(field_map[1])
+                    ).split(multi_field_delimiter)
+                )
+            field_values.extend(
+                [
+                    f"{field_map[0]}_{field_map[1]}:{x}" for
+                    x in subfields
+                ]
+            )
+        elif len(field_map) > 2:
+            for mf in marc_record.get_fields(field_map[0]):
+                for sf in field_map[1:]:
+                    field_values.extend(
+                        [
+                            f"{field_map[0]}_{sf}:{x}" for x in multi_field_delimiter.join(
+                                mf.get_subfields(sf)
+                            ).split(multi_field_delimiter)
+                        ]
+                    )
+        elif field_map:
+            for mf in marc_record.get_fields(field_map[0]):
+                field_values.append(f"{field_map[0]}:{mf.value()}")
+        return field_values
 
     def save_source_record(
         self,

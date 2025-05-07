@@ -52,6 +52,7 @@ class ItemMapper(MappingFileMapperBase):
             statistical_codes_map,
             FOLIONamespaces.items,
             library_configuration,
+            task_configuration,
         )
         self.task_configuration = task_configuration
         self.item_schema = self.folio_client.get_item_schema()
@@ -117,8 +118,10 @@ class ItemMapper(MappingFileMapperBase):
             "LocationMapping",
         )
 
-    def perform_additional_mappings(self, folio_rec, file_def):
+    def perform_additional_mappings(self, legacy_ids, folio_rec, file_def):
         self.handle_suppression(folio_rec, file_def)
+        self.map_statistical_codes(folio_rec, file_def)
+        self.map_statistical_code_ids(legacy_ids, folio_rec)
 
     def handle_suppression(self, folio_record, file_def: FileDefinition):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
@@ -219,15 +222,15 @@ class ItemMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 self.loan_type_mapping, legacy_item, folio_prop_name, index_or_id
             )
-        elif folio_prop_name.startswith("statisticalCodeIds"):
-            statistical_code_id = self.get_statistical_code(
-                legacy_item, folio_prop_name, index_or_id
-            )
-            self.migration_report.add(
-                "StatisticalCodeMapping",
-                f"{folio_prop_name} -> {statistical_code_id}",
-            )
-            return statistical_code_id
+        # elif folio_prop_name.startswith("statisticalCodeIds"):
+        #     statistical_code_id = self.get_statistical_code(
+        #         legacy_item, folio_prop_name, index_or_id
+        #     )
+        #     self.migration_report.add(
+        #         "StatisticalCodeMapping",
+        #         f"{folio_prop_name} -> {statistical_code_id}",
+        #     )
+        #     return statistical_code_id
 
         mapped_value = super().get_prop(
             legacy_item, folio_prop_name, index_or_id, schema_default_value

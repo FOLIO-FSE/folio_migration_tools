@@ -217,6 +217,17 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
+        self.task_configuration = self.task_config
+        if self.task_config.statistical_codes_map_file_name:
+            statcode_mapping = self.load_ref_data_mapping_file(
+                "statisticalCodeIds",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.statistical_codes_map_file_name,
+                [],
+                False,
+            )
+        else:
+            statcode_mapping = None
         self.holdings_types = list(
             self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
         )
@@ -282,6 +293,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.library_configuration,
             self.instance_id_map,
             self.boundwith_relationship_map_rows,
+            statcode_mapping
         )
         self.add_supplemental_mfhd_mappings()
         if (

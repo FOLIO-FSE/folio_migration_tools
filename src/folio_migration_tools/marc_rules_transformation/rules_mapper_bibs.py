@@ -44,11 +44,13 @@ class BibsRulesMapper(RulesMapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         task_configuration: MarcTaskConfigurationBase,
+        statistical_codes_map: Dict[str, str] = None,
     ):
         super().__init__(
             folio_client,
             library_configuration,
             task_configuration,
+            statistical_codes_map,
             self.get_instance_schema(folio_client),
             Conditions(folio_client, self, "bibs", library_configuration.folio_release),
         )
@@ -205,6 +207,8 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record, legacy_ids)
         self.handle_languages(folio_instance, marc_record, legacy_ids)
         self.handle_suppression(folio_instance, file_def)
+        self.map_statistical_codes(folio_instance, file_def, marc_record)
+        self.map_statistical_code_ids(legacy_ids, folio_instance)
         self.handle_holdings(marc_record)
         if prec_titles := folio_instance.get("precedingTitles", []):
             self.migration_report.add("PrecedingSuccedingTitles", f"{len(prec_titles)}")

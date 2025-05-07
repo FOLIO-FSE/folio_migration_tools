@@ -1,4 +1,5 @@
 import logging
+from unittest.mock import Mock
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -14,6 +15,7 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.organization_mapper import (
     OrganizationMapper,
 )
+from folio_migration_tools.migration_tasks.organization_transformer import OrganizationTransformer
 from folio_migration_tools.test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
@@ -65,7 +67,8 @@ def mapper(pytestconfig) -> OrganizationMapper:
         multi_field_delimiter="^-^",
         use_gateway_url_for_uuids=True #TODO: Update the tests to use tenant_id instead and then remove this
     )
-
+    task_config = Mock(spec=OrganizationTransformer.TaskConfiguration)
+    task_config.name = "Organization transformer"
     address_categories_map = [
         {"address_categories": "rt", "folio_value": "Returns"},
         {"address_categories": "*", "folio_value": "General"},
@@ -100,6 +103,7 @@ def mapper(pytestconfig) -> OrganizationMapper:
     return OrganizationMapper(
         mock_folio_client,
         lib_config,
+        task_config,
         organization_map,
         organization_types_map,
         address_categories_map,

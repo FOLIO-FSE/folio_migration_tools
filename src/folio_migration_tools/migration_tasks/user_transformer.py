@@ -119,6 +119,7 @@ class UserTransformer(MigrationTaskBase):
     ):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
+        self.task_configuration = self.task_config
         self.total_records = 0
 
         self.user_map = self.setup_records_map(

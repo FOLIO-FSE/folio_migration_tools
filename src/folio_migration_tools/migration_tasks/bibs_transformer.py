@@ -7,8 +7,6 @@ from pydantic import Field
 
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import (
-    FileDefinition,
-    HridHandling,
     IlsFlavour,
     LibraryConfiguration,
 )
@@ -116,11 +114,23 @@ class BibsTransformer(MigrationTaskBase):
         use_logging: bool = True,
     ):
         super().__init__(library_config, task_config, folio_client, use_logging)
+        self.task_config = task_config
+        self.task_configuration = self.task_config
+        if self.task_config.statistical_codes_map_file_name:
+            statcode_mapping = self.load_ref_data_mapping_file(
+                "statisticalCodeIds",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.statistical_codes_map_file_name,
+                [],
+                False,
+            )
+        else:
+            statcode_mapping = None
         self.processor: MarcFileProcessor
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_configuration.files
         )
-        self.mapper = BibsRulesMapper(self.folio_client, library_config, self.task_configuration)
+        self.mapper = BibsRulesMapper(self.folio_client, library_config, self.task_configuration, statcode_mapping)
         self.bib_ids: set = set()
         if (
             self.task_configuration.reset_hrid_settings

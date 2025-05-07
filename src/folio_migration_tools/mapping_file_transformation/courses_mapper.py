@@ -31,6 +31,7 @@ class CoursesMapper(MappingFileMapperBase):
         self.user_cache: dict = {}
         self.notes_mapper: NotesMapper = NotesMapper(
             library_configuration,
+            None,
             self.folio_client,
             course_map,
             FOLIONamespaces.note,
@@ -45,6 +46,7 @@ class CoursesMapper(MappingFileMapperBase):
             None,
             FOLIONamespaces.course,
             library_configuration,
+            task_configuration
         )
         self.course_map = course_map
         if terms_map:

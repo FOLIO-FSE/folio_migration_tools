@@ -1,4 +1,5 @@
 import json
+import logging
 from unittest.mock import Mock
 
 import pymarc
@@ -40,6 +41,7 @@ def mapper(pytestconfig) -> RulesMapperHoldings:
         log_level_debug=False,
         iteration_identifier="I have no clue",
         base_folder="/",
+        multi_field_delimiter="^-^",
     )
     conf = HoldingsMarcTransformer.TaskConfiguration(
         name="test",
@@ -58,7 +60,17 @@ def mapper(pytestconfig) -> RulesMapperHoldings:
         {"legacy_code": "jnlDesk", "folio_code": "KU/CC/DI/2"},
         {"legacy_code": "*", "folio_code": "KU/CC/DI/2"},
     ]
-    mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map, [])
+    statistical_codes_map = [
+        {"folio_code": "compfiles", "legacy_stat_code": "998_c:compfiles"},
+        {"folio_code": "ebooks", "legacy_stat_code": "998_b:ebooks"},
+        {"folio_code": "vidstream", "legacy_stat_code": "003:FoD"},
+        {"folio_code": "arch", "legacy_stat_code": "998_a:arch"},
+        {"folio_code": "audstream", "legacy_stat_code": "998_a:audstream"},
+        {"folio_code": "XOCLC", "legacy_stat_code": "990:xoclc"},
+        {"folio_code": "audstream", "legacy_stat_code": "*"},
+    ]
+
+    mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map, [], statistical_codes_map)
     mapper.folio_client = folio
     mapper.migration_report = MigrationReport()
     return mapper
@@ -163,10 +175,10 @@ def test_setup_boundwith_relationship_map_with_entries():
         "B4": ("B4", "9f6d7e45-9489-5b56-ab8e-5e22ba523856", "in00000000004"),
     }
 
-    mocked_mapper = RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), parent_id_map, file_mock)
+    mapper = RulesMapperHoldings(mocked_classes.mocked_folio_client(), [], mock_task_configuration, mocked_classes.get_mocked_library_config(), parent_id_map, file_mock, {})
 
-    assert len(mocked_mapper.boundwith_relationship_map) == 2
-    assert mocked_mapper.boundwith_relationship_map["bcddbd83-a6aa-5904-888b-13b46f0b1fcb"] == [
+    assert len(mapper.boundwith_relationship_map) == 2
+    assert mapper.boundwith_relationship_map["bcddbd83-a6aa-5904-888b-13b46f0b1fcb"] == [
         "ae0c833c-e76f-53aa-975a-7ac4c2be7972",
         "fae73ef8-b546-5310-b4ee-c2d68fed48c5",
     ]
@@ -554,7 +566,6 @@ def test_add_mfhd_as_mrk_note_false(mapper):
         record = next(reader)
     folio_holdings = {}
     mapper.add_mfhd_as_mrk_note(record, folio_holdings, "1")
-    mfhd_str = """=LDR  00183nx  a22000854n 4500\n=001  000000167\n=004  7611780\\\\\\\\\n=005  20190827122500.0\n=008  1601264|00008|||1001|||||0901128\n=852  0\\$bjnlDesk$hQB611$i.C44\n"""
     assert "notes" not in folio_holdings
 
 
@@ -565,5 +576,147 @@ def test_add_mfhd_as_mrc_note_false(mapper):
         record = next(reader)
     folio_holdings = {}
     mapper.add_mfhd_as_mrc_note(record, folio_holdings, "1")
-    mfhd_str = '00183nx  a22000854n 4500001001000000004001200010005001700022008003300039852002500072\x1e000000167\x1e7611780    \x1e20190827122500.0\x1e1601264|00008|||1001|||||0901128\x1e0 \x1fbjnlDesk\x1fhQB611\x1fi.C44\x1e\x1d'
     assert "notes" not in folio_holdings
+
+
+def test_statistical_code_map_from_single_marc_field_single_subfield(mapper):
+    mapper.task_configuration.statistical_code_mapping_fields = ["998$a"]
+    file_def = Mock(spec=FileDefinition)
+    file_def.statistical_code = ""
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="998",
+            subfields=[
+                pymarc.Subfield(code="a", value="arch^-^audstream"),
+            ],
+        )
+    )
+    folio_holdings = {}
+    mapper.map_statistical_codes(folio_holdings, file_def, record)
+    assert len(folio_holdings["statisticalCodeIds"]) == 2
+    assert "998_a:arch" in folio_holdings["statisticalCodeIds"]
+    assert "998_a:audstream" in folio_holdings["statisticalCodeIds"]
+
+
+def test_statistical_code_map_from_single_marc_field_single_subfield_repeated_single_code(mapper):
+    mapper.task_configuration.statistical_code_mapping_fields = ["998$a"]
+    file_def = Mock(spec=FileDefinition)
+    file_def.statistical_code = ""
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="998",
+            subfields=[
+                pymarc.Subfield(code="a", value="arch"),
+                pymarc.Subfield(code="a", value="audstream"),
+            ],
+        )
+    )
+    folio_holdings = {}
+    mapper.map_statistical_codes(folio_holdings, file_def, record)
+    assert len(folio_holdings["statisticalCodeIds"]) == 2
+    assert "998_a:arch" in folio_holdings["statisticalCodeIds"]
+    assert "998_a:audstream" in folio_holdings["statisticalCodeIds"]
+
+
+def test_statistical_code_map_from_one_field_no_subfields_non_control_to_id(mapper):
+    mapper.task_configuration.statistical_code_mapping_fields = ["990"]
+    file_def = Mock(spec=FileDefinition)
+    file_def.statistical_code = ""
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="990",
+            subfields=[
+                pymarc.Subfield(code="a", value="xoclc"),
+            ],
+        )
+    )
+    folio_holdings = {}
+    mapper.map_statistical_codes(folio_holdings, file_def, record)
+    assert len(folio_holdings["statisticalCodeIds"]) == 1
+    assert "990:xoclc" in folio_holdings["statisticalCodeIds"]
+    mapper.map_statistical_code_ids("1", folio_holdings)
+    assert len(folio_holdings["statisticalCodeIds"]) == 1
+    assert "264c4f94-1538-43a3-8b40-bed68384b31b" in folio_holdings["statisticalCodeIds"]
+
+
+def test_statistical_code_map_from_single_marc_field_multiple_subfields_to_stat_code_id(mapper):
+    mapper.task_configuration.statistical_code_mapping_fields = ["998$a$b$c", "003"]
+    file_def = Mock(spec=FileDefinition)
+    file_def.statistical_code = ""
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="998",
+            subfields=[
+                pymarc.Subfield(code="a", value="arch^-^audstream"),
+                pymarc.Subfield(code="b", value="ebooks"),
+                pymarc.Subfield(code="c", value="compfiles"),
+            ],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="003",
+            data="FoD",
+        )
+    )
+    folio_holdings = {}
+    mapper.map_statistical_codes(folio_holdings, file_def, record)
+    assert len(folio_holdings["statisticalCodeIds"]) == 5
+    assert "998_a:arch" in folio_holdings["statisticalCodeIds"]
+    assert "998_a:audstream" in folio_holdings["statisticalCodeIds"]
+    assert "998_b:ebooks" in folio_holdings["statisticalCodeIds"]
+    assert "998_c:compfiles" in folio_holdings["statisticalCodeIds"]
+    assert "003:FoD" in folio_holdings["statisticalCodeIds"]
+    mapper.map_statistical_code_ids("1", folio_holdings)
+    assert len(folio_holdings["statisticalCodeIds"]) == 5
+    assert "b6b46869-f3c1-4370-b603-29774a1e42b1" in folio_holdings["statisticalCodeIds"]
+    assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" in folio_holdings["statisticalCodeIds"]
+    assert "9d8abbe2-1a94-4866-8731-4d12ac09f7a8" in folio_holdings["statisticalCodeIds"]
+    assert "bb76b1c1-c9df-445c-8deb-68bb3580edc2" in folio_holdings["statisticalCodeIds"]
+    assert "6d584d0e-3dbc-46c4-a1bd-e9238dd9a6be" in folio_holdings["statisticalCodeIds"]
+
+
+def test_statistical_code_map_with_unmapped_codes(mapper, caplog):
+    mapper.task_configuration.statistical_code_mapping_fields = ["998$a$b$c", "003"]
+    file_def = Mock(spec=FileDefinition)
+    file_def.statistical_code = ""
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="998",
+            subfields=[
+                pymarc.Subfield(code="a", value="arch^-^audstream"),
+                pymarc.Subfield(code="b", value="ebooks"),
+                pymarc.Subfield(code="c", value="compfiles"),
+                pymarc.Subfield(code="c", value="unmapped"),
+            ],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="003",
+            data="FoD",
+        )
+    )
+    folio_holdings = {}
+    caplog.set_level(logging.DEBUG)
+    mapper.map_statistical_codes(folio_holdings, file_def, record)
+    assert len(folio_holdings["statisticalCodeIds"]) == 6
+    assert "998_a:arch" in folio_holdings["statisticalCodeIds"]
+    assert "998_a:audstream" in folio_holdings["statisticalCodeIds"]
+    assert "998_b:ebooks" in folio_holdings["statisticalCodeIds"]
+    assert "998_c:compfiles" in folio_holdings["statisticalCodeIds"]
+    assert "003:FoD" in folio_holdings["statisticalCodeIds"]
+    assert "998_c:unmapped" in folio_holdings["statisticalCodeIds"]
+    mapper.map_statistical_code_ids("1", folio_holdings)
+    assert len(folio_holdings["statisticalCodeIds"]) == 5
+    assert "b6b46869-f3c1-4370-b603-29774a1e42b1" in folio_holdings["statisticalCodeIds"]
+    assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" in folio_holdings["statisticalCodeIds"]
+    assert "9d8abbe2-1a94-4866-8731-4d12ac09f7a8" in folio_holdings["statisticalCodeIds"]
+    assert "bb76b1c1-c9df-445c-8deb-68bb3580edc2" in folio_holdings["statisticalCodeIds"]
+    assert "6d584d0e-3dbc-46c4-a1bd-e9238dd9a6be" in folio_holdings["statisticalCodeIds"]
+    assert "Statistical code '998_c:unmapped' not found in FOLIO" in "".join(caplog.messages)

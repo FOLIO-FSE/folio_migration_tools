@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from unittest.mock import Mock
 
 import pymarc
 import pytest
@@ -45,6 +46,7 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         log_level_debug=False,
         iteration_identifier="I have no clue",
         base_folder="/",
+        multi_field_delimiter="^-^",
     )
     conf = BibsTransformer.TaskConfiguration(
         name="test",
@@ -56,7 +58,17 @@ def mapper(pytestconfig) -> BibsRulesMapper:
         data_import_marc=False,
         create_source_records=True
     )
-    return BibsRulesMapper(folio, lib, conf)
+    statistical_codes_map = [
+        {"folio_code": "compfiles", "legacy_stat_code": "998_c:compfiles"},
+        {"folio_code": "ebooks", "legacy_stat_code": "998_b:ebooks"},
+        {"folio_code": "vidstream", "legacy_stat_code": "003:FoD"},
+        {"folio_code": "arch", "legacy_stat_code": "998_a:arch"},
+        {"folio_code": "audstream", "legacy_stat_code": "998_a:audstream"},
+        {"folio_code": "XOCLC", "legacy_stat_code": "990:xoclc"},
+        {"folio_code": "withdrawn", "legacy_stat_code": "withdrawn"},
+        {"folio_code": "audstream", "legacy_stat_code": "*"},
+    ]
+    return BibsRulesMapper(folio, lib, conf, statistical_codes_map)
 
 @pytest.fixture
 def simple_mapper() -> BibsRulesMapper:
@@ -891,3 +903,47 @@ def test_simple_bib_map_no_245(mapper):
     with pytest.raises(TransformationRecordFailedError) as tfe:
         mapper.simple_bib_map(instance, marc_record, set(), ["legacy_id"])
     assert tfe.value.message == "No 245 field in MARC record"
+
+
+def test_statistical_code_map_with_unmapped_codes_and_file_codes(mapper, caplog):
+    mapper.task_configuration.statistical_code_mapping_fields = ["998$a$b$c", "003"]
+    file_def = Mock(spec=FileDefinition)
+    file_def.statistical_code = "withdrawn^-^withdrawn"
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="998",
+            subfields=[
+                pymarc.Subfield(code="a", value="arch^-^audstream"),
+                pymarc.Subfield(code="b", value="ebooks"),
+                pymarc.Subfield(code="c", value="compfiles^-^arch"),
+                pymarc.Subfield(code="c", value="unmapped"),
+            ],
+        )
+    )
+    record.add_field(
+        pymarc.Field(
+            tag="003",
+            data="FoD",
+        )
+    )
+    folio_holdings = {}
+    caplog.set_level(logging.DEBUG)
+    mapper.map_statistical_codes(folio_holdings, file_def, record)
+    assert len(folio_holdings["statisticalCodeIds"]) == 9
+    assert "998_a:arch" in folio_holdings["statisticalCodeIds"]
+    assert "998_a:audstream" in folio_holdings["statisticalCodeIds"]
+    assert "998_b:ebooks" in folio_holdings["statisticalCodeIds"]
+    assert "998_c:compfiles" in folio_holdings["statisticalCodeIds"]
+    assert "003:FoD" in folio_holdings["statisticalCodeIds"]
+    assert "998_c:unmapped" in folio_holdings["statisticalCodeIds"]
+    assert "withdrawn" in folio_holdings["statisticalCodeIds"]
+    mapper.map_statistical_code_ids("1", folio_holdings)
+    assert len(folio_holdings["statisticalCodeIds"]) == 6
+    assert "b6b46869-f3c1-4370-b603-29774a1e42b1" in folio_holdings["statisticalCodeIds"]
+    assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" in folio_holdings["statisticalCodeIds"]
+    assert "9d8abbe2-1a94-4866-8731-4d12ac09f7a8" in folio_holdings["statisticalCodeIds"]
+    assert "bb76b1c1-c9df-445c-8deb-68bb3580edc2" in folio_holdings["statisticalCodeIds"]
+    assert "6d584d0e-3dbc-46c4-a1bd-e9238dd9a6be" in folio_holdings["statisticalCodeIds"]
+    assert "c4073462-6144-4b69-a543-dd131e241799" in folio_holdings["statisticalCodeIds"]
+    assert "Statistical code '998_c:unmapped' not found in FOLIO" in "".join(caplog.messages)

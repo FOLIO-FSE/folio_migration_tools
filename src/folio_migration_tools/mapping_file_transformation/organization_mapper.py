@@ -23,6 +23,7 @@ class OrganizationMapper(MappingFileMapperBase):
         self,
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
+        task_config,
         organization_map: dict,
         organization_types_map,
         address_categories_map,
@@ -43,6 +44,7 @@ class OrganizationMapper(MappingFileMapperBase):
             None,
             FOLIONamespaces.organizations,
             library_configuration,
+            task_config,
         )
         self.organization_schema = organization_schema
         # Set up reference data maps
@@ -56,6 +58,7 @@ class OrganizationMapper(MappingFileMapperBase):
         self.folio_client: FolioClient = folio_client
         self.notes_mapper: NotesMapper = NotesMapper(
             library_configuration,
+            None,
             self.folio_client,
             organization_map,
             FOLIONamespaces.note,

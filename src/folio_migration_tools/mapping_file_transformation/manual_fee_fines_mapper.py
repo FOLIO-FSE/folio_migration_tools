@@ -46,6 +46,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             None,
             FOLIONamespaces.fees_fines,
             library_configuration,
+            task_configuration,
             ignore_legacy_identifier,
         )
 
