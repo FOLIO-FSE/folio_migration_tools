@@ -222,15 +222,6 @@ class ItemMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 self.loan_type_mapping, legacy_item, folio_prop_name, index_or_id
             )
-        # elif folio_prop_name.startswith("statisticalCodeIds"):
-        #     statistical_code_id = self.get_statistical_code(
-        #         legacy_item, folio_prop_name, index_or_id
-        #     )
-        #     self.migration_report.add(
-        #         "StatisticalCodeMapping",
-        #         f"{folio_prop_name} -> {statistical_code_id}",
-        #     )
-        #     return statistical_code_id
 
         mapped_value = super().get_prop(
             legacy_item, folio_prop_name, index_or_id, schema_default_value

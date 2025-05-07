@@ -100,21 +100,6 @@ class MappingFileMapperBase(MapperBase):
         )
         csv.register_dialect("tsv", delimiter="\t")
 
-    # def setup_statistical_codes_map(self, statistical_codes_map):
-    #     if statistical_codes_map:
-    #         self.statistical_codes_mapping = RefDataMapping(
-    #             self.folio_client,
-    #             "/statistical-codes",
-    #             "statisticalCodes",
-    #             statistical_codes_map,
-    #             "code",
-    #             "StatisticalCodeMapping",
-    #         )
-    #         logging.info("Statistical codes mapping set up")
-    #     else:
-    #         self.statistical_codes_mapping = None
-    #         logging.info("Statistical codes map is not set up")
-
     def setup_field_map(self, ignore_legacy_identifier):
         field_map = {}  # Map of folio_fields and source fields as an array
         for k in self.record_map["data"]:
