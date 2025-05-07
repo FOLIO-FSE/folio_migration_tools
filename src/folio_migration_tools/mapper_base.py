@@ -454,6 +454,7 @@ class MapperBase:
         Args:
             folio_record (dict): The FOLIO record to which the statistical codes will be added.
             file_def (FileDefinition): The file definition containing the statistical codes.
+            legacy_record (Optional[Union[dict, Record]]): The legacy record from which the statistical codes are derived.
         """
         if file_def.statistical_code:
             code_strings = file_def.statistical_code.split(
