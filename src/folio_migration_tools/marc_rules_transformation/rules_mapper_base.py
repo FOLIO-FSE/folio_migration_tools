@@ -849,7 +849,7 @@ class RulesMapperBase(MapperBase):
                 folio_record['statisticalCodeIds'] = folio_record.get("statisticalCodeIds", []) + mapped_codes
 
     @staticmethod
-    def map_stat_codes_from_marc_field(field_map: List[str], marc_record: Record, multi_field_delimiter: str="<delimiter>") -> str:
+    def map_stat_codes_from_marc_field(field_map: List[str], marc_record: Record, multi_field_delimiter: str="<delimiter>") -> List[str]:
         """Map statistical codes from MARC field to FOLIO instance.
 
         This function extracts statistical codes from a MARC field based on the provided field map.
