@@ -496,10 +496,10 @@ class MapperBase:
         self, legacy_ids, folio_record: dict
     ):
         if stat_codes := {x: None for x in folio_record.pop("statisticalCodeIds", [])}:
-            folio_record["statisticalCodeIds"] = []
+            folio_code_ids = set()
             for stat_code in stat_codes:
                 if stat_code_id := self.get_statistical_code({"legacy_stat_code": stat_code}, "statisticalCodeId", legacy_ids):
-                    folio_record["statisticalCodeIds"].append(stat_code_id)
+                    folio_code_ids.add(stat_code_id)
                 else:
                     Helper.log_data_issue(
                         legacy_ids,
@@ -509,6 +509,7 @@ class MapperBase:
                         ),
                         stat_code,
                     )
+            folio_record["statisticalCodeIds"] = list(folio_code_ids)
 
     @property
     def base_string_for_folio_uuid(self):
