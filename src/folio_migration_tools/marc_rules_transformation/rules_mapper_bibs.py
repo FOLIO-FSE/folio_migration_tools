@@ -207,6 +207,7 @@ class BibsRulesMapper(RulesMapperBase):
         folio_instance["modeOfIssuanceId"] = self.get_mode_of_issuance_id(marc_record, legacy_ids)
         self.handle_languages(folio_instance, marc_record, legacy_ids)
         self.handle_suppression(folio_instance, file_def)
+        # Map statistical codes from MARC and FileDefinition, then map the IDs
         self.map_statistical_codes(folio_instance, file_def, marc_record)
         self.map_statistical_code_ids(legacy_ids, folio_instance)
         self.handle_holdings(marc_record)
