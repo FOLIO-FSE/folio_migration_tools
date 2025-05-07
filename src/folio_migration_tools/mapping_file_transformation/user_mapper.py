@@ -49,8 +49,7 @@ class UserMapper(MappingFileMapperBase):
                 library_config,
                 task_config
             )
-            self.task_config = task_config
-            self.task_configuration = self.task_config
+            self.task_config = self.task_configuration
             self.notes_mapper: NotesMapper = NotesMapper(
                 self.library_configuration,
                 None,

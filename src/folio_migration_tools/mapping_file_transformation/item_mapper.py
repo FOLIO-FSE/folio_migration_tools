@@ -54,7 +54,6 @@ class ItemMapper(MappingFileMapperBase):
             library_configuration,
             task_configuration,
         )
-        self.task_configuration = task_configuration
         self.item_schema = self.folio_client.get_item_schema()
         self.items_map = items_map
         self.holdings_id_map = holdings_id_map

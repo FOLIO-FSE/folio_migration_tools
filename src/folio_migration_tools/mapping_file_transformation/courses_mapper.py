@@ -38,7 +38,6 @@ class CoursesMapper(MappingFileMapperBase):
             True,
         )
         self.composite_course_schema = self.get_composite_course_schema()
-        self.task_configuration = task_configuration
         super().__init__(
             folio_client,
             self.composite_course_schema,
