@@ -4,8 +4,10 @@ from unittest.mock import MagicMock, Mock
 import pytest
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.extradata_writer import ExtradataWriter
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.test_infrastructure import mocked_classes
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
@@ -13,6 +15,17 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 def mocked_mapper():
     return MapperBase(
         mocked_classes.get_mocked_library_config(),
+        AbstractTaskConfiguration(
+            name="Test Task",
+            migration_task_type="Test Task",
+            files=[
+                FileDefinition(
+                    file_type="items",
+                    file_path="items.json",
+                    discovery_suppressed=False,
+                )
+            ],
+        ),
         mocked_classes.mocked_folio_client(),
     )
 

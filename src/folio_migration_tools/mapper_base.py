@@ -6,7 +6,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -19,7 +19,8 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.extradata_writer import ExtradataWriter
-from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import FileDefinition, LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -34,8 +35,9 @@ class MapperBase:
     def __init__(
         self,
         library_configuration: LibraryConfiguration,
+        task_configuration: AbstractTaskConfiguration,
         folio_client: FolioClient,
-        parent_id_map: dict[str, tuple] = {},
+        parent_id_map: Dict[str, Tuple] = {},
     ):
         logging.info("MapperBase initiating")
         self.parent_id_map: dict[str, tuple] = parent_id_map
@@ -43,7 +45,7 @@ class MapperBase:
         self.start_datetime = datetime.now(timezone.utc)
         self.folio_client: FolioClient = folio_client
         self.library_configuration: LibraryConfiguration = library_configuration
-        self.task_configuration: AbstractTaskConfiguration
+        self.task_configuration: AbstractTaskConfiguration = task_configuration
         self.mapped_folio_fields: dict = {}
         self.migration_report: MigrationReport = MigrationReport()
         self.num_criticalerrors = 0
@@ -440,6 +442,80 @@ class MapperBase:
             )
         )
 
+    def map_statistical_codes(self, folio_record: dict, file_def: FileDefinition):
+        """Map statistical codes to the folio record.
+
+        This method checks if the file definition contains statistical codes and
+        if so, it splits the codes by the multi-field delimiter and adds them to
+        the folio record's 'statisticalCodeIds' field. If the field does not exist,
+        it initializes it as an empty list before appending the codes.
+
+        Args:
+            folio_record (dict): The FOLIO record to which the statistical codes will be added.
+            file_def (FileDefinition): The file definition containing the statistical codes.
+        """
+        if file_def.statistical_code:
+            code_strings = file_def.statistical_code.split(
+                self.library_configuration.multi_field_delimiter
+            )
+            folio_record["statisticalCodeIds"] = folio_record.get("statisticalCodeIds", []) + code_strings
+
+    def setup_statistical_codes_map(self, statistical_codes_map):
+        if statistical_codes_map:
+            self.statistical_codes_mapping = RefDataMapping(
+                self.folio_client,
+                "/statistical-codes",
+                "statisticalCodes",
+                statistical_codes_map,
+                "code",
+                "StatisticalCodeMapping",
+            )
+            logging.info(f"Statistical codes mapping set up {self.statistical_codes_mapping.mapped_legacy_keys}")
+        else:
+            self.statistical_codes_mapping = None
+            logging.info("Statistical codes map is not set up")
+
+    def get_statistical_code(self, legacy_item: dict, folio_prop_name: str, index_or_id):
+        if self.statistical_codes_mapping:
+            return self.get_mapped_ref_data_value(
+                self.statistical_codes_mapping,
+                legacy_item,
+                index_or_id,
+                folio_prop_name,
+                True,
+            )
+        self.migration_report.add(
+            "StatisticalCodeMapping",
+            i18n.t("Mapping not set up"),
+        )
+        return ""
+
+    def map_statistical_code_ids(
+        self, legacy_ids, folio_record: dict
+    ):
+        if stat_codes := {x: None for x in folio_record.pop("statisticalCodeIds", [])}:
+            folio_record["statisticalCodeIds"] = []
+            for stat_code in stat_codes:
+                if stat_code_id := self.get_statistical_code({"legacy_stat_code": stat_code}, "statisticalCodeId", legacy_ids):
+                    folio_record["statisticalCodeIds"].append(stat_code_id)
+                else:
+                    Helper.log_data_issue(
+                        legacy_ids,
+                        i18n.t(
+                            "Statistical code '%{code}' not found in FOLIO",
+                            code=stat_code,
+                        ),
+                        stat_code,
+                    )
+
+    @property
+    def is_inventory_type(self):
+        return self.get_object_type() in [
+            FOLIONamespaces.instances,
+            FOLIONamespaces.holdings,
+            FOLIONamespaces.items,
+        ]
+
     @property
     def base_string_for_folio_uuid(self):
         if self.library_configuration.use_gateway_url_for_uuids and not self.library_configuration.is_ecs:
@@ -462,6 +538,9 @@ class MapperBase:
             )
         return location_map
 
+    @staticmethod
+    def get_object_type() -> FOLIONamespaces:
+        raise NotImplementedError("This method should be overridden in subclasses")
 
 def flatten(my_dict: dict, path=""):
     for k, v in iter(my_dict.items()):

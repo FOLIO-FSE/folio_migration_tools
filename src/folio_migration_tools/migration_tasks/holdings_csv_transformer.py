@@ -160,6 +160,16 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 ),
             ),
         ] = True
+        statistical_codes_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Statistical code map file name",
+                description=(
+                    "Path to the file containing the mapping of statistical codes. "
+                    "The file should be in TSV format with legacy_stat_code and folio_code columns."
+                ),
+            ),
+        ] = ""
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -174,16 +184,29 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     ):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
+        self.task_config = task_config
+        self.task_configuration = self.task_config
+        self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
+        if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
+            statcode_mapping = self.load_ref_data_mapping_file(
+                "statisticalCodeIds",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.statistical_codes_map_file_name,
+                self.folio_keys,
+                False,
+            )
+        else:
+            statcode_mapping = None
         try:
-            self.task_config = task_config
             self.bound_with_keys = set()
             self.mapper = HoldingsMapper(
                 self.folio_client,
-                self.load_mapped_fields(),
+                self.holdings_field_map,
                 self.load_location_map(),
                 self.load_call_number_type_map(),
                 self.load_instance_id_map(True),
                 library_config,
+                statcode_mapping,
             )
             self.holdings = {}
             self.total_records = 0
@@ -294,7 +317,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 "%s mapped fields in holdings mapping file map",
                 len(list(mapped_fields)),
             )
-            return holdings_map
+            return mapped_fields, holdings_map
 
     def do_work(self):
         logging.info("Starting....")
@@ -426,7 +449,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             raise TransformationRecordFailedError(legacy_id, "No instance id in parsed record", "")
 
         for folio_holding in holdings_from_row:
-            self.mapper.perform_additional_mappings(folio_holding, file_def)
+            self.mapper.perform_additional_mappings(legacy_id, folio_holding, file_def)
             self.merge_holding_in(folio_holding, all_instance_ids, legacy_id)
         self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 

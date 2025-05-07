@@ -319,8 +319,10 @@ def mapper(pytestconfig) -> HoldingsMapper:
         {"folio_name": "Library of Congress classification", "CALLNUMBERTYPE": "*"},
     ]
     statistical_codes_map = [
-        {"folio_code": "arch", "STATCODE": "Codered"},
-        {"folio_code": "audstream", "STATCODE": "*"},
+        {"folio_code": "arch", "legacy_stat_code": "Codered"},
+        {"folio_code": "arch", "legacy_stat_code": "arch"},
+        {"folio_code": "audstream", "legacy_stat_code": "audstream"},
+        {"folio_code": "audstream", "legacy_stat_code": "*"},
     ]
     instance_id_map = {"b1": ["b1", "88009a08-5a2e-49e1-a3dd-d44c44d21b76"]}
     mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
@@ -332,6 +334,7 @@ def mapper(pytestconfig) -> HoldingsMapper:
         call_number_type_map,
         instance_id_map,
         lib,
+        mocked_config,
         statistical_codes_map,
     )
 
@@ -351,13 +354,14 @@ def test_simple_get_prop_stat_codes_empty_if_empty(mapper: HoldingsMapper):
 def test_simple_get_prop_stat_codes_empty_if_not_mapped(mapper: HoldingsMapper):
     legacy_holding = {"STATCODE": "CodeBlue"}  # CodeBlue is not in map
     res = mapper.get_prop(legacy_holding, "statisticalCodeIds[0]", "id1", "")
-    assert res == ""
+    assert res == "CodeBlue"
 
 
 def test_simple_get_prop_stat_codes(mapper: HoldingsMapper):
     legacy_holding = {"STATCODE": "Codered"}
     res = mapper.get_prop(legacy_holding, "statisticalCodeIds[0]", "id1", "")
-    assert res == "b6b46869-f3c1-4370-b603-29774a1e42b1"
+    assert res == "Codered"
+    # assert res == "b6b46869-f3c1-4370-b603-29774a1e42b1"
 
 
 def test_simple_get_prop_call_number_type(mapper: HoldingsMapper):
@@ -445,9 +449,41 @@ def test_perform_additional_mappings(mapper: HoldingsMapper):
     file_config_2 = Mock(spec=FileDefinition)
     file_config.discovery_suppressed = True
     file_config_2.discovery_suppressed = False
+    file_config.statistical_code = ""
+    file_config_2.statistical_code = ""
     suppressed_holdings = {"id": "12345", "instanceId": "12345", "permanentLocationId": "12345"}
     unsuppressed_holdings = {"id": "54321", "instanceId": "12345", "permanentLocationId": "12345"}
-    mapper.perform_additional_mappings(suppressed_holdings, file_config)
-    mapper.perform_additional_mappings(unsuppressed_holdings, file_config_2)
+    mapper.perform_additional_mappings("1", suppressed_holdings, file_config)
+    mapper.perform_additional_mappings("2", unsuppressed_holdings, file_config_2)
     assert suppressed_holdings["discoverySuppress"] is True
     assert unsuppressed_holdings["discoverySuppress"] is False
+
+
+def test_perform_additional_mappings_with_stat_codes(mapper: HoldingsMapper, caplog):
+    file_config = Mock(spec=FileDefinition)
+    file_config.statistical_code = "arch<delimiter>audstream"
+    file_config.discovery_suppressed = True
+    file_config_2 = Mock(spec=FileDefinition)
+    file_config_2.statistical_code = "arch"
+    file_config_2.discovery_suppressed = False
+    suppressed_holdings = {
+        "id": "12345",
+        "instanceId": "12345",
+        "permanentLocationId": "12345",
+    }
+    unsuppressed_holdings = {
+        "id": "54321",
+        "instanceId": "12345",
+        "permanentLocationId": "12345",
+    }
+    caplog.set_level("DEBUG")
+    mapper.perform_additional_mappings("1", suppressed_holdings, file_config)
+    mapper.perform_additional_mappings("2", unsuppressed_holdings, file_config_2)
+    # mapper.map_statistical_codes(suppressed_holdings, file_config)
+    # mapper.map_statistical_codes(unsuppressed_holdings, file_config_2)
+    # assert suppressed_holdings["statisticalCodeIds"] == ["arch", "audstream"]
+    # assert unsuppressed_holdings["statisticalCodeIds"] == ["arch"]
+    # mapper.map_statistical_code_ids("1", suppressed_holdings)
+    # mapper.map_statistical_code_ids("2", unsuppressed_holdings)
+    assert suppressed_holdings["statisticalCodeIds"] == ['b6b46869-f3c1-4370-b603-29774a1e42b1', 'e10796e0-a594-47b7-b748-3a81b69b3d9b']
+    assert unsuppressed_holdings["statisticalCodeIds"] == ['b6b46869-f3c1-4370-b603-29774a1e42b1']

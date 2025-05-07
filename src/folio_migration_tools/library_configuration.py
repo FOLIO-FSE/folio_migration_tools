@@ -32,7 +32,27 @@ class FileDefinition(BaseModel):
     ] = ""
     discovery_suppressed: Annotated[bool, Field(title="Discovery suppressed")] = False
     staff_suppressed: Annotated[bool, Field(title="Staff suppressed")] = False
-    service_point_id: Annotated[str, Field(title="Service point ID")] = ""
+    service_point_id: Annotated[
+        str,
+        Field(
+            title="Service point ID",
+            description=(
+                "Service point to be used for "
+                "transactions created from this file (Loans-only)."
+            ),
+        )
+    ] = ""
+    statistical_code: Annotated[
+        str,
+        Field(
+            title="Statistical code",
+            description=(
+                "Statistical code (code) to be used inventory records created from "
+                "this file (Instances, Holdings, Items). Specify multiple codes using "
+                "multi_field_delimiter."
+            ),
+        )
+    ] = ""
     create_source_records: Annotated[
         bool,
         Field(

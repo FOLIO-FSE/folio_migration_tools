@@ -455,7 +455,7 @@ class MigrationTaskBase:
             logging.info("No mapping setup for %s", folio_property_name)
             logging.info("%s will have default mapping if any ", folio_property_name)
             logging.info(
-                "Add a file named %s and add the field to the item.mapping.json file.",
+                "Add a file named %s and add the field to the field mapping json file.",
                 map_file_path,
             )
             return None
@@ -522,6 +522,27 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
             ),
         ),
     ] = False
+    statistical_codes_map_file_name: Annotated[
+        Optional[str],
+        Field(
+            title="Statistical code map file name",
+            description=(
+                "Path to the file containing the mapping of statistical codes. "
+                "The file should be in TSV format with legacy_stat_code and folio_code columns."
+            ),
+        ),
+    ] = ""
+    statistical_code_mapping_fields: Annotated[
+        List[str],
+        Field(
+            title="Statistical code mapping fields",
+            description=(
+                "List of fields + subfields to be used for mapping statistical codes. "
+                "Subfields should be delimited by a \"$\" (eg. 907$a). Single repeating subfields "
+                "will be treated as unique values. Multiple subfields will be concatenated together with a space."
+            ),
+        ),
+    ] = []
 
 class ExcludeLevelFilter(logging.Filter):
     def __init__(self, level):

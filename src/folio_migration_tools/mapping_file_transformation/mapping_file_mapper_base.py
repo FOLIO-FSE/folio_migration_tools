@@ -20,10 +20,8 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
-from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
-    RefDataMapping,
-)
 from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 empty_vals = ["Not mapped", None, ""]
 
@@ -37,9 +35,10 @@ class MappingFileMapperBase(MapperBase):
         statistical_codes_map,
         uuid_namespace: UUID,
         library_configuration: LibraryConfiguration,
+        task_config: AbstractTaskConfiguration,
         ignore_legacy_identifier=False,
     ):
-        super().__init__(library_configuration, folio_client)
+        super().__init__(library_configuration, task_config, folio_client)
         self.uuid_namespace = uuid_namespace
         self.ignore_legacy_identifier = ignore_legacy_identifier
         self.schema = schema
@@ -101,20 +100,20 @@ class MappingFileMapperBase(MapperBase):
         )
         csv.register_dialect("tsv", delimiter="\t")
 
-    def setup_statistical_codes_map(self, statistical_codes_map):
-        if statistical_codes_map:
-            self.statistical_codes_mapping = RefDataMapping(
-                self.folio_client,
-                "/statistical-codes",
-                "statisticalCodes",
-                statistical_codes_map,
-                "code",
-                "StatisticalCodeMapping",
-            )
-            logging.info("Statistical codes mapping set up")
-        else:
-            self.statistical_codes_mapping = None
-            logging.info("Statistical codes map is not set up")
+    # def setup_statistical_codes_map(self, statistical_codes_map):
+    #     if statistical_codes_map:
+    #         self.statistical_codes_mapping = RefDataMapping(
+    #             self.folio_client,
+    #             "/statistical-codes",
+    #             "statisticalCodes",
+    #             statistical_codes_map,
+    #             "code",
+    #             "StatisticalCodeMapping",
+    #         )
+    #         logging.info("Statistical codes mapping set up")
+    #     else:
+    #         self.statistical_codes_mapping = None
+    #         logging.info("Statistical codes map is not set up")
 
     def setup_field_map(self, ignore_legacy_identifier):
         field_map = {}  # Map of folio_fields and source fields as an array

@@ -7,6 +7,7 @@ import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
+from pymarc import Optional
 from pymarc.field import Field
 from pymarc.record import Record
 
@@ -40,6 +41,7 @@ class RulesMapperHoldings(RulesMapperBase):
         library_configuration: LibraryConfiguration,
         parent_id_map: dict,
         boundwith_relationship_map_rows: List[Dict],
+        statistical_codes_map: Optional[Dict] = None,
     ):
         self.task_configuration = task_configuration
         self.conditions = Conditions(
@@ -47,13 +49,14 @@ class RulesMapperHoldings(RulesMapperBase):
             self,
             "holdings",
             library_configuration.folio_release,
-            self.task_configuration.default_call_number_type_name,
+            task_configuration.default_call_number_type_name,
         )
         self.folio = folio_client
         super().__init__(
             folio_client,
             library_configuration,
             task_configuration,
+            statistical_codes_map,
             self.fetch_holdings_schema(folio_client),
             self.conditions,
             parent_id_map,
@@ -297,6 +300,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 "",
             )
         self.handle_suppression(folio_holding, file_def, True)
+        self.map_statistical_codes(folio_holding, file_def, marc_record)
+        self.map_statistical_code_ids(legacy_ids, folio_holding)
         self.set_source_id(self.create_source_records, folio_holding, self.holdingssources, file_def)
 
     def pick_first_location_if_many(self, folio_holding: Dict, legacy_ids: List[str]):
@@ -582,7 +587,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 "", "Column BIB_ID missing from Boundwith relationship map", ""
             )
 
-    def setup_boundwith_relationship_map(self, boundwith_relationship_map: List[Dict]):
+    def setup_boundwith_relationship_map(self, boundwith_relationship_map_list: List[Dict]):
         """
         Creates a map of MFHD_ID to BIB_ID for boundwith relationships.
 
@@ -597,7 +602,7 @@ class RulesMapperHoldings(RulesMapperBase):
             TransformationRecordFailedError: If BIB_ID is not in the instance id map.
         """
         new_map = {}
-        for idx, entry in enumerate(boundwith_relationship_map):
+        for idx, entry in enumerate(boundwith_relationship_map_list):
             self.verity_boundwith_map_entry(entry)
             mfhd_uuid = str(
                 FolioUUID(

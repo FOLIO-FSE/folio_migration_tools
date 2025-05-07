@@ -20,7 +20,7 @@ def mapper(pytestconfig) -> ItemMapper:
     username = "username"
     password = "password"  # noqa: S105
 
-    print("init")
+    # print("init")
     mock_folio_client = mocked_classes.mocked_folio_client()
 
     lib_config = LibraryConfiguration(
@@ -57,7 +57,12 @@ def mapper(pytestconfig) -> ItemMapper:
         {"folio_code": "KU/CC/DI/P", "PERM_LOCATION": "infoOff"},
         {"folio_code": "E", "PERM_LOCATION": "*"},
     ]
-
+    statistical_codes_map = [
+        {"folio_code": "arch", "legacy_stat_code": "Codered"},
+        {"folio_code": "arch", "legacy_stat_code": "arch"},
+        {"folio_code": "audstream", "legacy_stat_code": "audstream"},
+        {"folio_code": "audstream", "legacy_stat_code": "*"},
+    ]
     return ItemMapper(
         mock_folio_client,
         item_map,
@@ -70,7 +75,7 @@ def mapper(pytestconfig) -> ItemMapper:
             "ABC000950000010": ["ABC000950000010", "9e840586-a641-5932-92ef-cfde8e84f9a2"],
             "abc000950000010": ["abc000950000010", "9e840586-a641-5932-92ef-cfde8e84f9a3"],
         },
-        {},
+        statistical_codes_map,
         {},
         {},
         {},
@@ -104,10 +109,12 @@ def test_perform_additional_mappings(mapper: ItemMapper):
     file_config_2 = Mock(spec=FileDefinition)
     file_config.discovery_suppressed = True
     file_config_2.discovery_suppressed = False
+    file_config.statistical_code = ""
+    file_config_2.statistical_code = ""
     suppressed_holdings = {"id": "12345", "holdingsId": "12345", "permanentLoanTypeId": "12345"}
     unsuppressed_holdings = {"id": "54321", "holdingsId": "12345", "permanentLoanTypeId": "12345"}
-    mapper.perform_additional_mappings(suppressed_holdings, file_config)
-    mapper.perform_additional_mappings(unsuppressed_holdings, file_config_2)
+    mapper.perform_additional_mappings("1", suppressed_holdings, file_config)
+    mapper.perform_additional_mappings("2", unsuppressed_holdings, file_config_2)
     assert suppressed_holdings["discoverySuppress"] is True
     assert unsuppressed_holdings["discoverySuppress"] is False
 
@@ -172,3 +179,33 @@ item_map = {
         },
     ]
 }
+
+
+def test_perform_additional_mappings_with_stat_codes(mapper: ItemMapper, caplog):
+    file_config = Mock(spec=FileDefinition)
+    file_config.statistical_code = "arch^-^audstream"
+    file_config.discovery_suppressed = True
+    file_config_2 = Mock(spec=FileDefinition)
+    file_config_2.statistical_code = "arch"
+    file_config_2.discovery_suppressed = False
+    suppressed_item = {
+        "id": "12345",
+        "holdingsId": "12345",
+        "permanentLocationId": "12345",
+    }
+    unsuppressed_item = {
+        "id": "54321",
+        "holdingsId": "12345",
+        "permanentLocationId": "12345",
+    }
+    caplog.set_level("DEBUG")
+    mapper.perform_additional_mappings("1", suppressed_item, file_config)
+    mapper.perform_additional_mappings("2", unsuppressed_item, file_config_2)
+    # mapper.map_statistical_codes(suppressed_holdings, file_config)
+    # mapper.map_statistical_codes(unsuppressed_holdings, file_config_2)
+    # assert suppressed_holdings["statisticalCodeIds"] == ["arch", "audstream"]
+    # assert unsuppressed_holdings["statisticalCodeIds"] == ["arch"]
+    # mapper.map_statistical_code_ids("1", suppressed_holdings)
+    # mapper.map_statistical_code_ids("2", unsuppressed_holdings)
+    assert suppressed_item["statisticalCodeIds"] == ['b6b46869-f3c1-4370-b603-29774a1e42b1', 'e10796e0-a594-47b7-b748-3a81b69b3d9b']
+    assert unsuppressed_item["statisticalCodeIds"] == ['b6b46869-f3c1-4370-b603-29774a1e42b1']

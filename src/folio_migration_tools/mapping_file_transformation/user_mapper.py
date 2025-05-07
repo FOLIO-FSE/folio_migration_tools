@@ -47,10 +47,13 @@ class UserMapper(MappingFileMapperBase):
                 None,
                 FOLIONamespaces.users,
                 library_config,
+                task_config
             )
             self.task_config = task_config
+            self.task_configuration = self.task_config
             self.notes_mapper: NotesMapper = NotesMapper(
                 self.library_configuration,
+                None,
                 self.folio_client,
                 self.record_map,
                 FOLIONamespaces.users,
