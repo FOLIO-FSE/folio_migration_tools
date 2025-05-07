@@ -6,12 +6,13 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
+from pymarc import Record
 
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
@@ -442,7 +443,7 @@ class MapperBase:
             )
         )
 
-    def map_statistical_codes(self, folio_record: dict, file_def: FileDefinition):
+    def map_statistical_codes(self, folio_record: dict, file_def: FileDefinition, legacy_record: Optional[Union[dict, Record]] = None):
         """Map statistical codes to the folio record.
 
         This method checks if the file definition contains statistical codes and
