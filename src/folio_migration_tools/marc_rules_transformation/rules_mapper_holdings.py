@@ -300,6 +300,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 "",
             )
         self.handle_suppression(folio_holding, file_def, True)
+        # First, map statistical codes from MARC fields and FileDefinitions to FOLIO statistical codes.
+        # Then, convert the mapped statistical codes to their corresponding code IDs.
         self.map_statistical_codes(folio_holding, file_def, marc_record)
         self.map_statistical_code_ids(legacy_ids, folio_holding)
         self.set_source_id(self.create_source_records, folio_holding, self.holdingssources, file_def)
