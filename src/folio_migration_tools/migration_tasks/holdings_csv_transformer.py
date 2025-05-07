@@ -184,14 +184,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     ):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
-        self.task_config = task_config
-        self.task_configuration = self.task_config
         self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
         if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
                 self.folder_structure.mapping_files_folder
-                / self.task_config.statistical_codes_map_file_name,
+                / self.task_configuration.statistical_codes_map_file_name,
                 self.folio_keys,
                 False,
             )
@@ -219,19 +217,19 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             logging.info("%s\tholdings types in tenant", len(self.holdings_types))
             self.validate_merge_criterias()
             self.check_source_files(
-                self.folder_structure.data_folder / "items", self.task_config.files
+                self.folder_structure.data_folder / "items", self.task_configuration.files
             )
             self.fallback_holdings_type = next(
                 h
                 for h in self.holdings_types
-                if h["id"] == self.task_config.fallback_holdings_type_id
+                if h["id"] == self.task_configuration.fallback_holdings_type_id
             )
             if not self.fallback_holdings_type:
                 raise TransformationProcessError(
                     "",
                     (
                         "Holdings type with ID "
-                        f"{self.task_config.fallback_holdings_type_id} "
+                        f"{self.task_configuration.fallback_holdings_type_id} "
                         "not found in FOLIO."
                     ),
                 )
@@ -239,15 +237,15 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 "%s will be used as default holdings type",
                 self.fallback_holdings_type["name"],
             )
-            if any(self.task_config.previously_generated_holdings_files):
-                for file_name in self.task_config.previously_generated_holdings_files:
+            if any(self.task_configuration.previously_generated_holdings_files):
+                for file_name in self.task_configuration.previously_generated_holdings_files:
                     logging.info("Processing %s", file_name)
                     self.holdings.update(
                         HoldingsHelper.load_previously_generated_holdings(
                             self.folder_structure.results_folder / file_name,
-                            self.task_config.holdings_merge_criteria,
+                            self.task_configuration.holdings_merge_criteria,
                             self.mapper.migration_report,
-                            self.task_config.holdings_type_uuid_for_boundwiths,
+                            self.task_configuration.holdings_type_uuid_for_boundwiths,
                         )
                     )
 
@@ -283,7 +281,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def load_call_number_type_map(self):
         with open(
             self.folder_structure.mapping_files_folder
-            / self.task_config.call_number_type_map_file_name,
+            / self.task_configuration.call_number_type_map_file_name,
             "r",
         ) as callnumber_type_map_f:
             return self.load_ref_data_map_from_file(
@@ -292,7 +290,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def load_location_map(self):
         with open(
-            self.folder_structure.mapping_files_folder / self.task_config.location_map_file_name
+            self.folder_structure.mapping_files_folder / self.task_configuration.location_map_file_name
         ) as location_map_f:
             return self.load_ref_data_map_from_file(
                 location_map_f, "Found %s rows in location map"
@@ -306,7 +304,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def load_mapped_fields(self):
         with open(
-            self.folder_structure.mapping_files_folder / self.task_config.holdings_map_file_name
+            self.folder_structure.mapping_files_folder / self.task_configuration.holdings_map_file_name
         ) as holdings_mapper_f:
             holdings_map = json.load(holdings_mapper_f)
             logging.info("%s fields in holdings mapping file map", len(holdings_map["data"]))
@@ -321,7 +319,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def do_work(self):
         logging.info("Starting....")
-        for file_def in self.task_config.files:
+        for file_def in self.task_configuration.files:
             logging.info("Processing %s", file_def.file_name)
             try:
                 self.process_single_file(file_def)
@@ -334,7 +332,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 print(f"\n{error_str}\nHalting")
                 sys.exit(1)
         logging.info(
-            f"processed {self.total_records:,} records in {len(self.task_config.files)} files"
+            f"processed {self.total_records:,} records in {len(self.task_configuration.files)} files"
         )
 
     def wrap_up(self):
@@ -380,8 +378,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         holdings_schema = self.folio_client.get_holdings_schema()
         properties = holdings_schema["properties"].keys()
         logging.info(properties)
-        logging.info(self.task_config.holdings_merge_criteria)
-        res = [mc for mc in self.task_config.holdings_merge_criteria if mc not in properties]
+        logging.info(self.task_configuration.holdings_merge_criteria)
+        res = [mc for mc in self.task_configuration.holdings_merge_criteria if mc not in properties]
         if any(res):
             logging.critical(
                 (
@@ -459,7 +457,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.mapper.create_bound_with_holdings(
                 folio_holding,
                 folio_holding["instanceId"],
-                self.task_config.holdings_type_uuid_for_boundwiths,
+                self.task_configuration.holdings_type_uuid_for_boundwiths,
             )
         )
 
@@ -503,9 +501,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             # Regular holding. Merge according to criteria
             new_holding_key = HoldingsHelper.to_key(
                 incoming_holding,
-                self.task_config.holdings_merge_criteria,
+                self.task_configuration.holdings_merge_criteria,
                 self.mapper.migration_report,
-                self.task_config.holdings_type_uuid_for_boundwiths,
+                self.task_configuration.holdings_type_uuid_for_boundwiths,
             )
             if self.holdings.get(new_holding_key, None):
                 self.mapper.migration_report.add_general_statistics(
