@@ -216,13 +216,11 @@ class HoldingsMarcTransformer(MigrationTaskBase):
     ):
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, folio_client, use_logging)
-        self.task_config = task_config
-        self.task_configuration = self.task_config
-        if self.task_config.statistical_codes_map_file_name:
+        if self.task_configuration.statistical_codes_map_file_name:
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
                 self.folder_structure.mapping_files_folder
-                / self.task_config.statistical_codes_map_file_name,
+                / self.task_configuration.statistical_codes_map_file_name,
                 [],
                 False,
             )
@@ -235,7 +233,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             (
                 h
                 for h in self.holdings_types
-                if h["id"] == self.task_config.fallback_holdings_type_id
+                if h["id"] == self.task_configuration.fallback_holdings_type_id
             ),
             {"name": ""},
         )
@@ -243,7 +241,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             raise TransformationProcessError(
                 "",
                 (
-                    f"Holdings type with ID {self.task_config.fallback_holdings_type_id}"
+                    f"Holdings type with ID {self.task_configuration.fallback_holdings_type_id}"
                     " not found in FOLIO."
                 ),
             )
@@ -254,11 +252,11 @@ class HoldingsMarcTransformer(MigrationTaskBase):
 
         # Load Boundwith relationship map
         self.boundwith_relationship_map_rows = []
-        if self.task_config.boundwith_relationship_file_path:
+        if self.task_configuration.boundwith_relationship_file_path:
             try:
                 with open(
                     self.folder_structure.legacy_records_folder
-                    / self.task_config.boundwith_relationship_file_path
+                    / self.task_configuration.boundwith_relationship_file_path
                 ) as boundwith_relationship_file:
                     self.boundwith_relationship_map_rows = list(
                         csv.DictReader(boundwith_relationship_file, dialect="tsv")
@@ -271,25 +269,25 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 raise TransformationProcessError(
                     "",
                     i18n.t("Provided boundwith relationship file not found"),
-                    self.task_config.boundwith_relationship_file_path,
+                    self.task_configuration.boundwith_relationship_file_path,
                 )
 
         location_map_path = (
             self.folder_structure.mapping_files_folder
-            / self.task_config.location_map_file_name
+            / self.task_configuration.location_map_file_name
         )
         with open(location_map_path) as location_map_file:
             self.location_map = list(csv.DictReader(location_map_file, dialect="tsv"))
             logging.info("Locations in map: %s", len(self.location_map))
 
         self.check_source_files(
-            self.folder_structure.legacy_records_folder, self.task_config.files
+            self.folder_structure.legacy_records_folder, self.task_configuration.files
         )
         self.instance_id_map = self.load_instance_id_map(True)
         self.mapper = RulesMapperHoldings(
             self.folio_client,
             self.location_map,
-            self.task_config,
+            self.task_configuration,
             self.library_configuration,
             self.instance_id_map,
             self.boundwith_relationship_map_rows,
@@ -305,12 +303,12 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         logging.info("Init done")
 
     def add_supplemental_mfhd_mappings(self):
-        if self.task_config.supplemental_mfhd_mapping_rules_file:
+        if self.task_configuration.supplemental_mfhd_mapping_rules_file:
             try:
                 with open(
                     (
                         self.folder_structure.mapping_files_folder
-                        / self.task_config.supplemental_mfhd_mapping_rules_file
+                        / self.task_configuration.supplemental_mfhd_mapping_rules_file
                     ),
                     "r",
                 ) as new_rules_file:
@@ -325,7 +323,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 raise TransformationProcessError(
                     "",
                     "Provided supplemental MFHD mapping rules file not found",
-                    self.task_config.supplemental_mfhd_mapping_rules_file,
+                    self.task_configuration.supplemental_mfhd_mapping_rules_file,
                 )
         else:
             new_rules = {}
