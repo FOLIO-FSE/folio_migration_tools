@@ -17,7 +17,10 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
-from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase, MigrationTaskBase
+from folio_migration_tools.migration_tasks.migration_task_base import (
+    MarcTaskConfigurationBase,
+    MigrationTaskBase,
+)
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):
@@ -35,14 +38,14 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Migration task type",
-                description=("The type of migration task you want to perform"),
+                description="The type of migration task you want to perform",
             ),
         ]
         files: Annotated[
             List[FileDefinition],
             Field(
                 title="Source files",
-                description=("List of MARC21 files with holdings records"),
+                description="List of MARC21 files with holdings records",
             ),
         ]
         hrid_handling: Annotated[
@@ -123,8 +126,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         default_call_number_type_name: Annotated[
             str,
             Field(
-                title="Default callnumber type name",
-                description="The name of the callnumber type that will be used as fallback",
+                title="Default call number type name",
+                description="The name of the call number type that will be used as fallback",
             ),
         ]
         fallback_holdings_type_id: Annotated[
@@ -138,7 +141,10 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Supplemental MFHD mapping rules file",
-                description="The name of the file in the mapping_files directory containing supplemental MFHD mapping rules",
+                description=(
+                    "The name of the file in the mapping_files directory containing "
+                    "supplemental MFHD mapping rules"
+                ),
             ),
         ] = ""
         include_mrk_statements: Annotated[
@@ -146,8 +152,9 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             Field(
                 title="Include MARC statements (MRK-format) as staff-only Holdings notes",
                 description=(
-                    "If set to true, the MARC statements will be included in the output as MARC Maker format fields. "
-                    "If set to false (default), the MARC statements will not be included in the output."
+                    "If set to true, the MARC statements will be included in the output as MARC "
+                    "Maker format fields. If set to false (default), "
+                    "the MARC statements will not be included in the output."
                 ),
             ),
         ] = False
@@ -155,9 +162,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="MARC Holdings Note type",
-                description=(
-                    "The name of the note type to use for MARC (MRK) statements. "
-                ),
+                description="The name of the note type to use for MARC (MRK) statements. ",
             ),
         ] = "Original MARC holdings statements"
         include_mfhd_mrk_as_note: Annotated[
@@ -186,8 +191,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 title="Include MARC Record (as MARC21 decoded string) as note",
                 description=(
                     "If set to true, the MARC record will be included in the output as a "
-                    "decoded binary MARC21 record. If set to false (default), the MARC record will not be "
-                    "included in the output."
+                    "decoded binary MARC21 record. If set to false (default), "
+                    "the MARC record will not be included in the output."
                 ),
             ),
         ] = False
@@ -239,7 +244,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.default_holdings_type.get("name", ""),
         )
 
-        # Load Boundwith relationship map
+        # Load a Boundwith relationship map
         self.boundwith_relationship_map_rows = []
         if self.task_config.boundwith_relationship_file_path:
             try:
@@ -283,8 +288,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         )
         self.add_supplemental_mfhd_mappings()
         if (
-            self.task_configuration.reset_hrid_settings
-            and self.task_configuration.update_hrid_settings
+            self.task_config.reset_hrid_settings
+            and self.task_config.update_hrid_settings
         ):
             self.mapper.hrid_handler.reset_holdings_hrid_counter()
         logging.info("%s Instance ids in map", len(self.instance_id_map))
