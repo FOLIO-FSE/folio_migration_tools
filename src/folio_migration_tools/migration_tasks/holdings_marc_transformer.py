@@ -1,5 +1,3 @@
-'''Main "script."'''
-
 import csv
 import json
 import logging
