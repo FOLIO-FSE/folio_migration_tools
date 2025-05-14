@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 from datetime import datetime
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 from uuid import uuid4
 
 import httpx
@@ -173,11 +173,13 @@ class BatchPoster(MigrationTaskBase):
         self.num_posted = 0
         self.okapi_headers = self.folio_client.okapi_headers
         self.http_client = None
+        self.starting_record_count_in_folio: Optional[int] = None
 
     def do_work(self):
         with self.folio_client.get_folio_http_client() as httpx_client:
             self.http_client = httpx_client
             with open(self.folder_structure.failed_recs_path, "w", encoding='utf-8') as failed_recs_file:
+                self.get_starting_record_count()
                 try:
                     batch = []
                     if self.task_configuration.object_type == "SRS":
@@ -604,6 +606,42 @@ class BatchPoster(MigrationTaskBase):
         else:
             return httpx.post(url, headers=self.okapi_headers, json=payload, params=self.query_params, timeout=None)
 
+    def get_current_record_count_in_folio(self):
+        if "query_endpoint" in self.api_info:
+            url = f"{self.folio_client.gateway_url}{self.api_info['query_endpoint']}"
+            query_params = {"query": "cql.allRecords=1", "limit": 0}
+            if self.http_client and not self.http_client.is_closed:
+                res = self.http_client.get(url, headers=self.folio_client.okapi_headers, params=query_params)
+            else:
+                res = httpx.get(url, headers=self.okapi_headers, params=query_params, timeout=None)
+            try:
+                res.raise_for_status()
+                return res.json()["totalRecords"]
+            except httpx.HTTPStatusError as e:
+                logging.error("Failed to get current record count. HTTP %s", res.status_code)
+                return 0
+            except KeyError:
+                logging.error(f"Failed to get current record count. No 'totalRecords' in response: {res.json()}")
+                return 0
+        else:
+            raise ValueError(
+                "No 'query_endpoint' available for %s. Cannot get current record count.", self.task_configuration.object_type
+            )
+
+    def get_starting_record_count(self):
+        if "query_endpoint" in self.api_info and not self.starting_record_count_in_folio:
+            logging.info("Getting starting record count in FOLIO")
+            self.starting_record_count_in_folio = self.get_current_record_count_in_folio()
+        else:
+            logging.info("No query_endpoint available for %s. Cannot get starting record count.", self.task_configuration.object_type)
+
+    def get_finished_record_count(self):
+        if "query_endpoint" in self.api_info:
+            logging.info("Getting finished record count in FOLIO")
+            self.finished_record_count_in_folio = self.get_current_record_count_in_folio()
+        else:
+            logging.info("No query_endpoint available for %s. Cannot get ending record count.", self.task_configuration.object_type)
+
     def wrap_up(self):
         logging.info("Done. Wrapping up")
         self.extradata_writer.flush()
@@ -621,11 +659,34 @@ class BatchPoster(MigrationTaskBase):
             )
         else:
             logging.info("Done posting %s records. %s failed", self.num_posted, self.num_failures)
-
+        if self.starting_record_count_in_folio:
+            self.get_finished_record_count()
+            total_on_server = self.finished_record_count_in_folio - self.starting_record_count_in_folio
+            discrepancy = self.processed - self.num_failures - total_on_server
+            if discrepancy != 0:
+                logging.error(
+                    (
+                        "Discrepancy in record count. "
+                        "Starting record count: %s. Finished record count: %s. "
+                        "Records posted: %s. Discrepancy: %s"
+                    ),
+                    self.starting_record_count_in_folio,
+                    self.finished_record_count_in_folio,
+                    self.num_posted - self.num_failures,
+                    discrepancy,
+                )
+        else:
+            discrepancy = 0
         run = "second time" if self.performing_rerun else "first time"
         self.migration_report.set("GeneralStatistics", f"Records processed {run}", self.processed)
         self.migration_report.set("GeneralStatistics", f"Records posted {run}", self.num_posted)
         self.migration_report.set("GeneralStatistics", f"Failed to post {run}", self.num_failures)
+        if discrepancy:
+            self.migration_report.set(
+                "GeneralStatistics",
+                f"Discrepancy in record count {run}",
+                discrepancy,
+            )
         self.rerun_run()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
