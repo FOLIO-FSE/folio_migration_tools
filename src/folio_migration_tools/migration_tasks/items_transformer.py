@@ -354,7 +354,7 @@ class ItemsTransformer(MigrationTaskBase):
                         record, f"row {idx}", FOLIONamespaces.items
                     )
 
-                    self.mapper.perform_additional_mappings(folio_rec, file_def)
+                    self.mapper.perform_additional_mappings(legacy_id, folio_rec, file_def)
                     self.handle_circiulation_notes(folio_rec, self.folio_client.current_user)
                     self.handle_notes(folio_rec)
                     if folio_rec["holdingsRecordId"] in self.boundwith_relationship_map:
