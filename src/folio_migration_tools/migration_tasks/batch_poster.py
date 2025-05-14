@@ -617,7 +617,7 @@ class BatchPoster(MigrationTaskBase):
             try:
                 res.raise_for_status()
                 return res.json()["totalRecords"]
-            except httpx.HTTPStatusError as e:
+            except httpx.HTTPStatusError:
                 logging.error("Failed to get current record count. HTTP %s", res.status_code)
                 return 0
             except KeyError:
