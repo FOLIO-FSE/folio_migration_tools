@@ -319,6 +319,8 @@ class BatchPoster(MigrationTaskBase):
                 updates[record["id"]] = {
                             "_version": record["_version"],
                         }
+                if "hrid" in record:
+                    updates[record["id"]]["hrid"] = record["hrid"]
                 if "status" in record:
                     updates[record["id"]]["status"] = record["status"]
                 if "lastCheckIn" in record:
