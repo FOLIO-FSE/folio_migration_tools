@@ -580,7 +580,7 @@ class RulesMapperBase(MapperBase):
             for req_entity_prop in req_entity_props
             if req_entity_prop not in entity
         ]
-        if any(missing_required_props):
+        if entity and any(missing_required_props):
             entity = {}
             Helper.log_data_issue(
                 index_or_legacy_id,
