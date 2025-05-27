@@ -401,7 +401,7 @@ class RulesMapperHoldings(RulesMapperBase):
         ]
 
     @staticmethod
-    def split_mrk_by_max_note_size(s: str, max_chunk_size: int = 32000) -> list[str]:
+    def split_mrk_by_max_note_size(s: str, max_chunk_size: int = 32000) -> List[str]:
         lines = s.splitlines(keepends=True)
         chunks = []
         current_chunk = ""
@@ -449,7 +449,7 @@ class RulesMapperHoldings(RulesMapperBase):
             ]
 
     @staticmethod
-    def split_mrc_by_max_note_size(data: bytes, sep: bytes = b"\x1e", max_chunk_size: int = 32000) -> list[bytes]:
+    def split_mrc_by_max_note_size(data: bytes, sep: bytes = b"\x1e", max_chunk_size: int = 32000) -> List[bytes]:
         # Split data into segments, each ending with the separator (except possibly the last)
         pattern = re.compile(b'(.*?' + re.escape(sep) + b'|.+?$)', re.DOTALL)
         parts = [m.group(0) for m in pattern.finditer(data) if m.group(0)]
