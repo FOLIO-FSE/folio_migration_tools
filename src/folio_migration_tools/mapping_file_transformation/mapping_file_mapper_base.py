@@ -531,9 +531,21 @@ class MappingFileMapperBase(MapperBase):
                             isinstance(res, str)
                             and self.library_configuration.multi_field_delimiter in res
                         ):
+                            for delim_value in res.split(
+                                self.library_configuration.multi_field_delimiter
+                            ):
+                                if delim_value not in empty_vals:
+                                    self.validate_enums(
+                                        delim_value,
+                                        sub_prop,
+                                        sub_prop_name,
+                                        index_or_id,
+                                        required,
+                                    )
                             multi_field_props.append(sub_prop_name)
+                        else:
+                            self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
 
-                        self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
                         if res or isinstance(res, bool):
                             temp_object[sub_prop_name] = res
 
