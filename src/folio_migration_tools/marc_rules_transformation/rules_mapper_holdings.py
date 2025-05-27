@@ -394,10 +394,10 @@ class RulesMapperHoldings(RulesMapperBase):
             ) from ee
         return [
             {
-                "note": "\n".join(mrk_statement_notes),
+                "note": chunk,
                 "holdingsNoteTypeId": holdings_note_type_id,
                 "staffOnly": True,
-            }
+            } for chunk in self.split_mrk_by_max_note_size("\n".join(mrk_statement_notes))
         ]
 
     @staticmethod
