@@ -4774,7 +4774,7 @@ def test_map_array_object_array_string_with_delimiter_and_invalid_delimited_enum
             mocked_classes.get_mocked_library_config(),
             mocked_file_mapper.task_configuration
         ).do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
-    assert "Allowed values for noteTypeare ['Type A', 'Type B']" in str(trfe.value)
+    assert "Allowed values for noteType are ['Type A', 'Type B']" in str(trfe.value)
 
 
 def test_map_array_object_array_string_with_delimiter_and_non_delimited_enum(mocked_folio_client: FolioClient, mocked_file_mapper):
