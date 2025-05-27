@@ -4652,3 +4652,189 @@ def test_get_map_entries_by_folio_prop_name_with_partial_matches():
     assert len(result) == 1
     assert result[0]["value"] == "Valid Value"
 
+
+def test_map_array_object_array_string_with_delimiter_and_delimited_enum(mocked_folio_client: FolioClient, mocked_file_mapper):
+    data = [
+        {
+            "folio_field": "legacyIdentifier",
+            "legacy_field": "id",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "circulationNotes[0].note",
+            "legacy_field": "circulation_note",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "circulationNotes[0].noteType",
+            "legacy_field": "circulation_note_type",
+            "value": "",
+            "description": "",
+        }
+    ]
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "circulationNotes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "note": {
+                            "type": "string"
+                        },
+                        "noteType": {
+                            "type": "string",
+                            "enum": ["Type A", "Type B", "Type C"],
+                        },
+                    },
+                },
+            }
+        },
+    }
+    legacy_record = {
+        "id": "id1",
+        "circulation_note": "Note 1<delimiter>Note 2",
+        "circulation_note_type": "Type A<delimiter>Type B",
+    }
+    result, folio_id = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        {"data": data},
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration
+    ).do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
+    assert result["circulationNotes"][0]["note"] == "Note 1"
+    assert result["circulationNotes"][0]["noteType"] == "Type A"
+    assert result["circulationNotes"][1]["note"] == "Note 2"
+    assert result["circulationNotes"][1]["noteType"] == "Type B"
+
+
+def test_map_array_object_array_string_with_delimiter_and_invalid_delimited_enum(mocked_folio_client: FolioClient, mocked_file_mapper):
+    data = [
+        {
+            "folio_field": "legacyIdentifier",
+            "legacy_field": "id",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "circulationNotes[0].note",
+            "legacy_field": "circulation_note",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "circulationNotes[0].noteType",
+            "legacy_field": "circulation_note_type",
+            "value": "",
+            "description": "",
+        }
+    ]
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "circulationNotes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "note": {
+                            "type": "string"
+                        },
+                        "noteType": {
+                            "type": "string",
+                            "enum": ["Type A", "Type B"],
+                        },
+                    },
+                },
+            }
+        },
+    }
+    legacy_record = {
+        "id": "id1",
+        "circulation_note": "Note 1<delimiter>Note 2",
+        "circulation_note_type": "Type A<delimiter>Invalid Type",
+    }
+    with pytest.raises(TransformationRecordFailedError) as trfe:
+        MappingFileMapperBase(
+            mocked_folio_client,
+            schema,
+            {"data": data},
+            None,
+            FOLIONamespaces.items,
+            mocked_classes.get_mocked_library_config(),
+            mocked_file_mapper.task_configuration
+        ).do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
+    assert "Allowed values for noteTypeare ['Type A', 'Type B']" in str(trfe.value)
+
+
+def test_map_array_object_array_string_with_delimiter_and_non_delimited_enum(mocked_folio_client: FolioClient, mocked_file_mapper):
+    data = [
+        {
+            "folio_field": "legacyIdentifier",
+            "legacy_field": "id",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "circulationNotes[0].note",
+            "legacy_field": "circulation_note",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "circulationNotes[0].noteType",
+            "legacy_field": "circulation_note_type",
+            "value": "",
+            "description": "",
+        }
+    ]
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "The record of an organization",
+        "type": "object",
+        "properties": {
+            "circulationNotes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "note": {
+                            "type": "string"
+                        },
+                        "noteType": {
+                            "type": "string",
+                            "enum": ["Type A", "Type B", "Type C"],
+                        },
+                    },
+                },
+            }
+        },
+    }
+    legacy_record = {
+        "id": "id1",
+        "circulation_note": "Note 1<delimiter>Note 2",
+        "circulation_note_type": "Type A"
+    }
+    result, folio_id = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        {"data": data},
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration
+    ).do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
+    assert result["circulationNotes"][0]["note"] == "Note 1"
+    assert result["circulationNotes"][0]["noteType"] == "Type A"
+    assert result["circulationNotes"][1]["note"] == "Note 2"
+    assert result["circulationNotes"][1]["noteType"] == "Type A"
