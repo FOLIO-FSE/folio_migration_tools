@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+import re
 from typing import Dict, List, Set
 
 import i18n
@@ -399,6 +400,23 @@ class RulesMapperHoldings(RulesMapperBase):
             }
         ]
 
+    @staticmethod
+    def split_mrk_by_max_note_size(s: str, max_chunk_size: int = 32000) -> list[str]:
+        lines = s.splitlines(keepends=True)
+        chunks = []
+        current_chunk = ""
+        for line in lines:
+            # If adding this line would exceed the limit, start a new chunk
+            if len(current_chunk) + len(line) > max_chunk_size:
+                if current_chunk:
+                    chunks.append(current_chunk)
+                current_chunk = line
+            else:
+                current_chunk += line
+        if current_chunk:
+            chunks.append(current_chunk)
+        return chunks
+
     def add_mfhd_as_mrk_note(self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]):
         """Adds the MFHD as a note to the holdings record
 
@@ -424,11 +442,28 @@ class RulesMapperHoldings(RulesMapperBase):
                 ) from ee
             folio_holding["notes"] = folio_holding.get("notes", []) + [
                 {
-                    "note": str(marc_record),
+                    "note": chunk,
                     "holdingsNoteTypeId": holdings_note_type_id,
                     "staffOnly": True,
-                }
+                } for chunk in self.split_mrk_by_max_note_size(str(marc_record))
             ]
+
+    @staticmethod
+    def split_mrc_by_max_note_size(data: bytes, sep: bytes = b"\x1e", max_chunk_size: int = 32000) -> list[bytes]:
+        # Split data into segments, each ending with the separator (except possibly the last)
+        pattern = re.compile(b'(.*?' + re.escape(sep) + b'|.+?$)', re.DOTALL)
+        parts = [m.group(0) for m in pattern.finditer(data) if m.group(0)]
+        chunks = []
+        current_chunk = b""
+        for part in parts:
+            if len(current_chunk) + len(part) > max_chunk_size and current_chunk:
+                chunks.append(current_chunk)
+                current_chunk = part
+            else:
+                current_chunk += part
+        if current_chunk:
+            chunks.append(current_chunk)
+        return chunks
 
     def add_mfhd_as_mrc_note(self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]):
         """Adds the MFHD as a note to the holdings record
@@ -455,10 +490,10 @@ class RulesMapperHoldings(RulesMapperBase):
                 ) from ee
             folio_holding["notes"] = folio_holding.get("notes", []) + [
                 {
-                    "note": marc_record.as_marc().decode("utf-8"),
+                    "note": chunk.decode("utf-8"),
                     "holdingsNoteTypeId": holdings_note_type_id,
                     "staffOnly": True,
-                }
+                } for chunk in self.split_mrc_by_max_note_size(marc_record.as_marc())
             ]
 
     def wrap_up(self):
