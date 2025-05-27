@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 from datetime import datetime, timezone
-from typing import Set
+from typing import Dict, List, Set, Union
 from uuid import uuid4
 
 import i18n
@@ -117,12 +117,12 @@ class ItemMapper(MappingFileMapperBase):
             "LocationMapping",
         )
 
-    def perform_additional_mappings(self, legacy_ids, folio_rec, file_def):
+    def perform_additional_mappings(self, legacy_ids: Union[str, List[str]], folio_rec: Dict, file_def: FileDefinition):
         self.handle_suppression(folio_rec, file_def)
         self.map_statistical_codes(folio_rec, file_def)
         self.map_statistical_code_ids(legacy_ids, folio_rec)
 
-    def handle_suppression(self, folio_record, file_def: FileDefinition):
+    def handle_suppression(self, folio_record: Dict, file_def: FileDefinition):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
