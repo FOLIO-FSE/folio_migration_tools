@@ -171,14 +171,15 @@ class MappingFileMapperBase(MapperBase):
         object_type: FOLIONamespaces,
         accept_duplicate_ids: bool = False,
     ):
+        folio_object = {}
         if self.ignore_legacy_identifier:
-            return (
+            folio_object.update(
                 {
                     "id": str(uuid.uuid4()),
                     "type": "object",
-                },
-                index_or_id,
+                }
             )
+            return folio_object, index_or_id
 
         if not (
             legacy_id := " ".join(
@@ -205,13 +206,21 @@ class MappingFileMapperBase(MapperBase):
             )
         else:
             self.unique_record_ids.add(generated_id)
-        return (
+        folio_object.update(
             {
                 "id": generated_id,
                 "type": "object",
-            },
-            legacy_id,
+            }
         )
+        if object_type == FOLIONamespaces.holdings and hasattr(self, "holdings_sources"):
+            folio_object['sourceId'] = self.holdings_sources.get("FOLIO")
+        elif object_type == FOLIONamespaces.holdings and not hasattr(self, "holdings_sources"):
+            raise TransformationProcessError(
+                index_or_id,
+                "Holdings source not set in the mapper",
+                None
+            )
+        return folio_object, legacy_id
 
     def get_statistical_code(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:
