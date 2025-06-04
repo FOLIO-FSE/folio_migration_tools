@@ -1,10 +1,12 @@
 import ast
+import json
+import logging
 
 import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import TransformationProcessError, TransformationRecordFailedError
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -59,6 +61,21 @@ class HoldingsMapper(MappingFileMapperBase):
                 "name",
                 "CallNumberTypeMapping",
             )
+        self.holdings_sources = self.get_holdings_sources()
+
+    def get_holdings_sources(self):
+        res = {}
+        holdings_sources = list(
+            self.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
+        )
+        logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
+        res = {n["name"].upper(): n["id"] for n in holdings_sources}
+        if "FOLIO" not in res:
+            raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
+        if "MARC" not in res:
+            raise TransformationProcessError("", "No holdings source with name MARC in tenant")
+        logging.info(json.dumps(res, indent=4))
+        return res
 
     def perform_additional_mappings(self, legacy_ids, folio_rec, file_def):
         self.handle_suppression(folio_rec, file_def)
