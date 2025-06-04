@@ -165,7 +165,7 @@ class BibsRulesMapper(RulesMapperBase):
             Helper.log_data_issue(
                 legacy_ids,
                 "Multiple main entry fields in record. Record will fail Data Import. Creating Instance anyway.",
-                main_entry_fields
+                [str(x) for x in main_entry_fields]
             )
         if not main_entry_fields:
             main_entry_fields += marc_record.get_fields("700", "710", "711", "730")
