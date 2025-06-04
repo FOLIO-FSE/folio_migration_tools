@@ -559,6 +559,16 @@ class RulesMapperBase(MapperBase):
             if k == "authorityId" and (legacy_subfield_9 := marc_field.get("9")):
                 marc_field.add_subfield("0", legacy_subfield_9)
                 marc_field.delete_subfield("9")
+            if k == "authorityId" and (entity_subfields := entity_mapping.get("subfield", [])):
+                for subfield in entity_subfields:
+                    if subfield != "9":
+                        Helper.log_data_issue(
+                            index_or_legacy_id,
+                            f"authorityId mapping from ${subfield} is not supported. Data Import will fail. "
+                            "Use only $9 for authority id mapping in MARC-to-Instance mapping rules.",
+                            marc_field,
+                        )
+                        entity_mapping["subfield"] = ["9"]
             if my_values := [
                 v
                 for v in self.apply_rules(marc_field, entity_mapping, index_or_legacy_id)
