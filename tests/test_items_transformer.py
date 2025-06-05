@@ -63,7 +63,7 @@ def test_load_boundwith_relationships_happy_path(items_transformer):
 
 
 def test_load_boundwith_relationships_file_not_found(items_transformer):
-    with (patch("builtins.open", side_effect=FileNotFoundError)):
+    with patch("builtins.open", side_effect=FileNotFoundError):
         with pytest.raises(TransformationProcessError) as exc_info:
             ItemsTransformer.load_boundwith_relationships(items_transformer)
         assert (
@@ -75,8 +75,12 @@ def test_load_boundwith_relationships_file_not_found(items_transformer):
 def test_load_boundwith_relationships_invalid_json(items_transformer):
     mock_data = '["key1", ["value1"]\n["key2", ["value2"]]'
     with patch("builtins.open", mock_open(read_data=mock_data)):
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(TransformationProcessError) as exc_info:
             ItemsTransformer.load_boundwith_relationships(items_transformer)
+            assert (
+                   "Boundwith relationship file specified, but relationships file "
+                   "from holdings transformation is not a valid line JSON."
+                   ) in str(exc_info.value)
 
 
 def test_load_boundwith_relationships_empty_file(items_transformer):
@@ -89,6 +93,9 @@ def test_load_boundwith_relationships_empty_file(items_transformer):
 def test_load_boundwith_relationships_map_not_a_list(items_transformer):
     mock_data = '{"key1": ["value1"]}'
     with patch("builtins.open", mock_open(read_data=mock_data)):
-        with pytest.raises(ValueError):
+        with pytest.raises(TransformationProcessError) as exc_info:
             ItemsTransformer.load_boundwith_relationships(items_transformer)
-
+        assert (
+                "Boundwith relationship file specified, but relationships file "
+                "from holdings transformation is not a valid line JSON."
+               ) in str(exc_info.value)

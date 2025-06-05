@@ -462,11 +462,16 @@ class ItemsTransformer(MigrationTaskBase):
         except FileNotFoundError:
             raise TransformationProcessError(
                 "",
-                (
-                    "Boundwith relationship file specified, but relationships file "
-                    "from holdings transformation not found."
-                ),
+                "Boundwith relationship file specified, but relationships file "
+                "from holdings transformation not found.",
                 self.folder_structure.boundwith_relationships_map_path
+            )
+        except ValueError:
+            raise TransformationProcessError(
+                "",
+                "Boundwith relationship file specified, but relationships file "
+                "from holdings transformation is not a valid line JSON.",
+                self.folder_structure.boundwith_relationships_map_path,
             )
 
     def wrap_up(self):
