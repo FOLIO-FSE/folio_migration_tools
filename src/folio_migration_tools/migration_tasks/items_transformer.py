@@ -127,7 +127,8 @@ class ItemsTransformer(MigrationTaskBase):
                 title="Statistical code map file name",
                 description=(
                     "Path to the file containing the mapping of statistical codes. "
-                    "The file should be in TSV format with legacy_stat_code and folio_code columns."
+                    "The file should be in TSV format with legacy_stat_code "
+                    "and folio_code columns."
                 ),
             ),
         ] = ""
@@ -355,7 +356,7 @@ class ItemsTransformer(MigrationTaskBase):
                     )
 
                     self.mapper.perform_additional_mappings(legacy_id, folio_rec, file_def)
-                    self.handle_circiulation_notes(folio_rec, self.folio_client.current_user)
+                    self.handle_circulation_notes(folio_rec, self.folio_client.current_user)
                     self.handle_notes(folio_rec)
                     if folio_rec["holdingsRecordId"] in self.boundwith_relationship_map:
                         for idx_, instance_id in enumerate(
@@ -373,7 +374,7 @@ class ItemsTransformer(MigrationTaskBase):
                     if idx == 0:
                         logging.info("First FOLIO record:")
                         logging.info(json.dumps(folio_rec, indent=4))
-                    # TODO: turn this into a asynchrounous task
+                    # TODO: turn this into a asynchronous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
                         i18n.t("Number of records written to disk")
@@ -388,8 +389,8 @@ class ItemsTransformer(MigrationTaskBase):
                     logging.fatal(attribute_error)
                     logging.info("Quitting...")
                     sys.exit(1)
-                except Exception as excepion:
-                    self.mapper.handle_generic_exception(idx, excepion)
+                except Exception as exception:
+                    self.mapper.handle_generic_exception(idx, exception)
                 self.mapper.migration_report.add(
                     "GeneralStatistics",
                     i18n.t("Number of Legacy items in %{container}", container=file_def),
@@ -425,14 +426,14 @@ class ItemsTransformer(MigrationTaskBase):
                 del folio_object["notes"]
 
     @staticmethod
-    def handle_circiulation_notes(folio_rec, current_user_uuid):
+    def handle_circulation_notes(folio_rec, current_user_uuid):
         if not folio_rec.get("circulationNotes", []):
             return
         filtered_notes = []
         for circ_note in folio_rec.get("circulationNotes", []):
             if circ_note.get("noteType", "") not in ["Check in", "Check out"]:
                 raise TransformationProcessError(
-                    "", "Circulation Note types are not mapped correclty"
+                    "", "Circulation Note types are not mapped correctly"
                 )
             if circ_note.get("note", ""):
                 circ_note["id"] = str(uuid.uuid4())
@@ -455,11 +456,17 @@ class ItemsTransformer(MigrationTaskBase):
                         json.loads(x) for x in boundwith_relationship_file
                     )
             logging.info(
-                    "Rows in Bound with relationship map: %s", len(self.boundwith_relationship_map)
+                "Rows in Bound with relationship map: %s",
+                len(self.boundwith_relationship_map)
                 )
         except FileNotFoundError:
             raise TransformationProcessError(
-                    "", "Boundwith relationship file specified, but relationships file from holdings transformation not found. ", self.folder_structure.boundwith_relationships_map_path
+                "",
+                (
+                    "Boundwith relationship file specified, but relationships file "
+                    "from holdings transformation not found."
+                ),
+                self.folder_structure.boundwith_relationships_map_path
             )
 
     def wrap_up(self):

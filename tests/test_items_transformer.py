@@ -11,34 +11,35 @@ import json
 from unittest.mock import mock_open, patch
 
 
-def test_handle_circiulation_notes_wrong_type():
+def test_handle_circulation_notes_wrong_type():
     folio_rec = {
         "circulationNotes": [{"id": "someId", "noteType": "Check inn", "note": "some note"}]
     }
     with pytest.raises(TransformationProcessError):
-        ItemsTransformer.handle_circiulation_notes(folio_rec, str(uuid.uuid4()))
+        ItemsTransformer.handle_circulation_notes(folio_rec, str(uuid.uuid4()))
 
 
-def test_handle_circiulation_notes_no_note():
+def test_handle_circulation_notes_no_note():
     folio_rec = {"circulationNotes": [{"id": "someId", "noteType": "Check in", "note": ""}]}
-    ItemsTransformer.handle_circiulation_notes(folio_rec, str(uuid.uuid4()))
+    ItemsTransformer.handle_circulation_notes(folio_rec, str(uuid.uuid4()))
     assert "circulationNotes" not in folio_rec
 
 
-def test_handle_circiulation_notes_happy_path():
+def test_handle_circulation_notes_happy_path():
     folio_rec = {
         "circulationNotes": [
             {"id": "someId", "noteType": "Check in", "note": "some_note"},
             {"id": "someId", "noteType": "Check in", "note": ""},
         ]
     }
-    ItemsTransformer.handle_circiulation_notes(folio_rec, str(uuid.uuid4()))
+    ItemsTransformer.handle_circulation_notes(folio_rec, str(uuid.uuid4()))
     assert folio_rec["circulationNotes"][0]["note"] == "some_note"
     assert len(folio_rec["circulationNotes"]) == 1
 
 
 def test_get_object_type():
     assert ItemsTransformer.get_object_type() == FOLIONamespaces.items
+
 
 @pytest.fixture
 def items_transformer():
@@ -62,10 +63,13 @@ def test_load_boundwith_relationships_happy_path(items_transformer):
 
 
 def test_load_boundwith_relationships_file_not_found(items_transformer):
-    with patch("builtins.open", side_effect=FileNotFoundError):
-        with pytest.raises(TransformationProcessError) as excinfo:
+    with (patch("builtins.open", side_effect=FileNotFoundError)):
+        with pytest.raises(TransformationProcessError) as exc_info:
             ItemsTransformer.load_boundwith_relationships(items_transformer)
-        assert "Boundwith relationship file specified, but relationships file from holdings transformation not found." in str(excinfo.value)
+        assert (
+                "Boundwith relationship file specified, but relationships file "
+                "from holdings transformation not found."
+               ) in str(exc_info.value)
 
 
 def test_load_boundwith_relationships_invalid_json(items_transformer):
