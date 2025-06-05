@@ -77,3 +77,18 @@ def test_load_boundwith_relationships_invalid_json(items_transformer):
     with patch("builtins.open", mock_open(read_data=mock_data)):
         with pytest.raises(json.JSONDecodeError):
             ItemsTransformer.load_boundwith_relationships(items_transformer)
+
+
+def test_load_boundwith_relationships_empty_file(items_transformer):
+    mock_data = ''
+    with patch("builtins.open", mock_open(read_data=mock_data)):
+        ItemsTransformer.load_boundwith_relationships(items_transformer)
+        assert len(items_transformer.boundwith_relationship_map) == 0
+
+
+def test_load_boundwith_relationships_map_not_a_list(items_transformer):
+    mock_data = '{"key1": ["value1"]}'
+    with patch("builtins.open", mock_open(read_data=mock_data)):
+        with pytest.raises(ValueError):
+            ItemsTransformer.load_boundwith_relationships(items_transformer)
+
