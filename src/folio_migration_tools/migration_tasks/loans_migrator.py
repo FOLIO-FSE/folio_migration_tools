@@ -234,7 +234,7 @@ class LoansMigrator(MigrationTaskBase):
             legacy_loan (LegacyLoan): The Legacy loan
         """
         res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
-
+        
         if res_checkout.was_successful:
             self.migration_report.add("Details", i18n.t("Checked out on first try"))
             self.migration_report.add_general_statistics(i18n.t("Successfully checked out"))
@@ -463,7 +463,7 @@ class LoansMigrator(MigrationTaskBase):
         elif folio_checkout.error_message == "Declared lost":
             return folio_checkout
         elif folio_checkout.error_message.startswith("Cannot check out to inactive user"):
-            return self.checkout_to_inactice_user(legacy_loan)
+            return self.checkout_to_inactive_user(legacy_loan)
         else:
             self.migration_report.add(
                 "Details",
@@ -493,7 +493,7 @@ class LoansMigrator(MigrationTaskBase):
                 del self.failed[legacy_loan.item_barcode]
             return TransactionResult(False, False, "", "", "")
 
-    def checkout_to_inactice_user(self, legacy_loan) -> TransactionResult:
+    def checkout_to_inactive_user(self, legacy_loan) -> TransactionResult:
         logging.info("Cannot check out to inactive user. Activating and trying again")
         user = self.get_user_by_barcode(legacy_loan.patron_barcode)
         expiration_date = user.get("expirationDate", datetime.isoformat(datetime.now()))
@@ -501,6 +501,8 @@ class LoansMigrator(MigrationTaskBase):
         self.activate_user(user)
         logging.debug("Successfully Activated user")
         res = self.circulation_helper.check_out_by_barcode(legacy_loan)  # checkout_and_update
+        if res.should_be_retried:
+            res = self.handle_checkout_failure(legacy_loan, res)
         self.migration_report.add("Details", res.migration_report_message)
         self.deactivate_user(user, expiration_date)
         logging.debug("Successfully Deactivated user again")
