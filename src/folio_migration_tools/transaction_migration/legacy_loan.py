@@ -8,7 +8,7 @@ from dateutil import tz
 from dateutil.parser import parse, ParserError
 
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 
 utc = ZoneInfo("UTC")
 
@@ -124,7 +124,13 @@ class LegacyLoan(object):
             if self.out_date.hour == 0:
                 self.out_date = self.out_date.replace(hour=0, minute=1)
         if self.due_date <= self.out_date:
-            raise TransformationProcessError(self.row, i18n.t("Due date is before out date, or date information is missing from both"), json.dumps(self.legacy_loan_dict, indent=2))
+            raise TransformationRecordFailedError(
+                self.row,
+                i18n.t(
+                    "Due date is before out date, or date information is missing from both"
+                ),
+                json.dumps(self.legacy_loan_dict, indent=2)
+            )
 
     def to_dict(self):
         return {

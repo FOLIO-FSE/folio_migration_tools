@@ -17,6 +17,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from art import tprint
 
 from folio_migration_tools.circulation_helper import CirculationHelper
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -302,7 +303,7 @@ class LoansMigrator(MigrationTaskBase):
 
     def wrap_up(self):
         for k, v in self.failed.items():
-            self.failed_and_not_dupe[k] = [v.to_dict()]
+            self.failed_and_not_dupe[k] = [v if type(v) is dict else v.to_dict()]
         print(f"Wrapping up. Unique loans in failed:{len(self.failed_and_not_dupe)}")
 
         self.write_failed_loans_to_file()
@@ -404,6 +405,19 @@ class LoansMigrator(MigrationTaskBase):
                     ] = legacy_loan
                 else:
                     results.append(legacy_loan)
+            except TransformationRecordFailedError as trfe:
+                num_bad += 1
+                self.migration_report.add_general_statistics(
+                    i18n.t("Loans failed pre-validation")
+                )
+                self.migration_report.add(
+                    "DiscardedLoans",
+                    f"{trfe.message} - see data issues log",
+                )
+                trfe.log_it()
+                self.failed[
+                    legacy_loan_dict.get("item_barcode", f"no_barcode_{legacy_loan_count}")
+                ] = legacy_loan_dict
             except ValueError as ve:
                 logging.exception(ve)
         logging.info(
