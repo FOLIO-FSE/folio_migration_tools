@@ -303,7 +303,7 @@ class LoansMigrator(MigrationTaskBase):
 
     def wrap_up(self):
         for k, v in self.failed.items():
-            self.failed_and_not_dupe[k] = [v if type(v) is dict else v.to_dict()]
+            self.failed_and_not_dupe[k] = [v if isinstance(v, dict) else v.to_dict()]
         print(f"Wrapping up. Unique loans in failed:{len(self.failed_and_not_dupe)}")
 
         self.write_failed_loans_to_file()
