@@ -90,6 +90,7 @@ class Conditions:
         logging.info("%s\tholding_note_types", len(self.folio.holding_note_types)) # type: ignore
         logging.info("%s\tcall_number_types", len(self.folio.call_number_types)) # type: ignore
         self.setup_and_validate_holdings_types()
+        self.ill_policies = self.folio.folio_get_all("/ill-policies", "illPolicies")
         # Raise for empty settings
         if not self.folio.holding_note_types:
             raise TransformationProcessError("", "No holding_note_types in FOLIO")
@@ -915,3 +916,194 @@ class Conditions:
                 legacy_id,
                 f"Subject source not found for {value} {marc_field}",
             )
+
+    def condition_set_acquisition_method(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        """
+        This method maps the acquisition method based on the 008 field.
+        This condition is not available in FOLIO's MARC mapping engine and 
+        will require use of a supplemental mapping rules file in the
+        HoldingsMarcTransformer task definition.
+        """
+        if len(value) < 8:
+            self.mapper.migration_report.add(
+                "ReceiptStatusMapping", i18n.t("008 is too short") + f": {value}"
+            )
+            return ""
+
+        try:
+            acq_methods = {
+                "c": "Cooperative or consortial purchase",
+                "d": "Deposit",
+                "e": "Exchange",
+                "f": "Free",
+                "g": "Gift",
+                "l": "Legal depostit",
+                "m": "Membership",
+                "n": "Non-library purchase",
+                "p": "Purchase",
+                "q": "Lease",
+                "u": "Unknown",
+                "z": "Other method of acquisition",
+            }
+            mapped_value = acq_methods[value[7]]
+            self.mapper.migration_report.add(
+                "MethodOfAcquisitionMapping",
+                i18n.t(
+                    "%{value} mapped to %{mapped_value}", value=value[7], mapped_value=mapped_value
+                ),
+            )
+            return mapped_value
+        except Exception:
+            self.mapper.migration_report.add(
+                "MethodOfAcquisitionMapping", i18n.t("%{value} not found in map.", value=value[8])
+            )
+            return ""
+
+    def condition_set_retention_policy(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        """
+        This method maps the retention policy based on the 008 field.
+        This condition is not available in FOLIO's MARC mapping engine and
+        will require use of a supplemental mapping rules file in the
+        HoldingsMarcTransformer task definition.
+        """
+        if len(value) < 13:
+            self.mapper.migration_report.add(
+                "RetentionPolicyMapping", i18n.t("008 is too short") + f": {value}"
+            )
+            return ""
+
+        try:
+            retention_policies = {
+                "0": "Unknown",
+                "1": "Other general retention policy",
+                "2": "Retained except as replaced by updates",
+                "3": "Sample issue retained",
+                "4": "Retained until replaced by microform",
+                "5": "Retained until replaced by cumulation, replacement volume, or revision",
+                "6": "Retained for a limited period",
+                "7": "Not retained",
+                "8": "Permanently retained",
+            }
+            mapped_value = retention_policies[value[12]]
+            self.mapper.migration_report.add(
+                "RetentionPolicyMapping",
+                i18n.t(
+                    "%{value} mapped to %{mapped_value}",
+                    value=value[12],
+                    mapped_value=mapped_value,
+                ),
+            )
+            if value[12] == "6":
+                self.mapper.migration_report.add(
+                    "RetentionPolicyMapping",
+                    i18n.t(
+                        "Retention policy 6 indicates a limited period. Specific retention period will be mapped from 008/13-15",
+                    )
+                )
+                policy_types = {
+                    "l": "Latest",
+                    "p": "Previous",
+                }
+                unit_types = {
+                    "m": "Day",
+                    "w": "Month",
+                    "y": "Year",
+                    "e": "Edition",
+                    "i": "Issue",
+                    "s": "Supplement"
+                }
+                try:
+                    if value[13].strip() and value[14].strip() and value[15].strip():
+                        if int(value[14]) > 1:
+                            specific_retention_policy = f"{policy_types.get(value[13], "")} {value[14]} {unit_types.get(value[15], "")}s retained".strip()
+                        else:
+                            specific_retention_policy = f"{policy_types.get(value[13], "")} {value[14]} {unit_types.get(value[15], "")} retained".strip()
+                    if specific_retention_policy:
+                        return specific_retention_policy
+                except ValueError:
+                    self.mapper.migration_report.add(
+                        "RetentionPolicyMapping",
+                        i18n.t("Invalid specific retention policy in 008/13-15: %{value}", value=value[13:16]),
+                    )
+            return mapped_value
+        except Exception:
+            self.mapper.migration_report.add(
+                "RetentionPolicyMapping", i18n.t("%{value} not found in map.", value=value[12])
+            )
+            return ""
+
+    def set_ill_policy(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        """
+        This method maps the ILL policy based on the 008 field.
+        This condition is not available in FOLIO's MARC mapping engine and
+        will require use of a supplemental mapping rules file in the
+        HoldingsMarcTransformer task definition."""
+        if len(value) < 21:
+            self.mapper.migration_report.add(
+                "ILLPolicyMapping", i18n.t("008 is too short") + f": {value}"
+            )
+            return ""
+        try:
+            ill_policies = {
+                "a": "Will lend",
+                "b": "Will not lend",
+                "c": "Will lend hard copy only",
+                "l": "Limited lending policy",
+                "u": "Unknown",
+            }
+            mapped_value = ill_policies[value[20]]
+            self.mapper.migration_report.add(
+                "ILLPolicyMapping",
+                i18n.t("%{value} mapped to %{mapped_value}", value=value[20], mapped_value=mapped_value),
+            )
+            ill_policy_id = self.get_ref_data_tuple_by_name(
+                self.ill_policies, "ill_policies", mapped_value
+            )
+            return ill_policy_id[0] if ill_policy_id else ""
+        except Exception:
+            self.mapper.migration_report.add(
+                "ILLPolicyMapping", i18n.t("%{value} not found in map.", value=value[20])
+            )
+            return ""
+
+    def condition_set_digitization_policy(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        """
+        This method maps the digitization policy based on the 008 field.
+        This condition is not available in FOLIO's MARC mapping engine and
+        will require use of a supplemental mapping rules file in the
+        HoldingsMarcTransformer task definition.
+        """
+        if len(value) < 22:
+            self.mapper.migration_report.add(
+                "DigitizationPolicyMapping", i18n.t("008 is too short") + f": {value}"
+            )
+            return ""
+        try:
+            digitization_policies = {
+                "a": "Will reproduce",
+                "b": "Will not reproduce",
+                "u": "Unknown",
+            }
+            mapped_value = digitization_policies[value[21]]
+            self.mapper.migration_report.add(
+                "DigitizationPolicyMapping",
+                i18n.t(
+                    "%{value} mapped to %{mapped_value}",
+                    value=value[21],
+                    mapped_value=mapped_value,
+                ),
+            )
+            return mapped_value
+        except Exception:
+            self.mapper.migration_report.add(
+                "DigitizationPolicyMapping", i18n.t("%{value} not found in map.", value=value[21])
+            )
+            return ""
