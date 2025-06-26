@@ -25,7 +25,9 @@ class AbstractTaskConfiguration(BaseModel):
         str,
         Field(
             title="Migration task type",
-            description=("The type of migration task you want to perform."),
+            description=(
+                "The type of migration task you want to perform."
+            ),
         ),
     ]
     ecs_tenant_id: Annotated[

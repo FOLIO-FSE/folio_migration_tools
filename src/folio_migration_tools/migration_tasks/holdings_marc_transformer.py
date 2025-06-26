@@ -1,5 +1,3 @@
-'''Main "script."'''
-
 import csv
 import json
 import logging
@@ -19,7 +17,10 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings import (
     RulesMapperHoldings,
 )
-from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase, MigrationTaskBase
+from folio_migration_tools.migration_tasks.migration_task_base import (
+    MarcTaskConfigurationBase,
+    MigrationTaskBase
+)
 
 
 class HoldingsMarcTransformer(MigrationTaskBase):
@@ -37,14 +38,18 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Migration task type",
-                description=("The type of migration task you want to perform"),
+                description=(
+                    "The type of migration task you want to perform"
+                ),
             ),
         ]
         files: Annotated[
             List[FileDefinition],
             Field(
                 title="Source files",
-                description=("List of MARC21 files with holdings records"),
+                description=(
+                    "List of MARC21 files with holdings records"
+                ),
             ),
         ]
         hrid_handling: Annotated[
@@ -125,8 +130,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         default_call_number_type_name: Annotated[
             str,
             Field(
-                title="Default callnumber type name",
-                description="The name of the callnumber type that will be used as fallback",
+                title="Default call_number type name",
+                description="The name of the call_number type that will be used as fallback",
             ),
         ]
         fallback_holdings_type_id: Annotated[
@@ -140,7 +145,10 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Supplemental MFHD mapping rules file",
-                description="The name of the file in the mapping_files directory containing supplemental MFHD mapping rules",
+                description=(
+                    "The name of the file in the mapping_files directory "
+                    "containing supplemental MFHD mapping rules"
+                ),
             ),
         ] = ""
         include_mrk_statements: Annotated[
@@ -148,8 +156,10 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             Field(
                 title="Include MARC statements (MRK-format) as staff-only Holdings notes",
                 description=(
-                    "If set to true, the MARC statements will be included in the output as MARC Maker format fields. "
-                    "If set to false (default), the MARC statements will not be included in the output."
+                    "If set to true, the MARC statements "
+                    "will be included in the output as MARC Maker format fields. "
+                    "If set to false (default), the MARC statements "
+                    "will not be included in the output."
                 ),
             ),
         ] = False
@@ -188,7 +198,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 title="Include MARC Record (as MARC21 decoded string) as note",
                 description=(
                     "If set to true, the MARC record will be included in the output as a "
-                    "decoded binary MARC21 record. If set to false (default), the MARC record will not be "
+                    "decoded binary MARC21 record. If set to false (default), "
+                    "the MARC record will not be "
                     "included in the output."
                 ),
             ),
@@ -215,6 +226,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
+        self.task_configuration = task_config
         super().__init__(library_config, task_config, folio_client, use_logging)
         if self.task_configuration.statistical_codes_map_file_name:
             statcode_mapping = self.load_ref_data_mapping_file(
