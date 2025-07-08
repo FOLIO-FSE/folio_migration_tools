@@ -226,7 +226,6 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         use_logging: bool = True,
     ):
         csv.register_dialect("tsv", delimiter="\t")
-        self.task_configuration = task_config
         super().__init__(library_config, task_config, folio_client, use_logging)
         if self.task_configuration.statistical_codes_map_file_name:
             statcode_mapping = self.load_ref_data_mapping_file(
