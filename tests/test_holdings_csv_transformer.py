@@ -1,5 +1,8 @@
 import logging
 from unittest.mock import Mock
+from pathlib import Path
+
+import pytest
 
 from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
     HoldingsMapper,
@@ -162,3 +165,33 @@ def test_merge_holding_in_second_boundwith_different_locs_no_merge(caplog):
     assert (
         "bw_Instance_2_loc_2_call_number_Instance_1_Instance_2" in mock_transformer.bound_with_keys
     )
+
+
+def test_load_call_number_type_map_file_not_found():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.task_configuration = Mock()
+    mock_transformer.task_configuration.call_number_type_map_file_name = "non_existent_file.csv"
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.mapping_files_folder = Path("")
+    with pytest.raises(FileNotFoundError):
+        HoldingsCsvTransformer.load_call_number_type_map(mock_transformer)
+
+
+def test_load_location_map_file_not_found():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.task_configuration = Mock()
+    mock_transformer.task_configuration.location_map_file_name = "non_existent_file.csv"
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.mapping_files_folder = Path("")
+    with pytest.raises(FileNotFoundError):
+        HoldingsCsvTransformer.load_location_map(mock_transformer)
+
+
+def test_load_mapped_fields_file_not_found():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.task_configuration = Mock()
+    mock_transformer.task_configuration.holdings_map_file_name = "non_existent_file.csv"
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.mapping_files_folder = Path("")
+    with pytest.raises(FileNotFoundError):
+        HoldingsCsvTransformer.load_mapped_fields(mock_transformer)

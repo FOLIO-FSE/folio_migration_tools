@@ -183,7 +183,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
-        self.task_configuration = task_config
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
         self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
@@ -280,23 +279,38 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         logging.info("Init done")
 
     def load_call_number_type_map(self):
-        with open(
-            self.folder_structure.mapping_files_folder
-            / self.task_configuration.call_number_type_map_file_name,
-            "r",
-        ) as call_number_type_map_f:
-            return self.load_ref_data_map_from_file(
-                call_number_type_map_f, "Found %s rows in call number type map"
+        try:
+            with open(
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.call_number_type_map_file_name,
+                "r",
+            ) as call_number_type_map_f:
+                return self.load_ref_data_map_from_file(
+                    call_number_type_map_f, "Found %s rows in call number type map"
+                )
+        except FileNotFoundError:
+            logging.critical(
+                "Call number type map file "
+                f"{self.task_configuration.call_number_type_map_file_name} "
+                "not found. Halting..."
             )
+            sys.exit(1)
 
     def load_location_map(self):
-        with open(
-            self.folder_structure.mapping_files_folder /
-            self.task_configuration.location_map_file_name
-        ) as location_map_f:
-            return self.load_ref_data_map_from_file(
-                location_map_f, "Found %s rows in location map"
+        try:
+            with open(
+                self.folder_structure.mapping_files_folder /
+                self.task_configuration.location_map_file_name
+            ) as location_map_f:
+                return self.load_ref_data_map_from_file(
+                    location_map_f, "Found %s rows in location map"
+                )
+        except FileNotFoundError:
+            logging.critical(
+                f"Location map file {self.task_configuration.location_map_file_name} "
+                "not found. Halting..."
             )
+            sys.exit(1)
 
     # TODO Rename this here and in `load_call_number_type_map` and `load_location_map`
     @staticmethod
@@ -306,20 +320,30 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         return ref_dat_map
 
     def load_mapped_fields(self):
-        with open(
-            self.folder_structure.mapping_files_folder
-            / self.task_configuration.holdings_map_file_name
-        ) as holdings_mapper_f:
-            holdings_map = json.load(holdings_mapper_f)
-            logging.info("%s fields in holdings mapping file map", len(holdings_map["data"]))
-            mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
-                holdings_map
+        try:
+            with open(
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.holdings_map_file_name
+            ) as holdings_mapper_f:
+                holdings_map = json.load(holdings_mapper_f)
+                logging.info(
+                    "%s fields in holdings mapping file map",
+                    len(holdings_map["data"])
+                )
+                mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+                    holdings_map
+                )
+                logging.info(
+                    "%s mapped fields in holdings mapping file map",
+                    len(list(mapped_fields)),
+                )
+                return mapped_fields, holdings_map
+        except FileNotFoundError:
+            logging.critical(
+                f"Holdings map file {self.task_configuration.holdings_map_file_name} "
+                "not found. Halting..."
             )
-            logging.info(
-                "%s mapped fields in holdings mapping file map",
-                len(list(mapped_fields)),
-            )
-            return mapped_fields, holdings_map
+            sys.exit(1)
 
     def do_work(self):
         logging.info("Starting....")
