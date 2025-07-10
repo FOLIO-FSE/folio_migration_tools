@@ -1,6 +1,5 @@
 # Mapping files
 The repo contains the following mapping files in the Mapping files folder.
-There is a web tool that helps you crate the mapping files for certain objects available at https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation
 
 ## What file is needed for what objects?
 File\Process | Bibs->Instances | Holdings (from MARC/MFHD) | Holdings (from item tsv/csv) | Items  | Open Loans  | Users   
@@ -130,7 +129,7 @@ Unmapped | *
 
 ## 📄 statcodes.tsv
 In order to map one statistical code to the FOLIO UUID, you need this map, and the field mapped in the item_mappings.json. These mappings allow for some complexity even though not needed. This mapping does not allow for default values. Any record without the field will not get one assigned.
- folio_code | Z30_STAT_CODE 
+ folio_code | legacy_stat_code 
 ------------ | -------------
 married_with_children | 8
 happily_ever_after | 9

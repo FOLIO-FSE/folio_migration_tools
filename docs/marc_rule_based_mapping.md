@@ -294,7 +294,18 @@ To map only the statement fields, add the following parameter to the `MarcHoldin
 ```
 You can use the name of the holdings note type you want to use, and the tools will resolve the UUID during transformation.
 
+### Source=FOLIO-only holdings mapping conditions
+`folio_migration_tools` support the following custom mapping rule conditions when transforming MARC holdings to source=FOLIO holdings:
+* `set_acquisition_method`: This condition will map the LC MFHD standard values from `008[7]` to their textual representations
+* `set_retention_policy`: This condition will map the LC MFHD standard values from `008[12]` to their textual representations
+* `set_ill_policy`: This condition will map the LC MFHD standard values from `008[20]` to the appropriately-named FOLIO holdings ILL policy reference data value
+* `set_digitization_policy`: This condition will map the LC MFHD standard values from `008[21]` to their textual representations
+* `set_receipt_status`: This condition will map the LC MFHD standard values from `008[6]` to their textual representations (this condition is available for source=MARC records, as well)
+
+### Multiple 852 Fields
+FOLIO holdings records do not support multiple locations or call number values, so records containing more than one 852 with either of these values will be either ignored _or_ result in the creation of additional holdings records containing values derieved from the additional 852 fields. If only `$x` or `$z` subfields are present in the additional 852, those notes will be mapped onto the initial holdings records as additional holdings notes. If you wish to create additional holdings records for additional 852s with holdings or call number information, if one of the two values cannot be mapped from the additional 852, it will be copied from the first (if present, in the case of call number). Creation of additional holdings can be controlled by setting the `createHoldingsForRepeated852=true` in your `MarcHoldingsTransformer` task configuration.
+
 ### Limitations and other considerations
 * The MFHD transformer will only act upon the first 852 field encountered. Any remaining 852:s will be reported and discarded.
-* The MFHD transformer does not handle 852$x or 852$z mappings to holdings notes. You will need to create a supplemental MFHD map file or update the FOLIO system default map to include mapping rules for those subfields (or any other subfields of the 852 you want to map to an `entity`, in FOLIO MARC mapping rules terms) as a "952" mapping rule. During the transformation, the tools will copy the 852 into a 952 field with `ff` indicators and apply the configured 952 mapping.
+* The MFHD transformer does not handle `852$x` or `852$z` mappings to holdings notes. You will need to create a supplemental MFHD map file or update the FOLIO system default map to include mapping rules for those subfields (or any other subfields of the 852 you want to map to an `entity`, in FOLIO MARC mapping rules terms) as a "952" mapping rule. During the transformation, the tools will copy the 852 into a 952 field with `ff` indicators and apply the configured 952 mapping.
 * Boundwith information in 014 will not be handled.

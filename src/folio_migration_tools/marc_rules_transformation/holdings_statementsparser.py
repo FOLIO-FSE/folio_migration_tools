@@ -23,18 +23,18 @@ class HoldingsStatementsParser:
         """_summary_
 
         Args:
-            marc_record (Record): _description_
-            pattern_tag (str): _description_
-            value_tag (str): _description_
-            field_textual (str): _description_
-            legacy_ids (List[str]): _description_
-            dedupe_results (bool): _description_. Defaults to True.
+            marc_record (Record): pymarc Record object
+            pattern_tag (str): MARC tag for the pattern field
+            value_tag (str): MARC tag for the value field
+            field_textual (str): MARC tag for the textual holdings field
+            legacy_ids (List[str]): List of legacy IDs associated with the record
+            dedupe_results (bool): Whether to deduplicate the results. Defaults to True.
 
         Raises:
-            TransformationFieldMappingError: _description_
+            TransformationFieldMappingError: If there is an error in mapping the holdings statements.
 
         Returns:
-            dict: _description_
+            dict: A dictionary containing parsed holdings statements and related information.
         """
 
         # Textual holdings statements
@@ -45,21 +45,9 @@ class HoldingsStatementsParser:
 
         value_fields = marc_record.get_fields(value_tag)
         for pattern_field in marc_record.get_fields(pattern_tag):
-            if "8" not in pattern_field:
-                raise TransformationFieldMappingError(
-                    legacy_ids,
-                    i18n.t(
-                        "%{tag} subfield %{subfield} not in field",
-                        tag=pattern_tag,
-                        subfield="8",
-                    ),
-                    pattern_field,
-                )
-            linked_value_fields = [
-                value_field
-                for value_field in value_fields
-                if "8" in value_field and value_field["8"].split(".")[0] == pattern_field["8"]
-            ]
+            linked_value_fields = HoldingsStatementsParser.get_linked_value_fields(
+                pattern_tag, legacy_ids, value_fields, pattern_field
+            )
 
             if not any(linked_value_fields):
                 return_dict["migration_report"].append(
@@ -75,7 +63,7 @@ class HoldingsStatementsParser:
                         parsed_dict = HoldingsStatementsParser.parse_linked_field(
                             pattern_field, linked_value_field
                         )
-                    except KeyError:
+                    except KeyError as e:
                         raise TransformationFieldMappingError(
                             legacy_ids,
                             i18n.t(
@@ -84,30 +72,57 @@ class HoldingsStatementsParser:
                                 linked_value_tag=linked_value_field,
                             ),
                             pattern_field,
-                        )
-                    if parsed_dict["hlm_stmt"]:
-                        return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
-                    if parsed_dict["statement"]:
-                        logging.info(
-                            f"HOLDINGS STATEMENT PATTERN\t{'-'.join(legacy_ids)}\t{pattern_field}"
-                            f"\t{linked_value_field}"
-                            f"\t{parsed_dict['statement']['statement']}"
-                            f"\t{parsed_dict['statement']['note']}"
-                            f"\t{parsed_dict['statement']['staffNote']}"
-                        )
-                        return_dict["migration_report"].append(
-                            (
-                                "Holdings statements",
-                                f"From {pattern_tag}",
-                            )
-                        )
-                        return_dict["statements"].append(parsed_dict["statement"])
+                        ) from e
+                    HoldingsStatementsParser.prepare_return_dict(
+                        pattern_tag, legacy_ids, return_dict, pattern_field, linked_value_field, parsed_dict
+                    )
 
         if dedupe_results:
             return_dict["statements"] = HoldingsStatementsParser.dedupe_list_of_dict(
                 return_dict["statements"]
             )
         return return_dict
+
+    @staticmethod
+    def prepare_return_dict(
+        pattern_tag, legacy_ids, return_dict, pattern_field, linked_value_field, parsed_dict
+    ):
+        if parsed_dict["hlm_stmt"]:
+            return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
+        if parsed_dict["statement"]:
+            logging.info(
+                f"HOLDINGS STATEMENT PATTERN\t{'-'.join(legacy_ids)}\t{pattern_field}"
+                f"\t{linked_value_field}"
+                f"\t{parsed_dict['statement']['statement']}"
+                f"\t{parsed_dict['statement']['note']}"
+                f"\t{parsed_dict['statement']['staffNote']}"
+            )
+            return_dict["migration_report"].append(
+                (
+                    "Holdings statements",
+                    f"From {pattern_tag}",
+                )
+            )
+            return_dict["statements"].append(parsed_dict["statement"])
+
+    @staticmethod
+    def get_linked_value_fields(pattern_tag, legacy_ids, value_fields, pattern_field):
+        if "8" not in pattern_field:
+            raise TransformationFieldMappingError(
+                legacy_ids,
+                i18n.t(
+                    "%{tag} subfield %{subfield} not in field",
+                    tag=pattern_tag,
+                    subfield="8",
+                ),
+                pattern_field,
+            )
+        linked_value_fields = [
+            value_field
+            for value_field in value_fields
+            if "8" in value_field and value_field["8"].split(".")[0] == pattern_field["8"]
+        ]
+        return linked_value_fields
 
     @staticmethod
     def parse_linked_field(pattern_field: Field, linked_value_fields: Field):
@@ -123,6 +138,20 @@ class HoldingsStatementsParser:
             "hlm_stmt": hlm_stmt,
         }
 
+        _from, _to = HoldingsStatementsParser.format_from_to(_from, _to, cron_from, cron_to)
+        span = "-" if is_span or is_cron_span else ""
+        stmt = f"{_from}{span}{_to}{break_ind}" if _from else ""
+        stmt = stmt.strip()
+        if "z" in linked_value_fields:
+            return_dict["statement"]["note"] = linked_value_fields["z"]
+        if "x" in linked_value_fields:
+            return_dict["statement"]["staffNote"] = linked_value_fields["x"]
+        stmt = re.sub(" +", " ", stmt)
+        return_dict["statement"]["statement"] = stmt
+        return return_dict
+
+    @staticmethod
+    def format_from_to(_from, _to, cron_from, cron_to):
         if _from and cron_from:
             _from = f"{_from} ({cron_from})"
         if not _from and cron_from:
@@ -137,16 +166,7 @@ class HoldingsStatementsParser:
             _to = f"({cron_to})"
         if _from and _from == cron_from:
             _from = f"({cron_from})"
-        span = " - " if is_span or is_cron_span else ""
-        stmt = f"{_from}{span}{_to}{break_ind}" if _from else ""
-        stmt = stmt.strip()
-        if "z" in linked_value_fields:
-            return_dict["statement"]["note"] = linked_value_fields["z"]
-        if "x" in linked_value_fields:
-            return_dict["statement"]["staffNote"] = linked_value_fields["x"]
-        stmt = re.sub(" +", " ", stmt)
-        return_dict["statement"]["statement"] = stmt
-        return return_dict
+        return _from, _to
 
     @staticmethod
     def get_textual_statements(
@@ -276,12 +296,9 @@ class HoldingsStatementsParser:
                     elif cron_to.strip() and val:
                         val_rest = val
                     if year:
-                        spill_year = f"{hlm_stmt}:" if "-" not in hlm_stmt else ""
-                        cron_from = f"{cron_from.strip()}:{val} "
-                        if cron_to and "".join(val_rest):
-                            cron_to = f"{cron_to}:{''.join(val_rest)} "
-                        elif not cron_to and "".join(val_rest):
-                            cron_to = f"{spill_year}{''.join(val_rest)}"
+                        cron_from, cron_to = HoldingsStatementsParser.format_year_cron_from_cron_to(
+                            cron_from, cron_to, hlm_stmt, val, val_rest
+                        )
 
                 else:
                     if "season" in desc:
@@ -293,6 +310,16 @@ class HoldingsStatementsParser:
         return (f"{cron_from.strip()}", cron_to.strip(), hlm_stmt, is_span)
 
     @staticmethod
+    def format_year_cron_from_cron_to(cron_from, cron_to, hlm_stmt, val, val_rest):
+        spill_year = f"{hlm_stmt}:" if "-" not in hlm_stmt else ""
+        cron_from = f"{cron_from.strip()}:{val}"
+        if cron_to and "".join(val_rest):
+            cron_to = f"{cron_to}:{''.join(val_rest)}"
+        elif not cron_to and "".join(val_rest):
+            cron_to = f"{spill_year}{''.join(val_rest)}"
+        return cron_from, cron_to
+
+    @staticmethod
     def get_from_to(pattern_field: Field, linked_value_field: Field):
         _from = ""
         _to = ""
@@ -300,11 +327,18 @@ class HoldingsStatementsParser:
         for enum_level in [el for el in "abcdef" if el in linked_value_field]:
             desc = pattern_field.get(enum_level, "")
             desc = desc.strip() if "(" not in desc else ""
-            if linked_value_field.get(enum_level):
-                val, *val_rest = linked_value_field[enum_level].split("-")
-                is_span = "-" in linked_value_field[enum_level] or is_span
-                _from = f"{_from}{(':' if _from else '')}{desc}{val}"
-                temp_to = "".join(val_rest)
-                if temp_to.strip():
-                    _to = f"{_to}{(':' if _to else '')}{desc}{temp_to}"
+            _from, _to, is_span = HoldingsStatementsParser.format_enum_parts(
+                linked_value_field, _from, _to, is_span, enum_level, desc
+            )
         return (f"{_from.strip()}", _to.strip(), is_span)
+
+    @staticmethod
+    def format_enum_parts(linked_value_field, _from, _to, is_span, enum_level, desc):
+        if linked_value_field.get(enum_level):
+            val, *val_rest = linked_value_field[enum_level].split("-")
+            is_span = "-" in linked_value_field[enum_level] or is_span
+            _from = f"{_from}{(':' if _from else '')}{desc}{val}"
+            temp_to = "".join(val_rest)
+            if temp_to.strip():
+                _to = f"{_to}{(':' if _to else '')}{desc}{temp_to}"
+        return _from, _to, is_span
