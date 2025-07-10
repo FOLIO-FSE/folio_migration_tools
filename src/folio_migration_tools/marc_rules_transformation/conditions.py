@@ -1020,9 +1020,9 @@ class Conditions:
                     specific_retention_policy = ""
                     if value[13].strip() and value[15].strip():
                         if int(value[14]) > 1:
-                            specific_retention_policy = f"{policy_types.get(value[13], "")} {value[14]} {unit_types.get(value[15], "")}s retained".strip()
+                            specific_retention_policy = f"{policy_types.get(value[13], '')} {value[14]} {unit_types.get(value[15], '')}s retained".strip()
                         else:
-                            specific_retention_policy = f"{policy_types.get(value[13], "")} {unit_types.get(value[15], "")} retained".strip()
+                            specific_retention_policy = f"{policy_types.get(value[13], '')} {unit_types.get(value[15], '')} retained".strip()
                     if specific_retention_policy:
                         return specific_retention_policy
                 except ValueError:
