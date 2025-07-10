@@ -559,6 +559,7 @@ def test_collect_mrk_statement_notes_false(mapper):
     mapper.collect_mrk_statement_notes(record, folio_holdings, "1")
     assert "notes" not in folio_holdings
 
+
 def test_add_mfhd_as_mrk_note_false(mapper):
     mapper.task_configuration.include_mfhd_mrk_as_note = False
     with open("./tests/test_data/mfhd/holding.mrc", "rb") as marc_file:
