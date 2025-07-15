@@ -1037,7 +1037,7 @@ class Conditions:
             )
             return ""
 
-    def set_ill_policy(
+    def condition_set_ill_policy(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
         """
