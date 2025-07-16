@@ -998,12 +998,6 @@ class Conditions:
                 ),
             )
             if value[12] == "6":
-                self.mapper.migration_report.add(
-                    "RetentionPolicyMapping",
-                    i18n.t(
-                        "Retention policy 6 indicates a limited period. Specific retention period will be mapped from 008/13-15",
-                    )
-                )
                 policy_types = {
                     "l": "Latest",
                     "p": "Previous",
@@ -1024,7 +1018,17 @@ class Conditions:
                         else:
                             specific_retention_policy = f"{policy_types.get(value[13], '')} {unit_types.get(value[15], '')} retained".strip()
                     if specific_retention_policy:
+                        self.mapper.migration_report.add(
+                            "RetentionPolicyMapping",
+                            i18n.t(
+                                "Retention policy 6 indicates a limited period. Specific retention period will be mapped from 008/13-15",
+                            )
+                        )
                         return specific_retention_policy
+                    else:
+                        raise ValueError(
+                            "Specific retention policy is empty or invalid in 008/13-15"
+                        )
                 except ValueError:
                     self.mapper.migration_report.add(
                         "RetentionPolicyMapping",
