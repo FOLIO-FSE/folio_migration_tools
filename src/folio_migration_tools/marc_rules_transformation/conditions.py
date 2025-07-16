@@ -975,7 +975,7 @@ class Conditions:
                 "RetentionPolicyMapping", i18n.t("008 is too short") + f": {value}"
             )
             return ""
-
+        value = value.replace("|", " ").replace("#", " ") # Replace pipe with space for mapping consistency
         try:
             retention_policies = {
                 "0": "Unknown",
@@ -1019,7 +1019,7 @@ class Conditions:
                 try:
                     specific_retention_policy = ""
                     if value[13].strip() and value[15].strip():
-                        if int(value[14]) > 1:
+                        if value[14].strip() and int(value[14]) > 1:
                             specific_retention_policy = f"{policy_types.get(value[13], '')} {value[14]} {unit_types.get(value[15], '')}s retained".strip()
                         else:
                             specific_retention_policy = f"{policy_types.get(value[13], '')} {unit_types.get(value[15], '')} retained".strip()
