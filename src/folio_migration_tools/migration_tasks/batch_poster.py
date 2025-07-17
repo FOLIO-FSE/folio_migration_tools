@@ -5,7 +5,7 @@ import logging
 import sys
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Annotated, List, Optional
 from uuid import uuid4
 
@@ -33,9 +33,9 @@ def write_failed_batch_to_file(batch, file):
 
 
 class BatchPoster(MigrationTaskBase):
-    """Batchposter
+    """BatchPoster
 
-    Args:
+    Parents:
         MigrationTaskBase (_type_): _description_
 
     Raises:
@@ -158,7 +158,8 @@ class BatchPoster(MigrationTaskBase):
         if self.api_info["supports_upsert"]:
             self.query_params["upsert"] = self.task_configuration.upsert
         elif self.task_configuration.upsert and not self.api_info["supports_upsert"]:
-            logging.info("Upsert is not supported for this object type. Query parameter will not be set.")
+            logging.info(
+                "Upsert is not supported for this object type. Query parameter will not be set.")
         self.snapshot_id = str(uuid4())
         self.failed_objects: list = []
         self.batch_size = self.task_configuration.batch_size
@@ -174,11 +175,14 @@ class BatchPoster(MigrationTaskBase):
         self.okapi_headers = self.folio_client.okapi_headers
         self.http_client = None
         self.starting_record_count_in_folio: Optional[int] = None
+        self.finished_record_count_in_folio: Optional[int] = None
 
     def do_work(self):
         with self.folio_client.get_folio_http_client() as httpx_client:
             self.http_client = httpx_client
-            with open(self.folder_structure.failed_recs_path, "w", encoding='utf-8') as failed_recs_file:
+            with open(
+                    self.folder_structure.failed_recs_path, "w", encoding='utf-8'
+            ) as failed_recs_file:
                 self.get_starting_record_count()
                 try:
                     batch = []
@@ -249,7 +253,7 @@ class BatchPoster(MigrationTaskBase):
                             self.handle_generic_exception(
                                 exception, last_row, batch, self.processed, failed_recs_file
                             )
-                    logging.info("Done posting %s records. ", (self.processed))
+                    logging.info("Done posting %s records. ", self.processed)
                     if self.task_configuration.object_type == "SRS":
                         self.commit_snapshot()
 
@@ -276,7 +280,7 @@ class BatchPoster(MigrationTaskBase):
 
     async def set_version_async(self, batch, query_api, object_type) -> None:
         """
-        Fetches the current version of the records in the batch, if the record exists in FOLIO
+        Fetches the current version of the records in the batch if the record exists in FOLIO
 
         Args:
             batch (list): List of records to fetch versions for
@@ -297,7 +301,10 @@ class BatchPoster(MigrationTaskBase):
                         client,
                         query_api,
                         params={
-                            "query": f"id==({' OR '.join([record['id'] for record in batch_slice if 'id' in record])})",
+                            "query": (
+                                "id==("
+                                f"{' OR '.join([r['id'] for r in batch_slice if 'id' in r])})"
+                            ),
                             "limit": fetch_batch_size
                         },
                     )
@@ -332,11 +339,14 @@ class BatchPoster(MigrationTaskBase):
                         response.text,
                     )
 
-    async def get_with_retry(self, client: httpx.AsyncClient, url: str, params: dict = {}):
+    async def get_with_retry(self, client: httpx.AsyncClient, url: str, params=None):
+        if params is None:
+            params = {}
         retries = 3
         for attempt in range(retries):
             try:
-                response = await client.get(url, params=params, headers=self.folio_client.okapi_headers)
+                response = await client.get(
+                    url, params=params, headers=self.folio_client.okapi_headers)
                 response.raise_for_status()
                 return response
             except httpx.HTTPError as e:
@@ -473,12 +483,12 @@ class BatchPoster(MigrationTaskBase):
         )
         logging.info(
             "Failing row, either the one shown here or the next row in %s",
-            self.task_configuration.file.file_name,
+            self.task_configuration.files,
         )
         logging.info(last_row)
         logging.info("=========Stack trace==============")
-        traceback.logging.info_exc() # type: ignore
-        logging.info("=======================", flush=True)
+        traceback.logging.info_exc()  # type: ignore
+        logging.info("=======================")
 
     def post_batch(self, batch, failed_recs_file, num_records, recursion_depth=0):
         if self.query_params.get("upsert", False) and self.api_info.get("query_endpoint", ""):
@@ -514,7 +524,7 @@ class BatchPoster(MigrationTaskBase):
                 )
                 write_failed_batch_to_file(batch, failed_recs_file)
             if json_report.get("failedUsers", []):
-                logging.error("Errormessage: %s", json_report.get("error", []))
+                logging.error("Error message: %s", json_report.get("error", []))
                 for failed_user in json_report.get("failedUsers"):
                     logging.error(
                         "User failed. %s\t%s\t%s",
@@ -544,7 +554,7 @@ class BatchPoster(MigrationTaskBase):
                 "",
                 f"HTTP {response.status_code}\t"
                 f"Request size: {get_req_size(response)}"
-                f"{datetime.utcnow().isoformat()} UTC\n",
+                f"{datetime.now(UTC).isoformat()} UTC\n",
                 json.dumps(resp, indent=4),
             )
         elif response.status_code == 400:
@@ -564,7 +574,7 @@ class BatchPoster(MigrationTaskBase):
                     "",
                     f"HTTP {response.status_code}\t"
                     f"Request size: {get_req_size(response)}"
-                    f"{datetime.utcnow().isoformat()} UTC\n",
+                    f"{datetime.now(UTC).isoformat()} UTC\n",
                     response.text,
                 )
             else:
@@ -581,14 +591,14 @@ class BatchPoster(MigrationTaskBase):
                 resp = json.dumps(response, indent=4)
             except TypeError:
                 resp = response
-            except Exception:
-                logging.exception("something unexpected happened")
+            except (ValueError, RecursionError) as e:
+                logging.exception(f"something unexpected happened, {e}")
                 resp = response
             raise TransformationRecordFailedError(
                 "",
                 f"HTTP {response.status_code}\t"
                 f"Request size: {get_req_size(response)}"
-                f"{datetime.utcnow().isoformat()} UTC\n",
+                f"{datetime.now(UTC).isoformat()} UTC\n",
                 resp,
             )
 
@@ -603,17 +613,29 @@ class BatchPoster(MigrationTaskBase):
             payload = {self.api_info["object_name"]: batch}
         if self.http_client and not self.http_client.is_closed:
             return self.http_client.post(
-                url, json=payload, headers=self.folio_client.okapi_headers, params=self.query_params
+                url,
+                json=payload,
+                headers=self.folio_client.okapi_headers,
+                params=self.query_params
             )
         else:
-            return httpx.post(url, headers=self.okapi_headers, json=payload, params=self.query_params, timeout=None)
+            return httpx.post(
+                url,
+                headers=self.okapi_headers,
+                json=payload,
+                params=self.query_params,
+                timeout=None)
 
     def get_current_record_count_in_folio(self):
         if "query_endpoint" in self.api_info:
             url = f"{self.folio_client.gateway_url}{self.api_info['query_endpoint']}"
             query_params = {"query": "cql.allRecords=1", "limit": 0}
             if self.http_client and not self.http_client.is_closed:
-                res = self.http_client.get(url, headers=self.folio_client.okapi_headers, params=query_params)
+                res = self.http_client.get(
+                    url,
+                    headers=self.folio_client.okapi_headers,
+                    params=query_params
+                )
             else:
                 res = httpx.get(url, headers=self.okapi_headers, params=query_params, timeout=None)
             try:
@@ -623,11 +645,15 @@ class BatchPoster(MigrationTaskBase):
                 logging.error("Failed to get current record count. HTTP %s", res.status_code)
                 return 0
             except KeyError:
-                logging.error(f"Failed to get current record count. No 'totalRecords' in response: {res.json()}")
+                logging.error(
+                    "Failed to get current record count. "
+                    f"No 'totalRecords' in response: {res.json()}"
+                )
                 return 0
         else:
             raise ValueError(
-                "No 'query_endpoint' available for %s. Cannot get current record count.", self.task_configuration.object_type
+                "No 'query_endpoint' available for %s. Cannot get current record count.",
+                self.task_configuration.object_type
             )
 
     def get_starting_record_count(self):
@@ -635,14 +661,20 @@ class BatchPoster(MigrationTaskBase):
             logging.info("Getting starting record count in FOLIO")
             self.starting_record_count_in_folio = self.get_current_record_count_in_folio()
         else:
-            logging.info("No query_endpoint available for %s. Cannot get starting record count.", self.task_configuration.object_type)
+            logging.info(
+                "No query_endpoint available for %s. Cannot get starting record count.",
+                self.task_configuration.object_type
+            )
 
     def get_finished_record_count(self):
         if "query_endpoint" in self.api_info:
             logging.info("Getting finished record count in FOLIO")
             self.finished_record_count_in_folio = self.get_current_record_count_in_folio()
         else:
-            logging.info("No query_endpoint available for %s. Cannot get ending record count.", self.task_configuration.object_type)
+            logging.info(
+                "No query_endpoint available for %s. Cannot get ending record count.",
+                self.task_configuration.object_type
+            )
 
     def wrap_up(self):
         logging.info("Done. Wrapping up")
@@ -663,7 +695,9 @@ class BatchPoster(MigrationTaskBase):
             logging.info("Done posting %s records. %s failed", self.num_posted, self.num_failures)
         if self.starting_record_count_in_folio:
             self.get_finished_record_count()
-            total_on_server = self.finished_record_count_in_folio - self.starting_record_count_in_folio
+            total_on_server = (
+                    self.finished_record_count_in_folio - self.starting_record_count_in_folio
+            )
             discrepancy = self.processed - self.num_failures - total_on_server
             if discrepancy != 0:
                 logging.error(
@@ -712,7 +746,10 @@ class BatchPoster(MigrationTaskBase):
                 temp_report = copy.deepcopy(self.migration_report)
                 temp_start = self.start_datetime
                 self.task_configuration.rerun_failed_records = False
-                self.__init__(self.task_configuration, self.library_configuration, self.folio_client)
+                self.__init__(
+                    self.task_configuration,
+                    self.library_configuration,
+                    self.folio_client)
                 self.performing_rerun = True
                 self.migration_report = temp_report
                 self.start_datetime = temp_start
@@ -735,7 +772,7 @@ class BatchPoster(MigrationTaskBase):
         snapshot = {
             "jobExecutionId": self.snapshot_id,
             "status": "PARSING_IN_PROGRESS",
-            "processingStartedDate": datetime.utcnow().isoformat(timespec="milliseconds"),
+            "processingStartedDate": datetime.now(UTC).isoformat(timespec="milliseconds"),
         }
         try:
             url = f"{self.folio_client.gateway_url}/source-storage/snapshots"
@@ -747,9 +784,11 @@ class BatchPoster(MigrationTaskBase):
                 res = httpx.post(url, headers=self.okapi_headers, json=snapshot, timeout=None)
             res.raise_for_status()
             logging.info("Posted Snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
-            get_url = f"{self.folio_client.gateway_url}/source-storage/snapshots/{self.snapshot_id}"
-            getted = False
-            while not getted:
+            get_url = (
+                f"{self.folio_client.gateway_url}/source-storage/snapshots/{self.snapshot_id}"
+            )
+            got = False
+            while not got:
                 logging.info("Sleeping while waiting for the snapshot to get created")
                 time.sleep(5)
                 if self.http_client and not self.http_client.is_closed:
@@ -757,11 +796,14 @@ class BatchPoster(MigrationTaskBase):
                 else:
                     res = httpx.get(get_url, headers=self.okapi_headers, timeout=None)
                 if res.status_code == 200:
-                    getted = True
+                    got = True
                 else:
                     logging.info(res.status_code)
-        except Exception:
-            logging.exception("Could not post the snapshot")
+        except httpx.HTTPStatusError as exc:
+            logging.exception("HTTP error occurred while posting the snapshot: %s", exc)
+            sys.exit(1)
+        except Exception as exc:
+            logging.exception("Could not post the snapshot: %s", exc)
             sys.exit(1)
 
     def commit_snapshot(self):
@@ -776,11 +818,15 @@ class BatchPoster(MigrationTaskBase):
                 res = httpx.put(url, headers=self.okapi_headers, json=snapshot, timeout=None)
             res.raise_for_status()
             logging.info("Posted Committed snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
-        except Exception:
+        except httpx.HTTPStatusError as exc:
+            logging.exception("HTTP error occurred while posting the snapshot: %s", exc)
+            sys.exit(1)
+        except Exception as exc:
             logging.exception(
                 "Could not commit snapshot with id %s. Post this to /source-storage/snapshots/%s:",
                 self.snapshot_id,
                 self.snapshot_id,
+                exc,
             )
             logging.info("%s", json.dumps(snapshot, indent=4))
             sys.exit(1)
@@ -891,8 +937,11 @@ def get_api_info(object_type: str, use_safe: bool = True):
     try:
         return choices[object_type]
     except KeyError:
-        key_string = ",".join(choices.keys())
-        logging.error(f"Wrong type. Only one of {key_string} are allowed")
+        key_string = ", ".join(choices.keys())
+        logging.error(
+            f"Wrong type. Only one of {key_string} are allowed, "
+            f"received {object_type=} instead"
+        )
         logging.error("Halting")
         sys.exit(1)
 
@@ -908,7 +957,7 @@ def chunks(records, number_of_chunks):
         _type_: _description_
     """
     for i in range(0, len(records), number_of_chunks):
-        yield records[i : i + number_of_chunks]
+        yield records[i: i + number_of_chunks]
 
 
 def get_human_readable(size, precision=2):
