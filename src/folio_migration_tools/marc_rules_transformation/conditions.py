@@ -917,6 +917,48 @@ class Conditions:
                 f"Subject source not found for {value} {marc_field}",
             )
 
+    def condition_set_receipt_status(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
+        """
+        This method maps the receipt status based on the 008 field.
+        This condition is not available in FOLIO's MARC mapping engine and 
+        will require use of a supplemental mapping rules file in the
+        HoldingsMarcTransformer task definition.
+        """
+        if len(value) < 7:
+            self.mapper.migration_report.add(
+                "ReceiptStatusMapping", i18n.t("008 is too short") + f": {value}"
+            )
+            return ""
+        
+        status_map = {
+            "0": "Unknown",
+            "1": "Other receipt or acquisition status",
+            "2": "Received and complete or ceased",
+            "3": "On order",
+            "4": "Currently received",
+            "5": "Not currently received",
+            "6": "External access",
+        }
+
+        try:
+            mapped_value = status_map[value[6]]
+            self.mapper.migration_report.add(
+                "ReceiptStatusMapping",
+                i18n.t(
+                    "%{value} mapped to %{mapped_value}",
+                    value=value[6],
+                    mapped_value=mapped_value,
+                ),
+            )
+            return mapped_value
+        except KeyError:
+            self.mapper.migration_report.add(
+                "ReceiptStatusMapping", i18n.t("Error mapping receipt status")
+            )
+            return ""
+
     def condition_set_acquisition_method(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
