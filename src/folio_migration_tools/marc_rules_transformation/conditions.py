@@ -1012,7 +1012,7 @@ class Conditions:
                 }
                 try:
                     specific_retention_policy = ""
-                    if value[13].strip() and value[15].strip():
+                    if value[13].strip() or value[15].strip():
                         if value[14].strip() and int(value[14]) > 1:
                             specific_retention_policy = f"{policy_types.get(value[13], '')} {value[14]} {unit_types.get(value[15], '')}s retained".strip()
                         else:
