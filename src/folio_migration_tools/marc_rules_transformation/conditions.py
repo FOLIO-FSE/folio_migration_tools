@@ -467,36 +467,6 @@ class Conditions:
     def condition_char_select(self, legacy_id, value, parameter, marc_field: field.Field):
         return value[parameter["from"] : parameter["to"]]
 
-    def condition_set_receipt_status(self, legacy_id, value, parameter, marc_field: field.Field):
-        if len(value) < 7:
-            self.mapper.migration_report.add(
-                "ReceiptStatusMapping", i18n.t("008 is too short") + f": {value}"
-            )
-            return ""
-        try:
-            status_map = {
-                "0": "Unknown",
-                "1": "Other receipt or acquisition status",
-                "2": "Received and complete or ceased",
-                "3": "On order",
-                "4": "Currently received",
-                "5": "Not currently received",
-                "6": "External access",
-            }
-            mapped_value = status_map[value[6]]
-            self.mapper.migration_report.add(
-                "ReceiptStatusMapping",
-                i18n.t(
-                    "%{value} mapped to %{mapped_value}", value=value[6], mapped_value=mapped_value
-                ),
-            )
-
-            return
-        except Exception:
-            self.mapper.migration_report.add(
-                "ReceiptStatusMapping", i18n.t("%{value} not found in map.", value=value)
-            )
-            return "Unknown"
 
     def condition_set_identifier_type_id_by_name(
         self, legacy_id, value, parameter, marc_field: field.Field
@@ -953,9 +923,9 @@ class Conditions:
                 ),
             )
             return mapped_value
-        except KeyError:
+        except Exception:
             self.mapper.migration_report.add(
-                "ReceiptStatusMapping", i18n.t("Error mapping receipt status")
+                "ReceiptStatusMapping", i18n.t("%{value} not found in map.", value=value[6])
             )
             return ""
 
