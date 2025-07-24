@@ -4,10 +4,13 @@ import uuid
 from unittest.mock import Mock
 
 import pytest
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
-from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
-from folio_migration_tools.test_infrastructure import mocked_classes
+from src.folio_migration_tools.custom_exceptions import (
+    TransformationRecordFailedError,
+    TransformationProcessError
+)
+from src.folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
+from src.folio_migration_tools.migration_tasks.user_transformer import UserTransformer
+from src.folio_migration_tools.test_infrastructure import mocked_classes
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 LOGGER = logging.getLogger(__name__)
@@ -788,7 +791,6 @@ def test_basic_fallback_all_empty(mocked_folio_client):
         folio_user = user_mapper.perform_additional_mapping(
             legacy_user_record, folio_user, index_or_id
         )
-
 
 @pytest.mark.slow
 def test_basic_turn_off_id_and_request_preferences(mocked_folio_client):
@@ -1577,3 +1579,19 @@ def test_notes_empty_field(mocked_folio_client):
     )
     assert folio_user["externalSystemId"] == "externalid_1"
     assert user_mapper.notes_mapper.noteprops is not None
+
+
+def test_get_users_missing_keys():
+    source_file_content = 'col1,col2\nval1,val2'
+
+    from io import StringIO
+    source_file = StringIO(source_file_content)
+    file_format = "csv"
+
+    with pytest.raises(TransformationProcessError) as exc_info:
+        list(UserMapper.get_users(source_file, file_format))
+
+    error = exc_info.value
+    assert error.record_idx == 0
+    assert error.data_value == json.dumps({"col1": "val1", "col2": "val2"})
+    assert "something is wrong source file row" in error.message
