@@ -59,8 +59,8 @@ class UserMapper(MappingFileMapperBase):
                 True,
             )
             self.notes_mapper.migration_report = self.migration_report
-            self.setup_departments_mapping(departments_mapping)
-            self.setup_groups_mapping(groups_map)
+            self.departments_mapping = self.setup_departments_mapping(departments_mapping)
+            self.groups_mapping = self.setup_groups_mapping(groups_map)
 
             for m in self.record_map["data"]:
                 if m["folio_field"].startswith("customFields"):
@@ -120,7 +120,8 @@ class UserMapper(MappingFileMapperBase):
 
         return clean_folio_object
 
-    def get_users(self, source_file, file_format: str):
+    @staticmethod
+    def get_users(source_file, file_format: str):
         csv.register_dialect("tsv", delimiter="\t")
         if file_format == "tsv":
             reader = csv.DictReader(source_file, dialect="tsv")
@@ -184,27 +185,21 @@ class UserMapper(MappingFileMapperBase):
             return ""
 
     def setup_groups_mapping(self, groups_map):
-        if groups_map:
-            self.groups_mapping = RefDataMapping(
-                self.folio_client,
-                "/groups",
-                "usergroups",
-                groups_map,
-                "group",
-                "UserGroupMapping",
-            )
-        else:
-            self.groups_mapping = None
+        return RefDataMapping(
+            self.folio_client,
+            "/groups",
+            "usergroups",
+            groups_map,
+            "group",
+            "UserGroupMapping",
+        ) if groups_map else None
 
     def setup_departments_mapping(self, departments_mapping):
-        if departments_mapping:
-            self.departments_mapping = RefDataMapping(
-                self.folio_client,
-                "/departments",
-                "departments",
-                departments_mapping,
-                "name",
-                "DepartmentsMapping",
-            )
-        else:
-            self.departments_mapping = None
+        return RefDataMapping(
+            self.folio_client,
+            "/departments",
+            "departments",
+            departments_mapping,
+            "name",
+            "DepartmentsMapping",
+        ) if departments_mapping else None
