@@ -294,7 +294,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 f"{self.task_configuration.call_number_type_map_file_name} "
                 "not found. Halting..."
             )
-            sys.exit(1)
+            raise FileNotFoundError
 
     def load_location_map(self):
         try:
@@ -310,7 +310,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 f"Location map file {self.task_configuration.location_map_file_name} "
                 "not found. Halting..."
             )
-            sys.exit(1)
+            raise FileNotFoundError
 
     # TODO Rename this here and in `load_call_number_type_map` and `load_location_map`
     @staticmethod
@@ -343,7 +343,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 f"Holdings map file {self.task_configuration.holdings_map_file_name} "
                 "not found. Halting..."
             )
-            sys.exit(1)
+            raise FileNotFoundError
 
     def do_work(self):
         logging.info("Starting....")
