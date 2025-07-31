@@ -527,8 +527,11 @@ class LoansMigrator(MigrationTaskBase):
             self.set_item_status(legacy_loan)
             res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
             legacy_loan.next_item_status = lost_type
-            self.set_item_status(legacy_loan)
-            s = f"Successfully Checked out {lost_type} item and put the status back"
+            if lost_type == "Aged to lost":
+                self.set_item_status(legacy_loan)
+                s = f"Successfully Checked out {lost_type} item and put the status back"
+            else:
+                s = f"Successfully Checked out {lost_type} item. Item will be declared lost."
             logging.info(s)
             self.migration_report.add("Details", s)
             return res_checkout
