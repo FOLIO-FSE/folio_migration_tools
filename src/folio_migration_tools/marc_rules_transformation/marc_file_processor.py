@@ -65,7 +65,12 @@ class MarcFileProcessor:
         self.records_count += 1
         try:
             # Transform the MARC21 to a FOLIO record
-            legacy_ids = self.mapper.get_legacy_ids(marc_record, idx)
+            try:
+                legacy_ids = self.mapper.get_legacy_ids(marc_record, idx)
+            except ValueError as e:
+                raise TransformationRecordFailedError(
+                    f"{idx} in {file_def.file_name}", str(e), idx
+                ) from e
             if not legacy_ids:
                 raise TransformationRecordFailedError(
                     f"Index in file: {idx}", "No legacy id found", idx
