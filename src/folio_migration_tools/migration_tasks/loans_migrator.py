@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 from datetime import datetime, timedelta
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
 from pydantic import Field
@@ -459,9 +459,9 @@ class LoansMigrator(MigrationTaskBase):
         ):
             return folio_checkout
         elif "Aged to lost" in folio_checkout.error_message:
-            return self.handle_aged_to_lost_item(legacy_loan)
+            return self.handle_lost_item(legacy_loan, "Aged to lost")
         elif folio_checkout.error_message == "Declared lost":
-            return folio_checkout
+            return self.handle_lost_item(legacy_loan, "Declared lost")
         elif folio_checkout.error_message.startswith("Cannot check out to inactive user"):
             return self.checkout_to_inactive_user(legacy_loan)
         else:
@@ -509,14 +509,16 @@ class LoansMigrator(MigrationTaskBase):
         self.migration_report.add("Details", i18n.t("Handled inactive users"))
         return res
 
-    def handle_aged_to_lost_item(self, legacy_loan: LegacyLoan) -> TransactionResult:
+    def handle_lost_item(
+        self, legacy_loan: LegacyLoan, lost_type: Literal["Aged to lost", "Declared lost"]
+    ) -> TransactionResult:
         if self.circulation_helper.is_checked_out(legacy_loan):
             return TransactionResult(
                 False,
                 False,
                 legacy_loan,
-                i18n.t("Aged to lost and checked out"),
-                i18n.t("Aged to lost and checked out"),
+                i18n.t(f"{lost_type} and checked out"),
+                i18n.t(f"{lost_type} and checked out"),
             )
 
         else:
@@ -524,9 +526,9 @@ class LoansMigrator(MigrationTaskBase):
             legacy_loan.next_item_status = "Available"
             self.set_item_status(legacy_loan)
             res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
-            legacy_loan.next_item_status = "Aged to lost"
+            legacy_loan.next_item_status = lost_type
             self.set_item_status(legacy_loan)
-            s = "Successfully Checked out Aged to lost item and put the status back"
+            s = f"Successfully Checked out {lost_type} item and put the status back"
             logging.info(s)
             self.migration_report.add("Details", s)
             return res_checkout
