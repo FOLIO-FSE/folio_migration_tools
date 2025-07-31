@@ -148,6 +148,7 @@ class OrganizationTransformer(MigrationTaskBase):
         self.mapper = OrganizationMapper(
             self.folio_client,
             self.library_configuration,
+            self.task_configuration,
             self.organization_map,
             self.load_ref_data_mapping_file(
                 "organizationTypes",
