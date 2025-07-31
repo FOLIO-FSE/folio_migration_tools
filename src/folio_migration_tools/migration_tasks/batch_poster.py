@@ -483,7 +483,7 @@ class BatchPoster(MigrationTaskBase):
         )
         logging.info(
             "Failing row, either the one shown here or the next row in %s",
-            self.task_configuration.files,
+            self.task_configuration.file.file_name,
         )
         logging.info(last_row)
         logging.info("=========Stack trace==============")
@@ -591,7 +591,7 @@ class BatchPoster(MigrationTaskBase):
                 resp = json.dumps(response, indent=4)
             except TypeError:
                 resp = response
-            except (ValueError, RecursionError) as e:
+            except Exception as e:
                 logging.exception(f"something unexpected happened, {e}")
                 resp = response
             raise TransformationRecordFailedError(
