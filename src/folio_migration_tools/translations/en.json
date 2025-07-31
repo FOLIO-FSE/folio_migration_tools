@@ -21,6 +21,7 @@
   "Added 035 from 001": "Added 035 from 001",
   "Additional 852$b was moved to 852$x": "Additional 852$b was moved to 852$x",
   "Aged to lost and checked out": "Aged to lost and checked out",
+  "Declared lost and checked out": "Declared lost and checked out",
   "Already set to %{value}. %{leader_key} was %{leader}": "Already set to %{value}. %{leader_key} was %{leader}",
   "An Unmapped": "An Unmapped",
   "Authority records transformation report": "Authority records transformation report",
