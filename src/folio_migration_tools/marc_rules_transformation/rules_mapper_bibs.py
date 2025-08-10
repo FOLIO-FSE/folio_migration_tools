@@ -174,11 +174,11 @@ class BibsRulesMapper(RulesMapperBase):
             self.process_marc_field(folio_instance, main_entry_fields[0], ignored_subsequent_fields, legacy_ids)
         try:
             self.process_marc_field(folio_instance, marc_record['245'], ignored_subsequent_fields, legacy_ids)
-        except KeyError:
+        except KeyError as ke:
             raise TransformationRecordFailedError(
                 legacy_ids,
                 "No 245 field in MARC record"
-            )
+            ) from ke
 
     def perform_additional_parsing(
         self,
