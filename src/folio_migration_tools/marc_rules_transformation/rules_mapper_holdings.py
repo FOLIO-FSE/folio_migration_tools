@@ -196,8 +196,14 @@ class RulesMapperHoldings(RulesMapperBase):
         if "004" not in marc_record:
             raise TransformationProcessError(
                 "",
-                ("No 004 in record. The tools only support bib-mfhd linking throuh 004"),
+                ("No 004 in record. The tools only support bib-mfhd linking through 004"),
                 legacy_ids,
+            )
+        if len(marc_record.get_fields("004")) > 1:
+            Helper.log_data_issue(
+                legacy_ids,
+                "More than one linked bib (004) found in record. Using the first one",
+                [str(x) for x in marc_record.get_fields("004")],
             )
         legacy_instance_id = marc_record["004"].data.strip()
         folio_holding["formerIds"].append(f"{self.bib_id_template}{legacy_instance_id}")
