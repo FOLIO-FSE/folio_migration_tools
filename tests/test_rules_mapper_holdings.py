@@ -721,3 +721,60 @@ def test_statistical_code_map_with_unmapped_codes(mapper, caplog):
     assert "bb76b1c1-c9df-445c-8deb-68bb3580edc2" in folio_holdings["statisticalCodeIds"]
     assert "6d584d0e-3dbc-46c4-a1bd-e9238dd9a6be" in folio_holdings["statisticalCodeIds"]
     assert "Statistical code '998_c:unmapped' not found in FOLIO" in "".join(caplog.messages)
+
+
+def test_set_instance_id_by_map_success():
+    # Setup
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="004", data="B123"))
+    legacy_ids = ["legacy1"]
+    folio_holding = {"formerIds": []}
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.bib_id_template = ""
+    mock_mapper.parent_id_map = {"B123": ("B123", "instance-uuid", "in00000000001")}
+
+    RulesMapperHoldings.set_instance_id_by_map(mock_mapper, legacy_ids, folio_holding, record)
+
+    assert folio_holding["instanceId"] == "instance-uuid"
+    assert "B123" in folio_holding["formerIds"]
+
+
+def test_set_instance_id_by_map_missing_004():
+    record = pymarc.Record()
+    legacy_ids = ["legacy1"]
+    folio_holding = {"formerIds": []}
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.bib_id_template = ""
+    mock_mapper.parent_id_map = {}
+
+    with pytest.raises(TransformationProcessError) as excinfo:
+        RulesMapperHoldings.set_instance_id_by_map(mock_mapper, legacy_ids, folio_holding, record)
+    assert "No 004 in record" in str(excinfo.value)
+
+
+def test_set_instance_id_by_map_multiple_004(caplog):
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="004", data="B123"))
+    record.add_field(pymarc.Field(tag="004", data="B456"))
+    legacy_ids = ["legacy1"]
+    folio_holding = {"formerIds": []}
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.bib_id_template = ""
+    mock_mapper.parent_id_map = {"B123": ("B123", "instance-uuid", "in00000000001")}
+    RulesMapperHoldings.set_instance_id_by_map(mock_mapper, legacy_ids, folio_holding, record)
+    assert folio_holding["instanceId"] == "instance-uuid"
+    assert "More than one linked bib (004) found in record" in "".join(caplog.messages)
+
+
+def test_set_instance_id_by_map_instance_id_not_in_map():
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="004", data="B999"))
+    legacy_ids = ["legacy1"]
+    folio_holding = {"formerIds": []}
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.bib_id_template = ""
+    mock_mapper.parent_id_map = {}
+
+    with pytest.raises(Exception) as excinfo:
+        RulesMapperHoldings.set_instance_id_by_map(mock_mapper, legacy_ids, folio_holding, record)
+    assert "Old instance id not in map" in str(excinfo.value)
