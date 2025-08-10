@@ -1,3 +1,4 @@
+from types import MethodType
 from unittest.mock import Mock, AsyncMock, patch, create_autospec
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -59,6 +60,7 @@ def test_set_consortium_source():
     assert json_rec_folio["source"] == "CONSORTIUM-FOLIO"
 
 
+
 @pytest.mark.asyncio
 async def test_get_with_retry_successful():
     mock_response = Mock()
@@ -75,23 +77,29 @@ async def test_get_with_retry_successful():
     mock_response.text = "OK"
 
     # Mock the httpx.AsyncClient.get method
-    with (patch("httpx.AsyncClient.get", AsyncMock(return_value=mock_response)) as mock_get):
+    with patch(
+        "httpx.AsyncClient.get", AsyncMock(return_value=mock_response)
+    ) as mock_get:
         # Create an instance of the BatchPoster class
-        batch_poster_task = create_autospec(spec=BatchPoster)
-        batch_poster_task.folio_client = Mock(spec=FolioClient)
-        batch_poster_task.folio_client.okapi_headers = {"x-okapi-token": "token"}
-        batch_poster_task.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
-        batch_poster_task.get_with_retry = Mock(wraps=BatchPoster.get_with_retry)
+        batch_poster = create_autospec(spec=BatchPoster)
+        batch_poster.folio_client = Mock(spec=FolioClient)
+        batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+        batch_poster.folio_client.gateway_url = (
+            "http://folio-snapshot-okapi.dev.folio.org"
+        )
+        batch_poster.get_with_retry = Mock(wraps=BatchPoster.get_with_retry)
 
         # Define test inputs
         query_api = "/instance-storage/instances"
         params = {"query": "id==(record1 OR record2)", "limit": 90}
 
         # Act
-        async with (
-                httpx.AsyncClient(base_url=batch_poster_task.folio_client.gateway_url) as client):
-            response = await batch_poster_task.get_with_retry(
-                batch_poster_task, client, query_api, params)
+        async with httpx.AsyncClient(
+            base_url=batch_poster.folio_client.gateway_url
+        ) as client:
+            response = await batch_poster.get_with_retry(
+                batch_poster, client, query_api, params
+            )
 
         # Assert
         assert response.status_code == 200
@@ -104,7 +112,7 @@ async def test_get_with_retry_successful():
         mock_get.assert_called_once_with(
             query_api,
             params=params,
-            headers=batch_poster_task.folio_client.okapi_headers,
+            headers=batch_poster.folio_client.okapi_headers,
         )
 
 
@@ -120,13 +128,49 @@ async def test_set_version_async():
     }
 
     # Create an instance of the BatchPoster class
-    batch_poster_task = create_autospec(spec=BatchPoster)
-    batch_poster_task.folio_client = Mock(spec=FolioClient)
-    batch_poster_task.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster_task.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
-    batch_poster_task.set_version_async = Mock(wraps=BatchPoster.set_version_async)
-    batch_poster_task.get_with_retry = AsyncMock(return_value=mock_response)
-    batch_poster_task.update_record_versions = BatchPoster.update_record_versions
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=False,
+        preserve_administrative_notes=False,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
 
     # Define test inputs
     batch = [{"id": "record1"}, {"id": "record2"}]
@@ -134,7 +178,7 @@ async def test_set_version_async():
     object_type = "instances"
 
     # Act
-    await batch_poster_task.set_version_async(batch_poster_task, batch, query_api, object_type)
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -154,13 +198,49 @@ async def test_set_version_async_one_existing_items():
     }
 
     # Create an instance of the BatchPoster class
-    batch_poster_task = create_autospec(spec=BatchPoster)
-    batch_poster_task.folio_client = Mock(spec=FolioClient)
-    batch_poster_task.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster_task.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
-    batch_poster_task.set_version_async = Mock(wraps=BatchPoster.set_version_async)
-    batch_poster_task.get_with_retry = AsyncMock(return_value=mock_response)
-    batch_poster_task.update_record_versions = BatchPoster.update_record_versions
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=False,
+        preserve_administrative_notes=False,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
 
     # Define test inputs
     batch = [{"id": "record1"}, {"id": "record2"}]
@@ -168,7 +248,7 @@ async def test_set_version_async_one_existing_items():
     object_type = "items"
 
     # Act
-    await batch_poster_task.set_version_async(batch_poster_task, batch, query_api, object_type)
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -177,10 +257,618 @@ async def test_set_version_async_one_existing_items():
     assert "status" not in batch[1]
 
 
+@pytest.mark.asyncio
+async def test_set_version_async_preserve_temporary_locations():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "id": "record1", "_version": 1,
+                "status": {"name": "Available"},
+                "temporaryLocationId": "tempLocation2"
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=True,
+        preserve_administrative_notes=True,
+        preserve_temporary_locations=True,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
+
+    # Define test inputs
+    batch = [{"id": "record1", "temporaryLocationId": "tempLocation1"}, {"id": "record2"}]
+    query_api = "/item-storage/items"
+    object_type = "items"
+
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[0]["temporaryLocationId"] == "tempLocation2"
+    assert "_version" not in batch[1]
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_preserve_temporary_loan_types():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "id": "record1", "_version": 1,
+                "status": {"name": "Available"},
+                "temporaryLoanTypeId": "LoanType2"
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=True,
+        preserve_administrative_notes=True,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=True,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
+
+    # Define test inputs
+    batch = [{"id": "record1", "temporaryLoanTypeId": "LoanType1"}, {"id": "record2"}]
+    query_api = "/item-storage/items"
+    object_type = "items"
+
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[0]["temporaryLoanTypeId"] == "LoanType2"
+    assert "_version" not in batch[1]
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_preserve_administrative_notes_and_statistical_codes():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "id": "record1", "_version": 1,
+                "status": {"name": "Available"},
+                "administrativeNotes": ["note1"],
+                "statisticalCodeIds": ["code1", "code2"]
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=True,
+        preserve_administrative_notes=True,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
+
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1", "administrativeNotes": ["note2"], 
+            "statisticalCodeIds": ["code3", "code4"]
+        },
+        {"id": "record2"}
+    ]
+    query_api = "/item-storage/items"
+    object_type = "items"
+
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[0]["administrativeNotes"] == ["note1", "note2"]
+    assert batch[0]["statisticalCodeIds"] == ["code1", "code2", "code3", "code4"]
+    assert "_version" not in batch[1]
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_preserve_administrative_notes_and_statistical_codes_no_existing_codes_or_notes():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "id": "record1", "_version": 1,
+                "status": {"name": "Available"},
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=True,
+        preserve_administrative_notes=True,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
+
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1", "administrativeNotes": ["note2"], 
+            "statisticalCodeIds": ["code3", "code4"]
+        },
+        {"id": "record2"}
+    ]
+    query_api = "/item-storage/items"
+    object_type = "items"
+
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[0]["administrativeNotes"] == ["note2"]
+    assert batch[0]["statisticalCodeIds"] == ["code3", "code4"]
+    assert "_version" not in batch[1]
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_source_marc_instance():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "instances": [
+            {
+                "id": "record1",
+                "_version": 1,
+                "source": "MARC",
+                "title": "Test Title 1",
+                "statisticalCodeIds": ["code1", "code2"],
+            },
+            {
+                "id": "record2",
+                "_version": 2,
+                "source": "MARC",
+                "title": "Test Title 2",
+                "administrativeNotes": ["test note 1", "test note 2"],
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=True,
+        preserve_administrative_notes=True,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
+
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1", "source": "FOLIO", "statisticalCodeIds": ["code3"],
+            "title": "Test Title 3"
+        },
+        {
+            "id": "record2", "source": "FOLIO", "administrativeNotes": ["test note 3"],
+            "title": "Test Title 4"
+        },
+    ]
+    query_api = "/instance-storage/instances"
+    object_type = "instances"
+
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert batch[0]["source"] == "MARC"
+    assert batch[1]["source"] == "MARC"
+    assert "administrativeNotes" not in batch[0]
+    assert batch[1]["administrativeNotes"] == [
+        "test note 1",
+        "test note 2",
+        "test note 3",
+    ]
+    assert batch[0]["statisticalCodeIds"] == ["code1", "code2", "code3"]
+    assert "statisticalCodeIds" not in batch[1]
+    assert batch[0]["title"] == "Test Title 1"
+    assert batch[1]["title"] == "Test Title 2"
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_source_marc_instance_do_not_preserve_statistical_codes():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "instances": [
+            {
+                "id": "record1",
+                "_version": 1,
+                "source": "MARC",
+                "title": "Test Title 1",
+                "statisticalCodeIds": ["code1", "code2"],
+            },
+            {
+                "id": "record2",
+                "_version": 2,
+                "source": "MARC",
+                "title": "Test Title 2",
+                "administrativeNotes": ["test note 1", "test note 2"],
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=False,
+        preserve_administrative_notes=True,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
+
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1", "source": "FOLIO", "statisticalCodeIds": ["code3"],
+            "title": "Test Title 3"
+        },
+        {
+            "id": "record2", "source": "FOLIO", "administrativeNotes": ["test note 3"],
+            "title": "Test Title 4"
+        },
+    ]
+    query_api = "/instance-storage/instances"
+    object_type = "instances"
+
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert batch[0]["source"] == "MARC"
+    assert batch[1]["source"] == "MARC"
+    assert "administrativeNotes" not in batch[0]
+    assert batch[1]["administrativeNotes"] == [
+        "test note 1",
+        "test note 2",
+        "test note 3",
+    ]
+    assert batch[0]["statisticalCodeIds"] == ["code3"]
+    assert "statisticalCodeIds" not in batch[1]
+    assert batch[0]["title"] == "Test Title 1"
+    assert batch[1]["title"] == "Test Title 2"
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_source_marc_instance_do_not_preserve_administrative_notes():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "instances": [
+            {
+                "id": "record1",
+                "_version": 1,
+                "source": "MARC",
+                "title": "Test Title 1",
+                "statisticalCodeIds": ["code1", "code2"],
+            },
+            {
+                "id": "record2",
+                "_version": 2,
+                "source": "MARC",
+                "title": "Test Title 2",
+                "administrativeNotes": ["test note 1", "test note 2"],
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=True,
+        preserve_administrative_notes=False,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
+
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1",
+            "source": "FOLIO",
+            "statisticalCodeIds": ["code3"],
+            "title": "Test Title 3"
+        },
+        {
+            "id": "record2",
+            "source": "FOLIO",
+            "administrativeNotes": ["test note 3"],
+            "title": "Test Title 4"
+        },
+    ]
+    query_api = "/instance-storage/instances"
+    object_type = "instances"
+
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert batch[0]["source"] == "MARC"
+    assert batch[1]["source"] == "MARC"
+    assert "administrativeNotes" not in batch[0]
+    assert batch[1]["administrativeNotes"] == [
+        "test note 3"
+    ]
+    assert batch[0]["statisticalCodeIds"] == ["code1", "code2", "code3"]
+    assert "statisticalCodeIds" not in batch[1]
+    assert batch[0]["title"] == "Test Title 1"
+    assert batch[1]["title"] == "Test Title 2"
+
+
 def test_set_version():
     # Mock the asynchronous function
-    with (patch("folio_migration_tools.migration_tasks.batch_poster.BatchPoster.set_version_async")
-          as mock_async):
+    with patch(
+        "folio_migration_tools.migration_tasks.batch_poster.BatchPoster.set_version_async"
+    ) as mock_async:
         mock_async.return_value = None
 
         batch_poster_task = create_autospec(spec=BatchPoster)
@@ -196,141 +884,3 @@ def test_set_version():
 
         batch_poster_task.set_version(batch_poster_task, batch, query_api, object_type)
         mock_async.assert_called_with(batch, query_api, object_type)
-
-
-def test_get_api_info_use_safe():
-    api_info = batch_poster.get_api_info("Extradata")
-    assert api_info["object_name"] == ""
-    assert api_info["api_endpoint"] == ""
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert not api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Items")
-    assert api_info["object_name"] == "items"
-    assert api_info["api_endpoint"] == "/item-storage/batch/synchronous"
-    assert api_info["query_endpoint"] == "/item-storage/items"
-    assert api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Holdings")
-    assert api_info["object_name"] == "holdingsRecords"
-    assert api_info["api_endpoint"] == "/holdings-storage/batch/synchronous"
-    assert api_info["query_endpoint"] == "/holdings-storage/holdings"
-    assert api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Instances")
-    assert api_info["object_name"] == "instances"
-    assert api_info["api_endpoint"] == "/instance-storage/batch/synchronous"
-    assert api_info["query_endpoint"] == "/instance-storage/instances"
-    assert api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("ShadowInstances")
-    assert api_info["object_name"] == "instances"
-    assert api_info["api_endpoint"] == "/instance-storage/batch/synchronous"
-    assert api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Authorities")
-    assert api_info["object_name"] == ""
-    assert api_info["api_endpoint"] == "/authority-storage/authorities"
-    assert not api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert not api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("SRS")
-    assert api_info["object_name"] == "records"
-    assert api_info["api_endpoint"] == "/source-storage/batch/records"
-    assert api_info["is_batch"]
-    assert api_info["total_records"]
-    assert api_info["addSnapshotId"]
-    assert not api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Users")
-    assert api_info["object_name"] == "users"
-    assert api_info["api_endpoint"] == "/user-import"
-    assert api_info["is_batch"]
-    assert api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert not api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Organizations")
-    assert api_info["object_name"] == ""
-    assert api_info["api_endpoint"] == "/organizations/organizations"
-    assert not api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert not api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Orders")
-    assert api_info["object_name"] == ""
-    assert api_info["api_endpoint"] == "/orders/composite-orders"
-    assert not api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert not api_info["supports_upsert"]
-
-    with pytest.raises(SystemExit) as exc_info:
-        batch_poster.get_api_info("UnsupportedObjectType")
-        assert exc_info.value.code == 1
-
-
-def test_get_api_info_use_unsafe():
-    api_info = batch_poster.get_api_info("Instances", False)
-    assert api_info["object_name"] == "instances"
-    assert api_info["api_endpoint"] == "/instance-storage/batch/synchronous-unsafe"
-    assert api_info["query_endpoint"] == "/instance-storage/instances"
-    assert api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Holdings", False)
-    assert api_info["object_name"] == "holdingsRecords"
-    assert api_info["api_endpoint"] == "/holdings-storage/batch/synchronous-unsafe"
-    assert api_info["query_endpoint"] == "/holdings-storage/holdings"
-    assert api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert api_info["supports_upsert"]
-
-    api_info = batch_poster.get_api_info("Items", False)
-    assert api_info["object_name"] == "items"
-    assert api_info["api_endpoint"] == "/item-storage/batch/synchronous-unsafe"
-    assert api_info["query_endpoint"] == "/item-storage/items"
-    assert api_info["is_batch"]
-    assert not api_info["total_records"]
-    assert not api_info["addSnapshotId"]
-    assert api_info["supports_upsert"]
-
-    with pytest.raises(SystemExit) as exc_info:
-        batch_poster.get_api_info("UnsupportedObjectType", False)
-        assert exc_info.value.code == 1
-
-
-def test_get_human_readable():
-    human_readable = batch_poster.get_human_readable(1000)
-    assert human_readable == "1000.00B"
-
-    human_readable = batch_poster.get_human_readable(10000)
-    assert human_readable == "9.77KB"
-
-    human_readable = batch_poster.get_human_readable(10000000)
-    assert human_readable == "9.54MB"
-
-    human_readable = batch_poster.get_human_readable(10000000000)
-    assert human_readable == "9.31GB"
-
-    human_readable = batch_poster.get_human_readable(10000000000000)
-    assert human_readable == "9.09TB"
