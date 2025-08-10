@@ -464,6 +464,8 @@ class LoansMigrator(MigrationTaskBase):
             return self.handle_lost_item(legacy_loan, "Declared lost")
         elif folio_checkout.error_message.startswith("Cannot check out to inactive user"):
             return self.checkout_to_inactive_user(legacy_loan)
+        elif "has the item status Claimed returned and cannot be checked out" in folio_checkout.error_message:
+            return self.handle_claimed_returned_item(legacy_loan)
         else:
             self.migration_report.add(
                 "Details",
@@ -534,6 +536,23 @@ class LoansMigrator(MigrationTaskBase):
                 s = f"Successfully Checked out {lost_type} item. Item will be declared lost."
             logging.info(s)
             self.migration_report.add("Details", s)
+            return res_checkout
+
+    def handle_claimed_returned_item(self, legacy_loan: LegacyLoan):
+        if self.circulation_helper.is_checked_out(legacy_loan):
+            return TransactionResult(
+                False,
+                False,
+                legacy_loan,
+                i18n.t(f"Claimed returned and checked out"),
+                i18n.t(f"Claimed returned and checked out"),
+            )
+        else:
+            logging.debug("Setting Available")
+            legacy_loan.next_item_status = "Available"
+            self.set_item_status(legacy_loan)
+            res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
+            legacy_loan.next_item_status = "Claimed returned"
             return res_checkout
 
     def update_open_loan(self, folio_loan: dict, legacy_loan: LegacyLoan):
@@ -612,7 +631,7 @@ class LoansMigrator(MigrationTaskBase):
             "comment": "Created at migration. Date is due date + 1 day",
         }
         logging.debug(f"Claim returned data:\t{json.dumps(data)}")
-        if self.folio_put_post(claim_returned_url, data, "POST", i18n.t("Declare item as lost")):
+        if self.folio_put_post(claim_returned_url, data, "POST", i18n.t("Claim item returned")):
             self.migration_report.add(
                 "Details", i18n.t("Successfully declared loan as Claimed returned")
             )
