@@ -131,6 +131,46 @@ class BatchPoster(MigrationTaskBase):
                 ),
             ),
         ] = False
+        preserve_statistical_codes: Annotated[
+            bool,
+            Field(
+                title="Preserve statistical codes",
+                description=(
+                    "Toggles whether or not to preserve statistical codes "
+                    "during the upsert process. Defaults to False"
+                ),
+            ),
+        ] = False
+        preserve_administrative_notes: Annotated[
+            bool,
+            Field(
+                title="Preserve administrative notes",
+                description=(
+                    "Toggles whether or not to preserve administrative notes "
+                    "during the upsert process. Defaults to False"
+                ),
+            ),
+        ] = False
+        preserve_temporary_locations: Annotated[
+            bool,
+            Field(
+                title="Preserve temporary locations",
+                description=(
+                    "Toggles whether or not to preserve temporary locations "
+                    "on items during the upsert process. Defaults to False"
+                ),
+            ),
+        ] = False
+        preserve_temporary_loan_types: Annotated[
+            bool,
+            Field(
+                title="Preserve temporary loan types",
+                description=(
+                    "Toggles whether or not to preserve temporary loan types "
+                    "on items during the upsert process. Defaults to False"
+                ),
+            ),
+        ] = False
 
     task_configuration: TaskConfiguration
 
@@ -292,7 +332,7 @@ class BatchPoster(MigrationTaskBase):
         """
         fetch_batch_size = 90
         fetch_tasks = []
-        updates = {}
+        existing_records = {}
         async with httpx.AsyncClient(base_url=self.folio_client.gateway_url) as client:
             for i in range(0, len(batch), fetch_batch_size):
                 batch_slice = batch[i:i + fetch_batch_size]
@@ -313,31 +353,76 @@ class BatchPoster(MigrationTaskBase):
             responses = await asyncio.gather(*fetch_tasks)
 
             for response in responses:
-                self.update_record_versions(object_type, updates, response)
+                self.collect_existing_records_for_upsert(object_type, response, existing_records)
         for record in batch:
-            if record["id"] in updates:
-                record.update(updates[record["id"]])
+            if record["id"] in existing_records:
+                self.prepare_record_for_upsert(record, existing_records[record["id"]])
+
+    def handle_source_marc(self, new_record: dict, existing_record: dict):
+        updates = {}
+        updates.update(existing_record)
+        self.handle_upsert_for_administrative_notes(updates)
+        self.handle_upsert_for_statistical_codes(updates)
+        keep_new = {k: v for k, v in new_record.items() if k in ["statisticalCodeIds", "administrativeNotes"]}
+        if "instanceStatusId" in new_record:
+            updates["instanceStatusId"] = new_record["instanceStatusId"]
+        for k, v in keep_new.items():
+            updates[k] = list(dict.fromkeys(updates.get(k, []) + v))
+        new_record.update(updates)
 
     @staticmethod
-    def update_record_versions(object_type, updates, response):
+    def collect_existing_records_for_upsert(object_type: str, response: httpx.Response, existing_records: dict):
         if response.status_code == 200:
             response_json = response.json()
             for record in response_json[object_type]:
-                updates[record["id"]] = {
-                            "_version": record["_version"],
-                        }
-                if "hrid" in record:
-                    updates[record["id"]]["hrid"] = record["hrid"]
-                if "status" in record:
-                    updates[record["id"]]["status"] = record["status"]
-                if "lastCheckIn" in record:
-                    updates[record["id"]]["lastCheckIn"] = record["lastCheckIn"]
+                existing_records[record["id"]] = record
         else:
             logging.error(
-                        "Failed to fetch current records. HTTP %s\t%s",
-                        response.status_code,
-                        response.text,
-                    )
+                "Failed to fetch current records. HTTP %s\t%s",
+                response.status_code,
+                response.text,
+            )
+
+    def handle_upsert_for_statistical_codes(self, updates: dict):
+        if not self.task_configuration.preserve_statistical_codes:
+            updates.pop("statisticalCodeIds", None)
+
+    def handle_upsert_for_administrative_notes(self, updates: dict):
+        if not self.task_configuration.preserve_administrative_notes:
+            updates.pop("administrativeNotes", None)
+
+    def handle_upsert_for_temporary_locations(self, updates: dict):
+        if not self.task_configuration.preserve_temporary_locations:
+            updates.pop("temporaryLocationId", None)
+
+    def handle_upsert_for_temporary_loan_types(self, updates: dict):
+        if not self.task_configuration.preserve_temporary_loan_types:
+            updates.pop("temporaryLoanTypeId", None)
+
+    def prepare_record_for_upsert(self, new_record: dict, existing_record: dict):
+        if "source" in existing_record and "MARC" in existing_record["source"]:
+            self.handle_source_marc(new_record, existing_record)
+        else:
+            updates = {
+                "_version": existing_record["_version"],
+            }
+            for key in ["hrid", "status", "lastCheckIn"]:
+                if key in existing_record:
+                    updates[key] = existing_record[key]
+            keep_new = {k: v for k, v in new_record.items() if k in ["statisticalCodeIds", "administrativeNotes"]}
+            self.handle_upsert_for_statistical_codes(existing_record)
+            self.handle_upsert_for_administrative_notes(existing_record)
+            self.handle_upsert_for_temporary_locations(existing_record)
+            self.handle_upsert_for_temporary_loan_types(existing_record)
+            for k, v in keep_new.items():
+                updates[k] = list(dict.fromkeys(existing_record.get(k, []) + v))
+            for key in [
+                "temporaryLocationId",
+                "temporaryLoanTypeId",
+            ]:
+                if key in existing_record:
+                    updates[key] = existing_record[key]
+            new_record.update(updates)
 
     async def get_with_retry(self, client: httpx.AsyncClient, url: str, params=None):
         if params is None:
