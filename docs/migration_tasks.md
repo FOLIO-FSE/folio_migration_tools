@@ -285,10 +285,14 @@ These configuration pieces in the configuration file determines the behaviour
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
 | migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
 | userMappingFileName  | Any string  | location of the mapping file in the mapping_files folder  |
+| departmentsMapPath  | Any string   | Location of the user departments mapping file in the mapping_files folder  |
 | groupMapPath  | Any string   | Location of the user group mapping file in the mapping_files folder  |
 | useGroupMap  | boolean   | Use the above group map file or use code-to-code direct mapping  |
 | userFile.file_name  | Any string  | name of csv/tsv file of legacy users in the data/users folder |
 
+```{note}
+To map multiple departments for a user, ensure that all legacy values are in the same column of your delimited data file, sub-delimited with the `multi_field_delimiter` value from your `libraryConfiguration`
+```
 
 ## Syntax to run
 ``` 
