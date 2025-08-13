@@ -1078,6 +1078,83 @@ def test_ref_data_departments_mapping(mocked_folio_client):
     assert "departments" not in folio_user_2
 
 
+def test_ref_data_departments_mapping_multi_field_delimiter(mocked_folio_client):
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+            {
+                "folio_field": "departments[0]",
+                "legacy_field": "dept",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "dept": "Department name<delimiter>Department name2",
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+    }
+    legacy_user_record_2 = {
+        "dept": "Unmapped name",
+        "ext_id": "externalid_2",
+        "user_name": "user_name_2",
+        "id": "2",
+    }
+
+    departments_map = [
+        {"dept": "Department name", "folio_name": "FOLIO user department name"},
+        {"dept": "Department name2", "folio_name": "FOLIO user department name 2"},
+        {"dept": "*", "folio_name": "FOLIO fallback user department name"},
+    ]
+    mock_library_conf = mocked_classes.get_mocked_library_config()
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_task_config.remove_request_preferences = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_folio_client
+    user_mapper = UserMapper(
+        mock_folio, mock_task_config, mock_library_conf, user_map, departments_map, None
+    )
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    folio_user_2, index_or_id_2 = user_mapper.do_map(
+        legacy_user_record_2, "002", FOLIONamespaces.users
+    )
+    folio_user_2 = user_mapper.perform_additional_mapping(
+        legacy_user_record_2, folio_user_2, index_or_id_2
+    )
+    assert folio_user["departments"][0] == "FOLIO user department name"
+    assert folio_user["departments"][1] == "FOLIO user department name 2"
+    assert "departments" not in folio_user_2
+
+
 def test_custom_fields_mapping(mocked_folio_client):
     user_map = {
         "data": [

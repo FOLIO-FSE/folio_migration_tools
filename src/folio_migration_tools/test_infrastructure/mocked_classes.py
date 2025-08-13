@@ -122,6 +122,11 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "code": "fdp",
             },
             {
+                "id": "12a2ad12-951d-4124-9fb2-58c70f0b7f72",
+                "name": "FOLIO user department name 2",
+                "code": "fdp2",
+            },
+            {
                 "id": "2f452d21-507d-4b32-a89d-8ea9753cc946",
                 "name": "FOLIO fallback user department name",
                 "code": "fb",
