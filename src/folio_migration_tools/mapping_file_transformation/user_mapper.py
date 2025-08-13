@@ -157,12 +157,25 @@ class UserMapper(MappingFileMapperBase):
                     "No Departments mapping set up. Set up a departments mapping file "
                     " or remove the mapping of the Departments field",
                 )
-            return self.get_mapped_name(
-                self.departments_mapping,
-                legacy_user,
-                index_or_id,
-                True,
-            )
+            if len(self.departments_mapping.mapped_legacy_keys) == 1 and self.library_configuration.multi_field_delimiter in legacy_user.get(self.departments_mapping.mapped_legacy_keys[0], ""):
+                split_departments = legacy_user.get(self.departments_mapping.mapped_legacy_keys[0], "").split(
+                    self.library_configuration.multi_field_delimiter
+                )
+                return self.library_configuration.multi_field_delimiter.join([
+                    self.get_mapped_name(
+                        self.departments_mapping,
+                        {self.departments_mapping.mapped_legacy_keys[0]: dept},
+                        index_or_id,
+                        True,
+                    ) for dept in split_departments
+                ])
+            else:
+                return self.get_mapped_name(
+                    self.departments_mapping,
+                    legacy_user,
+                    index_or_id,
+                    True,
+                )
         elif folio_prop_name in ["expirationDate", "enrollmentDate", "personal.dateOfBirth"]:
             return self.get_parsed_date(mapped_value, folio_prop_name)
         return mapped_value
