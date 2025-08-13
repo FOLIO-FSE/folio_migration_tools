@@ -218,7 +218,10 @@ class ItemsTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
-        if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
+        if (
+            any(k for k in self.folio_keys if k.startswith("statisticalCodeIds"))
+            or any(getattr(k, "statistical_code", "") for k in self.task_configuration.files)
+        ):
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
                 self.folder_structure.mapping_files_folder
