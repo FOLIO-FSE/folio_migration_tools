@@ -457,7 +457,7 @@ class LoansMigrator(MigrationTaskBase):
         elif folio_checkout.error_message.startswith(
             "Cannot check out item that already has an open loan"
         ):
-            return folio_checkout
+            return self.handle_checked_out_item(legacy_loan)
         elif "Aged to lost" in folio_checkout.error_message:
             return self.handle_lost_item(legacy_loan, "Aged to lost")
         elif folio_checkout.error_message == "Declared lost":
@@ -511,6 +511,23 @@ class LoansMigrator(MigrationTaskBase):
         self.migration_report.add("Details", i18n.t("Handled inactive users"))
         return res
 
+    def handle_checked_out_item(self, legacy_loan: LegacyLoan) -> TransactionResult:
+        if self.circulation_helper.is_checked_out(legacy_loan):
+            return TransactionResult(
+                False,
+                False,
+                legacy_loan,
+                i18n.t("Loan already exists for %{item_barcode}", item_barcode=legacy_loan.item_barcode),
+                i18n.t("Loan already exists for %{item_barcode}", item_barcode=legacy_loan.item_barcode),
+            )
+        else:
+            logging.debug(i18n.t("Setting item %{item_barcode} to status \"Available\"", item_barcode=legacy_loan.item_barcode))
+            legacy_loan.next_item_status = "Available"
+            self.set_item_status(legacy_loan)
+            res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
+            legacy_loan.next_item_status = "Checked out"
+            return res_checkout
+
     def handle_lost_item(
         self, legacy_loan: LegacyLoan, lost_type: Literal["Aged to lost", "Declared lost"]
     ) -> TransactionResult:
@@ -519,21 +536,21 @@ class LoansMigrator(MigrationTaskBase):
                 False,
                 False,
                 legacy_loan,
-                i18n.t(f"{lost_type} and checked out"),
-                i18n.t(f"{lost_type} and checked out"),
+                i18n.t("%{lost_type} and checked out", lost_type=lost_type),
+                i18n.t("%{lost_type} and checked out", lost_type=lost_type),
             )
 
         else:
-            logging.debug("Setting Available")
+            logging.debug("Setting item %{item_barcode} to status \"Available\"", item_barcode=legacy_loan.item_barcode)
             legacy_loan.next_item_status = "Available"
             self.set_item_status(legacy_loan)
             res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
             legacy_loan.next_item_status = lost_type
             if lost_type == "Aged to lost":
                 self.set_item_status(legacy_loan)
-                s = f"Successfully Checked out {lost_type} item and put the status back"
+                s = i18n.t("Successfully Checked out %{lost_type} item and put the status back", lost_type=lost_type)
             else:
-                s = f"Successfully Checked out {lost_type} item. Item will be declared lost."
+                s = i18n.t("Successfully Checked out %{lost_type} item. Item will be declared lost.", lost_type=lost_type)
             logging.info(s)
             self.migration_report.add("Details", s)
             return res_checkout
@@ -544,11 +561,11 @@ class LoansMigrator(MigrationTaskBase):
                 False,
                 False,
                 legacy_loan,
-                i18n.t(f"Claimed returned and checked out"),
-                i18n.t(f"Claimed returned and checked out"),
+                i18n.t("Claimed returned and checked out"),
+                i18n.t("Claimed returned and checked out"),
             )
         else:
-            logging.debug("Setting Available")
+            logging.debug("Setting item %{item_barcode} to status \"Available\"", item_barcode=legacy_loan.item_barcode)
             legacy_loan.next_item_status = "Available"
             self.set_item_status(legacy_loan)
             res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
