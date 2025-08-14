@@ -236,10 +236,12 @@ def test_to_dict() -> None:
     expected_result = {
         "item_barcode": "the barcode with trailing spaces",
         "patron_barcode": "the barcode with leading spaces",
+        "proxy_patron_barcode": "",
         "due_date": "2025-03-27T23:59:00+00:00",
         "out_date": "2025-03-27T00:01:00+00:00",
         "renewal_count": 1,
         "next_item_status": "Checked out",
+        "service_point_id": ""
     }
     assert legacy_loan.to_dict() == expected_result
 
