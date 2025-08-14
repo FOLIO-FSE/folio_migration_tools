@@ -1,7 +1,5 @@
-```{contents}
-:depth: 1
-```
 # Statistical Code Mapping
+
 ## Introduction
 FOLIO provides the ability to construct a controlled vocabulary of [statistical codes](https://docs.folio.org/docs/settings/settings_inventory/settings_inventory/#settings--inventory--statistical-codes) that can be assigned to three principal inventory record types (Instances, Holdings, and Items). `folio_migration_tools` allows you to map legacy values from your MARC Bibs, MARC Holdings, CSV Holdings, or CSV Items to the list of statistical codes during the migration process. The tools also allow you to map statistical codes based on the source file of the records being migrated.
 
