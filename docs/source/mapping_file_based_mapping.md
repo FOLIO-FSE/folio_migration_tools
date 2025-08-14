@@ -149,7 +149,8 @@ If you do not want it mapped, just add "Not mapped" as the value, or an empty st
 ### The value property
 The value property is a way to add the same value to all records. 
 
-```{important}⚠️ The value field has preceedence over all other mappings. If you put a value here, no other mappings will be taken into consideration
+```{caution}
+⚠️ The value field has preceedence over all other mappings. If you put a value here, no other mappings will be taken into consideration
 ```
 
 ### The description property
