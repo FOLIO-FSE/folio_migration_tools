@@ -9,7 +9,7 @@ quick_tutorial.md
 ```{toctree}
 :maxdepth: 3
 :hidden:
-:caption: How to Use the Tools
+:caption: Using the Tools
 migration_process.md
 migration_tasks.md
 mapping_file_based_mapping.md

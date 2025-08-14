@@ -52,7 +52,7 @@ A typical entry looks like this:
 }
 ```
 folio_field and legacy_field are mandatory. All other fields are optional. 
-### The pirority of the mappings in the mapping entry:
+### The priority of the mappings in the mapping entry:
 There might be exceptions to this in some areas, but generally, this is the how the mapping works:
 1. If there are reference data mappings or special cases for particular fields, then this has precedence
 2. Values added to the *value* field are returned immediately without any further manipulation
@@ -149,7 +149,9 @@ If you do not want it mapped, just add "Not mapped" as the value, or an empty st
 ### The value property
 The value property is a way to add the same value to all records. 
 
-⚠️ The value field has preceedence over all other mappings. If you put a value here, no other mappings will be taken into consideration 
+```{important}⚠️ The value field has preceedence over all other mappings. If you put a value here, no other mappings will be taken into consideration
+```
+
 ### The description property
 The description field is used for your own notes.
 
