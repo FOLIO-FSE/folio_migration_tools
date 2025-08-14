@@ -171,6 +171,9 @@ async def test_set_version_async():
     batch_poster.handle_source_marc = MethodType(
         BatchPoster.handle_source_marc, batch_poster
     )
+    batch_poster.keep_existing_fields = MethodType(
+        BatchPoster.keep_existing_fields, batch_poster
+    )
 
     # Define test inputs
     batch = [{"id": "record1"}, {"id": "record2"}]
@@ -185,6 +188,81 @@ async def test_set_version_async():
     assert batch[1]["_version"] == 2
     assert batch[0]["status"]["name"] == "Available"
     assert batch[1]["status"]["name"] == "Checked out"
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_preserve_status_false():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "instances": [
+            {"id": "record1", "_version": 1, "status": {"name": "Available"}},
+            {"id": "record2", "_version": 2, "status": {"name": "Checked out"}},
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=False,
+        preserve_administrative_notes=False,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+        preserve_item_status=False
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.handle_source_marc = MethodType(
+        BatchPoster.handle_source_marc, batch_poster
+    )
+    batch_poster.keep_existing_fields = MethodType(
+        BatchPoster.keep_existing_fields, batch_poster
+    )
+    
+    # Define test inputs
+    batch = [{"id": "record1", "status": {"name": "Declared lost"}}, {"id": "record2", "status": {"name": "Unavailable"}}]
+    query_api = "/instance-storage/instances"
+    object_type = "instances"
+
+    # Act
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert batch[0]["status"]["name"] == "Declared lost"
+    assert batch[1]["status"]["name"] == "Unavailable"
 
 
 @pytest.mark.asyncio
@@ -240,6 +318,9 @@ async def test_set_version_async_one_existing_items():
     )
     batch_poster.handle_source_marc = MethodType(
         BatchPoster.handle_source_marc, batch_poster
+    )
+    batch_poster.keep_existing_fields = MethodType(
+        BatchPoster.keep_existing_fields, batch_poster
     )
 
     # Define test inputs
