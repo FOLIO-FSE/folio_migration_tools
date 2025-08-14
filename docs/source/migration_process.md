@@ -1,7 +1,3 @@
-```{contents} 
-:depth: 2
-```
-
 # The migration process
 
 In order to perform migrations according to this process, you need the following:

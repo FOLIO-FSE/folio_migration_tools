@@ -1,6 +1,3 @@
-```{contents} 
-:depth: 1
-```
 # The migration tasks
 The folio_migration_tools are all build on the concept of a set type of migration tasks, that either 
 *transforms*, *posts* (loads), or *migrates* data or transactions from a legacy system into FOLIO
@@ -31,7 +28,7 @@ This configuration piece in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | useTenantMappingRules  | true  | Placeholder for option to use an external rules file  |
 | ilsFlavour  | any of "aleph", "voyager", "sierra", "millennium", "koha", "tag907y", "tag001", "tagf990a", "custom"  | Used to point scripts to the correct legacy identifier and other ILS-specific things  |
 | custom_bib_id_field  | any MARC field + subfield (eg. 991$a)  | The MARC record field (with optional $-delimited subfield) containing the legacy system ID of the record. Only used when `ilsFlavour` is "custom".  |
@@ -76,7 +73,7 @@ These configuration pieces in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | objectType  | Any of "Extradata", "Items", "Holdings", "Instances", "SRS", "Users" | Type of object to post  |
 | batchSize  | integer  | The number of records per batch to post. If the API does not allow batch posting, this number will be ignored  |
 | file.filename  | Any string  | Name of file to post, located in the results folder  |
@@ -116,7 +113,7 @@ This configuration piece in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | legacyIdMarcPath  | A marc field followed by an optional subfield delimited by a $ | used to locate the legacy identifier for this record. Examles : "001", "951$c"  |
 | mfhdMappingFileName  | Any string  | location of the MFHD rules in the mapping_files folder  |
 | locationMapFileName  | Any string   | Location of the Location mapping file in the mapping_files folder  |
@@ -161,7 +158,7 @@ These configuration pieces in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | objectType  | Any of "Extradata", "Items", "Holdings", "Instances", "SRS", "Users" | Type of object to post  |
 | batchSize  | integer  | The number of records per batch to post. If the API does not allow batch posting, this number will be ignored  |
 | file.filename  | Any string  | Name of file to post, located in the results folder  |
@@ -205,7 +202,7 @@ These configuration pieces in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | holdingsMapFileName  | Any string  | location of the mapping file in the mapping_files folder  |
 | locationMapFileName  | Any string   | Location of the Location mapping file in the mapping_files folder  |
 | defaultCallNumberTypeName | any string | Name of callnumber in FOLIO used as a  fallback | 
@@ -247,7 +244,7 @@ These configuration pieces in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | itemsMappingFileName  | Any string  | location of the mapping file in the mapping_files folder  |
 | locationMapFileName  | Any string   | Location of the location mapping file in the mapping_files folder  |
 | prevent_permanent_location_map_default  | `true` or `false`  | If `true`, item permanent location mapping will not use the fallback (`*`) mapping  |
@@ -285,7 +282,7 @@ These configuration pieces in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | userMappingFileName  | Any string  | location of the mapping file in the mapping_files folder  |
 | departmentsMapPath  | Any string   | Location of the user departments mapping file in the mapping_files folder  |
 | groupMapPath  | Any string   | Location of the user group mapping file in the mapping_files folder  |
@@ -329,7 +326,7 @@ These configuration pieces in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | organizationMapPath  | Any string  | location of the Organizations mapping file in the mapping_files folder  |
 | organizationTypesMapPath  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
 | addressCategoriesMapPath  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
@@ -385,7 +382,7 @@ These configuration pieces in the configuration file determines the behaviour
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | feefinesMap  | Any string  | location of the fee/fine mapping file in the mapping_files folder  |
 | feefinesOwnerMap  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
 | feefinesTypeMap  | Any string   | Location of the reference data mapping file in the mapping_files folder  |
@@ -465,7 +462,7 @@ Unlike other data types that allow you to map columns in a legacy source data fi
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
 | Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
-| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| migrationTaskType  | Any of the [avialable migration tasks](https://github.com/FOLIO-FSE/folio_migration_tools/tree/main/src/folio_migration_tools/migration_tasks)  | The type of migration task you want to run  |
 | openLoansFiles  | Objects with filename and optional `service_point_id`   | location of the open loan source data in the `source_data/loans` folder and optional fallback `service_point_id` for the file |
 | startingRow  | Integer   | Row of the loans file(s) to start on  |
 | itemFiles  | Objects with filename    | Location of the transformed item records for the iteration in the `results` folder  |

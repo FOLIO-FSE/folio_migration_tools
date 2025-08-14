@@ -1,8 +1,5 @@
 # MARC Rules based mapping
 
-```{contents}
-```
-
 ## Introduction
 
 ## The mapping rules
@@ -28,7 +25,6 @@ By default this tool will perform a basic mapping, including Title, Primary Cont
 The first step in preparing to transform MARC Bib records for FOLIO is to create a task configuration:
 
 ```json
-...
     {
         "name": "bibs",
         "migrationTaskType": "BibsTransformer",
@@ -46,7 +42,6 @@ The first step in preparing to transform MARC Bib records for FOLIO is to create
             }
         ]
     }
-...
 ```
 
 ### Posting BibTransformer MARC records
@@ -66,7 +61,6 @@ MFHD records are a great way to export records from your legacy system to migrat
 The first step in preparing to transform MARC Bib records for FOLIO is to create a task configuration:
 
 ```json
-...
         {
             "name": "transform_mfhd",
             "migrationTaskType": "HoldingsMarcTransformer",
@@ -91,9 +85,8 @@ The first step in preparing to transform MARC Bib records for FOLIO is to create
             ],
             "updateHridSettings": false
         },
-...
 ```
-For more information on the task configuration options for MFHD transformation, see [Migration Tasks](migration_tasks.md#transform-mfhd-records-to-holdings-and-srs-holdings)
+For more information on the task configuration options for MFHD transformation, see [Migration Tasks](./migration_tasks.md#transform-mfhd-records-to-holdings-and-srs-holdings)
 
 ### Boundwith Mapping for MFHD Holdings ("Voyager-style" boundwiths)
 In the MFHD transformer task above, you will notice the `"boundwithRelationshipFilePath"` key. This is a filename, relative to the `source_data/holdings` directory of your iteration that contains a tab-delimited file mapping MFHD legacy ID values to MARC Bib legacy ID values. This file should also be included in any related item transformation task your perform later.
@@ -270,26 +263,20 @@ To map only the statement fields, add the following parameter to the `MarcHoldin
 
 ```json
 {
-    ...
     "includeMrkStatements": true,
     "mrkHoldingsNoteType": "Original MARC holdings statements",
-    ...
 }
 ```
 ```json
 {
-    ...
     "includeMfhdMrkAsNote": true,
     "mfhdMrkNoteType": "Original MFHD Record"
-    ...
 }
 ```
 ```json
 {
-    ...
     "includeMfhdMrcAsNote": true,
     "mfhdMrcNoteType": "Original MFHD (MARC21)"
-    ...
 }
 ```
 You can use the name of the holdings note type you want to use, and the tools will resolve the UUID during transformation.

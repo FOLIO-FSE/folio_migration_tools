@@ -1,19 +1,22 @@
 ```{toctree}
-:maxdepth: 1
+:maxdepth: 3
+:caption: Getting Started
 :hidden:
-Installing <installing.md>
-Quick tutorial <quick_tutorial.md>
-The migration process <migration_process.md>
-Migration Tasks <migration_tasks.md>
-Mapping-file based mapping <mapping_file_based_mapping.md>
-MARC Rules based mapping <marc_rule_based_mapping.md>
-Mapping files <mapping_files.md>
-Statistical Codes <statistical_codes.md>
-Q&A <q_and_a.md>
+installing.md
+quick_tutorial.md
+```
 
-```   
-```{contents} 
-:depth: 2
+```{toctree}
+:maxdepth: 3
+:hidden:
+:caption: How to Use the Tools
+migration_process.md
+migration_tasks.md
+mapping_file_based_mapping.md
+marc_rule_based_mapping.md
+mapping_files.md
+statistical_codes.md
+q_and_a.md
 ```
 
 
