@@ -29,11 +29,13 @@ class LegacyLoan(object):
             "patron_barcode",
             "due_date",
             "out_date",
+        ]
+        optional_headers = [
+            "service_point_id",
+            "proxy_patron_barcode",
             "renewal_count",
             "next_item_status",
-            "service_point_id",
         ]
-        optional_headers = ["service_point_id", "proxy_patron_barcode"]
         legal_statuses = [
             "",
             "Aged to lost",
@@ -72,7 +74,9 @@ class LegacyLoan(object):
                 )
         except (ParserError, OverflowError) as ee:
             logging.error(ee)
-            self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "due_date"))
+            self.errors.append(
+                (f"Parse date failure in {row=}. Setting UTC NOW", "due_date")
+            )
             temp_date_due = datetime.now(ZoneInfo("UTC"))
         try:
             temp_date_out: datetime = parse(self.legacy_loan_dict["out_date"])
@@ -86,18 +90,24 @@ class LegacyLoan(object):
             temp_date_out = datetime.now(
                 ZoneInfo("UTC")
             )  # TODO: Consider moving this assignment block above the temp_date_due
-            self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "out_date"))
+            self.errors.append(
+                (f"Parse date failure in {row=}. Setting UTC NOW", "out_date")
+            )
 
         # good to go, set properties
         self.item_barcode: str = self.legacy_loan_dict["item_barcode"].strip()
         self.patron_barcode: str = self.legacy_loan_dict["patron_barcode"].strip()
-        self.proxy_patron_barcode: str = self.legacy_loan_dict.get("proxy_patron_barcode", "")
+        self.proxy_patron_barcode: str = self.legacy_loan_dict.get(
+            "proxy_patron_barcode", ""
+        )
         self.due_date: datetime = temp_date_due
         self.out_date: datetime = temp_date_out
         self.correct_for_1_day_loans()
         self.make_utc()
         self.renewal_count = self.set_renewal_count(self.legacy_loan_dict)
-        self.next_item_status = self.legacy_loan_dict.get("next_item_status", "").strip()
+        self.next_item_status = self.legacy_loan_dict.get(
+            "next_item_status", ""
+        ).strip()
         if self.next_item_status not in legal_statuses:
             self.errors.append((f"Not an allowed status {row=}", self.next_item_status))
         self.service_point_id = (
@@ -112,9 +122,11 @@ class LegacyLoan(object):
             try:
                 return int(renewal_count)
             except ValueError:
-                self.report(f"Unresolvable {renewal_count=} was replaced with 0.")
+                self.report(
+                    i18n.t("Unresolvable %{renewal_count=} was replaced with 0.")
+                )
         else:
-            self.report(f"Missing renewal count was replaced with 0.")
+            self.report(i18n.t("Missing renewal count was replaced with 0."))
         return 0
 
     def correct_for_1_day_loans(self):
@@ -129,17 +141,19 @@ class LegacyLoan(object):
                 i18n.t(
                     "Due date is before out date, or date information is missing from both"
                 ),
-                json.dumps(self.legacy_loan_dict, indent=2)
+                json.dumps(self.legacy_loan_dict, indent=2),
             )
 
     def to_dict(self):
         return {
             "item_barcode": self.item_barcode,
             "patron_barcode": self.patron_barcode,
+            "proxy_patron_barcode": self.proxy_patron_barcode,
             "due_date": self.due_date.isoformat(),
             "out_date": self.out_date.isoformat(),
             "renewal_count": self.renewal_count,
             "next_item_status": self.next_item_status,
+            "service_point_id": self.service_point_id,
         }
 
     def make_utc(self):

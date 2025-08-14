@@ -18,11 +18,11 @@ Mapping of MARC-source data is controlled by a [MARC-to-FOLIO mapping rules conf
 If you want to pull multiple legacy stat codes from the same MARC field, you can either provide them as repeating (or multiple different) subfields (eg. `998$a$b$c` to pull codes from all three subfields) or use the `multi_field_delimiter` value specified in your project's `libraryConfiguration`. Here is an example of a MARC field with statistical code data and the task configuration you'll need to map them:
 
 MARC field
-```MARC
+```marc
 =998 \\$aarch$bebooks$cebooks$cjournal
 ```
 Statistical code map
-```TSV
+```tsv
 legacy_stat_code	folio_code
 998_a:arch	arch
 arch	arch
@@ -31,7 +31,9 @@ folios	oversize
 998_c:ebooks	ebooks-sub
 998_c:journal	journals-sub
 ```
+
 Task configuration
+
 ```json
 {
     "name": "bibs",
@@ -50,6 +52,7 @@ Task configuration
     ]
 }
 ```
+
 Assuming the codes in the `folio_code` column exist in FOLIO, they will appear in the FOLIO record created from the record containing that MARC field.
 
 ## Mapping statistical code data from CSV/TSV data
@@ -60,7 +63,7 @@ Mapping statistical code data from delimited data files (CSV/TSV) is somewhat mo
 
 Here is an example field mapping and it's mapping TSV:
 
-```JSON
+```json
 {
     "folio_field": "statisticalCodeIds[0]",
     "legacy_field": "icode1",
@@ -69,14 +72,17 @@ Here is an example field mapping and it's mapping TSV:
 }
 ```
 
-```TSV
+```tsv
 legacy_stat_code	folio_code
 u	weeding
 g	gift
 $	facoffice
 *	gencol
 ```
+
+```{attention}
 Note: the wildcard fallback mapping will not be used, but must be included for the mapping file to be valid.
+```
 
 ## Notes and observations
 * Mappings that result in the same FOLIO code being mapped more than once will be deduplicated

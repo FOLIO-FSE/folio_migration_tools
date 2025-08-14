@@ -4,10 +4,11 @@
 # The migration tasks
 The folio_migration_tools are all build on the concept of a set type of migration tasks, that either 
 *transforms*, *posts* (loads), or *migrates* data or transactions from a legacy system into FOLIO
+
 # Transform bibs
 ## Configuration
 This configuration piece in the configuration file determines the behaviour
-```
+```json
  {
     "name": "transform_bibs",
     "migrationTaskType": "BibsTransformer",
@@ -42,14 +43,15 @@ This configuration piece in the configuration file determines the behaviour
 
 
 ## Syntax to run
-``` 
+```shell 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_bibs --base_folder PATH_TO_migration_repo_template/
 
 ```
 # Post tranformed Instances and SRS records 
 ## Configuration
 These configuration pieces in the configuration file determines the behaviour
-```
+
+```json
 {
     "name": "post_bibs",
     "migrationTaskType": "BatchPoster",
@@ -80,7 +82,7 @@ These configuration pieces in the configuration file determines the behaviour
 | file.filename  | Any string  | Name of file to post, located in the results folder  |
 
 ## Syntax to run
-``` 
+```shell 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_bibs --base_folder PATH_TO_migration_repo_template/
 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_srs_bibs --base_folder PATH_TO_migration_repo_template/
@@ -90,7 +92,7 @@ folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfi
 # Transform MFHD records to holdings and SRS holdings 
 ## Configuration
 This configuration piece in the configuration file determines the behaviour
-```
+```json
 {
     "name": "transform_mfhd",
     "migrationTaskType": "HoldingsMarcTransformer",
@@ -127,14 +129,14 @@ This configuration piece in the configuration file determines the behaviour
 | files  | Objects with filename and boolean  | Filename of the MARC21 file in the data/holdings folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
 
 ## Syntax to run
-``` 
+```shell 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_mfhd --base_folder PATH_TO_migration_repo_template/
 ```
 
 # Post tranformed MFHDs and Holdingsrecords to FOLIO 
 ## Configuration
 These configuration pieces in the configuration file determines the behaviour
-```
+```json
 {
     "name": "post_holdingsrecords_from_mfhd",
     "migrationTaskType": "BatchPoster",
@@ -165,7 +167,7 @@ These configuration pieces in the configuration file determines the behaviour
 | file.filename  | Any string  | Name of file to post, located in the results folder  |
 
 ## Syntax to run
-``` 
+```shell 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_holdingsrecords_from_mfhd --base_folder PATH_TO_migration_repo_template/
 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json post_srs_mfhds --base_folder PATH_TO_migration_repo_template/
@@ -175,7 +177,7 @@ folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfi
 # Transform CSV/TSV files into Holdingsrecords
 ## Configuration
 These configuration pieces in the configuration file determines the behaviour
-```
+```json
 {
     "name": "transform_csv_holdings",
     "migrationTaskType": "HoldingsCsvTransformer",
@@ -215,7 +217,7 @@ These configuration pieces in the configuration file determines the behaviour
 | files  | Objects with filename and boolean  | Filename of the tab-delimited source file in the source_data/items folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
 
 ## Syntax to run
-``` 
+```shell 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_csv_holdings --base_folder PATH_TO_migration_repo_template/
 ```
 # Post trasformed Holdingsrecords to FOLIO
@@ -224,7 +226,7 @@ See documentation for posting above
 # Transform CSV/TSV files into Items
 ## Configuration
 These configuration pieces in the configuration file determines the behaviour
-```
+```json
 {
     "name": "transform_csv_items",
     "migrationTaskType": "ItemsTransformer",    
@@ -257,7 +259,7 @@ These configuration pieces in the configuration file determines the behaviour
 | files  | Objects with filename and boolean  | Filename tab-delimited source file in the source_data/items folder- Suppressed tells script to mark records as suppressedFromDiscovery  |
 
 ## Syntax to run
-``` 
+```shell 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_csv_items --base_folder PATH_TO_migration_repo_template/
 ```
 
@@ -267,7 +269,7 @@ See documentation for posting above
 # Transform CSV/TSV files into FOLIO users
 ## Configuration
 These configuration pieces in the configuration file determines the behaviour
-```
+```json
 {
     "name": "user_transform",
     "migrationTaskType": "UserTransformer",
@@ -295,7 +297,7 @@ To map multiple departments for a user, ensure that all legacy values are in the
 ```
 
 ## Syntax to run
-``` 
+```shell
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json user_transform --base_folder PATH_TO_migration_repo_template/
 ```
 
@@ -306,7 +308,7 @@ See documentation for posting above
 # Transform CSV/TSV files into FOLIO Organizations
 ## Configuration
 These configuration pieces in the configuration file determines the behaviour
-```
+```json
 {
     "name": "transform_organizations",
     "migrationTaskType": "OrganizationTransformer",
@@ -336,18 +338,18 @@ These configuration pieces in the configuration file determines the behaviour
 | files  | Objects with filename and boolean  | List of filenames containing the organization source data  |
 
 ## Syntax to run
-``` 
+```shell 
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
 ```
 
 # Post transformed Organizations to FOLIO
 See documentation for posting above. Note that any linked contacts, interfaces, credentials and notes will be in the "organizations.extradata" file. The "extradata" file should be posted after the "folio_organisations" file.
-¨
 
 # Transform CSV/TSV files into FOLIO Manual fees/fines
 ## General considerations
 ### Manual (static) fees/fines vs Automatic (incrementing) fees/fnes
 This migration task allows you to create static, so-called "manual" fees/fines in FOLIO. These are different from "automatic" fees/fines, which are generated and incremented automatically for open loans by FOLIO's BL pocesses. To avoid "duplicating" fees/fines during migration, we recmmend only creating manual fees/fines for charges that are not related to open loans.
+
 ## Mapping best practices
 ### Account and feefineAction
 Behind the scenes, a manual fee/fine in FOLIO is made up of one "account" and one or more "feeFineActions". In its current implementation, this migration task creates one accoount and one feeFineAction for each row in the source data file. Check out the migration_example repo for a tried and tested example of how you can map your source data to this structure: [manual_feefines_map.json](https://github.com/FOLIO-FSE/migration_example/blob/main/mapping_files/manual_feefines_map.json)
@@ -363,7 +365,7 @@ This task allows you to specify up to three reference data mapping files: Fee fi
 
 ## Configuration
 These configuration pieces in the configuration file determines the behaviour
-```
+```json
 {
     "name": "transform_manual_feefines",
     "migrationTaskType": "ManualFeeFinesTransformer",
@@ -391,12 +393,12 @@ These configuration pieces in the configuration file determines the behaviour
 | files  | Objects with filename and boolean  | List of filenames containing the fee/fine source data  |
 
 ## Syntax to run
-``` 
+```shell
 folio-migration-tools PATH_TO_migration_repo_template/mapping_files/exampleConfiguration.json transform_organizations --base_folder PATH_TO_migration_repo_template/
 ```
 # Post transformed Manual fees/fines to FOLIO
 See documentation for posting above. Note that all of the transformed fee/fine information is stored in the fees_fines.extradata file. 
-```
+```json
 {
     "name": "post_feefines",
     "migrationTaskType": "BatchPoster",
@@ -409,3 +411,84 @@ See documentation for posting above. Note that all of the transformed fee/fine i
     ]
 }
 ```
+
+# Migration Open Loans
+Unlike the preceding data types, migrating open loan data does not require separate transformation and loading tasks or mapping files. It is run as a single task that reads loan data from a CSV/TSV file with a prescribed column set. Optionally, this data can be validated against transformed item and user data to pre-determine if transactiosn will fail due to missing item or patron data in FOLIO
+
+## Loans `source_data` file format
+Unlike other data types that allow you to map columns in a legacy source data file to fields in a FOLIO object, the `LoansMigrator` task requires a CSV/TSV file with specific column headings:
+
+* Required headings
+  * `item_barcode`
+  * `patron_barcode`
+  * `due_date`
+  * `out_date`
+* Optional headings
+  * `proxy_patron_barcode`
+  * `renewal_count`
+  * `next_item_status`
+  * `service_point_id`
+
+## Task Configuration
+```json
+{
+  "name": "migrate_open_loans",
+  "migrationTaskType": "LoansMigrator",
+  "fallbackServicePointId": "a77b55e7-f9f3-40a1-83e0-241bc606a826",
+  "openLoansFiles": [
+    {
+        "file_name": "loans.tsv",
+        "service_point_id": "a77b55e7-f9f3-40a1-83e0-241bc606a826"
+    }
+  ],
+  "startingRow": 1,
+  "item_files": [
+    {
+        "file_name": "folio_items_transform_csv_items.json"
+    },
+    {
+        "file_name": "folio_items_transform_bw_items.json"
+    },
+    {
+        "file_name": "folio_items_transform_mfhd_items.json"
+    }
+  ],
+  "patron_files": [
+    {
+        "file_name": "folio_users_user_transform.json"
+    }
+  ]
+}
+```
+
+## Explanation of parameters
+| Parameter  | Possible values  | Explanation  | 
+| ------------- | ------------- | ------------- |
+| Name  | Any string  | The name of this task. Created files will have this as part of their names.  |
+| migrationTaskType  | Any of the [avialable migration tasks]()  | The type of migration task you want to run  |
+| openLoansFiles  | Objects with filename and optional `service_point_id`   | location of the open loan source data in the `source_data/loans` folder and optional fallback `service_point_id` for the file |
+| startingRow  | Integer   | Row of the loans file(s) to start on  |
+| itemFiles  | Objects with filename    | Location of the transformed item records for the iteration in the `results` folder  |
+| patronFiles  | Objects with filename    | Location of the transformed patron records for the iteration in the `results` folder  |
+
+## How it Works
+As mentioned, this task attempts to create new `/circulation/loans` transactions via the standard `/circulation/check-out-by-barcode` API, rather than writing `loan-storage` objects to FOLIO. This is done for two reasons:
+
+* To avoid the need to replicate the circulation rule system in these tools (to set appropriate policy values)
+* To generate the appropriate schedule notices in FOLIO
+
+```{attention}
+This process can generate _thousands_ of notices, depending on how many loans are migrated and patron notice policies configured. We *strongly recommend* disabling SMTP while ading open loans. The task will check to see if SMTP is disabled before it begins and give you ten seconds to stop the task before it proceeds. How to disable outgoing SMTP is left as an exercise for the reader.
+```
+
+If patron and/or item files are specified in the task configuration, the task will validate the loans data files against them, setting aside any rows that contain item or patron barcodes not found in the transformed users or items files. Rows with `due_date` values that precede `out_date` will also be set aside. Both sets of records will be saved to the `failed_records_failed_<task_name>_<timestamp>.txt` in `results`.
+
+Once the source data has made it through validation, the task will attempt to post post the loans via `check-out-by-barcode`, with all overrides specified. If the loan is created successfully, the task will then update the `loanDate` and `dueDate` values of the resulting loan. This will re-generate any scheduled notices.
+
+If the loan's item has a status that cannot normally be checked out ("Aged to lost", "Declared lost", "Claimed returned", "Checked out"), the task will report the initial failure and then attempt to change the status to "Available" and try to create the loan again. Once that is complete, the status will be reset, as needed.
+
+```{tip}
+While the task will, in most cases, be able to load a loan where the item is not in a loanable status, this will significantly slow things down. It's highly recommended to migrate any loaned items as "Available" or another loanable status.
+```
+
+If a patron is inactive in FOLIO, the first attempt to create the loan will fail. The task will then attempt to activate the patron, create the loan again, and then deactivate the patron before proceeding.
