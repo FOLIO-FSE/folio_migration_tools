@@ -344,13 +344,14 @@ class LoansMigrator(MigrationTaskBase):
 
     def write_failed_loans_to_file(self):
         csv_columns = [
-            "due_date",
-            "item_barcode",
-            "next_item_status",
-            "out_date",
             "patron_barcode",
+            "proxy_patron_barcode",
+            "item_barcode",
+            "due_date",
+            "out_date",
+            "next_item_status",
             "renewal_count",
-            "service_point_id"
+            "service_point_id",
         ]
         with open(self.folder_structure.failed_recs_path, "w+") as failed_loans_file:
             writer = csv.DictWriter(
