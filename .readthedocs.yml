@@ -5,8 +5,7 @@ sphinx:
   configuration: docs/source/conf.py
 
 formats:
-  - html
-  - pdf
+  - htmlzip
 
 build:
   os: ubuntu-22.04
