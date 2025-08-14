@@ -171,6 +171,16 @@ class BatchPoster(MigrationTaskBase):
                 ),
             ),
         ] = False
+        preserve_item_status: Annotated[
+            bool,
+            Field(
+                title="Preserve item status",
+                description=(
+                    "Toggles whether or not to preserve item status "
+                    "on items during the upsert process. Defaults to False"
+                ),
+            ),
+        ] = True
 
     task_configuration: TaskConfiguration
 
@@ -399,6 +409,14 @@ class BatchPoster(MigrationTaskBase):
         if not self.task_configuration.preserve_temporary_loan_types:
             updates.pop("temporaryLoanTypeId", None)
 
+    def keep_existing_fields(self, updates: dict, existing_record: dict):
+        keep_existing_fields = ["hrid", "lastCheckIn"]
+        if self.task_configuration.preserve_item_status:
+            keep_existing_fields.append("status")
+        for key in keep_existing_fields:
+            if key in existing_record:
+                updates[key] = existing_record[key]
+
     def prepare_record_for_upsert(self, new_record: dict, existing_record: dict):
         if "source" in existing_record and "MARC" in existing_record["source"]:
             self.handle_source_marc(new_record, existing_record)
@@ -406,9 +424,7 @@ class BatchPoster(MigrationTaskBase):
             updates = {
                 "_version": existing_record["_version"],
             }
-            for key in ["hrid", "status", "lastCheckIn"]:
-                if key in existing_record:
-                    updates[key] = existing_record[key]
+            self.keep_existing_fields(updates, existing_record)
             keep_new = {k: v for k, v in new_record.items() if k in ["statisticalCodeIds", "administrativeNotes"]}
             self.handle_upsert_for_statistical_codes(existing_record)
             self.handle_upsert_for_administrative_notes(existing_record)
