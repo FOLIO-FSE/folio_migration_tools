@@ -24,16 +24,21 @@ holdings_id_map.json | A json map from legacy Holdings Id to the ID of the creat
 holdings_transformation_report.md | A file containing various breakdowns of the transformation. Also contains errors to be fixed by the library | Create list of cleaning tasks, mapping refinement
 instances_id_map.json | A json map from legacy Bib Id to the ID of the created FOLIO Instance record. Relies on the "ILS Flavour" parameter in the main_bibs.py scripts | To be used in subsequent transformation steps 
 instance_transformation_report.md | A file containing various breakdowns of the transformation. Also contains errors to be fixed by the library | Create list of cleaning tasks, mapping refinement
-item_id_map.json | A json map from legacy Item Id to the ID of the created FOLIO Item record | To be used in subsequent transformation steps 
-item_transform_errors.tsv | A TSV file with errors and data issues together with the row number or id for the Item | To be used in fixing of data issues 
-items_transformation_report.md | A file containing various breakdowns of the transformation. Also contains errors to be fixed by the library | Create list of cleaning tasks, mapping refinement
-marc_xml_dump.xml | A MARCXML dump of the bib records, with the proper 001:s and 999 fields added | For pre-loading a Discovery system.
-srs.json | FOLIO SRS records in json format. One per row in the file | To be loaded into FOLIO using the batch APIs
-
+data_issues_log_<transformer_task_name>.tsv | A TSV file with errors and data issues together with the row number or id for the source record | To be used in fixing of data issues 
+report_<transformer_task_name>.md | A file containing various breakdowns of the transformation. Also contains errors to be fixed by the library | Create list of cleaning tasks, mapping refinement
+folio_marc_instances_<transformer_task_name>.mrc | A MARC dump of the bib records, with the proper 999$i fields added | For loading MARC records for instances .
 
 
 ## HRID handling
-### Current implementation:   
+
+### Current implementation
+Previous versions of the migration tools pre-populated HRIDs for instances when transforming to acommodate requirements for creating SRS JSON records. The current process for transforming MARC bibs does not require setting the HRID of the instance record. The value will be set by FOLIO when the instances are posted and in the SRS records created by Data Import when [loading the corresponding MARC data](./marc_rule_based_mapping.md#posting-bibtransformer-marc-records).
+
+```{note}
+If you set `hridHandling` to `"preserve001"`, the 001 of the source MARC record will be used as the instance HRID value.
+```
+
+### Legacy implementation (deprecated):   
 Download the HRID handling settings from the tenant. 
 **If there are HRID handling in the mapping rules:**
 - The HRID is set on the Instance
