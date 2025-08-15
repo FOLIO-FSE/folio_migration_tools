@@ -198,6 +198,14 @@ class CirculationHelper:
                         error_message_from_folio,
                         error_message_from_folio,
                     )
+                elif "Item is already checked out" in error_message_from_folio:
+                    return TransactionResult(
+                        False,
+                        True,
+                        None,
+                        error_message_from_folio,
+                        error_message_from_folio,
+                    )
                 logging.error(
                     f"{error_message} "
                     f"Patron barcode: {legacy_loan.patron_barcode} "
