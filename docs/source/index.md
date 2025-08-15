@@ -14,8 +14,9 @@ migration_process.md
 migration_tasks.md
 mapping_file_based_mapping.md
 marc_rule_based_mapping.md
-mapping_files.md
+Transforming inventory <mapping_files_inventory.md>
 statistical_codes.md
+Migrating circulation <mapping_files_circulation.md>
 q_and_a.md
 ```
 
