@@ -502,6 +502,8 @@ class LoansMigrator(MigrationTaskBase):
             "Cannot check out item that already has an open loan"
         ):
             return self.handle_checked_out_item(legacy_loan)
+        elif "Item is already checked out" in folio_checkout.error_message:
+            return self.handle_checked_out_item(legacy_loan)
         elif "Aged to lost" in folio_checkout.error_message:
             return self.handle_lost_item(legacy_loan, "Aged to lost")
         elif folio_checkout.error_message == "Declared lost":
