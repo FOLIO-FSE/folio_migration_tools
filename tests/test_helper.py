@@ -15,6 +15,14 @@ def test_log_dats_issue(caplog):
     assert "legacy value" in caplog.text
 
 
+def test_log_data_issue_failed(caplog):
+    caplog.set_level(26)
+    Helper.log_data_issue_failed("test id", "test log message", "legacy value")
+    assert "RECORD FAILED" in caplog.text
+    assert "test log message" in caplog.text
+    assert "test id" in caplog.text
+    assert "legacy value" in caplog.text
+
 def test_print_mapping_report():
     migration_report_file = io.StringIO()
     mapped_folio_fields = {}
