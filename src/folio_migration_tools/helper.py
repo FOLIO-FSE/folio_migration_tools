@@ -56,6 +56,10 @@ class Helper:
     @staticmethod
     def log_data_issue(index_or_id, message, legacy_value):
         logging.log(26, "DATA ISSUE\t%s\t%s\t%s", index_or_id, message, legacy_value)
+    
+    @staticmethod
+    def log_data_issue_failed(index_or_id, message, legacy_value):
+        logging.log(26, "RECORD FAILED\t%s\t%s\t%s", index_or_id, message, legacy_value)
 
     @staticmethod
     def write_to_file(file, folio_record):

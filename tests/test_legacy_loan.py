@@ -45,13 +45,11 @@ def test_init_tz():
     assert legacy_loan.out_date.isoformat() == "2022-01-13T20:00:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Provided due_date is not UTC in row=0, "
-        "setting tz-info to tenant timezone (America/Chicago)"
+        "Provided due_date is not UTC, setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided out_date is not UTC in row=0, "
-        "setting tz-info to tenant timezone (America/Chicago)"
+        "Provided out_date is not UTC, setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
 
@@ -72,17 +70,16 @@ def test_init_tz_2():
     assert legacy_loan.out_date.isoformat() == "2019-02-22T10:53:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Hour and minute not specified for due date in row=0. "
-        "Assuming end of local calendar day (23:59)..."
+        "Hour and minute not specified for due date"
         in migration_report.report["Details"]
     )
 
     assert (
-        "Provided out_date is not UTC in row=0, setting tz-info to tenant timezone (UTC)"
+        "Provided out_date is not UTC, setting tz-info to tenant timezone (UTC)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided due_date is not UTC in row=0, setting tz-info to tenant timezone (UTC)"
+        "Provided due_date is not UTC, setting tz-info to tenant timezone (UTC)"
         in migration_report.report["Details"]
     )
 
@@ -105,13 +102,11 @@ def test_init_tz_3():
     assert legacy_loan.out_date.isoformat() == "2022-01-13T03:00:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Provided due_date is not UTC in row=0, "
-        "setting tz-info to tenant timezone (Australia/Sydney)"
+        "Provided due_date is not UTC, setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided out_date is not UTC in row=0, "
-        "setting tz-info to tenant timezone (Australia/Sydney)"
+        "Provided out_date is not UTC, setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
 
@@ -134,13 +129,11 @@ def test_init_tz_4():  # Test dates with(out) DST
     assert legacy_loan.out_date.isoformat() == "2022-06-13T04:00:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Provided due_date is not UTC in row=0, "
-        "setting tz-info to tenant timezone (Australia/Sydney)"
+        "Provided due_date is not UTC, setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided out_date is not UTC in row=0, "
-        "setting tz-info to tenant timezone (Australia/Sydney)"
+        "Provided out_date is not UTC, setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
 
@@ -163,13 +156,11 @@ def test_init_tz_5():  # Test dates with(out) DST
     assert legacy_loan.out_date.isoformat() == "2022-06-13T19:00:00+00:00"
     assert legacy_loan.renewal_count > 0
     assert (
-        "Provided due_date is not UTC in row=0, "
-        "setting tz-info to tenant timezone (America/Chicago)"
+        "Provided due_date is not UTC, setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
     assert (
-        "Provided out_date is not UTC in row=0, "
-        "setting tz-info to tenant timezone (America/Chicago)"
+        "Provided out_date is not UTC, setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
 
