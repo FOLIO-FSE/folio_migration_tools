@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 from datetime import datetime, timedelta
-from typing import Annotated, Literal, Optional
+from typing import Annotated, List, Literal, Optional
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
 from pydantic import Field
@@ -110,7 +110,7 @@ class LoansMigrator(MigrationTaskBase):
         self.failed: dict = {}
         self.failed_and_not_dupe: dict = {}
         self.migration_report = MigrationReport()
-        self.valid_legacy_loans = []
+        self.valid_legacy_loans: List[LegacyLoan] = []
         super().__init__(library_config, task_configuration, folio_client)
         self.circulation_helper = CirculationHelper(
             self.folio_client,
@@ -227,6 +227,12 @@ class LoansMigrator(MigrationTaskBase):
                 )
                 try:
                     self.checkout_single_loan(legacy_loan)
+                except TransformationRecordFailedError as ee:
+                    logging.error(
+                        f"Transformation failed in row {num_loans}  Item barcode: {legacy_loan.item_barcode} "
+                        f"Patron barcode: {legacy_loan.patron_barcode}"
+                    )
+                    ee.log_it()
                 except Exception as ee:
                     logging.exception(
                         f"Error in row {num_loans}  Item barcode: {legacy_loan.item_barcode} "
@@ -277,11 +283,6 @@ class LoansMigrator(MigrationTaskBase):
                 else:
                     self.failed[legacy_loan.item_barcode] = legacy_loan
                     self.migration_report.add_general_statistics(i18n.t("Failed loans"))
-                    Helper.log_data_issue(
-                        "",
-                        "Loans failing during checkout",
-                        json.dumps(legacy_loan.to_dict()),
-                    )
                     logging.error(
                         "Failed on second try: %s", res_checkout2.error_message
                     )
@@ -289,6 +290,11 @@ class LoansMigrator(MigrationTaskBase):
                         "Details",
                         i18n.t("Second failure")
                         + f": {res_checkout2.migration_report_message}",
+                    )
+                    raise TransformationRecordFailedError(
+                        f"Row {legacy_loan.row}",
+                        i18n.t("Loans failing during checkout, second try"),
+                        json.dumps(legacy_loan.to_dict()),
                     )
         elif not res_checkout.should_be_retried:
             logging.error(
@@ -301,8 +307,10 @@ class LoansMigrator(MigrationTaskBase):
                 + f": {res_checkout.migration_report_message}",
             )
             self.failed[legacy_loan.item_barcode] = legacy_loan
-            Helper.log_data_issue(
-                "", "Loans failing during checkout", json.dumps(legacy_loan.to_dict())
+            raise TransformationRecordFailedError(
+                f"Row {legacy_loan.row}",
+                i18n.t("Loans failing during checkout"),
+                json.dumps(legacy_loan.to_dict()),
             )
 
     def set_new_status(self, legacy_loan: LegacyLoan, res_checkout: TransactionResult):
@@ -400,7 +408,7 @@ class LoansMigrator(MigrationTaskBase):
                     + f": {has_proxy_barcode}",
                 )
             if not has_item_barcode:
-                Helper.log_data_issue(
+                Helper.log_data_issue_failed(
                     "", "Loan without matched item barcode", json.dumps(loan.to_dict())
                 )
             if not has_patron_barcode:
@@ -410,7 +418,7 @@ class LoansMigrator(MigrationTaskBase):
                     json.dumps(loan.to_dict()),
                 )
             if not has_proxy_barcode:
-                Helper.log_data_issue(
+                Helper.log_data_issue_failed(
                     "",
                     "Loan without matched proxy patron barcode",
                     json.dumps(loan.to_dict()),
