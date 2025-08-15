@@ -27,7 +27,7 @@ def test_init():
     migration_report.report = {}
 
 
-def test_init_tz():
+def test_init_tz(caplog):
     loan_dict = {
         "item_barcode": "the barcode with trailing space ",
         "patron_barcode": " the barcode with leading space",
@@ -52,9 +52,17 @@ def test_init_tz():
         "Provided out_date is not UTC, setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
     )
+    assert (
+        "Provided due_date is not UTC in row=0, setting tz-info to tenant timezone (America/Chicago)"
+        in caplog.text
+    )
+    assert (
+        "Provided out_date is not UTC in row=0, setting tz-info to tenant timezone (America/Chicago)"
+        in caplog.text
+    )
 
 
-def test_init_tz_2():
+def test_init_tz_2(caplog):
     loan_dict = {
         "item_barcode": "the barcode with trailing space ",
         "patron_barcode": " the barcode with leading space",
@@ -82,9 +90,17 @@ def test_init_tz_2():
         "Provided due_date is not UTC, setting tz-info to tenant timezone (UTC)"
         in migration_report.report["Details"]
     )
+    assert (
+        "Provided out_date is not UTC in row=0, setting tz-info to tenant timezone (UTC)"
+        in caplog.text
+    )
+    assert (
+        "Provided due_date is not UTC in row=0, setting tz-info to tenant timezone (UTC)"
+        in caplog.text
+    )
 
 
-def test_init_tz_3():
+def test_init_tz_3(caplog):
     loan_dict = {
         "item_barcode": "the barcode with trailing space ",
         "patron_barcode": " the barcode with leading space",
@@ -109,9 +125,17 @@ def test_init_tz_3():
         "Provided out_date is not UTC, setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
+    assert (
+        "Provided due_date is not UTC in row=0, setting tz-info to tenant timezone (Australia/Sydney)"
+        in caplog.text
+    )
+    assert (
+        "Provided out_date is not UTC in row=0, setting tz-info to tenant timezone (Australia/Sydney)"
+        in caplog.text
+    )
 
 
-def test_init_tz_4():  # Test dates with(out) DST
+def test_init_tz_4(caplog):  # Test dates with(out) DST
     loan_dict = {
         "item_barcode": "the barcode with trailing space ",
         "patron_barcode": " the barcode with leading space",
@@ -136,9 +160,17 @@ def test_init_tz_4():  # Test dates with(out) DST
         "Provided out_date is not UTC, setting tz-info to tenant timezone (Australia/Sydney)"
         in migration_report.report["Details"]
     )
+    assert (
+        "Provided due_date is not UTC in row=0, setting tz-info to tenant timezone (Australia/Sydney)"
+        in caplog.text
+    )
+    assert (
+        "Provided out_date is not UTC in row=0, setting tz-info to tenant timezone (Australia/Sydney)"
+        in caplog.text
+    )
 
 
-def test_init_tz_5():  # Test dates with(out) DST
+def test_init_tz_5(caplog):  # Test dates with(out) DST
     loan_dict = {
         "item_barcode": "the barcode with trailing space ",
         "patron_barcode": " the barcode with leading space",
@@ -162,6 +194,14 @@ def test_init_tz_5():  # Test dates with(out) DST
     assert (
         "Provided out_date is not UTC, setting tz-info to tenant timezone (America/Chicago)"
         in migration_report.report["Details"]
+    )
+    assert (
+        "Provided due_date is not UTC in row=0, setting tz-info to tenant timezone (America/Chicago)"
+        in caplog.text
+    )
+    assert (
+        "Provided out_date is not UTC in row=0, setting tz-info to tenant timezone (America/Chicago)"
+        in caplog.text
     )
 
 
@@ -270,6 +310,7 @@ def test_correct_for_1_day_loans_due_date_is_before_out_date() -> None:
     )
     with pytest.raises(TransformationRecordFailedError, match=expected_err_message):
         LegacyLoan(loan_dict, "", migration_report, tenant_timezone)
+
 
 def test_correct_for_1_day_loans_no_out_or_due_date_info() -> None:
     loan_dict = {
