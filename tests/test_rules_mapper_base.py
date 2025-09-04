@@ -85,8 +85,8 @@ def test_datetime_from_005():
     record.add_field(Field(tag="005", data=f005_1))
     instance = {
         "metadata": {
-            "createdDate": datetime.datetime.utcnow().isoformat(),
-            "updatedDate": datetime.datetime.utcnow().isoformat(),
+            "createdDate": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "updatedDate": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
     }
     RulesMapperBase.set_005_as_updated_date(record, instance, "some_id")
@@ -100,8 +100,8 @@ def test_date_from_008():
     instance = {
         "title": "some title",
         "metadata": {
-            "createdDate": datetime.datetime.utcnow().isoformat(),
-            "updatedDate": datetime.datetime.utcnow().isoformat(),
+            "createdDate": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "updatedDate": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         },
     }
     RulesMapperBase.use_008_for_dates(record, instance, "some_id")
@@ -154,8 +154,8 @@ def test_date_from_008_holding():
     record.add_field(Field(tag="008", data=f008))
     holding = {
         "metadata": {
-            "createdDate": datetime.datetime.utcnow().isoformat(),
-            "updatedDate": datetime.datetime.utcnow().isoformat(),
+            "createdDate": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "updatedDate": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
     }
     RulesMapperBase.use_008_for_dates(record, holding, "some_id")

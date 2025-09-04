@@ -5,7 +5,7 @@ import logging
 import sys
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, List, Optional
 from uuid import uuid4
 
@@ -655,7 +655,7 @@ class BatchPoster(MigrationTaskBase):
                 "",
                 f"HTTP {response.status_code}\t"
                 f"Request size: {get_req_size(response)}"
-                f"{datetime.utcnow().isoformat()} UTC\n",
+                f"{datetime.now(timezone.utc).isoformat()}\n",
                 json.dumps(resp, indent=4),
             )
         elif response.status_code == 400:
@@ -675,7 +675,7 @@ class BatchPoster(MigrationTaskBase):
                     "",
                     f"HTTP {response.status_code}\t"
                     f"Request size: {get_req_size(response)}"
-                    f"{datetime.utcnow().isoformat()} UTC\n",
+                    f"{datetime.now(timezone.utc).isoformat()}\n",
                     response.text,
                 )
             else:
@@ -699,7 +699,7 @@ class BatchPoster(MigrationTaskBase):
                 "",
                 f"HTTP {response.status_code}\t"
                 f"Request size: {get_req_size(response)}"
-                f"{datetime.utcnow().isoformat()} UTC\n",
+                f"{datetime.now(timezone.utc).isoformat()}\n",
                 resp,
             )
 
@@ -873,7 +873,7 @@ class BatchPoster(MigrationTaskBase):
         snapshot = {
             "jobExecutionId": self.snapshot_id,
             "status": "PARSING_IN_PROGRESS",
-            "processingStartedDate": datetime.utcnow().isoformat(timespec="milliseconds"),
+            "processingStartedDate": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
         }
         try:
             url = f"{self.folio_client.gateway_url}/source-storage/snapshots"
