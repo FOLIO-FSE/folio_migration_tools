@@ -383,6 +383,14 @@ class BatchPoster(MigrationTaskBase):
                 self.prepare_record_for_upsert(record, existing_records[record["id"]])
 
     def patch_record(self, new_record: dict, existing_record: dict, patch_paths: List[str]):
+        """
+        Updates new_record with values from existing_record according to patch_paths.
+
+        Args:
+            new_record (dict): The new record to be updated.
+            existing_record (dict): The existing record to patch from.
+            patch_paths (List[str]): List of fields in JSON Path notation (e.g., ['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']) to patch during the upsert process. If empty, all fields will be patched.
+        """
         updates = {}
         updates.update(existing_record)
         keep_existing = {}
