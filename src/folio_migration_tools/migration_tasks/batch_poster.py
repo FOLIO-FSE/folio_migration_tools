@@ -2,6 +2,7 @@ import asyncio
 import copy
 import json
 import logging
+import re
 import sys
 import time
 import traceback
@@ -181,6 +182,19 @@ class BatchPoster(MigrationTaskBase):
                 ),
             ),
         ] = True
+        patch_existing_records: Annotated[bool, Field(
+            title="Patch existing records",
+            description=(
+                "Toggles whether or not to patch existing records "
+                "during the upsert process. Defaults to False"
+            ),
+        )] = False
+        patch_paths: Annotated[List[str], Field(
+            title="Patch paths",
+            description=(
+                "A list of fields in JSON Path notation to patch during the upsert process (leave off the $). If empty, all fields will be patched. Examples: ['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']"
+            ),
+        )] = []
 
     task_configuration: TaskConfiguration
 
@@ -368,16 +382,25 @@ class BatchPoster(MigrationTaskBase):
             if record["id"] in existing_records:
                 self.prepare_record_for_upsert(record, existing_records[record["id"]])
 
-    def handle_source_marc(self, new_record: dict, existing_record: dict):
+    def patch_record(self, new_record: dict, existing_record: dict, patch_paths: List[str]):
         updates = {}
         updates.update(existing_record)
-        self.handle_upsert_for_administrative_notes(updates)
-        self.handle_upsert_for_statistical_codes(updates)
-        keep_new = {k: v for k, v in new_record.items() if k in ["statisticalCodeIds", "administrativeNotes"]}
+        keep_existing = {}
+        self.handle_upsert_for_administrative_notes(updates, keep_existing)
+        self.handle_upsert_for_statistical_codes(updates, keep_existing)
+        if not patch_paths:
+            keep_new = new_record
+        else:
+            keep_new = extract_paths(new_record, patch_paths)
         if "instanceStatusId" in new_record:
             updates["instanceStatusId"] = new_record["instanceStatusId"]
-        for k, v in keep_new.items():
-            updates[k] = list(dict.fromkeys(updates.get(k, []) + v))
+        deep_update(updates, keep_new)
+        for key, value in keep_existing.items():
+            if isinstance(value, list) and key in keep_new:
+                updates[key] = list(dict.fromkeys(updates.get(key, []) + value))
+            elif key not in keep_new:
+                updates[key] = value
+        new_record.clear()
         new_record.update(updates)
 
     @staticmethod
@@ -393,21 +416,29 @@ class BatchPoster(MigrationTaskBase):
                 response.text,
             )
 
-    def handle_upsert_for_statistical_codes(self, updates: dict):
+    def handle_upsert_for_statistical_codes(self, updates: dict, keep_existing: dict):
         if not self.task_configuration.preserve_statistical_codes:
-            updates.pop("statisticalCodeIds", None)
+            updates["statisticalCodeIds"] = []
+            keep_existing["statisticalCodeIds"] = []
+        else:
+            keep_existing["statisticalCodeIds"] = updates.pop("statisticalCodeIds", [])
+            updates["statisticalCodeIds"] = []
 
-    def handle_upsert_for_administrative_notes(self, updates: dict):
+    def handle_upsert_for_administrative_notes(self, updates: dict, keep_existing: dict):
         if not self.task_configuration.preserve_administrative_notes:
-            updates.pop("administrativeNotes", None)
+            updates["administrativeNotes"] = []
+            keep_existing["administrativeNotes"] = []
+        else:
+            keep_existing["administrativeNotes"] = updates.pop("administrativeNotes", [])
+            updates["administrativeNotes"] = []
 
-    def handle_upsert_for_temporary_locations(self, updates: dict):
-        if not self.task_configuration.preserve_temporary_locations:
-            updates.pop("temporaryLocationId", None)
+    def handle_upsert_for_temporary_locations(self, updates: dict, keep_existing: dict):
+        if self.task_configuration.preserve_temporary_locations:
+            keep_existing["temporaryLocationId"] = updates.pop("temporaryLocationId", None)
 
-    def handle_upsert_for_temporary_loan_types(self, updates: dict):
-        if not self.task_configuration.preserve_temporary_loan_types:
-            updates.pop("temporaryLoanTypeId", None)
+    def handle_upsert_for_temporary_loan_types(self, updates: dict, keep_existing: dict):
+        if self.task_configuration.preserve_temporary_loan_types:
+            keep_existing["temporaryLoanTypeId"] = updates.pop("temporaryLoanTypeId", None)
 
     def keep_existing_fields(self, updates: dict, existing_record: dict):
         keep_existing_fields = ["hrid", "lastCheckIn"]
@@ -419,25 +450,31 @@ class BatchPoster(MigrationTaskBase):
 
     def prepare_record_for_upsert(self, new_record: dict, existing_record: dict):
         if "source" in existing_record and "MARC" in existing_record["source"]:
-            self.handle_source_marc(new_record, existing_record)
+            if self.task_configuration.patch_paths:
+                logging.debug(
+                    "Record %s is a MARC record, patch_paths will be ignored",
+                    existing_record["id"],
+                )
+            self.patch_record(new_record, existing_record, ["statisticalCodeIds", "administrativeNotes", "instanceStatusId"])
+        elif self.task_configuration.patch_existing_records:
+            self.patch_record(new_record, existing_record, self.task_configuration.patch_paths)
         else:
             updates = {
                 "_version": existing_record["_version"],
             }
             self.keep_existing_fields(updates, existing_record)
             keep_new = {k: v for k, v in new_record.items() if k in ["statisticalCodeIds", "administrativeNotes"]}
-            self.handle_upsert_for_statistical_codes(existing_record)
-            self.handle_upsert_for_administrative_notes(existing_record)
-            self.handle_upsert_for_temporary_locations(existing_record)
-            self.handle_upsert_for_temporary_loan_types(existing_record)
-            for k, v in keep_new.items():
-                updates[k] = list(dict.fromkeys(existing_record.get(k, []) + v))
-            for key in [
-                "temporaryLocationId",
-                "temporaryLoanTypeId",
-            ]:
-                if key in existing_record:
-                    updates[key] = existing_record[key]
+            keep_existing = {}
+            self.handle_upsert_for_statistical_codes(existing_record, keep_existing)
+            self.handle_upsert_for_administrative_notes(existing_record, keep_existing)
+            self.handle_upsert_for_temporary_locations(existing_record, keep_existing)
+            self.handle_upsert_for_temporary_loan_types(existing_record, keep_existing)
+            for k, v in keep_existing.items():
+                if isinstance(v, list) and k in keep_new:
+                    keep_new[k] = list(dict.fromkeys(v + keep_new.get(k, [])))
+                elif k not in keep_new:
+                    keep_new[k] = v
+            updates.update(keep_new)
             new_record.update(updates)
 
     async def get_with_retry(self, client: httpx.AsyncClient, url: str, params=None):
@@ -1076,3 +1113,85 @@ def get_req_size(response: httpx.Response):
     size += "\r\n".join(f"{k}{v}" for k, v in response.request.headers.items())
     size += response.request.content.decode("utf-8") or ""
     return get_human_readable(len(size.encode("utf-8")))
+
+def parse_path(path):
+    """
+    Parses a path like 'foo.bar[0].baz' into ['foo', 'bar', 0, 'baz']
+    """
+    tokens = []
+    # Split by dot, then extract indices
+    for part in path.split('.'):
+        # Find all [index] parts
+        matches = re.findall(r'([^\[\]]+)|\[(\d+)\]', part)
+        for name, idx in matches:
+            if name:
+                tokens.append(name)
+            if idx:
+                tokens.append(int(idx))
+    return tokens
+
+def get_by_path(data, path):
+    keys = parse_path(path)
+    for key in keys:
+        data = data[key]
+    return data
+
+def set_by_path(data, path, value):
+    keys = parse_path(path)
+    for i, key in enumerate(keys[:-1]):
+        next_key = keys[i + 1]
+        if isinstance(key, int):
+            while len(data) <= key:
+                data.append({} if not isinstance(next_key, int) else [])
+            data = data[key]
+        else:
+            if key not in data or not isinstance(data[key], (dict, list)):
+                data[key] = {} if not isinstance(next_key, int) else []
+            data = data[key]
+    last_key = keys[-1]
+    if isinstance(last_key, int):
+        while len(data) <= last_key:
+            data.append(None)
+        data[last_key] = value
+    else:
+        data[last_key] = value
+
+def extract_paths(data, paths):
+    result = {}
+    for path in paths:
+        try:
+            value = get_by_path(data, path)
+            set_by_path(result, path, value)
+        except KeyError:
+            continue
+    return result
+
+def deep_update(target, patch):
+    """
+    Recursively update target dict/list with values from patch dict/list.
+    For lists, only non-None values in patch are merged into target.
+    """
+    if isinstance(patch, dict):
+        for k, v in patch.items():
+            if (
+                k in target
+                and isinstance(target[k], (dict, list))
+                and isinstance(v, (dict, list))
+            ):
+                deep_update(target[k], v)
+            else:
+                target[k] = v
+    elif isinstance(patch, list):
+        for i, v in enumerate(patch):
+            if v is None:
+                continue  # Skip None values, leave target unchanged
+            if i < len(target):
+                if isinstance(target[i], (dict, list)) and isinstance(v, (dict, list)):
+                    deep_update(target[i], v)
+                else:
+                    target[i] = v
+            else:
+                # Only append if not None
+                target.append(v)
+    else:
+        return patch

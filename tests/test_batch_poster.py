@@ -169,7 +169,7 @@ async def test_set_version_async():
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
     batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+        BatchPoster.patch_record, batch_poster
     )
     batch_poster.keep_existing_fields = MethodType(
         BatchPoster.keep_existing_fields, batch_poster
@@ -244,7 +244,7 @@ async def test_set_version_async_preserve_status_false():
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
     batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+        BatchPoster.patch_record, batch_poster
     )
     batch_poster.keep_existing_fields = MethodType(
         BatchPoster.keep_existing_fields, batch_poster
@@ -317,7 +317,7 @@ async def test_set_version_async_one_existing_items():
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
     batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+        BatchPoster.patch_record, batch_poster
     )
     batch_poster.keep_existing_fields = MethodType(
         BatchPoster.keep_existing_fields, batch_poster
@@ -394,7 +394,7 @@ async def test_set_version_async_preserve_temporary_locations():
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
     batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+        BatchPoster.patch_record, batch_poster
     )
 
     # Define test inputs
@@ -466,7 +466,7 @@ async def test_set_version_async_preserve_temporary_loan_types():
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
     batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+        BatchPoster.patch_record, batch_poster
     )
 
     # Define test inputs
@@ -539,7 +539,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
     batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+        BatchPoster.patch_record, batch_poster
     )
 
     # Define test inputs
@@ -617,7 +617,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
     batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+        BatchPoster.patch_record, batch_poster
     )
 
     # Define test inputs
@@ -704,8 +704,8 @@ async def test_set_version_async_source_marc_instance():
     batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
-    batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+    batch_poster.patch_record = MethodType(
+        BatchPoster.patch_record, batch_poster
     )
 
     # Define test inputs
@@ -729,14 +729,16 @@ async def test_set_version_async_source_marc_instance():
     assert batch[1]["_version"] == 2
     assert batch[0]["source"] == "MARC"
     assert batch[1]["source"] == "MARC"
-    assert "administrativeNotes" not in batch[0]
+    assert "administrativeNotes" in batch[0]
+    assert batch[0]["administrativeNotes"] == []
     assert batch[1]["administrativeNotes"] == [
+        "test note 3",
         "test note 1",
         "test note 2",
-        "test note 3",
     ]
-    assert batch[0]["statisticalCodeIds"] == ["code1", "code2", "code3"]
-    assert "statisticalCodeIds" not in batch[1]
+    assert batch[0]["statisticalCodeIds"] == ["code3", "code1", "code2"]
+    assert "statisticalCodeIds" in batch[1]
+    assert batch[1]["statisticalCodeIds"] == []
     assert batch[0]["title"] == "Test Title 1"
     assert batch[1]["title"] == "Test Title 2"
 
@@ -805,8 +807,8 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_statistica
     batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
-    batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+    batch_poster.patch_record = MethodType(
+        BatchPoster.patch_record, batch_poster
     )
 
     # Define test inputs
@@ -830,14 +832,16 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_statistica
     assert batch[1]["_version"] == 2
     assert batch[0]["source"] == "MARC"
     assert batch[1]["source"] == "MARC"
-    assert "administrativeNotes" not in batch[0]
+    assert "administrativeNotes" in batch[0]
+    assert batch[0]["administrativeNotes"] == []
     assert batch[1]["administrativeNotes"] == [
+        "test note 3",
         "test note 1",
         "test note 2",
-        "test note 3",
     ]
     assert batch[0]["statisticalCodeIds"] == ["code3"]
-    assert "statisticalCodeIds" not in batch[1]
+    assert "statisticalCodeIds" in batch[1]
+    assert batch[1]["statisticalCodeIds"] == []
     assert batch[0]["title"] == "Test Title 1"
     assert batch[1]["title"] == "Test Title 2"
 
@@ -906,8 +910,8 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_administra
     batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
         BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
     )
-    batch_poster.handle_source_marc = MethodType(
-        BatchPoster.handle_source_marc, batch_poster
+    batch_poster.patch_record = MethodType(
+        BatchPoster.patch_record, batch_poster
     )
 
     # Define test inputs
@@ -935,14 +939,485 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_administra
     assert batch[1]["_version"] == 2
     assert batch[0]["source"] == "MARC"
     assert batch[1]["source"] == "MARC"
-    assert "administrativeNotes" not in batch[0]
+    assert "administrativeNotes" in batch[0]
+    assert batch[0]["administrativeNotes"] == []
     assert batch[1]["administrativeNotes"] == [
         "test note 3"
     ]
-    assert batch[0]["statisticalCodeIds"] == ["code1", "code2", "code3"]
-    assert "statisticalCodeIds" not in batch[1]
+    assert batch[0]["statisticalCodeIds"] == [
+        "code3",
+        "code1",
+        "code2", 
+    ]
+    assert "statisticalCodeIds" in batch[1]
+    assert batch[1]["statisticalCodeIds"] == []
     assert batch[0]["title"] == "Test Title 1"
     assert batch[1]["title"] == "Test Title 2"
+
+@pytest.mark.asyncio
+async def test_set_version_async_patch_object_with_patch_paths_no_preserve():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "id": "record1",
+                "holdingsId": "holdings1",
+                "_version": 1,
+                "barcode": "123456",
+                "statisticalCodeIds": ["code1", "code2"],
+            },
+            {
+                "id": "record2",
+                "holdingsId": "holdings2",
+                "_version": 2,
+                "barcode": "789012",
+                "administrativeNotes": ["test note 1", "test note 2"],
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=False,
+        preserve_administrative_notes=False,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+        patch_existing_records=True,
+        patch_paths=["statisticalCodeIds[1]", "subObject.subObjectField"]
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.patch_record = MethodType(
+        BatchPoster.patch_record, batch_poster
+    )
+
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1",
+            "source": "FOLIO",
+            "statisticalCodeIds": ["code3", "code4"],
+            "title": "Test Title 3",
+            "subObject": {
+                "subObjectField": "subObjectValue"
+            }
+        },
+        {
+            "id": "record2",
+            "source": "FOLIO",
+            "administrativeNotes": ["test note 3"],
+            "title": "Test Title 4"
+        },
+    ]
+    query_api = "/item-storage/items"
+    object_type = "items"
+
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert "administrativeNotes" in batch[0]
+    assert batch[0]["administrativeNotes"] == []
+    assert batch[0]["statisticalCodeIds"] == ["code4"]
+    assert "statisticalCodeIds" in batch[1]
+    assert batch[1]["statisticalCodeIds"] == []
+    assert "subObject" in batch[0]
+    assert "subObjectField" in batch[0]["subObject"]
+    assert "barcode" in batch[0]
+    assert batch[0]["barcode"] == "123456"
+    assert "holdingsId" in batch[0]
+    assert batch[0]["holdingsId"] == "holdings1"
+    assert "barcode" in batch[1]
+    assert batch[1]["barcode"] == "789012"
+    assert "holdingsId" in batch[1]
+    assert batch[1]["holdingsId"] == "holdings2"
+    assert batch[0]["subObject"]["subObjectField"] == "subObjectValue"
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_patch_object_with_patch_paths_preserve_statistical_codes_and_administrative_notes():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "id": "record1",
+                "holdingsId": "holdings1",
+                "_version": 1,
+                "barcode": "123456",
+                "statisticalCodeIds": ["code1", "code2"],
+            },
+            {
+                "id": "record2",
+                "holdingsId": "holdings2",
+                "_version": 2,
+                "barcode": "789012",
+                "administrativeNotes": ["test note 1", "test note 2"],
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=True,
+        preserve_administrative_notes=True,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+        patch_existing_records=True,
+        patch_paths=["statisticalCodeIds[1]", "subObject.subObjectField"]
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.patch_record = MethodType(
+        BatchPoster.patch_record, batch_poster
+    )
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1",
+            "source": "FOLIO",
+            "statisticalCodeIds": ["code3", "code4"],
+            "title": "Test Title 3",
+            "subObject": {
+                "subObjectField": "subObjectValue"
+            }
+        },
+        {
+            "id": "record2",
+            "source": "FOLIO",
+            "administrativeNotes": ["test note 1", "test note 2"],
+            "title": "Test Title 4",
+            "subObject": {
+                "subObjectField": "subObjectValue"
+            }
+        }
+    ]
+    query_api = "/item-storage/items"
+    object_type = "items"
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert "administrativeNotes" in batch[0]
+    assert batch[0]["administrativeNotes"] == []
+    assert "administrativeNotes" in batch[1]
+    assert batch[1]["administrativeNotes"] == ["test note 1", "test note 2"]
+    assert batch[0]["statisticalCodeIds"] == ["code4", "code1", "code2"]
+    assert "statisticalCodeIds" in batch[1]
+    assert batch[1]["statisticalCodeIds"] == []
+    assert "subObject" in batch[0]
+    assert "subObjectField" in batch[0]["subObject"]
+    assert "barcode" in batch[0]
+    assert batch[0]["barcode"] == "123456"
+    assert "holdingsId" in batch[0]
+    assert batch[0]["holdingsId"] == "holdings1"
+    assert "barcode" in batch[1]
+    assert batch[1]["barcode"] == "789012"
+    assert "holdingsId" in batch[1]
+    assert batch[1]["holdingsId"] == "holdings2"
+    assert batch[0]["subObject"]["subObjectField"] == "subObjectValue"
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_patch_object_with_no_patch_paths_preserve_statistical_codes_and_administrative_notes():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "id": "record1",
+                "holdingsId": "holdings1",
+                "_version": 1,
+                "source": "FOLIO",
+                "barcode": "123456",
+                "statisticalCodeIds": ["code1", "code2"],
+            },
+            {
+                "id": "record2",
+                "holdingsId": "holdings2",
+                "_version": 2,
+                "source": "FOLIO",
+                "barcode": "789012",
+                "administrativeNotes": ["test note 1", "test note 2"],
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=True,
+        preserve_administrative_notes=True,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+        patch_existing_records=True,
+        patch_paths=[]
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.patch_record = MethodType(
+        BatchPoster.patch_record, batch_poster
+    )
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1",
+            "statisticalCodeIds": [None,"code4"],
+            "subObject": {
+                "subObjectField": "subObjectValue"
+            }
+        },
+        {
+            "id": "record2",
+            "administrativeNotes": ["test note 1", "test note 2"],
+            "subObject": {
+                "subObjectField": "subObjectValue"
+            }
+        }
+    ]
+    query_api = "/item-storage/items"
+    object_type = "items"
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert "source" in batch[0]
+    assert "source" in batch[1]
+    assert batch[0]["source"] == "FOLIO"
+    assert batch[1]["source"] == "FOLIO"
+    assert "administrativeNotes" in batch[0]
+    assert batch[0]["administrativeNotes"] == []
+    assert "administrativeNotes" in batch[1]
+    assert batch[1]["administrativeNotes"] == ["test note 1", "test note 2"]
+    assert batch[0]["statisticalCodeIds"] == ["code4", "code1", "code2"]
+    assert "statisticalCodeIds" in batch[1]
+    assert batch[1]["statisticalCodeIds"] == []
+    assert "subObject" in batch[0]
+    assert "subObjectField" in batch[0]["subObject"]
+    assert "barcode" in batch[0]
+    assert batch[0]["barcode"] == "123456"
+    assert "holdingsId" in batch[0]
+    assert batch[0]["holdingsId"] == "holdings1"
+    assert "barcode" in batch[1]
+    assert batch[1]["barcode"] == "789012"
+    assert "holdingsId" in batch[1]
+    assert batch[1]["holdingsId"] == "holdings2"
+    assert batch[0]["subObject"]["subObjectField"] == "subObjectValue"
+
+
+@pytest.mark.asyncio
+async def test_set_version_async_patch_object_with_no_patch_paths_no_preserve_statistical_codes_and_administrative_notes():
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "id": "record1",
+                "holdingsId": "holdings1",
+                "_version": 1,
+                "source": "FOLIO",
+                "barcode": "123456",
+                "statisticalCodeIds": ["code1", "code2"],
+            },
+            {
+                "id": "record2",
+                "holdingsId": "holdings2",
+                "_version": 2,
+                "source": "FOLIO",
+                "barcode": "789012",
+                "administrativeNotes": ["test note 1", "test note 2", "test note 3"],
+            },
+        ]
+    }
+
+    # Create an instance of the BatchPoster class
+    batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=False,
+        preserve_administrative_notes=False,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+        patch_existing_records=True,
+        patch_paths=[]
+    )
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
+    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster
+    )
+    batch_poster.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster
+    )
+    batch_poster.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster
+    )
+    batch_poster.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster
+    )
+    batch_poster.patch_record = MethodType(
+        BatchPoster.patch_record, batch_poster
+    )
+    # Define test inputs
+    batch = [
+        {
+            "id": "record1",
+            "statisticalCodeIds": [None,"code4"],
+            "subObject": {
+                "subObjectField": "subObjectValue"
+            }
+        },
+        {
+            "id": "record2",
+            "administrativeNotes": ["test note 1", "test note 2"],
+            "subObject": {
+                "subObjectField": "subObjectValue"
+            }
+        }
+    ]
+    query_api = "/item-storage/items"
+    object_type = "items"
+    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    # Assert
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2
+    assert "source" in batch[0]
+    assert "source" in batch[1]
+    assert batch[0]["source"] == "FOLIO"
+    assert batch[1]["source"] == "FOLIO"
+    assert "administrativeNotes" in batch[0]
+    assert batch[0]["administrativeNotes"] == []
+    assert "administrativeNotes" in batch[1]
+    assert batch[1]["administrativeNotes"] == ["test note 1", "test note 2"]
+    assert batch[0]["statisticalCodeIds"] == ["code4"]
+    assert "statisticalCodeIds" in batch[1]
+    assert batch[1]["statisticalCodeIds"] == []
+    assert "subObject" in batch[0]
+    assert "subObjectField" in batch[0]["subObject"]
+    assert "barcode" in batch[0]
+    assert batch[0]["barcode"] == "123456"
+    assert "holdingsId" in batch[0]
+    assert batch[0]["holdingsId"] == "holdings1"
+    assert "barcode" in batch[1]
+    assert batch[1]["barcode"] == "789012"
+    assert "holdingsId" in batch[1]
+    assert batch[1]["holdingsId"] == "holdings2"
+    assert batch[0]["subObject"]["subObjectField"] == "subObjectValue"
 
 
 def test_set_version():
