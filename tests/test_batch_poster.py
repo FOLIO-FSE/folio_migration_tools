@@ -1259,7 +1259,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_preserve_stati
     batch = [
         {
             "id": "record1",
-            "statisticalCodeIds": [None,"code4"],
+            "statisticalCodeIds": [None, "code4"],
             "subObject": {
                 "subObjectField": "subObjectValue"
             }
