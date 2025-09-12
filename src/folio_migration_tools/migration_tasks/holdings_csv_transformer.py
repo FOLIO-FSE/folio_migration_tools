@@ -204,6 +204,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.load_call_number_type_map(),
                 self.load_instance_id_map(True),
                 library_config,
+                task_config,
                 statcode_mapping,
             )
             self.holdings = {}
