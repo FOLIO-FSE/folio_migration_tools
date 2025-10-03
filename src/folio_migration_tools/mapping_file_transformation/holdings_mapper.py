@@ -6,7 +6,10 @@ import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError, TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -18,6 +21,7 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
 
 class HoldingsMapper(MappingFileMapperBase):
     def __init__(
@@ -40,7 +44,7 @@ class HoldingsMapper(MappingFileMapperBase):
             statistical_codes_map,
             FOLIONamespaces.holdings,
             library_configuration,
-            task_config
+            task_config,
         )
         self.holdings_map = holdings_map
 
@@ -52,6 +56,7 @@ class HoldingsMapper(MappingFileMapperBase):
             "code",
             "LocationMapping",
         )
+        self.call_number_mapping = None
         if call_number_type_map:
             self.call_number_mapping = RefDataMapping(
                 self.folio_client,
@@ -91,9 +96,20 @@ class HoldingsMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
         if folio_prop_name == "permanentLocationId":
-            return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
+            return self.get_mapped_name(
+                self.location_mapping,
+                legacy_item,
+                index_or_id,
+                False,
+            )
         elif folio_prop_name == "callNumberTypeId":
-            return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
+            if self.call_number_mapping:
+                return self.get_mapped_name(
+                    self.call_number_mapping,
+                    legacy_item,
+                    index_or_id,
+                    False,
+                )
         # elif folio_prop_name.startswith("statisticalCodeIds"):
         #     return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
 
