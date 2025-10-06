@@ -173,10 +173,10 @@ def test_load_call_number_type_map_file_not_found():
     mock_transformer.task_configuration.call_number_type_map_file_name = "non_existent_file.csv"
     mock_transformer.folder_structure = Mock()
     mock_transformer.folder_structure.mapping_files_folder = Path("")
-    mock_transformer.load_call_number_type_map = Mock(
-        side_effect=FileNotFoundError("File not found")
-    )
     with pytest.raises(FileNotFoundError):
+        HoldingsCsvTransformer.load_call_number_type_map = Mock(
+            side_effect=FileNotFoundError("File not found")
+        )
         HoldingsCsvTransformer.load_call_number_type_map(mock_transformer)
 
 
@@ -186,8 +186,8 @@ def test_load_location_map_file_not_found():
     mock_transformer.task_configuration.location_map_file_name = "non_existent_file.csv"
     mock_transformer.folder_structure = Mock()
     mock_transformer.folder_structure.mapping_files_folder = Path("")
-    mock_transformer.load_location_map = Mock(side_effect=FileNotFoundError("File not found"))
     with pytest.raises(FileNotFoundError):
+        HoldingsCsvTransformer.load_location_map = Mock(side_effect=FileNotFoundError("File not found"))
         HoldingsCsvTransformer.load_location_map(mock_transformer)
 
 
