@@ -163,7 +163,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 title="Statistical code map file name",
                 description=(
                     "Path to the file containing the mapping of statistical codes. "
-                    "The file should be in TSV format with legacy_stat_code and folio_code columns."
+                    "The file should be in TSV format with legacy_stat_code and "
+                    "folio_code columns."
                 ),
             ),
         ] = ""
@@ -343,11 +344,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
                 holdings_map
             )
-            logging.info(
-                "%s mapped fields in holdings mapping file map",
-                len(list(mapped_fields)),
-            )
-            return mapped_fields, holdings_map
+            raise FileNotFoundError
 
     def do_work(self):
         logging.info("Starting....")
@@ -364,7 +361,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 print(f"\n{error_str}\nHalting")
                 sys.exit(1)
         logging.info(
-            f"processed {self.total_records:,} records in {len(self.task_configuration.files)} files"
+            f"processed {self.total_records:,} records in "
+            f"{len(self.task_configuration.files)} files"
         )
 
     def wrap_up(self):
@@ -406,7 +404,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         logging.info("All done!")
         self.clean_out_empty_logs()
 
-    def validate_merge_criterias(self):
+    def validate_merge_criteria(self):
         holdings_schema = self.folio_client.get_holdings_schema()
         properties = holdings_schema["properties"].keys()
         logging.info(properties)
@@ -417,7 +415,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         if any(res):
             logging.critical(
                 (
-                    "Merge criteria(s) is not a property of a holdingsrecord: %s"
+                    "Merge criteria is not a property of a holdings record: %s"
                     "check the merge criteria names and try again"
                 ),
                 ", ".join(res),
@@ -444,8 +442,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     self.mapper.handle_transformation_process_error(idx, process_error)
                 except TransformationRecordFailedError as error:
                     self.mapper.handle_transformation_record_failed_error(idx, error)
-                except Exception as excepion:
-                    self.mapper.handle_generic_exception(idx, excepion)
+                except Exception as e:
+                    self.mapper.handle_generic_exception(idx, e)
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Number of Legacy items in file")
                 )
@@ -496,14 +494,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str
     ) -> None:
-        """Determines what newly generated holdingsrecords are to be merged with
+        """Determines what newly generated holdings records are to be merged with
         previously created ones. When that is done, it generates the correct boundwith
         parts needed.
 
         Args:
             incoming_holding (dict): The newly created FOLIO Holding
             instance_ids (list): the instance IDs tied to the current item
-            legacy_item_id (str): Id of the Item the holding was generated from
+            legacy_item_id (str): ID of the Item the holding was generated from
         """
         if len(instance_ids) > 1:
             # Is boundwith
@@ -530,7 +528,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     i18n.t("BW Items found tied to previously created BW Holdings")
                 )
         else:
-            # Regular holding. Merge according to criteria
+            # Regular holding. Merge, according to criteria
             new_holding_key = HoldingsHelper.to_key(
                 incoming_holding,
                 self.task_configuration.holdings_merge_criteria,
