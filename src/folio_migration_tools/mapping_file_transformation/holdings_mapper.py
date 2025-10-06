@@ -47,6 +47,7 @@ class HoldingsMapper(MappingFileMapperBase):
             task_config,
         )
         self.holdings_map = holdings_map
+        self.task_configuration = task_config
 
         self.location_mapping = RefDataMapping(
             self.folio_client,
@@ -96,7 +97,7 @@ class HoldingsMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
         if folio_prop_name == "permanentLocationId":
-            return self.get_mapped_name(
+            return self.get_mapped_ref_data_value(
                 self.location_mapping,
                 legacy_item,
                 index_or_id,
@@ -104,12 +105,13 @@ class HoldingsMapper(MappingFileMapperBase):
             )
         elif folio_prop_name == "callNumberTypeId":
             if self.call_number_mapping:
-                return self.get_mapped_name(
+                return self.get_mapped_ref_data_value(
                     self.call_number_mapping,
                     legacy_item,
                     index_or_id,
                     False,
                 )
+                
         # elif folio_prop_name.startswith("statisticalCodeIds"):
         #     return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
 

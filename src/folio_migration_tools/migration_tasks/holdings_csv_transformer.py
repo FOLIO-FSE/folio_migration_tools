@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 import time
+import os
 import traceback
 from typing import Annotated, List, Optional
 
@@ -180,6 +181,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     ):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
+        self.default_call_number_type = None
         self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
         if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
             statcode_mapping = self.load_ref_data_mapping_file(
@@ -210,15 +212,24 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.holdings_types = list(
                 self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
             )
+            self.call_number_types = list(
+                self.folio_client.folio_get_all("/call-number-types", "callNumberTypes")
+            )
             logging.info("%s\tholdings types in tenant", len(self.holdings_types))
+            logging.info("%s\tcall number types in tenant", len(self.call_number_types))
             self.validate_merge_criterias()
             self.check_source_files(
                 self.folder_structure.data_folder / "items", self.task_configuration.files
             )
             self.fallback_holdings_type = next(
-                h
+                (h
                 for h in self.holdings_types
-                if h["id"] == self.task_configuration.fallback_holdings_type_id
+                if h["id"] == self.task_configuration.fallback_holdings_type_id), None
+            )
+            self.default_call_number_type = next(
+                (c
+                for c in self.call_number_types
+                if c["name"] == self.task_configuration.default_call_number_type_name), None
             )
             if not self.fallback_holdings_type:
                 raise TransformationProcessError(
@@ -229,9 +240,17 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         "not found in FOLIO."
                     ),
                 )
+            if not self.default_call_number_type:
+                raise TransformationProcessError(
+                    "",
+                    (
+                        "Call number type with name "
+                        f"{self.task_configuration.default_call_number_type_name} "
+                        "not found in FOLIO."
+                    ),
+                )
             logging.info(
-                "%s will be used as default holdings type",
-                self.fallback_holdings_type["name"],
+                f"{self.fallback_holdings_type['name']} will be used as default holdings type",
             )
             if any(self.task_configuration.previously_generated_holdings_files):
                 for file_name in self.task_configuration.previously_generated_holdings_files:
@@ -275,38 +294,36 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         logging.info("Init done")
 
     def load_call_number_type_map(self):
-        if (
-            self.folder_structure.mapping_files_folder
-            / self.task_configuration.call_number_type_map_file_name
-        ).is_file():
+        cn_map = os.path.join(
+            self.folder_structure.mapping_files_folder,
+            str(self.task_configuration.call_number_type_map_file_name),
+        )
+        if os.path.isfile(cn_map):
             return self.load_ref_data_mapping_file(
                 "callNumberTypeId",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.call_number_type_map_file_name,
+                cn_map,
                 self.folio_keys,
             )
         else:
             logging.info(
-                "%s not found. No call number type mapping will be performed",
-                self.folder_structure.mapping_files_folder / self.task_config.group_map_path,
+                f'Call number type map not found. Default call number type "{self.task_configuration.default_call_number_type_name}" used.'
             )
             return []
 
     def load_location_map(self):
-        if (
-            self.folder_structure.mapping_files_folder
-            / self.task_configuration.location_map_file_name
-        ).is_file():
+        location_map = os.path.join(
+            self.folder_structure.mapping_files_folder,
+            self.task_configuration.location_map_file_name,
+        )
+        if os.path.isfile(location_map):
             return self.load_ref_data_mapping_file(
                 "permanentLocationId",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.location_map_file_name,
+                location_map,
                 self.folio_keys,
             )
         else:
             logging.info(
-                "%s not found. No location mapping will be performed",
-                self.folder_structure.mapping_files_folder / self.task_config.group_map_path,
+                f"{location_map} not found. No location mapping will be performed",
             )
             return []
 
@@ -445,10 +462,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def post_process_holding(self, folio_rec: dict, legacy_id: str, file_def: FileDefinition):
         HoldingsHelper.handle_notes(folio_rec)
         HoldingsHelper.remove_empty_holdings_statements(folio_rec)
-
         if not folio_rec.get("holdingsTypeId", ""):
             folio_rec["holdingsTypeId"] = self.fallback_holdings_type["id"]
-
+        if not folio_rec.get("callNumberTypeId", ""):
+            folio_rec["callNumberTypeId"] = self.default_call_number_type["id"]
         holdings_from_row = []
         all_instance_ids = folio_rec.get("instanceId", [])
         if len(all_instance_ids) == 1:

@@ -221,8 +221,17 @@ class MapperBase:
                     "a recognized field in the legacy data."
                 ),
             ) from exception
+        except KeyError as exception:
+            raise TransformationProcessError(
+                index_or_id,
+                (
+                    f"{ref_data_mapping.name} mapping - folio_{ref_data_mapping.key_type} "
+                    f"({ref_data_mapping.mapped_legacy_keys})  is not "
+                    f"a recognized field in the legacy data. KeyError: {exception}"
+                ),
+            ) from exception
         except Exception as exception:
-            raise TransformationRecordFailedError(
+            raise TransformationProcessError(
                 index_or_id,
                 (
                     f"{ref_data_mapping.name} - folio_{ref_data_mapping.key_type} "
@@ -238,8 +247,8 @@ class MapperBase:
 
     def handle_transformation_process_error(self, idx, error: TransformationProcessError):
         self.migration_report.add_general_statistics(i18n.t("Transformation process error"))
-        logging.critical("%s\t%s", idx, error)
-        print(f"\n{error.message}: {error.data_value}")
+        logging.critical(f"{idx}\t{error}")
+        # print(f"\n{error.message}: {error.data_value}")
         sys.exit(1)
 
     def handle_transformation_record_failed_error(
@@ -536,6 +545,7 @@ class MapperBase:
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         raise NotImplementedError("This method should be overridden in subclasses")
+
 
 def flatten(my_dict: dict, path=""):
     for k, v in iter(my_dict.items()):
