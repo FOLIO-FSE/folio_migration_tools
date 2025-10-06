@@ -328,12 +328,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             return []
 
-    # TODO Rename this here and in `load_call_number_type_map` and `load_location_map`
-    def load_ref_data_map_from_file_old(self, file, message):
-        ref_dat_map = list(csv.DictReader(file, dialect="tsv"))
-        logging.info(message, len(ref_dat_map))
-        return ref_dat_map
-
     def load_mapped_fields(self):
         with open(
             self.folder_structure.mapping_files_folder
