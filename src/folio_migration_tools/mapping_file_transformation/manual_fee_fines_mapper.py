@@ -103,20 +103,22 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             ) from ee
 
     def get_prop(self, legacy_object, folio_prop_name, index_or_id, schema_default_value):
+        mapping_props = {
+            "legacy_object": legacy_object,
+            "index_or_id": index_or_id,
+            "prevent_default": False,
+        }
         if folio_prop_name == "account.ownerId" and self.feefines_owner_map:
-            return self.get_mapped_ref_data_value(
-                self.feefines_owner_map, legacy_object, index_or_id, folio_prop_name, False
-            )
+            mapping_props["ref_data_mapping"] = self.feefines_owner_map
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         elif folio_prop_name == "account.feeFineId" and self.feefines_type_map:
-            return self.get_mapped_ref_data_value(
-                self.feefines_type_map, legacy_object, index_or_id, folio_prop_name, False
-            )
+            mapping_props["ref_data_mapping"] = self.feefines_type_map
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         elif folio_prop_name == "feefineaction.createdAt" and self.service_point_map:
-            return self.get_mapped_ref_data_value(
-                self.service_point_map, legacy_object, index_or_id, folio_prop_name, False
-            )
+            mapping_props["ref_data_mapping"] = self.service_point_map
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         elif folio_prop_name == "account.amount" or folio_prop_name == "account.remaining":
             return self.parse_sum_as_float(

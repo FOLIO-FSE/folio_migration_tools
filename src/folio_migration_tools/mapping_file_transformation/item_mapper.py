@@ -117,7 +117,9 @@ class ItemMapper(MappingFileMapperBase):
             "LocationMapping",
         )
 
-    def perform_additional_mappings(self, legacy_ids: Union[str, List[str]], folio_rec: Dict, file_def: FileDefinition):
+    def perform_additional_mappings(
+        self, legacy_ids: Union[str, List[str]], folio_rec: Dict, file_def: FileDefinition
+    ):
         self.handle_suppression(folio_rec, file_def)
         self.map_statistical_codes(folio_rec, file_def)
         self.map_statistical_code_ids(legacy_ids, folio_rec)
@@ -126,24 +128,17 @@ class ItemMapper(MappingFileMapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            i18n.t("Suppressed from discovery")
-            + f" = {folio_record['discoverySuppress']}",
+            i18n.t("Suppressed from discovery") + f" = {folio_record['discoverySuppress']}",
         )
 
     def setup_status_mapping(self, item_statuses_map):
-        statuses = self.item_schema["properties"]["status"]["properties"]["name"][
-            "enum"
-        ]
+        statuses = self.item_schema["properties"]["status"]["properties"]["name"]["enum"]
         for mapping in item_statuses_map:
             if "folio_name" not in mapping:
-                logging.critical(
-                    "folio_name is not a column in the status mapping file"
-                )
+                logging.critical("folio_name is not a column in the status mapping file")
                 sys.exit(1)
             elif "legacy_code" not in mapping:
-                logging.critical(
-                    "legacy_code is not a column in the status mapping file"
-                )
+                logging.critical("legacy_code is not a column in the status mapping file")
                 sys.exit(1)
             elif mapping["folio_name"] not in statuses:
                 logging.critical(
@@ -158,9 +153,7 @@ class ItemMapper(MappingFileMapperBase):
                 )
                 sys.exit(1)
             elif not all(mapping.values()):
-                logging.critical(
-                    "empty value in mapping %s. Check mapping file", mapping.values()
-                )
+                logging.critical("empty value in mapping %s. Check mapping file", mapping.values())
                 sys.exit(1)
             else:
                 self.status_mapping = {
@@ -169,58 +162,51 @@ class ItemMapper(MappingFileMapperBase):
         logging.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
+        base_props = {
+            "legacy_object": legacy_item,
+            "index_or_id": index_or_id,
+        }
         if folio_prop_name == "permanentLocationId":
-            return self.get_mapped_ref_data_value(
-                self.location_mapping,
-                legacy_item,
-                folio_prop_name,
-                index_or_id,
-                self.task_configuration.prevent_permanent_location_map_default,
-            )
+            mapping_props = {
+                **base_props,
+                "ref_data_mapping": self.location_mapping,
+                "prevent_default": self.task_configuration.prevent_permanent_location_map_default,
+            }
+            return self.get_mapped_ref_data_value(**mapping_props)
         elif folio_prop_name == "temporaryLocationId":
             if not self.temp_location_mapping:
                 raise TransformationProcessError(
                     "Temporary location is mapped, but there is no "
                     "temporary location mapping file referenced in configuration"
                 )
-            temp_loc = self.get_mapped_ref_data_value(
-                self.temp_location_mapping,
-                legacy_item,
-                folio_prop_name,
-                index_or_id,
-                True,
-            )
+            mapping_props = {
+                **base_props,
+                "ref_data_mapping": self.temp_location_mapping,
+                "prevent_default": True,
+            }
+            temp_loc = self.get_mapped_ref_data_value(**mapping_props)
             self.migration_report.add("TemporaryLocationMapping", f"{temp_loc}")
             return temp_loc
         elif folio_prop_name == "materialTypeId":
-            return self.get_mapped_ref_data_value(
-                self.material_type_mapping,
-                legacy_item,
-                folio_prop_name,
-                index_or_id,
-            )
+            mapping_props["ref_data_mapping"] = self.material_type_mapping
+            return self.get_mapped_ref_data_value(**mapping_props)
         elif folio_prop_name == "itemLevelCallNumberTypeId":
-            return self.get_item_level_call_number_type_id(
-                legacy_item, folio_prop_name, index_or_id
-            )
+            mapping_props["ref_data_mapping"] = self.call_number_mapping
+            return self.get_mapped_ref_data_value(**mapping_props)
         elif folio_prop_name == "status.date":
             return datetime.now(timezone.utc).isoformat()
         elif folio_prop_name == "temporaryLoanTypeId":
-            ltid = self.get_mapped_ref_data_value(
-                self.temp_loan_type_mapping,
-                legacy_item,
-                folio_prop_name,
-                index_or_id,
-                True,
-            )
-            self.migration_report.add(
-                "TemporaryLoanTypeMapping", f"{folio_prop_name} -> {ltid}"
-            )
+            mapping_props = {
+                **base_props,
+                "ref_data_mapping": self.temp_loan_type_mapping,
+                "prevent_default": True,
+            }
+            ltid = self.get_mapped_ref_data_value(**mapping_props)
+            self.migration_report.add("TemporaryLoanTypeMapping", f"{folio_prop_name} -> {ltid}")
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
-            return self.get_mapped_ref_data_value(
-                self.loan_type_mapping, legacy_item, folio_prop_name, index_or_id
-            )
+            mapping_props["ref_data_mapping"] = self.loan_type_mapping
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         mapped_value = super().get_prop(
             legacy_item, folio_prop_name, index_or_id, schema_default_value
@@ -232,9 +218,7 @@ class ItemMapper(MappingFileMapperBase):
             normalized_barcode = barcode.strip().lower()
             if normalized_barcode and normalized_barcode in self.unique_barcodes:
                 Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
-                self.migration_report.add_general_statistics(
-                    i18n.t("Duplicate barcodes")
-                )
+                self.migration_report.add_general_statistics(i18n.t("Duplicate barcodes"))
                 return f"{barcode}-{uuid4()}"
             else:
                 if normalized_barcode:
@@ -259,18 +243,7 @@ class ItemMapper(MappingFileMapperBase):
             self.migration_report.add("UnmappedProperties", f"{folio_prop_name}")
             return ""
 
-    def get_item_level_call_number_type_id(
-        self, legacy_item, folio_prop_name: str, index_or_id
-    ):
-        if self.call_number_mapping:
-            return self.get_mapped_ref_data_value(
-                self.call_number_mapping, legacy_item, index_or_id, folio_prop_name
-            )
-        self.migration_report.add(
-            "CallNumberTypeMapping",
-            i18n.t("Mapping not setup"),
-        )
-        return ""
+
 
     def transform_status(self, legacy_value):
         status = self.status_mapping.get(legacy_value, "Available")

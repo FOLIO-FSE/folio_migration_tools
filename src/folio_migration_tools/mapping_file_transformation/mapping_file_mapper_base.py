@@ -213,23 +213,20 @@ class MappingFileMapperBase(MapperBase):
             }
         )
         if object_type == FOLIONamespaces.holdings and hasattr(self, "holdings_sources"):
-            folio_object['sourceId'] = self.holdings_sources.get("FOLIO")
+            folio_object["sourceId"] = self.holdings_sources.get("FOLIO")
         elif object_type == FOLIONamespaces.holdings and not hasattr(self, "holdings_sources"):
             raise TransformationProcessError(
-                index_or_id,
-                "Holdings source not set in the mapper",
-                None
+                index_or_id, "Holdings source not set in the mapper", None
             )
         return folio_object, legacy_id
 
     def get_statistical_code(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:
             return self.get_mapped_ref_data_value(
-                self.statistical_codes_mapping,
-                legacy_item,
-                index_or_id,
-                folio_prop_name,
-                True,
+                ref_data_mapping=self.statistical_codes_mapping,
+                legacy_object=legacy_item,
+                index_or_id=index_or_id,
+                prevent_default=True,
             )
         self.migration_report.add(
             "StatisticalCodeMapping",
@@ -553,7 +550,9 @@ class MappingFileMapperBase(MapperBase):
                                     )
                             multi_field_props.append(sub_prop_name)
                         else:
-                            self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
+                            self.validate_enums(
+                                res, sub_prop, sub_prop_name, index_or_id, required
+                            )
 
                         if res or isinstance(res, bool):
                             temp_object[sub_prop_name] = res
@@ -973,4 +972,6 @@ def in_deep(dictionary, keys):
 
 
 def is_set_or_bool_or_numeric(any_value):
-    return (isinstance(any_value, str) and (any_value.strip() not in empty_vals)) or isinstance(any_value, (int, float, complex))
+    return (isinstance(any_value, str) and (any_value.strip() not in empty_vals)) or isinstance(
+        any_value, (int, float, complex)
+    )

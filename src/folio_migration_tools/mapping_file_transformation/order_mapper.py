@@ -91,14 +91,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
         self.notes_mapper.migration_report = self.migration_report
 
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id, schema_default_value):
+        mapping_props = {
+            "legacy_object": legacy_order,
+            "index_or_id": index_or_id,
+            "prevent_default": False,
+        }
         if folio_prop_name.endswith(".acquisitionMethod"):
-            return self.get_mapped_ref_data_value(
-                self.acquisitions_methods_mapping,
-                legacy_order,
-                folio_prop_name,
-                index_or_id,
-                False,
-            )
+            mapping_props["ref_data_mapping"] = self.acquisitions_methods_mapping
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         elif re.compile(r"compositePoLines\[(\d+)\]\.id").fullmatch(folio_prop_name):
             return str(uuid.uuid4())
@@ -107,13 +107,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return ""
 
         if folio_prop_name.endswith(".locationId"):
-            return self.get_mapped_ref_data_value(
-                self.location_mapping,
-                legacy_order,
-                folio_prop_name,
-                index_or_id,
-                False,
-            )
+            mapping_props["ref_data_mapping"] = self.location_mapping
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         mapped_value = super().get_prop(
             legacy_order, folio_prop_name, index_or_id, schema_default_value
@@ -274,7 +269,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
             ):
                 object_schema["properties"] = CompositeOrderMapper.inject_schema_by_ref(
                     submodule_path, github_headers, object_schema
-                ).get("properties", {})#TODO: Investigate new CustomFields schema and figure out how to actually handle it
+                ).get(
+                    "properties", {}
+                )  # TODO: Investigate new CustomFields schema and figure out how to actually handle it
 
             for property_name_level1, property_level1 in object_schema.get(
                 "properties", {}
@@ -383,9 +380,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
         return composite_order
 
     def validate_po_number(
-            self,
-            index_or_id: str,
-            po_number: str,
+        self,
+        index_or_id: str,
+        po_number: str,
     ):
         if not self.is_valid_po_number(po_number):
             self.migration_report.add(

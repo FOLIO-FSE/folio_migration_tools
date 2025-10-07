@@ -99,82 +99,19 @@ class MapperBase:
                 self.mapped_folio_fields[field_name][0] += 1
                 self.mapped_folio_fields[field_name][1] += 1
 
-    def get_mapped_name(
-        self,
-        ref_data_mapping: RefDataMapping,
-        legacy_object,
-        index_or_id,
-        prevent_default=False,
-    ):
-        try:
-            # Get the values in the fields that will be used for mapping
-            fieldvalues = [legacy_object.get(k) for k in ref_data_mapping.mapped_legacy_keys]
-
-            # Gets the first line in the map satisfying all legacy mapping values.
-            # Case insensitive, strips away whitespace
-            right_mapping = ref_data_mapping.get_ref_data_mapping(legacy_object)
-
-            if not right_mapping:
-                raise StopIteration()
-            self.migration_report.add(
-                ref_data_mapping.blurb_id,
-                (
-                    f'{" - ".join(fieldvalues)} '
-                    f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
-                ),
-            )
-            return next(v for k, v in right_mapping.items() if k.startswith("folio_"))
-
-        except StopIteration:
-            if prevent_default:
-                self.migration_report.add(
-                    ref_data_mapping.blurb_id,
-                    (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
-                )
-                return ""
-            self.migration_report.add(
-                ref_data_mapping.blurb_id,
-                (
-                    f"Unmapped (Default value was set) -- "
-                    f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
-                ),
-            )
-            return ref_data_mapping.default_name
-        except IndexError as exception:
-            raise TransformationRecordFailedError(
-                index_or_id,
-                (
-                    f"{ref_data_mapping.name} - folio_{ref_data_mapping.key_type} "
-                    f"({ref_data_mapping.mapped_legacy_keys}) {exception} is not "
-                    "a recognized field in the legacy data."
-                ),
-            ) from exception
-        except KeyError as exception:
-            raise TransformationProcessError(
-                index_or_id,
-                (
-                    f"{ref_data_mapping.name} mapping - folio_{ref_data_mapping.key_type} "
-                    f"({ref_data_mapping.mapped_legacy_keys})  is not "
-                    f"a recognized field in the legacy data. KeyError: {exception}"
-                ),
-            ) from exception
-        except Exception as exception:
-            raise TransformationProcessError(
-                index_or_id,
-                (
-                    f"{ref_data_mapping.name} - folio_{ref_data_mapping.key_type} "
-                    f"({ref_data_mapping.mapped_legacy_keys}) {exception}"
-                ),
-            ) from exception
-
     def get_mapped_ref_data_value(
         self,
         ref_data_mapping: RefDataMapping,
         legacy_object,
         index_or_id,
-        folio_property_name="",
+        name_or_id="id",
         prevent_default=False,
     ):
+        mapped_val = (
+            ref_data_mapping.default_id
+            if name_or_id == "id"
+            else ref_data_mapping.default_name
+        )
         # Gets mapped value from mapping file, translated to the right FOLIO UUID
         try:
             # Get the values in the fields that will be used for mapping
@@ -196,7 +133,10 @@ class MapperBase:
                     f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
                 ),
             )
-            return right_mapping["folio_id"]
+            if name_or_id == "id":
+                return right_mapping["folio_id"]
+            elif name_or_id == "name":
+                return next(v for k, v in right_mapping.items() if k.startswith("folio_"))
         except StopIteration:
             if prevent_default:
                 self.migration_report.add(
@@ -211,7 +151,7 @@ class MapperBase:
                     f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
                 ),
             )
-            return ref_data_mapping.default_id
+            return mapped_val
         except IndexError as exception:
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -452,7 +392,12 @@ class MapperBase:
             )
         )
 
-    def map_statistical_codes(self, folio_record: dict, file_def: FileDefinition, legacy_record: Optional[Union[dict, Record]] = None):
+    def map_statistical_codes(
+        self,
+        folio_record: dict,
+        file_def: FileDefinition,
+        legacy_record: Optional[Union[dict, Record]] = None,
+    ):
         """Map statistical codes to the folio record.
 
         This method checks if the file definition contains statistical codes and
@@ -469,7 +414,9 @@ class MapperBase:
             code_strings = file_def.statistical_code.split(
                 self.library_configuration.multi_field_delimiter
             )
-            folio_record["statisticalCodeIds"] = folio_record.get("statisticalCodeIds", []) + code_strings
+            folio_record["statisticalCodeIds"] = (
+                folio_record.get("statisticalCodeIds", []) + code_strings
+            )
 
     def setup_statistical_codes_map(self, statistical_codes_map):
         if statistical_codes_map:
@@ -481,7 +428,9 @@ class MapperBase:
                 "code",
                 "StatisticalCodeMapping",
             )
-            logging.info(f"Statistical codes mapping set up {self.statistical_codes_mapping.mapped_legacy_keys}")
+            logging.info(
+                f"Statistical codes mapping set up {self.statistical_codes_mapping.mapped_legacy_keys}"
+            )
         else:
             self.statistical_codes_mapping = None
             logging.info("Statistical codes map is not set up")
@@ -489,11 +438,12 @@ class MapperBase:
     def get_statistical_code(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:
             return self.get_mapped_ref_data_value(
-                self.statistical_codes_mapping,
-                legacy_item,
-                index_or_id,
-                folio_prop_name,
-                True,
+                **{
+                    "ref_data_mapping": self.statistical_codes_mapping,
+                    "legacy_object": legacy_item,
+                    "index_or_id": index_or_id,
+                    "prevent_default": True,
+                }
             )
         self.migration_report.add(
             "StatisticalCodeMapping",
@@ -501,13 +451,13 @@ class MapperBase:
         )
         return ""
 
-    def map_statistical_code_ids(
-        self, legacy_ids, folio_record: dict
-    ):
+    def map_statistical_code_ids(self, legacy_ids, folio_record: dict):
         if stat_codes := {x: None for x in folio_record.pop("statisticalCodeIds", [])}:
             folio_code_ids = set()
             for stat_code in stat_codes:
-                if stat_code_id := self.get_statistical_code({"legacy_stat_code": stat_code}, "statisticalCodeId", legacy_ids):
+                if stat_code_id := self.get_statistical_code(
+                    {"legacy_stat_code": stat_code}, "statisticalCodeId", legacy_ids
+                ):
                     folio_code_ids.add(stat_code_id)
                 else:
                     Helper.log_data_issue(
@@ -522,7 +472,10 @@ class MapperBase:
 
     @property
     def base_string_for_folio_uuid(self):
-        if self.library_configuration.use_gateway_url_for_uuids and not self.library_configuration.is_ecs:
+        if (
+            self.library_configuration.use_gateway_url_for_uuids
+            and not self.library_configuration.is_ecs
+        ):
             return str(self.folio_client.gateway_url)
         elif self.library_configuration.ecs_tenant_id:
             return str(self.library_configuration.ecs_tenant_id)
@@ -531,8 +484,8 @@ class MapperBase:
 
     @staticmethod
     def validate_location_map(location_map: List[Dict], locations: List[Dict]) -> List[Dict]:
-        mapped_codes = [x['folio_code'] for x in location_map]
-        existing_codes = [x['code'] for x in locations]
+        mapped_codes = [x["folio_code"] for x in location_map]
+        existing_codes = [x["code"] for x in locations]
         missing_codes = set(mapped_codes) - set(existing_codes)
         if missing_codes:
             raise TransformationProcessError(

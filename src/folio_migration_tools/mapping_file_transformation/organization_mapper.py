@@ -68,40 +68,28 @@ class OrganizationMapper(MappingFileMapperBase):
 
     # Commence the mapping work
     def get_prop(self, legacy_organization, folio_prop_name, index_or_id, schema_default_value):
-        value_tuple = (
-            legacy_organization,
-            index_or_id,
-            folio_prop_name,
-        )
+        mapping_props = {
+            "legacy_object": legacy_organization,
+            "index_or_id": index_or_id,
+            "prevent_default": False,
+        }
 
         # Perfrom reference data mappings
         if folio_prop_name == "organizationTypes":
-            return self.get_mapped_ref_data_value(
-                self.organization_types_map,
-                *value_tuple,
-                False,
-            )
+            mapping_props["ref_data_mapping"] = self.organization_types_map
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         elif re.compile(r"addresses\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
-            return self.get_mapped_ref_data_value(
-                self.address_categories_map,
-                *value_tuple,
-                False,
-            )
+            mapping_props["ref_data_mapping"] = self.address_categories_map
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         elif re.compile(r"emails\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
-            return self.get_mapped_ref_data_value(
-                self.email_categories_map,
-                *value_tuple,
-                False,
-            )
+            mapping_props["ref_data_mapping"] = self.email_categories_map
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         elif re.compile(r"phoneNumbers\[(\d+)\]\.categories\[(\d+)\]").fullmatch(folio_prop_name):
-            return self.get_mapped_ref_data_value(
-                self.phone_categories_map,
-                *value_tuple,
-                False,
-            )
+            mapping_props["ref_data_mapping"] = self.phone_categories_map
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         elif re.compile(r"interfaces\[(\d+)\]\.interfaceCredential.interfaceId").fullmatch(
             folio_prop_name

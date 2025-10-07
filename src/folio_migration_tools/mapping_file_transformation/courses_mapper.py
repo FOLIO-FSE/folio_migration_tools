@@ -45,7 +45,7 @@ class CoursesMapper(MappingFileMapperBase):
             None,
             FOLIONamespaces.course,
             library_configuration,
-            task_configuration
+            task_configuration,
         )
         self.course_map = course_map
         if terms_map:
@@ -142,22 +142,17 @@ class CoursesMapper(MappingFileMapperBase):
             del instructor["userId"]
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
+        mapping_props = {
+            "legacy_object": legacy_item,
+            "index_or_id": index_or_id,
+            "prevent_default": False,
+        }
         if folio_prop_name == "courselisting.termId":
-            return self.get_mapped_ref_data_value(
-                self.terms_map,
-                legacy_item,
-                folio_prop_name,
-                index_or_id,
-                False,
-            )
+            mapping_props["ref_data_mapping"] = self.terms_map
+            return self.get_mapped_ref_data_value(**mapping_props)
         elif folio_prop_name == "course.departmentId":
-            return self.get_mapped_ref_data_value(
-                self.departments_map,
-                legacy_item,
-                folio_prop_name,
-                index_or_id,
-                False,
-            )
+            mapping_props["ref_data_mapping"] = self.departments_map
+            return self.get_mapped_ref_data_value(**mapping_props)
         elif mapped_value := super().get_prop(
             legacy_item, folio_prop_name, index_or_id, schema_default_value
         ):
