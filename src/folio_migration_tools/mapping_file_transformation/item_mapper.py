@@ -4,7 +4,7 @@ import sys
 from datetime import datetime, timezone
 from typing import Dict, List, Set, Union
 from uuid import uuid4
-
+from copy import deepcopy
 import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
@@ -165,46 +165,42 @@ class ItemMapper(MappingFileMapperBase):
         base_props = {
             "legacy_object": legacy_item,
             "index_or_id": index_or_id,
+            "prevent_default": False,
         }
         if folio_prop_name == "permanentLocationId":
-            mapping_props = {
-                **base_props,
-                "ref_data_mapping": self.location_mapping,
-                "prevent_default": self.task_configuration.prevent_permanent_location_map_default,
-            }
+            mapping_props = deepcopy(base_props)
+            mapping_props["ref_data_mapping"] = self.location_mapping
+            mapping_props["prevent_default"] = self.task_configuration.prevent_permanent_location_map_default
             return self.get_mapped_ref_data_value(**mapping_props)
         elif folio_prop_name == "temporaryLocationId":
+            mapping_props = deepcopy(base_props)
             if not self.temp_location_mapping:
                 raise TransformationProcessError(
                     "Temporary location is mapped, but there is no "
                     "temporary location mapping file referenced in configuration"
                 )
-            mapping_props = {
-                **base_props,
-                "ref_data_mapping": self.temp_location_mapping,
-                "prevent_default": True,
-            }
+            mapping_props["ref_data_mapping"] = self.temp_location_mapping
             temp_loc = self.get_mapped_ref_data_value(**mapping_props)
             self.migration_report.add("TemporaryLocationMapping", f"{temp_loc}")
             return temp_loc
         elif folio_prop_name == "materialTypeId":
+            mapping_props = deepcopy(base_props)
             mapping_props["ref_data_mapping"] = self.material_type_mapping
             return self.get_mapped_ref_data_value(**mapping_props)
         elif folio_prop_name == "itemLevelCallNumberTypeId":
+            mapping_props = deepcopy(base_props)
             mapping_props["ref_data_mapping"] = self.call_number_mapping
             return self.get_mapped_ref_data_value(**mapping_props)
         elif folio_prop_name == "status.date":
             return datetime.now(timezone.utc).isoformat()
         elif folio_prop_name == "temporaryLoanTypeId":
-            mapping_props = {
-                **base_props,
-                "ref_data_mapping": self.temp_loan_type_mapping,
-                "prevent_default": True,
-            }
+            mapping_props = deepcopy(base_props)
+            mapping_props["ref_data_mapping"] = self.temp_loan_type_mapping
             ltid = self.get_mapped_ref_data_value(**mapping_props)
             self.migration_report.add("TemporaryLoanTypeMapping", f"{folio_prop_name} -> {ltid}")
             return ltid
         elif folio_prop_name == "permanentLoanTypeId":
+            mapping_props = deepcopy(base_props)
             mapping_props["ref_data_mapping"] = self.loan_type_mapping
             return self.get_mapped_ref_data_value(**mapping_props)
 
@@ -242,8 +238,6 @@ class ItemMapper(MappingFileMapperBase):
         else:
             self.migration_report.add("UnmappedProperties", f"{folio_prop_name}")
             return ""
-
-
 
     def transform_status(self, legacy_value):
         status = self.status_mapping.get(legacy_value, "Available")

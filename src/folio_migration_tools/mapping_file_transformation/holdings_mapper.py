@@ -57,16 +57,14 @@ class HoldingsMapper(MappingFileMapperBase):
             "code",
             "LocationMapping",
         )
-        self.call_number_mapping = None
-        if call_number_type_map:
-            self.call_number_mapping = RefDataMapping(
-                self.folio_client,
-                "/call-number-types",
-                "callNumberTypes",
-                call_number_type_map,
-                "name",
-                "CallNumberTypeMapping",
-            )
+        self.call_number_mapping = RefDataMapping(
+            self.folio_client,
+            "/call-number-types",
+            "callNumberTypes",
+            call_number_type_map,
+            "name",
+            "CallNumberTypeMapping",
+        )
         self.holdings_sources = self.get_holdings_sources()
 
     def get_holdings_sources(self):
@@ -105,9 +103,8 @@ class HoldingsMapper(MappingFileMapperBase):
             mapping_props["ref_data_mapping"] = self.location_mapping
             return self.get_mapped_ref_data_value(**mapping_props)
         elif folio_prop_name == "callNumberTypeId":
-            if self.call_number_mapping:
-                mapping_props["ref_data_mapping"] = self.call_number_mapping
-                return self.get_mapped_ref_data_value(**mapping_props)
+            mapping_props["ref_data_mapping"] = self.call_number_mapping
+            return self.get_mapped_ref_data_value(**mapping_props)
 
         # elif folio_prop_name.startswith("statisticalCodeIds"):
         #     return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)

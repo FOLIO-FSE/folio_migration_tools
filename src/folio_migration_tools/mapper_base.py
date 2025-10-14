@@ -123,9 +123,8 @@ class MapperBase:
             if not right_mapping:
                 # Not all fields matched. Could it be a hybrid wildcard map?
                 right_mapping = ref_data_mapping.get_hybrid_mapping(legacy_object)
-
-            if not right_mapping:
-                raise StopIteration()
+                if not right_mapping:
+                    raise StopIteration()
             self.migration_report.add(
                 ref_data_mapping.blurb_id,
                 (
