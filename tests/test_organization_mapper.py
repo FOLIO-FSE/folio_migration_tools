@@ -392,17 +392,17 @@ def test_map_organization_notes(mapper):
 
     res = mapper.do_map(data, 1, FOLIONamespaces.organizations)
     mapper.notes_mapper.map_notes(data, data["code"], res[0]["id"], FOLIONamespaces.organizations)
-
+    
     assert (
         'notes\t{"typeId": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5", "title": "A migrated note",'
         ' "domain": "organizations", "content": "The game is afoot!",'
-        ' "links": [{"id": "3c4c99a2-ac24-57c5-81e3-d53fe84a2a60", "type": "organization"}]}\n'
+        ' "links": [{"id": "7cf3c2b6-2ed3-565a-be6d-5216dfc4d23d", "type": "organization"}]}\n'
         in mapper.extradata_writer.cache
     )
     assert (
         'notes\t{"typeId": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5", "title": "Another note",'
         ' "domain": "organizations", "content": "Elementary! /SH",'
-        ' "links": [{"id": "3c4c99a2-ac24-57c5-81e3-d53fe84a2a60", "type": "organization"}]}\n'
+        ' "links": [{"id": "7cf3c2b6-2ed3-565a-be6d-5216dfc4d23d", "type": "organization"}]}\n'
         in mapper.extradata_writer.cache
     )
 

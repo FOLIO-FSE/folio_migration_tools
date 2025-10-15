@@ -128,14 +128,6 @@ class RefDataMapping(object):
             return self.cache[obj_key]
         prepped_props = {k: legacy_object[k].strip() for k in self.mapped_legacy_keys}
         for mapping in self.regular_mappings:
-            if self.name == "loantypes":
-                pprint({
-                    "mapping":mapping,
-                    "self.mapped_legacy_keys": self.mapped_legacy_keys,
-                    "match_number":match_number,
-                    "len(self.mapped_legacy_keys)": len(self.mapped_legacy_keys),
-                    "prepped_props":prepped_props
-                })
             match_number = sum(prepped_props[k] == mapping[k] for k in self.mapped_legacy_keys)
             if match_number == len(self.mapped_legacy_keys):
                 self.cache[obj_key] = mapping
