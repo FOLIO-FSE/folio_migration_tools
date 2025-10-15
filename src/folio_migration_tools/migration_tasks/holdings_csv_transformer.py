@@ -5,7 +5,6 @@ import logging
 import sys
 import time
 import os
-import random
 import traceback
 from typing import Annotated, List, Optional
 
@@ -316,13 +315,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             logging.info(
                 f'callNumberTypeMapFileName not set. Default call number type "{self.task_configuration.default_call_number_type_name}" used.'
             )
-            legacy_key = random.choice(
-                [
-                    o["legacy_field"]
-                    for o in self.holdings_field_map["data"]
-                    if o["legacy_field"] and o["legacy_field"].lower().strip() != "not mapped"
-                ]
-            )
+            legacy_key = [
+                o["legacy_field"]
+                for o in self.holdings_field_map["data"]
+                if o["legacy_field"] and o["legacy_field"].lower().strip() != "not mapped"
+            ][0]
             return [
                 {
                     legacy_key: "*",
