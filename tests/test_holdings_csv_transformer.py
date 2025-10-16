@@ -357,43 +357,43 @@ def test_merge_holding_in_regular_holding_new():
     )
 
 
-# def test_merge_holding_in_regular_holding_existing():
-#     mock_transformer = Mock(spec=HoldingsCsvTransformer)
-#     mock_transformer.holdings = {
-#         "Instance_1_loc_1": {
-#             "id": "existing_holding_id",
-#             "instanceId": "Instance_1",
-#             "permanentLocationId": "loc_1",
-#         }
-#     }
-#     mock_transformer.mapper = Mock(spec=HoldingsMapper)
-#     mock_transformer.mapper.migration_report = Mock()
-#     mock_transformer.task_configuration = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
-#     mock_transformer.task_configuration.holdings_merge_criteria = [
-#         "instanceId",
-#         "permanentLocationId",
-#     ]
-#     mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = ""
+def test_merge_holding_in_regular_holding_existing():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.holdings = {
+        "Instance_1_loc_1": {
+            "id": "existing_holding_id",
+            "instanceId": "Instance_1",
+            "permanentLocationId": "loc_1",
+        }
+    }
+    mock_transformer.mapper = Mock(spec=HoldingsMapper)
+    mock_transformer.mapper.migration_report = Mock()
+    mock_transformer.task_configuration = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mock_transformer.task_configuration.holdings_merge_criteria = [
+        "instanceId",
+        "permanentLocationId",
+    ]
+    mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = ""
 
-#     incoming_holding = {
-#         "id": "new_holding_id",
-#         "instanceId": "Instance_1",
-#         "permanentLocationId": "loc_1",
-#     }
-#     instance_ids = ["Instance_1"]
-#     legacy_item_id = "legacy_item_1"
+    incoming_holding = {
+        "id": "new_holding_id",
+        "instanceId": "Instance_1",
+        "permanentLocationId": "loc_1",
+    }
+    instance_ids = ["Instance_1"]
+    legacy_item_id = "legacy_item_1"
 
-#     HoldingsCsvTransformer.merge_holding_in(
-#         mock_transformer, incoming_holding, instance_ids, legacy_item_id
-#     )
+    HoldingsCsvTransformer.merge_holding_in(
+        mock_transformer, incoming_holding, instance_ids, legacy_item_id
+    )
 
-#     assert len(mock_transformer.holdings) == 1
-#     mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
-#         "Holdings already created from Item"
-#     )
-#     mock_transformer.load_mapped_fields = Mock(side_effect=FileNotFoundError("File not found"))
-#     with pytest.raises(FileNotFoundError):
-#         HoldingsCsvTransformer.load_mapped_fields(mock_transformer)
+    assert len(mock_transformer.holdings) == 1
+    mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
+        "Holdings already created from Item"
+    )
+    mock_transformer.load_mapped_fields = Mock(side_effect=FileNotFoundError("File not found"))
+    with pytest.raises(FileNotFoundError):
+        HoldingsCsvTransformer.load_mapped_fields(mock_transformer)
 
 
 def test_merge_holding_in_boundwith_new_holding():
@@ -462,68 +462,141 @@ def test_merge_holding_in_boundwith_existing_holding():
     )
 
 
-# def test_merge_holding_in_regular_holding_new():
-#     mock_transformer = Mock(spec=HoldingsCsvTransformer)
-#     mock_transformer.holdings = {}
-#     mock_transformer.mapper = Mock(spec=HoldingsMapper)
-#     mock_transformer.mapper.migration_report = Mock()
-#     mock_transformer.task_configuration.holdings_merge_criteria = [
-#         "instanceId",
-#         "permanentLocationId",
-#     ]
-#     mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = ""
+def test_merge_holding_in_regular_holding_new():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.holdings = {}
+    mock_transformer.mapper = Mock(spec=HoldingsMapper)
+    mock_transformer.mapper.migration_report = Mock()
+    mock_transformer.task_configuration.holdings_merge_criteria = [
+        "instanceId",
+        "permanentLocationId",
+    ]
+    mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = ""
 
-#     incoming_holding = {
-#         "id": "holding_id",
-#         "instanceId": "Instance_1",
-#         "permanentLocationId": "loc_1",
-#     }
-#     instance_ids = ["Instance_1"]
-#     legacy_item_id = "legacy_item_1"
+    incoming_holding = {
+        "id": "holding_id",
+        "instanceId": "Instance_1",
+        "permanentLocationId": "loc_1",
+    }
+    instance_ids = ["Instance_1"]
+    legacy_item_id = "legacy_item_1"
 
-#     HoldingsCsvTransformer.merge_holding_in(
-#         mock_transformer, incoming_holding, instance_ids, legacy_item_id
-#     )
+    HoldingsCsvTransformer.merge_holding_in(
+        mock_transformer, incoming_holding, instance_ids, legacy_item_id
+    )
 
-#     assert len(mock_transformer.holdings) == 1
-#     assert "Instance_1_loc_1" in mock_transformer.holdings
-#     mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
-#         "Unique Holdings created from Items"
-#     )
+    assert len(mock_transformer.holdings) == 1
+    assert "Instance_1_loc_1" in mock_transformer.holdings
+    mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
+        "Unique Holdings created from Items"
+    )
 
 
-# def test_merge_holding_in_regular_holding_existing():
-#     mock_transformer = Mock(spec=HoldingsCsvTransformer)
-#     mock_transformer.holdings = {
-#         "Instance_1_loc_1": {
-#             "id": "existing_holding_id",
-#             "instanceId": "Instance_1",
-#             "permanentLocationId": "loc_1",
-#         }
-#     }
-#     mock_transformer.mapper = Mock(spec=HoldingsMapper)
-#     mock_transformer.mapper.migration_report = Mock()
-#     mock_transformer.task_configuration = Mock()  # Add this line to mock the task_configuration attribute
-#     mock_transformer.task_configuration = Mock()  # Add this line to mock the task_configuration attribute
-#     mock_transformer.task_configuration.holdings_merge_criteria = [
-#         "instanceId",
-#         "permanentLocationId",
-#     ]
-#     mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = ""
+def test_merge_holding_in_regular_holding_existing():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.holdings = {
+        "Instance_1-loc_1": {
+            "id": "existing_holding_id",
+            "instanceId": "Instance_1",
+            "permanentLocationId": "loc_1",
+        }
+    }
+    mock_transformer.mapper = Mock(spec=HoldingsMapper)
+    mock_transformer.mapper.migration_report = Mock()
+    mock_transformer.task_configuration = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mock_transformer.task_configuration.holdings_merge_criteria = [
+        "instanceId",
+        "permanentLocationId",
+    ]
+    mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = ""
 
-#     incoming_holding = {
-#         "id": "new_holding_id",
-#         "instanceId": "Instance_1",
-#         "permanentLocationId": "loc_1",
-#     }
-#     instance_ids = ["Instance_1"]
-#     legacy_item_id = "legacy_item_1"
+    incoming_holding = {
+        "id": "new_holding_id",
+        "instanceId": "Instance_1",
+        "permanentLocationId": "loc_1",
+    }
+    instance_ids = ["Instance_1"]
+    legacy_item_id = "legacy_item_1"
 
-#     HoldingsCsvTransformer.merge_holding_in(
-#         mock_transformer, incoming_holding, instance_ids, legacy_item_id
-#     )
+    HoldingsCsvTransformer.merge_holding_in(
+        mock_transformer, incoming_holding, instance_ids, legacy_item_id
+    )
 
-#     assert len(mock_transformer.holdings) == 1
-#     mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
-#         "Holdings already created from Item"
-#     )
+    assert len(mock_transformer.holdings) == 1
+    mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
+        "Holdings already created from Item"
+    )
+
+def test_post_process_holding_default_call_number_type():
+    # Setup mock transformer
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.default_call_number_type = {"id": "default-call-number-type-id"}
+    mock_transformer.fallback_holdings_type = {"id": "fallback-holdings-type-id"}
+    mock_transformer.mapper = Mock()
+    
+    # Create test folio record without callNumberTypeId
+    folio_rec = {
+        "instanceId": ["test-instance-id"],
+        "permanentLocationId": "test-location"
+    }
+    
+    # Call post_process_holding
+    HoldingsCsvTransformer.post_process_holding(
+        mock_transformer,
+        folio_rec,
+        "test-legacy-id",
+        Mock()
+    )
+    
+    # Assert default call number type was set
+    assert folio_rec["callNumberTypeId"] == "default-call-number-type-id"
+
+def test_post_process_holding_existing_call_number_type():
+    # Setup mock transformer
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.default_call_number_type = {"id": "default-call-number-type-id"}
+    mock_transformer.fallback_holdings_type = {"id": "fallback-holdings-type-id"}
+    mock_transformer.mapper = Mock()
+    
+    # Create test folio record with existing callNumberTypeId
+    folio_rec = {
+        "instanceId": ["test-instance-id"],
+        "permanentLocationId": "test-location",
+        "callNumberTypeId": "existing-call-number-type-id"
+    }
+    
+    # Call post_process_holding
+    HoldingsCsvTransformer.post_process_holding(
+        mock_transformer,
+        folio_rec,
+        "test-legacy-id",
+        Mock()
+    )
+    
+    # Assert existing call number type was preserved
+    assert folio_rec["callNumberTypeId"] == "existing-call-number-type-id"
+
+def test_post_process_holding_empty_call_number_type():
+    # Setup mock transformer
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.default_call_number_type = {"id": "default-call-number-type-id"}
+    mock_transformer.fallback_holdings_type = {"id": "fallback-holdings-type-id"}
+    mock_transformer.mapper = Mock()
+    
+    # Create test folio record with empty callNumberTypeId
+    folio_rec = {
+        "instanceId": ["test-instance-id"],
+        "permanentLocationId": "test-location",
+        "callNumberTypeId": ""
+    }
+    
+    # Call post_process_holding
+    HoldingsCsvTransformer.post_process_holding(
+        mock_transformer,
+        folio_rec,
+        "test-legacy-id",
+        Mock()
+    )
+    
+    # Assert default call number type was set
+    assert folio_rec["callNumberTypeId"] == "default-call-number-type-id"
