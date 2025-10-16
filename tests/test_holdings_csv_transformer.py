@@ -17,6 +17,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
+# HoldingsCsvTransformer.load_mapped_fields(mock_transformer)
 
 def test_get_object_type():
     assert HoldingsCsvTransformer.get_object_type() == FOLIONamespaces.holdings
@@ -187,7 +188,9 @@ def test_load_location_map_file_not_found():
     mock_transformer.folder_structure = Mock()
     mock_transformer.folder_structure.mapping_files_folder = Path("")
     with pytest.raises(FileNotFoundError):
-        HoldingsCsvTransformer.load_location_map = Mock(side_effect=FileNotFoundError("File not found"))
+        HoldingsCsvTransformer.load_location_map = Mock(
+            side_effect=FileNotFoundError("File not found")
+        )
         HoldingsCsvTransformer.load_location_map(mock_transformer)
 
 
@@ -200,3 +203,136 @@ def test_load_mapped_fields_file_not_found():
     mock_transformer.load_mapped_fields = Mock(side_effect=FileNotFoundError("File not found"))
     with pytest.raises(FileNotFoundError):
         HoldingsCsvTransformer.load_mapped_fields(mock_transformer)
+
+
+def test_merge_holding_in_boundwith_new_holding():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.bound_with_keys = set()
+    mock_transformer.holdings = {}
+    mock_transformer.holdings_id_map = {}
+    mock_transformer.mapper = Mock(spec=HoldingsMapper)
+    mock_transformer.mapper.migration_report = Mock()
+    mock_transformer.object_type = FOLIONamespaces.holdings
+
+    incoming_holding = {
+        "id": "holding_id",
+        "instanceId": "Instance_1",
+        "permanentLocationId": "loc_1",
+        "callNumber": "call_1",
+    }
+    instance_ids = ["Instance_1", "Instance_2"]
+    legacy_item_id = "legacy_item_1"
+
+    HoldingsCsvTransformer.merge_holding_in(
+        mock_transformer, incoming_holding, instance_ids, legacy_item_id
+    )
+
+    assert len(mock_transformer.bound_with_keys) == 1
+    assert len(mock_transformer.holdings) == 1
+    assert "bw_Instance_1_loc_1_call_1_Instance_1_Instance_2" in mock_transformer.bound_with_keys
+    mock_transformer.mapper.create_and_write_boundwith_part.assert_called_once_with(
+        legacy_item_id, incoming_holding["id"]
+    )
+
+
+def test_merge_holding_in_boundwith_existing_holding():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.bound_with_keys = {"bw_Instance_1_loc_1_call_1_Instance_1_Instance_2"}
+    mock_transformer.holdings = {
+        "bw_Instance_1_loc_1_call_1_Instance_1_Instance_2": {
+            "id": "existing_holding_id",
+            "instanceId": "Instance_1",
+            "permanentLocationId": "loc_1",
+            "callNumber": "call_1",
+        }
+    }
+    mock_transformer.holdings_id_map = {}
+    mock_transformer.mapper = Mock(spec=HoldingsMapper)
+    mock_transformer.mapper.migration_report = Mock()
+    mock_transformer.object_type = FOLIONamespaces.holdings
+
+    incoming_holding = {
+        "id": "new_holding_id",
+        "instanceId": "Instance_1",
+        "permanentLocationId": "loc_1",
+        "callNumber": "call_1",
+    }
+    instance_ids = ["Instance_1", "Instance_2"]
+    legacy_item_id = "legacy_item_2"
+
+    HoldingsCsvTransformer.merge_holding_in(
+        mock_transformer, incoming_holding, instance_ids, legacy_item_id
+    )
+
+    assert len(mock_transformer.bound_with_keys) == 1
+    assert len(mock_transformer.holdings) == 1
+    mock_transformer.mapper.create_and_write_boundwith_part.assert_called_once_with(
+        legacy_item_id, "existing_holding_id"
+    )
+
+
+# def test_merge_holding_in_regular_holding_new():
+#     mock_transformer = Mock(spec=HoldingsCsvTransformer)
+#     mock_transformer.holdings = {}
+#     mock_transformer.mapper = Mock(spec=HoldingsMapper)
+#     mock_transformer.mapper.migration_report = Mock()
+#     mock_transformer.task_configuration.holdings_merge_criteria = [
+#         "instanceId",
+#         "permanentLocationId",
+#     ]
+#     mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = ""
+
+#     incoming_holding = {
+#         "id": "holding_id",
+#         "instanceId": "Instance_1",
+#         "permanentLocationId": "loc_1",
+#     }
+#     instance_ids = ["Instance_1"]
+#     legacy_item_id = "legacy_item_1"
+
+#     HoldingsCsvTransformer.merge_holding_in(
+#         mock_transformer, incoming_holding, instance_ids, legacy_item_id
+#     )
+
+#     assert len(mock_transformer.holdings) == 1
+#     assert "Instance_1_loc_1" in mock_transformer.holdings
+#     mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
+#         "Unique Holdings created from Items"
+#     )
+
+
+# def test_merge_holding_in_regular_holding_existing():
+#     mock_transformer = Mock(spec=HoldingsCsvTransformer)
+#     mock_transformer.holdings = {
+#         "Instance_1_loc_1": {
+#             "id": "existing_holding_id",
+#             "instanceId": "Instance_1",
+#             "permanentLocationId": "loc_1",
+#         }
+#     }
+#     mock_transformer.mapper = Mock(spec=HoldingsMapper)
+#     mock_transformer.mapper.migration_report = Mock()
+#     mock_transformer.task_configuration = Mock()  # Add this line to mock the task_configuration attribute
+#     mock_transformer.task_configuration = Mock()  # Add this line to mock the task_configuration attribute
+#     mock_transformer.task_configuration.holdings_merge_criteria = [
+#         "instanceId",
+#         "permanentLocationId",
+#     ]
+#     mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = ""
+
+#     incoming_holding = {
+#         "id": "new_holding_id",
+#         "instanceId": "Instance_1",
+#         "permanentLocationId": "loc_1",
+#     }
+#     instance_ids = ["Instance_1"]
+#     legacy_item_id = "legacy_item_1"
+
+#     HoldingsCsvTransformer.merge_holding_in(
+#         mock_transformer, incoming_holding, instance_ids, legacy_item_id
+#     )
+
+#     assert len(mock_transformer.holdings) == 1
+#     mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
+#         "Holdings already created from Item"
+#     )
