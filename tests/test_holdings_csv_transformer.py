@@ -466,6 +466,7 @@ def test_merge_holding_in_regular_holding_new():
     mock_transformer = Mock(spec=HoldingsCsvTransformer)
     mock_transformer.holdings = {}
     mock_transformer.mapper = Mock(spec=HoldingsMapper)
+    mock_transformer.task_configuration = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
     mock_transformer.mapper.migration_report = Mock()
     mock_transformer.task_configuration.holdings_merge_criteria = [
         "instanceId",
@@ -486,7 +487,7 @@ def test_merge_holding_in_regular_holding_new():
     )
 
     assert len(mock_transformer.holdings) == 1
-    assert "Instance_1_loc_1" in mock_transformer.holdings
+    assert "Instance_1-loc_1" in mock_transformer.holdings
     mock_transformer.mapper.migration_report.add_general_statistics.assert_called_with(
         "Unique Holdings created from Items"
     )
