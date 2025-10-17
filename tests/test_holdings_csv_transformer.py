@@ -7,6 +7,10 @@ from folio_migration_tools.mapping_file_transformation.holdings_mapper import (
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.holdings_csv_transformer import (
     HoldingsCsvTransformer,
+    explode_former_ids
+)
+from folio_migration_tools.library_configuration import (
+    FileDefinition
 )
 import csv
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -601,3 +605,93 @@ def test_post_process_holding_empty_call_number_type():
     
     # Assert default call number type was set
     assert folio_rec["callNumberTypeId"] == "default-call-number-type-id"
+
+def test_task_configuration_validation():
+    # Test required fields
+    config_data = {
+        "name": "test_task",
+        "migration_task_type": "holdings",
+        "hrid_handling": "default",
+        "files": [],
+        "holdings_map_file_name": "holdings_map.json",
+        "location_map_file_name": "locations.tsv",
+        "default_call_number_type_name": "LC",
+        "fallback_holdings_type_id": "12345"
+    }
+    config = HoldingsCsvTransformer.TaskConfiguration(**config_data)
+    assert config.name == "test_task"
+    assert config.migration_task_type == "holdings"
+    assert config.holdings_map_file_name == "holdings_map.json"
+
+def test_validate_merge_criteria_valid():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.task_configuration = Mock()
+    mock_transformer.task_configuration.holdings_merge_criteria = ["instanceId", "permanentLocationId"]
+    mock_transformer.folio_client = Mock()
+    
+    # Mock the holdings schema
+    mock_transformer.folio_client.get_holdings_schema.return_value = {
+        "properties": {
+            "instanceId": {},
+            "permanentLocationId": {},
+            "callNumber": {}
+        }
+    }
+    
+    # Should not raise any exception
+    HoldingsCsvTransformer.validate_merge_criteria(mock_transformer)
+
+def test_validate_merge_criteria_invalid():
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.task_configuration = Mock()
+    mock_transformer.task_configuration.holdings_merge_criteria = ["invalidField"]
+    mock_transformer.folio_client = Mock()
+    
+    # Mock the holdings schema
+    mock_transformer.folio_client.get_holdings_schema.return_value = {
+        "properties": {
+            "instanceId": {},
+            "permanentLocationId": {},
+            "callNumber": {}
+        }
+    }
+    
+    with pytest.raises(SystemExit):
+        HoldingsCsvTransformer.validate_merge_criteria(mock_transformer)
+
+def test_process_single_file_success(tmp_path):
+    # Create a mock file
+    items_dir = tmp_path / "items"
+    items_dir.mkdir(exist_ok=True)
+    test_file = items_dir / "test.csv"
+    test_file.write_text("header1,header2\nvalue1,value2")
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.data_folder = tmp_path
+    mock_transformer.mapper = Mock()
+    mock_transformer.mapper.migration_report = Mock()
+    mock_transformer.mapper.get_objects.return_value = [{"field": "value"}]
+    
+    file_def = Mock(spec=FileDefinition)
+    file_def.file_name = "test.csv"
+    
+    HoldingsCsvTransformer.process_single_file(mock_transformer, file_def)
+    
+    mock_transformer.mapper.migration_report.add_general_statistics.assert_called()
+    assert mock_transformer.total_records == 1
+
+def test_explode_former_ids():
+    # Test with array-like string
+    holding_with_array = {"formerIds": ["[id1,id2,id3]"]}
+    result = explode_former_ids(holding_with_array)
+    assert result == ["id1", "id2", "id3"]
+    
+    # Test with regular string
+    holding_with_string = {"formerIds": ["regular_id"]}
+    result = explode_former_ids(holding_with_string)
+    assert result == ["regular_id"]
+    
+    # Test with mixed content
+    holding_mixed = {"formerIds": ["[id1,id2]", "regular_id", "[id3,id4]"]}
+    result = explode_former_ids(holding_mixed)
+    assert result == ["id1", "id2", "regular_id", "id3", "id4"]
