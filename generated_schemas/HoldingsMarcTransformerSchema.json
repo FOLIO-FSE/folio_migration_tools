@@ -1,95 +1,212 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
+    "$defs": {
+        "FileDefinition": {
+            "properties": {
+                "file_name": {
+                    "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "default": false,
+                    "title": "Discovery suppressed",
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "default": false,
+                    "title": "Staff suppressed",
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
+                    "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
+                }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        },
+        "HridHandling": {
+            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
+            "enum": [
+                "default",
+                "preserve001"
+            ],
+            "title": "HridHandling",
+            "type": "string"
+        }
+    },
     "properties": {
         "name": {
-            "title": "Name",
             "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
+            "title": "Name",
             "type": "string"
         },
         "migrationTaskType": {
-            "title": "Migration task type",
             "description": "The type of migration task you want to perform",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
             "type": "string"
         },
         "files": {
-            "title": "Source files",
             "description": "List of MARC21 files with holdings records",
-            "type": "array",
             "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Source files",
+            "type": "array"
         },
-        "hridHandling": {
-            "title": "HRID Handling",
-            "description": "Setting to default will make FOLIO generate HRIDs and move the existing 001:s into a 035, concatenated with the 003. Choosing preserve001 means the 001:s will remain in place, and that they will also become the HRIDs",
-            "default": "default",
-            "allOf": [
-                {
-                    "$ref": "#/definitions/HridHandling"
-                }
-            ]
-        },
-        "deactivate035From001": {
-            "title": "Create 035 from 001 and 003",
-            "description": "This deactivates the FOLIO default functionality of moving the previous 001 into a 035, prefixed with the value from 003",
+        "createSourceRecords": {
             "default": false,
+            "description": "Controls whether or not to retain the MARC records in Source Record Storage.",
+            "title": "Create source records",
             "type": "boolean"
         },
-        "holdingsTypeUuidForBoundwiths": {
-            "title": "Holdings Type for Boundwith Holdings",
-            "description": "UUID for a Holdings type (set in Settings->Inventory) for Bound-with Holdings)",
+        "hridHandling": {
+            "$ref": "#/$defs/HridHandling",
+            "default": "default",
+            "description": "Setting to default will make FOLIO generate HRIDs and move the existing 001:s into a 035, concatenated with the 003. Choosing preserve001 means the 001:s will remain in place, and that they will also become the HRIDs",
+            "title": "HRID Handling"
+        },
+        "deactivate035From001": {
+            "default": false,
+            "description": "This deactivates the FOLIO default functionality of moving the previous 001 into a 035, prefixed with the value from 003",
+            "title": "Create 035 from 001 and 003",
+            "type": "boolean"
+        },
+        "statisticalCodesMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
+            "description": "Path to the file containing the mapping of statistical codes. The file should be in TSV format with legacy_stat_code and folio_code columns.",
+            "title": "Statistical code map file name"
+        },
+        "statisticalCodeMappingFields": {
+            "default": [],
+            "description": "List of fields + subfields to be used for mapping statistical codes. Subfields should be delimited by a \"$\" (eg. 907$a). Single repeating subfields will be treated as unique values. Multiple subfields will be concatenated together with a space.",
+            "items": {
+                "type": "string"
+            },
+            "title": "Statistical code mapping fields",
+            "type": "array"
+        },
+        "holdingsTypeUuidForBoundwiths": {
+            "default": "",
+            "description": "UUID for a Holdings type (set in Settings->Inventory) for Bound-with Holdings)",
+            "title": "Holdings Type for Boundwith Holdings",
             "type": "string"
         },
         "boundwithRelationshipFilePath": {
-            "title": "Boundwith relationship file path",
-            "description": "Path to a file outlining Boundwith relationships, in the style of Voyager. A TSV file with MFHD_ID and BIB_ID headers and values",
             "default": "",
+            "description": "Path to a file outlining Boundwith relationships, in the style of Voyager. A TSV file with MFHD_ID and BIB_ID headers and values",
+            "title": "Boundwith relationship file path",
             "type": "string"
         },
-        "createSourceRecords": {
-            "title": "Create source records",
-            "description": "Controls wheter or not to retain the MARC records in Source Record Storage.",
-            "default": true,
-            "type": "boolean"
-        },
         "updateHridSettings": {
-            "title": "Update HRID settings",
-            "description": "At the end of the run, update FOLIO with the HRID settings",
             "default": true,
+            "description": "At the end of the run, update FOLIO with the HRID settings",
+            "title": "Update HRID settings",
             "type": "boolean"
         },
         "resetHridSettings": {
-            "title": "Reset HRID settings",
-            "description": "Setting to true means the task will reset the HRID counters for this particular record type",
             "default": false,
+            "description": "Setting to true means the task will reset the HRID counters for this particular record type",
+            "title": "Reset HRID settings",
             "type": "boolean"
         },
         "legacyIdMarcPath": {
-            "title": "Path to legacy id in the records",
             "description": "The path to the field where the legacy id is located. Example syntax: '001' or '951$c'",
+            "title": "Path to legacy id in the records",
             "type": "string"
         },
         "deduplicateHoldingsStatements": {
-            "title": "Deduplicate holdings statements",
-            "description": "If set to False, duplicate holding statements within the same record will remain in place",
             "default": true,
+            "description": "If set to False, duplicate holding statements within the same record will remain in place",
+            "title": "Deduplicate holdings statements",
             "type": "boolean"
         },
         "locationMapFileName": {
-            "title": "Path to location map file",
             "description": "Must be a TSV file located in the mapping_files folder",
+            "title": "Path to location map file",
             "type": "string"
         },
         "defaultCallNumberTypeName": {
-            "title": "Default callnumber type name",
-            "description": "The name of the callnumber type that will be used as fallback",
+            "description": "The name of the call_number type that will be used as fallback",
+            "title": "Default call_number type name",
             "type": "string"
         },
         "fallbackHoldingsTypeId": {
-            "title": "Fallback holdings type id",
             "description": "The UUID of the Holdings type that will be used for unmapped values",
+            "title": "Fallback holdings type id",
+            "type": "string"
+        },
+        "supplementalMfhdMappingRulesFile": {
+            "default": "",
+            "description": "The name of the file in the mapping_files directory containing supplemental MFHD mapping rules",
+            "title": "Supplemental MFHD mapping rules file",
+            "type": "string"
+        },
+        "includeMrkStatements": {
+            "default": false,
+            "description": "If set to true, the MARC statements will be included in the output as MARC Maker format fields. If set to false (default), the MARC statements will not be included in the output.",
+            "title": "Include MARC statements (MRK-format) as staff-only Holdings notes",
+            "type": "boolean"
+        },
+        "mrkHoldingsNoteType": {
+            "default": "Original MARC holdings statements",
+            "description": "The name of the note type to use for MARC (MRK) statements. ",
+            "title": "MARC Holdings Note type",
+            "type": "string"
+        },
+        "includeMfhdMrkAsNote": {
+            "default": false,
+            "description": "If set to true, the MARC statements will be included in the output as a (MRK) note. If set to false (default), the MARC statements will not be included in the output.",
+            "title": "Include MARC Record (as MARC Maker Representation) as note",
+            "type": "boolean"
+        },
+        "mfhdMrkNoteType": {
+            "default": "Original MFHD Record",
+            "description": "The name of the note type to use for MFHD (MRK) note. ",
+            "title": "MARC Record (as MARC Maker Representation) note type",
+            "type": "string"
+        },
+        "includeMfhdMrcAsNote": {
+            "default": false,
+            "description": "If set to true, the MARC record will be included in the output as a decoded binary MARC21 record. If set to false (default), the MARC record will not be included in the output.",
+            "title": "Include MARC Record (as MARC21 decoded string) as note",
+            "type": "boolean"
+        },
+        "mfhdMrcNoteType": {
+            "default": "Original MFHD (MARC21)",
+            "description": "The name of the note type to use for MFHD (MRC) note. ",
+            "title": "MARC Record (as MARC21 decoded string) note type",
             "type": "string"
         }
     },
@@ -102,42 +219,6 @@
         "defaultCallNumberTypeName",
         "fallbackHoldingsTypeId"
     ],
-    "definitions": {
-        "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
-            "properties": {
-                "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
-                    "default": "",
-                    "type": "string"
-                },
-                "discovery_suppressed": {
-                    "title": "Discovery suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "staff_suppressed": {
-                    "title": "Staff suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "service_point_id": {
-                    "title": "Service point ID",
-                    "default": "",
-                    "type": "string"
-                }
-            }
-        },
-        "HridHandling": {
-            "title": "HridHandling",
-            "description": "Enum determining how the HRID generation should be handled.\n        - default: Enumerates the HRID, building on the current value in the HRID settings\n        - preserve001: Takes the 001 and uses this as the HRID.\n\n    Args:\n        str (_type_): _description_\n        Enum (_type_): _description_\n    ",
-            "enum": [
-                "default",
-                "preserve001"
-            ],
-            "type": "string"
-        }
-    }
+    "title": "TaskConfiguration",
+    "type": "object"
 }

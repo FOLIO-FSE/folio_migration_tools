@@ -1,87 +1,46 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
-    "properties": {
-        "name": {
-            "title": "Name",
-            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
-            "type": "string"
-        },
-        "migrationTaskType": {
-            "title": "Migration task type",
-            "description": "The type of migration task you want to perform",
-            "type": "string"
-        },
-        "files": {
-            "title": "Source files",
-            "description": "List of MARC21 files with authority records",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
-        },
-        "ilsFlavour": {
-            "title": "ILS flavour",
-            "description": "The type of ILS you are migrating records from.",
-            "allOf": [
-                {
-                    "$ref": "#/definitions/IlsFlavour"
-                }
-            ]
-        },
-        "tagsToDelete": {
-            "title": "Tags to delete from MARC record",
-            "description": "Tags in the incoming MARC authority that the process should remove before adding them into FOLIO. These tags will be used in the transformation before getting removed.",
-            "default": [],
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
-        },
-        "createSourceRecords": {
-            "title": "Create source records",
-            "description": "Controls wheter or not to retain the MARC records in Source Record Storage.",
-            "default": true,
-            "type": "boolean"
-        }
-    },
-    "required": [
-        "name",
-        "migrationTaskType",
-        "files",
-        "ilsFlavour"
-    ],
-    "definitions": {
+    "$defs": {
         "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
             "properties": {
                 "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
                     "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
                     "type": "string"
                 },
                 "discovery_suppressed": {
-                    "title": "Discovery suppressed",
                     "default": false,
+                    "title": "Discovery suppressed",
                     "type": "boolean"
                 },
                 "staff_suppressed": {
-                    "title": "Staff suppressed",
                     "default": false,
+                    "title": "Staff suppressed",
                     "type": "boolean"
                 },
                 "service_point_id": {
-                    "title": "Service point ID",
                     "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
                     "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
                 }
-            }
+            },
+            "title": "FileDefinition",
+            "type": "object"
         },
         "IlsFlavour": {
-            "title": "IlsFlavour",
-            "description": " ",
             "enum": [
                 "aleph",
                 "voyager",
@@ -94,7 +53,64 @@
                 "custom",
                 "none"
             ],
+            "title": "IlsFlavour",
             "type": "string"
         }
-    }
+    },
+    "properties": {
+        "name": {
+            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
+            "title": "Name",
+            "type": "string"
+        },
+        "migrationTaskType": {
+            "description": "The type of migration task you want to perform",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
+            "type": "string"
+        },
+        "files": {
+            "description": "List of MARC21 files with authority records",
+            "items": {
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Source files",
+            "type": "array"
+        },
+        "ilsFlavour": {
+            "$ref": "#/$defs/IlsFlavour",
+            "description": "The type of ILS you are migrating records from.",
+            "title": "ILS flavour"
+        },
+        "tagsToDelete": {
+            "default": [],
+            "description": "Tags in the incoming MARC authority that the process should remove before adding them into FOLIO. These tags will be used in the transformation before getting removed.",
+            "items": {
+                "type": "string"
+            },
+            "title": "Tags to delete from MARC record",
+            "type": "array"
+        },
+        "createSourceRecords": {
+            "default": true,
+            "description": "Controls wheter or not to retain the MARC records in Source Record Storage.",
+            "title": "Create source records",
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "name",
+        "migrationTaskType",
+        "files",
+        "ilsFlavour"
+    ],
+    "title": "TaskConfiguration",
+    "type": "object"
 }

@@ -112,9 +112,45 @@
                     "type": "string"
                 },
                 "metadata": {
-                    "description": "Metadata about creation to user fine/fee account, provided by the server",
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "metadata.schema",
+                    "title": "Metadata Schema",
+                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                     "type": "object",
-                    "$ref": "raml-util/schemas/metadata.schema"
+                    "properties": {
+                        "createdDate": {
+                            "description": "Date and time when the record was created",
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "createdByUserId": {
+                            "description": "ID of the user who created the record (when available)",
+                            "type": "string",
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                        },
+                        "createdByUsername": {
+                            "description": "Username of the user who created the record (when available)",
+                            "type": "string"
+                        },
+                        "updatedDate": {
+                            "description": "Date and time when the record was last updated",
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "updatedByUserId": {
+                            "description": "ID of the user who last updated the record (when available)",
+                            "type": "string",
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                        },
+                        "updatedByUsername": {
+                            "description": "Username of the user who last updated the record (when available)",
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "createdDate"
+                    ]
                 },
                 "dueDate": {
                     "description": "Date time when the item is due to be returned",
@@ -127,42 +163,67 @@
                     "format": "date-time"
                 },
                 "loanId": {
-                    "description": "ID of the loan",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "userId": {
-                    "description": "ID of the user",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "itemId": {
-                    "description": "ID of the item",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "materialTypeId": {
-                    "description": "ID of the materialType",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "feeFineId": {
-                    "description": "ID of the fee/fine",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "ownerId": {
-                    "description": "ID of the owner",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "id": {
-                    "description": "User fine/fee account id, UUID",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "holdingsRecordId": {
-                    "description": "Item field: item.holdingsRecordId",
-                    "$ref": "raml-util/schemas/uuid.schema",
-                    "readonly": true
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "instanceId": {
-                    "description": "Holdings record field: holdingsRecord.instanceId",
-                    "$ref": "raml-util/schemas/uuid.schema",
-                    "readonly": true
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "contributors": {
                     "type": "array",
@@ -183,26 +244,39 @@
                     }
                 },
                 "loanPolicyId": {
-                    "description": "Loan policy ID",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "overdueFinePolicyId": {
-                    "description": "Overdue fine policy ID",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "lostItemFeePolicyId": {
-                    "description": "Lost item fee policy ID",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "processId": {
-                    "description": "Randomly generated UUID added to fees/fines created in scope of the same process (e.g. same check-in or same scheduled Lost Item Fee generation job run)",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 }
             },
             "additionalProperties": false,
             "required": [
                 "amount",
                 "remaining",
+                "status",
                 "paymentStatus",
                 "userId",
                 "feeFineId",
@@ -239,7 +313,7 @@
                     "type": "number"
                 },
                 "balance": {
-                    "description": "Calculated amount of remaining balance based on original fee/fine and what has been paid/waived/tranferred/refunded",
+                    "description": "Calculated amount of remaining balance based on original fee/fine and what has been paid/waived/transferred/refunded",
                     "javaType": "org.folio.rest.domain.MonetaryValue",
                     "type": "number"
                 },
@@ -248,7 +322,14 @@
                     "type": "string"
                 },
                 "createdAt": {
-                    "description": "Location where activity took place (from login information)",
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
+                },
+                "originalCreatedAt": {
+                    "description": "Original invalid (non-UUID) value of 'createdAt' moved here when UUID-validation was enabled for 'createdAt'",
                     "type": "string"
                 },
                 "source": {
@@ -260,16 +341,25 @@
                     "type": "string"
                 },
                 "accountId": {
-                    "description": "ID of the accounts",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "userId": {
-                    "description": "ID of the user",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 },
                 "id": {
-                    "description": "Fine/fee action id, UUID",
-                    "$ref": "raml-util/schemas/uuid.schema"
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "uuid.schema",
+                    "description": "A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$"
                 }
             },
             "additionalProperties": false,

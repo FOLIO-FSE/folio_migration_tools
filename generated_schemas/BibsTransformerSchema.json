@@ -1,133 +1,55 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
-    "properties": {
-        "name": {
-            "title": "Name",
-            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
-            "type": "string"
-        },
-        "migrationTaskType": {
-            "title": "Migration task type",
-            "description": "The type of migration task you want to perform.",
-            "type": "string"
-        },
-        "files": {
-            "title": "Source files",
-            "description": "List of MARC21 files with bibliographic records.",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
-        },
-        "ilsFlavour": {
-            "title": "ILS flavour",
-            "description": "The type of ILS you are migrating records from.",
-            "allOf": [
-                {
-                    "$ref": "#/definitions/IlsFlavour"
-                }
-            ]
-        },
-        "customBibIdField": {
-            "title": "Custom BIB ID field",
-            "description": "A string representing a MARC field with optional subfield indicated by a \"$\" (eg. \"991$a\") from which to draw legacy Bib ID. Use this in combination with `ilsFlavour: \"custom\"`. Defaults to \"001\", and is ignored for all other ilsFlavours.",
-            "default": "001",
-            "type": "string"
-        },
-        "addAdministrativeNotesWithLegacyIds": {
-            "title": "Add administrative notes with legacy IDs",
-            "description": "If set to true, an Administrative note will be added to the records containing the legacy ID. Use this in order to protect the values from getting overwritten by overlays,",
-            "default": true,
-            "type": "boolean"
-        },
-        "tagsToDelete": {
-            "title": "Tags to delete from MARC record",
-            "description": "Tags in the incoming MARC authority that the process should remove before adding them into FOLIO. These tags will be used in the transformation before getting removed.",
-            "default": [],
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
-        },
-        "createSourceRecords": {
-            "title": "Create source records",
-            "description": "Controls wheter or not to retain the MARC records in Source Record Storage.",
-            "default": true,
-            "type": "boolean"
-        },
-        "parseCatalogedDate": {
-            "title": "Parse cataloged date",
-            "description": "Parse fields mapped to catalogedDate into a FOLIO accepted date string using dateutil.parser. Verify results carefully when using",
-            "default": false,
-            "type": "boolean"
-        },
-        "hridHandling": {
-            "title": "HRID Handling",
-            "description": "Setting to default will make FOLIO generate HRIDs and move the existing 001:s into a 035, concatenated with the 003. Choosing preserve001 means the 001:s will remain in place, and that they will also become the HRIDs",
-            "default": "default",
-            "allOf": [
-                {
-                    "$ref": "#/definitions/HridHandling"
-                }
-            ]
-        },
-        "resetHridSettings": {
-            "title": "Reset HRID settings",
-            "description": "Setting to true means the task will reset the HRID counters for this particular record type",
-            "default": false,
-            "type": "boolean"
-        },
-        "updateHridSettings": {
-            "title": "Update HRID settings",
-            "description": "At the end of the run, update FOLIO with the HRID settings",
-            "default": true,
-            "type": "boolean"
-        },
-        "deactivate035From001": {
-            "title": "Create 035 from 001 and 003",
-            "description": "This deactivates the FOLIO default functionality of moving the previous 001 into a 035, prefixed with the value from 003",
-            "default": false,
-            "type": "boolean"
-        }
-    },
-    "required": [
-        "name",
-        "migrationTaskType",
-        "files",
-        "ilsFlavour"
-    ],
-    "definitions": {
+    "$defs": {
         "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
             "properties": {
                 "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
                     "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
                     "type": "string"
                 },
                 "discovery_suppressed": {
-                    "title": "Discovery suppressed",
                     "default": false,
+                    "title": "Discovery suppressed",
                     "type": "boolean"
                 },
                 "staff_suppressed": {
-                    "title": "Staff suppressed",
                     "default": false,
+                    "title": "Staff suppressed",
                     "type": "boolean"
                 },
                 "service_point_id": {
-                    "title": "Service point ID",
                     "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
                     "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
                 }
-            }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        },
+        "HridHandling": {
+            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
+            "enum": [
+                "default",
+                "preserve001"
+            ],
+            "title": "HridHandling",
+            "type": "string"
         },
         "IlsFlavour": {
-            "title": "IlsFlavour",
-            "description": " ",
             "enum": [
                 "aleph",
                 "voyager",
@@ -140,16 +62,134 @@
                 "custom",
                 "none"
             ],
-            "type": "string"
-        },
-        "HridHandling": {
-            "title": "HridHandling",
-            "description": "Enum determining how the HRID generation should be handled.\n        - default: Enumerates the HRID, building on the current value in the HRID settings\n        - preserve001: Takes the 001 and uses this as the HRID.\n\n    Args:\n        str (_type_): _description_\n        Enum (_type_): _description_\n    ",
-            "enum": [
-                "default",
-                "preserve001"
-            ],
+            "title": "IlsFlavour",
             "type": "string"
         }
-    }
+    },
+    "properties": {
+        "name": {
+            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
+            "title": "Name",
+            "type": "string"
+        },
+        "migrationTaskType": {
+            "description": "The type of migration task you want to perform.",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
+            "type": "string"
+        },
+        "files": {
+            "description": "List of MARC21 files with bibliographic records.",
+            "items": {
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Source files",
+            "type": "array"
+        },
+        "createSourceRecords": {
+            "default": false,
+            "description": "Controls whether or not to retain the MARC records in Source Record Storage.",
+            "title": "Create source records",
+            "type": "boolean"
+        },
+        "hridHandling": {
+            "$ref": "#/$defs/HridHandling",
+            "default": "default",
+            "description": "Setting to default will make FOLIO generate HRIDs and move the existing 001:s into a 035, concatenated with the 003. Choosing preserve001 means the 001:s will remain in place, and that they will also become the HRIDs",
+            "title": "HRID Handling"
+        },
+        "deactivate035From001": {
+            "default": false,
+            "description": "This deactivates the FOLIO default functionality of moving the previous 001 into a 035, prefixed with the value from 003",
+            "title": "Create 035 from 001 and 003",
+            "type": "boolean"
+        },
+        "statisticalCodesMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "default": "",
+            "description": "Path to the file containing the mapping of statistical codes. The file should be in TSV format with legacy_stat_code and folio_code columns.",
+            "title": "Statistical code map file name"
+        },
+        "statisticalCodeMappingFields": {
+            "default": [],
+            "description": "List of fields + subfields to be used for mapping statistical codes. Subfields should be delimited by a \"$\" (eg. 907$a). Single repeating subfields will be treated as unique values. Multiple subfields will be concatenated together with a space.",
+            "items": {
+                "type": "string"
+            },
+            "title": "Statistical code mapping fields",
+            "type": "array"
+        },
+        "ils_flavor": {
+            "$ref": "#/$defs/IlsFlavour",
+            "description": "The type of ILS you are migrating records from.",
+            "title": "ILS flavour"
+        },
+        "customBibIdField": {
+            "default": "001",
+            "description": "A string representing a MARC field with optional subfield indicated by a \"$\" (eg. \"991$a\") from which to draw legacy Bib ID. Use this in combination with `ilsFlavour: \"custom\"`. Defaults to \"001\", and is ignored for all other ilsFlavours.",
+            "title": "Custom BIB ID field",
+            "type": "string"
+        },
+        "addAdministrativeNotesWithLegacyIds": {
+            "default": true,
+            "description": "If set to true, an Administrative note will be added to the records containing the legacy ID. Use this in order to protect the values from getting overwritten by overlays,",
+            "title": "Add administrative notes with legacy IDs",
+            "type": "boolean"
+        },
+        "tagsToDelete": {
+            "default": [],
+            "description": "Tags in the incoming MARC authority that the process should remove before adding them into FOLIO. These tags will be used in the transformation before getting removed.",
+            "items": {
+                "type": "string"
+            },
+            "title": "Tags to delete from MARC record",
+            "type": "array"
+        },
+        "dataImportMarc": {
+            "default": true,
+            "description": "If set to true, the process will generate a file of binary MARC records that canbe imported into FOLIO using the Data Import APIs. If set to false, only a fileof FOLIO instance records (and optional SRS records) will be generated.",
+            "title": "Generate a MARC file for data import overlay of instances",
+            "type": "boolean"
+        },
+        "parseCatalogedDate": {
+            "default": false,
+            "description": "Parse fields mapped to catalogedDate into a FOLIO accepted date string using dateutil.parser. Verify results carefully when using",
+            "title": "Parse cataloged date",
+            "type": "boolean"
+        },
+        "resetHridSettings": {
+            "default": false,
+            "description": "Setting to true means the task will reset the HRID counters for this particular record type",
+            "title": "Reset HRID settings",
+            "type": "boolean"
+        },
+        "updateHridSettings": {
+            "default": true,
+            "description": "At the end of the run, update FOLIO with the HRID settings",
+            "title": "Update HRID settings",
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "name",
+        "migrationTaskType",
+        "files",
+        "ils_flavor"
+    ],
+    "title": "TaskConfiguration",
+    "type": "object"
 }

@@ -1,71 +1,107 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
+    "$defs": {
+        "FileDefinition": {
+            "properties": {
+                "file_name": {
+                    "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "default": false,
+                    "title": "Discovery suppressed",
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "default": false,
+                    "title": "Staff suppressed",
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
+                    "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
+                }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        }
+    },
     "properties": {
         "name": {
-            "title": "Name",
-            "type": "string"
-        },
-        "compositeCourseMapPath": {
-            "title": "Compositecoursemappath",
+            "description": "The name of the task",
+            "title": "Task name",
             "type": "string"
         },
         "migrationTaskType": {
-            "title": "Migrationtasktype",
+            "description": "Type of migration task",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
+            "type": "string"
+        },
+        "compositeCourseMapPath": {
+            "description": "Path to the composite course map file",
+            "title": "Composite course map path",
             "type": "string"
         },
         "coursesFile": {
-            "$ref": "#/definitions/FileDefinition"
+            "$ref": "#/$defs/FileDefinition",
+            "description": "File containing course data",
+            "title": "Courses file"
         },
         "termsMapPath": {
-            "title": "Termsmappath",
+            "description": "Path to the terms map file",
+            "title": "Terms map path",
             "type": "string"
         },
         "departmentsMapPath": {
-            "title": "Departmentsmappath",
+            "description": "Path to the departments map file",
+            "title": "Departments map path",
             "type": "string"
         },
         "lookUpInstructor": {
-            "title": "Lookupinstructor",
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": false,
-            "type": "boolean"
+            "description": "Flag to indicate whether to look up instructors. By default is False.",
+            "title": "Look up instructor"
         }
     },
     "required": [
         "name",
-        "compositeCourseMapPath",
         "migrationTaskType",
+        "compositeCourseMapPath",
         "coursesFile",
         "termsMapPath",
         "departmentsMapPath"
     ],
-    "definitions": {
-        "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
-            "properties": {
-                "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
-                    "default": "",
-                    "type": "string"
-                },
-                "discovery_suppressed": {
-                    "title": "Discovery suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "staff_suppressed": {
-                    "title": "Staff suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "service_point_id": {
-                    "title": "Service point ID",
-                    "default": "",
-                    "type": "string"
-                }
-            }
-        }
-    }
+    "title": "TaskConfiguration",
+    "type": "object"
 }
