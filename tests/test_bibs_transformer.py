@@ -82,7 +82,7 @@ def test_wrap_up(mock_clean_out_empty_logs, mock_folder_structure, mock_check_so
 
 def test_different_ils_flavours(mock_folder_structure, mock_check_source_files):
     for ils_flavour in IlsFlavour:
-        task_config = TASK_CONFIG.copy(update={"ils_flavour": ils_flavour})
+        task_config = TASK_CONFIG.model_copy(update={"ils_flavour": ils_flavour})
         library_config = get_mocked_library_config()
         folio_client = mocked_folio_client()
         transformer = BibsTransformer(task_config, library_config, folio_client)
@@ -99,7 +99,7 @@ def test_error_handling(mock_folder_structure, mock_check_source_files):
 
 
 def test_hrid_settings(mock_folder_structure, mock_check_source_files):
-    task_config = TASK_CONFIG.copy(update={
+    task_config = TASK_CONFIG.model_copy(update={
         "reset_hrid_settings": True,
         "update_hrid_settings": True
     })
