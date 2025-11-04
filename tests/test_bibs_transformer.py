@@ -1,4 +1,5 @@
 from unittest.mock import patch, MagicMock
+import pytest
 
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -19,20 +20,32 @@ TASK_CONFIG = BibsTransformer.TaskConfiguration(
     ils_flavour=IlsFlavour.voyager
 )
 
+
+@pytest.fixture
+def mock_folder_structure():
+    """Fixture to mock FolderStructure"""
+    with patch(
+        'folio_migration_tools.migration_tasks.migration_task_base.FolderStructure',
+        return_value=get_mocked_folder_structure()
+    ) as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_check_source_files():
+    """Fixture to mock check_source_files"""
+    with patch(
+        'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer.check_source_files',
+        return_value=[]
+    ) as mock:
+        yield mock
+
+
 def test_get_object_type():
     assert BibsTransformer.get_object_type() == FOLIONamespaces.instances
 
 
-@patch(
-    'folio_migration_tools.migration_tasks.migration_task_base.FolderStructure',
-    return_value=get_mocked_folder_structure()
-)
-@patch(
-    'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer.check_source_files',
-    new_callable=MagicMock
-)
-def test_init(mock_check_source_files, _mock_folder_structure):
-    mock_check_source_files.return_value = []
+def test_init(mock_folder_structure, mock_check_source_files):
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
     transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
@@ -42,19 +55,10 @@ def test_init(mock_check_source_files, _mock_folder_structure):
 
 
 @patch(
-    'folio_migration_tools.migration_tasks.migration_task_base.FolderStructure',
-    return_value=get_mocked_folder_structure()
-)
-@patch(
-    'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer.check_source_files',
-    new_callable=MagicMock
-)
-@patch(
     'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer'
     '.do_work_marc_transformer'
 )
-def test_do_work(mock_do_work_marc_transformer, mock_check_source_files, _mock_folder_structure):
-    mock_check_source_files.return_value = []
+def test_do_work(mock_do_work_marc_transformer, mock_folder_structure, mock_check_source_files):
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
     transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
@@ -64,19 +68,10 @@ def test_do_work(mock_do_work_marc_transformer, mock_check_source_files, _mock_f
 
 
 @patch(
-    'folio_migration_tools.migration_tasks.migration_task_base.FolderStructure',
-    return_value=get_mocked_folder_structure()
-)
-@patch(
-    'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer.check_source_files',
-    new_callable=MagicMock
-)
-@patch(
     'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer'
     '.clean_out_empty_logs'
 )
-def test_wrap_up(mock_clean_out_empty_logs, mock_check_source_files, _mock_folder_structure):
-    mock_check_source_files.return_value = []
+def test_wrap_up(mock_clean_out_empty_logs, mock_folder_structure, mock_check_source_files):
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
     transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
@@ -85,16 +80,7 @@ def test_wrap_up(mock_clean_out_empty_logs, mock_check_source_files, _mock_folde
     mock_clean_out_empty_logs.assert_called_once()
 
 
-@patch(
-    'folio_migration_tools.migration_tasks.migration_task_base.FolderStructure',
-    return_value=get_mocked_folder_structure()
-)
-@patch(
-    'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer.check_source_files',
-    new_callable=MagicMock
-)
-def test_different_ils_flavours(mock_check_source_files, _mock_folder_structure):
-    mock_check_source_files.return_value = []
+def test_different_ils_flavours(mock_folder_structure, mock_check_source_files):
     for ils_flavour in IlsFlavour:
         task_config = TASK_CONFIG.copy(update={"ils_flavour": ils_flavour})
         library_config = get_mocked_library_config()
@@ -104,16 +90,7 @@ def test_different_ils_flavours(mock_check_source_files, _mock_folder_structure)
         # Check that transformer is properly initialized for each ILS type
 
 
-@patch(
-    'folio_migration_tools.migration_tasks.migration_task_base.FolderStructure',
-    return_value=get_mocked_folder_structure()
-)
-@patch(
-    'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer.check_source_files',
-    new_callable=MagicMock
-)
-def test_error_handling(mock_check_source_files, _mock_folder_structure):
-    mock_check_source_files.return_value = []
+def test_error_handling(mock_folder_structure, mock_check_source_files):
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
     transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
@@ -121,16 +98,7 @@ def test_error_handling(mock_check_source_files, _mock_folder_structure):
     # Check handling of different error types
 
 
-@patch(
-    'folio_migration_tools.migration_tasks.migration_task_base.FolderStructure',
-    return_value=get_mocked_folder_structure()
-)
-@patch(
-    'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer.check_source_files',
-    new_callable=MagicMock
-)
-def test_hrid_settings(mock_check_source_files, _mock_folder_structure):
-    mock_check_source_files.return_value = []
+def test_hrid_settings(mock_folder_structure, mock_check_source_files):
     task_config = TASK_CONFIG.copy(update={
         "reset_hrid_settings": True,
         "update_hrid_settings": True
@@ -142,16 +110,7 @@ def test_hrid_settings(mock_check_source_files, _mock_folder_structure):
     # Check that HRID settings are properly handled
 
 
-@patch(
-    'folio_migration_tools.migration_tasks.migration_task_base.FolderStructure',
-    return_value=get_mocked_folder_structure()
-)
-@patch(
-    'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer.check_source_files',
-    new_callable=MagicMock
-)
-def test_marc_file_processing(mock_check_source_files, _mock_folder_structure):
-    mock_check_source_files.return_value = []
+def test_marc_file_processing(mock_folder_structure, mock_check_source_files):
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
     transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)

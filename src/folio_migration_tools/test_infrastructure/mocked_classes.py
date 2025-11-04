@@ -2,8 +2,7 @@ import json
 import logging
 import uuid
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock, patch
 
 from folioclient import FolioClient
 
@@ -28,13 +27,31 @@ def mocked_holdings_mapper() -> Mock:
 
 def mocked_folio_client() -> FolioClient:
     try:
-        FolioClient.login = MagicMock(name="login", return_value=None)
-        FolioClient.okapi_token = "token"  # noqa:S105
-        mocked_folio = FolioClient("okapi_url", "tenant_id", "username", "password")
+        # Patch the login method to avoid network calls during instantiation
+        with patch.object(FolioClient, "login", return_value=None):
+            mocked_folio = FolioClient("http://test.com", "tenant_id", "username", "password")
+
+        # Set up the mock methods and properties after instantiation
         mocked_folio.folio_get_single_object = folio_get_single_object_mocked
         mocked_folio.folio_get_all = folio_get_all_mocked
         mocked_folio.get_from_github = folio_get_from_github
         mocked_folio.current_user = str(uuid.uuid4())
+
+        # Create a mock folio_auth object to provide token access
+        mock_auth = MagicMock()
+        mock_auth.folio_auth_token = "token"  # noqa:S105
+        mock_auth.folio_refresh_token = "refresh_token"  # noqa:S105
+        mock_auth.tenant_id = "tenant_id"
+        mocked_folio.folio_auth = mock_auth
+
+        # Mock ECS-related properties and methods to prevent network calls during tests
+        # Override the _initial_ecs_check method to do nothing
+        mocked_folio._initial_ecs_check = MagicMock()
+        mocked_folio._initial_ecs_check_done = True
+        mocked_folio._ecs_consortium = None
+        # Mock the is_ecs property to return False
+        type(mocked_folio).is_ecs = property(lambda self: False)
+
         return mocked_folio
     except Exception as ee:
         logging.error(ee)
@@ -225,8 +242,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "folio",
                 "metadata": {
                     "createdDate": "2024-09-04T01:54:20.719+00:00",
-                    "updatedDate": "2024-09-04T01:54:20.719+00:00"
-                }
+                    "updatedDate": "2024-09-04T01:54:20.719+00:00",
+                },
             },
             {
                 "id": "c4407cc7-d79f-4609-95bd-1cefb2e2b5c5",
@@ -234,8 +251,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "folio",
                 "metadata": {
                     "createdDate": "2024-09-04T01:54:20.722+00:00",
-                    "updatedDate": "2024-09-04T01:54:20.722+00:00"
-                }
+                    "updatedDate": "2024-09-04T01:54:20.722+00:00",
+                },
             },
             {
                 "id": "d6510242-5ec3-42ed-b593-3585d2e48fd6",
@@ -243,8 +260,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "folio",
                 "metadata": {
                     "createdDate": "2024-09-04T01:54:20.723+00:00",
-                    "updatedDate": "2024-09-04T01:54:20.723+00:00"
-                }
+                    "updatedDate": "2024-09-04T01:54:20.723+00:00",
+                },
             },
             {
                 "id": "e19eabab-a85c-4aef-a7b2-33bd9acef24e",
@@ -252,8 +269,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "folio",
                 "metadata": {
                     "createdDate": "2024-09-04T01:54:20.724+00:00",
-                    "updatedDate": "2024-09-04T01:54:20.724+00:00"
-                }
+                    "updatedDate": "2024-09-04T01:54:20.724+00:00",
+                },
             },
             {
                 "id": "db9b4787-95f0-4e78-becf-26748ce6bdeb",
@@ -261,8 +278,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "folio",
                 "metadata": {
                     "createdDate": "2024-09-04T01:54:20.725+00:00",
-                    "updatedDate": "2024-09-04T01:54:20.725+00:00"
-                }
+                    "updatedDate": "2024-09-04T01:54:20.725+00:00",
+                },
             },
             {
                 "id": "6a41b714-8574-4084-8d64-a9373c3fbb59",
@@ -270,8 +287,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "folio",
                 "metadata": {
                     "createdDate": "2024-09-04T01:54:20.728+00:00",
-                    "updatedDate": "2024-09-04T01:54:20.728+00:00"
-                }
+                    "updatedDate": "2024-09-04T01:54:20.728+00:00",
+                },
             },
             {
                 "id": "b160f13a-ddba-4053-b9c4-60ec5ea45d56",
@@ -279,8 +296,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "folio",
                 "metadata": {
                     "createdDate": "2024-09-04T01:54:20.728+00:00",
-                    "updatedDate": "2024-09-04T01:54:20.728+00:00"
-                }
+                    "updatedDate": "2024-09-04T01:54:20.728+00:00",
+                },
             },
             {
                 "id": "841d1873-015b-4bfb-a69f-6cbb41d925ba",
@@ -288,8 +305,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "local",
                 "metadata": {
                     "createdDate": "2025-05-02T01:54:20.728+00:00",
-                    "updatedDate": "2025-05-02T01:54:20.728+00:00"
-                }
+                    "updatedDate": "2025-05-02T01:54:20.728+00:00",
+                },
             },
             {
                 "id": "09c1e5c9-6f11-432e-bcbe-b9e733ccce57",
@@ -297,8 +314,8 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "local",
                 "metadata": {
                     "createdDate": "2025-05-02T01:54:20.728+00:00",
-                    "updatedDate": "2025-05-02T01:54:20.728+00:00"
-                }
+                    "updatedDate": "2025-05-02T01:54:20.728+00:00",
+                },
             },
             {
                 "id": "474120b0-d64e-4a6f-9c9c-e7d3e76f3cf5",
@@ -306,9 +323,9 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
                 "source": "local",
                 "metadata": {
                     "createdDate": "2025-05-02T01:54:20.728+00:00",
-                    "updatedDate": "2025-05-02T01:54:20.728+00:00"
-                }
-            }
+                    "updatedDate": "2025-05-02T01:54:20.728+00:00",
+                },
+            },
         ]
 
     elif ref_data_path in super_schema:
@@ -344,30 +361,33 @@ def folio_get_single_object_mocked(*args, **kwargs):
 
 
 def folio_get_from_github(owner, repo, file_path):
-    return FolioClient.get_latest_from_github(owner, repo, file_path, "")
+    return FolioClient.get_latest_from_github(owner, repo, file_path, True)
 
-OKAPI_URL = "http://localhost:9130"
+
+OKAPI_URL = "https://localhost:9130"
 LIBRARY_NAME = "Test Library"
+
 
 def get_mocked_library_config():
     return LibraryConfiguration(
         okapi_url=OKAPI_URL,
         tenant_id="test_tenant",
         okapi_username="test_user",
-        okapi_password="test_password",
+        okapi_password="test_password",  # noqa: S106
         base_folder=Path("."),
         library_name=LIBRARY_NAME,
         log_level_debug=False,
         folio_release=FolioRelease.sunflower,
-        iteration_identifier="test_iteration"
+        iteration_identifier="test_iteration",
     )
+
 
 def get_mocked_ecs_central_libarary_config():
     return LibraryConfiguration(
         okapi_url=OKAPI_URL,
         tenant_id="test_tenant",
         okapi_username="test_user",
-        okapi_password="test_password",
+        okapi_password="test_password",  # noqa: S106
         base_folder=Path("."),
         library_name=LIBRARY_NAME,
         log_level_debug=False,
@@ -376,13 +396,14 @@ def get_mocked_ecs_central_libarary_config():
         is_ecs=True,
     )
 
+
 def get_mocked_ecs_member_libarary_config():
     return LibraryConfiguration(
         okapi_url=OKAPI_URL,
         tenant_id="test_tenant",
         ecs_tenant_id="test_ecs_tenant",
         okapi_username="test_user",
-        okapi_password="test_password",
+        okapi_password="test_password",  # noqa: S106
         base_folder=Path("."),
         library_name=LIBRARY_NAME,
         log_level_debug=False,
@@ -391,6 +412,7 @@ def get_mocked_ecs_member_libarary_config():
         ecs_central_iteration_identifier="central_iteration",
         is_ecs=True,
     )
+
 
 def get_mocked_folder_structure():
     mock_fs = MagicMock()

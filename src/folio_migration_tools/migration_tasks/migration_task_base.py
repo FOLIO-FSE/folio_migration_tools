@@ -52,10 +52,8 @@ class MigrationTaskBase:
         self.ecs_tenant_id = (
             task_configuration.ecs_tenant_id or library_configuration.ecs_tenant_id
         )
-        self.ecs_tenant_header = (
-            {"x-okapi-tenant": self.ecs_tenant_id} if self.ecs_tenant_id else {}
-        )
-        self.folio_client.okapi_headers.update(self.ecs_tenant_header)
+        self.folio_client.tenant_id = self.ecs_tenant_id
+
         self.central_folder_structure: Optional[FolderStructure] = None
         if library_configuration.is_ecs and library_configuration.ecs_central_iteration_identifier:
             self.central_folder_structure = FolderStructure(

@@ -3,12 +3,12 @@ import json
 import logging
 import re
 import time
+from http import HTTPStatus
 from typing import Set
 
 import httpx
 import i18n
-from folioclient import FolioClient
-from httpx import HTTPError
+from folioclient import FolioClient, FolioClientError, FolioConnectionError, FolioValidationError
 
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.migration_report import MigrationReport
@@ -138,7 +138,6 @@ class CirculationHelper:
         if legacy_loan.proxy_patron_barcode:
             data.update({"proxyUserBarcode": legacy_loan.proxy_patron_barcode})
         path = "/circulation/check-out-by-barcode"
-        url = f"{self.folio_client.gateway_url}{path}"
         try:
             if legacy_loan.patron_barcode in self.missing_patron_barcodes:
                 error_message = i18n.t("Patron barcode already detected as missing")
@@ -147,108 +146,109 @@ class CirculationHelper:
                     f"Item Barcode:{legacy_loan.item_barcode}"
                 )
                 return TransactionResult(False, False, "", error_message, error_message)
-            req = httpx.post(url, headers=self.folio_client.okapi_headers, json=data, timeout=None)
-            if req.status_code == 422:
-                error_message_from_folio = json.loads(req.text)["errors"][0]["message"]
-                stat_message = error_message_from_folio
-                error_message = error_message_from_folio
-                if "has the item status" in error_message_from_folio:
-                    stat_message = re.findall(
-                        r"(?<=has the item status\s).*(?=\sand cannot be checked out)",
-                        error_message_from_folio,
-                    )[0]
-                    error_message = (
-                        f"{stat_message} for item with barcode {legacy_loan.item_barcode}"
-                    )
-                    return TransactionResult(
-                        False,
-                        True,
-                        None,
-                        error_message_from_folio,
-                        stat_message,
-                    )
-                elif "No item with barcode" in error_message_from_folio:
-                    error_message = f"No item with barcode {legacy_loan.item_barcode} in FOLIO"
-                    stat_message = "Item barcode not in FOLIO"
-                    self.missing_item_barcodes.add(legacy_loan.item_barcode)
-                    return TransactionResult(
-                        False,
-                        False,
-                        None,
-                        error_message_from_folio,
-                        stat_message,
-                    )
-
-                elif "find user with matching barcode" in error_message_from_folio:
-                    self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
-                    error_message = f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
-                    stat_message = i18n.t("Patron barcode not in FOLIO")
-                    return TransactionResult(
-                        False,
-                        False,
-                        None,
-                        error_message_from_folio,
-                        stat_message,
-                    )
-                elif "Cannot check out item that already has an open" in error_message_from_folio:
-                    return TransactionResult(
-                        False,
-                        False,
-                        None,
-                        error_message_from_folio,
-                        error_message_from_folio,
-                    )
-                elif "Item is already checked out" in error_message_from_folio:
-                    return TransactionResult(
-                        False,
-                        True,
-                        None,
-                        error_message_from_folio,
-                        error_message_from_folio,
-                    )
-                logging.error(
-                    f"{error_message} "
-                    f"Patron barcode: {legacy_loan.patron_barcode} "
-                    f"Item Barcode:{legacy_loan.item_barcode}"
-                )
-                self.migration_report.add("Details", stat_message)
+            loan = self.folio_client.folio_post(path, data)
+            stats = "Successfully checked out by barcode"
+            logging.debug(
+                "%s (item barcode %s}) in %ss",
+                stats,
+                legacy_loan.item_barcode,
+                f"{(time.time() - t0_function):.2f}",
+            )
+            return TransactionResult(True, False, loan, "", stats)
+        except FolioValidationError as fve:
+            error_message_from_folio = self.folio_client.handle_json_response(fve.response)[
+                "errors"
+            ][0]["message"]
+            stat_message = error_message_from_folio
+            error_message = error_message_from_folio
+            if "has the item status" in error_message_from_folio:
+                stat_message = re.findall(
+                    r"(?<=has the item status\s).*(?=\sand cannot be checked out)",
+                    error_message_from_folio,
+                )[0]
+                error_message = f"{stat_message} for item with barcode {legacy_loan.item_barcode}"
                 return TransactionResult(
-                    False, True, None, error_message, f"Check out error: {stat_message}"
+                    False,
+                    True,
+                    None,
+                    error_message_from_folio,
+                    stat_message,
                 )
-            elif req.status_code == 201:
-                stats = "Successfully checked out by barcode"
-                logging.debug(
-                    "%s (item barcode %s}) in %ss",
-                    stats,
-                    legacy_loan.item_barcode,
-                    f"{(time.time() - t0_function):.2f}",
+            elif "No item with barcode" in error_message_from_folio:
+                error_message = f"No item with barcode {legacy_loan.item_barcode} in FOLIO"
+                stat_message = "Item barcode not in FOLIO"
+                self.missing_item_barcodes.add(legacy_loan.item_barcode)
+                return TransactionResult(
+                    False,
+                    False,
+                    None,
+                    error_message_from_folio,
+                    stat_message,
                 )
-                return TransactionResult(True, False, json.loads(req.text), "", stats)
-            elif req.status_code == 204:
-                stats = "Successfully checked out by barcode"
-                logging.debug(
-                    "%s (item barcode %s) %s",
-                    stats,
-                    legacy_loan.item_barcode,
-                    req.status_code,
+
+            elif "find user with matching barcode" in error_message_from_folio:
+                self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
+                error_message = f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
+                stat_message = i18n.t("Patron barcode not in FOLIO")
+                return TransactionResult(
+                    False,
+                    False,
+                    None,
+                    error_message_from_folio,
+                    stat_message,
                 )
-                return TransactionResult(True, False, None, "", stats)
-            else:
-                req.raise_for_status()
-        except HTTPError:
+            elif "Cannot check out item that already has an open" in error_message_from_folio:
+                return TransactionResult(
+                    False,
+                    False,
+                    None,
+                    error_message_from_folio,
+                    error_message_from_folio,
+                )
+            elif "Item is already checked out" in error_message_from_folio:
+                return TransactionResult(
+                    False,
+                    True,
+                    None,
+                    error_message_from_folio,
+                    error_message_from_folio,
+                )
+            logging.error(
+                f"{error_message} "
+                f"Patron barcode: {legacy_loan.patron_barcode} "
+                f"Item Barcode:{legacy_loan.item_barcode}"
+            )
+            self.migration_report.add("Details", stat_message)
+            return TransactionResult(
+                False, True, None, error_message, f"Check out error: {stat_message}"
+            )
+        except FolioClientError as fce:
             logging.exception(
                 "%s\tPOST FAILED %s\n\t%s\n\t%s",
-                req.status_code,
-                url,
+                fce.response.status_code,
+                fce.request.url,
                 json.dumps(data),
-                req.text,
+                fce.response.text,
             )
             return TransactionResult(
                 False,
                 False,
                 None,
                 "5XX",
-                i18n.t("Failed checkout http status %{code}", code=req.status_code),
+                i18n.t("Failed checkout http status %{code}", code=fce.response.status_code),
+            )
+        except FolioConnectionError as fce:
+            logging.exception(
+                "Connection error\tPOST FAILED %s\n\t%s\n\t%s",
+                fce.request.url,
+                json.dumps(data),
+            )
+            return TransactionResult(
+                False,
+                False,
+                None,
+                "Connection error",
+                i18n.t("Connection error during checkout"),
             )
 
     @staticmethod
@@ -257,7 +257,6 @@ class CirculationHelper:
     ):
         try:
             path = "/circulation/requests"
-            url = f"{folio_client.gateway_url}{path}"
             data = legacy_request.serialize()
             data["requestProcessingParameters"] = {
                 "overrideBlocks": {
@@ -269,21 +268,31 @@ class CirculationHelper:
                     "comment": "Migrated from legacy system",
                 }
             }
-            req = httpx.post(url, headers=folio_client.okapi_headers, json=data, timeout=None)
-            logging.debug(f"POST {req.status_code}\t{url}\t{json.dumps(data)}")
-            if str(req.status_code) == "422":
-                message = json.loads(req.text)["errors"][0]["message"]
-                logging.error(f"{message}")
-                migration_report.add_general_statistics(message)
-                return False
-            else:
-                req.raise_for_status()
-                logging.info(
-                    "%s Successfully created %s",
-                    req.status_code,
-                    legacy_request.request_type,
+            _ = folio_client.folio_post(path, data)
+            logging.debug(f"POST {path}\t{json.dumps(data)}")
+            logging.info(
+                "%s Successfully created %s",
+                HTTPStatus.OK,
+                legacy_request.request_type,
+            )
+            return True
+        except FolioValidationError as fve:
+            message = folio_client.handle_json_response(fve.response)["errors"][0]["message"]
+            logging.error(message)
+            migration_report.add_general_statistics(message)
+            return False
+        except (FolioConnectionError, FolioClientError) as fce:
+            if client_response := getattr(fce, "response", None):
+                message = (
+                    f"HTTP {client_response.status_code} Error creating request: "
+                    f"{client_response.text}"
                 )
-                return True
+                logging.error(message)
+                migration_report.add_general_statistics(message)
+            else:
+                logging.error(f"Connection error creating request: {fce}")
+                migration_report.add_general_statistics("Connection error creating request")
+            return False
         except Exception as exception:
             logging.error(exception, exc_info=True)
             migration_report.add("Details", exception)

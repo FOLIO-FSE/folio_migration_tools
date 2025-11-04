@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 from pydantic.types import DirectoryPath
 
 
@@ -25,8 +25,7 @@ class FileDefinition(BaseModel):
         Field(
             title="File name",
             description=(
-                "Name of the file to be processed. "
-                "The location of the file depends on the context"
+                "Name of the file to be processed. The location of the file depends on the context"
             ),
         ),
     ] = ""
@@ -37,10 +36,9 @@ class FileDefinition(BaseModel):
         Field(
             title="Service point ID",
             description=(
-                "Service point to be used for "
-                "transactions created from this file (Loans-only)."
+                "Service point to be used for transactions created from this file (Loans-only)."
             ),
-        )
+        ),
     ] = ""
     statistical_code: Annotated[
         str,
@@ -51,7 +49,7 @@ class FileDefinition(BaseModel):
                 "this file (Instances, Holdings, Items). Specify multiple codes using "
                 "multi_field_delimiter."
             ),
-        )
+        ),
     ] = ""
     create_source_records: Annotated[
         bool,
@@ -85,6 +83,7 @@ class FolioRelease(str, Enum):
     ramsons = "ramsons"
     sunflower = "sunflower"
     trillium = "trillium"
+    umbrellaleaf = "umbrellaleaf"
 
 
 class LibraryConfiguration(BaseModel):
@@ -96,7 +95,6 @@ class LibraryConfiguration(BaseModel):
                 "The URL of the FOLIO API gateway instance. "
                 "You can find this in Settings > Software versions > API gateway services."
             ),
-            alias="okapi_url"
         ),
     ]
     tenant_id: Annotated[
@@ -128,18 +126,14 @@ class LibraryConfiguration(BaseModel):
                 "The username for the FOLIO user account performing the migration. "
                 "User should have a full admin permissions/roles in FOLIO. "
             ),
-            alias="okapi_username"
         ),
     ]
     folio_password: Annotated[
         str,
         Field(
             title="FOLIO API Gateway password",
-            description=(
-                "The password for the FOLIO user account performing the migration. "
-            ),
-            alias="okapi_password"
-        )
+            description=("The password for the FOLIO user account performing the migration. "),
+        ),
     ]
     base_folder: DirectoryPath = Field(
         description=(
@@ -163,29 +157,34 @@ class LibraryConfiguration(BaseModel):
     ] = 5000
     failed_percentage_threshold: Annotated[
         int,
-        Field(
-            description=("Percentage of failed records until the process shuts down")
-        ),
+        Field(description=("Percentage of failed records until the process shuts down")),
     ] = 20
     generic_exception_threshold: Annotated[
         int,
-        Field(
-            description=("Number of generic exceptions until the process shuts down")
-        ),
+        Field(description=("Number of generic exceptions until the process shuts down")),
     ] = 50
-    library_name: str
-    log_level_debug: bool
-    folio_release: FolioRelease = Field(
-        description=(
-            "The Flavour of the ILS you are migrating from. This choice is "
-            "maninly tied to the handling of legacy identifiers and thereby the "
-            "deterministic UUIDs generated from them."
-        )
+    library_name: Annotated[str, Field(description="Name of the library being migrated")]
+    log_level_debug: Annotated[bool, Field(description="Enable debug level logging")] = False
+    folio_release: Annotated[
+        FolioRelease,
+        Field(
+            description=(
+                "The Flavour of the ILS you are migrating from. This choice is "
+                "maninly tied to the handling of legacy identifiers and thereby the "
+                "deterministic UUIDs generated from them."
+            )
+        ),
+    ]
+    iteration_identifier: Annotated[
+        str,
+        Field(
+            description="The name of the current directory under base_folder/iterations/ to be "
+            "used for this migration."
+        ),
+    ]
+    add_time_stamp_to_file_names: Annotated[bool, Field(title="Add time stamp to file names")] = (
+        False
     )
-    iteration_identifier: str
-    add_time_stamp_to_file_names: Annotated[
-        bool, Field(title="Add time stamp to file names")
-    ] = False
     use_gateway_url_for_uuids: Annotated[
         bool,
         Field(
@@ -217,3 +216,26 @@ class LibraryConfiguration(BaseModel):
             ),
         ),
     ] = ""
+
+    @root_validator(pre=True)
+    def handle_legacy_field_names(cls, values):
+        """Handle backward compatibility for legacy okapi field names."""
+        # Handle folio_password / okapi_password backward compatibility
+        if "folio_password" not in values and "okapi_password" in values:
+            values["folio_password"] = values["okapi_password"]
+        if "gateway_url" not in values and "okapi_url" in values:
+            values["gateway_url"] = values["okapi_url"]
+        if "folio_username" not in values and "okapi_username" in values:
+            values["folio_username"] = values["okapi_username"]
+        return values
+
+    @root_validator(pre=True)
+    def set_error_thresholds_for_debug(cls, values):
+        """If log_level_debug is true, set error thresholds to very high values to avoid
+        process shutdown during debugging.
+        """
+        if values.get("log_level_debug", False):
+            values["failed_records_threshold"] = 10_000_000
+            values["failed_percentage_threshold"] = 100
+            values["generic_exception_threshold"] = 10_000_000
+        return values
