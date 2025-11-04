@@ -178,11 +178,11 @@ def main():
         )
         sys.exit("Invalid JSON")
     except ValidationError as e:
-        print(e.json())
+        print(json.dumps(e.errors(), indent=2))
         print("Validation errors in configuration file:")
         print("==========================================")
 
-        for validation_message in json.loads(e.json()):
+        for validation_message in e.errors():
             print(
                 f"{validation_message['msg']}\t"
                 f"{', '.join(humps.camelize(str(x)) for x in validation_message['loc'])}"

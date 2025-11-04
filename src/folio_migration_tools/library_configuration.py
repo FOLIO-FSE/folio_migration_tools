@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 from pydantic.types import DirectoryPath
 
 
@@ -217,7 +217,8 @@ class LibraryConfiguration(BaseModel):
         ),
     ] = ""
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def handle_legacy_field_names(cls, values):
         """Handle backward compatibility for legacy okapi field names."""
         # Handle folio_password / okapi_password backward compatibility
@@ -229,7 +230,8 @@ class LibraryConfiguration(BaseModel):
             values["folio_username"] = values["okapi_username"]
         return values
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def set_error_thresholds_for_debug(cls, values):
         """If log_level_debug is true, set error thresholds to very high values to avoid
         process shutdown during debugging.
