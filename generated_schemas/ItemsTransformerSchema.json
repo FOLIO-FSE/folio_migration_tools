@@ -1,84 +1,191 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
+    "$defs": {
+        "FileDefinition": {
+            "properties": {
+                "file_name": {
+                    "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "default": false,
+                    "title": "Discovery suppressed",
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "default": false,
+                    "title": "Staff suppressed",
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
+                    "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
+                }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        },
+        "HridHandling": {
+            "description": "Enum determining how the HRID generation should be handled.\n    - default: Enumerates the HRID, building on the current value in the HRID settings\n    - preserve001: Takes the 001 and uses this as the HRID.\n\nArgs:\n    str (_type_): _description_\n    Enum (_type_): _description_",
+            "enum": [
+                "default",
+                "preserve001"
+            ],
+            "title": "HridHandling",
+            "type": "string"
+        }
+    },
     "properties": {
         "name": {
-            "title": "Name",
+            "description": "Name of the task.",
+            "title": "Task name",
             "type": "string"
         },
         "migrationTaskType": {
-            "title": "Migrationtasktype",
+            "description": "Type of migration task.",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
             "type": "string"
         },
         "hridHandling": {
-            "$ref": "#/definitions/HridHandling"
+            "$ref": "#/$defs/HridHandling",
+            "description": "Determining how the HRID generation should be handled.",
+            "title": "HRID handling"
         },
         "files": {
-            "title": "Files",
-            "type": "array",
+            "description": "List of files.",
             "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Files",
+            "type": "array"
         },
         "itemsMappingFileName": {
-            "title": "Itemsmappingfilename",
+            "description": "File name for items mapping.",
+            "title": "Items mapping file name",
             "type": "string"
         },
         "locationMapFileName": {
-            "title": "Locationmapfilename",
+            "description": "File name for location map.",
+            "title": "Location map file name",
             "type": "string"
         },
         "defaultCallNumberTypeName": {
-            "title": "Defaultcallnumbertypename",
+            "description": "Default name for call number type.",
+            "title": "Default call number type name",
             "type": "string"
         },
         "tempLocationMapFileName": {
-            "title": "Templocationmapfilename",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "Temporary file name for location map. Empty string by default.",
+            "title": "Temporary location map file name"
         },
         "materialTypesMapFileName": {
-            "title": "Materialtypesmapfilename",
+            "description": "File name for material types map.",
+            "title": "Material types map file name",
             "type": "string"
         },
         "loanTypesMapFileName": {
-            "title": "Loantypesmapfilename",
+            "description": "File name for loan types map.",
+            "title": "Loan types map file name",
             "type": "string"
         },
         "tempLoanTypesMapFileName": {
-            "title": "Temploantypesmapfilename",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "File name for temporary loan types map. Empty string by default.",
+            "title": "Temporary loan types map file name"
         },
         "statisticalCodesMapFileName": {
-            "title": "Statisticalcodesmapfilename",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "Path to the file containing the mapping of statistical codes. The file should be in TSV format with legacy_stat_code and folio_code columns.",
+            "title": "Statistical code map file name"
         },
         "itemStatusesMapFileName": {
-            "title": "Itemstatusesmapfilename",
+            "description": "File name for item statuses map.",
+            "title": "Item statuses map file name",
             "type": "string"
         },
         "callNumberTypeMapFileName": {
-            "title": "Callnumbertypemapfilename",
+            "description": "File name for call number type map.",
+            "title": "Call number type map file name",
             "type": "string"
         },
         "resetHridSettings": {
-            "title": "Resethridsettings",
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": false,
-            "type": "boolean"
+            "description": "At the end of the run reset FOLIO with the HRID settings. By default is False.",
+            "title": "Reset HRID settings"
         },
         "updateHridSettings": {
-            "title": "Update HRID settings",
-            "description": "At the end of the run, update FOLIO with the HRID settings",
             "default": true,
+            "description": "At the end of the run update FOLIO with the HRID settings. By default is True.",
+            "title": "Update HRID settings",
             "type": "boolean"
         },
         "boundwithRelationshipFilePath": {
-            "title": "Boundwith relationship file path",
-            "description": "Path to a file outlining Boundwith relationships, in the style of Voyager. A TSV file with MFHD_ID and BIB_ID headers and values",
             "default": "",
+            "description": "Path to a file outlining Boundwith relationships, in the style of Voyager. A TSV file with MFHD_ID and BIB_ID headers and values. By default is empty string.",
+            "title": "Boundwith relationship file path",
             "type": "string"
+        },
+        "preventPermanentLocationMapDefault": {
+            "default": false,
+            "description": "Prevent the default mapping of permanent location to the default location. By default is False.",
+            "title": "Prevent permanent location map default",
+            "type": "boolean"
         }
     },
     "required": [
@@ -94,42 +201,6 @@
         "itemStatusesMapFileName",
         "callNumberTypeMapFileName"
     ],
-    "definitions": {
-        "HridHandling": {
-            "title": "HridHandling",
-            "description": "Enum determining how the HRID generation should be handled.\n        - default: Enumerates the HRID, building on the current value in the HRID settings\n        - preserve001: Takes the 001 and uses this as the HRID.\n\n    Args:\n        str (_type_): _description_\n        Enum (_type_): _description_\n    ",
-            "enum": [
-                "default",
-                "preserve001"
-            ],
-            "type": "string"
-        },
-        "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
-            "properties": {
-                "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
-                    "default": "",
-                    "type": "string"
-                },
-                "discovery_suppressed": {
-                    "title": "Discovery suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "staff_suppressed": {
-                    "title": "Staff suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "service_point_id": {
-                    "title": "Service point ID",
-                    "default": "",
-                    "type": "string"
-                }
-            }
-        }
-    }
+    "title": "TaskConfiguration",
+    "type": "object"
 }

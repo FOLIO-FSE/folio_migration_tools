@@ -1,38 +1,114 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
+    "$defs": {
+        "FileDefinition": {
+            "properties": {
+                "file_name": {
+                    "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "default": false,
+                    "title": "Discovery suppressed",
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "default": false,
+                    "title": "Staff suppressed",
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
+                    "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
+                }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        }
+    },
     "properties": {
         "name": {
-            "title": "Name",
+            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
+            "title": "Task name",
             "type": "string"
         },
         "migrationTaskType": {
-            "title": "Migrationtasktype",
+            "description": "The type of migration task you want to perform",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
             "type": "string"
         },
         "openRequestsFile": {
-            "$ref": "#/definitions/FileDefinition"
+            "$ref": "#/$defs/FileDefinition",
+            "description": "File with list of open requests",
+            "title": "Open requests file"
         },
         "startingRow": {
-            "title": "Startingrow",
+            "anyOf": [
+                {
+                    "type": "integer"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": 1,
-            "type": "integer"
+            "description": "Row number to start processing data from. Optional, by default is first row",
+            "title": "Starting row"
         },
         "itemFiles": {
-            "title": "Itemfiles",
+            "anyOf": [
+                {
+                    "items": {
+                        "$ref": "#/$defs/FileDefinition"
+                    },
+                    "type": "array"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": [],
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
+            "description": "List of files containing item data. Optional, by default is empty list",
+            "title": "Item files"
         },
         "patronFiles": {
-            "title": "Patronfiles",
+            "anyOf": [
+                {
+                    "items": {
+                        "$ref": "#/$defs/FileDefinition"
+                    },
+                    "type": "array"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": [],
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
+            "description": "List of files containing patron data. Optional, by default is empty list",
+            "title": "Patron files"
         }
     },
     "required": [
@@ -40,33 +116,6 @@
         "migrationTaskType",
         "openRequestsFile"
     ],
-    "definitions": {
-        "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
-            "properties": {
-                "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
-                    "default": "",
-                    "type": "string"
-                },
-                "discovery_suppressed": {
-                    "title": "Discovery suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "staff_suppressed": {
-                    "title": "Staff suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "service_point_id": {
-                    "title": "Service point ID",
-                    "default": "",
-                    "type": "string"
-                }
-            }
-        }
-    }
+    "title": "TaskConfiguration",
+    "type": "object"
 }
