@@ -27,8 +27,9 @@ from folio_migration_tools.test_infrastructure import mocked_classes
 @pytest.fixture
 def folio_client():
     fc = mocked_classes.mocked_folio_client()
-    fc.gateway_url = "https://folio-snapshot.dev.folio.org"
-    fc.tenant_id = "diku"
+    # Set properties through the folio_auth object since they're read-only properties
+    fc.folio_auth.gateway_url = "https://folio-snapshot.dev.folio.org"
+    fc.folio_auth.tenant_id = "diku"
     fc.folio_username = "diku_admin"
     fc.folio_password = "admin"
     fc.get_from_github = FolioClient.get_from_github
@@ -257,7 +258,8 @@ def test_get_srs_string_bad_leaders():
 
 
 def test_create_srs_uuid(mapper_base):
-    mapper_base.folio_client.gateway_url = "some_url"
+    # Set the gateway_url through the folio_auth object since gateway_url is read-only
+    mapper_base.folio_client.folio_auth.gateway_url = "some_url"
     created_id = mapper_base.create_srs_id(FOLIONamespaces.holdings, "id_1")
     assert str(created_id) == "06e42308-4555-5bd2-b0b4-4655f7e30e4a"
     created_id_2 = mapper_base.create_srs_id(FOLIONamespaces.instances, "id_1")
@@ -282,7 +284,11 @@ def marc_record():
 def test_save_source_record(caplog, folio_record, marc_record, mapper_base):
     record_type = FOLIONamespaces.instances
     folio_client = Mock(spec=FolioClient)
-    folio_client.gateway_url = "https://folio-snapshot.dev.folio.org"
+    # Mock the folio_auth object to handle gateway_url property
+    folio_client.folio_auth = Mock()
+    folio_client.folio_auth.gateway_url = "https://folio-snapshot.dev.folio.org"
+    # Make gateway_url a property that returns the value from folio_auth
+    type(folio_client).gateway_url = property(lambda self: self.folio_auth.gateway_url)
     legacy_ids = ["legacy_id_1", "legacy_id_2"]
     suppress = False
     srs_records = []

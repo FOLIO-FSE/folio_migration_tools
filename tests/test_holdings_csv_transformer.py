@@ -25,12 +25,12 @@ def test_generate_boundwith_part(caplog):
     mock_transformer.mapper = mock_mapper
 
     mock_mapper.folio_client = mocked_classes.mocked_folio_client()
-    mock_mapper.base_string_for_folio_uuid = mocked_classes.mocked_folio_client().gateway_url
+    mock_mapper.base_string_for_folio_uuid = "test_tenant"  # Use tenant_id as base string
     HoldingsMapper.create_and_write_boundwith_part(mock_mapper, "legacy_id", "holding_uuid")
 
     assert any("boundwithPart\t" in ed for ed in mock_mapper.extradata_writer.cache)
     assert any(
-        '"itemId": "02b904dc-b824-55ac-8e56-e50e395f18f8"}\n' in ed
+        '"itemId": "c6792640-a656-527f-84e7-e2524c141f66"}\n' in ed
         for ed in mock_mapper.extradata_writer.cache
     )
     assert any(

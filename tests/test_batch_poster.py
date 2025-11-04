@@ -147,7 +147,7 @@ async def test_set_version_async():
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -222,7 +222,7 @@ async def test_set_version_async_preserve_status_false():
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -295,7 +295,7 @@ async def test_set_version_async_one_existing_items():
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -372,7 +372,7 @@ async def test_set_version_async_preserve_temporary_locations():
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -444,7 +444,7 @@ async def test_set_version_async_preserve_temporary_loan_types():
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -517,7 +517,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -595,7 +595,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -683,7 +683,7 @@ async def test_set_version_async_source_marc_instance():
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -786,7 +786,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_statistica
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -889,7 +889,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_administra
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -999,7 +999,7 @@ async def test_set_version_async_patch_object_with_patch_paths_no_preserve():
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -1113,7 +1113,7 @@ async def test_set_version_async_patch_object_with_patch_paths_preserve_statisti
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -1231,7 +1231,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_preserve_stati
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(
@@ -1349,7 +1349,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_no_preserve_st
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.okapi_headers = {"x-okapi-token": "token"}
-    batch_poster.folio_client.gateway_url = "http://folio-snapshot-okapi.dev.folio.org"
+    batch_poster.folio_client.gateway_url = "https://folio-snapshot-okapi.dev.folio.org"
     batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response)
     batch_poster.prepare_record_for_upsert = MethodType(

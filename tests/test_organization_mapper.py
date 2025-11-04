@@ -396,13 +396,13 @@ def test_map_organization_notes(mapper):
     assert (
         'notes\t{"typeId": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5", "title": "A migrated note",'
         ' "domain": "organizations", "content": "The game is afoot!",'
-        ' "links": [{"id": "3c4c99a2-ac24-57c5-81e3-d53fe84a2a60", "type": "organization"}]}\n'
+        ' "links": [{"id": "a3a4a075-676c-5d04-979b-bb9940093dfd", "type": "organization"}]}\n'
         in mapper.extradata_writer.cache
     )
     assert (
         'notes\t{"typeId": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5", "title": "Another note",'
         ' "domain": "organizations", "content": "Elementary! /SH",'
-        ' "links": [{"id": "3c4c99a2-ac24-57c5-81e3-d53fe84a2a60", "type": "organization"}]}\n'
+        ' "links": [{"id": "a3a4a075-676c-5d04-979b-bb9940093dfd", "type": "organization"}]}\n'
         in mapper.extradata_writer.cache
     )
 
