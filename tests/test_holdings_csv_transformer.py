@@ -697,7 +697,7 @@ def test_explode_former_ids():
     assert result == ["id1", "id2", "regular_id", "id3", "id4"]
 
 
-def test_load_call_number_type_map_default(tmp_path):
+def test_load_call_number_type_map_default(tmp_path, monkeypatch):
     # When the call number type map file does not exist, default mapping is returned
     mock_transformer = Mock(spec=HoldingsCsvTransformer)
     mock_transformer.folder_structure = Mock()
@@ -711,6 +711,8 @@ def test_load_call_number_type_map_default(tmp_path):
     # holdings_field_map must have at least one mapped legacy field not equal to 'not mapped'
     mock_transformer.holdings_field_map = {"data": [{"legacy_field": "legacy1"}, {"legacy_field": "not mapped"}]}
 
+    # ensure os.path.isfile behaves consistently across environments
+    monkeypatch.setattr("os.path.isfile", lambda _: False)
     result = HoldingsCsvTransformer.load_call_number_type_map(mock_transformer)
     # Expect the returned mapping to contain the legacy key and default folio name
     assert isinstance(result, list)
@@ -718,7 +720,7 @@ def test_load_call_number_type_map_default(tmp_path):
     assert result[0]["folio_name"] == "DefaultCN"
 
 
-def test_load_call_number_type_map_file_exists(tmp_path):
+def test_load_call_number_type_map_file_exists(tmp_path, monkeypatch):
     # When a mapping file exists, the instance's load_ref_data_mapping_file should be used
     mock_transformer = Mock(spec=HoldingsCsvTransformer)
     mock_transformer.folder_structure = Mock()
@@ -736,12 +738,13 @@ def test_load_call_number_type_map_file_exists(tmp_path):
     expected = [{"folio_code": "FC", "legacy_code": "LC"}]
     mock_transformer.load_ref_data_mapping_file = Mock(return_value=expected)
 
+    monkeypatch.setattr("os.path.isfile", lambda _: True)
     result = HoldingsCsvTransformer.load_call_number_type_map(mock_transformer)
     mock_transformer.load_ref_data_mapping_file.assert_called()
     assert result == expected
 
 
-def test_load_location_map_file_exists(tmp_path):
+def test_load_location_map_file_exists(tmp_path, monkeypatch):
     # When a location map file exists, load_ref_data_mapping_file is called
     mock_transformer = Mock(spec=HoldingsCsvTransformer)
     mock_transformer.folder_structure = Mock()
@@ -758,6 +761,7 @@ def test_load_location_map_file_exists(tmp_path):
     expected = [{"folio_code": "STACKS", "legacy_code": "stacks"}]
     mock_transformer.load_ref_data_mapping_file = Mock(return_value=expected)
 
+    monkeypatch.setattr("os.path.isfile", lambda _: True)
     result = HoldingsCsvTransformer.load_location_map(mock_transformer)
     mock_transformer.load_ref_data_mapping_file.assert_called()
     assert result == expected
