@@ -695,3 +695,99 @@ def test_explode_former_ids():
     holding_mixed = {"formerIds": ["[id1,id2]", "regular_id", "[id3,id4]"]}
     result = explode_former_ids(holding_mixed)
     assert result == ["id1", "id2", "regular_id", "id3", "id4"]
+
+
+def test_load_call_number_type_map_default(tmp_path):
+    # When the call number type map file does not exist, default mapping is returned
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.mapping_files_folder = tmp_path
+
+    mock_task_conf = Mock()
+    mock_task_conf.call_number_type_map_file_name = "nonexistent.tsv"
+    mock_task_conf.default_call_number_type_name = "DefaultCN"
+    mock_transformer.task_configuration = mock_task_conf
+
+    # holdings_field_map must have at least one mapped legacy field not equal to 'not mapped'
+    mock_transformer.holdings_field_map = {"data": [{"legacy_field": "legacy1"}, {"legacy_field": "not mapped"}]}
+
+    result = HoldingsCsvTransformer.load_call_number_type_map(mock_transformer)
+    # Expect the returned mapping to contain the legacy key and default folio name
+    assert isinstance(result, list)
+    assert result[0]["legacy1"] == "*"
+    assert result[0]["folio_name"] == "DefaultCN"
+
+
+def test_load_call_number_type_map_file_exists(tmp_path):
+    # When a mapping file exists, the instance's load_ref_data_mapping_file should be used
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.mapping_files_folder = tmp_path
+
+    # create an empty file to satisfy isfile check
+    fname = "cn_map.tsv"
+    (tmp_path / fname).write_text("dummy")
+
+    mock_task_conf = Mock()
+    mock_task_conf.call_number_type_map_file_name = fname
+    mock_transformer.task_configuration = mock_task_conf
+
+    mock_transformer.folio_keys = ["a"]
+    expected = [{"folio_code": "FC", "legacy_code": "LC"}]
+    mock_transformer.load_ref_data_mapping_file = Mock(return_value=expected)
+
+    result = HoldingsCsvTransformer.load_call_number_type_map(mock_transformer)
+    mock_transformer.load_ref_data_mapping_file.assert_called()
+    assert result == expected
+
+
+def test_load_location_map_file_exists(tmp_path):
+    # When a location map file exists, load_ref_data_mapping_file is called
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.mapping_files_folder = tmp_path
+
+    fname = "locations.tsv"
+    (tmp_path / fname).write_text("dummy")
+
+    mock_task_conf = Mock()
+    mock_task_conf.location_map_file_name = fname
+    mock_transformer.task_configuration = mock_task_conf
+
+    mock_transformer.folio_keys = ["permanentLocationId"]
+    expected = [{"folio_code": "STACKS", "legacy_code": "stacks"}]
+    mock_transformer.load_ref_data_mapping_file = Mock(return_value=expected)
+
+    result = HoldingsCsvTransformer.load_location_map(mock_transformer)
+    mock_transformer.load_ref_data_mapping_file.assert_called()
+    assert result == expected
+
+
+def test_load_mapped_fields_reads_file(tmp_path, monkeypatch):
+    # Create a holdings map file and ensure the function returns parsed map and calls MappingFileMapperBase
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.mapping_files_folder = tmp_path
+
+    fname = "holdings_map.json"
+    holdings_map = {"data": [{"legacy_field": "lf1", "folio_field": "ff1"}]}
+    (tmp_path / fname).write_text(json.dumps(holdings_map))
+
+    mock_task_conf = Mock()
+    mock_task_conf.holdings_map_file_name = fname
+    mock_transformer.task_configuration = mock_task_conf
+
+    # Patch the MappingFileMapperBase.get_mapped_folio_properties_from_map to return a known value
+    from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
+        MappingFileMapperBase,
+    )
+
+    monkeypatch.setattr(
+        MappingFileMapperBase,
+        "get_mapped_folio_properties_from_map",
+        lambda m: {"mapped": True},
+    )
+
+    mapped_fields, parsed_map = HoldingsCsvTransformer.load_mapped_fields(mock_transformer)
+    assert mapped_fields == {"mapped": True}
+    assert parsed_map == holdings_map
