@@ -43,6 +43,8 @@ class RefDataMapping(object):
         return self.cached_dict.get(key_value.lower().strip(), ())
 
     def setup_mappings(self):
+        if not self.map:
+            return
         self.pre_validate_map()
         for idx, mapping in enumerate(self.map):
             try:
