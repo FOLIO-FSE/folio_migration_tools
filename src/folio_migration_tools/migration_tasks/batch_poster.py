@@ -1115,20 +1115,6 @@ def get_api_info(object_type: str, use_safe: bool = True):
         sys.exit(1)
 
 
-def chunks(records, number_of_chunks):
-    """Yield successive n-sized chunks from lst.
-
-    Args:
-        records (_type_): _description_
-        number_of_chunks (_type_): _description_
-
-    Yields:
-        _type_: _description_
-    """
-    for i in range(0, len(records), number_of_chunks):
-        yield records[i : i + number_of_chunks]
-
-
 def get_human_readable(size, precision=2):
     suffixes = ["B", "KB", "MB", "GB", "TB"]
     suffix_index = 0
