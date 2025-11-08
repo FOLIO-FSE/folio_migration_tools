@@ -418,10 +418,14 @@ class MigrationTaskBase:
             required (bool): Whether the property is required or not
         """
         if (
-            folio_property_name in folio_keys
-            or required
-            or folio_property_name.startswith("statisticalCodeIds")
-            or folio_property_name.startswith("locationMap")
+                (
+	            folio_property_name in folio_keys
+	            or required
+	            or folio_property_name.startswith("statisticalCodeIds")
+	            or folio_property_name.startswith("locationMap")
+	            or folio_property_name.startswith("fundsMap")
+                )
+                and map_file_path.is_file()
         ):
             try:
                 with open(map_file_path) as map_file:
