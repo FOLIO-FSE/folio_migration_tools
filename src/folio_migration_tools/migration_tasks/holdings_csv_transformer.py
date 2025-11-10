@@ -7,6 +7,7 @@ import time
 import os
 import traceback
 from typing import Annotated, List, Optional
+from pathlib import Path
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -196,11 +197,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         else:
             statcode_mapping = None
-        cn_map = os.path.join(
+        cn_fp = os.path.join(
             self.folder_structure.mapping_files_folder,
             str(self.task_configuration.call_number_type_map_file_name),
         )
-        if os.path.isfile(cn_map):
+        cn_map = Path(cn_fp)
+        if os.path.exists(cn_fp):
             self.call_number_type_map = self.load_ref_data_mapping_file(
                 "callNumberTypeId",
                 cn_map,
@@ -221,20 +223,23 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     "folio_name": self.task_configuration.default_call_number_type_name,
                 }
             ]
+            self.mapper.migration_report.add(
+                    "LocationMapping", i18n.t("Fallback mapping") + f": {self.task_configuration.default_call_number_type_name}"
+            )
 
-        location_map = os.path.join(
+        location_fp = os.path.join(
             self.folder_structure.mapping_files_folder,
             self.task_configuration.location_map_file_name,
         )
-        if os.path.isfile(location_map):
+        if os.path.exists(location_fp):
             self.location_map = self.load_ref_data_mapping_file(
                 "permanentLocationId",
-                location_map,
+                Path(location_fp),
                 self.folio_keys,
             )
         else:
             logging.info(
-                f"{location_map} not found. No location mapping will be performed",
+                f"{location_fp} not found. No location mapping will be performed",
             )
             self.location_map = []
         
