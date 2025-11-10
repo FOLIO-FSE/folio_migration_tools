@@ -183,6 +183,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
         self.default_call_number_type = None
+        self.call_number_type_map = None
+        self.location_map = None
         self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
         if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
             statcode_mapping = self.load_ref_data_mapping_file(
@@ -194,13 +196,55 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         else:
             statcode_mapping = None
+        cn_map = os.path.join(
+            self.folder_structure.mapping_files_folder,
+            str(self.task_configuration.call_number_type_map_file_name),
+        )
+        if os.path.isfile(cn_map):
+            self.call_number_type_map = self.load_ref_data_mapping_file(
+                "callNumberTypeId",
+                cn_map,
+                self.folio_keys,
+            )
+        else:
+            logging.info(
+                f'callNumberTypeMapFileName not set. Default call number type "{self.task_configuration.default_call_number_type_name}" used.'
+            )
+            legacy_key = [
+                o["legacy_field"]
+                for o in self.holdings_field_map["data"]
+                if o["legacy_field"] and o["legacy_field"].lower().strip() != "not mapped"
+            ][0]
+            self.call_number_type_map = [
+                {
+                    legacy_key: "*",
+                    "folio_name": self.task_configuration.default_call_number_type_name,
+                }
+            ]
+
+        location_map = os.path.join(
+            self.folder_structure.mapping_files_folder,
+            self.task_configuration.location_map_file_name,
+        )
+        if os.path.isfile(location_map):
+            self.location_map = self.load_ref_data_mapping_file(
+                "permanentLocationId",
+                location_map,
+                self.folio_keys,
+            )
+        else:
+            logging.info(
+                f"{location_map} not found. No location mapping will be performed",
+            )
+            self.location_map = []
+        
         try:
             self.bound_with_keys = set()
             self.mapper = HoldingsMapper(
                 self.folio_client,
                 self.holdings_field_map,
-                self.load_location_map(),
-                self.load_call_number_type_map(),
+                self.location_map,
+                self.call_number_type_map,
                 self.load_instance_id_map(True),
                 library_config,
                 task_config,
@@ -299,50 +343,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             traceback.print_exc()
             sys.exit(1)
         logging.info("Init done")
-
-    def load_call_number_type_map(self):
-        cn_map = os.path.join(
-            self.folder_structure.mapping_files_folder,
-            str(self.task_configuration.call_number_type_map_file_name),
-        )
-        if os.path.isfile(cn_map):
-            return self.load_ref_data_mapping_file(
-                "callNumberTypeId",
-                cn_map,
-                self.folio_keys,
-            )
-        else:
-            logging.info(
-                f'callNumberTypeMapFileName not set. Default call number type "{self.task_configuration.default_call_number_type_name}" used.'
-            )
-            legacy_key = [
-                o["legacy_field"]
-                for o in self.holdings_field_map["data"]
-                if o["legacy_field"] and o["legacy_field"].lower().strip() != "not mapped"
-            ][0]
-            return [
-                {
-                    legacy_key: "*",
-                    "folio_name": self.task_configuration.default_call_number_type_name,
-                }
-            ]
-
-    def load_location_map(self):
-        location_map = os.path.join(
-            self.folder_structure.mapping_files_folder,
-            self.task_configuration.location_map_file_name,
-        )
-        if os.path.isfile(location_map):
-            return self.load_ref_data_mapping_file(
-                "permanentLocationId",
-                location_map,
-                self.folio_keys,
-            )
-        else:
-            logging.info(
-                f"{location_map} not found. No location mapping will be performed",
-            )
-            return []
 
     def load_mapped_fields(self):
         with open(
