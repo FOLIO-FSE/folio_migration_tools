@@ -78,6 +78,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "code",
             "OrderLineLocationMapping",
         )
+        self.funds_mapping = RefDataMapping(
+            self.folio_client,
+            "/finance/funds",
+            "funds",
+            funds_map,
+            "code",
+            "FundsMapping",
+        )
 
         self.folio_client: FolioClient = folio_client
         self.notes_mapper: NotesMapper = NotesMapper(
@@ -109,6 +117,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if folio_prop_name.endswith(".locationId"):
             mapping_props["ref_data_mapping"] = self.location_mapping
             return self.get_mapped_ref_data_value(**mapping_props)
+
+        if folio_prop_name.endswith(".fundId"):
+            return self.get_mapped_ref_data_value(
+                self.location_mapping,
+                legacy_order,
+                folio_prop_name,
+                index_or_id,
+                False,
+            )
 
         mapped_value = super().get_prop(
             legacy_order, folio_prop_name, index_or_id, schema_default_value

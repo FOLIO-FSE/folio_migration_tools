@@ -44,6 +44,9 @@ class RefDataMapping(object):
         return self.cached_dict.get(key_value.lower().strip(), ())
 
     def setup_mappings(self):
+        if not self.map:
+            logging.info("%s legacy map file is empty or not provided", self.name)
+            return
         self.pre_validate_map()
         for idx, mapping in enumerate(self.map):
             try:

@@ -318,6 +318,8 @@
   "blurbs.FieldMappingErrors.title": "Field mapping errors",
   "blurbs.FolioDefaultValuesAdded.description": "The below FOLIO default values were added to records that had no mapped value in the source data.",
   "blurbs.FolioDefaultValuesAdded.title": "FOLIO default values added",
+  "blurbs.FundsMapping.title": "Fund mappings",
+  "blurbs.FundsMapping.description": "Reference data for funds mapping",
   "blurbs.GeneralStatistics.description": "A list of general counters to outline the transformation as a whole.",
   "blurbs.GeneralStatistics.title": "General statistics",
   "blurbs.HoldingsGenerationFromBibs.description": "Some libraries have Holdings/MFHD information baked into their bib records. The following breakdown gives an idea on the occurrence of 852/866 combinations",
