@@ -218,7 +218,7 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folder_structure.mapping_files_folder 
                 / self.task_config.funds_map_file_name,
                 self.folio_keys,
-                False,
+                True,
             ),
             self.load_ref_data_mapping_file(  # Todo: The property in the schema has no type
                 "fundsExpenseClassMap",
@@ -236,7 +236,7 @@ class OrdersTransformer(MigrationTaskBase):
 
             if not isfile(file_path):
                 print(f"\n\nERROR: File defined in task not found - {f.file_name}")
-                sys.exit(1)
+                raise TransformationProcessError(f"\n\nERROR: File defined in task not found - {f.file_name}")
             files.append(file_path)
         logging.info("Files to process:")
         for filename in files:
