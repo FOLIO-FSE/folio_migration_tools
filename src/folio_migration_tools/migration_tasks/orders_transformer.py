@@ -34,7 +34,6 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
-
 # Read files and do some work
 class OrdersTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
@@ -219,7 +218,7 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folder_structure.mapping_files_folder 
                 / self.task_config.funds_map_file_name,
                 self.folio_keys,
-                True,
+                False,
             ),
             self.load_ref_data_mapping_file(  # Todo: The property in the schema has no type
                 "fundsExpenseClassMap",
@@ -231,17 +230,14 @@ class OrdersTransformer(MigrationTaskBase):
         )
 
     def list_source_files(self):
-        files = [
-            self.folder_structure.data_folder / self.object_type_name / f.file_name
-            for f in self.task_config.files
-            if isfile(self.folder_structure.data_folder / self.object_type_name / f.file_name)
-        ]
-        if not any(files):
-            ret_str = ",".join(f.file_name for f in self.task_config.files)
-            raise TransformationProcessError(
-                f"Files {ret_str} not found in"
-                "{self.folder_structure.data_folder} / {self.object_type_name}"
-            )
+        files = []
+        for f in self.task_config.files:
+            file_path =self.folder_structure.data_folder / self.object_type_name / f.file_name
+
+            if not isfile(file_path):
+                print(f"\n\nERROR: File defined in task not found - {f.file_name}")
+                sys.exit(1)
+            files.append(file_path)
         logging.info("Files to process:")
         for filename in files:
             logging.info("\t%s", filename)
@@ -311,6 +307,7 @@ class OrdersTransformer(MigrationTaskBase):
             )
 
     def do_work(self):
+
         logging.info("Getting started!")
         for file in self.files:
             logging.info("Processing %s", file)
