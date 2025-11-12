@@ -47,7 +47,6 @@ class HoldingsMapper(MappingFileMapperBase):
             task_config,
         )
         self.holdings_map = holdings_map
-        self.task_configuration = task_config
 
         self.location_mapping = RefDataMapping(
             self.folio_client,
@@ -71,14 +70,22 @@ class HoldingsMapper(MappingFileMapperBase):
     def get_holdings_sources(self):
         res = {}
         holdings_sources = list(
-            self.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
+            self.folio_client.folio_get_all(
+                "/holdings-sources", "holdingsRecordsSources"
+            )
         )
-        logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
+        logging.info(
+            "Fetched %s holdingsRecordsSources from tenant", len(holdings_sources)
+        )
         res = {n["name"].upper(): n["id"] for n in holdings_sources}
         if "FOLIO" not in res:
-            raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
+            raise TransformationProcessError(
+                "", "No holdings source with name FOLIO in tenant"
+            )
         if "MARC" not in res:
-            raise TransformationProcessError("", "No holdings source with name MARC in tenant")
+            raise TransformationProcessError(
+                "", "No holdings source with name MARC in tenant"
+            )
         logging.info(json.dumps(res, indent=4))
         return res
 
@@ -91,19 +98,22 @@ class HoldingsMapper(MappingFileMapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            i18n.t("Suppressed from discovery") + f' = {folio_record["discoverySuppress"]}',
+            i18n.t("Suppressed from discovery")
+            + f" = {folio_record['discoverySuppress']}",
         )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
         if folio_prop_name == "permanentLocationId":
-            return self.get_mapped_ref_data_value(
+            return self.get_location_id(
                 ref_data_mapping=self.location_mapping,
                 legacy_object=legacy_item,
                 index_or_id=index_or_id,
                 prevent_default=False,
             )
         elif folio_prop_name == "callNumberTypeId":
-            return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
+            return self.get_call_number_type_id(
+                legacy_item, folio_prop_name, index_or_id
+            )
         # elif folio_prop_name.startswith("statisticalCodeIds"):
         #     return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
 
@@ -127,7 +137,9 @@ class HoldingsMapper(MappingFileMapperBase):
             )
             self.migration_report.add(
                 "BoundWithMappings",
-                (f"Number of bib-level callnumbers in record: {len(legacy_value.split(','))}"),
+                (
+                    f"Number of bib-level callnumbers in record: {len(legacy_value.split(','))}"
+                ),
             )
         if legacy_value.startswith("[") and len(legacy_value.split(",")) == 1:
             try:
@@ -135,6 +147,28 @@ class HoldingsMapper(MappingFileMapperBase):
             except (SyntaxError, ValueError):
                 return legacy_value
         return legacy_value
+    
+    ## TODO probably don't need this anymore? - kp 11/12/25
+    # def get_location_id(
+    #     self, legacy_item: dict, id_or_index, folio_prop_name, prevent_default=False
+    # ):
+    #     return self.get_mapped_ref_data_value(
+    #         self.location_mapping,
+    #         legacy_item,
+    #         id_or_index,
+    #         folio_prop_name,
+    #         prevent_default,
+    #     )
+
+    def get_call_number_type_id(self, legacy_item, folio_prop_name: str, id_or_index):
+        if self.call_number_mapping:
+            return self.get_mapped_ref_data_value(
+                self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
+            )
+        self.migration_report.add(
+            "CallNumberTypeMapping", i18n.t("No Call Number Type Mapping")
+        )
+        return ""
 
     def get_instance_ids(self, legacy_value: str, index_or_id: str):
         # Returns a list of Id:s
@@ -142,7 +176,8 @@ class HoldingsMapper(MappingFileMapperBase):
         legacy_bib_ids = self.get_legacy_bib_ids(legacy_value, index_or_id)
         self.migration_report.add(
             "BoundWithMappings",
-            i18n.t("Number of bib records referenced in item") + f": {len(legacy_bib_ids)}",
+            i18n.t("Number of bib records referenced in item")
+            + f": {len(legacy_bib_ids)}",
         )
         for legacy_instance_id in legacy_bib_ids:
             new_legacy_value = (
@@ -163,9 +198,9 @@ class HoldingsMapper(MappingFileMapperBase):
                 self.migration_report.add_general_statistics(
                     i18n.t("Records matched to Instances")
                 )
-                entry = self.instance_id_map.get(new_legacy_value, "") or self.instance_id_map.get(
-                    legacy_instance_id
-                )
+                entry = self.instance_id_map.get(
+                    new_legacy_value, ""
+                ) or self.instance_id_map.get(legacy_instance_id)
                 return_ids.append(entry[1])
         if any(return_ids):
             return return_ids
