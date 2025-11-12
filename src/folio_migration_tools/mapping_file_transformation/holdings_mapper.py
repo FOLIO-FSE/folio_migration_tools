@@ -6,7 +6,10 @@ import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError, TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -18,6 +21,7 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
 
 class HoldingsMapper(MappingFileMapperBase):
     def __init__(
@@ -40,9 +44,10 @@ class HoldingsMapper(MappingFileMapperBase):
             statistical_codes_map,
             FOLIONamespaces.holdings,
             library_configuration,
-            task_config
+            task_config,
         )
         self.holdings_map = holdings_map
+        self.task_configuration = task_config
 
         self.location_mapping = RefDataMapping(
             self.folio_client,
@@ -91,7 +96,12 @@ class HoldingsMapper(MappingFileMapperBase):
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):
         if folio_prop_name == "permanentLocationId":
-            return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
+            return self.get_mapped_ref_data_value(
+                ref_data_mapping=self.location_mapping,
+                legacy_object=legacy_item,
+                index_or_id=index_or_id,
+                prevent_default=False,
+            )
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
         # elif folio_prop_name.startswith("statisticalCodeIds"):
@@ -125,25 +135,6 @@ class HoldingsMapper(MappingFileMapperBase):
             except (SyntaxError, ValueError):
                 return legacy_value
         return legacy_value
-
-    def get_location_id(
-        self, legacy_item: dict, id_or_index, folio_prop_name, prevent_default=False
-    ):
-        return self.get_mapped_ref_data_value(
-            self.location_mapping,
-            legacy_item,
-            id_or_index,
-            folio_prop_name,
-            prevent_default,
-        )
-
-    def get_call_number_type_id(self, legacy_item, folio_prop_name: str, id_or_index):
-        if self.call_number_mapping:
-            return self.get_mapped_ref_data_value(
-                self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
-            )
-        self.migration_report.add("CallNumberTypeMapping", i18n.t("No Call Number Type Mapping"))
-        return ""
 
     def get_instance_ids(self, legacy_value: str, index_or_id: str):
         # Returns a list of Id:s
