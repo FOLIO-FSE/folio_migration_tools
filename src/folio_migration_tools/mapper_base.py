@@ -212,6 +212,15 @@ class MapperBase:
                 ),
             )
             return ref_data_mapping.default_id
+        except KeyError as exception:
+            raise TransformationProcessError(
+                index_or_id,
+                (
+                    f"{ref_data_mapping.name} mapping - folio_{ref_data_mapping.key_type} "
+                    f"({ref_data_mapping.mapped_legacy_keys})  is not "
+                    f"a recognized field in the legacy data. KeyError: {exception}"
+                ),
+            ) from exception
         except IndexError as exception:
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -229,6 +238,7 @@ class MapperBase:
                     f"({ref_data_mapping.mapped_legacy_keys}) {exception}"
                 ),
             ) from exception
+
 
     def handle_transformation_field_mapping_error(self, index_or_id, error):
         self.migration_report.add("FieldMappingErrors", error)
