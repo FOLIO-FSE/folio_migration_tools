@@ -57,10 +57,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             HridHandling,
             Field(
                 title="HRID handling",
-                description=(
-                    "Determining how the HRID generation "
-                    "should be handled."
-                ),
+                description=("Determining how the HRID generation " "should be handled."),
             ),
         ]
         files: Annotated[
@@ -96,8 +93,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             Field(
                 title="Previously generated holdings files",
                 description=(
-                    "List of previously generated holdings files. "
-                    "By default is empty list."
+                    "List of previously generated holdings files. " "By default is empty list."
                 ),
             ),
         ] = []
@@ -184,9 +180,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     ):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
-        self.location_map = None
+        self.location_map = []
         self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
-        location_map_path = self.folder_structure.mapping_files_folder / self.task_configuration.location_map_file_name
+        location_map_path = (
+            self.folder_structure.mapping_files_folder
+            / self.task_configuration.location_map_file_name
+        )
         if location_map_path.is_file():
             self.location_map = self.load_ref_data_mapping_file(
                 "permanentLocationId",
@@ -194,10 +193,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.folio_keys,
             )
         else:
-            logging.info(
-                f"{location_map_path} not found. No location mapping will be performed",
+            raise TransformationProcessError(
+                "",
+                (f"{location_map_path} not found.",),
             )
-            self.location_map = []
         if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
@@ -310,7 +309,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def load_mapped_fields(self):
         with open(
-            self.folder_structure.mapping_files_folder / self.task_configuration.holdings_map_file_name
+            self.folder_structure.mapping_files_folder
+            / self.task_configuration.holdings_map_file_name
         ) as holdings_mapper_f:
             holdings_map = json.load(holdings_mapper_f)
             logging.info("%s fields in holdings mapping file map", len(holdings_map["data"]))
@@ -385,7 +385,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         properties = holdings_schema["properties"].keys()
         logging.info(properties)
         logging.info(self.task_configuration.holdings_merge_criteria)
-        res = [mc for mc in self.task_configuration.holdings_merge_criteria if mc not in properties]
+        res = [
+            mc for mc in self.task_configuration.holdings_merge_criteria if mc not in properties
+        ]
         if any(res):
             logging.critical(
                 (
