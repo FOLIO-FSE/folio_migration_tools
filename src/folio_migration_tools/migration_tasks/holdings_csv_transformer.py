@@ -57,10 +57,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             HridHandling,
             Field(
                 title="HRID handling",
-                description=(
-                    "Determining how the HRID generation "
-                    "should be handled."
-                ),
+                description=("Determining how the HRID generation " "should be handled."),
             ),
         ]
         files: Annotated[
@@ -96,8 +93,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             Field(
                 title="Previously generated holdings files",
                 description=(
-                    "List of previously generated holdings files. "
-                    "By default is empty list."
+                    "List of previously generated holdings files. " "By default is empty list."
                 ),
             ),
         ] = []
@@ -184,7 +180,23 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     ):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
+        self.location_map = []
         self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
+        location_map_path = (
+            self.folder_structure.mapping_files_folder
+            / self.task_configuration.location_map_file_name
+        )
+        if location_map_path.is_file():
+            self.location_map = self.load_ref_data_mapping_file(
+                "permanentLocationId",
+                location_map_path,
+                self.folio_keys,
+            )
+        else:
+            raise TransformationProcessError(
+                "",
+                (f"{location_map_path} not found.",),
+            )
         if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
@@ -193,6 +205,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.folio_keys,
                 False,
             )
+
         else:
             statcode_mapping = None
         try:
@@ -200,7 +213,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.mapper = HoldingsMapper(
                 self.folio_client,
                 self.holdings_field_map,
-                self.load_location_map(),
+                self.location_map,
                 self.load_call_number_type_map(),
                 self.load_instance_id_map(True),
                 library_config,
@@ -288,14 +301,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 callnumber_type_map_f, "Found %s rows in call number type map"
             )
 
-    def load_location_map(self):
-        with open(
-            self.folder_structure.mapping_files_folder / self.task_configuration.location_map_file_name
-        ) as location_map_f:
-            return self.load_ref_data_map_from_file(
-                location_map_f, "Found %s rows in location map"
-            )
-
     # TODO Rename this here and in `load_call_number_type_map` and `load_location_map`
     def load_ref_data_map_from_file(self, file, message):
         ref_dat_map = list(csv.DictReader(file, dialect="tsv"))
@@ -304,7 +309,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def load_mapped_fields(self):
         with open(
-            self.folder_structure.mapping_files_folder / self.task_configuration.holdings_map_file_name
+            self.folder_structure.mapping_files_folder
+            / self.task_configuration.holdings_map_file_name
         ) as holdings_mapper_f:
             holdings_map = json.load(holdings_mapper_f)
             logging.info("%s fields in holdings mapping file map", len(holdings_map["data"]))
@@ -379,7 +385,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         properties = holdings_schema["properties"].keys()
         logging.info(properties)
         logging.info(self.task_configuration.holdings_merge_criteria)
-        res = [mc for mc in self.task_configuration.holdings_merge_criteria if mc not in properties]
+        res = [
+            mc for mc in self.task_configuration.holdings_merge_criteria if mc not in properties
+        ]
         if any(res):
             logging.critical(
                 (
