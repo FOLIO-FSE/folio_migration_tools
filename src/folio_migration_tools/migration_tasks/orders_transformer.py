@@ -34,6 +34,7 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
+
 # Read files and do some work
 class OrdersTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
@@ -84,8 +85,7 @@ class OrdersTransformer(MigrationTaskBase):
             Field(
                 title="Payment Status Map File Name",
                 description=(
-                    "File name for payment status mapping. "
-                    "By default is empty string."
+                    "File name for payment status mapping. By default is empty string."
                 ),
             ),
         ] = ""
@@ -94,8 +94,7 @@ class OrdersTransformer(MigrationTaskBase):
             Field(
                 title="Receipt Status Map File Name",
                 description=(
-                    "File name for receipt status mapping. "
-                    "By default is empty string."
+                    "File name for receipt status mapping. By default is empty string."
                 ),
             ),
         ] = ""
@@ -104,8 +103,7 @@ class OrdersTransformer(MigrationTaskBase):
             Field(
                 title="Workflow Status Map File Name",
                 description=(
-                    "File name for workflow status mapping. "
-                    "By default is empty string."
+                    "File name for workflow status mapping. By default is empty string."
                 ),
             ),
         ] = ""
@@ -114,8 +112,7 @@ class OrdersTransformer(MigrationTaskBase):
             Field(
                 title="Location Map File Name",
                 description=(
-                    "File name for location mapping. "
-                    "By default is empty string."
+                    "File name for location mapping. By default is empty string."
                 ),
             ),
         ] = ""
@@ -124,8 +121,7 @@ class OrdersTransformer(MigrationTaskBase):
             Field(
                 title="Funds Map File Name",
                 description=(
-                    "File name for funds mapping. "
-                    "By default is empty string."
+                    "File name for funds mapping. By default is empty string."
                 ),
             ),
         ] = ""
@@ -161,7 +157,8 @@ class OrdersTransformer(MigrationTaskBase):
         self.total_records = 0
         self.current_folio_record: dict = {}
         self.orders_map = self.setup_records_map(
-            self.folder_structure.mapping_files_folder / self.task_config.orders_mapping_file_name
+            self.folder_structure.mapping_files_folder
+            / self.task_config.orders_mapping_file_name
         )
         self.results_path = self.folder_structure.created_objects_path
         self.failed_files: List[str] = []
@@ -215,7 +212,7 @@ class OrdersTransformer(MigrationTaskBase):
             ),
             self.load_ref_data_mapping_file(  # Required if there was is a fund.
                 "fundsMap",
-                self.folder_structure.mapping_files_folder 
+                self.folder_structure.mapping_files_folder
                 / self.task_config.funds_map_file_name,
                 self.folio_keys,
                 True,
@@ -232,11 +229,15 @@ class OrdersTransformer(MigrationTaskBase):
     def list_source_files(self):
         files = []
         for f in self.task_config.files:
-            file_path =self.folder_structure.data_folder / self.object_type_name / f.file_name
+            file_path = (
+                self.folder_structure.data_folder / self.object_type_name / f.file_name
+            )
 
-            if not isfile(file_path):
+            if not file_path.is_file():
                 print(f"\n\nERROR: File defined in task not found - {f.file_name}")
-                raise TransformationProcessError(f"\n\nERROR: File defined in task not found - {f.file_name}")
+                raise TransformationProcessError(
+                    f"\n\nERROR: File defined in task not found - {f.file_name}"
+                )
             files.append(file_path)
         logging.info("Files to process:")
         for filename in files:
@@ -244,15 +245,18 @@ class OrdersTransformer(MigrationTaskBase):
         return files
 
     def process_single_file(self, filename):
-        with open(filename, encoding="utf-8-sig") as records_file, open(
-            self.folder_structure.created_objects_path, "w+"
-        ) as results_file:
+        with (
+            open(filename, encoding="utf-8-sig") as records_file,
+            open(self.folder_structure.created_objects_path, "w+") as results_file,
+        ):
             self.mapper.migration_report.add_general_statistics(
                 i18n.t("Number of files processed")
             )
             start = time.time()
             records_processed = 0
-            for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
+            for idx, record in enumerate(
+                self.mapper.get_objects(records_file, filename)
+            ):
                 records_processed += 1
 
                 try:
@@ -269,7 +273,9 @@ class OrdersTransformer(MigrationTaskBase):
                     self.mapper.migration_report.add_general_statistics(
                         i18n.t("TOTAL Purchase Order Lines created")
                     )
-                    self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
+                    self.mapper.report_folio_mapping(
+                        folio_rec, self.mapper.composite_order_schema
+                    )
                     self.mapper.notes_mapper.map_notes(
                         record,
                         legacy_id,
@@ -307,7 +313,6 @@ class OrdersTransformer(MigrationTaskBase):
             )
 
     def do_work(self):
-
         logging.info("Getting started!")
         for file in self.files:
             logging.info("Processing %s", file)
@@ -325,13 +330,17 @@ class OrdersTransformer(MigrationTaskBase):
 
     def wrap_up(self):
         logging.info("Done. Wrapping up...")
-        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
+        with open(
+            self.folder_structure.migration_reports_file, "w"
+        ) as migration_report_file:
             logging.info(
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Pruchase Orders and Purchase Order Lines Transformation Report"),
+                i18n.t(
+                    "Pruchase Orders and Purchase Order Lines Transformation Report"
+                ),
                 migration_report_file,
                 self.start_datetime,
             )
