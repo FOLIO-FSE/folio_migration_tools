@@ -65,6 +65,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 "name",
                 "CallNumberTypeMapping",
             )
+   
         self.holdings_sources = self.get_holdings_sources()
 
     def get_holdings_sources(self):
@@ -111,9 +112,13 @@ class HoldingsMapper(MappingFileMapperBase):
                 prevent_default=False,
             )
         elif folio_prop_name == "callNumberTypeId":
-            return self.get_call_number_type_id(
-                legacy_item, folio_prop_name, index_or_id
+            value = self.get_mapped_ref_data_value(
+                ref_data_mapping=self.call_number_mapping,
+                legacy_object=legacy_item,
+                index_or_id=index_or_id,
+                prevent_default=False,
             )
+            return value
         # elif folio_prop_name.startswith("statisticalCodeIds"):
         #     return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
 
@@ -147,28 +152,6 @@ class HoldingsMapper(MappingFileMapperBase):
             except (SyntaxError, ValueError):
                 return legacy_value
         return legacy_value
-    
-    ## TODO probably don't need this anymore? - kp 11/12/25
-    # def get_location_id(
-    #     self, legacy_item: dict, id_or_index, folio_prop_name, prevent_default=False
-    # ):
-    #     return self.get_mapped_ref_data_value(
-    #         self.location_mapping,
-    #         legacy_item,
-    #         id_or_index,
-    #         folio_prop_name,
-    #         prevent_default,
-    #     )
-
-    def get_call_number_type_id(self, legacy_item, folio_prop_name: str, id_or_index):
-        if self.call_number_mapping:
-            return self.get_mapped_ref_data_value(
-                self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
-            )
-        self.migration_report.add(
-            "CallNumberTypeMapping", i18n.t("No Call Number Type Mapping")
-        )
-        return ""
 
     def get_instance_ids(self, legacy_value: str, index_or_id: str):
         # Returns a list of Id:s
