@@ -133,7 +133,7 @@ class MappingFileMapperBase(MapperBase):
                 raise TransformationProcessError(
                     "",
                     f"property legacyIdentifier not setup in map: "
-                    f"{field_map.get('legacyIdentifier', '') ({exception})}",
+                    f"{field_map.get('legacyIdentifier', '')({exception})}",
                 ) from exception
             del field_map["legacyIdentifier"]
         return field_map
@@ -213,12 +213,10 @@ class MappingFileMapperBase(MapperBase):
             }
         )
         if object_type == FOLIONamespaces.holdings and hasattr(self, "holdings_sources"):
-            folio_object['sourceId'] = self.holdings_sources.get("FOLIO")
+            folio_object["sourceId"] = self.holdings_sources.get("FOLIO")
         elif object_type == FOLIONamespaces.holdings and not hasattr(self, "holdings_sources"):
             raise TransformationProcessError(
-                index_or_id,
-                "Holdings source not set in the mapper",
-                None
+                index_or_id, "Holdings source not set in the mapper", None
             )
         return folio_object, legacy_id
 
@@ -400,7 +398,7 @@ class MappingFileMapperBase(MapperBase):
                 value = replaced_val
         if value and mapping_file_entry.get("rules", {}).get("regexGetFirstMatchOrEmpty", ""):
             my_pattern = (
-                f'{mapping_file_entry.get("rules", {}).get("regexGetFirstMatchOrEmpty")}|$'
+                f"{mapping_file_entry.get('rules', {}).get('regexGetFirstMatchOrEmpty')}|$"
             )
             value = re.findall(my_pattern, value)[0]
         if not value and mapping_file_entry.get("fallback_legacy_field", ""):
@@ -498,7 +496,7 @@ class MappingFileMapperBase(MapperBase):
             set_deep(folio_object, schema_property_name, temp_object)
             # folio_object[schema_property_name] = temp_object
 
-    def map_objects_array_props(
+    def map_objects_array_props(  # noqa: C901
         self,
         legacy_object,
         prop_name: str,
@@ -553,7 +551,9 @@ class MappingFileMapperBase(MapperBase):
                                     )
                             multi_field_props.append(sub_prop_name)
                         else:
-                            self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
+                            self.validate_enums(
+                                res, sub_prop, sub_prop_name, index_or_id, required
+                            )
 
                         if res or isinstance(res, bool):
                             temp_object[sub_prop_name] = res
@@ -619,8 +619,8 @@ class MappingFileMapperBase(MapperBase):
     @staticmethod
     def split_obj_by_delim(delimiter: str, folio_obj: dict, delimited_props: List[str]):
         non_split_props = [(k, v) for k, v in folio_obj.items() if k not in delimited_props]
-        delimited_props = map(lambda x: [x, *folio_obj[x].split(delimiter)], delimited_props)
-        zipped = list(zip(*delimited_props))
+        delimited_props = ([x, *folio_obj[x].split(delimiter)] for x in delimited_props)
+        zipped = list(zip(*delimited_props, strict=False))
         res = []
         for (prop_name_idx, prop_name), (value_idx, ra) in itertools.product(
             enumerate(zipped[0]), enumerate(zipped[1:])
@@ -973,4 +973,6 @@ def in_deep(dictionary, keys):
 
 
 def is_set_or_bool_or_numeric(any_value):
-    return (isinstance(any_value, str) and (any_value.strip() not in empty_vals)) or isinstance(any_value, (int, float, complex))
+    return (isinstance(any_value, str) and (any_value.strip() not in empty_vals)) or isinstance(
+        any_value, (int, float, complex)
+    )

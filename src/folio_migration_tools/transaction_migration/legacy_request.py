@@ -122,7 +122,7 @@ class LegacyRequest(object):
         missing = [r for r in required if not req.get(r, "")]
         if any(missing):
             raise TransformationRecordFailedError(
-                "", "Required properties missing:" ", ".join(missing)
+                "", "Required properties missing:, ".join(missing)
             )
         return req
 

@@ -250,7 +250,7 @@ class BatchPoster(MigrationTaskBase):
         self.starting_record_count_in_folio: Optional[int] = None
         self.finished_record_count_in_folio: Optional[int] = None
 
-    def do_work(self):
+    def do_work(self):  # noqa: C901
         with self.folio_client.get_folio_http_client() as httpx_client:
             self.http_client = httpx_client
             with open(
@@ -261,7 +261,7 @@ class BatchPoster(MigrationTaskBase):
                     batch = []
                     if self.task_configuration.object_type == "SRS":
                         self.create_snapshot()
-                    for idx, file_def in enumerate(self.task_configuration.files):
+                    for idx, file_def in enumerate(self.task_configuration.files):  # noqa: B007
                         path = self.folder_structure.results_folder / file_def.file_name
                         with open(path) as rows:
                             logging.info("Running %s", path)
@@ -398,7 +398,7 @@ class BatchPoster(MigrationTaskBase):
             new_record (dict): The new record to be updated.
             existing_record (dict): The existing record to patch from.
             patch_paths (List[str]): List of fields in JSON Path notation (e.g., ['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']) to patch during the upsert process. If empty, all fields will be patched.
-        """
+        """  # noqa: E501
         updates = {}
         updates.update(existing_record)
         keep_existing = {}

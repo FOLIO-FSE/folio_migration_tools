@@ -24,7 +24,10 @@ from folio_migration_tools.migration_report import MigrationReport
 
 class MarcFileProcessor:
     def __init__(
-        self, mapper: RulesMapperBase, folder_structure: FolderStructure, created_objects_file: TextIO
+        self,
+        mapper: RulesMapperBase,
+        folder_structure: FolderStructure,
+        created_objects_file: TextIO,
     ):
         self.object_type: FOLIONamespaces = folder_structure.object_type
         self.folder_structure: FolderStructure = folder_structure
@@ -35,16 +38,15 @@ class MarcFileProcessor:
         ):
             self.srs_records_file: TextIO = open(self.folder_structure.srs_records_path, "w+")
         if getattr(mapper.task_configuration, "data_import_marc", False):
-            self.data_import_marc_file: BinaryIO = open(self.folder_structure.data_import_marc_path, "wb+")
+            self.data_import_marc_file: BinaryIO = open(
+                self.folder_structure.data_import_marc_path, "wb+"
+            )
         self.unique_001s: Set[str] = set()
         self.failed_records_count: int = 0
         self.records_count: int = 0
         self.start: float = time.time()
         self.legacy_ids: Set[str] = set()
-        if (
-            self.object_type == FOLIONamespaces.holdings
-            and self.mapper.create_source_records
-        ):
+        if self.object_type == FOLIONamespaces.holdings and self.mapper.create_source_records:
             logging.info("Loading Parent HRID map for SRS creation")
             self.parent_hrids = {entity[1]: entity[2] for entity in mapper.parent_id_map.values()}
 
@@ -83,10 +85,7 @@ class MarcFileProcessor:
                     )
                     self.add_legacy_ids_to_map(folio_rec, filtered_legacy_ids)
 
-                    if (
-                        file_def.create_source_records
-                        and self.mapper.create_source_records
-                    ):
+                    if file_def.create_source_records and self.mapper.create_source_records:
                         self.save_srs_record(
                             marc_record,
                             file_def,
@@ -95,11 +94,7 @@ class MarcFileProcessor:
                             self.object_type,
                         )
                     if getattr(self.mapper.task_configuration, "data_import_marc", False):
-                        self.save_marc_record(
-                            marc_record,
-                            folio_rec,
-                            self.object_type
-                        )
+                        self.save_marc_record(marc_record, folio_rec, self.object_type)
                 Helper.write_to_file(self.created_objects_file, folio_rec)
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Inventory records written to disk")
@@ -136,12 +131,7 @@ class MarcFileProcessor:
                     ):
                         self.mapper.remove_from_id_map(folio_rec.get("formerIds", []))
 
-    def save_marc_record(
-        self,
-        marc_record: Record,
-        folio_rec: Dict,
-        object_type: FOLIONamespaces
-    ):
+    def save_marc_record(self, marc_record: Record, folio_rec: Dict, object_type: FOLIONamespaces):
         self.mapper.save_data_import_marc_record(
             self.data_import_marc_file,
             object_type,
@@ -228,7 +218,9 @@ class MarcFileProcessor:
 
     @staticmethod
     def get_valid_folio_record_ids(
-        legacy_ids: List[str], folio_record_identifiers: Set[str], migration_report: MigrationReport
+        legacy_ids: List[str],
+        folio_record_identifiers: Set[str],
+        migration_report: MigrationReport,
     ) -> List[str]:
         new_ids: Set[str] = set()
         for legacy_id in legacy_ids:

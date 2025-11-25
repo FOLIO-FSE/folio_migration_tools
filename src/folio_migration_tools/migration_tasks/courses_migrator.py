@@ -77,8 +77,7 @@ class CoursesMigrator(MigrationTaskBase):
             Field(
                 title="Look up instructor",
                 description=(
-                    "Flag to indicate whether to look up instructors. "
-                    "By default is False."
+                    "Flag to indicate whether to look up instructors. By default is False."
                 ),
             ),
         ] = False
@@ -91,7 +90,7 @@ class CoursesMigrator(MigrationTaskBase):
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
-        folio_client
+        folio_client,
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.task_configuration = task_configuration

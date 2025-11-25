@@ -95,25 +95,21 @@ class RulesMapperHoldings(RulesMapperBase):
                         )
         self.mappings["852"] = new_852_mapping
 
-    def integrate_supplemental_mfhd_mappings(self, new_rules={}):
+    def integrate_supplemental_mfhd_mappings(self, new_rules=None):
         try:
-            self.mappings.update(new_rules)
+            self.mappings.update(new_rules or {})
             self.fix_853_bug_in_rules()
         except Exception as e:
             raise TransformationProcessError(
                 "",
                 "Failed to integrate supplemental mfhd mappings",
                 str(e),
-            )
+            ) from e
 
     def prep_852_notes(self, marc_record: Record):
         for field in marc_record.get_fields("852"):
             field.subfields.sort(key=lambda x: x[0])
-            new_952 = Field(
-                tag="952",
-                indicators=["f", "f"],
-                subfields=field.subfields
-            )
+            new_952 = Field(tag="952", indicators=["f", "f"], subfields=field.subfields)
             marc_record.add_ordered_field(new_952)
 
     def parse_record(
@@ -270,7 +266,11 @@ class RulesMapperHoldings(RulesMapperBase):
                 ignored_subsequent_fields.add(marc_field.tag)
 
     def perform_additional_mapping(
-        self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str], file_def: FileDefinition
+        self,
+        marc_record: Record,
+        folio_holding: Dict,
+        legacy_ids: List[str],
+        file_def: FileDefinition,
     ):
         """_summary_
 
@@ -306,11 +306,13 @@ class RulesMapperHoldings(RulesMapperBase):
                 "",
             )
         self.handle_suppression(folio_holding, file_def, True)
-        # First, map statistical codes from MARC fields and FileDefinitions to FOLIO statistical codes.
-        # Then, convert the mapped statistical codes to their corresponding code IDs.
+        # First, map statistical codes from MARC fields and FileDefinitions to FOLIO statistical
+        # codes. Then, convert the mapped statistical codes to their corresponding code IDs.
         self.map_statistical_codes(folio_holding, file_def, marc_record)
         self.map_statistical_code_ids(legacy_ids, folio_holding)
-        self.set_source_id(self.create_source_records, folio_holding, self.holdingssources, file_def)
+        self.set_source_id(
+            self.create_source_records, folio_holding, self.holdingssources, file_def
+        )
 
     def pick_first_location_if_many(self, folio_holding: Dict, legacy_ids: List[str]):
         if " " in folio_holding.get("permanentLocationId", ""):
@@ -324,7 +326,12 @@ class RulesMapperHoldings(RulesMapperBase):
             ]
 
     @staticmethod
-    def set_source_id(create_source_records: bool, folio_rec: Dict, holdingssources: Dict, file_def: FileDefinition):
+    def set_source_id(
+        create_source_records: bool,
+        folio_rec: Dict,
+        holdingssources: Dict,
+        file_def: FileDefinition,
+    ):
         if file_def.create_source_records and create_source_records:
             folio_rec["sourceId"] = holdingssources.get("MARC")
         else:
@@ -371,10 +378,14 @@ class RulesMapperHoldings(RulesMapperBase):
         """
         if self.task_configuration.include_mrk_statements:
             mrk_statement_notes = []
-            for field in marc_record.get_fields("853", "854", "855", "863", "864", "865", "866", "867", "868"):
+            for field in marc_record.get_fields(
+                "853", "854", "855", "863", "864", "865", "866", "867", "868"
+            ):
                 mrk_statement_notes.append(str(field))
             if mrk_statement_notes:
-                folio_holding["notes"] = folio_holding.get("notes", []) + self.add_mrk_statements_note(mrk_statement_notes, legacy_ids)
+                folio_holding["notes"] = folio_holding.get(
+                    "notes", []
+                ) + self.add_mrk_statements_note(mrk_statement_notes, legacy_ids)
 
     def add_mrk_statements_note(self, mrk_statement_notes: List[str], legacy_ids) -> List[Dict]:
         """Creates a note from the MRK statements
@@ -386,7 +397,9 @@ class RulesMapperHoldings(RulesMapperBase):
             List: A list containing the FOLIO holdings note object (Dict)
         """
         holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
-            self.folio.holding_note_types, "holding_note_types", self.task_configuration.mrk_holdings_note_type
+            self.folio.holding_note_types,
+            "holding_note_types",
+            self.task_configuration.mrk_holdings_note_type,
         )
         try:
             holdings_note_type_id = holdings_note_type_tuple[0]
@@ -394,7 +407,8 @@ class RulesMapperHoldings(RulesMapperBase):
             logging.error(ee)
             raise TransformationRecordFailedError(
                 legacy_ids,
-                f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mrk_holdings_note_type}\t'
+                f"Holdings note type mapping error.\tNote type name: "
+                f"{self.task_configuration.mrk_holdings_note_type}\t"
                 f"MFHD holdings statement note type not found in FOLIO.",
                 self.task_configuration.mrk_holdings_note_type,
             ) from ee
@@ -403,7 +417,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 "note": chunk,
                 "holdingsNoteTypeId": holdings_note_type_id,
                 "staffOnly": True,
-            } for chunk in self.split_mrk_by_max_note_size("\n".join(mrk_statement_notes))
+            }
+            for chunk in self.split_mrk_by_max_note_size("\n".join(mrk_statement_notes))
         ]
 
     @staticmethod
@@ -423,7 +438,9 @@ class RulesMapperHoldings(RulesMapperBase):
             chunks.append(current_chunk)
         return chunks
 
-    def add_mfhd_as_mrk_note(self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]):
+    def add_mfhd_as_mrk_note(
+        self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]
+    ):
         """Adds the MFHD as a note to the holdings record
 
         This is done to preserve the information in the MARC record for future reference.
@@ -434,7 +451,9 @@ class RulesMapperHoldings(RulesMapperBase):
         """
         if self.task_configuration.include_mfhd_mrk_as_note:
             holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
-                self.folio.holding_note_types, "holding_note_types", self.task_configuration.mfhd_mrk_note_type
+                self.folio.holding_note_types,
+                "holding_note_types",
+                self.task_configuration.mfhd_mrk_note_type,
             )
             try:
                 holdings_note_type_id = holdings_note_type_tuple[0]
@@ -442,7 +461,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 logging.error(ee)
                 raise TransformationRecordFailedError(
                     legacy_ids,
-                    f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrk_note_type}\t'
+                    f"Holdings note type mapping error.\tNote type name: "
+                    f"{self.task_configuration.mfhd_mrk_note_type}\t"
                     f"Note type not found in FOLIO.",
                     self.task_configuration.mfhd_mrk_note_type,
                 ) from ee
@@ -451,13 +471,16 @@ class RulesMapperHoldings(RulesMapperBase):
                     "note": chunk,
                     "holdingsNoteTypeId": holdings_note_type_id,
                     "staffOnly": True,
-                } for chunk in self.split_mrk_by_max_note_size(str(marc_record))
+                }
+                for chunk in self.split_mrk_by_max_note_size(str(marc_record))
             ]
 
     @staticmethod
-    def split_mrc_by_max_note_size(data: bytes, sep: bytes = b"\x1e", max_chunk_size: int = 32000) -> List[bytes]:
+    def split_mrc_by_max_note_size(
+        data: bytes, sep: bytes = b"\x1e", max_chunk_size: int = 32000
+    ) -> List[bytes]:
         # Split data into segments, each ending with the separator (except possibly the last)
-        pattern = re.compile(b'(.*?' + re.escape(sep) + b'|.+?$)', re.DOTALL)
+        pattern = re.compile(b"(.*?" + re.escape(sep) + b"|.+?$)", re.DOTALL)
         parts = [m.group(0) for m in pattern.finditer(data) if m.group(0)]
         chunks = []
         current_chunk = b""
@@ -471,7 +494,9 @@ class RulesMapperHoldings(RulesMapperBase):
             chunks.append(current_chunk)
         return chunks
 
-    def add_mfhd_as_mrc_note(self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]):
+    def add_mfhd_as_mrc_note(
+        self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]
+    ):
         """Adds the MFHD as a note to the holdings record
 
         This is done to preserve the information in the MARC record for future reference.
@@ -482,7 +507,9 @@ class RulesMapperHoldings(RulesMapperBase):
         """
         if self.task_configuration.include_mfhd_mrc_as_note:
             holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
-                self.folio.holding_note_types, "holding_note_types", self.task_configuration.mfhd_mrc_note_type
+                self.folio.holding_note_types,
+                "holding_note_types",
+                self.task_configuration.mfhd_mrc_note_type,
             )
             try:
                 holdings_note_type_id = holdings_note_type_tuple[0]
@@ -490,7 +517,8 @@ class RulesMapperHoldings(RulesMapperBase):
                 logging.error(ee)
                 raise TransformationRecordFailedError(
                     legacy_ids,
-                    f'Holdings note type mapping error.\tNote type name: {self.task_configuration.mfhd_mrc_note_type}\t'
+                    f"Holdings note type mapping error.\tNote type name: "
+                    f"{self.task_configuration.mfhd_mrc_note_type}\t"
                     f"Note type not found in FOLIO.",
                     self.task_configuration.mfhd_mrc_note_type,
                 ) from ee
@@ -499,7 +527,8 @@ class RulesMapperHoldings(RulesMapperBase):
                     "note": chunk.decode("utf-8"),
                     "holdingsNoteTypeId": holdings_note_type_id,
                     "staffOnly": True,
-                } for chunk in self.split_mrc_by_max_note_size(marc_record.as_marc())
+                }
+                for chunk in self.split_mrc_by_max_note_size(marc_record.as_marc())
             ]
 
     def wrap_up(self):
@@ -642,7 +671,7 @@ class RulesMapperHoldings(RulesMapperBase):
         Raises:
             TransformationProcessError: If MFHD_ID or BIB_ID is missing from the entry or if the instance_uuid is not in the parent_id_map.
             TransformationRecordFailedError: If BIB_ID is not in the instance id map.
-        """
+        """  # noqa: E501
         new_map = {}
         for idx, entry in enumerate(boundwith_relationship_map_list):
             self.verity_boundwith_map_entry(entry)
@@ -663,9 +692,10 @@ class RulesMapperHoldings(RulesMapperBase):
     def get_bw_instance_id_map_tuple(self, entry: Dict):
         try:
             return self.parent_id_map[entry["BIB_ID"]]
-        except KeyError:
+        except KeyError as e:
             raise TransformationRecordFailedError(
                 entry["MFHD_ID"],
-                "Boundwith relationship map contains a BIB_ID id not in the instance id map. No boundwith holdings created for this BIB_ID.",
+                "Boundwith relationship map contains a BIB_ID id not in the instance id map. "
+                "No boundwith holdings created for this BIB_ID.",
                 entry["BIB_ID"],
-            )
+            ) from e

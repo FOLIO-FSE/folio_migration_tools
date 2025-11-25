@@ -49,41 +49,37 @@ class UserTransformer(MigrationTaskBase):
             Field(
                 title="Group map path",
                 description="Define the path for group mapping",
-            )
+            ),
         ]
         departments_map_path: Annotated[
             Optional[str],
             Field(
                 title="Departments map path",
                 description=(
-                    "Define the path for departments mapping. "
-                    "Optional, by dfault is empty string"
+                    "Define the path for departments mapping. Optional, by dfault is empty string"
                 ),
-            )
+            ),
         ] = ""
         use_group_map: Annotated[
             Optional[bool],
             Field(
                 title="Use group map",
-                description=(
-                    "Specify whether to use group mapping. "
-                    "Optional, by default is True"
-                ),
-            )
+                description=("Specify whether to use group mapping. Optional, by default is True"),
+            ),
         ] = True
         user_mapping_file_name: Annotated[
             str,
             Field(
                 title="User mapping file name",
                 description="Specify the user mapping file name",
-            )
+            ),
         ]
         user_file: Annotated[
             FileDefinition,
             Field(
                 title="User file",
                 description="Select the user data file",
-            )
+            ),
         ]
         remove_id_and_request_preferences: Annotated[
             Optional[bool],
@@ -93,7 +89,7 @@ class UserTransformer(MigrationTaskBase):
                     "Specify whether to remove user ID and request preferences. "
                     "Optional, by default is False"
                 ),
-            )
+            ),
         ] = False
         remove_request_preferences: Annotated[
             Optional[bool],
@@ -103,7 +99,7 @@ class UserTransformer(MigrationTaskBase):
                     "Specify whether to remove user request preferences. "
                     "Optional, by default is False"
                 ),
-            )
+            ),
         ] = False
 
     @staticmethod
@@ -306,8 +302,7 @@ def find_primary_addresses(addresses):
         if "primaryAddress" not in address:
             address["primaryAddress"] = False
         elif (
-            isinstance(address["primaryAddress"], bool)
-            and address["primaryAddress"] is True
+            isinstance(address["primaryAddress"], bool) and address["primaryAddress"] is True
         ) or (
             isinstance(address["primaryAddress"], str)
             and address["primaryAddress"].lower() == "true"

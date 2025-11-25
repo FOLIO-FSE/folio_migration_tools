@@ -1,5 +1,6 @@
 """The default mapper, responsible for parsing MARC21 records acording to the
 FOLIO community specifications"""
+
 import logging
 import re
 import time

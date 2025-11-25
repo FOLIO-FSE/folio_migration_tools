@@ -32,7 +32,7 @@ class RequestsMigrator(MigrationTaskBase):
                 description=(
                     "Name of this migration task. The name is being used to call "
                     "the specific task, and to distinguish tasks of similar types"
-                )
+                ),
             ),
         ]
         migration_task_type: Annotated[
@@ -54,8 +54,7 @@ class RequestsMigrator(MigrationTaskBase):
             Field(
                 title="Starting row",
                 description=(
-                    "Row number to start processing data from. "
-                    "Optional, by default is first row"
+                    "Row number to start processing data from. Optional, by default is first row"
                 ),
             ),
         ] = 1
@@ -64,8 +63,7 @@ class RequestsMigrator(MigrationTaskBase):
             Field(
                 title="Item files",
                 description=(
-                    "List of files containing item data. "
-                    "Optional, by default is empty list"
+                    "List of files containing item data. Optional, by default is empty list"
                 ),
             ),
         ] = []
@@ -74,8 +72,7 @@ class RequestsMigrator(MigrationTaskBase):
             Field(
                 title="Patron files",
                 description=(
-                    "List of files containing patron data. "
-                    "Optional, by default is empty list"
+                    "List of files containing patron data. Optional, by default is empty list"
                 ),
             ),
         ] = []
@@ -88,7 +85,7 @@ class RequestsMigrator(MigrationTaskBase):
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
-        folio_client
+        folio_client,
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
@@ -135,8 +132,7 @@ class RequestsMigrator(MigrationTaskBase):
             )
         else:
             logging.info(
-                "No item or user files supplied. Not validating against"
-                "previously migrated objects"
+                "No item or user files supplied. Not validating againstpreviously migrated objects"
             )
             self.valid_legacy_requests = self.semi_valid_legacy_requests
 
@@ -188,7 +184,7 @@ class RequestsMigrator(MigrationTaskBase):
         legacy_request.instance_id = holding.get("instanceId")
         if item["status"]["name"] in ["Available"]:
             legacy_request.request_type = "Page"
-            logging.info(f'Setting request to Page, since the status is {item["status"]["name"]}')
+            logging.info(f"Setting request to Page, since the status is {item['status']['name']}")
         self.migration_report.add_general_statistics(
             i18n.t("Valid, prepared requests, ready for posting")
         )
@@ -197,7 +193,7 @@ class RequestsMigrator(MigrationTaskBase):
     def do_work(self):
         logging.info("Starting")
         if self.task_configuration.starting_row > 1:
-            logging.info(f"Skipping {(self.task_configuration.starting_row-1)} records")
+            logging.info(f"Skipping {(self.task_configuration.starting_row - 1)} records")
         for num_requests, legacy_request in enumerate(
             self.valid_legacy_requests[self.task_configuration.starting_row - 1 :],
             start=1,
@@ -281,7 +277,8 @@ class RequestsMigrator(MigrationTaskBase):
                 self.migration_report.add(
                     "DiscardedLoans",
                     i18n.t(
-                        "Requests discarded. Had migrated item barcode: %{item_barcode}.\n Had migrated user barcode: %{patron_barcode}",
+                        "Requests discarded. Had migrated item barcode: %{item_barcode}.\n "
+                        "Had migrated user barcode: %{patron_barcode}",
                         item_barcode=has_item_barcode,
                         patron_barcode=has_patron_barcode,
                     ),
@@ -333,8 +330,7 @@ class RequestsMigrator(MigrationTaskBase):
             except ValueError as ve:
                 logging.exception(ve)
         logging.info(
-            f"Done validating {legacy_reques_count} "
-            f"legacy requests with {num_bad} rotten apples"
+            f"Done validating {legacy_reques_count} legacy requests with {num_bad} rotten apples"
         )
         if num_bad > 0 and (num_bad / legacy_reques_count) > 0.5:
             q = num_bad / legacy_reques_count

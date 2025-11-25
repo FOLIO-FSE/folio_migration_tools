@@ -104,7 +104,8 @@ class LibraryConfiguration(BaseModel):
             description=(
                 "The ID of the FOLIO tenant instance. "
                 "You can find this in Settings > Software versions > API gateway services. "
-                "In an ECS environment, this is the ID of the central tenant, for all configurations."
+                "In an ECS environment, this is the ID of the central tenant, for all "
+                "configurations."
             ),
         ),
     ]
@@ -147,7 +148,8 @@ class LibraryConfiguration(BaseModel):
             title="Multi field delimiter",
             description=(
                 "The delimiter used to separate multiple values in a single field. "
-                "This is used for delimited text (CSV/TSV) fields with multiple sub-delimited values."
+                "This is used for delimited text (CSV/TSV) fields with multiple sub-delimited "
+                "values."
             ),
         ),
     ] = "<delimiter>"
@@ -190,8 +192,9 @@ class LibraryConfiguration(BaseModel):
         Field(
             title="Use gateway URL for UUIDs",
             description=(
-                "If set to true, folio_uuid will use the gateway URL when generating deterministic UUIDs for FOLIO records. "
-                "If set to false (default), the UUIDs will be generated using the tenant_id (or ecs_tenant_id)."
+                "If set to true, folio_uuid will use the gateway URL when generating deterministic"
+                " UUIDs for FOLIO records. If set to false (default), the UUIDs will be generated"
+                " using the tenant_id (or ecs_tenant_id)."
             ),
         ),
     ] = False
@@ -211,8 +214,9 @@ class LibraryConfiguration(BaseModel):
         Field(
             title="ECS central iteration identifier",
             description=(
-                "The iteration_identifier value from the central tenant configuration that corresponds "
-                "to this configuration's iteration_identifier. Used to access the central instances_id_map."
+                "The iteration_identifier value from the central tenant configuration that "
+                "corresponds to this configuration's iteration_identifier. Used to access the "
+                "central instances_id_map."
             ),
         ),
     ] = ""

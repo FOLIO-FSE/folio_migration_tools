@@ -52,7 +52,10 @@ class RulesMapperBase(MapperBase):
         self.mappings: dict = {}
         self.schema_properties = None
         self.create_source_records = all(
-            [self.task_configuration.create_source_records, (not getattr(self.task_configuration, "data_import_marc", False))]
+            [
+                self.task_configuration.create_source_records,
+                (not getattr(self.task_configuration, "data_import_marc", False)),
+            ]
         )
         if hasattr(self.task_configuration, "hrid_handling"):
             self.hrid_handler = HRIDHandler(
@@ -190,10 +193,10 @@ class RulesMapperBase(MapperBase):
     ):
         values: List[str] = []
         if mapping.get("subfield") and (custom_delimiters := mapping.get("subFieldDelimiter")):
-            delimiter_map = {sub_f: " " for sub_f in mapping.get("subfield")}
+            delimiter_map = dict.fromkeys(mapping.get("subfield"), " ")
             for custom_delimiter in custom_delimiters:
                 delimiter_map.update(
-                    {sub_f: custom_delimiter["value"] for sub_f in custom_delimiter["subfields"]}
+                    dict.fromkeys(custom_delimiter["subfields"], custom_delimiter["value"])
                 )
             custom_delimited_strings: List[Tuple[str, List[str]]] = []
             subfields = mapping.get("subfield")
@@ -505,7 +508,7 @@ class RulesMapperBase(MapperBase):
                 + i18n.t("Check mapping file against the schema.")
                 + " "
                 + i18n.t("Target type")
-                + f": {sch.get(target_string,{}).get('type','')} "
+                + f": {sch.get(target_string, {}).get('type', '')} "
                 + i18n.t("Value")
                 + f": {value}",
                 "",
@@ -529,7 +532,7 @@ class RulesMapperBase(MapperBase):
                 "",
                 (
                     f"Edge! Target string: {target_string} "
-                    f"Target type: {sch.get(target_string,{}).get('type','')} Value: {value}"
+                    f"Target type: {sch.get(target_string, {}).get('type', '')} Value: {value}"
                 ),
             )
 
@@ -564,8 +567,9 @@ class RulesMapperBase(MapperBase):
                     if subfield != "9":
                         Helper.log_data_issue(
                             index_or_legacy_id,
-                            f"authorityId mapping from ${subfield} is not supported. Data Import will fail. "
-                            "Use only $9 for authority id mapping in MARC-to-Instance mapping rules.",
+                            f"authorityId mapping from ${subfield} is not supported. Data Import "
+                            "will fail. Use only $9 for authority id mapping in MARC-to-Instance "
+                            "mapping rules.",
                             marc_field,
                         )
                         entity_mapping["subfield"] = ["9"]
@@ -599,7 +603,8 @@ class RulesMapperBase(MapperBase):
             entity = {}
             Helper.log_data_issue(
                 index_or_legacy_id,
-                f"Missing one or more required property in entity {entity_parent_key} ({missing_required_props})",
+                f"Missing one or more required property in entity {entity_parent_key} "
+                f"({missing_required_props})",
                 marc_field,
             )
         return entity
@@ -639,7 +644,8 @@ class RulesMapperBase(MapperBase):
                     )
                     or e_parent in ["electronicAccess", "publication"]
                     or (
-                        e_parent.startswith("holdingsStatements") and any(v for k, v in entity.items())
+                        e_parent.startswith("holdingsStatements")
+                        and any(v for k, v in entity.items())
                     )
                 ):
                     self.add_entity_to_record(entity, e_parent, folio_record, self.schema)
@@ -661,12 +667,12 @@ class RulesMapperBase(MapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            i18n.t("Suppressed from discovery") + f' = {folio_record["discoverySuppress"]}',
+            i18n.t("Suppressed from discovery") + f" = {folio_record['discoverySuppress']}",
         )
         if not only_discovery_suppress:
             folio_record["staffSuppress"] = file_def.staff_suppressed
             self.migration_report.add(
-                "Suppression", i18n.t("Staff suppressed") + f' = {folio_record["staffSuppress"]} '
+                "Suppression", i18n.t("Staff suppressed") + f" = {folio_record['staffSuppress']} "
             )
 
     def create_preceding_succeeding_titles(
@@ -825,7 +831,6 @@ class RulesMapperBase(MapperBase):
             )
         data_import_marc_file.write(marc_record.as_marc())
 
-
     def map_statistical_codes(
         self,
         folio_record: dict,
@@ -854,11 +859,17 @@ class RulesMapperBase(MapperBase):
             for mapping in self.task_configuration.statistical_code_mapping_fields:
                 stat_code_marc_fields.append(mapping.split("$"))
             for field_map in stat_code_marc_fields:
-                mapped_codes = self.map_stat_codes_from_marc_field(field_map, marc_record, self.library_configuration.multi_field_delimiter)
-                folio_record['statisticalCodeIds'] = folio_record.get("statisticalCodeIds", []) + mapped_codes
+                mapped_codes = self.map_stat_codes_from_marc_field(
+                    field_map, marc_record, self.library_configuration.multi_field_delimiter
+                )
+                folio_record["statisticalCodeIds"] = (
+                    folio_record.get("statisticalCodeIds", []) + mapped_codes
+                )
 
     @staticmethod
-    def map_stat_codes_from_marc_field(field_map: List[str], marc_record: Record, multi_field_delimiter: str="<delimiter>") -> List[str]:
+    def map_stat_codes_from_marc_field(
+        field_map: List[str], marc_record: Record, multi_field_delimiter: str = "<delimiter>"
+    ) -> List[str]:
         """Map statistical codes from MARC field to FOLIO instance.
 
         This function extracts statistical codes from a MARC field based on the provided field map.
@@ -871,30 +882,26 @@ class RulesMapperBase(MapperBase):
 
         Returns:
             str: A string of statistical codes extracted from the MARC field, formatted as "<field>_<subfield>:<value>".
-        """
+        """  # noqa: E501
         field_values = []
         if len(field_map) == 2:
             subfields = []
             for mf in marc_record.get_fields(field_map[0]):
                 subfields.extend(
-                    multi_field_delimiter.join(
-                        mf.get_subfields(field_map[1])
-                    ).split(multi_field_delimiter)
+                    multi_field_delimiter.join(mf.get_subfields(field_map[1])).split(
+                        multi_field_delimiter
+                    )
                 )
-            field_values.extend(
-                [
-                    f"{field_map[0]}_{field_map[1]}:{x}" for
-                    x in subfields
-                ]
-            )
+            field_values.extend([f"{field_map[0]}_{field_map[1]}:{x}" for x in subfields])
         elif len(field_map) > 2:
             for mf in marc_record.get_fields(field_map[0]):
                 for sf in field_map[1:]:
                     field_values.extend(
                         [
-                            f"{field_map[0]}_{sf}:{x}" for x in multi_field_delimiter.join(
-                                mf.get_subfields(sf)
-                            ).split(multi_field_delimiter)
+                            f"{field_map[0]}_{sf}:{x}"
+                            for x in multi_field_delimiter.join(mf.get_subfields(sf)).split(
+                                multi_field_delimiter
+                            )
                         ]
                     )
         elif field_map:
@@ -960,11 +967,7 @@ class RulesMapperBase(MapperBase):
         }
 
         return str(
-            FolioUUID(
-                self.base_string_for_folio_uuid,
-                srs_types.get(record_type),
-                legacy_id
-            )
+            FolioUUID(self.base_string_for_folio_uuid, srs_types.get(record_type), legacy_id)
         )
 
     @staticmethod
@@ -1075,6 +1078,7 @@ def is_array_of_objects(schema_property):
     sc_prop_type = schema_property.get("type", "string")
     return sc_prop_type == "array" and schema_property["items"]["type"] == "object"
 
+
 def entity_indicators_match(entity_mapping, marc_field):
     """
     Check if the indicators of the entity mapping match the indicators of the MARC field.
@@ -1095,12 +1099,18 @@ def entity_indicators_match(entity_mapping, marc_field):
 
     Returns:
         bool: True if the indicators match, False otherwise.
-    """
+    """  # noqa: E501
     if indicator_rule := [x["indicators"] for x in entity_mapping if "indicators" in x]:
         return all(
             [
-                (marc_field.indicator1 == indicator_rule[0]['ind1'] or indicator_rule[0]['ind1'] == "*"),
-                (marc_field.indicator2 == indicator_rule[0]['ind2'] or indicator_rule[0]['ind2'] == "*"),
+                (
+                    marc_field.indicator1 == indicator_rule[0]["ind1"]
+                    or indicator_rule[0]["ind1"] == "*"
+                ),
+                (
+                    marc_field.indicator2 == indicator_rule[0]["ind2"]
+                    or indicator_rule[0]["ind2"] == "*"
+                ),
             ]
         )
     else:

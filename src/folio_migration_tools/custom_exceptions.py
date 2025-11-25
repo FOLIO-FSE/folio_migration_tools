@@ -13,7 +13,7 @@ class TransformationFieldMappingError(TransformationError):
     """Raised when the field mapping fails, but the error is not critical.
     The issue should be logged for the library to act upon it"""
 
-    def __init__(self, index_or_id="", message="", data_value: Union[str, StrCoercible]=""):
+    def __init__(self, index_or_id="", message="", data_value: Union[str, StrCoercible] = ""):
         self.index_or_id = index_or_id or ""
         self.message = message
         self.data_value: Union[str, StrCoercible] = data_value
@@ -70,7 +70,7 @@ class TransformationProcessError(TransformationError):
         index_or_id,
         message="Critical Process issue. Transformation failed."
         " Check configuration, mapping files and reference data",
-        data_value: Union[str, StrCoercible]="",
+        data_value: Union[str, StrCoercible] = "",
     ):
         self.index_or_id = index_or_id
         self.message = message
