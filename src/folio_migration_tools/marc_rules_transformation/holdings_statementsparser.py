@@ -35,7 +35,7 @@ class HoldingsStatementsParser:
 
         Returns:
             dict: A dictionary containing parsed holdings statements and related information.
-        """
+        """  # noqa: E501
 
         # Textual holdings statements
         return_dict: dict = {"statements": [], "migration_report": [], "hlm_stmts": []}
@@ -67,14 +67,20 @@ class HoldingsStatementsParser:
                         raise TransformationFieldMappingError(
                             legacy_ids,
                             i18n.t(
-                                "subfield present in %{linked_value_tag} but not in %{pattern_field}",
+                                "subfield present in %{linked_value_tag} but not "
+                                "in %{pattern_field}",
                                 pattern_field=pattern_field,
                                 linked_value_tag=linked_value_field,
                             ),
                             pattern_field,
                         ) from e
                     HoldingsStatementsParser.prepare_return_dict(
-                        pattern_tag, legacy_ids, return_dict, pattern_field, linked_value_field, parsed_dict
+                        pattern_tag,
+                        legacy_ids,
+                        return_dict,
+                        pattern_field,
+                        linked_value_field,
+                        parsed_dict,
                     )
 
         if dedupe_results:
@@ -296,8 +302,10 @@ class HoldingsStatementsParser:
                     elif cron_to.strip() and val:
                         val_rest = val
                     if year:
-                        cron_from, cron_to = HoldingsStatementsParser.format_year_cron_from_cron_to(
-                            cron_from, cron_to, hlm_stmt, val, val_rest
+                        cron_from, cron_to = (
+                            HoldingsStatementsParser.format_year_cron_from_cron_to(
+                                cron_from, cron_to, hlm_stmt, val, val_rest
+                            )
                         )
 
                 else:

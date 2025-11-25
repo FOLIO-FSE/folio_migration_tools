@@ -47,7 +47,7 @@ class UserMapper(MappingFileMapperBase):
                 None,
                 FOLIONamespaces.users,
                 library_config,
-                task_config
+                task_config,
             )
             self.task_config = self.task_configuration
             self.notes_mapper: NotesMapper = NotesMapper(
@@ -157,18 +157,25 @@ class UserMapper(MappingFileMapperBase):
                     "No Departments mapping set up. Set up a departments mapping file "
                     " or remove the mapping of the Departments field",
                 )
-            if len(self.departments_mapping.mapped_legacy_keys) == 1 and self.library_configuration.multi_field_delimiter in legacy_user.get(self.departments_mapping.mapped_legacy_keys[0], ""):
-                split_departments = legacy_user.get(self.departments_mapping.mapped_legacy_keys[0], "").split(
-                    self.library_configuration.multi_field_delimiter
+            if len(
+                self.departments_mapping.mapped_legacy_keys
+            ) == 1 and self.library_configuration.multi_field_delimiter in legacy_user.get(
+                self.departments_mapping.mapped_legacy_keys[0], ""
+            ):
+                split_departments = legacy_user.get(
+                    self.departments_mapping.mapped_legacy_keys[0], ""
+                ).split(self.library_configuration.multi_field_delimiter)
+                return self.library_configuration.multi_field_delimiter.join(
+                    [
+                        self.get_mapped_name(
+                            self.departments_mapping,
+                            {self.departments_mapping.mapped_legacy_keys[0]: dept},
+                            index_or_id,
+                            True,
+                        )
+                        for dept in split_departments
+                    ]
                 )
-                return self.library_configuration.multi_field_delimiter.join([
-                    self.get_mapped_name(
-                        self.departments_mapping,
-                        {self.departments_mapping.mapped_legacy_keys[0]: dept},
-                        index_or_id,
-                        True,
-                    ) for dept in split_departments
-                ])
             else:
                 return self.get_mapped_name(
                     self.departments_mapping,
@@ -198,21 +205,29 @@ class UserMapper(MappingFileMapperBase):
             return ""
 
     def setup_groups_mapping(self, groups_map):
-        return RefDataMapping(
-            self.folio_client,
-            "/groups",
-            "usergroups",
-            groups_map,
-            "group",
-            "UserGroupMapping",
-        ) if groups_map else None
+        return (
+            RefDataMapping(
+                self.folio_client,
+                "/groups",
+                "usergroups",
+                groups_map,
+                "group",
+                "UserGroupMapping",
+            )
+            if groups_map
+            else None
+        )
 
     def setup_departments_mapping(self, departments_mapping):
-        return RefDataMapping(
-            self.folio_client,
-            "/departments",
-            "departments",
-            departments_mapping,
-            "name",
-            "DepartmentsMapping",
-        ) if departments_mapping else None
+        return (
+            RefDataMapping(
+                self.folio_client,
+                "/departments",
+                "departments",
+                departments_mapping,
+                "name",
+                "DepartmentsMapping",
+            )
+            if departments_mapping
+            else None
+        )

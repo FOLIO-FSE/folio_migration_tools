@@ -330,9 +330,9 @@ class OrganizationMapper(MappingFileMapperBase):
                         ["username", "password", "interfaceId"],
                     )
 
-                    interface_schema["properties"][
-                        "interfaceCredential"
-                    ] = interface_credential_schema
+                    interface_schema["properties"]["interfaceCredential"] = (
+                        interface_credential_schema
+                    )
 
                     property_level1["items"] = interface_schema
 

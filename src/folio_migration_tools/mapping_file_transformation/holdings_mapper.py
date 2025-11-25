@@ -6,7 +6,10 @@ import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError, TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -18,6 +21,7 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
 
 class HoldingsMapper(MappingFileMapperBase):
     def __init__(
@@ -40,7 +44,7 @@ class HoldingsMapper(MappingFileMapperBase):
             statistical_codes_map,
             FOLIONamespaces.holdings,
             library_configuration,
-            task_config
+            task_config,
         )
         self.holdings_map = holdings_map
 
@@ -86,7 +90,7 @@ class HoldingsMapper(MappingFileMapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            i18n.t("Suppressed from discovery") + f' = {folio_record["discoverySuppress"]}',
+            i18n.t("Suppressed from discovery") + f" = {folio_record['discoverySuppress']}",
         )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):

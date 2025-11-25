@@ -58,7 +58,7 @@ class FolderStructure:
         logging.info("Migration report file will be saved at %s", self.migration_reports_file)
 
     def setup_migration_file_structure(self, source_file_type: str = ""):
-        self.time_stamp = f'_{time.strftime("%Y%m%d-%H%M%S")}'
+        self.time_stamp = f"_{time.strftime('%Y%m%d-%H%M%S')}"
         self.time_str = self.time_stamp if self.add_time_stamp_to_file_names else ""
         self.file_template = f"{self.time_str}_{self.migration_task_name}"
         object_type_string = str(self.object_type.name).lower()

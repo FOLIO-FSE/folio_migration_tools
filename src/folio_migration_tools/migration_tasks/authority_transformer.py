@@ -66,8 +66,7 @@ class AuthorityTransformer(MigrationTaskBase):
             Field(
                 title="Create source records",
                 description=(
-                    "Controls wheter or not to retain the MARC records in "
-                    "Source Record Storage."
+                    "Controls wheter or not to retain the MARC records in Source Record Storage."
                 ),
             ),
         ] = True

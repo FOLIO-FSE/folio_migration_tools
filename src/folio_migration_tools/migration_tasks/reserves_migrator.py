@@ -59,7 +59,7 @@ class ReservesMigrator(MigrationTaskBase):
         self,
         task_configuration: TaskConfiguration,
         library_config: LibraryConfiguration,
-        folio_client
+        folio_client,
     ):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()

@@ -58,7 +58,7 @@ def mocked_folio_client() -> FolioClient:
         raise ee
 
 
-def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):
+def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):  # noqa: C901
     with open("./static/reference_data.json", "r") as super_schema_file:
         super_schema = json.load(super_schema_file)
     if ref_data_path == "/coursereserves/terms":

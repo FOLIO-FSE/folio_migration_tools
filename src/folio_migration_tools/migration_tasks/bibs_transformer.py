@@ -16,7 +16,10 @@ from folio_migration_tools.marc_rules_transformation.marc_file_processor import 
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
 )
-from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase, MigrationTaskBase
+from folio_migration_tools.migration_tasks.migration_task_base import (
+    MarcTaskConfigurationBase,
+    MigrationTaskBase,
+)
 
 
 class BibsTransformer(MigrationTaskBase):
@@ -26,7 +29,7 @@ class BibsTransformer(MigrationTaskBase):
             Field(
                 title="ILS flavour",
                 description="The type of ILS you are migrating records from.",
-                alias="ils_flavor"
+                alias="ils_flavor",
             ),
         ]
         custom_bib_id_field: Annotated[
@@ -68,11 +71,11 @@ class BibsTransformer(MigrationTaskBase):
             Field(
                 title="Generate a MARC file for data import overlay of instances",
                 description=(
-                    "If set to true, the process will generate a file of binary MARC records that can"
-                    "be imported into FOLIO using the Data Import APIs. If set to false, only a file"
-                    "of FOLIO instance records (and optional SRS records) will be generated."
+                    "If set to true, the process will generate a file of binary MARC records that "
+                    "can be imported into FOLIO using the Data Import APIs. If set to false, only "
+                    "a file of FOLIO instance records (and optional SRS records) will be generated."  # noqa: E501
                 ),
-            )
+            ),
         ] = True
         parse_cataloged_date: Annotated[
             bool,
@@ -130,7 +133,9 @@ class BibsTransformer(MigrationTaskBase):
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_configuration.files
         )
-        self.mapper = BibsRulesMapper(self.folio_client, library_config, self.task_configuration, statcode_mapping)
+        self.mapper = BibsRulesMapper(
+            self.folio_client, library_config, self.task_configuration, statcode_mapping
+        )
         self.bib_ids: set = set()
         if (
             self.task_configuration.reset_hrid_settings

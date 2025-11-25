@@ -58,11 +58,11 @@ class Conditions:
 
     def setup_reference_data_for_bibs(self):
         logging.info("Setting up reference data for bib transformation")
-        logging.info("%s\tcontrib_name_types", len(self.folio.contrib_name_types)) # type: ignore
-        logging.info("%s\tcontributor_types", len(self.folio.contributor_types)) # type: ignore
-        logging.info("%s\talt_title_types", len(self.folio.alt_title_types)) # type: ignore
-        logging.info("%s\tidentifier_types", len(self.folio.identifier_types)) # type: ignore
-        logging.info("%s\tsubject_types", len(self.folio.subject_types)) # type: ignore
+        logging.info("%s\tcontrib_name_types", len(self.folio.contrib_name_types))  # type: ignore
+        logging.info("%s\tcontributor_types", len(self.folio.contributor_types))  # type: ignore
+        logging.info("%s\talt_title_types", len(self.folio.alt_title_types))  # type: ignore
+        logging.info("%s\tidentifier_types", len(self.folio.identifier_types))  # type: ignore
+        logging.info("%s\tsubject_types", len(self.folio.subject_types))  # type: ignore
         # Raise for empty settings
         if not self.folio.contributor_types:
             raise TransformationProcessError("", "No contributor_types in FOLIO")
@@ -77,18 +77,20 @@ class Conditions:
 
         # Set defaults
         logging.info("Setting defaults")
-        self.default_contributor_name_type: str = self.folio.contrib_name_types[0]["id"] # type: ignore
+        self.default_contributor_name_type: str = self.folio.contrib_name_types[0]["id"]  # type: ignore
         logging.info("Contributor name type:\t%s", self.default_contributor_name_type)
         self.default_contributor_type = next(
-            ct for ct in self.folio.contributor_types if ct["code"] == "ctb" # type: ignore
+            ct
+            for ct in self.folio.contributor_types
+            if ct["code"] == "ctb"  # type: ignore
         )
         logging.info("Contributor type:\t%s", self.default_contributor_type["id"])
 
     def setup_reference_data_for_items_and_holdings(self, default_call_number_type_name):
-        logging.info(f"{len(self.folio.locations)}\tlocations") # type: ignore
+        logging.info(f"{len(self.folio.locations)}\tlocations")  # type: ignore
         self.default_call_number_type = {}
-        logging.info("%s\tholding_note_types", len(self.folio.holding_note_types)) # type: ignore
-        logging.info("%s\tcall_number_types", len(self.folio.call_number_types)) # type: ignore
+        logging.info("%s\tholding_note_types", len(self.folio.holding_note_types))  # type: ignore
+        logging.info("%s\tcall_number_types", len(self.folio.call_number_types))  # type: ignore
         self.setup_and_validate_holdings_types()
         self.ill_policies = self.folio.folio_get_all("/ill-policies", "illPolicies")
         # Raise for empty settings
@@ -104,7 +106,7 @@ class Conditions:
         self.default_call_number_type: dict = next(
             (
                 ct
-                for ct in self.folio.call_number_types # type: ignore
+                for ct in self.folio.call_number_types  # type: ignore
                 if ct["name"] == default_call_number_type_name
             ),
             None,
@@ -127,7 +129,7 @@ class Conditions:
         missing_holdings_types = [
             ht
             for ht in self.holdings_type_map.values()
-            if ht not in [ht_ref["name"] for ht_ref in self.holdings_types] # type: ignore
+            if ht not in [ht_ref["name"] for ht_ref in self.holdings_types]  # type: ignore
         ]
         if any(missing_holdings_types):
             raise TransformationProcessError(
@@ -135,15 +137,15 @@ class Conditions:
                 "Holdings types are missing from the tenant. Please set them up",
                 missing_holdings_types,
             )
-        logging.info("%s\tholdings types", len(self.holdings_types)) # type: ignore
+        logging.info("%s\tholdings types", len(self.holdings_types))  # type: ignore
 
     def setup_reference_data_for_all(self):
-        logging.info(f"{len(self.folio.class_types)}\tclass_types") # type: ignore
+        logging.info(f"{len(self.folio.class_types)}\tclass_types")  # type: ignore
         logging.info(
-            f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships" # type: ignore
+            f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships"  # type: ignore
         )
         self.statistical_codes = self.folio.statistical_codes
-        logging.info(f"{len(self.statistical_codes)} \tstatistical_codes") # type: ignore
+        logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")  # type: ignore
 
         # Raise for empty settings
         if not self.folio.class_types:
@@ -156,13 +158,13 @@ class Conditions:
             )
         )
         logging.info(f"{len(self.authority_note_types)} \tAuthority note types")
-        logging.info(f"{len(self.folio.identifier_types)} \tidentifier types") # type: ignore
+        logging.info(f"{len(self.folio.identifier_types)} \tidentifier types")  # type: ignore
 
     def get_condition(
         self, name, legacy_id, value, parameter=None, marc_field: Union[None, field.Field] = None
     ):
         try:
-            return self.condition_cache.get(name)(legacy_id, value, parameter, marc_field) # type: ignore
+            return self.condition_cache.get(name)(legacy_id, value, parameter, marc_field)  # type: ignore
         # Exception should only handle the missing condition from the cache.
         # All other exceptions should propagate up
         except Exception:
@@ -381,7 +383,7 @@ class Conditions:
         identifier_type: dict = next(
             (
                 f
-                for f in self.folio.identifier_types # type: ignore
+                for f in self.folio.identifier_types  # type: ignore
                 if (
                     f["name"] in parameter.get("names", "non existant")
                     or f["name"] in parameter.get("name", "non existant")
@@ -424,7 +426,7 @@ class Conditions:
             logging.error(ee)
             raise TransformationRecordFailedError(
                 legacy_id,
-                f'Holdings note type mapping error.\tParameter: {parameter.get("name", "")}\t'
+                f"Holdings note type mapping error.\tParameter: {parameter.get('name', '')}\t"
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
             ) from ee
@@ -442,7 +444,7 @@ class Conditions:
             logging.error(ee)
             raise TransformationProcessError(
                 legacy_id,
-                f'Authority note type mapping error.\tParameter: {parameter.get("name", "")}\t'
+                f"Authority note type mapping error.\tParameter: {parameter.get('name', '')}\t"
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
             ) from ee
@@ -456,17 +458,16 @@ class Conditions:
             )
             self.mapper.migration_report.add("MappedClassificationTypes", t[1])
             return t[0]
-        except Exception:
+        except Exception as e:
             raise TransformationRecordFailedError(
                 legacy_id,
                 f'Classification mapping error.\tParameter: "{parameter.get("name", "")}"\t'
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
-            )
+            ) from e
 
     def condition_char_select(self, legacy_id, value, parameter, marc_field: field.Field):
         return value[parameter["from"] : parameter["to"]]
-
 
     def condition_set_identifier_type_id_by_name(
         self, legacy_id, value, parameter, marc_field: field.Field
@@ -513,8 +514,8 @@ class Conditions:
                 f"{marc_field.tag} ({parameter.get('name', '')}) -> {t[1]}",
             )
             return t[0]
-        except Exception:
-            raise ValueError(f"Instance note type not found for {marc_field} {parameter}")
+        except Exception as e:
+            raise ValueError(f"Instance note type not found for {marc_field} {parameter}") from e
 
     def condition_set_contributor_type_id(
         self, legacy_id, value, parameter, marc_field: field.Field
@@ -562,7 +563,8 @@ class Conditions:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
                     i18n.t(
-                        'Mapping failed for %{tag} "%{subfield}" (Normalized: %{normalized_subfield})',
+                        'Mapping failed for %{tag} "%{subfield}" '
+                        "(Normalized: %{normalized_subfield})",
                         tag=f"{marc_field.tag} $e",
                         subfield=subfield,
                         normalized_subfield=normalized_subfield,
@@ -631,7 +633,8 @@ class Conditions:
                 "CallNumberTypeMapping",
                 (
                     i18n.t(
-                        'Unhandled call number type in ind1: "%{ind1}".\n Returning default Callnumber type: %{type}',
+                        'Unhandled call number type in ind1: "%{ind1}".\n Returning default '
+                        "Callnumber type: %{type}",
                         ind1=marc_field.indicator1,
                         type=self.default_call_number_type["name"],
                     )
@@ -652,7 +655,7 @@ class Conditions:
             "CallNumberTypeMapping",
             (
                 "Mapping failed. Setting default CallNumber type: "
-                f'{self.default_call_number_type["name"]}'
+                f"{self.default_call_number_type['name']}"
             ),
         )
 
@@ -663,7 +666,7 @@ class Conditions:
     ):
         for subfield in marc_field.get_subfields("4", "e"):
             normalized_subfield = re.sub(r"[^A-Za-z0-9 ]+", "", subfield.strip())
-            for cont_type in self.folio.contributor_types: # type: ignore
+            for cont_type in self.folio.contributor_types:  # type: ignore
                 if normalized_subfield in [cont_type["code"], cont_type["name"]]:
                     return cont_type["name"]
         try:
@@ -679,11 +682,11 @@ class Conditions:
             )
             self.mapper.migration_report.add("MappedAlternativeTitleTypes", t[1])
             return t[0]
-        except Exception:
+        except Exception as e:
             raise TransformationProcessError(
                 legacy_id,
                 f"Alternative title type not found for {parameter['name']} {marc_field}",
-            )
+            ) from e
 
     def condition_set_location_id_by_code(
         self, legacy_id, value, parameter, marc_field: field.Field
@@ -702,7 +705,7 @@ class Conditions:
     ):
         if "legacy_locations" not in self.ref_data_dicts:
             try:
-                d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map} # type: ignore
+                d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}  # type: ignore
                 self.ref_data_dicts["legacy_locations"] = d
                 for folio_code in d.values():
                     t = self.get_ref_data_tuple_by_code(
@@ -802,14 +805,14 @@ class Conditions:
                 )
                 self.mapper.migration_report.add("MappedElectronicRelationshipTypes", t[1])
                 return t[0]
-            except Exception:
+            except Exception as e:
                 raise TransformationProcessError(
                     legacy_id,
-                    f"Electronic access relationship not found for {parameter['name']} {marc_field}",
-                )
+                    f"Electronic access relationship not found for {parameter['name']} {marc_field}",  # noqa: E501
+                ) from e
         return self._extracted_from_condition_set_electronic_access_relations_id_2("3", marc_field)
 
-    # TODO Rename this here and in `condition_set_url_relationship` and `condition_set_electronic_access_relations_id`
+    # TODO Rename this here and in `condition_set_url_relationship` and `condition_set_electronic_access_relations_id` # noqa: E501
     def _extracted_from_condition_set_electronic_access_relations_id_2(self, arg0, marc_field):
         enum = {
             "0": "resource",
@@ -855,44 +858,50 @@ class Conditions:
             )
             self.mapper.migration_report.add("MappedSubjectTypes", t[1])
             return t[0]
-        except Exception:
+        except Exception as e:
             raise TransformationProcessError(
                 legacy_id,
                 f"Subject type not found for {parameter['name']} {marc_field}",
-            )
+            ) from e
 
-    def condition_set_subject_source_id(self, legacy_id, value, parameter, marc_field: field.Field):
+    def condition_set_subject_source_id(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         try:
             t = self.get_ref_data_tuple_by_name(
-                self.folio.folio_get_all("/subject-sources", "subjectSources"), "subject_sources", parameter["name"]
+                self.folio.folio_get_all("/subject-sources", "subjectSources"),
+                "subject_sources",
+                parameter["name"],
             )
             self.mapper.migration_report.add("MappedSubjectSources", t[1])
             return t[0]
-        except Exception:
+        except Exception as e:
             raise TransformationProcessError(
                 legacy_id,
                 f"Subject source not found for {parameter['name']} {marc_field}",
-            )
+            ) from e
 
-    def condition_set_subject_source_id_by_code(self, legacy_id, value, parameter, marc_field: field.Field):
+    def condition_set_subject_source_id_by_code(
+        self, legacy_id, value, parameter, marc_field: field.Field
+    ):
         try:
             t = self.get_ref_data_tuple_by_code(
-                self.folio.folio_get_all("/subject-sources", "subjectSources"), "subject_sources", value
+                self.folio.folio_get_all("/subject-sources", "subjectSources"),
+                "subject_sources",
+                value,
             )
             self.mapper.migration_report.add("MappedSubjectSources", t[1])
             return t[0]
-        except Exception:
+        except Exception as e:
             raise TransformationProcessError(
                 legacy_id,
                 f"Subject source not found for {value} {marc_field}",
-            )
+            ) from e
 
-    def condition_set_receipt_status(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_set_receipt_status(self, legacy_id, value, parameter, marc_field: field.Field):
         """
         This method maps the receipt status based on the 008 field.
-        This condition is not available in FOLIO's MARC mapping engine and 
+        This condition is not available in FOLIO's MARC mapping engine and
         will require use of a supplemental mapping rules file in the
         HoldingsMarcTransformer task definition.
         """
@@ -901,7 +910,7 @@ class Conditions:
                 "ReceiptStatusMapping", i18n.t("008 is too short") + f": {value}"
             )
             return ""
-        
+
         status_map = {
             "0": "Unknown",
             "1": "Other receipt or acquisition status",
@@ -934,7 +943,7 @@ class Conditions:
     ):
         """
         This method maps the acquisition method based on the 008 field.
-        This condition is not available in FOLIO's MARC mapping engine and 
+        This condition is not available in FOLIO's MARC mapping engine and
         will require use of a supplemental mapping rules file in the
         HoldingsMarcTransformer task definition.
         """
@@ -973,9 +982,7 @@ class Conditions:
             )
             return ""
 
-    def condition_set_retention_policy(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_set_retention_policy(self, legacy_id, value, parameter, marc_field: field.Field):
         """
         This method maps the retention policy based on the 008 field.
         This condition is not available in FOLIO's MARC mapping engine and
@@ -987,7 +994,9 @@ class Conditions:
                 "RetentionPolicyMapping", i18n.t("008 is too short") + f": {value}"
             )
             return ""
-        value = value.replace("|", " ").replace("#", " ") # Replace pipe with space for mapping consistency
+        value = value.replace("|", " ").replace(
+            "#", " "
+        )  # Replace pipe with space for mapping consistency
         try:
             retention_policies = {
                 "0": "Unknown",
@@ -1020,21 +1029,22 @@ class Conditions:
                     "y": "Year",
                     "e": "Edition",
                     "i": "Issue",
-                    "s": "Supplement"
+                    "s": "Supplement",
                 }
                 try:
                     specific_retention_policy = ""
                     if value[13].strip() or value[15].strip():
                         if value[14].strip() and int(value[14]) > 1:
-                            specific_retention_policy = f"{policy_types.get(value[13], '')} {value[14]} {unit_types.get(value[15], '')}s retained".strip()
+                            specific_retention_policy = f"{policy_types.get(value[13], '')} {value[14]} {unit_types.get(value[15], '')}s retained".strip()  # noqa: E501
                         else:
-                            specific_retention_policy = f"{policy_types.get(value[13], '')} {unit_types.get(value[15], '')} retained".strip()
+                            specific_retention_policy = f"{policy_types.get(value[13], '')} {unit_types.get(value[15], '')} retained".strip()  # noqa: E501
                     if specific_retention_policy:
                         self.mapper.migration_report.add(
                             "RetentionPolicyMapping",
                             i18n.t(
-                                "Retention policy 6 indicates a limited period. Specific retention period will be mapped from 008/13-15",
-                            )
+                                "Retention policy 6 indicates a limited period. Specific "
+                                "retention period will be mapped from 008/13-15",
+                            ),
                         )
                         return specific_retention_policy
                     else:
@@ -1044,7 +1054,10 @@ class Conditions:
                 except ValueError:
                     self.mapper.migration_report.add(
                         "RetentionPolicyMapping",
-                        i18n.t("Invalid specific retention policy in 008/13-15: %{value}", value=value[13:16]),
+                        i18n.t(
+                            "Invalid specific retention policy in 008/13-15: %{value}",
+                            value=value[13:16],
+                        ),
                     )
             return mapped_value
         except Exception:
@@ -1053,9 +1066,7 @@ class Conditions:
             )
             return ""
 
-    def condition_set_ill_policy(
-        self, legacy_id, value, parameter, marc_field: field.Field
-    ):
+    def condition_set_ill_policy(self, legacy_id, value, parameter, marc_field: field.Field):
         """
         This method maps the ILL policy based on the 008 field.
         This condition is not available in FOLIO's MARC mapping engine and
@@ -1077,7 +1088,11 @@ class Conditions:
             mapped_value = ill_policies[value[20]]
             self.mapper.migration_report.add(
                 "ILLPolicyMapping",
-                i18n.t("%{value} mapped to %{mapped_value}", value=value[20], mapped_value=mapped_value),
+                i18n.t(
+                    "%{value} mapped to %{mapped_value}",
+                    value=value[20],
+                    mapped_value=mapped_value,
+                ),
             )
             ill_policy_id = self.get_ref_data_tuple_by_name(
                 self.ill_policies, "ill_policies", mapped_value

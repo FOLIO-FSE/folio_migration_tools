@@ -76,7 +76,7 @@ class MigrationReport:
                 ]
             )
         )
-        logging.info(f"Elapsed time: {time_finished-time_started}")
+        logging.info(f"Elapsed time: {time_finished - time_started}")
         for a in self.report:
             blurb_id = self.report[a].get("blurb_id") or ""
             report_file.write(

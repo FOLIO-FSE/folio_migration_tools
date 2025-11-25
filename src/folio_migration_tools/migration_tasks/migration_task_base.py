@@ -156,7 +156,7 @@ class MigrationTaskBase:
         This is in the base class because multiple tasks need it. It exists because instances in an ECS environment
         are transformed for the central and data tenants separately, but the data tenants need to know about
         the central tenant instance ids. This is a bit of a hack, but it works for now.
-        """
+        """  # noqa: E501
         map_files = []
         instance_id_map = {}
         if self.library_configuration.is_ecs and self.central_folder_structure:
@@ -185,11 +185,11 @@ class MigrationTaskBase:
         return instance_id_map
 
     @staticmethod
-    def load_id_map(map_path, raise_if_empty=False, existing_id_map={}):
+    def load_id_map(map_path, raise_if_empty=False, existing_id_map=None):
         if not isfile(map_path):
             logging.warning("No legacy id map found at %s. Will build one from scratch", map_path)
             return {}
-        id_map = existing_id_map
+        id_map = existing_id_map or {}
         loaded_rows = len(id_map)
         with open(map_path) as id_map_file:
             for index, json_string in enumerate(id_map_file, start=1):
@@ -358,7 +358,7 @@ class MigrationTaskBase:
 
         Returns:
             None
-        """
+        """  # noqa: E501
         current_pos = map_file.tell()
         try:
             map_file.seek(0)
@@ -372,7 +372,8 @@ class MigrationTaskBase:
                     "",
                     (
                         f"Mapping file {map_file.name} has rows with different number "
-                        f"of columns ({'Row' if len(invalid_lines) == 1 else 'Rows'} {', '.join(invalid_lines)})"
+                        f"of columns ({'Row' if len(invalid_lines) == 1 else 'Rows'} "
+                        f"{', '.join(invalid_lines)})"
                     ),
                 )
             if not valid_lines:
@@ -397,15 +398,12 @@ class MigrationTaskBase:
             required (bool): Whether the property is required or not
         """
         if (
-                (
-	            folio_property_name in folio_keys
-	            or required
-	            or folio_property_name.startswith("statisticalCodeIds")
-	            or folio_property_name.startswith("locationMap")
-	            or folio_property_name.startswith("fundsMap")
-                )
-                and map_file_path.is_file()
-        ):
+            folio_property_name in folio_keys
+            or required
+            or folio_property_name.startswith("statisticalCodeIds")
+            or folio_property_name.startswith("locationMap")
+            or folio_property_name.startswith("fundsMap")
+        ) and map_file_path.is_file():
             try:
                 with open(map_file_path) as map_file:
                     # Validate the structure of the mapping file
@@ -465,7 +463,7 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
         deactivate035_from001 (bool):
             Disables the default FOLIO functionality of moving the previous 001 field into a 035 field, prefixed with the value from 003.
             Default is False, meaning the functionality remains active.
-    """
+    """  # noqa: E501
 
     files: Annotated[
         List[library_configuration.FileDefinition],
@@ -521,7 +519,8 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
             description=(
                 "List of fields + subfields to be used for mapping statistical codes. "
                 'Subfields should be delimited by a "$" (eg. 907$a). Single repeating subfields '
-                "will be treated as unique values. Multiple subfields will be concatenated together with a space."
+                "will be treated as unique values. Multiple subfields will be concatenated "
+                "together with a space."
             ),
         ),
     ] = []
