@@ -6,7 +6,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -447,7 +447,7 @@ class MapperBase:
         self,
         folio_record: dict,
         file_def: FileDefinition,
-        legacy_record: Optional[Union[dict, Record]] = None,
+        legacy_record: dict | Record | None = None,
     ):
         """Map statistical codes to the folio record.
 
@@ -459,7 +459,7 @@ class MapperBase:
         Args:
             folio_record (dict): The FOLIO record to which the statistical codes will be added.
             file_def (FileDefinition): The file definition containing the statistical codes.
-            legacy_record (Optional[Union[dict, Record]]): The legacy record from which the statistical codes are derived.
+            legacy_record (dict | Record | None): The legacy record from which the statistical codes are derived.
         """  # noqa: E501
         if file_def.statistical_code:
             code_strings = file_def.statistical_code.split(

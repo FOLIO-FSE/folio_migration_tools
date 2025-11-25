@@ -1,7 +1,6 @@
 import logging
 import re
 import traceback
-from typing import Union
 
 import i18n
 from folioclient import FolioClient
@@ -161,7 +160,7 @@ class Conditions:
         logging.info(f"{len(self.folio.identifier_types)} \tidentifier types")  # type: ignore
 
     def get_condition(
-        self, name, legacy_id, value, parameter=None, marc_field: Union[None, field.Field] = None
+        self, name, legacy_id, value, parameter=None, marc_field: field.Field | None = None
     ):
         try:
             return self.condition_cache.get(name)(legacy_id, value, parameter, marc_field)  # type: ignore

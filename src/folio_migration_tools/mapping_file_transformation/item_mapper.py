@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 from datetime import datetime, timezone
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Set
 from uuid import uuid4
 
 import i18n
@@ -118,7 +118,7 @@ class ItemMapper(MappingFileMapperBase):
         )
 
     def perform_additional_mappings(
-        self, legacy_ids: Union[str, List[str]], folio_rec: Dict, file_def: FileDefinition
+        self, legacy_ids: List[str] | str, folio_rec: Dict, file_def: FileDefinition
     ):
         self.handle_suppression(folio_rec, file_def)
         self.map_statistical_codes(folio_rec, file_def)
