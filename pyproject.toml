@@ -139,3 +139,6 @@ line-ending = "auto"
 
 docstring-code-format = false
 docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
