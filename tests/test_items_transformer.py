@@ -6,7 +6,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 import json
 from unittest.mock import mock_open, patch
 

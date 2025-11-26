@@ -16,7 +16,7 @@ from folio_migration_tools.mapping_file_transformation.order_mapper import (
     CompositeOrderMapper,
 )
 from folio_migration_tools.migration_tasks.orders_transformer import OrdersTransformer
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
