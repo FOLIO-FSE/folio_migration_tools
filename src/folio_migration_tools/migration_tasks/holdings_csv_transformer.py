@@ -6,6 +6,7 @@ import sys
 import time
 import traceback
 from typing import Annotated, List, Optional
+from pathlib import Path
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -187,8 +188,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.folder_structure.mapping_files_folder
             / self.task_configuration.location_map_file_name
         )
-        call_number_type_map_path = (self.folder_structure.mapping_files_folder
-            / self.task_configuration.call_number_type_map_file_name)
+        call_number_type_map_path = Path()
+        if getattr(self.task_configuration, "call_number_type_map_file_name"):
+            call_number_type_map_path = (self.folder_structure.mapping_files_folder
+                / self.task_configuration.call_number_type_map_file_name)
         if location_map_path.is_file():
             self.location_map = self.load_ref_data_mapping_file(
                 "permanentLocationId",
@@ -206,21 +209,6 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 call_number_type_map_path,
                 self.folio_keys,
             )
-        else:
-            logging.info(
-                f'callNumberTypeMapFileName not found. Default call number type "{self.task_configuration.default_call_number_type_name}" used.'
-            )
-            legacy_key = [
-                o["legacy_field"]
-                for o in self.holdings_field_map["data"]
-                if o["legacy_field"] and o["legacy_field"].lower().strip() != "not mapped"
-            ][0]
-            self.call_number_type_map = [
-                {
-                    legacy_key: "*",
-                    "folio_name": self.task_configuration.default_call_number_type_name,
-                }
-            ]
         if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",

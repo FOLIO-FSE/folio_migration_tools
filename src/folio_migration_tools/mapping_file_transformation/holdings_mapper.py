@@ -56,17 +56,20 @@ class HoldingsMapper(MappingFileMapperBase):
             "code",
             "LocationMapping",
         )
-        if call_number_type_map:
-            self.call_number_mapping = RefDataMapping(
-                self.folio_client,
-                "/call-number-types",
-                "callNumberTypes",
-                call_number_type_map,
-                "name",
-                "CallNumberTypeMapping",
-            )
-   
+        self.call_number_mapping = RefDataMapping(
+            self.folio_client,
+            "/call-number-types",
+            "callNumberTypes",
+            call_number_type_map,
+            "name",
+            "CallNumberTypeMapping",
+        )
+
         self.holdings_sources = self.get_holdings_sources()
+        call_number_types = self.folio_client.folio_get_all(
+            "/call-number-types", "callNumberTypes", "", 1000
+        )
+        self.call_number_types_by_name = {c["name"]: c["id"] for c in call_number_types}
 
     def get_holdings_sources(self):
         res = {}
@@ -94,6 +97,18 @@ class HoldingsMapper(MappingFileMapperBase):
         self.handle_suppression(folio_rec, file_def)
         self.map_statistical_codes(folio_rec, file_def)
         self.map_statistical_code_ids(legacy_ids, folio_rec)
+        self.handle_default_call_number_type(folio_rec)
+
+    def handle_default_call_number_type(self, folio_record: dict):
+        if "callNumberTypeId" in folio_record or "callNumber" not in folio_record:
+            return
+        elif (
+            getattr(self.task_configuration, "default_call_number_type_name")
+            and self.task_configuration.default_call_number_type_name
+        ):  
+            default_name = self.task_configuration.default_call_number_type_name
+            default_uuid = self.call_number_types_by_name[default_name]
+            folio_record["callNumberTypeId"] = default_uuid
 
     def handle_suppression(self, folio_record, file_def: FileDefinition):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
@@ -116,7 +131,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 ref_data_mapping=self.call_number_mapping,
                 legacy_object=legacy_item,
                 index_or_id=index_or_id,
-                prevent_default=False,
+                prevent_default=True,
             )
             return value
         # elif folio_prop_name.startswith("statisticalCodeIds"):
