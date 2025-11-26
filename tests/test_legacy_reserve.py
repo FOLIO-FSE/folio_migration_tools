@@ -2,7 +2,7 @@ import pytest
 
 from folioclient import FolioClient
 from folio_migration_tools.transaction_migration.legacy_reserve import LegacyReserve
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 
 

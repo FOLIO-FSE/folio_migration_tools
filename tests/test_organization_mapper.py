@@ -16,7 +16,7 @@ from folio_migration_tools.mapping_file_transformation.organization_mapper impor
     OrganizationMapper,
 )
 from folio_migration_tools.migration_tasks.organization_transformer import OrganizationTransformer
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True

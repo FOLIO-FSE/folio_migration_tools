@@ -20,7 +20,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 
 # flake8: noqa: E501
 

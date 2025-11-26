@@ -7,7 +7,7 @@ from folio_migration_tools.library_configuration import (
     FileDefinition,
     IlsFlavour,
 )
-from folio_migration_tools.test_infrastructure.mocked_classes import (
+from .test_infrastructure.mocked_classes import (
     mocked_folio_client,
     get_mocked_library_config,
     get_mocked_folder_structure
