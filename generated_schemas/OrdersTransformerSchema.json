@@ -1,100 +1,175 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
+    "$defs": {
+        "FileDefinition": {
+            "properties": {
+                "file_name": {
+                    "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "default": false,
+                    "title": "Discovery suppressed",
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "default": false,
+                    "title": "Staff suppressed",
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
+                    "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
+                }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        }
+    },
     "properties": {
         "name": {
-            "title": "Name",
+            "description": "The name of the task.",
+            "title": "Task name",
             "type": "string"
         },
-        "migration_task_type": {
-            "title": "Migration Task Type",
+        "migrationTaskType": {
+            "description": "Type of the migration task.",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
             "type": "string"
         },
         "files": {
-            "title": "Files",
-            "type": "array",
+            "description": "List of the files.",
             "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Files",
+            "type": "array"
         },
-        "orders_mapping_file_name": {
+        "ordersMappingFileName": {
+            "description": "File name for orders mapping.",
             "title": "Orders Mapping File Name",
             "type": "string"
         },
-        "organizations_code_map_file_name": {
+        "organizationsCodeMapFileName": {
+            "description": "File name for organizations code mapping.",
             "title": "Organizations Code Map File Name",
             "type": "string"
         },
-        "acquisition_method_map_file_name": {
+        "acquisitionMethodMapFileName": {
+            "description": "File name for acquisition method mapping.",
             "title": "Acquisition Method Map File Name",
             "type": "string"
         },
-        "payment_status_map_file_name": {
-            "title": "Payment Status Map File Name",
+        "paymentStatusMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "File name for payment status mapping. By default is empty string.",
+            "title": "Payment Status Map File Name"
         },
-        "receipt_status_map_file_name": {
-            "title": "Receipt Status Map File Name",
+        "receiptStatusMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "File name for receipt status mapping. By default is empty string.",
+            "title": "Receipt Status Map File Name"
         },
-        "workflow_status_map_file_name": {
-            "title": "Workflow Status Map File Name",
+        "workflowStatusMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "File name for workflow status mapping. By default is empty string.",
+            "title": "Workflow Status Map File Name"
         },
-        "location_map_file_name": {
-            "title": "Location Map File Name",
+        "locationMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "File name for location mapping. By default is empty string.",
+            "title": "Location Map File Name"
         },
-        "funds_map_file_name": {
-            "title": "Funds Map File Name",
+        "fundsMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "File name for funds mapping. By default is empty string.",
+            "title": "Funds Map File Name"
         },
-        "funds_expense_class_map_file_name": {
-            "title": "Funds Expense Class Map File Name",
+        "fundsExpenseClassMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "File name for funds expense class mapping. By default is empty string.",
+            "title": "Funds Expense Class Map File Name"
         }
     },
     "required": [
         "name",
-        "migration_task_type",
+        "migrationTaskType",
         "files",
-        "orders_mapping_file_name",
-        "organizations_code_map_file_name",
-        "acquisition_method_map_file_name"
+        "ordersMappingFileName",
+        "organizationsCodeMapFileName",
+        "acquisitionMethodMapFileName"
     ],
-    "definitions": {
-        "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
-            "properties": {
-                "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
-                    "default": "",
-                    "type": "string"
-                },
-                "discovery_suppressed": {
-                    "title": "Discovery suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "staff_suppressed": {
-                    "title": "Staff suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "service_point_id": {
-                    "title": "Service point ID",
-                    "default": "",
-                    "type": "string"
-                }
-            }
-        }
-    }
+    "title": "TaskConfiguration",
+    "type": "object"
 }

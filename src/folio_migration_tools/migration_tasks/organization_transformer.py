@@ -50,27 +50,21 @@ class OrganizationTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Migration task type",
-                description=(
-                    "The type of migration task you want to perform"
-                ),
+                description=("The type of migration task you want to perform"),
             ),
         ]
         files: Annotated[
             List[FileDefinition],
             Field(
                 title="Source files",
-                description=(
-                    "List of MARC21 files with holdings records"
-                ),
+                description=("List of MARC21 files with holdings records"),
             ),
         ]
         organization_map_path: Annotated[
             str,
             Field(
                 title="Organization map path",
-                description=(
-                    "Path to the organization map file"
-                ),
+                description=("Path to the organization map file"),
             ),
         ]
         organization_types_map_path: Annotated[
@@ -95,18 +89,14 @@ class OrganizationTransformer(MigrationTaskBase):
             Optional[str],
             Field(
                 title="Email categories map path",
-                description=(
-                    "Path to the email categories map file. By default is empty string"
-                ),
+                description=("Path to the email categories map file. By default is empty string"),
             ),
         ] = ""
         phone_categories_map_path: Annotated[
             Optional[str],
             Field(
                 title="Phone categories map path",
-                description=(
-                    "Path to the phone categories map file. By default is empty string"
-                ),
+                description=("Path to the phone categories map file. By default is empty string"),
             ),
         ] = ""
 
@@ -201,9 +191,10 @@ class OrganizationTransformer(MigrationTaskBase):
         return files
 
     def process_single_file(self, filename):
-        with open(filename, encoding="utf-8-sig") as records_file, open(
-            self.folder_structure.created_objects_path, "w+"
-        ) as results_file:
+        with (
+            open(filename, encoding="utf-8-sig") as records_file,
+            open(self.folder_structure.created_objects_path, "w+") as results_file,
+        ):
             self.mapper.migration_report.add_general_statistics(
                 i18n.t("Number of files processed")
             )

@@ -1,6 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "description": "The record of an organization",
+    "javaName": "Organization",
     "type": "object",
     "properties": {
         "id": {
@@ -312,6 +313,10 @@
                         "$ref": "../../common/schemas/uuid.json",
                         "type": "string"
                     },
+                    "_version": {
+                        "type": "integer",
+                        "description": "Record version for optimistic locking"
+                    },
                     "prefix": {
                         "description": "The prefix for this contact person",
                         "type": "string"
@@ -582,6 +587,15 @@
                     "firstName",
                     "lastName"
                 ]
+            }
+        },
+        "privilegedContacts": {
+            "description": "An array of privileged contact record IDs",
+            "type": "array",
+            "items": {
+                "description": "UUID of a privileged contact record",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string"
             }
         },
         "agreements": {
@@ -1085,6 +1099,12 @@
         "isVendor": {
             "id": "isVendor",
             "description": "Used to indicate that this organization is also a vendor",
+            "type": "boolean",
+            "default": false
+        },
+        "isDonor": {
+            "id": "isDonor",
+            "description": "Used to designate whether this organization is a donor",
             "type": "boolean",
             "default": false
         },

@@ -33,23 +33,25 @@ def parse_args(args):
 
     parser.add_argument(
         "task_name",
-        help=("Task name. Use one of: " f"{tasks_string}"),
+        help=(f"Task name. Use one of: {tasks_string}"),
         nargs="?" if "FOLIO_MIGRATION_TOOLS_TASK_NAME" in environ else None,
         prompt="FOLIO_MIGRATION_TOOLS_TASK_NAME" not in environ,
         default=environ.get("FOLIO_MIGRATION_TOOLS_TASK_NAME"),
     )
     parser.add_argument(
-        "--folio_password", "--okapi_password",
+        "--folio_password",
+        "--okapi_password",
         help="password for the tenant in the configuration file",
         prompt="FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD" not in environ,
-        default=environ.get("FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD"),
+        default=environ.get(
+            "FOLIO_MIGRATION_TOOLS_FOLIO_PASSWORD",
+            environ.get("FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD"),
+        ),
         secure=True,
     )
     parser.add_argument(
         "--base_folder_path",
-        help=(
-            "path to the base folder for this library. Built on migration_repo_template"
-        ),
+        help=("path to the base folder for this library. Built on migration_repo_template"),
         prompt="FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH" not in environ,
         default=environ.get("FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH"),
     )
@@ -62,34 +64,43 @@ def parse_args(args):
         prompt=False,
     )
     parser.add_argument(
-        "--version", "-V",
+        "--version",
+        "-V",
         help="Show the version of the FOLIO Migration Tools",
         action="store_true",
         prompt=False,
     )
     return parser.parse_args(args)
 
+
 def prep_library_config(args):
-        config_file_humped = merge_load(args.configuration_path)
-        config_file_humped["libraryInformation"]["okapiPassword"] = args.folio_password
-        config_file_humped["libraryInformation"]["baseFolder"] = args.base_folder_path
-        config_file = humps.decamelize(config_file_humped)
-        library_config = LibraryConfiguration(**config_file["library_information"])
-        if library_config.ecs_tenant_id:
-            library_config.is_ecs = True
-        if library_config.ecs_tenant_id and not library_config.ecs_central_iteration_identifier:
-            print(
-                "ECS tenant ID is set, but no central iteration identifier is provided. "
-                "Please provide the central iteration identifier in the configuration file."
-            )
-            sys.exit("ECS Central Iteration Identifier Not Found")
-        return config_file, library_config
+    config_file_humped = merge_load(args.configuration_path)
+
+    # Only set folioPassword if neither folioPassword nor okapiPassword exist in config
+    # The Pydantic validator will handle backward compatibility for existing okapiPassword
+    if (
+        "folioPassword" not in config_file_humped["libraryInformation"]
+        and "okapiPassword" not in config_file_humped["libraryInformation"]
+    ):
+        config_file_humped["libraryInformation"]["folioPassword"] = args.folio_password
+
+    config_file_humped["libraryInformation"]["baseFolder"] = args.base_folder_path
+    config_file = humps.decamelize(config_file_humped)
+    library_config = LibraryConfiguration(**config_file["library_information"])
+    if library_config.ecs_tenant_id:
+        library_config.is_ecs = True
+    if library_config.ecs_tenant_id and not library_config.ecs_central_iteration_identifier:
+        print(
+            "ECS tenant ID is set, but no central iteration identifier is provided. "
+            "Please provide the central iteration identifier in the configuration file."
+        )
+        sys.exit("ECS Central Iteration Identifier Not Found")
+    return config_file, library_config
+
 
 def print_version(args):
     if "-V" in args or "--version" in args:
-        print(
-            f"FOLIO Migration Tools: {metadata.version('folio_migration_tools')}"
-        )
+        print(f"FOLIO Migration Tools: {metadata.version('folio_migration_tools')}")
         sys.exit(0)
     return None
 
@@ -122,7 +133,7 @@ def main():
             task_names = [t.get("name", "") for t in config_file["migration_tasks"]]
             print(
                 f"Referenced task name {args.task_name} not found in the "
-                f'configuration file. Use one of {", ".join(task_names)}'
+                f"configuration file. Use one of {', '.join(task_names)}"
                 "\nHalting..."
             )
             sys.exit("Task Name Not Found")
@@ -134,13 +145,15 @@ def main():
             )
         except StopIteration:
             print(
-                f'Referenced task {migration_task_config["migration_task_type"]} '
+                f"Referenced task {migration_task_config['migration_task_type']} "
                 "is not a valid option. Update your task to incorporate "
                 f"one of {json.dumps([tc.__name__ for tc in task_classes], indent=4)}"
             )
             sys.exit("Task Type Not Found")
         try:
-            logging.getLogger("httpx").setLevel(logging.WARNING) # Exclude info messages from httpx
+            logging.getLogger("httpx").setLevel(
+                logging.WARNING
+            )  # Exclude info messages from httpx
             with FolioClient(
                 library_config.gateway_url,
                 library_config.tenant_id,
@@ -161,16 +174,15 @@ def main():
         logging.critical(json_error)
         print(json_error.doc)
         print(
-            f"\n{json_error}"
-            f"\nError parsing the above JSON mapping or configruation file. Halting."
+            f"\n{json_error}\nError parsing the above JSON mapping or configruation file. Halting."
         )
         sys.exit("Invalid JSON")
     except ValidationError as e:
-        print(e.json())
+        print(json.dumps(e.errors(), indent=2))
         print("Validation errors in configuration file:")
         print("==========================================")
 
-        for validation_message in json.loads(e.json()):
+        for validation_message in e.errors():
             print(
                 f"{validation_message['msg']}\t"
                 f"{', '.join(humps.camelize(str(x)) for x in validation_message['loc'])}"
@@ -198,6 +210,7 @@ def main():
         print(f"\n{ee}")
         sys.exit(ee.__class__.__name__)
     sys.exit(0)
+
 
 def inheritors(base_class):
     subclasses = set()

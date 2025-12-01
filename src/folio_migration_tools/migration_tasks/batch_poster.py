@@ -182,19 +182,27 @@ class BatchPoster(MigrationTaskBase):
                 ),
             ),
         ] = True
-        patch_existing_records: Annotated[bool, Field(
-            title="Patch existing records",
-            description=(
-                "Toggles whether or not to patch existing records "
-                "during the upsert process. Defaults to False"
+        patch_existing_records: Annotated[
+            bool,
+            Field(
+                title="Patch existing records",
+                description=(
+                    "Toggles whether or not to patch existing records "
+                    "during the upsert process. Defaults to False"
+                ),
             ),
-        )] = False
-        patch_paths: Annotated[List[str], Field(
-            title="Patch paths",
-            description=(
-                "A list of fields in JSON Path notation to patch during the upsert process (leave off the $). If empty, all fields will be patched. Examples: ['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']"
+        ] = False
+        patch_paths: Annotated[
+            List[str],
+            Field(
+                title="Patch paths",
+                description=(
+                    "A list of fields in JSON Path notation to patch during the upsert process "
+                    "(leave off the $). If empty, all fields will be patched. Examples: "
+                    "['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']"
+                ),
             ),
-        )] = []
+        ] = []
 
     task_configuration: TaskConfiguration
 
@@ -223,7 +231,8 @@ class BatchPoster(MigrationTaskBase):
             self.query_params["upsert"] = self.task_configuration.upsert
         elif self.task_configuration.upsert and not self.api_info["supports_upsert"]:
             logging.info(
-                "Upsert is not supported for this object type. Query parameter will not be set.")
+                "Upsert is not supported for this object type. Query parameter will not be set."
+            )
         self.snapshot_id = str(uuid4())
         self.failed_objects: list = []
         self.batch_size = self.task_configuration.batch_size
@@ -241,18 +250,18 @@ class BatchPoster(MigrationTaskBase):
         self.starting_record_count_in_folio: Optional[int] = None
         self.finished_record_count_in_folio: Optional[int] = None
 
-    def do_work(self):
+    def do_work(self):  # noqa: C901
         with self.folio_client.get_folio_http_client() as httpx_client:
             self.http_client = httpx_client
             with open(
-                    self.folder_structure.failed_recs_path, "w", encoding='utf-8'
+                self.folder_structure.failed_recs_path, "w", encoding="utf-8"
             ) as failed_recs_file:
                 self.get_starting_record_count()
                 try:
                     batch = []
                     if self.task_configuration.object_type == "SRS":
                         self.create_snapshot()
-                    for idx, file_def in enumerate(self.task_configuration.files):
+                    for idx, file_def in enumerate(self.task_configuration.files):  # noqa: B007
                         path = self.folder_structure.results_folder / file_def.file_name
                         with open(path) as rows:
                             logging.info("Running %s", path)
@@ -323,10 +332,10 @@ class BatchPoster(MigrationTaskBase):
 
     @staticmethod
     def set_consortium_source(json_rec):
-        if json_rec['source'] == 'MARC':
-            json_rec['source'] = 'CONSORTIUM-MARC'
-        elif json_rec['source'] == 'FOLIO':
-            json_rec['source'] = 'CONSORTIUM-FOLIO'
+        if json_rec["source"] == "MARC":
+            json_rec["source"] = "CONSORTIUM-MARC"
+        elif json_rec["source"] == "FOLIO":
+            json_rec["source"] = "CONSORTIUM-FOLIO"
 
     def set_version(self, batch, query_api, object_type) -> None:
         """
@@ -359,17 +368,16 @@ class BatchPoster(MigrationTaskBase):
         existing_records = {}
         async with httpx.AsyncClient(base_url=self.folio_client.gateway_url) as client:
             for i in range(0, len(batch), fetch_batch_size):
-                batch_slice = batch[i:i + fetch_batch_size]
+                batch_slice = batch[i : i + fetch_batch_size]
                 fetch_tasks.append(
                     self.get_with_retry(
                         client,
                         query_api,
                         params={
                             "query": (
-                                "id==("
-                                f"{' OR '.join([r['id'] for r in batch_slice if 'id' in r])})"
+                                f"id==({' OR '.join([r['id'] for r in batch_slice if 'id' in r])})"
                             ),
-                            "limit": fetch_batch_size
+                            "limit": fetch_batch_size,
                         },
                     )
                 )
@@ -390,7 +398,7 @@ class BatchPoster(MigrationTaskBase):
             new_record (dict): The new record to be updated.
             existing_record (dict): The existing record to patch from.
             patch_paths (List[str]): List of fields in JSON Path notation (e.g., ['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']) to patch during the upsert process. If empty, all fields will be patched.
-        """
+        """  # noqa: E501
         updates = {}
         updates.update(existing_record)
         keep_existing = {}
@@ -412,7 +420,9 @@ class BatchPoster(MigrationTaskBase):
         new_record.update(updates)
 
     @staticmethod
-    def collect_existing_records_for_upsert(object_type: str, response: httpx.Response, existing_records: dict):
+    def collect_existing_records_for_upsert(
+        object_type: str, response: httpx.Response, existing_records: dict
+    ):
         if response.status_code == 200:
             response_json = response.json()
             for record in response_json[object_type]:
@@ -458,12 +468,23 @@ class BatchPoster(MigrationTaskBase):
 
     def prepare_record_for_upsert(self, new_record: dict, existing_record: dict):
         if "source" in existing_record and "MARC" in existing_record["source"]:
-            if self.task_configuration.patch_paths:
+            patch_paths = [
+                x
+                for x in self.task_configuration.patch_paths
+                if ("suppress" in x.lower() or x.lower() == "deleted")
+            ]
+            if patch_paths:
+                logging.debug(
+                    "Record %s is a MARC record, only suppression related fields will be patched",
+                    existing_record["id"],
+                )
+            else:
                 logging.debug(
                     "Record %s is a MARC record, patch_paths will be ignored",
                     existing_record["id"],
                 )
-            self.patch_record(new_record, existing_record, ["statisticalCodeIds", "administrativeNotes", "instanceStatusId"])
+            patch_paths.extend(["statisticalCodeIds", "administrativeNotes", "instanceStatusId"])
+            self.patch_record(new_record, existing_record, patch_paths)
         elif self.task_configuration.patch_existing_records:
             self.patch_record(new_record, existing_record, self.task_configuration.patch_paths)
         else:
@@ -471,7 +492,11 @@ class BatchPoster(MigrationTaskBase):
                 "_version": existing_record["_version"],
             }
             self.keep_existing_fields(updates, existing_record)
-            keep_new = {k: v for k, v in new_record.items() if k in ["statisticalCodeIds", "administrativeNotes"]}
+            keep_new = {
+                k: v
+                for k, v in new_record.items()
+                if k in ["statisticalCodeIds", "administrativeNotes"]
+            }
             keep_existing = {}
             self.handle_upsert_for_statistical_codes(existing_record, keep_existing)
             self.handle_upsert_for_administrative_notes(existing_record, keep_existing)
@@ -492,13 +517,14 @@ class BatchPoster(MigrationTaskBase):
         for attempt in range(retries):
             try:
                 response = await client.get(
-                    url, params=params, headers=self.folio_client.okapi_headers)
+                    url, params=params, headers=self.folio_client.okapi_headers
+                )
                 response.raise_for_status()
                 return response
             except httpx.HTTPError as e:
                 if attempt < retries - 1:
                     logging.warning(f"Retrying due to {e}")
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
                 else:
                     logging.error(f"Failed to connect after {retries} attempts: {e}")
                     raise
@@ -563,11 +589,11 @@ class BatchPoster(MigrationTaskBase):
         object_types.update(task_configuration.extradata_endpoints)
         if object_name == "instructor":
             instructor = json.loads(string_object)
-            return f'coursereserves/courselistings/{instructor["courseListingId"]}/instructors'
+            return f"coursereserves/courselistings/{instructor['courseListingId']}/instructors"
 
         if object_name == "interfaceCredential":
             credential = json.loads(string_object)
-            return f'organizations-storage/interfaces/{credential["interfaceId"]}/credentials'
+            return f"organizations-storage/interfaces/{credential['interfaceId']}/credentials"
 
         return object_types[object_name]
 
@@ -638,7 +664,7 @@ class BatchPoster(MigrationTaskBase):
 
     def post_batch(self, batch, failed_recs_file, num_records, recursion_depth=0):
         if self.query_params.get("upsert", False) and self.api_info.get("query_endpoint", ""):
-            self.set_version(batch, self.api_info['query_endpoint'], self.api_info['object_name'])
+            self.set_version(batch, self.api_info["query_endpoint"], self.api_info["object_name"])
         response = self.do_post(batch)
         if response.status_code == 401:
             logging.error("Authorization failed (%s). Fetching new auth token...", response.text)
@@ -762,7 +788,7 @@ class BatchPoster(MigrationTaskBase):
                 url,
                 json=payload,
                 headers=self.folio_client.okapi_headers,
-                params=self.query_params
+                params=self.query_params,
             )
         else:
             return httpx.post(
@@ -770,7 +796,8 @@ class BatchPoster(MigrationTaskBase):
                 headers=self.okapi_headers,
                 json=payload,
                 params=self.query_params,
-                timeout=None)
+                timeout=None,
+            )
 
     def get_current_record_count_in_folio(self):
         if "query_endpoint" in self.api_info:
@@ -778,9 +805,7 @@ class BatchPoster(MigrationTaskBase):
             query_params = {"query": "cql.allRecords=1", "limit": 0}
             if self.http_client and not self.http_client.is_closed:
                 res = self.http_client.get(
-                    url,
-                    headers=self.folio_client.okapi_headers,
-                    params=query_params
+                    url, headers=self.folio_client.okapi_headers, params=query_params
                 )
             else:
                 res = httpx.get(url, headers=self.okapi_headers, params=query_params, timeout=None)
@@ -799,7 +824,7 @@ class BatchPoster(MigrationTaskBase):
         else:
             raise ValueError(
                 "No 'query_endpoint' available for %s. Cannot get current record count.",
-                self.task_configuration.object_type
+                self.task_configuration.object_type,
             )
 
     def get_starting_record_count(self):
@@ -809,7 +834,7 @@ class BatchPoster(MigrationTaskBase):
         else:
             logging.info(
                 "No query_endpoint available for %s. Cannot get starting record count.",
-                self.task_configuration.object_type
+                self.task_configuration.object_type,
             )
 
     def get_finished_record_count(self):
@@ -819,7 +844,7 @@ class BatchPoster(MigrationTaskBase):
         else:
             logging.info(
                 "No query_endpoint available for %s. Cannot get ending record count.",
-                self.task_configuration.object_type
+                self.task_configuration.object_type,
             )
 
     def wrap_up(self):
@@ -842,7 +867,7 @@ class BatchPoster(MigrationTaskBase):
         if self.starting_record_count_in_folio:
             self.get_finished_record_count()
             total_on_server = (
-                    self.finished_record_count_in_folio - self.starting_record_count_in_folio
+                self.finished_record_count_in_folio - self.starting_record_count_in_folio
             )
             discrepancy = self.processed - self.num_failures - total_on_server
             if discrepancy != 0:
@@ -893,9 +918,8 @@ class BatchPoster(MigrationTaskBase):
                 temp_start = self.start_datetime
                 self.task_configuration.rerun_failed_records = False
                 self.__init__(
-                    self.task_configuration,
-                    self.library_configuration,
-                    self.folio_client)
+                    self.task_configuration, self.library_configuration, self.folio_client
+                )
                 self.performing_rerun = True
                 self.migration_report = temp_report
                 self.start_datetime = temp_start
@@ -1085,25 +1109,10 @@ def get_api_info(object_type: str, use_safe: bool = True):
     except KeyError:
         key_string = ", ".join(choices.keys())
         logging.error(
-            f"Wrong type. Only one of {key_string} are allowed, "
-            f"received {object_type=} instead"
+            f"Wrong type. Only one of {key_string} are allowed, received {object_type=} instead"
         )
         logging.error("Halting")
         sys.exit(1)
-
-
-def chunks(records, number_of_chunks):
-    """Yield successive n-sized chunks from lst.
-
-    Args:
-        records (_type_): _description_
-        number_of_chunks (_type_): _description_
-
-    Yields:
-        _type_: _description_
-    """
-    for i in range(0, len(records), number_of_chunks):
-        yield records[i: i + number_of_chunks]
 
 
 def get_human_readable(size, precision=2):
@@ -1122,15 +1131,16 @@ def get_req_size(response: httpx.Response):
     size += response.request.content.decode("utf-8") or ""
     return get_human_readable(len(size.encode("utf-8")))
 
+
 def parse_path(path):
     """
     Parses a path like 'foo.bar[0].baz' into ['foo', 'bar', 0, 'baz']
     """
     tokens = []
     # Split by dot, then extract indices
-    for part in path.split('.'):
+    for part in path.split("."):
         # Find all [index] parts
-        matches = re.findall(r'([^\[\]]+)|\[(\d+)\]', part)
+        matches = re.findall(r"([^\[\]]+)|\[(\d+)\]", part)
         for name, idx in matches:
             if name:
                 tokens.append(name)
@@ -1138,11 +1148,13 @@ def parse_path(path):
                 tokens.append(int(idx))
     return tokens
 
+
 def get_by_path(data, path):
     keys = parse_path(path)
     for key in keys:
         data = data[key]
     return data
+
 
 def set_by_path(data, path, value):
     keys = parse_path(path)
@@ -1164,6 +1176,7 @@ def set_by_path(data, path, value):
     else:
         data[last_key] = value
 
+
 def extract_paths(data, paths):
     result = {}
     for path in paths:
@@ -1174,6 +1187,7 @@ def extract_paths(data, paths):
             continue
     return result
 
+
 def deep_update(target, patch):
     """
     Recursively update target dict/list with values from patch dict/list.
@@ -1181,11 +1195,7 @@ def deep_update(target, patch):
     """
     if isinstance(patch, dict):
         for k, v in patch.items():
-            if (
-                k in target
-                and isinstance(target[k], (dict, list))
-                and isinstance(v, (dict, list))
-            ):
+            if k in target and isinstance(target[k], (dict, list)) and isinstance(v, (dict, list)):
                 deep_update(target[k], v)
             else:
                 target[k] = v

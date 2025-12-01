@@ -10,7 +10,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from src.folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 LOGGER = logging.getLogger(__name__)

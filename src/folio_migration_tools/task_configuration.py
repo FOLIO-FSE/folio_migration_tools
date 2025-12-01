@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from humps import camelize
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic import Field
 
 
@@ -25,9 +25,7 @@ class AbstractTaskConfiguration(BaseModel):
         str,
         Field(
             title="Migration task type",
-            description=(
-                "The type of migration task you want to perform."
-            ),
+            description=("The type of migration task you want to perform."),
         ),
     ]
     ecs_tenant_id: Annotated[
@@ -41,6 +39,7 @@ class AbstractTaskConfiguration(BaseModel):
         ),
     ] = ""
 
-    class Config:
-        alias_generator = to_camel
-        allow_population_by_field_name = True
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )

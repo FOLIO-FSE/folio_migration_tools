@@ -114,7 +114,7 @@ class HRIDHandler:
             f_001 = marc_record["001"].value()
             f_003 = marc_record["003"].value().strip() if "003" in marc_record else ""
             migration_report.add(
-                "HridHandling", i18n.t("Values in %{field}", field="003") + f': {f_003 or "Empty"}'
+                "HridHandling", i18n.t("Values in %{field}", field="003") + f": {f_003 or 'Empty'}"
             )
 
             if deactivate035_from001:
@@ -214,7 +214,8 @@ class HRIDHandler:
             self.migration_report.add(
                 "HridHandling",
                 i18n.t(
-                    "Duplicate 001. Creating HRID instead.\n Previous 001 will be stored in a new 035 field"
+                    "Duplicate 001. Creating HRID instead.\n Previous 001 will be stored in a new "
+                    "035 field"
                 ),
             )
             self.handle_035_generation(

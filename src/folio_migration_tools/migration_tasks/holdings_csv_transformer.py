@@ -58,7 +58,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             HridHandling,
             Field(
                 title="HRID handling",
-                description=("Determining how the HRID generation " "should be handled."),
+                description=("Determining how the HRID generation should be handled."),
             ),
         ]
         files: Annotated[
@@ -94,7 +94,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             Field(
                 title="Previously generated holdings files",
                 description=(
-                    "List of previously generated holdings files. " "By default is empty list."
+                    "List of previously generated holdings files. By default is empty list."
                 ),
             ),
         ] = []
@@ -142,8 +142,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             Field(
                 title="Reset HRID settings",
                 description=(
-                    "At the end of the run reset "
-                    "FOLIO with the HRID settings. Default is FALSE."
+                    "At the end of the run reset FOLIO with the HRID settings. Default is FALSE."
                 ),
             ),
         ] = False
@@ -152,8 +151,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             Field(
                 title="Update HRID settings",
                 description=(
-                    "At the end of the run update "
-                    "FOLIO with the HRID settings. Default is TRUE."
+                    "At the end of the run update FOLIO with the HRID settings. Default is TRUE."
                 ),
             ),
         ] = True
@@ -163,7 +161,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 title="Statistical code map file name",
                 description=(
                     "Path to the file containing the mapping of statistical codes. "
-                    "The file should be in TSV format with legacy_stat_code and folio_code columns."
+                    "The file should be in TSV format with legacy_stat_code and folio_code columns."  # noqa: E501
                 ),
             ),
         ] = ""
@@ -334,7 +332,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 print(f"\n{error_str}\nHalting")
                 sys.exit(1)
         logging.info(
-            f"processed {self.total_records:,} records in {len(self.task_configuration.files)} files"
+            f"processed {self.total_records:,} records in "
+            f"{len(self.task_configuration.files)} files"
         )
 
     def wrap_up(self):

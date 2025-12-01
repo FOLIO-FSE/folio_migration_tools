@@ -47,15 +47,13 @@ class MigrationTaskBase:
         logging.info("MigrationTaskBase init")
         self.start_datetime = datetime.now(timezone.utc)
         self.task_configuration = task_configuration
-        logging.info(self.task_configuration.json(indent=4))
+        logging.info(self.task_configuration.model_dump_json(indent=4))
         self.folio_client: FolioClient = folio_client
         self.ecs_tenant_id = (
             task_configuration.ecs_tenant_id or library_configuration.ecs_tenant_id
         )
-        self.ecs_tenant_header = (
-            {"x-okapi-tenant": self.ecs_tenant_id} if self.ecs_tenant_id else {}
-        )
-        self.folio_client.okapi_headers.update(self.ecs_tenant_header)
+        self.folio_client.tenant_id = self.ecs_tenant_id
+
         self.central_folder_structure: Optional[FolderStructure] = None
         if library_configuration.is_ecs and library_configuration.ecs_central_iteration_identifier:
             self.central_folder_structure = FolderStructure(
@@ -133,11 +131,7 @@ class MigrationTaskBase:
             TransformationProcessError: _description_
 
         """
-        files = [
-            source_path / f.file_name
-            for f in file_defs
-            if isfile(source_path / f.file_name)
-        ]
+        files = [source_path / f.file_name for f in file_defs if isfile(source_path / f.file_name)]
         ret_str = ", ".join(f.file_name for f in file_defs)
 
         if files and len(files) < len(file_defs):
@@ -162,12 +156,13 @@ class MigrationTaskBase:
         This is in the base class because multiple tasks need it. It exists because instances in an ECS environment
         are transformed for the central and data tenants separately, but the data tenants need to know about
         the central tenant instance ids. This is a bit of a hack, but it works for now.
-        """
+        """  # noqa: E501
         map_files = []
         instance_id_map = {}
         if self.library_configuration.is_ecs and self.central_folder_structure:
             logging.info(
-                "Loading ECS central tenant instance id map from %s", self.central_folder_structure.instance_id_map_path
+                "Loading ECS central tenant instance id map from %s",
+                self.central_folder_structure.instance_id_map_path,
             )
             instance_id_map = self.load_id_map(
                 self.central_folder_structure.instance_id_map_path,
@@ -176,7 +171,7 @@ class MigrationTaskBase:
             map_files.append(str(self.central_folder_structure.instance_id_map_path))
             logging.info(
                 "Loading member tenant isntance id map from %s",
-                self.folder_structure.instance_id_map_path
+                self.folder_structure.instance_id_map_path,
             )
         instance_id_map = self.load_id_map(
             self.folder_structure.instance_id_map_path,
@@ -190,13 +185,11 @@ class MigrationTaskBase:
         return instance_id_map
 
     @staticmethod
-    def load_id_map(map_path, raise_if_empty=False, existing_id_map={}):
+    def load_id_map(map_path, raise_if_empty=False, existing_id_map=None):
         if not isfile(map_path):
-            logging.warning(
-                "No legacy id map found at %s. Will build one from scratch", map_path
-            )
+            logging.warning("No legacy id map found at %s. Will build one from scratch", map_path)
             return {}
-        id_map = existing_id_map
+        id_map = existing_id_map or {}
         loaded_rows = len(id_map)
         with open(map_path) as id_map_file:
             for index, json_string in enumerate(id_map_file, start=1):
@@ -247,9 +240,7 @@ class MigrationTaskBase:
         else:
             logger.setLevel(logging.INFO)
             stream_handler.setLevel(logging.INFO)
-            stream_handler.addFilter(
-                ExcludeLevelFilter(30)
-            )  # Exclude warnings from pymarc
+            stream_handler.addFilter(ExcludeLevelFilter(30))  # Exclude warnings from pymarc
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
@@ -280,22 +271,16 @@ class MigrationTaskBase:
     def setup_records_map(self, mapping_file_path):
         with open(mapping_file_path) as mapping_file:
             field_map = json.load(mapping_file)
-            logging.info(
-                "%s fields present in record mapping file", len(field_map["data"])
-            )
+            logging.info("%s fields present in record mapping file", len(field_map["data"]))
             mapped_fields = (
                 f
                 for f in field_map["data"]
                 if f["legacy_field"] and f["legacy_field"] != "Not mapped"
             )
-            logging.info(
-                "%s fields mapped in record mapping file", len(list(mapped_fields))
-            )
+            logging.info("%s fields mapped in record mapping file", len(list(mapped_fields)))
             return field_map
 
-    def log_and_exit_if_too_many_errors(
-        self, error: TransformationRecordFailedError, idx
-    ):
+    def log_and_exit_if_too_many_errors(self, error: TransformationRecordFailedError, idx):
         self.num_exeptions += 1
         error.log_it()
         if self.num_exeptions / (1 + idx) > 0.2 and self.num_exeptions > 5000:
@@ -311,9 +296,7 @@ class MigrationTaskBase:
         if num_processed > 1 and num_processed % 10000 == 0:
             elapsed = num_processed / (time.time() - start_time)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            logging.info(
-                f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} "
-            )
+            logging.info(f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} ")
 
     def do_work_marc_transformer(
         self,
@@ -322,9 +305,7 @@ class MigrationTaskBase:
         if self.folder_structure.failed_marc_recs_file.is_file():
             os.remove(self.folder_structure.failed_marc_recs_file)
             logging.info("Removed failed marc records file to prevent duplicating data")
-        with open(
-            self.folder_structure.created_objects_path, "w+"
-        ) as created_records_file:
+        with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
             self.processor = MarcFileProcessor(
                 self.mapper, self.folder_structure, created_records_file
             )
@@ -377,7 +358,7 @@ class MigrationTaskBase:
 
         Returns:
             None
-        """
+        """  # noqa: E501
         current_pos = map_file.tell()
         try:
             map_file.seek(0)
@@ -391,13 +372,12 @@ class MigrationTaskBase:
                     "",
                     (
                         f"Mapping file {map_file.name} has rows with different number "
-                        f"of columns ({'Row' if len(invalid_lines) == 1 else 'Rows'} {', '.join(invalid_lines)})"
+                        f"of columns ({'Row' if len(invalid_lines) == 1 else 'Rows'} "
+                        f"{', '.join(invalid_lines)})"
                     ),
                 )
             if not valid_lines:
-                raise TransformationProcessError(
-                    "", f"Map has no rows: {map_file.name}"
-                )
+                raise TransformationProcessError("", f"Map has no rows: {map_file.name}")
         finally:
             map_file.seek(current_pos)
 
@@ -418,15 +398,12 @@ class MigrationTaskBase:
             required (bool): Whether the property is required or not
         """
         if (
-                (
-	            folio_property_name in folio_keys
-	            or required
-	            or folio_property_name.startswith("statisticalCodeIds")
-	            or folio_property_name.startswith("locationMap")
-	            or folio_property_name.startswith("fundsMap")
-                )
-                and map_file_path.is_file()
-        ):
+            folio_property_name in folio_keys
+            or required
+            or folio_property_name.startswith("statisticalCodeIds")
+            or folio_property_name.startswith("locationMap")
+            or folio_property_name.startswith("fundsMap")
+        ) and map_file_path.is_file():
             try:
                 with open(map_file_path) as map_file:
                     # Validate the structure of the mapping file
@@ -486,7 +463,7 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
         deactivate035_from001 (bool):
             Disables the default FOLIO functionality of moving the previous 001 field into a 035 field, prefixed with the value from 003.
             Default is False, meaning the functionality remains active.
-    """
+    """  # noqa: E501
 
     files: Annotated[
         List[library_configuration.FileDefinition],
@@ -500,8 +477,7 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
         Field(
             title="Create source records",
             description=(
-                "Controls whether or not to retain the MARC records in "
-                "Source Record Storage."
+                "Controls whether or not to retain the MARC records in Source Record Storage."
             ),
         ),
     ] = False
@@ -542,11 +518,13 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
             title="Statistical code mapping fields",
             description=(
                 "List of fields + subfields to be used for mapping statistical codes. "
-                "Subfields should be delimited by a \"$\" (eg. 907$a). Single repeating subfields "
-                "will be treated as unique values. Multiple subfields will be concatenated together with a space."
+                'Subfields should be delimited by a "$" (eg. 907$a). Single repeating subfields '
+                "will be treated as unique values. Multiple subfields will be concatenated "
+                "together with a space."
             ),
         ),
     ] = []
+
 
 class ExcludeLevelFilter(logging.Filter):
     def __init__(self, level):

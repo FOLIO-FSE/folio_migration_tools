@@ -45,7 +45,7 @@ class CoursesMapper(MappingFileMapperBase):
             None,
             FOLIONamespaces.course,
             library_configuration,
-            task_configuration
+            task_configuration,
         )
         self.course_map = course_map
         if terms_map:

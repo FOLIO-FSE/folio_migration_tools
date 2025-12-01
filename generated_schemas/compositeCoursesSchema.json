@@ -7,9 +7,9 @@
             "additionalProperties": false,
             "properties": {
                 "id": {
+                    "description": "A UUID",
                     "type": "string",
-                    "description": "UUID to identify this course",
-                    "$ref": "uuid.json"
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                 },
                 "name": {
                     "type": "string",
@@ -20,24 +20,551 @@
                     "description": "A description of the course"
                 },
                 "departmentId": {
+                    "description": "A UUID",
                     "type": "string",
-                    "description": "The department that this course belongs to",
-                    "$ref": "uuid.json"
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                 },
                 "departmentObject": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
                     "type": "object",
-                    "description": "The department associated with this course",
-                    "$ref": "department.json"
+                    "description": "The department a course belongs to",
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the department"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "A description of this department"
+                        },
+                        "metadata": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "id": "metadata.schema",
+                            "title": "Metadata Schema",
+                            "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                            "type": "object",
+                            "properties": {
+                                "createdDate": {
+                                    "description": "Date and time when the record was created",
+                                    "type": "string",
+                                    "format": "date-time"
+                                },
+                                "createdByUserId": {
+                                    "description": "ID of the user who created the record (when available)",
+                                    "type": "string",
+                                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                },
+                                "createdByUsername": {
+                                    "description": "Username of the user who created the record (when available)",
+                                    "type": "string"
+                                },
+                                "updatedDate": {
+                                    "description": "Date and time when the record was last updated",
+                                    "type": "string",
+                                    "format": "date-time"
+                                },
+                                "updatedByUserId": {
+                                    "description": "ID of the user who last updated the record (when available)",
+                                    "type": "string",
+                                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                },
+                                "updatedByUsername": {
+                                    "description": "Username of the user who last updated the record (when available)",
+                                    "type": "string"
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "createdDate"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
                 },
                 "courseListingId": {
+                    "description": "A UUID",
                     "type": "string",
-                    "description": "The id for the course listing this course belongs to",
-                    "$ref": "uuid.json"
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                 },
                 "courseListingObject": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
                     "type": "object",
-                    "description": "The course listing associated with this course",
-                    "$ref": "courselisting.json"
+                    "description": "An actual instantiation in time and space of a course",
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        },
+                        "registrarId": {
+                            "type": "string",
+                            "description": "The registration id"
+                        },
+                        "externalId": {
+                            "type": "string",
+                            "description": "An external identifier associated with this listing"
+                        },
+                        "servicepointId": {
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        },
+                        "servicepointObject": {
+                            "type": "object",
+                            "description": "The service point associated with this listing's reserves",
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "description": "Id of service-point object"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "service-point name, a required field"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "description": "service-point code, a required field"
+                                },
+                                "discoveryDisplayName": {
+                                    "type": "string",
+                                    "description": "display name, a required field"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "description": "description of the service-point"
+                                },
+                                "shelvingLagTime": {
+                                    "type": "integer",
+                                    "description": "shelving lag time"
+                                },
+                                "pickupLocation": {
+                                    "type": "boolean",
+                                    "description": "indicates whether or not the service point is a pickup location"
+                                },
+                                "holdShelfExpiryPeriod": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "type": "object",
+                                    "description": "schema for time-period, which contains time interval 'duration' and the time unit",
+                                    "properties": {
+                                        "duration": {
+                                            "type": "integer",
+                                            "description": "Duration interval"
+                                        },
+                                        "intervalId": {
+                                            "type": "string",
+                                            "description": "Unit of time for the duration",
+                                            "enum": [
+                                                "Minutes",
+                                                "Hours",
+                                                "Days",
+                                                "Weeks",
+                                                "Months"
+                                            ],
+                                            "default": "Days"
+                                        }
+                                    },
+                                    "required": [
+                                        "duration",
+                                        "intervalId"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "staffSlips": {
+                                    "type": "array",
+                                    "description": "List of staff slips for this service point",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                                                "description": "The ID of the staff slip"
+                                            },
+                                            "printByDefault": {
+                                                "type": "boolean",
+                                                "description": "Whether or not to print the staff slip by default"
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "required": [
+                                            "id",
+                                            "printByDefault"
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        "locationId": {
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        },
+                        "locationObject": {
+                            "type": "object",
+                            "description": "The location associated with this listing's reserves",
+                            "properties": {
+                                "id": {
+                                    "description": "id of this (shelf) location record as UUID.",
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "description": "Name of the (shelf) location",
+                                    "type": "string"
+                                },
+                                "code": {
+                                    "description": "Code of the (shelf) location, usually an abbreviation of the name.",
+                                    "type": "string"
+                                },
+                                "description": {
+                                    "description": "Description of the (shelf) location.",
+                                    "type": "string"
+                                },
+                                "discoveryDisplayName": {
+                                    "description": "Name of the (shelf) location to be shown in the discovery.",
+                                    "type": "string"
+                                },
+                                "isActive": {
+                                    "description": "Whether this (shelf) location is active. Inactive (shelf) locations can no longer been used.",
+                                    "type": "boolean"
+                                },
+                                "institutionId": {
+                                    "description": "The UUID of the institution, the first-level location unit, this (shelf) location belongs to.",
+                                    "type": "string"
+                                },
+                                "campusId": {
+                                    "description": "The UUID of the campus, the second-level location unit, this (shelf) location belongs to.",
+                                    "type": "string"
+                                },
+                                "libraryId": {
+                                    "description": "The UUID of the library, the third-level location unit, this (shelf) location belongs to.",
+                                    "type": "string"
+                                },
+                                "details": {
+                                    "description": "Details about this (shelf) location.",
+                                    "type": "object"
+                                },
+                                "primaryServicePoint": {
+                                    "description": "The UUID of the primary service point of this (shelf) location.",
+                                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
+                                    "type": "string"
+                                },
+                                "servicePointIds": {
+                                    "description": "All service points that this (shelf) location has.",
+                                    "type": "array",
+                                    "items": {
+                                        "description": "The UUID of a service point that belongs to this (shelf) location.",
+                                        "type": "string",
+                                        "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
+                                        "not": {
+                                            "type": "null"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "termId": {
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        },
+                        "termObject": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "type": "object",
+                            "description": "Temporal periods that listings exist in",
+                            "additionalProperties": false,
+                            "properties": {
+                                "id": {
+                                    "description": "A UUID",
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "The name of period"
+                                },
+                                "startDate": {
+                                    "type": "string",
+                                    "description": "The beginning of the time period"
+                                },
+                                "endDate": {
+                                    "type": "string",
+                                    "description": "The ending of the time period"
+                                },
+                                "metadata": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "id": "metadata.schema",
+                                    "title": "Metadata Schema",
+                                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                                    "type": "object",
+                                    "properties": {
+                                        "createdDate": {
+                                            "description": "Date and time when the record was created",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "createdByUserId": {
+                                            "description": "ID of the user who created the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "createdByUsername": {
+                                            "description": "Username of the user who created the record (when available)",
+                                            "type": "string"
+                                        },
+                                        "updatedDate": {
+                                            "description": "Date and time when the record was last updated",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "updatedByUserId": {
+                                            "description": "ID of the user who last updated the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "updatedByUsername": {
+                                            "description": "Username of the user who last updated the record (when available)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "createdDate"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "name",
+                                "startDate",
+                                "endDate"
+                            ]
+                        },
+                        "courseTypeId": {
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        },
+                        "courseTypeObject": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "type": "object",
+                            "description": "The type of course a listing is",
+                            "additionalProperties": false,
+                            "properties": {
+                                "id": {
+                                    "description": "A UUID",
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "The name of the type"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "description": "A description of this type"
+                                },
+                                "metadata": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "id": "metadata.schema",
+                                    "title": "Metadata Schema",
+                                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                                    "type": "object",
+                                    "properties": {
+                                        "createdDate": {
+                                            "description": "Date and time when the record was created",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "createdByUserId": {
+                                            "description": "ID of the user who created the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "createdByUsername": {
+                                            "description": "Username of the user who created the record (when available)",
+                                            "type": "string"
+                                        },
+                                        "updatedDate": {
+                                            "description": "Date and time when the record was last updated",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "updatedByUserId": {
+                                            "description": "ID of the user who last updated the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "updatedByUsername": {
+                                            "description": "Username of the user who last updated the record (when available)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "createdDate"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "name"
+                            ]
+                        },
+                        "instructorObjects": {
+                            "type": "array",
+                            "description": "A listing of associated instructor objects",
+                            "items": {
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "type": "object",
+                                "description": "Describes an instructor for a given section",
+                                "additionalProperties": false,
+                                "properties": {
+                                    "id": {
+                                        "description": "A UUID",
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                    },
+                                    "userId": {
+                                        "description": "A UUID",
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "The name of this instructor"
+                                    },
+                                    "barcode": {
+                                        "type": "string",
+                                        "description": "The instructor's user barcode"
+                                    },
+                                    "patronGroup": {
+                                        "type": "string",
+                                        "description": "The id of the patrongroup associated with the user"
+                                    },
+                                    "patronGroupObject": {
+                                        "type": "object",
+                                        "description": "The instructor's user patrongroup",
+                                        "properties": {
+                                            "id": {
+                                                "description": "A UUID",
+                                                "type": "string",
+                                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                            },
+                                            "desc": {
+                                                "type": "string",
+                                                "description": "description of the group"
+                                            },
+                                            "group": {
+                                                "type": "string",
+                                                "description": "the unique name of the group"
+                                            }
+                                        }
+                                    },
+                                    "courseListingId": {
+                                        "description": "A UUID",
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                    },
+                                    "metadata": {
+                                        "$schema": "http://json-schema.org/draft-04/schema#",
+                                        "id": "metadata.schema",
+                                        "title": "Metadata Schema",
+                                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                                        "type": "object",
+                                        "properties": {
+                                            "createdDate": {
+                                                "description": "Date and time when the record was created",
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "createdByUserId": {
+                                                "description": "ID of the user who created the record (when available)",
+                                                "type": "string",
+                                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                            },
+                                            "createdByUsername": {
+                                                "description": "Username of the user who created the record (when available)",
+                                                "type": "string"
+                                            },
+                                            "updatedDate": {
+                                                "description": "Date and time when the record was last updated",
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "updatedByUserId": {
+                                                "description": "ID of the user who last updated the record (when available)",
+                                                "type": "string",
+                                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                            },
+                                            "updatedByUsername": {
+                                                "description": "Username of the user who last updated the record (when available)",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "required": [
+                                            "createdDate"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "courseListingId",
+                                    "name"
+                                ]
+                            }
+                        },
+                        "metadata": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "id": "metadata.schema",
+                            "title": "Metadata Schema",
+                            "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                            "type": "object",
+                            "properties": {
+                                "createdDate": {
+                                    "description": "Date and time when the record was created",
+                                    "type": "string",
+                                    "format": "date-time"
+                                },
+                                "createdByUserId": {
+                                    "description": "ID of the user who created the record (when available)",
+                                    "type": "string",
+                                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                },
+                                "createdByUsername": {
+                                    "description": "Username of the user who created the record (when available)",
+                                    "type": "string"
+                                },
+                                "updatedDate": {
+                                    "description": "Date and time when the record was last updated",
+                                    "type": "string",
+                                    "format": "date-time"
+                                },
+                                "updatedByUserId": {
+                                    "description": "ID of the user who last updated the record (when available)",
+                                    "type": "string",
+                                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                },
+                                "updatedByUsername": {
+                                    "description": "Username of the user who last updated the record (when available)",
+                                    "type": "string"
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "createdDate"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "termId"
+                    ]
                 },
                 "courseNumber": {
                     "type": "string",
@@ -52,8 +579,45 @@
                     "description": "The number of students enrolled in this course"
                 },
                 "metadata": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "metadata.schema",
+                    "title": "Metadata Schema",
+                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                     "type": "object",
-                    "$ref": "raml-util/schemas/metadata.schema"
+                    "properties": {
+                        "createdDate": {
+                            "description": "Date and time when the record was created",
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "createdByUserId": {
+                            "description": "ID of the user who created the record (when available)",
+                            "type": "string",
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                        },
+                        "createdByUsername": {
+                            "description": "Username of the user who created the record (when available)",
+                            "type": "string"
+                        },
+                        "updatedDate": {
+                            "description": "Date and time when the record was last updated",
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "updatedByUserId": {
+                            "description": "ID of the user who last updated the record (when available)",
+                            "type": "string",
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                        },
+                        "updatedByUsername": {
+                            "description": "Username of the user who last updated the record (when available)",
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "createdDate"
+                    ]
                 }
             },
             "required": [
@@ -69,9 +633,9 @@
             "additionalProperties": false,
             "properties": {
                 "id": {
+                    "description": "A UUID",
                     "type": "string",
-                    "description": "UUID for this listing",
-                    "$ref": "uuid.json"
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                 },
                 "registrarId": {
                     "type": "string",
@@ -82,9 +646,9 @@
                     "description": "An external identifier associated with this listing"
                 },
                 "servicepointId": {
+                    "description": "A UUID",
                     "type": "string",
-                    "description": "The ID of the service point associated with this listing's reserves",
-                    "$ref": "uuid.json"
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                 },
                 "servicepointObject": {
                     "type": "object",
@@ -119,9 +683,32 @@
                             "description": "indicates whether or not the service point is a pickup location"
                         },
                         "holdShelfExpiryPeriod": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
                             "type": "object",
-                            "$ref": "time-period.json",
-                            "description": "expiration period for items on the hold shelf at the service point"
+                            "description": "schema for time-period, which contains time interval 'duration' and the time unit",
+                            "properties": {
+                                "duration": {
+                                    "type": "integer",
+                                    "description": "Duration interval"
+                                },
+                                "intervalId": {
+                                    "type": "string",
+                                    "description": "Unit of time for the duration",
+                                    "enum": [
+                                        "Minutes",
+                                        "Hours",
+                                        "Days",
+                                        "Weeks",
+                                        "Months"
+                                    ],
+                                    "default": "Days"
+                                }
+                            },
+                            "required": [
+                                "duration",
+                                "intervalId"
+                            ],
+                            "additionalProperties": false
                         },
                         "staffSlips": {
                             "type": "array",
@@ -149,9 +736,9 @@
                     }
                 },
                 "locationId": {
+                    "description": "A UUID",
                     "type": "string",
-                    "description": "The ID of the location associated with this listing's reserves",
-                    "$ref": "uuid.json"
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                 },
                 "locationObject": {
                     "type": "object",
@@ -217,36 +804,351 @@
                     }
                 },
                 "termId": {
+                    "description": "A UUID",
                     "type": "string",
-                    "description": "The ID of the term for this listing",
-                    "$ref": "uuid.json"
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                 },
                 "termObject": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
                     "type": "object",
-                    "description": "The term associated with this listing",
-                    "$ref": "term.json"
+                    "description": "Temporal periods that listings exist in",
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "type": "object",
+                            "description": "schema for time-period, which contains time interval 'duration' and the time unit",
+                            "properties": {
+                                "duration": {
+                                    "type": "integer",
+                                    "description": "Duration interval"
+                                },
+                                "intervalId": {
+                                    "type": "string",
+                                    "description": "Unit of time for the duration",
+                                    "enum": [
+                                        "Minutes",
+                                        "Hours",
+                                        "Days",
+                                        "Weeks",
+                                        "Months"
+                                    ],
+                                    "default": "Days"
+                                }
+                            },
+                            "required": [
+                                "duration",
+                                "intervalId"
+                            ],
+                            "additionalProperties": false
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "The name of period"
+                        },
+                        "startDate": {
+                            "type": "string",
+                            "description": "The beginning of the time period"
+                        },
+                        "endDate": {
+                            "type": "string",
+                            "description": "The ending of the time period"
+                        },
+                        "metadata": {
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        }
+                    },
+                    "required": [
+                        "name",
+                        "startDate",
+                        "endDate"
+                    ]
                 },
                 "courseTypeId": {
+                    "description": "A UUID",
                     "type": "string",
-                    "description": "The ID of the course type for this listing",
-                    "$ref": "uuid.json"
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                 },
                 "courseTypeObject": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
                     "type": "object",
-                    "description": "The course type associated with this listing",
-                    "$ref": "coursetype.json"
+                    "description": "The type of course a listing is",
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the type"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "A description of this type"
+                        },
+                        "metadata": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "type": "object",
+                            "description": "Temporal periods that listings exist in",
+                            "additionalProperties": false,
+                            "properties": {
+                                "id": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "type": "object",
+                                    "description": "schema for time-period, which contains time interval 'duration' and the time unit",
+                                    "properties": {
+                                        "duration": {
+                                            "type": "integer",
+                                            "description": "Duration interval"
+                                        },
+                                        "intervalId": {
+                                            "type": "string",
+                                            "description": "Unit of time for the duration",
+                                            "enum": [
+                                                "Minutes",
+                                                "Hours",
+                                                "Days",
+                                                "Weeks",
+                                                "Months"
+                                            ],
+                                            "default": "Days"
+                                        }
+                                    },
+                                    "required": [
+                                        "duration",
+                                        "intervalId"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "The name of period"
+                                },
+                                "startDate": {
+                                    "type": "string",
+                                    "description": "The beginning of the time period"
+                                },
+                                "endDate": {
+                                    "type": "string",
+                                    "description": "The ending of the time period"
+                                },
+                                "metadata": {
+                                    "description": "A UUID",
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                }
+                            },
+                            "required": [
+                                "name",
+                                "startDate",
+                                "endDate"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
                 },
                 "instructorObjects": {
                     "type": "array",
                     "description": "A listing of associated instructor objects",
                     "items": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
                         "type": "object",
-                        "$ref": "instructor.json"
+                        "description": "Describes an instructor for a given section",
+                        "additionalProperties": false,
+                        "properties": {
+                            "id": {
+                                "description": "A UUID",
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                            },
+                            "userId": {
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "type": "object",
+                                "description": "Temporal periods that listings exist in",
+                                "additionalProperties": false,
+                                "properties": {
+                                    "id": {
+                                        "$schema": "http://json-schema.org/draft-04/schema#",
+                                        "type": "object",
+                                        "description": "schema for time-period, which contains time interval 'duration' and the time unit",
+                                        "properties": {
+                                            "duration": {
+                                                "type": "integer",
+                                                "description": "Duration interval"
+                                            },
+                                            "intervalId": {
+                                                "type": "string",
+                                                "description": "Unit of time for the duration",
+                                                "enum": [
+                                                    "Minutes",
+                                                    "Hours",
+                                                    "Days",
+                                                    "Weeks",
+                                                    "Months"
+                                                ],
+                                                "default": "Days"
+                                            }
+                                        },
+                                        "required": [
+                                            "duration",
+                                            "intervalId"
+                                        ],
+                                        "additionalProperties": false
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "The name of period"
+                                    },
+                                    "startDate": {
+                                        "type": "string",
+                                        "description": "The beginning of the time period"
+                                    },
+                                    "endDate": {
+                                        "type": "string",
+                                        "description": "The ending of the time period"
+                                    },
+                                    "metadata": {
+                                        "description": "A UUID",
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "startDate",
+                                    "endDate"
+                                ]
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "The name of this instructor"
+                            },
+                            "barcode": {
+                                "type": "string",
+                                "description": "The instructor's user barcode"
+                            },
+                            "patronGroup": {
+                                "type": "string",
+                                "description": "The id of the patrongroup associated with the user"
+                            },
+                            "patronGroupObject": {
+                                "type": "object",
+                                "description": "The instructor's user patrongroup",
+                                "properties": {
+                                    "id": {
+                                        "description": "A UUID",
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                    },
+                                    "desc": {
+                                        "type": "string",
+                                        "description": "description of the group"
+                                    },
+                                    "group": {
+                                        "type": "string",
+                                        "description": "the unique name of the group"
+                                    }
+                                }
+                            },
+                            "courseListingId": {
+                                "description": "A UUID",
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                            },
+                            "metadata": {
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "id": "metadata.schema",
+                                "title": "Metadata Schema",
+                                "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                                "type": "object",
+                                "properties": {
+                                    "createdDate": {
+                                        "description": "Date and time when the record was created",
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "createdByUserId": {
+                                        "description": "ID of the user who created the record (when available)",
+                                        "type": "string",
+                                        "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                    },
+                                    "createdByUsername": {
+                                        "description": "Username of the user who created the record (when available)",
+                                        "type": "string"
+                                    },
+                                    "updatedDate": {
+                                        "description": "Date and time when the record was last updated",
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "updatedByUserId": {
+                                        "description": "ID of the user who last updated the record (when available)",
+                                        "type": "string",
+                                        "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                    },
+                                    "updatedByUsername": {
+                                        "description": "Username of the user who last updated the record (when available)",
+                                        "type": "string"
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "required": [
+                                    "createdDate"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "courseListingId",
+                            "name"
+                        ]
                     }
                 },
                 "metadata": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "id": "metadata.schema",
+                    "title": "Metadata Schema",
+                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                     "type": "object",
-                    "$ref": "raml-util/schemas/metadata.schema"
+                    "properties": {
+                        "createdDate": {
+                            "description": "Date and time when the record was created",
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "createdByUserId": {
+                            "description": "ID of the user who created the record (when available)",
+                            "type": "string",
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                        },
+                        "createdByUsername": {
+                            "description": "Username of the user who created the record (when available)",
+                            "type": "string"
+                        },
+                        "updatedDate": {
+                            "description": "Date and time when the record was last updated",
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "updatedByUserId": {
+                            "description": "ID of the user who last updated the record (when available)",
+                            "type": "string",
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                        },
+                        "updatedByUsername": {
+                            "description": "Username of the user who last updated the record (when available)",
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "createdDate"
+                    ]
                 }
             },
             "required": [
@@ -262,14 +1164,14 @@
                 "additionalProperties": false,
                 "properties": {
                     "id": {
+                        "description": "A UUID",
                         "type": "string",
-                        "description": "UUID for this instructor",
-                        "$ref": "uuid.json"
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "userId": {
+                        "description": "A UUID",
                         "type": "string",
-                        "description": "ID of associated FOLIO user (if exists)",
-                        "$ref": "uuid.json"
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "name": {
                         "type": "string",
@@ -288,9 +1190,9 @@
                         "description": "The instructor's user patrongroup",
                         "properties": {
                             "id": {
+                                "description": "A UUID",
                                 "type": "string",
-                                "description": "UUID for the group",
-                                "$ref": "uuid.json"
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                             },
                             "desc": {
                                 "type": "string",
@@ -303,13 +1205,50 @@
                         }
                     },
                     "courseListingId": {
+                        "description": "A UUID",
                         "type": "string",
-                        "description": "The course listing this instructor teaches",
-                        "$ref": "uuid.json"
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "metadata": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "id": "metadata.schema",
+                        "title": "Metadata Schema",
+                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                         "type": "object",
-                        "$ref": "raml-util/schemas/metadata.schema"
+                        "properties": {
+                            "createdDate": {
+                                "description": "Date and time when the record was created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "createdByUserId": {
+                                "description": "ID of the user who created the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "createdByUsername": {
+                                "description": "Username of the user who created the record (when available)",
+                                "type": "string"
+                            },
+                            "updatedDate": {
+                                "description": "Date and time when the record was last updated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedByUserId": {
+                                "description": "ID of the user who last updated the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "updatedByUsername": {
+                                "description": "Username of the user who last updated the record (when available)",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "createdDate"
+                        ]
                     }
                 },
                 "required": [

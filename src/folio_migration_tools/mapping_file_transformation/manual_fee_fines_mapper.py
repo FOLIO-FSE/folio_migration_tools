@@ -172,8 +172,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         except TypeError as te:
             raise TransformationProcessError(
                 "",
-                "Failed to fetch Tenant Locale Settings. "
-                "Is your library configuration correct?",
+                "Failed to fetch Tenant Locale Settings. Is your library configuration correct?",
             ) from te
         except KeyError as ke:
             raise TransformationProcessError(

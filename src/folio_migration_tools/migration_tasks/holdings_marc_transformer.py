@@ -19,7 +19,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings impor
 )
 from folio_migration_tools.migration_tasks.migration_task_base import (
     MarcTaskConfigurationBase,
-    MigrationTaskBase
+    MigrationTaskBase,
 )
 
 
@@ -38,18 +38,14 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Migration task type",
-                description=(
-                    "The type of migration task you want to perform"
-                ),
+                description=("The type of migration task you want to perform"),
             ),
         ]
         files: Annotated[
             List[FileDefinition],
             Field(
                 title="Source files",
-                description=(
-                    "List of MARC21 files with holdings records"
-                ),
+                description=("List of MARC21 files with holdings records"),
             ),
         ]
         hrid_handling: Annotated[
@@ -167,9 +163,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="MARC Holdings Note type",
-                description=(
-                    "The name of the note type to use for MARC (MRK) statements. "
-                ),
+                description=("The name of the note type to use for MARC (MRK) statements. "),
             ),
         ] = "Original MARC holdings statements"
         include_mfhd_mrk_as_note: Annotated[
@@ -187,9 +181,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="MARC Record (as MARC Maker Representation) note type",
-                description=(
-                    "The name of the note type to use for MFHD (MRK) note. "
-                ),
+                description=("The name of the note type to use for MFHD (MRK) note. "),
             ),
         ] = "Original MFHD Record"
         include_mfhd_mrc_as_note: Annotated[
@@ -208,9 +200,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             str,
             Field(
                 title="MARC Record (as MARC21 decoded string) note type",
-                description=(
-                    "The name of the note type to use for MFHD (MRC) note. "
-                ),
+                description=("The name of the note type to use for MFHD (MRC) note. "),
             ),
         ] = "Original MFHD (MARC21)"
 
@@ -276,12 +266,12 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                     "Rows in Bound with relationship map: %s",
                     len(self.boundwith_relationship_map_rows),
                 )
-            except FileNotFoundError:
+            except FileNotFoundError as fnfe:
                 raise TransformationProcessError(
                     "",
                     i18n.t("Provided boundwith relationship file not found"),
                     self.task_configuration.boundwith_relationship_file_path,
-                )
+                ) from fnfe
 
         location_map_path = (
             self.folder_structure.mapping_files_folder
@@ -302,7 +292,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             self.library_configuration,
             self.instance_id_map,
             self.boundwith_relationship_map_rows,
-            statcode_mapping
+            statcode_mapping,
         )
         self.add_supplemental_mfhd_mappings()
         if (
@@ -330,12 +320,12 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                             "Supplemental MFHD mapping rules file must contain a dictionary",
                             json.dumps(new_rules),
                         )
-            except FileNotFoundError:
+            except FileNotFoundError as fnfe:
                 raise TransformationProcessError(
                     "",
                     "Provided supplemental MFHD mapping rules file not found",
                     self.task_configuration.supplemental_mfhd_mapping_rules_file,
-                )
+                ) from fnfe
         else:
             new_rules = {}
         self.mapper.integrate_supplemental_mfhd_mappings(new_rules)

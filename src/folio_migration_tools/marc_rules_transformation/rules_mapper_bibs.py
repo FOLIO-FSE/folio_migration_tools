@@ -67,7 +67,9 @@ class BibsRulesMapper(RulesMapperBase):
             self.hrid_handler.deactivate035_from001 = True
         self.start = time.time()
 
-    def perform_initial_preparation(self, file_def: FileDefinition, marc_record: Record, legacy_ids: List[str]):
+    def perform_initial_preparation(
+        self, file_def: FileDefinition, marc_record: Record, legacy_ids: List[str]
+    ):
         folio_instance = {}
         folio_instance["id"] = str(
             FolioUUID(
@@ -145,7 +147,13 @@ class BibsRulesMapper(RulesMapperBase):
         self.report_folio_mapping(clean_folio_instance, self.schema)
         return [clean_folio_instance]
 
-    def simple_bib_map(self, folio_instance: dict, marc_record: Record, ignored_subsequent_fields: set, legacy_ids: List[str]):
+    def simple_bib_map(
+        self,
+        folio_instance: dict,
+        marc_record: Record,
+        ignored_subsequent_fields: set,
+        legacy_ids: List[str],
+    ):
         """
         This method applies a much simplified MARC-to-instance
         mapping to create a minimal FOLIO Instance record to be
@@ -164,20 +172,24 @@ class BibsRulesMapper(RulesMapperBase):
         if len(main_entry_fields) > 1:
             Helper.log_data_issue(
                 legacy_ids,
-                "Multiple main entry fields in record. Record will fail Data Import. Creating Instance anyway.",
-                [str(field) for field in main_entry_fields]
+                "Multiple main entry fields in record. Record will fail Data Import. "
+                "Creating Instance anyway.",
+                [str(field) for field in main_entry_fields],
             )
         if not main_entry_fields:
             main_entry_fields += marc_record.get_fields("700", "710", "711", "730")
             main_entry_fields.sort(key=lambda x: int(x.tag))
         if main_entry_fields:
-            self.process_marc_field(folio_instance, main_entry_fields[0], ignored_subsequent_fields, legacy_ids)
+            self.process_marc_field(
+                folio_instance, main_entry_fields[0], ignored_subsequent_fields, legacy_ids
+            )
         try:
-            self.process_marc_field(folio_instance, marc_record['245'], ignored_subsequent_fields, legacy_ids)
+            self.process_marc_field(
+                folio_instance, marc_record["245"], ignored_subsequent_fields, legacy_ids
+            )
         except KeyError as ke:
             raise TransformationRecordFailedError(
-                legacy_ids,
-                "No 245 field in MARC record"
+                legacy_ids, "No 245 field in MARC record"
             ) from ke
 
     def perform_additional_parsing(
@@ -220,10 +232,8 @@ class BibsRulesMapper(RulesMapperBase):
 
     def handle_languages(self, folio_instance: Dict, marc_record: Record, legacy_ids: List[str]):
         if "languages" in folio_instance:
-            orig_languages = {lang: None for lang in folio_instance["languages"]}
-            orig_languages.update(
-                {lang: None for lang in self.get_languages(marc_record, legacy_ids)}
-            )
+            orig_languages = dict.fromkeys(folio_instance["languages"])
+            orig_languages.update(dict.fromkeys(self.get_languages(marc_record, legacy_ids)))
             folio_instance["languages"] = list(orig_languages.keys())
         else:
             folio_instance["languages"] = self.get_languages(marc_record, legacy_ids)
@@ -422,7 +432,7 @@ class BibsRulesMapper(RulesMapperBase):
             return True
         self.migration_report.add(
             "InstanceFormat",
-            ("InstanceFormat not mapped since 338$2 (Source) " f"is set to {field['2']}. "),
+            (f"InstanceFormat not mapped since 338$2 (Source) is set to {field['2']}. "),
         )
         return False
 
@@ -533,10 +543,10 @@ class BibsRulesMapper(RulesMapperBase):
         return ""
 
     def get_languages_041(self, marc_record: Record, legacy_id: List[str]) -> Dict[str, None]:
-        languages = dict()
+        languages = {}
         lang_fields = marc_record.get_fields("041")
         if not any(lang_fields):
-            return dict()
+            return {}
         subfields = "abdefghjkmn"
         for lang_tag in lang_fields:
             if "2" in lang_tag:

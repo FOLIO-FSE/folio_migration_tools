@@ -1,94 +1,130 @@
 {
-    "title": "LibraryConfiguration",
-    "type": "object",
+    "$defs": {
+        "FolioRelease": {
+            "enum": [
+                "ramsons",
+                "sunflower",
+                "trillium",
+                "umbrellaleaf"
+            ],
+            "title": "FolioRelease",
+            "type": "string"
+        }
+    },
     "properties": {
-        "okapi_url": {
-            "title": "Okapi Url",
+        "gateway_url": {
+            "description": "The URL of the FOLIO API gateway instance. You can find this in Settings > Software versions > API gateway services.",
+            "title": "FOLIO API Gateway URL",
             "type": "string"
         },
         "tenant_id": {
-            "title": "Tenant Id",
+            "description": "The ID of the FOLIO tenant instance. You can find this in Settings > Software versions > API gateway services. In an ECS environment, this is the ID of the central tenant, for all configurations.",
+            "title": "FOLIO tenant ID",
             "type": "string"
         },
-        "okapi_username": {
-            "title": "Okapi Username",
+        "ecs_tenant_id": {
+            "default": "",
+            "description": [
+                "For use in ECS environments when the configuration file is meant to target a ",
+                "data tenant. Set to the tenant ID of the data tenant."
+            ],
+            "title": "ECS tenant ID",
             "type": "string"
         },
-        "okapi_password": {
-            "title": "Okapi Password",
+        "folio_username": {
+            "description": "The username for the FOLIO user account performing the migration. User should have a full admin permissions/roles in FOLIO. ",
+            "title": "FOLIO API Gateway username",
+            "type": "string"
+        },
+        "folio_password": {
+            "description": "The password for the FOLIO user account performing the migration. ",
+            "title": "FOLIO API Gateway password",
             "type": "string"
         },
         "base_folder": {
-            "title": "Base Folder",
             "description": "The base folder for migration. Should ideally be a github clone of the migration_repo_template",
             "format": "directory-path",
+            "title": "Base Folder",
             "type": "string"
         },
         "multi_field_delimiter": {
-            "title": "Multi Field Delimiter",
             "default": "<delimiter>",
+            "description": "The delimiter used to separate multiple values in a single field. This is used for delimited text (CSV/TSV) fields with multiple sub-delimited values.",
+            "title": "Multi field delimiter",
             "type": "string"
         },
         "failed_records_threshold": {
-            "title": "Failed Records Threshold",
-            "description": "Number of failed records until the process shuts down",
             "default": 5000,
+            "description": "Number of failed records until the process shuts down",
+            "title": "Failed Records Threshold",
             "type": "integer"
         },
         "failed_percentage_threshold": {
-            "title": "Failed Percentage Threshold",
-            "description": "Percentage of failed records until the process shuts down",
             "default": 20,
+            "description": "Percentage of failed records until the process shuts down",
+            "title": "Failed Percentage Threshold",
+            "type": "integer"
+        },
+        "generic_exception_threshold": {
+            "default": 50,
+            "description": "Number of generic exceptions until the process shuts down",
+            "title": "Generic Exception Threshold",
             "type": "integer"
         },
         "library_name": {
+            "description": "Name of the library being migrated",
             "title": "Library Name",
             "type": "string"
         },
         "log_level_debug": {
+            "default": false,
+            "description": "Enable debug level logging",
             "title": "Log Level Debug",
             "type": "boolean"
         },
         "folio_release": {
-            "description": "The Flavour of the ILS you are migrating from. This choice is maninly tied to the handling of legacy identifiers and thereby the deterministic UUIDs generated from them.",
-            "allOf": [
-                {
-                    "$ref": "#/definitions/FolioRelease"
-                }
-            ]
+            "$ref": "#/$defs/FolioRelease",
+            "description": "The Flavour of the ILS you are migrating from. This choice is maninly tied to the handling of legacy identifiers and thereby the deterministic UUIDs generated from them."
         },
         "iteration_identifier": {
+            "description": "The name of the current directory under base_folder/iterations/ to be used for this migration.",
             "title": "Iteration Identifier",
             "type": "string"
         },
         "add_time_stamp_to_file_names": {
-            "title": "Add Time Stamp To File Names",
             "default": false,
+            "title": "Add time stamp to file names",
             "type": "boolean"
+        },
+        "use_gateway_url_for_uuids": {
+            "default": false,
+            "description": "If set to true, folio_uuid will use the gateway URL when generating deterministic UUIDs for FOLIO records. If set to false (default), the UUIDs will be generated using the tenant_id (or ecs_tenant_id).",
+            "title": "Use gateway URL for UUIDs",
+            "type": "boolean"
+        },
+        "is_ecs": {
+            "default": false,
+            "description": "If set to true, the migration is running in an ECS environment. If set to false (default), the migration is running in a non-ECS environment. If ecs_tenant_id is set, this will be set to true, regardless of the value here.",
+            "title": "Library is running ECS FOLIO",
+            "type": "boolean"
+        },
+        "ecs_central_iteration_identifier": {
+            "default": "",
+            "description": "The iteration_identifier value from the central tenant configuration that corresponds to this configuration's iteration_identifier. Used to access the central instances_id_map.",
+            "title": "ECS central iteration identifier",
+            "type": "string"
         }
     },
     "required": [
-        "okapi_url",
+        "gateway_url",
         "tenant_id",
-        "okapi_username",
-        "okapi_password",
+        "folio_username",
+        "folio_password",
         "base_folder",
         "library_name",
-        "log_level_debug",
         "folio_release",
         "iteration_identifier"
     ],
-    "definitions": {
-        "FolioRelease": {
-            "title": "FolioRelease",
-            "description": "An enumeration.",
-            "enum": [
-                "lotus",
-                "morning-glory",
-                "nolana",
-                "orchid"
-            ],
-            "type": "string"
-        }
-    }
+    "title": "LibraryConfiguration",
+    "type": "object"
 }

@@ -1,7 +1,7 @@
 from unittest.mock import Mock, mock_open, patch
 import pytest
 from pathlib import Path
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 

@@ -53,10 +53,7 @@ class ItemsTransformer(MigrationTaskBase):
             HridHandling,
             Field(
                 title="HRID handling",
-                description=(
-                    "Determining how the HRID generation "
-                    "should be handled."
-                ),
+                description=("Determining how the HRID generation should be handled."),
             ),
         ]
         files: Annotated[
@@ -91,10 +88,7 @@ class ItemsTransformer(MigrationTaskBase):
             Optional[str],
             Field(
                 title="Temporary location map file name",
-                description=(
-                    "Temporary file name for location map. "
-                    "Empty string by default."
-                ),
+                description=("Temporary file name for location map. Empty string by default."),
             ),
         ] = ""
         material_types_map_file_name: Annotated[
@@ -115,10 +109,7 @@ class ItemsTransformer(MigrationTaskBase):
             Optional[str],
             Field(
                 title="Temporary loan types map file name",
-                description=(
-                    "File name for temporary loan types map. "
-                    "Empty string by default."
-                ),
+                description=("File name for temporary loan types map. Empty string by default."),
             ),
         ] = ""
         statistical_codes_map_file_name: Annotated[
@@ -218,9 +209,8 @@ class ItemsTransformer(MigrationTaskBase):
         self.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
             self.items_map
         )
-        if (
-            any(k for k in self.folio_keys if k.startswith("statisticalCodeIds"))
-            or any(getattr(k, "statistical_code", "") for k in self.task_configuration.files)
+        if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")) or any(
+            getattr(k, "statistical_code", "") for k in self.task_configuration.files
         ):
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
@@ -307,7 +297,7 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_loan_type_mapping,
             temporary_location_mapping,
             self.library_configuration,
-            self.task_configuration
+            self.task_configuration,
         )
         if (
             self.task_configuration.reset_hrid_settings
@@ -363,9 +353,7 @@ class ItemsTransformer(MigrationTaskBase):
                     self.handle_notes(folio_rec)
                     if folio_rec["holdingsRecordId"] in self.boundwith_relationship_map:
                         for idx_, instance_id in enumerate(
-                            self.boundwith_relationship_map.get(
-                                folio_rec["holdingsRecordId"]
-                            )
+                            self.boundwith_relationship_map.get(folio_rec["holdingsRecordId"])
                         ):
                             if idx_ == 0:
                                 bw_id = folio_rec["holdingsRecordId"]
@@ -453,29 +441,28 @@ class ItemsTransformer(MigrationTaskBase):
     def load_boundwith_relationships(self):
         try:
             with open(
-                    self.folder_structure.boundwith_relationships_map_path
+                self.folder_structure.boundwith_relationships_map_path
             ) as boundwith_relationship_file:
                 self.boundwith_relationship_map = dict(
-                        json.loads(x) for x in boundwith_relationship_file
-                    )
-            logging.info(
-                "Rows in Bound with relationship map: %s",
-                len(self.boundwith_relationship_map)
+                    json.loads(x) for x in boundwith_relationship_file
                 )
-        except FileNotFoundError:
+            logging.info(
+                "Rows in Bound with relationship map: %s", len(self.boundwith_relationship_map)
+            )
+        except FileNotFoundError as fnfe:
             raise TransformationProcessError(
                 "",
                 "Boundwith relationship file specified, but relationships file "
                 "from holdings transformation not found.",
-                self.folder_structure.boundwith_relationships_map_path
-            )
-        except ValueError:
+                self.folder_structure.boundwith_relationships_map_path,
+            ) from fnfe
+        except ValueError as ve:
             raise TransformationProcessError(
                 "",
                 "Boundwith relationship file specified, but relationships file "
                 "from holdings transformation is not a valid line JSON.",
                 self.folder_structure.boundwith_relationships_map_path,
-            )
+            ) from ve
 
     def wrap_up(self):
         logging.info("Done. Transformer wrapping up...")

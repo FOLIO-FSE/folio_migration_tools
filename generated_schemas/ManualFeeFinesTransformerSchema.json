@@ -1,72 +1,117 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
+    "$defs": {
+        "FileDefinition": {
+            "properties": {
+                "file_name": {
+                    "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "default": false,
+                    "title": "Discovery suppressed",
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "default": false,
+                    "title": "Staff suppressed",
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
+                    "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
+                }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        }
+    },
     "properties": {
         "name": {
             "title": "Name",
-            "type": "string"
-        },
-        "feefinesMap": {
-            "title": "Feefinesmap",
             "type": "string"
         },
         "migrationTaskType": {
             "title": "Migrationtasktype",
             "type": "string"
         },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
+            "type": "string"
+        },
+        "feefinesMap": {
+            "title": "Feefinesmap",
+            "type": "string"
+        },
         "files": {
-            "title": "Files",
-            "type": "array",
             "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Files",
+            "type": "array"
         },
         "feefinesOwnerMap": {
-            "title": "Feefinesownermap",
-            "type": "string"
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "title": "Feefinesownermap"
         },
         "feefinesTypeMap": {
-            "title": "Feefinestypemap",
-            "type": "string"
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "title": "Feefinestypemap"
         },
         "servicePointMap": {
-            "title": "Servicepointmap",
-            "type": "string"
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "title": "Servicepointmap"
         }
     },
     "required": [
         "name",
-        "feefinesMap",
         "migrationTaskType",
-        "files"
+        "feefinesMap",
+        "files",
+        "feefinesOwnerMap",
+        "feefinesTypeMap",
+        "servicePointMap"
     ],
-    "definitions": {
-        "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
-            "properties": {
-                "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
-                    "default": "",
-                    "type": "string"
-                },
-                "discovery_suppressed": {
-                    "title": "Discovery suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "staff_suppressed": {
-                    "title": "Staff suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "service_point_id": {
-                    "title": "Service point ID",
-                    "default": "",
-                    "type": "string"
-                }
-            }
-        }
-    }
+    "title": "TaskConfiguration",
+    "type": "object"
 }

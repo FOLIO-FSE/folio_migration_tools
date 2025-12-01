@@ -45,7 +45,7 @@ def test_load_and_validate_legacy_loans_set_in_source():
         reader = csv.DictReader(csvfile)
 
         mock_library_conf = Mock(spec=LibraryConfiguration)
-        mock_library_conf.gateway_url = "http://okapi_url"
+        mock_library_conf.gateway_url = "https://okapi_url"
         mock_library_conf.tenant_id = ""
         mock_library_conf.folio_username = ""
         mock_library_conf.folio_password = ""  # noqa: 105
@@ -85,7 +85,7 @@ def test_load_and_validate_legacy_loans_set_centrally():
         reader = csv.DictReader(csvfile)
 
         mock_library_conf = Mock(spec=LibraryConfiguration)
-        mock_library_conf.gateway_url = "http://okapi_url"
+        mock_library_conf.gateway_url = "https://okapi_url"
         mock_library_conf.tenant_id = ""
         mock_library_conf.folio_username = ""
         mock_library_conf.folio_password = ""  # noqa: 105
@@ -127,7 +127,7 @@ def test_load_and_validate_legacy_loans_with_proxy():
         reader = csv.DictReader(csvfile)
 
         mock_library_conf = Mock(spec=LibraryConfiguration)
-        mock_library_conf.gateway_url = "http://okapi_url"
+        mock_library_conf.gateway_url = "https://okapi_url"
         mock_library_conf.tenant_id = ""
         mock_library_conf.folio_username = ""
         mock_library_conf.folio_password = ""  # noqa: 105

@@ -15,6 +15,7 @@ from folio_migration_tools.library_configuration import (
 import csv
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pathlib import Path
 import pytest
@@ -71,6 +72,25 @@ def test_load_ref_data_mapping_file_missing_required_field():
 
 def test_get_object_type():
     assert HoldingsCsvTransformer.get_object_type() == FOLIONamespaces.holdings
+
+
+def test_generate_boundwith_part(caplog):
+    mock_mapper = mocked_classes.mocked_holdings_mapper()
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.mapper = mock_mapper
+
+    mock_mapper.folio_client = mocked_classes.mocked_folio_client()
+    mock_mapper.base_string_for_folio_uuid = "test_tenant"  # Use tenant_id as base string
+    HoldingsMapper.create_and_write_boundwith_part(mock_mapper, "legacy_id", "holding_uuid")
+
+    assert any("boundwithPart\t" in ed for ed in mock_mapper.extradata_writer.cache)
+    assert any(
+        '"itemId": "c6792640-a656-527f-84e7-e2524c141f66"}\n' in ed
+        for ed in mock_mapper.extradata_writer.cache
+    )
+    assert any(
+        '"holdingsRecordId": "holding_uuid"' in ed for ed in mock_mapper.extradata_writer.cache
+    )
 
 
 def test_merge_holding_in_first_boundwith(caplog):

@@ -1,40 +1,131 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
+    "$defs": {
+        "FileDefinition": {
+            "properties": {
+                "file_name": {
+                    "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "default": false,
+                    "title": "Discovery suppressed",
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "default": false,
+                    "title": "Staff suppressed",
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
+                    "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
+                }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        }
+    },
     "properties": {
         "name": {
-            "title": "Name",
+            "description": "Name of this migration task. The name is being used to call the specific task, and to distinguish tasks of similar types",
+            "title": "Migration task name",
             "type": "string"
         },
         "migrationTaskType": {
-            "title": "Migrationtasktype",
+            "description": "The type of migration task you want to perform",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
             "type": "string"
         },
         "groupMapPath": {
-            "title": "Groupmappath",
+            "description": "Define the path for group mapping",
+            "title": "Group map path",
             "type": "string"
         },
         "departmentsMapPath": {
-            "title": "Departmentsmappath",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": "",
-            "type": "string"
+            "description": "Define the path for departments mapping. Optional, by dfault is empty string",
+            "title": "Departments map path"
         },
         "useGroupMap": {
-            "title": "Usegroupmap",
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": true,
-            "type": "boolean"
+            "description": "Specify whether to use group mapping. Optional, by default is True",
+            "title": "Use group map"
         },
         "userMappingFileName": {
-            "title": "Usermappingfilename",
+            "description": "Specify the user mapping file name",
+            "title": "User mapping file name",
             "type": "string"
         },
         "userFile": {
-            "$ref": "#/definitions/FileDefinition"
+            "$ref": "#/$defs/FileDefinition",
+            "description": "Select the user data file",
+            "title": "User file"
         },
         "removeIdAndRequestPreferences": {
-            "title": "Removeidandrequestpreferences",
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "default": false,
-            "type": "boolean"
+            "description": "Specify whether to remove user ID and request preferences. Optional, by default is False",
+            "title": "Remove ID and request preferences"
+        },
+        "removeRequestPreferences": {
+            "anyOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "default": false,
+            "description": "Specify whether to remove user request preferences. Optional, by default is False",
+            "title": "Remove request preferences"
         }
     },
     "required": [
@@ -44,33 +135,6 @@
         "userMappingFileName",
         "userFile"
     ],
-    "definitions": {
-        "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
-            "properties": {
-                "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
-                    "default": "",
-                    "type": "string"
-                },
-                "discovery_suppressed": {
-                    "title": "Discovery suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "staff_suppressed": {
-                    "title": "Staff suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "service_point_id": {
-                    "title": "Service point ID",
-                    "default": "",
-                    "type": "string"
-                }
-            }
-        }
-    }
+    "title": "TaskConfiguration",
+    "type": "object"
 }

@@ -1,41 +1,152 @@
 {
-    "title": "TaskConfiguration",
-    "type": "object",
+    "$defs": {
+        "FileDefinition": {
+            "properties": {
+                "file_name": {
+                    "default": "",
+                    "description": "Name of the file to be processed. The location of the file depends on the context",
+                    "title": "File name",
+                    "type": "string"
+                },
+                "discovery_suppressed": {
+                    "default": false,
+                    "title": "Discovery suppressed",
+                    "type": "boolean"
+                },
+                "staff_suppressed": {
+                    "default": false,
+                    "title": "Staff suppressed",
+                    "type": "boolean"
+                },
+                "service_point_id": {
+                    "default": "",
+                    "description": "Service point to be used for transactions created from this file (Loans-only).",
+                    "title": "Service point ID",
+                    "type": "string"
+                },
+                "statistical_code": {
+                    "default": "",
+                    "description": "Statistical code (code) to be used inventory records created from this file (Instances, Holdings, Items). Specify multiple codes using multi_field_delimiter.",
+                    "title": "Statistical code",
+                    "type": "string"
+                },
+                "create_source_records": {
+                    "default": true,
+                    "description": "If set to true, the source records will be created in FOLIO. If set to false, the source records will not be created in FOLIO. Only applied for MARC-based transformations.",
+                    "title": "Create source records",
+                    "type": "boolean"
+                }
+            },
+            "title": "FileDefinition",
+            "type": "object"
+        }
+    },
     "properties": {
         "name": {
-            "title": "Name",
+            "description": "The name of the task",
+            "title": "Task name",
             "type": "string"
         },
         "migrationTaskType": {
-            "title": "Migrationtasktype",
+            "description": "The type of migration task",
+            "title": "Migration task type",
+            "type": "string"
+        },
+        "ecsTenantId": {
+            "default": "",
+            "description": [
+                "The tenant ID to use when making requests to FOLIO APIs for this task, if different from library configuration"
+            ],
+            "title": "ECS tenant ID",
             "type": "string"
         },
         "objectType": {
-            "title": "Objecttype",
+            "description": "The type of object being migratedExamples of possible values: 'Extradata', 'SRS', Instances', 'Holdings', 'Items'",
+            "title": "Object type",
             "type": "string"
         },
         "files": {
-            "title": "Files",
-            "type": "array",
+            "description": "List of files to be processed",
             "items": {
-                "$ref": "#/definitions/FileDefinition"
-            }
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "List of files",
+            "type": "array"
         },
         "batchSize": {
-            "title": "Batchsize",
+            "description": "The batch size for processing files",
+            "title": "Batch size",
             "type": "integer"
         },
         "rerunFailedRecords": {
-            "title": "Rerunfailedrecords",
-            "description": "Toggles whether or not BatchPoster should try to rerun failed batches or just leave the failing records on disk.",
             "default": true,
+            "description": "Toggles whether or not BatchPoster should try to rerun failed batches or just leave the failing records on disk.",
+            "title": "Rerun failed records",
             "type": "boolean"
         },
         "useSafeInventoryEndpoints": {
-            "title": "Usesafeinventoryendpoints",
-            "description": "Toggles the use of the safe/unsafe Inventory storage endpoints. Unsafe circumvents the Optimistic locking in FOLIO. Defaults to True (using the 'safe' options)",
             "default": true,
+            "description": "Toggles the use of the safe/unsafe Inventory storage endpoints. Unsafe circumvents the Optimistic locking in FOLIO. Defaults to True (using the 'safe' options)",
+            "title": "Use safe inventory endpoints",
             "type": "boolean"
+        },
+        "extradataEndpoints": {
+            "additionalProperties": true,
+            "default": {},
+            "description": "A dictionary of extradata endpoints. The key is the object type and the value is the endpoint",
+            "title": "Extradata endpoints",
+            "type": "object"
+        },
+        "upsert": {
+            "default": false,
+            "description": "Toggles whether or not to use the upsert feature of the Inventory storage endpoints. Defaults to False",
+            "title": "Upsert",
+            "type": "boolean"
+        },
+        "preserveStatisticalCodes": {
+            "default": false,
+            "description": "Toggles whether or not to preserve statistical codes during the upsert process. Defaults to False",
+            "title": "Preserve statistical codes",
+            "type": "boolean"
+        },
+        "preserveAdministrativeNotes": {
+            "default": false,
+            "description": "Toggles whether or not to preserve administrative notes during the upsert process. Defaults to False",
+            "title": "Preserve administrative notes",
+            "type": "boolean"
+        },
+        "preserveTemporaryLocations": {
+            "default": false,
+            "description": "Toggles whether or not to preserve temporary locations on items during the upsert process. Defaults to False",
+            "title": "Preserve temporary locations",
+            "type": "boolean"
+        },
+        "preserveTemporaryLoanTypes": {
+            "default": false,
+            "description": "Toggles whether or not to preserve temporary loan types on items during the upsert process. Defaults to False",
+            "title": "Preserve temporary loan types",
+            "type": "boolean"
+        },
+        "preserveItemStatus": {
+            "default": true,
+            "description": "Toggles whether or not to preserve item status on items during the upsert process. Defaults to False",
+            "title": "Preserve item status",
+            "type": "boolean"
+        },
+        "patchExistingRecords": {
+            "default": false,
+            "description": "Toggles whether or not to patch existing records during the upsert process. Defaults to False",
+            "title": "Patch existing records",
+            "type": "boolean"
+        },
+        "patchPaths": {
+            "default": [],
+            "description": "A list of fields in JSON Path notation to patch during the upsert process (leave off the $). If empty, all fields will be patched. Examples: ['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']",
+            "items": {
+                "type": "string"
+            },
+            "title": "Patch paths",
+            "type": "array"
         }
     },
     "required": [
@@ -45,33 +156,6 @@
         "files",
         "batchSize"
     ],
-    "definitions": {
-        "FileDefinition": {
-            "title": "FileDefinition",
-            "type": "object",
-            "properties": {
-                "file_name": {
-                    "title": "File name",
-                    "description": "Name of the file to be processed. The location of the file depends on the context",
-                    "default": "",
-                    "type": "string"
-                },
-                "discovery_suppressed": {
-                    "title": "Discovery suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "staff_suppressed": {
-                    "title": "Staff suppressed",
-                    "default": false,
-                    "type": "boolean"
-                },
-                "service_point_id": {
-                    "title": "Service point ID",
-                    "default": "",
-                    "type": "string"
-                }
-            }
-        }
-    }
+    "title": "TaskConfiguration",
+    "type": "object"
 }

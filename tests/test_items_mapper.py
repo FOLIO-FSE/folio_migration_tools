@@ -10,7 +10,7 @@ from folio_migration_tools.library_configuration import (
 )
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 
 
 @pytest.fixture(scope="session", autouse=True)

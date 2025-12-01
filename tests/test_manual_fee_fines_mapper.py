@@ -17,7 +17,7 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.manual_fee_fines_transformer import (
     ManualFeeFinesTransformer,
 )
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True

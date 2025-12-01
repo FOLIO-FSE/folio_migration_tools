@@ -124,3 +124,5 @@ scratch_pad.ipynb
 poetry.lock
 .DS_Store
 *.mrk
+*.lock
+pylock.toml

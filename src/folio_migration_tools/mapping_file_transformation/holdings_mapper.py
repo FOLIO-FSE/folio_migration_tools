@@ -114,8 +114,7 @@ class HoldingsMapper(MappingFileMapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            i18n.t("Suppressed from discovery")
-            + f" = {folio_record['discoverySuppress']}",
+            i18n.t("Suppressed from discovery") + f" = {folio_record['discoverySuppress']}",
         )
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):

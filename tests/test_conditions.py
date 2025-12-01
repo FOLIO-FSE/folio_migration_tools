@@ -16,7 +16,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
 # )
 from folio_migration_tools.migration_report import MigrationReport
 from tests.test_rules_mapper_base import folio_client as folio_client_fixture
-from folio_migration_tools.test_infrastructure.mocked_classes import mocked_folio_client
+from .test_infrastructure.mocked_classes import mocked_folio_client
 
 
 def test_condition_trim_period():

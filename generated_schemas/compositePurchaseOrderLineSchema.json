@@ -157,6 +157,11 @@
             "$schema": "http://json-schema.org/draft-04/schema#",
             "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         },
+        "totalCredited": {
+            "description": "Total credited for the order",
+            "type": "number",
+            "readonly": true
+        },
         "totalEstimatedPrice": {
             "description": "total estimated price of this purchase order",
             "type": "number"
@@ -302,6 +307,15 @@
                             "additionalProperties": false
                         }
                     },
+                    "claimingActive": {
+                        "description": "Indicates if there is an active claim or dispute",
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "claimingInterval": {
+                        "description": "Specifies the time interval, in days, within which claims or disputes must be initiated",
+                        "type": "integer"
+                    },
                     "collection": {
                         "description": "whether or not this purchase order line is for a collection",
                         "type": "boolean"
@@ -412,6 +426,11 @@
                                 "type": "boolean",
                                 "default": false
                             },
+                            "isBinderyActive": {
+                                "description": "Indicates that this POL is designated as required binding",
+                                "type": "boolean",
+                                "default": false
+                            },
                             "productIds": {
                                 "description": "a list of product identifiers",
                                 "id": "productIds",
@@ -459,6 +478,17 @@
                     "donor": {
                         "description": "the donor contributing to this purchase order line",
                         "type": "string"
+                    },
+                    "donorOrganizationIds": {
+                        "description": "donor organization ids associated with this fund",
+                        "type": "array",
+                        "items": {
+                            "description": "The UUID format string",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        }
                     },
                     "eresource": {
                         "description": "purchase order line e-resource details",
@@ -618,19 +648,34 @@
                                     "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                 },
                                 "quantity": {
-                                    "description": "combined/total quanitity of physical and electronic items",
+                                    "description": "Combined/total quanitity of physical and electronic items",
                                     "type": "integer"
                                 },
                                 "quantityElectronic": {
-                                    "description": "quantity of electronic items",
+                                    "description": "Quantity of electronic items",
                                     "type": "integer"
                                 },
                                 "quantityPhysical": {
-                                    "description": "quantity of physical items",
+                                    "description": "Quantity of physical items",
                                     "type": "integer"
+                                },
+                                "tenantId": {
+                                    "description": "Associated tenant for ECS-enabled clusters",
+                                    "type": "string"
                                 }
                             },
                             "additionalProperties": false
+                        }
+                    },
+                    "searchLocationIds": {
+                        "description": "location ids used for search",
+                        "type": "array",
+                        "items": {
+                            "description": "The UUID format string",
+                            "$ref": "../../common/schemas/uuid.json",
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         }
                     },
                     "lastEDIExportDate": {
@@ -873,6 +918,15 @@
                         },
                         "additionalProperties": false
                     },
+                    "customFields": {
+                        "description": "Object that contains custom field",
+                        "type": "object",
+                        "$ref": "../../common/schemas/custom_fields.json",
+                        "$schema": "http://json-schema.org/draft-07/schema#",
+                        "javaName": "CustomFields",
+                        "additionalProperties": true,
+                        "properties": {}
+                    },
                     "metadata": {
                         "type": "object",
                         "$ref": "../../../raml-util/schemas/metadata.schema",
@@ -937,6 +991,11 @@
                 "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
             }
         },
+        "nextPolNumber": {
+            "description": "Number that will be used next time a purchase order line is created",
+            "type": "integer",
+            "readonly": true
+        },
         "tags": {
             "type": "object",
             "description": "List of simple tags that can be added to an object",
@@ -953,6 +1012,15 @@
                 }
             },
             "additionalProperties": false
+        },
+        "customFields": {
+            "description": "Object that contains custom field",
+            "type": "object",
+            "$ref": "../../common/schemas/custom_fields.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "javaName": "CustomFields",
+            "additionalProperties": true,
+            "properties": {}
         },
         "metadata": {
             "type": "object",

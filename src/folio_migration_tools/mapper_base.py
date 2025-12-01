@@ -6,7 +6,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -38,10 +38,10 @@ class MapperBase:
         library_configuration: LibraryConfiguration,
         task_configuration: AbstractTaskConfiguration,
         folio_client: FolioClient,
-        parent_id_map: Dict[str, Tuple] = {},
+        parent_id_map: Dict[str, Tuple] | None = None,
     ):
         logging.info("MapperBase initiating")
-        self.parent_id_map: dict[str, tuple] = parent_id_map
+        self.parent_id_map: dict[str, tuple] = parent_id_map or {}
         self.extradata_writer: ExtradataWriter = ExtradataWriter(Path(""))
         self.start_datetime = datetime.now(timezone.utc)
         self.folio_client: FolioClient = folio_client
@@ -119,8 +119,8 @@ class MapperBase:
             self.migration_report.add(
                 ref_data_mapping.blurb_id,
                 (
-                    f'{" - ".join(fieldvalues)} '
-                    f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
+                    f"{' - '.join(fieldvalues)} "
+                    f"-> {right_mapping[f'folio_{ref_data_mapping.key_type}']}"
                 ),
             )
             return next(v for k, v in right_mapping.items() if k.startswith("folio_"))
@@ -129,14 +129,14 @@ class MapperBase:
             if prevent_default:
                 self.migration_report.add(
                     ref_data_mapping.blurb_id,
-                    (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
+                    (f'Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""'),
                 )
                 return ""
             self.migration_report.add(
                 ref_data_mapping.blurb_id,
                 (
                     f"Unmapped (Default value was set) -- "
-                    f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
+                    f"{' - '.join(fieldvalues)} -> {ref_data_mapping.default_name}"
                 ),
             )
             return ref_data_mapping.default_name
@@ -192,8 +192,8 @@ class MapperBase:
             self.migration_report.add(
                 ref_data_mapping.blurb_id,
                 (
-                    f'{" - ".join(fieldvalues)} '
-                    f'-> {right_mapping[f"folio_{ref_data_mapping.key_type}"]}'
+                    f"{' - '.join(fieldvalues)} "
+                    f"-> {right_mapping[f'folio_{ref_data_mapping.key_type}']}"
                 ),
             )
             return right_mapping["folio_id"]
@@ -201,14 +201,14 @@ class MapperBase:
             if prevent_default:
                 self.migration_report.add(
                     ref_data_mapping.blurb_id,
-                    (f"Not to be mapped. " f'(No default) -- {" - ".join(fieldvalues)} -> ""'),
+                    (f'Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""'),
                 )
                 return ""
             self.migration_report.add(
                 ref_data_mapping.blurb_id,
                 (
                     f"Unmapped (Default value was set) -- "
-                    f'{" - ".join(fieldvalues)} -> {ref_data_mapping.default_name}'
+                    f"{' - '.join(fieldvalues)} -> {ref_data_mapping.default_name}"
                 ),
             )
             return ref_data_mapping.default_id
@@ -440,7 +440,7 @@ class MapperBase:
                     folio_holding["id"], instance_uuid
                 )
                 if bound_with_holding.get("hrid", ""):
-                    bound_with_holding["hrid"] = f'{bound_with_holding["hrid"]}_bw_{bwidx}'
+                    bound_with_holding["hrid"] = f"{bound_with_holding['hrid']}_bw_{bwidx}"
             self.migration_report.add_general_statistics(i18n.t("Bound-with holdings created"))
             yield bound_with_holding
 
@@ -453,7 +453,12 @@ class MapperBase:
             )
         )
 
-    def map_statistical_codes(self, folio_record: dict, file_def: FileDefinition, legacy_record: Optional[Union[dict, Record]] = None):
+    def map_statistical_codes(
+        self,
+        folio_record: dict,
+        file_def: FileDefinition,
+        legacy_record: dict | Record | None = None,
+    ):
         """Map statistical codes to the folio record.
 
         This method checks if the file definition contains statistical codes and
@@ -464,13 +469,15 @@ class MapperBase:
         Args:
             folio_record (dict): The FOLIO record to which the statistical codes will be added.
             file_def (FileDefinition): The file definition containing the statistical codes.
-            legacy_record (Optional[Union[dict, Record]]): The legacy record from which the statistical codes are derived.
-        """
+            legacy_record (dict | Record | None): The legacy record from which the statistical codes are derived.
+        """  # noqa: E501
         if file_def.statistical_code:
             code_strings = file_def.statistical_code.split(
                 self.library_configuration.multi_field_delimiter
             )
-            folio_record["statisticalCodeIds"] = folio_record.get("statisticalCodeIds", []) + code_strings
+            folio_record["statisticalCodeIds"] = (
+                folio_record.get("statisticalCodeIds", []) + code_strings
+            )
 
     def setup_statistical_codes_map(self, statistical_codes_map):
         if statistical_codes_map:
@@ -482,7 +489,9 @@ class MapperBase:
                 "code",
                 "StatisticalCodeMapping",
             )
-            logging.info(f"Statistical codes mapping set up {self.statistical_codes_mapping.mapped_legacy_keys}")
+            logging.info(
+                f"Statistical codes mapping set up {self.statistical_codes_mapping.mapped_legacy_keys}"  # noqa: E501
+            )
         else:
             self.statistical_codes_mapping = None
             logging.info("Statistical codes map is not set up")
@@ -502,13 +511,13 @@ class MapperBase:
         )
         return ""
 
-    def map_statistical_code_ids(
-        self, legacy_ids, folio_record: dict
-    ):
-        if stat_codes := {x: None for x in folio_record.pop("statisticalCodeIds", [])}:
+    def map_statistical_code_ids(self, legacy_ids, folio_record: dict):
+        if stat_codes := dict.fromkeys(folio_record.pop("statisticalCodeIds", [])):
             folio_code_ids = set()
             for stat_code in stat_codes:
-                if stat_code_id := self.get_statistical_code({"legacy_stat_code": stat_code}, "statisticalCodeId", legacy_ids):
+                if stat_code_id := self.get_statistical_code(
+                    {"legacy_stat_code": stat_code}, "statisticalCodeId", legacy_ids
+                ):
                     folio_code_ids.add(stat_code_id)
                 else:
                     Helper.log_data_issue(
@@ -523,7 +532,10 @@ class MapperBase:
 
     @property
     def base_string_for_folio_uuid(self):
-        if self.library_configuration.use_gateway_url_for_uuids and not self.library_configuration.is_ecs:
+        if (
+            self.library_configuration.use_gateway_url_for_uuids
+            and not self.library_configuration.is_ecs
+        ):
             return str(self.folio_client.gateway_url)
         elif self.library_configuration.ecs_tenant_id:
             return str(self.library_configuration.ecs_tenant_id)
@@ -532,8 +544,8 @@ class MapperBase:
 
     @staticmethod
     def validate_location_map(location_map: List[Dict], locations: List[Dict]) -> List[Dict]:
-        mapped_codes = [x['folio_code'] for x in location_map]
-        existing_codes = [x['code'] for x in locations]
+        mapped_codes = [x["folio_code"] for x in location_map]
+        existing_codes = [x["code"] for x in locations]
         missing_codes = set(mapped_codes) - set(existing_codes)
         if missing_codes:
             raise TransformationProcessError(
@@ -546,6 +558,7 @@ class MapperBase:
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         raise NotImplementedError("This method should be overridden in subclasses")
+
 
 def flatten(my_dict: dict, path=""):
     for k, v in iter(my_dict.items()):

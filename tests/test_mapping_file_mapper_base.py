@@ -16,7 +16,7 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 
 
 @pytest.fixture(scope="session", autouse=True)

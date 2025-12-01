@@ -17,7 +17,7 @@ from folio_migration_tools.mapping_file_transformation.order_mapper import (
 from folio_migration_tools.mapping_file_transformation.organization_mapper import (
     OrganizationMapper,
 )
-from folio_migration_tools.migration_tasks import *  # noqa: 403
+from folio_migration_tools.migration_tasks import *  # noqa: F403
 from folio_migration_tools.migration_tasks import migration_task_base
 
 
@@ -36,12 +36,12 @@ def parse_args():
 def main():
     args = parse_args()
     with open(os.path.join(args.results_path, "LibraryConfigurationSchema.json"), "w") as outfile:
-        outfile.write(LibraryConfiguration.schema_json(indent=4))
+        outfile.write(json.dumps(LibraryConfiguration.model_json_schema(), indent=4))
         outfile.write("\n")
 
     for t in inheritors(migration_task_base.MigrationTaskBase):
         with open(os.path.join(args.results_path, f"{t.__name__}Schema.json"), "w") as outfile:
-            outfile.write(t.TaskConfiguration.schema_json(indent=4))
+            outfile.write(json.dumps(t.TaskConfiguration.model_json_schema(), indent=4))
             outfile.write("\n")
 
     generate_extended_folio_object_schema(args)

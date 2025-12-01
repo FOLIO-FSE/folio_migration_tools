@@ -12,7 +12,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_holdings impor
     RulesMapperHoldings,
 )
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.test_infrastructure import mocked_classes
+from .test_infrastructure import mocked_classes
 
 
 def test_chop_008():
