@@ -52,7 +52,8 @@ class MigrationTaskBase:
         self.ecs_tenant_id = (
             task_configuration.ecs_tenant_id or library_configuration.ecs_tenant_id
         )
-        self.folio_client.tenant_id = self.ecs_tenant_id
+        if self.ecs_tenant_id:
+            self.folio_client.tenant_id = self.ecs_tenant_id
 
         self.central_folder_structure: Optional[FolderStructure] = None
         if library_configuration.is_ecs and library_configuration.ecs_central_iteration_identifier:
