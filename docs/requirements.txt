@@ -38,5 +38,5 @@ sphinxcontrib-serializinghtml==2.0.0 ; python_version >= "3.9" and python_versio
 toml==0.10.2 ; python_version >= "3.9" and python_version < "4.0"
 tomli==2.2.1 ; python_version >= "3.9" and python_version < "3.11"
 typing-extensions==4.14.1 ; python_version >= "3.9" and python_version < "4.0"
-urllib3==2.5.0 ; python_version >= "3.9" and python_version < "4.0"
+urllib3==2.6.0 ; python_version >= "3.9" and python_version < "4.0"
 zipp==3.23.0 ; python_version == "3.9"
