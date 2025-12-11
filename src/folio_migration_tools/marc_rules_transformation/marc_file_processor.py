@@ -93,8 +93,8 @@ class MarcFileProcessor:
                             legacy_ids,
                             self.object_type,
                         )
-                    if getattr(self.mapper.task_configuration, "data_import_marc", False):
-                        self.save_marc_record(marc_record, folio_rec, self.object_type)
+
+                    self.save_marc_record(marc_record, file_def, folio_rec, self.object_type)
                 Helper.write_to_file(self.created_objects_file, folio_rec)
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Inventory records written to disk")
@@ -131,13 +131,23 @@ class MarcFileProcessor:
                     ):
                         self.mapper.remove_from_id_map(folio_rec.get("formerIds", []))
 
-    def save_marc_record(self, marc_record: Record, folio_rec: Dict, object_type: FOLIONamespaces):
-        self.mapper.save_data_import_marc_record(
-            self.data_import_marc_file,
-            object_type,
-            marc_record,
-            folio_rec,
-        )
+    def save_marc_record(
+        self,
+        marc_record: Record,
+        file_def: FileDefinition,
+        folio_rec: Dict,
+        object_type: FOLIONamespaces,
+    ):
+        if (
+            getattr(self.mapper.task_configuration, "data_import_marc", False)
+            and file_def.data_import_marc
+        ):
+            self.mapper.save_data_import_marc_record(
+                self.data_import_marc_file,
+                object_type,
+                marc_record,
+                folio_rec,
+            )
 
     def save_srs_record(
         self,
