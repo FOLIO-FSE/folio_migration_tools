@@ -64,7 +64,7 @@ You may wish to exclude MARC records for a subset of your migrated bibs from the
             },
             {
                 "file_name": "equipment.mrc",
-                "discovery_suppress": false,
+                "discoverySuppressed": false,
                 "data_import_marc": false
             }
         ]
