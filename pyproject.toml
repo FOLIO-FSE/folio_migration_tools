@@ -1,6 +1,6 @@
 [project]
 name = "folio_migration_tools"
-version = "1.10.0b2"
+version = "1.10.0b3"
 description =  "A tool allowing you to migrate data from legacy ILS:s (Library systems) into FOLIO LSP"
 authors = [
 	{name = "Theodor Tolstoy", email = "github.teddes@tolstoy.se"},
