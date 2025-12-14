@@ -7,11 +7,14 @@ import sys
 import time
 import traceback
 from datetime import datetime, timezone
-from typing import Annotated, List, Optional
+from typing import TYPE_CHECKING, Annotated, List, Optional
 from uuid import uuid4
 
-import httpx
+import folioclient
 import i18n
+
+if TYPE_CHECKING:
+    from httpx import Response
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
@@ -245,90 +248,84 @@ class BatchPoster(MigrationTaskBase):
         self.failed_fields: set = set()
         self.num_failures = 0
         self.num_posted = 0
-        self.okapi_headers = self.folio_client.okapi_headers
-        self.http_client = None
         self.starting_record_count_in_folio: Optional[int] = None
         self.finished_record_count_in_folio: Optional[int] = None
 
     def do_work(self):  # noqa: C901
-        with self.folio_client.get_folio_http_client() as httpx_client:
-            self.http_client = httpx_client
-            with open(
-                self.folder_structure.failed_recs_path, "w", encoding="utf-8"
-            ) as failed_recs_file:
-                self.get_starting_record_count()
-                try:
-                    batch = []
-                    if self.task_configuration.object_type == "SRS":
-                        self.create_snapshot()
-                    for idx, file_def in enumerate(self.task_configuration.files):  # noqa: B007
-                        path = self.folder_structure.results_folder / file_def.file_name
-                        with open(path) as rows:
-                            logging.info("Running %s", path)
-                            last_row = ""
-                            for self.processed, row in enumerate(rows, start=1):
-                                last_row = row
-                                if row.strip():
-                                    try:
-                                        if self.task_configuration.object_type == "Extradata":
-                                            self.post_extra_data(
-                                                row, self.processed, failed_recs_file
-                                            )
-                                        elif not self.api_info["is_batch"]:
-                                            self.post_single_records(
-                                                row, self.processed, failed_recs_file
-                                            )
-                                        else:
-                                            batch = self.post_record_batch(
-                                                batch, failed_recs_file, row
-                                            )
-                                    except UnicodeDecodeError as unicode_error:
-                                        self.handle_unicode_error(unicode_error, last_row)
-                                    except TransformationProcessError as tpe:
-                                        self.handle_generic_exception(
-                                            tpe,
-                                            last_row,
-                                            batch,
-                                            self.processed,
-                                            failed_recs_file,
+        with open(
+            self.folder_structure.failed_recs_path, "w", encoding="utf-8"
+        ) as failed_recs_file:
+            self.get_starting_record_count()
+            try:
+                batch = []
+                if self.task_configuration.object_type == "SRS":
+                    self.create_snapshot()
+                for idx, file_def in enumerate(self.task_configuration.files):  # noqa: B007
+                    path = self.folder_structure.results_folder / file_def.file_name
+                    with open(path) as rows:
+                        logging.info("Running %s", path)
+                        last_row = ""
+                        for self.processed, row in enumerate(rows, start=1):
+                            last_row = row
+                            if row.strip():
+                                try:
+                                    if self.task_configuration.object_type == "Extradata":
+                                        self.post_extra_data(row, self.processed, failed_recs_file)
+                                    elif not self.api_info["is_batch"]:
+                                        self.post_single_records(
+                                            row, self.processed, failed_recs_file
                                         )
-                                        batch = []
-                                        raise
-                                    except TransformationRecordFailedError as exception:
-                                        self.handle_generic_exception(
-                                            exception,
-                                            last_row,
-                                            batch,
-                                            self.processed,
-                                            failed_recs_file,
+                                    else:
+                                        batch = self.post_record_batch(
+                                            batch, failed_recs_file, row
                                         )
-                                        batch = []
-                                    except (FileNotFoundError, PermissionError) as ose:
-                                        logging.error("Error reading file: %s", ose)
+                                except UnicodeDecodeError as unicode_error:
+                                    self.handle_unicode_error(unicode_error, last_row)
+                                except TransformationProcessError as tpe:
+                                    self.handle_generic_exception(
+                                        tpe,
+                                        last_row,
+                                        batch,
+                                        self.processed,
+                                        failed_recs_file,
+                                    )
+                                    batch = []
+                                    raise
+                                except TransformationRecordFailedError as exception:
+                                    self.handle_generic_exception(
+                                        exception,
+                                        last_row,
+                                        batch,
+                                        self.processed,
+                                        failed_recs_file,
+                                    )
+                                    batch = []
+                                except (FileNotFoundError, PermissionError) as ose:
+                                    logging.error("Error reading file: %s", ose)
 
-                except Exception as ee:
-                    if "idx" in locals() and self.task_configuration.files[idx:]:
-                        for file_def in self.task_configuration.files[idx:]:
-                            path = self.folder_structure.results_folder / file_def.file_name
-                            try:
-                                with open(path, "r") as failed_file:
-                                    failed_file.seek(self.processed)
-                                    failed_recs_file.write(failed_file.read())
-                                    self.processed = 0
-                            except (FileNotFoundError, PermissionError) as ose:
-                                logging.error("Error reading file: %s", ose)
-                    raise ee
-                finally:
-                    if self.task_configuration.object_type != "Extradata" and any(batch):
+            except Exception as ee:
+                if "idx" in locals() and self.task_configuration.files[idx:]:
+                    for file_def in self.task_configuration.files[idx:]:
+                        path = self.folder_structure.results_folder / file_def.file_name
                         try:
-                            self.post_batch(batch, failed_recs_file, self.processed)
-                        except Exception as exception:
-                            self.handle_generic_exception(
-                                exception, last_row, batch, self.processed, failed_recs_file
-                            )
-                    logging.info("Done posting %s records. ", self.processed)
-                    if self.task_configuration.object_type == "SRS":
-                        self.commit_snapshot()
+                            with open(path, "r") as failed_file:
+                                failed_file.seek(self.processed)
+                                failed_recs_file.write(failed_file.read())
+                                self.processed = 0
+                        except (FileNotFoundError, PermissionError) as ose:
+                            logging.error("Error reading file: %s", ose)
+                raise ee
+            finally:
+                if self.task_configuration.object_type != "Extradata" and any(batch):
+                    try:
+                        self.post_batch(batch, failed_recs_file, self.processed)
+                    except Exception as exception:
+                        self.handle_generic_exception(
+                            exception, last_row, batch, self.processed, failed_recs_file
+                        )
+                logging.info("Done posting %s records. ", self.processed)
+                if self.task_configuration.object_type == "SRS":
+                    self.commit_snapshot()
 
     @staticmethod
     def set_consortium_source(json_rec):
@@ -366,26 +363,26 @@ class BatchPoster(MigrationTaskBase):
         fetch_batch_size = 90
         fetch_tasks = []
         existing_records = {}
-        async with httpx.AsyncClient(base_url=self.folio_client.gateway_url) as client:
-            for i in range(0, len(batch), fetch_batch_size):
-                batch_slice = batch[i : i + fetch_batch_size]
-                fetch_tasks.append(
-                    self.get_with_retry(
-                        client,
-                        query_api,
-                        params={
-                            "query": (
-                                f"id==({' OR '.join([r['id'] for r in batch_slice if 'id' in r])})"
-                            ),
-                            "limit": fetch_batch_size,
-                        },
-                    )
+
+        for i in range(0, len(batch), fetch_batch_size):
+            batch_slice = batch[i : i + fetch_batch_size]
+            fetch_tasks.append(
+                self.get_with_retry(
+                    query_api,
+                    params={
+                        "query": (
+                            f"id==({' OR '.join([r['id'] for r in batch_slice if 'id' in r])})"
+                        ),
+                        "limit": fetch_batch_size,
+                    },
                 )
+            )
 
-            responses = await asyncio.gather(*fetch_tasks)
+        responses = await asyncio.gather(*fetch_tasks)
 
-            for response in responses:
-                self.collect_existing_records_for_upsert(object_type, response, existing_records)
+        for response in responses:
+            self.collect_existing_records_for_upsert(object_type, response, existing_records)
+
         for record in batch:
             if record["id"] in existing_records:
                 self.prepare_record_for_upsert(record, existing_records[record["id"]])
@@ -421,18 +418,18 @@ class BatchPoster(MigrationTaskBase):
 
     @staticmethod
     def collect_existing_records_for_upsert(
-        object_type: str, response: httpx.Response, existing_records: dict
+        object_type: str, response_json: dict, existing_records: dict
     ):
-        if response.status_code == 200:
-            response_json = response.json()
-            for record in response_json[object_type]:
-                existing_records[record["id"]] = record
-        else:
-            logging.error(
-                "Failed to fetch current records. HTTP %s\t%s",
-                response.status_code,
-                response.text,
-            )
+        """
+        Collects existing records from API response into existing_records dict.
+
+        Args:
+            object_type: The key in response containing the records array
+            response_json: Parsed JSON response from API
+            existing_records: Dict to populate with {record_id: record_data}
+        """
+        for record in response_json.get(object_type, []):
+            existing_records[record["id"]] = record
 
     def handle_upsert_for_statistical_codes(self, updates: dict, keep_existing: dict):
         if not self.task_configuration.preserve_statistical_codes:
@@ -510,23 +507,60 @@ class BatchPoster(MigrationTaskBase):
             updates.update(keep_new)
             new_record.update(updates)
 
-    async def get_with_retry(self, client: httpx.AsyncClient, url: str, params=None):
+    async def get_with_retry(self, url: str, params=None):
+        """
+        Wrapper around folio_get_async with selective retry logic.
+
+        Retries on:
+        - Connection errors (FolioConnectionError): Always retry
+        - Server errors (5xx): Transient failures
+        - Rate limiting (429): Too many requests
+
+        Does NOT retry on:
+        - Client errors (4xx except 429): Bad request, won't succeed on retry
+        """
         if params is None:
             params = {}
         retries = 3
+
         for attempt in range(retries):
             try:
-                response = await client.get(
-                    url, params=params, headers=self.folio_client.okapi_headers
-                )
-                response.raise_for_status()
-                return response
-            except httpx.HTTPError as e:
+                return await self.folio_client.folio_get_async(url, query_params=params)
+
+            except folioclient.FolioConnectionError as e:
+                # Network/connection errors - always retry
                 if attempt < retries - 1:
-                    logging.warning(f"Retrying due to {e}")
-                    await asyncio.sleep(2**attempt)
+                    wait_time = 2**attempt
+                    logging.warning(
+                        f"Connection error, retrying in {wait_time}s "
+                        f"(attempt {attempt + 1}/{retries}): {e}"
+                    )
+                    await asyncio.sleep(wait_time)
                 else:
-                    logging.error(f"Failed to connect after {retries} attempts: {e}")
+                    logging.error(f"Connection failed after {retries} attempts: {e}")
+                    raise
+
+            except folioclient.FolioHTTPError as e:
+                # HTTP errors - selective retry based on status code
+                status_code = e.response.status_code
+                should_retry = status_code >= 500 or status_code == 429
+
+                if should_retry and attempt < retries - 1:
+                    # Longer wait for rate limiting
+                    wait_time = 5 if status_code == 429 else 2**attempt
+                    logging.warning(
+                        f"HTTP {status_code} error, retrying in {wait_time}s "
+                        f"(attempt {attempt + 1}/{retries}): {e}"
+                    )
+                    await asyncio.sleep(wait_time)
+                else:
+                    # Either not retryable or out of attempts
+                    if should_retry:
+                        logging.error(
+                            f"HTTP {status_code} error persisted after {retries} attempts: {e}"
+                        )
+                    else:
+                        logging.error(f"HTTP {status_code} error (not retryable): {e}")
                     raise
 
     def post_record_batch(self, batch, failed_recs_file, row):
@@ -545,22 +579,29 @@ class BatchPoster(MigrationTaskBase):
 
     def post_extra_data(self, row: str, num_records: int, failed_recs_file):
         (object_name, data) = row.split("\t")
-        endpoint = self.get_extradata_endpoint(self.task_configuration, object_name, data)
-        url = f"{self.folio_client.gateway_url}/{endpoint}"
+        url = self.get_extradata_endpoint(self.task_configuration, object_name, data)
         body = data
-        response = self.post_objects(url, body)
-        if response.status_code == 201:
+        try:
+            _ = self.folio_client.folio_post(url, payload=body)
             self.num_posted += 1
-        elif response.status_code == 422:
-            self.num_failures += 1
-            error_msg = json.loads(response.text)["errors"][0]["message"]
-            logging.error("Row %s\tHTTP %s\t %s", num_records, response.status_code, error_msg)
-            if "id value already exists" not in json.loads(response.text)["errors"][0]["message"]:
+        except folioclient.FolioHTTPError as fhe:
+            if fhe.response.status_code == 422:
+                self.num_failures += 1
+                error_msg = json.loads(fhe.response.text)["errors"][0]["message"]
+                logging.error(
+                    "Row %s\tHTTP %s\t %s", num_records, fhe.response.status_code, error_msg
+                )
+                if (
+                    "id value already exists"
+                    not in json.loads(fhe.response.text)["errors"][0]["message"]
+                ):
+                    failed_recs_file.write(row)
+            else:
+                self.num_failures += 1
+                logging.error(
+                    "Row %s\tHTTP %s\t%s", num_records, fhe.response.status_code, fhe.response.text
+                )
                 failed_recs_file.write(row)
-        else:
-            self.num_failures += 1
-            logging.error("Row %s\tHTTP %s\t%s", num_records, response.status_code, response.text)
-            failed_recs_file.write(row)
         if num_records % 50 == 0:
             logging.info(
                 "%s records posted successfully. %s failed",
@@ -600,37 +641,37 @@ class BatchPoster(MigrationTaskBase):
     def post_single_records(self, row: str, num_records: int, failed_recs_file):
         if self.api_info["is_batch"]:
             raise TypeError("This record type supports batch processing, use post_batch method")
-        api_endpoint = self.api_info.get("api_endpoint")
-        url = f"{self.folio_client.gateway_url}{api_endpoint}"
-        response = self.post_objects(url, row)
-        if response.status_code == 201:
+        url = self.api_info.get("api_endpoint")
+        try:
+            _ = self.folio_client.folio_post(url, payload=row)
             self.num_posted += 1
-        elif response.status_code == 422:
-            self.num_failures += 1
-            error_msg = json.loads(response.text)["errors"][0]["message"]
-            logging.error("Row %s\tHTTP %s\t %s", num_records, response.status_code, error_msg)
-            if "id value already exists" not in json.loads(response.text)["errors"][0]["message"]:
+        except folioclient.FolioHTTPError as fhe:
+            if fhe.response.status_code == 422:
+                self.num_failures += 1
+                error_msg = json.loads(fhe.response.text)["errors"][0]["message"]
+                logging.error(
+                    "Row %s\tHTTP %s\t %s", num_records, fhe.response.status_code, error_msg
+                )
+                if (
+                    "id value already exists"
+                    not in json.loads(fhe.response.text)["errors"][0]["message"]
+                ):
+                    failed_recs_file.write(row)
+            else:
+                self.num_failures += 1
+                logging.error(
+                    "Row %s\tHTTP %s\t%s",
+                    num_records,
+                    fhe.response.status_code,
+                    fhe.response.text,
+                )
                 failed_recs_file.write(row)
-        else:
-            self.num_failures += 1
-            logging.error("Row %s\tHTTP %s\t%s", num_records, response.status_code, response.text)
-            failed_recs_file.write(row)
-        if num_records % 50 == 0:
-            logging.info(
-                "%s records posted successfully. %s failed",
-                self.num_posted,
-                self.num_failures,
-            )
-
-    def post_objects(self, url, body):
-        if self.http_client and not self.http_client.is_closed:
-            return self.http_client.post(
-                url, data=body.encode("utf-8"), headers=self.folio_client.okapi_headers
-            )
-        else:
-            return httpx.post(
-                url, headers=self.okapi_headers, data=body.encode("utf-8"), timeout=None
-            )
+            if num_records % 50 == 0:
+                logging.info(
+                    "%s records posted successfully. %s failed",
+                    self.num_posted,
+                    self.num_failures,
+                )
 
     def handle_generic_exception(self, exception, last_row, batch, num_records, failed_recs_file):
         logging.error("%s", exception)
@@ -775,50 +816,35 @@ class BatchPoster(MigrationTaskBase):
             )
 
     def do_post(self, batch):
-        path = self.api_info["api_endpoint"]
-        url = self.folio_client.gateway_url + path
+        url = self.api_info["api_endpoint"]
         if self.api_info["object_name"] == "users":
             payload = {self.api_info["object_name"]: list(batch), "totalRecords": len(batch)}
         elif self.api_info["total_records"]:
             payload = {"records": list(batch), "totalRecords": len(batch)}
         else:
             payload = {self.api_info["object_name"]: batch}
-        if self.http_client and not self.http_client.is_closed:
-            return self.http_client.post(
-                url,
-                json=payload,
-                headers=self.folio_client.okapi_headers,
-                params=self.query_params,
-            )
-        else:
-            return httpx.post(
-                url,
-                headers=self.okapi_headers,
-                json=payload,
-                params=self.query_params,
-                timeout=None,
-            )
+        return self.folio_client.folio_post(
+            url,
+            payload,
+            query_params=self.query_params,
+        )
 
     def get_current_record_count_in_folio(self):
         if "query_endpoint" in self.api_info:
-            url = f"{self.folio_client.gateway_url}{self.api_info['query_endpoint']}"
+            url = self.api_info["query_endpoint"]
             query_params = {"query": "cql.allRecords=1", "limit": 0}
-            if self.http_client and not self.http_client.is_closed:
-                res = self.http_client.get(
-                    url, headers=self.folio_client.okapi_headers, params=query_params
-                )
-            else:
-                res = httpx.get(url, headers=self.okapi_headers, params=query_params, timeout=None)
             try:
-                res.raise_for_status()
-                return res.json()["totalRecords"]
-            except httpx.HTTPStatusError:
-                logging.error("Failed to get current record count. HTTP %s", res.status_code)
+                res = self.folio_client.folio_get(url, query_params=query_params)
+                return res["totalRecords"]
+            except folioclient.FolioHTTPError as fhe:
+                logging.error(
+                    "Failed to get current record count. HTTP %s", fhe.response.status_code
+                )
                 return 0
             except KeyError:
                 logging.error(
                     "Failed to get current record count. "
-                    f"No 'totalRecords' in response: {res.json()}"
+                    f"No 'totalRecords' in response: {json.dumps(res, indent=2)}"
                 )
                 return 0
         else:
@@ -945,31 +971,20 @@ class BatchPoster(MigrationTaskBase):
             "processingStartedDate": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
         }
         try:
-            url = f"{self.folio_client.gateway_url}/source-storage/snapshots"
-            if self.http_client and not self.http_client.is_closed:
-                res = self.http_client.post(
-                    url, json=snapshot, headers=self.folio_client.okapi_headers
-                )
-            else:
-                res = httpx.post(url, headers=self.okapi_headers, json=snapshot, timeout=None)
-            res.raise_for_status()
+            url = "/source-storage/snapshots"
+            _ = self.folio_client.folio_post(url, payload=snapshot)
             logging.info("Posted Snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
-            get_url = (
-                f"{self.folio_client.gateway_url}/source-storage/snapshots/{self.snapshot_id}"
-            )
+            get_url = f"/source-storage/snapshots/{self.snapshot_id}"
             got = False
             while not got:
                 logging.info("Sleeping while waiting for the snapshot to get created")
                 time.sleep(5)
-                if self.http_client and not self.http_client.is_closed:
-                    res = self.http_client.get(get_url, headers=self.folio_client.okapi_headers)
-                else:
-                    res = httpx.get(get_url, headers=self.okapi_headers, timeout=None)
-                if res.status_code == 200:
+                try:
+                    _ = self.folio_client.folio_get(get_url)
                     got = True
-                else:
-                    logging.info(res.status_code)
-        except httpx.HTTPStatusError as exc:
+                except folioclient.FolioHTTPError as fhe:
+                    logging.info("Snapshot not yet created. HTTP %s", fhe.response.status_code)
+        except folioclient.FolioHTTPError as exc:
             logging.exception("HTTP error occurred while posting the snapshot: %s", exc)
             sys.exit(1)
         except Exception as exc:
@@ -979,16 +994,10 @@ class BatchPoster(MigrationTaskBase):
     def commit_snapshot(self):
         snapshot = {"jobExecutionId": self.snapshot_id, "status": "COMMITTED"}
         try:
-            url = f"{self.folio_client.gateway_url}/source-storage/snapshots/{self.snapshot_id}"
-            if self.http_client and not self.http_client.is_closed:
-                res = self.http_client.put(
-                    url, json=snapshot, headers=self.folio_client.okapi_headers
-                )
-            else:
-                res = httpx.put(url, headers=self.okapi_headers, json=snapshot, timeout=None)
-            res.raise_for_status()
+            url = f"/source-storage/snapshots/{self.snapshot_id}"
+            _ = self.folio_client.folio_put(url, payload=snapshot)
             logging.info("Posted Committed snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
-        except httpx.HTTPStatusError as exc:
+        except folioclient.FolioHTTPError as exc:
             logging.exception("HTTP error occurred while posting the snapshot: %s", exc)
             sys.exit(1)
         except Exception as exc:
@@ -1124,7 +1133,7 @@ def get_human_readable(size, precision=2):
     return "%.*f%s" % (precision, size, suffixes[suffix_index])
 
 
-def get_req_size(response: httpx.Response):
+def get_req_size(response: "Response"):
     size = response.request.method
     size += str(response.request.url)
     size += "\r\n".join(f"{k}{v}" for k, v in response.request.headers.items())
