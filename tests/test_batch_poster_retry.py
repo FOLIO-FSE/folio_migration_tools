@@ -265,3 +265,240 @@ async def test_get_with_retry_params_default_to_empty_dict():
     batch_poster.folio_client.folio_get_async.assert_called_once_with(
         "/test", query_params={}
     )
+
+
+def test_post_extra_data_http_422_duplicate_id():
+    """Test post_extra_data handles 422 errors with duplicate ID gracefully."""
+    from io import StringIO
+    
+    # Create mock BatchPoster instance
+    batch_poster = Mock(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.num_failures = 0
+    batch_poster.num_posted = 0
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration.object_type = "test_object"
+    
+    # Bind the actual method to the mock
+    batch_poster.post_extra_data = MethodType(BatchPoster.post_extra_data, batch_poster)
+    batch_poster.get_extradata_endpoint = Mock(return_value="/test/endpoint")
+    
+    # Mock HTTP 422 error with duplicate ID message
+    mock_request = create_mock_request()
+    mock_response = Mock(spec=httpx.Response)
+    mock_response.status_code = 422
+    mock_response.text = '{"errors": [{"message": "id value already exists in table"}]}'
+    
+    error = FolioHTTPError("Unprocessable Entity", request=mock_request, response=mock_response)
+    error.response = mock_response
+    
+    batch_poster.folio_client.folio_post.side_effect = error
+    
+    failed_file = StringIO()
+    row = "testObject\t{\"id\": \"123\", \"name\": \"test\"}"
+    
+    # Call the method
+    batch_poster.post_extra_data(row, 1, failed_file)
+    
+    # Duplicate ID should increment failures but not write to failed file
+    assert batch_poster.num_failures == 1
+    assert batch_poster.num_posted == 0
+    assert failed_file.getvalue() == ""  # Should not write duplicate IDs to failed file
+
+
+def test_post_extra_data_http_422_other_error():
+    """Test post_extra_data writes to failed file for non-duplicate 422 errors."""
+    from io import StringIO
+    
+    # Create mock BatchPoster instance
+    batch_poster = Mock(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.num_failures = 0
+    batch_poster.num_posted = 0
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration.object_type = "test_object"
+    
+    # Bind the actual method to the mock
+    batch_poster.post_extra_data = MethodType(BatchPoster.post_extra_data, batch_poster)
+    batch_poster.get_extradata_endpoint = Mock(return_value="/test/endpoint")
+    
+    # Mock HTTP 422 error with other validation message
+    mock_request = create_mock_request()
+    mock_response = Mock(spec=httpx.Response)
+    mock_response.status_code = 422
+    mock_response.text = '{"errors": [{"message": "Invalid field value"}]}'
+    
+    error = FolioHTTPError("Unprocessable Entity", request=mock_request, response=mock_response)
+    error.response = mock_response
+    
+    batch_poster.folio_client.folio_post.side_effect = error
+    
+    failed_file = StringIO()
+    row = "testObject\t{\"id\": \"123\", \"name\": \"test\"}"
+    
+    # Call the method
+    batch_poster.post_extra_data(row, 1, failed_file)
+    
+    # Should increment failures and write to failed file
+    assert batch_poster.num_failures == 1
+    assert batch_poster.num_posted == 0
+    assert failed_file.getvalue() == row
+
+
+def test_post_extra_data_http_500_error():
+    """Test post_extra_data handles 500 errors correctly."""
+    from io import StringIO
+    
+    # Create mock BatchPoster instance
+    batch_poster = Mock(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.num_failures = 0
+    batch_poster.num_posted = 0
+    batch_poster.task_configuration = Mock()
+    batch_poster.task_configuration.object_type = "test_object"
+    
+    # Bind the actual method to the mock
+    batch_poster.post_extra_data = MethodType(BatchPoster.post_extra_data, batch_poster)
+    batch_poster.get_extradata_endpoint = Mock(return_value="/test/endpoint")
+    
+    # Mock HTTP 500 error
+    mock_request = create_mock_request()
+    mock_response = Mock(spec=httpx.Response)
+    mock_response.status_code = 500
+    mock_response.text = 'Internal Server Error'
+    
+    error = FolioHTTPError("Internal Server Error", request=mock_request, response=mock_response)
+    error.response = mock_response
+    
+    batch_poster.folio_client.folio_post.side_effect = error
+    
+    failed_file = StringIO()
+    row = "testObject\t{\"id\": \"123\", \"name\": \"test\"}"
+    
+    # Call the method
+    batch_poster.post_extra_data(row, 1, failed_file)
+    
+    # Should increment failures and write to failed file
+    assert batch_poster.num_failures == 1
+    assert batch_poster.num_posted == 0
+    assert failed_file.getvalue() == row
+
+
+def test_commit_snapshot_success():
+    """Test commit_snapshot successfully posts snapshot."""
+    # Create mock BatchPoster instance
+    batch_poster = Mock(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.snapshot_id = "test-snapshot-123"
+    
+    # Bind the actual method to the mock
+    batch_poster.commit_snapshot = MethodType(BatchPoster.commit_snapshot, batch_poster)
+    
+    # Mock successful PUT
+    batch_poster.folio_client.folio_put.return_value = {"status": "COMMITTED"}
+    
+    # Call the method
+    batch_poster.commit_snapshot()
+    
+    # Verify PUT was called with correct params
+    batch_poster.folio_client.folio_put.assert_called_once_with(
+        "/source-storage/snapshots/test-snapshot-123",
+        payload={"jobExecutionId": "test-snapshot-123", "status": "COMMITTED"}
+    )
+
+
+def test_commit_snapshot_http_error():
+    """Test commit_snapshot exits on HTTP error."""
+    # Create mock BatchPoster instance
+    batch_poster = Mock(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.snapshot_id = "test-snapshot-123"
+    
+    # Bind the actual method to the mock
+    batch_poster.commit_snapshot = MethodType(BatchPoster.commit_snapshot, batch_poster)
+    
+    # Mock HTTP error
+    mock_request = create_mock_request()
+    mock_response = Mock(spec=httpx.Response)
+    mock_response.status_code = 500
+    mock_response.text = 'Internal Server Error'
+    
+    error = FolioHTTPError("Internal Server Error", request=mock_request, response=mock_response)
+    error.response = mock_response
+    
+    batch_poster.folio_client.folio_put.side_effect = error
+    
+    # Call the method and expect sys.exit
+    with pytest.raises(SystemExit) as exc_info:
+        batch_poster.commit_snapshot()
+    
+    assert exc_info.value.code == 1
+
+
+def test_commit_snapshot_generic_error():
+    """Test commit_snapshot exits on generic exception."""
+    # Create mock BatchPoster instance
+    batch_poster = Mock(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.snapshot_id = "test-snapshot-123"
+    
+    # Bind the actual method to the mock
+    batch_poster.commit_snapshot = MethodType(BatchPoster.commit_snapshot, batch_poster)
+    
+    # Mock generic error
+    batch_poster.folio_client.folio_put.side_effect = Exception("Unexpected error")
+    
+    # Call the method and expect sys.exit
+    with pytest.raises(SystemExit) as exc_info:
+        batch_poster.commit_snapshot()
+    
+    assert exc_info.value.code == 1
+
+
+
+def test_create_snapshot_http_error():
+    """Test create_snapshot exits on HTTP error during POST."""
+    # Create mock BatchPoster instance
+    batch_poster = Mock(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.snapshot_id = "test-snapshot-123"
+    
+    # Bind the actual method to the mock
+    batch_poster.create_snapshot = MethodType(BatchPoster.create_snapshot, batch_poster)
+    
+    # Mock HTTP error during POST
+    mock_request = create_mock_request()
+    mock_response = Mock(spec=httpx.Response)
+    mock_response.status_code = 500
+    mock_response.text = 'Internal Server Error'
+    
+    error = FolioHTTPError("Internal Server Error", request=mock_request, response=mock_response)
+    error.response = mock_response
+    
+    batch_poster.folio_client.folio_post.side_effect = error
+    
+    # Call the method and expect sys.exit
+    with pytest.raises(SystemExit) as exc_info:
+        batch_poster.create_snapshot()
+    
+    assert exc_info.value.code == 1
+
+
+def test_create_snapshot_generic_error():
+    """Test create_snapshot exits on generic exception."""
+    # Create mock BatchPoster instance
+    batch_poster = Mock(spec=BatchPoster)
+    batch_poster.folio_client = Mock(spec=FolioClient)
+    batch_poster.snapshot_id = "test-snapshot-123"
+    
+    # Bind the actual method to the mock
+    batch_poster.create_snapshot = MethodType(BatchPoster.create_snapshot, batch_poster)
+    
+    # Mock generic error
+    batch_poster.folio_client.folio_post.side_effect = Exception("Unexpected error")
+    
+    # Call the method and expect sys.exit
+    with pytest.raises(SystemExit) as exc_info:
+        batch_poster.create_snapshot()
+    
+    assert exc_info.value.code == 1

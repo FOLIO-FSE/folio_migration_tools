@@ -998,13 +998,14 @@ class BatchPoster(MigrationTaskBase):
             _ = self.folio_client.folio_put(url, payload=snapshot)
             logging.info("Posted Committed snapshot to FOLIO: %s", json.dumps(snapshot, indent=4))
         except folioclient.FolioHTTPError as exc:
-            logging.exception("HTTP error occurred while posting the snapshot: %s", exc)
+            logging.exception("HTTP error occurred while committing the snapshot: %s", exc)
             sys.exit(1)
         except Exception as exc:
             logging.exception(
-                "Could not commit snapshot with id %s. Post this to /source-storage/snapshots/%s:",
+                "Could not commit snapshot with id %s. "
+                "Post this to /source-storage/snapshots/%s: %s",
                 self.snapshot_id,
-                self.snapshot_id,
+                json.dumps(snapshot, indent=2),
                 exc,
             )
             logging.info("%s", json.dumps(snapshot, indent=4))
