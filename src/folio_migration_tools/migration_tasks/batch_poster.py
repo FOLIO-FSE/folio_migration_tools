@@ -697,7 +697,7 @@ class BatchPoster(MigrationTaskBase):
         traceback.logging.info_exc()  # type: ignore
         logging.info("=======================")
 
-    def post_batch(self, batch, failed_recs_file, num_records, recursion_depth=0):
+    def post_batch(self, batch, failed_recs_file, num_records):
         if self.query_params.get("upsert", False) and self.api_info.get("query_endpoint", ""):
             self.set_version(batch, self.api_info["query_endpoint"], self.api_info["object_name"])
         response = self.do_post(batch)
