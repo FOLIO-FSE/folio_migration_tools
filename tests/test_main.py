@@ -55,7 +55,6 @@ def test_inheritance():
     assert "ReservesMigrator" in inheritors
     assert "BibsTransformer" in inheritors
     assert "BatchPoster" in inheritors
-    assert "AuthorityTransformer" in inheritors
 
 
 @mock.patch("getpass.getpass", create=True)

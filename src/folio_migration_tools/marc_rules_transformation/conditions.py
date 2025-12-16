@@ -47,8 +47,6 @@ class Conditions:
         if object_type == "bibs":
             self.setup_reference_data_for_all()
             self.setup_reference_data_for_bibs()
-        elif object_type == "auth":
-            self.setup_reference_data_for_auth()
         else:
             self.setup_reference_data_for_all()
             self.setup_reference_data_for_items_and_holdings(default_call_number_type_name)
@@ -149,15 +147,6 @@ class Conditions:
         # Raise for empty settings
         if not self.folio.class_types:
             raise TransformationProcessError("", "No class_types in FOLIO")
-
-    def setup_reference_data_for_auth(self):
-        self.authority_note_types = list(
-            self.folio.folio_get_all(
-                "/authority-note-types", "authorityNoteTypes", self.folio.cql_all, 1000
-            )
-        )
-        logging.info(f"{len(self.authority_note_types)} \tAuthority note types")
-        logging.info(f"{len(self.folio.identifier_types)} \tidentifier types")  # type: ignore
 
     def get_condition(
         self, name, legacy_id, value, parameter=None, marc_field: field.Field | None = None
@@ -426,24 +415,6 @@ class Conditions:
             raise TransformationRecordFailedError(
                 legacy_id,
                 f"Holdings note type mapping error.\tParameter: {parameter.get('name', '')}\t"
-                f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
-                parameter.get("name", ""),
-            ) from ee
-
-    def condition_set_authority_note_type_id(
-        self, legacy_id, _, parameter, marc_field: field.Field
-    ):
-        try:
-            t = self.get_ref_data_tuple_by_name(
-                self.authority_note_types, "authority_note_types", parameter["name"]
-            )
-            self.mapper.migration_report.add("MappedNoteTypes", t[1])
-            return t[0]
-        except Exception as ee:
-            logging.error(ee)
-            raise TransformationProcessError(
-                legacy_id,
-                f"Authority note type mapping error.\tParameter: {parameter.get('name', '')}\t"
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
             ) from ee
