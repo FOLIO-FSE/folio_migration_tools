@@ -382,3 +382,35 @@ def test_fail_unhandled(mock_folio_client, wrap_up, do_work):
     assert exit_info.value.args[0] == "Exception"
     do_work.assert_called_once()
     wrap_up.assert_not_called()
+
+
+@mock.patch(
+    "sys.argv",
+    ["__main__.py", "tests/test_data/main/basic_config.json", "AuthorityTransformer"],
+)
+@mock.patch.dict(
+    "os.environ",
+    {
+        "FOLIO_MIGRATION_TOOLS_OKAPI_PASSWORD": "okapi_password",
+        "FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH": ".",
+    },
+)
+@mock.patch("folio_migration_tools.__main__.prep_library_config")
+def test_authority_transformer_deprecation_warning(mock_prep_config):
+    """Test that using AuthorityTransformer shows a deprecation warning."""
+    mock_config = {
+        "migration_tasks": [
+            {
+                "name": "AuthorityTransformer",
+                "migration_task_type": "AuthorityTransformer"
+            }
+        ]
+    }
+    mock_library_config = mock.MagicMock()
+    mock_prep_config.return_value = (mock_config, mock_library_config)
+    
+    with pytest.warns(DeprecationWarning, match="The AuthorityTransformer has been removed"):
+        with pytest.raises(SystemExit) as exit_info:
+            __main__.main()
+        # Should exit with Task Type Not Found since the task doesn't exist anymore
+        assert exit_info.value.args[0] == "Task Type Not Found"
