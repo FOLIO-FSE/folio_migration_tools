@@ -14,7 +14,7 @@ readme = "README.md"
 keywords = ["FOLIO", "ILS", "LSP", "Library Systems", "MARC21", "Library data"]
 requires-python = ">=3.10,<4.0"
 dependencies = [
-    "folioclient>=1.0.1",
+    "folioclient>=1.0.4",
 	"pyhumps>=3.7.3,<4.0.0",
 	"defusedxml>=0.7.1,<1.0.0",
 	"python-dateutil>=2.8.2,<3.0.0",
