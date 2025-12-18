@@ -99,6 +99,7 @@ class MigrationTaskBase:
         raise NotImplementedError()
 
     def clean_out_empty_logs(self):
+        _close_handler(self.data_issue_file_handler)
         if (
             self.folder_structure.data_issue_file_path.is_file()
             and os.stat(self.folder_structure.data_issue_file_path).st_size == 0
@@ -260,13 +261,13 @@ class MigrationTaskBase:
 
         # Data issue file formatter
         data_issue_file_formatter = logging.Formatter("%(message)s")
-        data_issue_file_handler = logging.FileHandler(
+        self.data_issue_file_handler = logging.FileHandler(
             filename=str(self.folder_structure.data_issue_file_path), mode="w"
         )
-        data_issue_file_handler.addFilter(LevelFilter(26))
-        data_issue_file_handler.setFormatter(data_issue_file_formatter)
-        data_issue_file_handler.setLevel(26)
-        logging.getLogger().addHandler(data_issue_file_handler)
+        self.data_issue_file_handler.addFilter(LevelFilter(26))
+        self.data_issue_file_handler.setFormatter(data_issue_file_formatter)
+        self.data_issue_file_handler.setLevel(26)
+        logging.getLogger().addHandler(self.data_issue_file_handler)
         logger.info("Logging set up")
 
     def setup_records_map(self, mapping_file_path):
@@ -553,3 +554,10 @@ class LevelFilter(logging.Filter):
 
     def filter(self, record):
         return record.levelno == self.level
+
+
+def _close_handler(handler: logging.Handler | None):
+    if handler is None:
+        return
+    handler.flush()
+    handler.close()
