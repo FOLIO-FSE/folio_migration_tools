@@ -792,18 +792,19 @@ class BatchPoster(MigrationTaskBase):
             )
 
     def do_post(self, batch):
-        url = self.api_info["api_endpoint"]
-        if self.api_info["object_name"] == "users":
-            payload = {self.api_info["object_name"]: list(batch), "totalRecords": len(batch)}
-        elif self.api_info["total_records"]:
-            payload = {"records": list(batch), "totalRecords": len(batch)}
-        else:
-            payload = {self.api_info["object_name"]: batch}
-        return self.folio_client.folio_post(
-            url,
-            payload,
-            query_params=self.query_params,
-        )
+        with self.folio_client.get_folio_http_client() as http_client:
+            url = self.api_info["api_endpoint"]
+            if self.api_info["object_name"] == "users":
+                payload = {self.api_info["object_name"]: list(batch), "totalRecords": len(batch)}
+            elif self.api_info["total_records"]:
+                payload = {"records": list(batch), "totalRecords": len(batch)}
+            else:
+                payload = {self.api_info["object_name"]: batch}
+            return http_client.post(
+                url,
+                json=payload,
+                params=self.query_params,
+            )
 
     def get_current_record_count_in_folio(self):
         if "query_endpoint" in self.api_info:
