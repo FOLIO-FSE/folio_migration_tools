@@ -889,6 +889,7 @@ def test_basic_turn_off_request_preferences(mocked_folio_client):
     mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
     mock_task_config.remove_id_and_request_preferences = False
     mock_task_config.remove_request_preferences = True
+    mock_task_config.remove_username = False
     mock_library_conf.multi_field_delimiter = "<delimiter>"
     mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
