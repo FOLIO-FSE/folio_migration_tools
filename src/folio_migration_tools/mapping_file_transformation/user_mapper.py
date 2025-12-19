@@ -115,6 +115,10 @@ class UserMapper(MappingFileMapperBase):
 
         if self.task_config.remove_request_preferences:
             del clean_folio_object["requestPreference"]
+        
+        if self.task_config.remove_username:
+            del clean_folio_object["username"]
+            
         self.report_folio_mapping_no_schema(clean_folio_object)
         self.report_legacy_mapping_no_schema(legacy_user)
 

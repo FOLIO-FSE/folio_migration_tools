@@ -101,6 +101,16 @@ class UserTransformer(MigrationTaskBase):
                 ),
             ),
         ] = False
+        remove_username: Annotated[
+            Optional[bool],
+            Field(
+                title="Remove username",
+                description=(
+                    "Specify whether to remove username. Do not use if using 'normal' FMT to load users."
+                    "Optional, by default is False"
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
