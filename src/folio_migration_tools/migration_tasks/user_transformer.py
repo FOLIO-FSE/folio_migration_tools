@@ -106,8 +106,8 @@ class UserTransformer(MigrationTaskBase):
             Field(
                 title="Remove username",
                 description=(
-                    "Specify whether to remove username. Do not use if using 'normal' FMT to load users."
-                    "Optional, by default is False"
+                    "Specify whether to remove username. Resulting objects are not compatible with"
+                    " the mod-user-import. Optional, by default is False"
                 ),
             ),
         ] = False
