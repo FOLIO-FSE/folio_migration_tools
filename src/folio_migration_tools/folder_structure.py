@@ -22,6 +22,8 @@ class FolderStructure:
         self.add_time_stamp_to_file_names = add_time_stamp_to_file_names
         self.iteration_identifier = iteration_identifier
         self.base_folder = Path(base_path)
+        # Ensure the base folder exists and is a directory. This differs from other folders, which
+        # are created if missing.
         if not self.base_folder.is_dir():
             logging.critical("Base Folder Path is not a folder. Exiting.")
             sys.exit(1)
