@@ -43,6 +43,10 @@ class FolderStructure:
         self.reports_folder = self.iteration_folder / "reports"
         self.verify_folder(self.reports_folder)
 
+        # Raw migration reports directory
+        self.raw_reports_folder = self.reports_folder / ".raw"
+        self.verify_folder(self.raw_reports_folder)
+
     def log_folder_structure(self):
         logging.info("Mapping files folder is %s", self.mapping_files_folder)
         logging.info("Git ignore is set up correctly")
@@ -98,6 +102,10 @@ class FolderStructure:
 
         self.migration_reports_file = self.reports_folder / f"report{self.file_template}.md"
 
+        self.migration_reports_raw_file = (
+            self.raw_reports_folder / f"raw_report{self.file_template}.json"
+        )
+
         self.srs_records_path = (
             self.results_folder / f"folio_srs_{object_type_string}{self.file_template}.json"
         )
@@ -128,10 +136,13 @@ class FolderStructure:
         self.item_statuses_map_path = self.mapping_files_folder / "item_statuses.tsv"
 
     def verify_folder(self, folder_path: Path):
-        if not folder_path.is_dir():
-            logging.critical("There is no folder located at %s. Exiting.", folder_path)
-            logging.critical("Create a folder by calling\n\tmkdir %s", folder_path)
+        if folder_path.exists() and not folder_path.is_dir():
+            logging.critical("Path exists but is not a directory: %s", folder_path)
             sys.exit(1)
+
+        if not folder_path.exists():
+            logging.info("Creating missing folder %s", folder_path)
+            folder_path.mkdir(parents=True, exist_ok=True)
         else:
             logging.info("Located %s", folder_path)
 

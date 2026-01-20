@@ -1,4 +1,5 @@
 import logging
+import json
 import i18n
 from datetime import datetime
 from datetime import timezone
@@ -46,6 +47,14 @@ class MigrationReport:
             measure_to_add (str): _description_
         """
         self.add("GeneralStatistics", measure_to_add)
+
+    def _write_json_report(self, report_file):
+        """Writes the raw migration report data to a JSON file.
+
+        Args:
+            report_file: An open file object to write the JSON data to
+        """
+        json.dump(self.report, report_file, indent=2)
 
     def write_migration_report(
         self,

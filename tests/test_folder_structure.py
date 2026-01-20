@@ -1,6 +1,8 @@
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.folder_structure import FolderStructure
@@ -94,3 +96,27 @@ def test_setup_migration_file_structure():
         str(folder_structure.transformation_extra_data_path)
         == "iterations/test_iteration/results/extradata_test_task.extradata"
     )
+
+
+def test_creates_subfolders(tmp_path):
+    base = tmp_path / "base"
+    base.mkdir()
+    (base / ".gitignore").write_text("")
+
+    folder_structure = FolderStructure(
+        base, FOLIONamespaces.other, "test_task", "test_iteration", False
+    )
+
+    assert folder_structure.mapping_files_folder.is_dir()
+    assert folder_structure.data_folder.is_dir()
+    assert folder_structure.results_folder.is_dir()
+    assert folder_structure.reports_folder.is_dir()
+    assert folder_structure.raw_reports_folder.is_dir()
+
+
+def test_base_folder_must_exist(tmp_path):
+    missing_base = tmp_path / "missing"
+    with pytest.raises(SystemExit):
+        FolderStructure(
+            missing_base, FOLIONamespaces.other, "test_task", "test_iteration", False
+        )
