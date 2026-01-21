@@ -15,6 +15,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -118,7 +119,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         full_path = self.folder_structure.legacy_records_folder / file_def.file_name
         with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of files processed")
+                i18n_t("Number of files processed")
             )
             start = time.time()
 
@@ -172,7 +173,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Manual fee/fine transformation report"),
+                i18n_t("Manual fee/fine transformation report"),
                 migration_report_file,
                 self.start_datetime,
             )

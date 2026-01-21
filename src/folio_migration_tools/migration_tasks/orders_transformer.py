@@ -16,6 +16,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -234,7 +235,7 @@ class OrdersTransformer(MigrationTaskBase):
             open(self.folder_structure.created_objects_path, "w+") as results_file,
         ):
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of files processed")
+                i18n_t("Number of files processed")
             )
             start = time.time()
             records_processed = 0
@@ -253,7 +254,7 @@ class OrdersTransformer(MigrationTaskBase):
                     self.mapper.perform_additional_mapping(legacy_id, folio_rec)
 
                     self.mapper.migration_report.add_general_statistics(
-                        i18n.t("TOTAL Purchase Order Lines created")
+                        i18n_t("TOTAL Purchase Order Lines created")
                     )
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
                     self.mapper.notes_mapper.map_notes(
@@ -316,7 +317,7 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Pruchase Orders and Purchase Order Lines Transformation Report"),
+                i18n_t("Pruchase Orders and Purchase Order Lines Transformation Report"),
                 migration_report_file,
                 self.start_datetime,
             )

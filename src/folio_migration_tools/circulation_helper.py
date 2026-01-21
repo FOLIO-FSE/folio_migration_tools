@@ -11,6 +11,7 @@ import i18n
 from folioclient import FolioClient, FolioClientError, FolioConnectionError, FolioValidationError
 
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
@@ -37,7 +38,7 @@ class CirculationHelper:
     def get_user_by_barcode(self, user_barcode):
         if user_barcode in self.missing_patron_barcodes:
             self.migration_report.add_general_statistics(
-                i18n.t("Users already detected as missing")
+                i18n_t("Users already detected as missing")
             )
             logging.info("User is already detected as missing")
             return {}
@@ -55,7 +56,7 @@ class CirculationHelper:
     def get_item_by_barcode(self, item_barcode):
         if item_barcode in self.missing_item_barcodes:
             self.migration_report.add_general_statistics(
-                i18n.t("Items already detected as missing")
+                i18n_t("Items already detected as missing")
             )
             logging.info("Item is already detected as missing")
             return {}
@@ -140,7 +141,7 @@ class CirculationHelper:
         path = "/circulation/check-out-by-barcode"
         try:
             if legacy_loan.patron_barcode in self.missing_patron_barcodes:
-                error_message = i18n.t("Patron barcode already detected as missing")
+                error_message = i18n_t("Patron barcode already detected as missing")
                 logging.error(
                     f"{error_message} Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
@@ -189,7 +190,7 @@ class CirculationHelper:
             elif "find user with matching barcode" in error_message_from_folio:
                 self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
                 error_message = f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
-                stat_message = i18n.t("Patron barcode not in FOLIO")
+                stat_message = i18n_t("Patron barcode not in FOLIO")
                 return TransactionResult(
                     False,
                     False,
@@ -248,7 +249,7 @@ class CirculationHelper:
                 False,
                 None,
                 "Connection error",
-                i18n.t("Connection error during checkout"),
+                i18n_t("Connection error during checkout"),
             )
 
     @staticmethod

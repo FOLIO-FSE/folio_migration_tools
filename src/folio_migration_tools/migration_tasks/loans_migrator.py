@@ -19,6 +19,7 @@ from art import tprint
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -205,7 +206,7 @@ class LoansMigrator(MigrationTaskBase):
             ):
                 t0_migration = time.time()
                 self.migration_report.add_general_statistics(
-                    i18n.t("Processed pre-validated loans")
+                    i18n_t("Processed pre-validated loans")
                 )
                 try:
                     self.checkout_single_loan(legacy_loan)
@@ -233,15 +234,15 @@ class LoansMigrator(MigrationTaskBase):
         res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
 
         if res_checkout.was_successful:
-            self.migration_report.add("Details", i18n.t("Checked out on first try"))
-            self.migration_report.add_general_statistics(i18n.t("Successfully checked out"))
+            self.migration_report.add("Details", i18n_t("Checked out on first try"))
+            self.migration_report.add_general_statistics(i18n_t("Successfully checked out"))
             self.set_renewal_count(legacy_loan, res_checkout)
             self.set_new_status(legacy_loan, res_checkout)
         elif res_checkout.should_be_retried:
             res_checkout2 = self.handle_checkout_failure(legacy_loan, res_checkout)
             if res_checkout2.was_successful and res_checkout2.folio_loan:
-                self.migration_report.add("Details", i18n.t("Checked out on second try"))
-                self.migration_report.add_general_statistics(i18n.t("Successfully checked out"))
+                self.migration_report.add("Details", i18n_t("Checked out on second try"))
+                self.migration_report.add_general_statistics(i18n_t("Successfully checked out"))
                 logging.info("Checked out on second try")
                 self.set_renewal_count(legacy_loan, res_checkout2)
                 self.set_new_status(legacy_loan, res_checkout2)
@@ -256,7 +257,7 @@ class LoansMigrator(MigrationTaskBase):
                     )
                 else:
                     self.failed[legacy_loan.item_barcode] = legacy_loan
-                    self.migration_report.add_general_statistics(i18n.t("Failed loans"))
+                    self.migration_report.add_general_statistics(i18n_t("Failed loans"))
                     logging.error("Failed on second try: %s", res_checkout2.error_message)
                     self.migration_report.add(
                         "Details",
@@ -264,21 +265,21 @@ class LoansMigrator(MigrationTaskBase):
                     )
                     raise TransformationRecordFailedError(
                         f"Row {legacy_loan.row}",
-                        i18n.t("Loans failing during checkout, second try"),
+                        i18n_t("Loans failing during checkout, second try"),
                         json.dumps(legacy_loan.to_dict()),
                     )
         elif not res_checkout.should_be_retried:
             logging.error("Failed first time. No retries: %s", res_checkout.error_message)
-            self.migration_report.add_general_statistics(i18n.t("Failed loans"))
+            self.migration_report.add_general_statistics(i18n_t("Failed loans"))
             self.migration_report.add(
                 "Details",
-                i18n.t("Failed 1st time. No retries")
+                i18n_t("Failed 1st time. No retries"
                 + f": {res_checkout.migration_report_message}",
             )
             self.failed[legacy_loan.item_barcode] = legacy_loan
             raise TransformationRecordFailedError(
                 f"Row {legacy_loan.row}",
-                i18n.t("Loans failing during checkout"),
+                i18n_t("Loans failing during checkout"),
                 json.dumps(legacy_loan.to_dict()),
             )
 
@@ -300,7 +301,7 @@ class LoansMigrator(MigrationTaskBase):
     def set_renewal_count(self, legacy_loan: LegacyLoan, res_checkout: TransactionResult):
         if legacy_loan.renewal_count > 0:
             self.update_open_loan(res_checkout.folio_loan, legacy_loan)
-            self.migration_report.add_general_statistics(i18n.t("Updated renewal count for loan"))
+            self.migration_report.add_general_statistics(i18n_t("Updated renewal count for loan"))
 
     def wrap_up(self):
         for k, v in self.failed.items():
@@ -311,7 +312,7 @@ class LoansMigrator(MigrationTaskBase):
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
-                i18n.t("Loans migration report"), report_file, self.start_datetime
+                i18n_t("Loans migration report"), report_file, self.start_datetime
             )
         self.clean_out_empty_logs()
 
@@ -351,7 +352,7 @@ class LoansMigrator(MigrationTaskBase):
                 )
             if has_item_barcode and has_patron_barcode and has_proxy_barcode:
                 self.migration_report.add_general_statistics(
-                    i18n.t("Loans verified against migrated user and item")
+                    i18n_t("Loans verified against migrated user and item")
                 )
                 yield loan
             else:
@@ -360,9 +361,9 @@ class LoansMigrator(MigrationTaskBase):
                 self.migration_report.add_general_statistics(i18n.t("Failed loans"))
                 self.migration_report.add(
                     "DiscardedLoans",
-                    i18n.t("Loans discarded. Had migrated item barcode")
+                    i18n_t("Loans discarded. Had migrated item barcode")
                     + f": {has_item_barcode}. "
-                    + i18n.t("Had migrated user barcode")
+                    + i18n_t("Had migrated user barcode")
                     + f": {has_patron_barcode}"
                     + f": {has_proxy_barcode}",
                 )
@@ -399,9 +400,9 @@ class LoansMigrator(MigrationTaskBase):
                 if any(legacy_loan.errors):
                     num_bad += 1
                     self.migration_report.add_general_statistics(
-                        i18n.t("Loans failed pre-validation")
+                        i18n_t("Loans failed pre-validation")
                     )
-                    self.migration_report.add_general_statistics(i18n.t("Failed loans"))
+                    self.migration_report.add_general_statistics(i18n_t("Failed loans"))
                     for error in legacy_loan.errors:
                         self.migration_report.add("DiscardedLoans", f"{error[0]} - {error[1]}")
                     # Add this loan to failed loans for later correction and re-run.
@@ -412,7 +413,7 @@ class LoansMigrator(MigrationTaskBase):
                     results.append(legacy_loan)
             except TransformationRecordFailedError as trfe:
                 num_bad += 1
-                self.migration_report.add_general_statistics(i18n.t("Loans failed pre-validation"))
+                self.migration_report.add_general_statistics(i18n_t("Loans failed pre-validation"))
                 self.migration_report.add(
                     "DiscardedLoans",
                     f"{trfe.message} - see data issues log",

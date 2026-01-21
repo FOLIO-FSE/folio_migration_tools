@@ -14,6 +14,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -90,7 +91,7 @@ class ReservesMigrator(MigrationTaskBase):
         logging.info("Starting")
         for num_reserves, legacy_reserve in enumerate(self.valid_reserves, start=1):
             t0_migration = time.time()
-            self.migration_report.add_general_statistics(i18n.t("Processed reserves"))
+            self.migration_report.add_general_statistics(i18n_t("Processed reserves"))
             try:
                 self.post_single_reserve(legacy_reserve)
             except Exception as ee:
@@ -107,10 +108,10 @@ class ReservesMigrator(MigrationTaskBase):
                 path, legacy_reserve.to_dict(), "POST", i18n.t("Posted reserves")
             ):
                 self.migration_report.add_general_statistics(
-                    i18n.t("Successfully posted reserves")
+                    i18n_t("Successfully posted reserves")
                 )
             else:
-                self.migration_report.add_general_statistics(i18n.t("Failure to post reserve"))
+                self.migration_report.add_general_statistics(i18n_t("Failure to post reserve"))
         except Exception as ee:
             logging.error(ee)
 
@@ -123,7 +124,7 @@ class ReservesMigrator(MigrationTaskBase):
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
-                i18n.t("Reserves migration report"), report_file, self.start_datetime
+                i18n_t("Reserves migration report"), report_file, self.start_datetime
             )
         self.clean_out_empty_logs()
 

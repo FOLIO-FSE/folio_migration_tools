@@ -4,6 +4,7 @@ import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,

@@ -21,6 +21,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import FileDefinition, LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
@@ -234,10 +235,10 @@ class MapperBase:
         self.migration_report.add("FieldMappingErrors", error)
         error.id = error.id or index_or_id
         error.log_it()
-        self.migration_report.add_general_statistics(i18n.t("Field Mapping Errors found"))
+        self.migration_report.add_general_statistics(i18n_t("Field Mapping Errors found"))
 
     def handle_transformation_process_error(self, idx, error: TransformationProcessError):
-        self.migration_report.add_general_statistics(i18n.t("Transformation process error"))
+        self.migration_report.add_general_statistics(i18n_t("Transformation process error"))
         logging.critical("%s\t%s", idx, error)
         print(f"\n{error.message}: {error.data_value}")
         sys.exit(1)
@@ -246,7 +247,7 @@ class MapperBase:
         self, records_processed: int, error: TransformationRecordFailedError
     ):
         self.migration_report.add(
-            "GeneralStatistics", i18n.t("FAILED Records failed due to an error")
+            "GeneralStatistics", i18n_t("FAILED Records failed due to an error")
         )
         error.index_or_id = error.index_or_id or records_processed
         error.log_it()
@@ -301,7 +302,7 @@ class MapperBase:
             for id_string in legacy_map.values():
                 legacy_map_file.write(f"{json.dumps(id_string)}\n")
                 self.migration_report.add(
-                    "GeneralStatistics", i18n.t("Unique ID:s written to legacy map")
+                    "GeneralStatistics", i18n_t("Unique ID:s written to legacy map")
                 )
         logging.info("Wrote legacy id map to %s", path)
 
@@ -357,7 +358,7 @@ class MapperBase:
     def add_legacy_id_to_admin_note(self, folio_record: dict, legacy_id: str):
         if not legacy_id:
             raise TransformationFieldMappingError(
-                legacy_id, i18n.t("Legacy id is empty"), legacy_id
+                legacy_id, i18n_t("Legacy id is empty"), legacy_id
             )
         if "administrativeNotes" not in folio_record:
             folio_record["administrativeNotes"] = []
@@ -497,7 +498,7 @@ class MapperBase:
             )
         self.migration_report.add(
             "StatisticalCodeMapping",
-            i18n.t("Mapping not set up"),
+            i18n_t("Mapping not set up"),
         )
         return ""
 

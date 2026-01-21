@@ -17,6 +17,7 @@ from folioclient import FolioClient
 from pymarc.record import Leader, Record
 from pymarc.field import Field
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -97,7 +98,7 @@ class BibsRulesMapper(RulesMapperBase):
 
     def handle_leader_05(self, marc_record: Record, legacy_ids: List[str]):
         leader_05 = marc_record.leader[5] or "Empty"
-        self.migration_report.add("RecordStatus", i18n.t("Original value") + f": {leader_05}")
+        self.migration_report.add("RecordStatus", i18n_t("Original value") + f": {leader_05}")
         if leader_05 not in ["a", "c", "d", "n", "p"]:
             marc_record.leader = Leader(f"{marc_record.leader[:5]}c{marc_record.leader[6:]}")
             self.migration_report.add(
@@ -323,7 +324,7 @@ class BibsRulesMapper(RulesMapperBase):
             raise TransformationProcessError("", "No instance_types setup in tenant")
 
         if "336" in marc_record and "b" not in marc_record["336"]:
-            self.migration_report.add("RecourceTypeMapping", i18n.t("Subfield b not in 336"))
+            self.migration_report.add("RecourceTypeMapping", i18n_t("Subfield b not in 336"))
             if "a" in marc_record["336"]:
                 return_id = get_folio_id_by_name(marc_record["336"]["a"])
 
