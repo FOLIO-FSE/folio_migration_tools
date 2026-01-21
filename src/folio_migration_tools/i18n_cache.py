@@ -54,7 +54,7 @@ def i18n_t(key: str, *args, **kwargs) -> str:
     """
     # Convert kwargs to a hashable form for caching (dicts aren't hashable)
     # We create a tuple of sorted items so the same kwargs always hash the same way
-    kwargs_tuple = tuple(sorted(kwargs.items())) if kwargs else ()
+    # Note: kwargs_tuple would be: tuple(sorted(kwargs.items())) if kwargs else ()
 
     # Note: We can't actually use *args in the lru_cache because it won't work properly
     # with the way we've defined this. The actual i18n.t call is below.

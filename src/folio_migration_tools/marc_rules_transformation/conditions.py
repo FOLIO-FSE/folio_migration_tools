@@ -12,7 +12,6 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
-from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,

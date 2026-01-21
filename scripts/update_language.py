@@ -39,7 +39,8 @@ if __name__ == "__main__":
     for key in target_translations:
         if key not in source_translations:
             print(
-                f"Key '{key}' in target not in source. Check if it was renamed, or if it is still needed."
+                f"Key '{key}' in target not in source. "
+                f"Check if it was renamed, or if it is still needed."
             )
     # Update target translations
     for key in source_translations:
@@ -62,7 +63,8 @@ if __name__ == "__main__":
             for subkey in target_translations[key]:
                 if missing_format_re.search(target_translations[key][subkey]):
                     print(
-                        f"Key '{key}' plural '{subkey}' may not format correctly: format must have %"
+                        f"Key '{key}' plural '{subkey}' may not format "
+                        f"correctly: format must have %"
                     )
     # Write
     with open(target_filename, "w") as f:

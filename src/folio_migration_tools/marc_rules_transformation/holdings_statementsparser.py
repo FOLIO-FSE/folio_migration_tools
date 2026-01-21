@@ -8,7 +8,6 @@ import i18n
 from pymarc import Field, Record
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
-from folio_migration_tools.i18n_cache import i18n_t
 
 
 class HoldingsStatementsParser:

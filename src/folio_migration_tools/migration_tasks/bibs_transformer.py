@@ -1,7 +1,6 @@
 import logging
 from typing import Annotated, List
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
