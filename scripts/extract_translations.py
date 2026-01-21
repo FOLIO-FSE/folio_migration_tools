@@ -57,7 +57,8 @@ if __name__ == "__main__":
             for subkey in translations[key]:
                 if missing_format_re.search(translations[key][subkey]):
                     print(
-                        f"Key '{key}' plural '{subkey}' may not format correctly: format must have %"
+                        f"Key '{key}' plural '{subkey}' may not format "
+                        f"correctly: format must have %"
                     )
     # Write
     with open(en_filename, "w") as f:

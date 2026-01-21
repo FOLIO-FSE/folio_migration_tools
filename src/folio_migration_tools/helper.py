@@ -1,6 +1,5 @@
 import json
 import logging
-import i18n
 
 from folio_migration_tools.i18n_cache import i18n_t
 

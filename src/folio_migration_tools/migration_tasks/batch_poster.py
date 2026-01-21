@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Annotated, List, Optional
 from uuid import uuid4
 
 import folioclient
-import i18n
 
 if TYPE_CHECKING:
     from httpx import Response

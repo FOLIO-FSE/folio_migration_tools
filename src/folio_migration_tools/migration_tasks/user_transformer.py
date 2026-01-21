@@ -4,7 +4,6 @@ import sys
 from typing import Optional, Annotated
 from pydantic import Field
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from art import tprint
 

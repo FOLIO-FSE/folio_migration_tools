@@ -273,7 +273,7 @@ class LoansMigrator(MigrationTaskBase):
             self.migration_report.add_general_statistics(i18n_t("Failed loans"))
             self.migration_report.add(
                 "Details",
-                i18n_t("Failed 1st time. No retries"
+                i18n_t("Failed 1st time. No retries")
                 + f": {res_checkout.migration_report_message}",
             )
             self.failed[legacy_loan.item_barcode] = legacy_loan
