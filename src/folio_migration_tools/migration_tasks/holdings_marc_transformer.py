@@ -9,6 +9,7 @@ from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -269,7 +270,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             except FileNotFoundError as fnfe:
                 raise TransformationProcessError(
                     "",
-                    i18n.t("Provided boundwith relationship file not found"),
+                    i18n_t("Provided boundwith relationship file not found"),
                     self.task_configuration.boundwith_relationship_file_path,
                 ) from fnfe
 
@@ -350,7 +351,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Bibliographic records transformation report"),
+                i18n_t("Bibliographic records transformation report"),
                 report_file,
                 self.start_datetime,
             )

@@ -8,6 +8,7 @@ from dateutil import tz
 from dateutil.parser import parse, ParserError
 
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 

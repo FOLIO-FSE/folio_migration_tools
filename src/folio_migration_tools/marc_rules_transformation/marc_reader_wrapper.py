@@ -11,6 +11,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,

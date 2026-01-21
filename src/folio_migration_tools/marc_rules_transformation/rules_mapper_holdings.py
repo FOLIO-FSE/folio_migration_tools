@@ -12,6 +12,7 @@ from pymarc import Optional
 from pymarc.field import Field
 from pymarc.record import Record
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -253,7 +254,7 @@ class RulesMapperHoldings(RulesMapperBase):
             ignored_subsequent_fields (_type_): _description_
             index_or_legacy_ids (_type_): _description_
         """
-        self.migration_report.add("Trivia", i18n.t("Total number of Tags processed"))
+        self.migration_report.add("Trivia", i18n_t("Total number of Tags processed"))
         if marc_field.tag not in self.mappings:
             self.report_legacy_mapping(marc_field.tag, True, False)
         elif marc_field.tag not in ignored_subsequent_fields:
@@ -584,7 +585,7 @@ class RulesMapperHoldings(RulesMapperBase):
                     Helper.log_data_issue(
                         legacy_ids,
                         (
-                            i18n.t("blurbs.HoldingsTypeMapping.title") + " is 'unknown'. "
+                            i18n_t("blurbs.HoldingsTypeMapping.title") + " is 'unknown'. "
                             "(leader 06 is set to 'u') Check if this is correct"
                         ),
                         ldr06,
@@ -598,14 +599,14 @@ class RulesMapperHoldings(RulesMapperBase):
                 folio_holding["holdingsTypeId"] = self.fallback_holdings_type_id
                 self.migration_report.add(
                     "HoldingsTypeMapping",
-                    i18n.t("An Unmapped")
+                    i18n_t("An Unmapped")
                     + f" {ldr06} -> {holdings_type} -> "
-                    + i18n.t("Unmapped"),
+                    + i18n_t("Unmapped"),
                 )
                 Helper.log_data_issue(
                     legacy_ids,
                     (
-                        i18n.t("blurbs.HoldingsTypeMapping.title", locale="en")
+                        i18n_t("blurbs.HoldingsTypeMapping.title", locale="en")
                         + ". leader 06 was unmapped."
                     ),
                     ldr06,

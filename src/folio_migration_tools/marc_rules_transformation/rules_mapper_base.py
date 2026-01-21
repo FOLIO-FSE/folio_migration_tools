@@ -15,6 +15,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 from pymarc import Field, Optional, Record, Subfield
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -299,13 +300,13 @@ class RulesMapperBase(MapperBase):
     def perform_proxy_mapping(self, marc_field):
         proxy_mapping = next(iter(self.mappings.get("880", [])), [])
         if "6" not in marc_field:
-            self.migration_report.add("Field880Mappings", i18n.t("Records without $6"))
+            self.migration_report.add("Field880Mappings", i18n_t("Records without $6"))
             return None
         if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
             return None
         if not marc_field["6"][:3] or len(marc_field["6"][:3]) != 3:
             self.migration_report.add(
-                "Field880Mappings", i18n.t("Records with unexpected length in $6")
+                "Field880Mappings", i18n_t("Records with unexpected length in $6")
             )
             return None
         first_three = marc_field["6"][:3]
@@ -320,16 +321,16 @@ class RulesMapperBase(MapperBase):
         )
         self.migration_report.add(
             "Field880Mappings",
-            i18n.t("Source digits")
+            i18n_t("Source digits")
             + f": {marc_field['6']} "
-            + i18n.t("Target field")
+            + i18n_t("Target field")
             + f": {target_field}",
         )
         mappings = self.mappings.get(target_field, {})
         if not mappings:
             self.migration_report.add(
                 "Field880Mappings",
-                i18n.t("Mapping not set up for target field")
+                i18n_t("Mapping not set up for target field")
                 + f": {target_field} ({marc_field['6']})",
             )
         return mappings
@@ -337,7 +338,7 @@ class RulesMapperBase(MapperBase):
     def report_marc_stats(
         self, marc_field: Field, bad_tags, legacy_ids, ignored_subsequent_fields
     ):
-        self.migration_report.add("Trivia", i18n.t("Total number of Tags processed"))
+        self.migration_report.add("Trivia", i18n_t("Total number of Tags processed"))
         self.report_source_and_links(marc_field)
         self.report_bad_tags(marc_field, bad_tags, legacy_ids)
         mapped = marc_field.tag in self.mappings
@@ -351,7 +352,7 @@ class RulesMapperBase(MapperBase):
         for subfield_2 in marc_field.get_subfields("2"):
             self.migration_report.add(
                 "AuthoritySources",
-                i18n.t("Source of heading or term") + f": {subfield_2.split(' ')[0]}",
+                i18n_t("Source of heading or term") + f": {subfield_2.split(' ')[0]}",
             )
         for subfield_0 in marc_field.get_subfields("0"):
             code = ""
@@ -363,7 +364,7 @@ class RulesMapperBase(MapperBase):
                     code = subfield_0[: subfield_0.find(url.path)]
             if code:
                 self.migration_report.add(
-                    "AuthoritySources", i18n.t("$0 base uri or source code") + f": {code}"
+                    "AuthoritySources", i18n_t("$0 base uri or source code") + f": {code}"
                 )
 
     def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
@@ -402,7 +403,7 @@ class RulesMapperBase(MapperBase):
             )
             trfe.log_it()
             self.migration_report.add_general_statistics(
-                i18n.t("Records failed due to an error. See data issues log for details")
+                i18n_t("Records failed due to an error. See data issues log for details")
             )
         except Exception as exception:
             self.handle_generic_exception(self.parsed_records, exception)

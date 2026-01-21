@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from folio_migration_tools import custom_exceptions
 from folio_migration_tools import helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import MigrationReport
 
 
@@ -54,7 +55,7 @@ class HoldingsHelper:
                 values.append(str(uuid4()))
                 migration_report.add(
                     "HoldingsMerging",
-                    i18n.t("Holding prevented from merging by holdingsTypeId"),
+                    i18n_t("Holding prevented from merging by holdingsTypeId"),
                 )
             return "-".join(values)
         except Exception as exception:
@@ -99,12 +100,12 @@ class HoldingsHelper:
                     )
                     migration_report.add(
                         "HoldingsMerging",
-                        i18n.t("Duplicate key based on current merge criteria. Records merged"),
+                        i18n_t("Duplicate key based on current merge criteria. Records merged"),
                     )
                 else:
                     migration_report.add(
                         "HoldingsMerging",
-                        i18n.t("Previously transformed holdings record loaded"),
+                        i18n_t("Previously transformed holdings record loaded"),
                     )
                     prev_holdings[stored_key] = stored_holding
             return prev_holdings

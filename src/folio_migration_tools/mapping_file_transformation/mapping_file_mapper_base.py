@@ -18,6 +18,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.migration_report import MigrationReport

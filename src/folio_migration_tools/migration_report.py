@@ -4,6 +4,8 @@ import i18n
 from datetime import datetime
 from datetime import timezone
 
+from folio_migration_tools.i18n_cache import i18n_t
+
 
 class MigrationReport:
     """Class responsible for handling the migration report"""
@@ -75,13 +77,13 @@ class MigrationReport:
                 [
                     "# " + report_title,
                     i18n.t("blurbs.Introduction.description"),
-                    "## " + i18n.t("Timings"),
+                    "## " + i18n_t("Timings"),
                     "",
-                    i18n.t("Measure") + " | " + i18n.t("Value"),
+                    i18n_t("Measure") + " | " + i18n_t("Value"),
                     "--- | ---:",
-                    i18n.t("Time Started:") + " | " + datetime.isoformat(time_started),
-                    i18n.t("Time Finished:") + " | " + datetime.isoformat(time_finished),
-                    i18n.t("Elapsed time:") + " | " + str(time_finished - time_started),
+                    i18n_t("Time Started:") + " | " + datetime.isoformat(time_started),
+                    i18n_t("Time Finished:") + " | " + datetime.isoformat(time_finished),
+                    i18n_t("Elapsed time:") + " | " + str(time_finished - time_started),
                 ]
             )
         )
@@ -98,7 +100,7 @@ class MigrationReport:
                         + i18n.t("Click to expand all %{count} things", count=len(self.report[a]))
                         + "</summary>",
                         "",
-                        i18n.t("Measure") + " | " + i18n.t("Count"),
+                        i18n_t("Measure") + " | " + i18n_t("Count"),
                         "--- | ---:",
                     ]
                     + [

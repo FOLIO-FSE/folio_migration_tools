@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -147,7 +148,7 @@ class RequestsMigrator(MigrationTaskBase):
 
     def prepare_legacy_request(self, legacy_request: LegacyRequest):
         patron = self.circulation_helper.get_user_by_barcode(legacy_request.patron_barcode)
-        self.migration_report.add_general_statistics(i18n.t("Patron lookups performed"))
+        self.migration_report.add_general_statistics(i18n_t("Patron lookups performed"))
 
         if not patron:
             logging.error(f"No user with barcode {legacy_request.patron_barcode} found in FOLIO")
@@ -157,18 +158,18 @@ class RequestsMigrator(MigrationTaskBase):
                 f"{legacy_request.patron_barcode}",
             )
             self.migration_report.add_general_statistics(
-                i18n.t("No user with barcode found in FOLIO")
+                i18n_t("No user with barcode found in FOLIO")
             )
             self.failed_requests.add(legacy_request)
             return False, legacy_request
         legacy_request.patron_id = patron.get("id")
 
         item = self.circulation_helper.get_item_by_barcode(legacy_request.item_barcode)
-        self.migration_report.add_general_statistics(i18n.t("Item lookups performed"))
+        self.migration_report.add_general_statistics(i18n_t("Item lookups performed"))
         if not item:
             logging.error(f"No item with barcode {legacy_request.item_barcode} found in FOLIO")
             self.migration_report.add_general_statistics(
-                i18n.t("No item with barcode found in FOLIO")
+                i18n_t("No item with barcode found in FOLIO")
             )
             Helper.log_data_issue(
                 f"{legacy_request.item_barcode}",
@@ -178,7 +179,7 @@ class RequestsMigrator(MigrationTaskBase):
             self.failed_requests.add(legacy_request)
             return False, legacy_request
         holding = self.circulation_helper.get_holding_by_uuid(item.get("holdingsRecordId"))
-        self.migration_report.add_general_statistics(i18n.t("Holdings lookups performed"))
+        self.migration_report.add_general_statistics(i18n_t("Holdings lookups performed"))
         legacy_request.item_id = item.get("id")
         legacy_request.holdings_record_id = item.get("holdingsRecordId")
         legacy_request.instance_id = holding.get("instanceId")
@@ -186,7 +187,7 @@ class RequestsMigrator(MigrationTaskBase):
             legacy_request.request_type = "Page"
             logging.info(f"Setting request to Page, since the status is {item['status']['name']}")
         self.migration_report.add_general_statistics(
-            i18n.t("Valid, prepared requests, ready for posting")
+            i18n_t("Valid, prepared requests, ready for posting")
         )
         return True, legacy_request
 
@@ -206,11 +207,11 @@ class RequestsMigrator(MigrationTaskBase):
                         self.folio_client, legacy_request, self.migration_report
                     ):
                         self.migration_report.add_general_statistics(
-                            i18n.t("Successfully migrated requests")
+                            i18n_t("Successfully migrated requests")
                         )
                     else:
                         self.migration_report.add_general_statistics(
-                            i18n.t("Unsuccessfully migrated requests")
+                            i18n_t("Unsuccessfully migrated requests")
                         )
                         self.failed_requests.add(legacy_request)
                 if num_requests == 1:
@@ -233,7 +234,7 @@ class RequestsMigrator(MigrationTaskBase):
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
-                i18n.t("Requests migration report"), report_file, self.start_datetime
+                i18n_t("Requests migration report"), report_file, self.start_datetime
             )
         self.clean_out_empty_logs()
 

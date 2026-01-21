@@ -13,6 +13,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -218,13 +219,13 @@ class UserTransformer(MigrationTaskBase):
                                 logging.info("## First FOLIO  user")
                                 logging.info(json.dumps(folio_user, indent=4, sort_keys=True))
                             self.mapper.migration_report.add_general_statistics(
-                                i18n.t("Successful user transformations")
+                                i18n_t("Successful user transformations")
                             )
                             if num_users % 1000 == 0:
                                 logging.info(f"{num_users} users processed.")
                         except TransformationRecordFailedError as tre:
                             self.mapper.migration_report.add_general_statistics(
-                                i18n.t("Records failed")
+                                i18n_t("Records failed")
                             )
                             Helper.log_data_issue(tre.index_or_id, tre.message, tre.data_value)
                             logging.error(tre)
@@ -241,7 +242,7 @@ class UserTransformer(MigrationTaskBase):
                             logging.error(num_users)
                             logging.error(json.dumps(legacy_user))
                             self.mapper.migration_report.add_general_statistics(
-                                i18n.t("Failed user transformations")
+                                i18n_t("Failed user transformations")
                             )
                             logging.error(ee, exc_info=True)
 
@@ -255,7 +256,7 @@ class UserTransformer(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Users transformation report"),
+                i18n_t("Users transformation report"),
                 migration_report_file,
                 self.mapper.start_datetime,
             )

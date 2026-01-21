@@ -12,11 +12,14 @@ import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
+from folio_migration_tools.i18n_cache import i18n_t
+
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -335,7 +338,7 @@ class ItemsTransformer(MigrationTaskBase):
         records_in_file = 0
         with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of files processed")
+                i18n_t("Number of files processed")
             )
             start = time.time()
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
@@ -368,7 +371,7 @@ class ItemsTransformer(MigrationTaskBase):
                     # TODO: turn this into a asynchronous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
-                        i18n.t("Number of records written to disk")
+                        i18n_t("Number of records written to disk")
                     )
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.schema)
                 except TransformationProcessError as process_error:
@@ -387,7 +390,7 @@ class ItemsTransformer(MigrationTaskBase):
                     i18n.t("Number of Legacy items in %{container}", container=file_def),
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Number of Legacy items in total")
+                    i18n_t("Number of Legacy items in total")
                 )
                 self.print_progress(idx, start)
                 records_in_file = idx + 1
@@ -469,7 +472,7 @@ class ItemsTransformer(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Item transformation report"),
+                i18n_t("Item transformation report"),
                 migration_report_file,
                 self.mapper.start_datetime,
             )

@@ -21,6 +21,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -668,7 +669,7 @@ class BatchPoster(MigrationTaskBase):
 
     def handle_generic_exception(self, exception, last_row, batch, num_records, failed_recs_file):
         logging.error("%s", exception)
-        self.migration_report.add("Details", i18n.t("Generic exceptions (see log for details)"))
+        self.migration_report.add("Details", i18n_t("Generic exceptions (see log for details)"))
         # logging.error("Failed row: %s", last_row)
         self.failed_batches += 1
         self.num_failures += len(batch)
@@ -681,7 +682,7 @@ class BatchPoster(MigrationTaskBase):
             sys.exit(1)
 
     def handle_unicode_error(self, unicode_error, last_row):
-        self.migration_report.add("Details", i18n.t("Encoding errors"))
+        self.migration_report.add("Details", i18n_t("Encoding errors"))
         logging.info("=========ERROR==============")
         logging.info(
             "%s Posting failed. Encoding error reading file",
