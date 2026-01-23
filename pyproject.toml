@@ -1,6 +1,6 @@
 [project]
 name = "folio_migration_tools"
-version = "1.10.0b7"
+version = "1.10.0"
 description =  "A tool allowing you to migrate data from legacy ILS:s (Library systems) into FOLIO LSP"
 authors = [
 	{name = "Theodor Tolstoy", email = "github.teddes@tolstoy.se"},
@@ -26,6 +26,7 @@ dependencies = [
     "pyaml>=21.10.1,<22.0.0",
     "python-i18n>=0.3.9,<1.0.0",
     "art>=6.5,<7.0",
+    "folio-data-import>=0.5.0,<0.6.0",
 ]
 
 [dependency-groups]
