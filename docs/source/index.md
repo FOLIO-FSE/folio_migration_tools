@@ -12,6 +12,7 @@ quick_tutorial.md
 :caption: Using the Tools
 migration_process.md
 migration_tasks.md
+migration_reports.md
 mapping_file_based_mapping.md
 marc_rule_based_mapping.md
 Transforming inventory <mapping_files_inventory.md>
