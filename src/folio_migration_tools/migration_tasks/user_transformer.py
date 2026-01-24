@@ -265,6 +265,8 @@ class UserTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         logging.info("All done!")
         self.clean_out_empty_logs()
 

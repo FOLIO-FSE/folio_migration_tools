@@ -178,6 +178,8 @@ class CoursesMigrator(MigrationTaskBase):
             self.mapper.migration_report.write_migration_report(
                 i18n.t("Courses migration report"), report_file, self.mapper.start_datetime
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
 
 

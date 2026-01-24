@@ -901,6 +901,8 @@ class BatchPoster(MigrationTaskBase):
                 report_file,
                 self.start_datetime,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
 
     def rerun_run(self):
