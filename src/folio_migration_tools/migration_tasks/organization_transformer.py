@@ -299,6 +299,8 @@ class OrganizationTransformer(MigrationTaskBase):
             self.mapper.save_id_map_file(
                 self.folder_structure.organizations_id_map_path, self.organizations_id_map
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
 
         logging.info("All done!")

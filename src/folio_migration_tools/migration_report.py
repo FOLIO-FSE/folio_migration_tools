@@ -50,7 +50,7 @@ class MigrationReport:
         """
         self.add("GeneralStatistics", measure_to_add)
 
-    def _write_json_report(self, report_file):
+    def write_json_report(self, report_file):
         """Writes the raw migration report data to a JSON file.
 
         Args:
