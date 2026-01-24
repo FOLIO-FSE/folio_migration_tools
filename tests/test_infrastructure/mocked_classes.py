@@ -421,6 +421,7 @@ def get_mocked_folder_structure():
     mock_fs.legacy_records_folder = Path("source_files")
     mock_fs.logs_folder = Path("logs")
     mock_fs.migration_reports_file = Path("/dev/null")
+    mock_fs.migration_reports_raw_file = Path("/dev/null")
     mock_fs.transformation_extra_data_path = Path("transformation_extra_data")
     mock_fs.transformation_log_path = Path("/dev/null")
     mock_fs.data_issue_file_path = Path("/dev/null")
