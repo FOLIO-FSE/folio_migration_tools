@@ -80,6 +80,42 @@ def test_wrap_up(mock_clean_out_empty_logs, mock_folder_structure, mock_check_so
     mock_clean_out_empty_logs.assert_called_once()
 
 
+@patch(
+    'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer'
+    '.clean_out_empty_logs'
+)
+def test_wrap_up_writes_json_report(
+    mock_clean_out_empty_logs, mock_folder_structure, mock_check_source_files, tmp_path
+):
+    """Test that wrap_up writes both markdown and JSON reports."""
+    library_config = get_mocked_library_config()
+    folio_client = mocked_folio_client()
+    transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
+    transformer.processor = MagicMock()
+
+    # Set up real temp files for reports
+    md_report_path = tmp_path / "report.md"
+    json_report_path = tmp_path / "raw_report.json"
+    transformer.folder_structure.migration_reports_file = md_report_path
+    transformer.folder_structure.migration_reports_raw_file = json_report_path
+
+    # Add some data to the migration report
+    transformer.mapper.migration_report.add("GeneralStatistics", "Records processed", 100)
+
+    transformer.wrap_up()
+
+    # Verify both files were created
+    assert md_report_path.exists(), "Markdown report file should be created"
+    assert json_report_path.exists(), "JSON report file should be created"
+
+    # Verify JSON report contains valid JSON with our data
+    import json
+    with open(json_report_path) as f:
+        json_data = json.load(f)
+    assert "GeneralStatistics" in json_data
+    assert json_data["GeneralStatistics"]["Records processed"] == 100
+
+
 def test_different_ils_flavours(mock_folder_structure, mock_check_source_files):
     for ils_flavour in IlsFlavour:
         task_config = TASK_CONFIG.model_copy(update={"ils_flavour": ils_flavour})
