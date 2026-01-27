@@ -2,6 +2,7 @@ import asyncio
 import copy
 import json
 import logging
+import os
 import re
 import sys
 import traceback
@@ -249,6 +250,10 @@ class BatchPoster(MigrationTaskBase):
         self.num_posted = 0
         self.starting_record_count_in_folio: Optional[int] = None
         self.finished_record_count_in_folio: Optional[int] = None
+        # Create a semaphore to limit concurrent async requests
+        self.semaphore = asyncio.Semaphore(
+            int(os.environ.get("FOLIO_MAX_CONCURRENT_REQUESTS", 10))
+        )
 
     def do_work(self):  # noqa: C901
         with open(
@@ -520,7 +525,8 @@ class BatchPoster(MigrationTaskBase):
 
         for attempt in range(retries):
             try:
-                return await self.folio_client.folio_get_async(url, query_params=params)
+                async with self.semaphore:
+                    return await self.folio_client.folio_get_async(url, query_params=params)
 
             except folioclient.FolioConnectionError as e:
                 # Network/connection errors - always retry
