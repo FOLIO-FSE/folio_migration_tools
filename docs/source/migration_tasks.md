@@ -60,6 +60,10 @@ These configuration pieces in the configuration file determines the behaviour
 }
 ```
 
+```{note} Upsert and performance
+If you are using `upsert=True` in your BatchPoster tasks, you may want to adjust the number of simultaneous async HTTP requests allowed, depending on the performance you experience. To do so, set the `FOLIO_MAX_CONCURRENT_REQUESTS` environment variable before running your task. If not set, the default is `10`.
+```
+
 ### Explanation of parameters
 | Parameter  | Possible values  | Explanation  | 
 | ------------- | ------------- | ------------- |
@@ -472,7 +476,7 @@ This process can generate _thousands_ of notices, depending on how many loans ar
 
 If patron and/or item files are specified in the task configuration, the task will validate the loans data files against them, setting aside any rows that contain item or patron barcodes not found in the transformed users or items files. Rows with `due_date` values that precede `out_date` will also be set aside. Both sets of records will be saved to the `failed_records_failed_<task_name>_<timestamp>.txt` in `results`.
 
-Once the source data has made it through validation, the task will attempt to post post the loans via `check-out-by-barcode`, with all overrides specified. If the loan is created successfully, the task will then update the `loanDate` and `dueDate` values of the resulting loan to match the original values. This will re-generate any scheduled notices.
+Once the source data has made it through validation, the task will attempt to post the loans via `check-out-by-barcode`, with all overrides specified. If the loan is created successfully, the task will then update the `loanDate` and `dueDate` values of the resulting loan to match the original values. This will re-generate any scheduled notices.
 
 If the loan's item has a status that cannot normally be checked out ("Aged to lost", "Declared lost", "Claimed returned", "Checked out"), the task will report the initial failure and then attempt to change the status to "Available" and try to create the loan again. Once that is complete, the status will be reset, as needed.
 
