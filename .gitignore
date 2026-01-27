@@ -126,3 +126,4 @@ poetry.lock
 *.mrk
 *.lock
 pylock.toml
+reference_material/
