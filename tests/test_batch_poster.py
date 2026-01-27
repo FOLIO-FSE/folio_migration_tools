@@ -1,3 +1,4 @@
+import asyncio
 from types import MethodType
 from unittest.mock import Mock, AsyncMock, patch, create_autospec
 
@@ -75,7 +76,8 @@ async def test_get_with_retry_successful():
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.folio_get_async = AsyncMock(return_value=mock_response_data)
     batch_poster.get_with_retry = Mock(wraps=BatchPoster.get_with_retry)
-
+    batch_poster.semaphore = asyncio.Semaphore(10)
+    
     # Define test inputs
     query_api = "/instance-storage/instances"
     params = {"query": "id==(record1 OR record2)", "limit": 90}
