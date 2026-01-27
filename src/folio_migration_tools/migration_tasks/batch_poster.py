@@ -723,6 +723,7 @@ class BatchPoster(MigrationTaskBase):
                 len(batch),
                 get_req_size(response),
             )
+            self.num_posted += len(batch)
         elif response.status_code == 200:
             json_report = json.loads(response.text)
             self.users_created += json_report.get("createdRecords", 0)
