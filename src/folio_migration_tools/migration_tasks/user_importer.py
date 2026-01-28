@@ -20,7 +20,6 @@ from pydantic import Field
 
 from folio_data_import.UserImport import UserImporter as FDIUserImporter
 from folio_data_import.UserImport import UserImporterStats
-from folio_data_import._progress import NoOpProgressReporter
 
 from folio_migration_tools.library_configuration import (
     FileDefinition,
