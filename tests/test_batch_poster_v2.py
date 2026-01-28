@@ -1,4 +1,4 @@
-"""Tests for BatchPosterV2 adapter module."""
+"""Tests for InventoryBatchPoster adapter module."""
 
 from types import MethodType
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
@@ -9,7 +9,7 @@ import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.migration_tasks.batch_poster_v2 import BatchPosterV2
+from folio_migration_tools.migration_tasks.inventory_batch_poster import InventoryBatchPoster
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -18,14 +18,14 @@ from folio_migration_tools.library_configuration import (
 
 def test_get_object_type():
     """Test that get_object_type returns the expected namespace."""
-    assert BatchPosterV2.get_object_type() == FOLIONamespaces.other
+    assert InventoryBatchPoster.get_object_type() == FOLIONamespaces.other
 
 
 def test_task_configuration_defaults():
     """Test TaskConfiguration default values."""
-    config = BatchPosterV2.TaskConfiguration(
+    config = InventoryBatchPoster.TaskConfiguration(
         name="test_task",
-        migration_task_type="BatchPosterV2",
+        migration_task_type="InventoryBatchPoster",
         object_type="Instances",
         files=[FileDefinition(file_name="test.json")],
     )
@@ -44,9 +44,9 @@ def test_task_configuration_defaults():
 
 def test_task_configuration_custom_values():
     """Test TaskConfiguration with custom values."""
-    config = BatchPosterV2.TaskConfiguration(
+    config = InventoryBatchPoster.TaskConfiguration(
         name="test_task",
-        migration_task_type="BatchPosterV2",
+        migration_task_type="InventoryBatchPoster",
         object_type="Items",
         files=[
             FileDefinition(file_name="items1.json"),
@@ -83,9 +83,9 @@ def test_task_configuration_object_type_validation():
     valid_types = ["Instances", "Holdings", "Items", "ShadowInstances"]
 
     for obj_type in valid_types:
-        config = BatchPosterV2.TaskConfiguration(
+        config = InventoryBatchPoster.TaskConfiguration(
             name="test",
-            migration_task_type="BatchPosterV2",
+            migration_task_type="InventoryBatchPoster",
             object_type=obj_type,
             files=[FileDefinition(file_name="test.json")],
         )
@@ -95,7 +95,7 @@ def test_task_configuration_object_type_validation():
 def test_task_configuration_batch_size_validation():
     """Test that batch_size is validated within range."""
     # Valid batch size
-    config = BatchPosterV2.TaskConfiguration(
+    config = InventoryBatchPoster.TaskConfiguration(
         name="test",
         migration_task_type="BatchPosterV2",
         object_type="Instances",
@@ -105,7 +105,7 @@ def test_task_configuration_batch_size_validation():
     assert config.batch_size == 500
 
     # Test boundary values
-    config_min = BatchPosterV2.TaskConfiguration(
+    config_min = InventoryBatchPoster.TaskConfiguration(
         name="test",
         migration_task_type="BatchPosterV2",
         object_type="Instances",
@@ -114,7 +114,7 @@ def test_task_configuration_batch_size_validation():
     )
     assert config_min.batch_size == 1
 
-    config_max = BatchPosterV2.TaskConfiguration(
+    config_max = InventoryBatchPoster.TaskConfiguration(
         name="test",
         migration_task_type="BatchPosterV2",
         object_type="Instances",
@@ -167,7 +167,7 @@ class TestBatchPosterV2CreateFDIConfig:
 
     def test_create_fdi_config_basic(self):
         """Test creating FDI config with basic settings."""
-        task_config = BatchPosterV2.TaskConfiguration(
+        task_config = InventoryBatchPoster.TaskConfiguration(
             name="test",
             migration_task_type="BatchPosterV2",
             object_type="Instances",
@@ -176,9 +176,9 @@ class TestBatchPosterV2CreateFDIConfig:
         )
 
         # Create a minimal mock BatchPosterV2 to test the method
-        poster = Mock(spec=BatchPosterV2)
+        poster = Mock(spec=InventoryBatchPoster)
         poster.task_configuration = task_config
-        poster._create_fdi_config = MethodType(BatchPosterV2._create_fdi_config, poster)
+        poster._create_fdi_config = MethodType(InventoryBatchPoster._create_fdi_config, poster)
 
         fdi_config = poster._create_fdi_config()
 
@@ -189,7 +189,7 @@ class TestBatchPosterV2CreateFDIConfig:
 
     def test_create_fdi_config_upsert_options(self):
         """Test creating FDI config with upsert options."""
-        task_config = BatchPosterV2.TaskConfiguration(
+        task_config = InventoryBatchPoster.TaskConfiguration(
             name="test",
             migration_task_type="BatchPosterV2",
             object_type="Items",
@@ -204,9 +204,9 @@ class TestBatchPosterV2CreateFDIConfig:
             patch_paths=["barcode", "status"],
         )
 
-        poster = Mock(spec=BatchPosterV2)
+        poster = Mock(spec=InventoryBatchPoster)
         poster.task_configuration = task_config
-        poster._create_fdi_config = MethodType(BatchPosterV2._create_fdi_config, poster)
+        poster._create_fdi_config = MethodType(InventoryBatchPoster._create_fdi_config, poster)
 
         fdi_config = poster._create_fdi_config()
 
@@ -229,8 +229,8 @@ class TestBatchPosterV2MigrationReport:
         from folio_data_import.BatchPoster import BatchPosterStats
 
         # Create mock poster with stats
-        poster = Mock(spec=BatchPosterV2)
-        poster.task_configuration = BatchPosterV2.TaskConfiguration(
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.task_configuration = InventoryBatchPoster.TaskConfiguration(
             name="test",
             migration_task_type="BatchPosterV2",
             object_type="Instances",
@@ -250,7 +250,7 @@ class TestBatchPosterV2MigrationReport:
         )
         poster.migration_report = Mock()
         poster._translate_stats_to_migration_report = MethodType(
-            BatchPosterV2._translate_stats_to_migration_report, poster
+            InventoryBatchPoster._translate_stats_to_migration_report, poster
         )
 
         poster._translate_stats_to_migration_report()
@@ -275,8 +275,8 @@ class TestBatchPosterV2MigrationReport:
         """Test stats translation when rerun is disabled."""
         from folio_data_import.BatchPoster import BatchPosterStats
 
-        poster = Mock(spec=BatchPosterV2)
-        poster.task_configuration = BatchPosterV2.TaskConfiguration(
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.task_configuration = InventoryBatchPoster.TaskConfiguration(
             name="test",
             migration_task_type="BatchPosterV2",
             object_type="Holdings",
@@ -294,7 +294,7 @@ class TestBatchPosterV2MigrationReport:
         )
         poster.migration_report = Mock()
         poster._translate_stats_to_migration_report = MethodType(
-            BatchPosterV2._translate_stats_to_migration_report, poster
+            InventoryBatchPoster._translate_stats_to_migration_report, poster
         )
 
         poster._translate_stats_to_migration_report()

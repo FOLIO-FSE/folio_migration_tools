@@ -9,7 +9,7 @@ import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.migration_tasks.user_importer import UserImporterTask
+from folio_migration_tools.migration_tasks.user_importer import UserImportTask
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -18,12 +18,12 @@ from folio_migration_tools.library_configuration import (
 
 def test_get_object_type():
     """Test that get_object_type returns the expected namespace."""
-    assert UserImporterTask.get_object_type() == FOLIONamespaces.users
+    assert UserImportTask.get_object_type() == FOLIONamespaces.users
 
 
 def test_task_configuration_defaults():
     """Test TaskConfiguration default values."""
-    config = UserImporterTask.TaskConfiguration(
+    config = UserImportTask.TaskConfiguration(
         name="test_task",
         migration_task_type="UserImporterTask",
         files=[FileDefinition(file_name="users.json")],
@@ -39,7 +39,7 @@ def test_task_configuration_defaults():
 
 def test_task_configuration_custom_values():
     """Test TaskConfiguration with custom values."""
-    config = UserImporterTask.TaskConfiguration(
+    config = UserImportTask.TaskConfiguration(
         name="test_task",
         migration_task_type="UserImporterTask",
         files=[
@@ -68,7 +68,7 @@ def test_task_configuration_user_match_key_validation():
     valid_keys = ["externalSystemId", "username", "barcode"]
 
     for match_key in valid_keys:
-        config = UserImporterTask.TaskConfiguration(
+        config = UserImportTask.TaskConfiguration(
             name="test",
             migration_task_type="UserImporterTask",
             files=[FileDefinition(file_name="test.json")],
@@ -82,7 +82,7 @@ def test_task_configuration_preferred_contact_type_validation():
     # Test ID format
     valid_ids = ["001", "002", "003", "004", "005"]
     for contact_id in valid_ids:
-        config = UserImporterTask.TaskConfiguration(
+        config = UserImportTask.TaskConfiguration(
             name="test",
             migration_task_type="UserImporterTask",
             files=[FileDefinition(file_name="test.json")],
@@ -93,7 +93,7 @@ def test_task_configuration_preferred_contact_type_validation():
     # Test name format
     valid_names = ["mail", "email", "text", "phone", "mobile"]
     for name in valid_names:
-        config = UserImporterTask.TaskConfiguration(
+        config = UserImportTask.TaskConfiguration(
             name="test",
             migration_task_type="UserImporterTask",
             files=[FileDefinition(file_name="test.json")],
@@ -105,7 +105,7 @@ def test_task_configuration_preferred_contact_type_validation():
 def test_task_configuration_batch_size_validation():
     """Test that batch_size is validated within range."""
     # Valid batch size
-    config = UserImporterTask.TaskConfiguration(
+    config = UserImportTask.TaskConfiguration(
         name="test",
         migration_task_type="UserImporterTask",
         files=[FileDefinition(file_name="test.json")],
@@ -114,7 +114,7 @@ def test_task_configuration_batch_size_validation():
     assert config.batch_size == 500
 
     # Test boundary values
-    config_min = UserImporterTask.TaskConfiguration(
+    config_min = UserImportTask.TaskConfiguration(
         name="test",
         migration_task_type="UserImporterTask",
         files=[FileDefinition(file_name="test.json")],
@@ -122,7 +122,7 @@ def test_task_configuration_batch_size_validation():
     )
     assert config_min.batch_size == 1
 
-    config_max = UserImporterTask.TaskConfiguration(
+    config_max = UserImportTask.TaskConfiguration(
         name="test",
         migration_task_type="UserImporterTask",
         files=[FileDefinition(file_name="test.json")],
@@ -133,7 +133,7 @@ def test_task_configuration_batch_size_validation():
 
 def test_task_configuration_simultaneous_requests_validation():
     """Test that limit_simultaneous_requests is validated within range."""
-    config = UserImporterTask.TaskConfiguration(
+    config = UserImportTask.TaskConfiguration(
         name="test",
         migration_task_type="UserImporterTask",
         files=[FileDefinition(file_name="test.json")],
@@ -142,7 +142,7 @@ def test_task_configuration_simultaneous_requests_validation():
     assert config.limit_simultaneous_requests == 50
 
     # Test boundary values
-    config_min = UserImporterTask.TaskConfiguration(
+    config_min = UserImportTask.TaskConfiguration(
         name="test",
         migration_task_type="UserImporterTask",
         files=[FileDefinition(file_name="test.json")],
@@ -150,7 +150,7 @@ def test_task_configuration_simultaneous_requests_validation():
     )
     assert config_min.limit_simultaneous_requests == 1
 
-    config_max = UserImporterTask.TaskConfiguration(
+    config_max = UserImportTask.TaskConfiguration(
         name="test",
         migration_task_type="UserImporterTask",
         files=[FileDefinition(file_name="test.json")],
@@ -201,19 +201,19 @@ class TestUserImporterTaskCreateFDIConfig:
 
     def test_create_fdi_config_basic(self):
         """Test creating FDI config with basic settings."""
-        task_config = UserImporterTask.TaskConfiguration(
+        task_config = UserImportTask.TaskConfiguration(
             name="test",
             migration_task_type="UserImporterTask",
             files=[FileDefinition(file_name="test.json")],
         )
 
         # Create a minimal mock UserImporterTask to test the method
-        importer = Mock(spec=UserImporterTask)
+        importer = Mock(spec=UserImportTask)
         importer.task_configuration = task_config
         importer.library_configuration = Mock()
         importer.library_configuration.library_name = "Test Library"
         importer._create_fdi_config = MethodType(
-            UserImporterTask._create_fdi_config, importer
+            UserImportTask._create_fdi_config, importer
         )
 
         file_paths = [Path("/tmp/results/test.json")]
@@ -227,11 +227,11 @@ class TestUserImporterTaskCreateFDIConfig:
         assert fdi_config.fields_to_protect == []
         assert fdi_config.limit_simultaneous_requests == 10
         assert fdi_config.user_file_paths == file_paths
-        assert fdi_config.no_progress is True
+        assert fdi_config.no_progress is False
 
     def test_create_fdi_config_with_protection(self):
         """Test creating FDI config with field protection."""
-        task_config = UserImporterTask.TaskConfiguration(
+        task_config = UserImportTask.TaskConfiguration(
             name="test",
             migration_task_type="UserImporterTask",
             files=[FileDefinition(file_name="test.json")],
@@ -241,12 +241,12 @@ class TestUserImporterTaskCreateFDIConfig:
             limit_simultaneous_requests=20,
         )
 
-        importer = Mock(spec=UserImporterTask)
+        importer = Mock(spec=UserImportTask)
         importer.task_configuration = task_config
         importer.library_configuration = Mock()
         importer.library_configuration.library_name = "My Library"
         importer._create_fdi_config = MethodType(
-            UserImporterTask._create_fdi_config, importer
+            UserImportTask._create_fdi_config, importer
         )
 
         file_paths = [Path("/tmp/users.json")]
@@ -266,8 +266,8 @@ class TestUserImporterTaskMigrationReport:
         from folio_data_import.UserImport import UserImporterStats
 
         # Create mock importer with stats
-        importer = Mock(spec=UserImporterTask)
-        importer.task_configuration = UserImporterTask.TaskConfiguration(
+        importer = Mock(spec=UserImportTask)
+        importer.task_configuration = UserImportTask.TaskConfiguration(
             name="test",
             migration_task_type="UserImporterTask",
             files=[
@@ -284,7 +284,7 @@ class TestUserImporterTaskMigrationReport:
         importer.files_processed = ["users1.json", "users2.json"]
         importer.migration_report = Mock()
         importer._translate_stats_to_migration_report = MethodType(
-            UserImporterTask._translate_stats_to_migration_report, importer
+            UserImportTask._translate_stats_to_migration_report, importer
         )
 
         importer._translate_stats_to_migration_report()
@@ -309,8 +309,8 @@ class TestUserImporterTaskMigrationReport:
         """Test stats translation when all users succeed."""
         from folio_data_import.UserImport import UserImporterStats
 
-        importer = Mock(spec=UserImporterTask)
-        importer.task_configuration = UserImporterTask.TaskConfiguration(
+        importer = Mock(spec=UserImportTask)
+        importer.task_configuration = UserImportTask.TaskConfiguration(
             name="test",
             migration_task_type="UserImporterTask",
             files=[FileDefinition(file_name="users.json")],
@@ -324,7 +324,7 @@ class TestUserImporterTaskMigrationReport:
         importer.files_processed = ["users.json"]
         importer.migration_report = Mock()
         importer._translate_stats_to_migration_report = MethodType(
-            UserImporterTask._translate_stats_to_migration_report, importer
+            UserImportTask._translate_stats_to_migration_report, importer
         )
 
         importer._translate_stats_to_migration_report()

@@ -29,10 +29,11 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+from folio_data_import._progress import RichProgressReporter
 
 
-class UserImporterTask(MigrationTaskBase):
-    """UserImporterTask
+class UserImportTask(MigrationTaskBase):
+    """UserImportTask
 
     An adapter that wraps folio_data_import.UserImporter to provide user import
     functionality while conforming to the MigrationTaskBase interface.
@@ -139,6 +140,13 @@ class UserImporterTask(MigrationTaskBase):
                 le=100,
             ),
         ] = 10
+        no_progress: Annotated[
+            bool,
+            Field(
+                title="No progress",
+                description="Disable progress reporting in the console output.",
+            ),
+        ] = False
 
     task_configuration: TaskConfiguration
 
@@ -182,7 +190,6 @@ class UserImporterTask(MigrationTaskBase):
             fields_to_protect=self.task_configuration.fields_to_protect,
             limit_simultaneous_requests=self.task_configuration.limit_simultaneous_requests,
             user_file_paths=file_paths,
-            no_progress=True,  # We handle our own logging
         )
 
     async def _do_work_async(self) -> None:
@@ -210,6 +217,14 @@ class UserImporterTask(MigrationTaskBase):
         # Create the folio_data_import UserImporter config
         fdi_config = self._create_fdi_config(file_paths)
 
+        # Create Progress Reporter
+        if self.task_configuration.no_progress:
+            from folio_data_import._progress import NoOpProgressReporter
+
+            reporter = NoOpProgressReporter()
+        else:
+            reporter = RichProgressReporter(enabled=True)
+
         # Error file path
         error_file_path = self.folder_structure.failed_recs_path
 
@@ -217,7 +232,7 @@ class UserImporterTask(MigrationTaskBase):
         importer = FDIUserImporter(
             folio_client=self.folio_client,
             config=fdi_config,
-            reporter=NoOpProgressReporter(),
+            reporter=reporter,
         )
 
         await importer.setup(error_file_path)
@@ -236,7 +251,7 @@ class UserImporterTask(MigrationTaskBase):
         to FOLIO using the folio_data_import.UserImporter, handling all related
         objects (request preferences, permission users, service points).
         """
-        logging.info("Starting UserImporterTask work...")
+        logging.info("Starting UserImportTask work...")
 
         try:
             # Run the async work in an event loop
@@ -248,7 +263,7 @@ class UserImporterTask(MigrationTaskBase):
             logging.error("Error during user import: %s", e)
             raise
 
-        logging.info("UserImporterTask work complete")
+        logging.info("UserImportTask work complete")
 
     def _translate_stats_to_migration_report(self) -> None:
         """
@@ -293,14 +308,14 @@ class UserImporterTask(MigrationTaskBase):
         This method translates statistics from the underlying UserImporter
         to the MigrationReport format and writes both markdown and JSON reports.
         """
-        logging.info("Done. Wrapping up UserImporterTask")
+        logging.info("Done. Wrapping up UserImportTask")
 
         # Translate stats to migration report
         self._translate_stats_to_migration_report()
 
         # Log summary
         logging.info("=" * 60)
-        logging.info("UserImporterTask Summary")
+        logging.info("UserImportTask Summary")
         logging.info("=" * 60)
         logging.info("Total records in files: %d", self.total_records)
         logging.info("Users created: %d", self.stats.created)
@@ -327,4 +342,4 @@ class UserImporterTask(MigrationTaskBase):
         # Clean up empty log files
         self.clean_out_empty_logs()
 
-        logging.info("UserImporterTask wrap up complete")
+        logging.info("UserImportTask wrap up complete")

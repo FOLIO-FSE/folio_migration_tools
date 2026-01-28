@@ -291,12 +291,12 @@ class MARCImportTask(MigrationTaskBase):
         fdi_config = self._create_fdi_config(file_paths)
 
         # Create progress reporter - use Rich if show_progress is enabled
-        if self.task_configuration.show_progress:
-            reporter = RichProgressReporter(enabled=True)
-        else:
+        if self.task_configuration.no_progress:
             from folio_data_import._progress import NoOpProgressReporter
 
             reporter = NoOpProgressReporter()
+        else:
+            reporter = RichProgressReporter(enabled=True)
 
         # Create and run the importer
         # folio_data_import handles its own error files and progress reporting
@@ -385,8 +385,6 @@ class MARCImportTask(MigrationTaskBase):
         logging.info("Records sent to Data Import: %d", self.total_records_sent)
         logging.info("Files processed: %d", len(self.files_processed))
         logging.info("Data Import jobs created: %d", len(self.job_ids))
-        for job_id in self.job_ids:
-            logging.info("  Job ID: %s", job_id)
 
         # Write markdown report
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:

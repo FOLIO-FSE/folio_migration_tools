@@ -18,7 +18,6 @@ from pydantic import Field
 
 from folio_data_import.BatchPoster import BatchPoster as FDIBatchPoster
 from folio_data_import.BatchPoster import BatchPosterStats
-from folio_data_import._progress import NoOpProgressReporter
 
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -27,11 +26,11 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
-from reference_material.folio_data_import._progress import RichProgressReporter
+from folio_data_import._progress import RichProgressReporter
 
 
-class BatchPosterV2(MigrationTaskBase):
-    """BatchPosterV2
+class InventoryBatchPoster(MigrationTaskBase):
+    """InventoryBatchPoster
 
     An adapter that wraps folio_data_import.BatchPoster to provide batch posting
     functionality for Instances, Holdings, Items, and ShadowInstances while
@@ -186,6 +185,13 @@ class BatchPosterV2(MigrationTaskBase):
                 ),
             ),
         ] = True
+        no_progress: Annotated[
+            bool,
+            Field(
+                title="No progress",
+                description="Disable progress reporting in the console output.",
+            ),
+        ] = False
 
     task_configuration: TaskConfiguration
 
@@ -205,7 +211,7 @@ class BatchPosterV2(MigrationTaskBase):
         self.stats: BatchPosterStats = BatchPosterStats()
         self.batch_errors: List[str] = []
 
-        logging.info("BatchPosterV2 initialized")
+        logging.info("InventoryBatchPoster initialized")
         logging.info("Object type: %s", self.task_configuration.object_type)
         logging.info("Batch size: %s", self.task_configuration.batch_size)
         logging.info("Upsert mode: %s", "On" if self.task_configuration.upsert else "Off")
@@ -260,11 +266,12 @@ class BatchPosterV2(MigrationTaskBase):
         fdi_config = self._create_fdi_config()
 
         # Create the Progress Reporter
-        progress_reporter = (
-            NoOpProgressReporter()
-            if fdi_config.no_progress
-            else RichProgressReporter(show_speed=True, show_time=True)
-        )
+        if self.task_configuration.no_progress:
+            from folio_data_import._progress import NoOpProgressReporter
+
+            reporter = NoOpProgressReporter()
+        else:
+            reporter = RichProgressReporter(enabled=True)
 
         # Create the poster with our failed records path
         failed_records_path = self.folder_structure.failed_recs_path
@@ -274,7 +281,7 @@ class BatchPosterV2(MigrationTaskBase):
                 folio_client=self.folio_client,
                 config=fdi_config,
                 failed_records_file=failed_records_path,
-                reporter=progress_reporter,
+                reporter=reporter,
             )
 
             async with poster:
@@ -298,7 +305,7 @@ class BatchPosterV2(MigrationTaskBase):
         This method reads records from the configured files and posts them
         to FOLIO in batches using the folio_data_import.BatchPoster.
         """
-        logging.info("Starting BatchPosterV2 work...")
+        logging.info("Starting InventoryBatchPoster work...")
 
         try:
             # Run the async work in an event loop
@@ -310,7 +317,7 @@ class BatchPosterV2(MigrationTaskBase):
             logging.error("Error during batch posting: %s", e)
             raise
 
-        logging.info("BatchPosterV2 work complete")
+        logging.info("InventoryBatchPoster work complete")
 
     def _translate_stats_to_migration_report(self) -> None:
         """
@@ -377,14 +384,14 @@ class BatchPosterV2(MigrationTaskBase):
         This method translates statistics from the underlying BatchPoster
         to the MigrationReport format and writes both markdown and JSON reports.
         """
-        logging.info("Done. Wrapping up BatchPosterV2")
+        logging.info("Done. Wrapping up InventoryBatchPoster")
 
         # Translate stats to migration report
         self._translate_stats_to_migration_report()
 
         # Log summary
         logging.info("=" * 60)
-        logging.info("BatchPosterV2 Summary")
+        logging.info("InventoryBatchPoster Summary")
         logging.info("=" * 60)
         logging.info("Records processed: %d", self.stats.records_processed)
         logging.info("Records posted: %d", self.stats.records_posted)
@@ -403,7 +410,7 @@ class BatchPosterV2(MigrationTaskBase):
         # Write markdown report
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
-                f"{self.task_configuration.object_type} loading report (V2)",
+                f"{self.task_configuration.object_type} loading report",
                 report_file,
                 self.start_datetime,
             )
