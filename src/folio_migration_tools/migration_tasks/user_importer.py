@@ -197,6 +197,7 @@ class UserImportTask(MigrationTaskBase):
             fields_to_protect=self.task_configuration.fields_to_protect,
             limit_simultaneous_requests=self.task_configuration.limit_simultaneous_requests,
             user_file_paths=file_paths,
+            no_progress=self.task_configuration.no_progress,
         )
 
     async def _do_work_async(self) -> None:

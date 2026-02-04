@@ -5,6 +5,7 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from pathlib import Path
 import json
 import pytest
+from datetime import datetime, timezone
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
@@ -162,6 +163,7 @@ def mock_folder_structure():
     folder_structure = Mock()
     folder_structure.results_folder = Path("/tmp/results")
     folder_structure.legacy_records_folder = Path("/tmp/legacy_records")
+    folder_structure.mapping_files_folder = Path("/tmp/mapping_files")
     folder_structure.failed_recs_path = Path("/tmp/failed_records.json")
     folder_structure.migration_reports_file = Path("/tmp/report.md")
     folder_structure.migration_reports_raw_file = Path("/tmp/report.json")
@@ -221,7 +223,7 @@ class TestMARCImportTaskCreateFDIConfig:
         assert fdi_config.marc_files == file_paths
         assert fdi_config.split_files is False
         assert fdi_config.split_size == 1000
-        # show_progress=True by default, so no_progress=False
+        # no_progress=False by default (progress shown)
         assert fdi_config.no_progress is False
 
     def test_create_fdi_config_with_split(self, mock_folder_structure):
@@ -414,3 +416,298 @@ class TestMARCImportTaskJobTracking:
 
         importer._translate_stats_to_migration_report()
 
+
+class TestMARCImportTaskDoWorkAsync:
+    """Tests for the async work execution."""
+
+    @pytest.mark.asyncio
+    async def test_do_work_async_file_not_found(self, mock_folder_structure):
+        """Test that FileNotFoundError is raised for missing files."""
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="nonexistent.mrc")],
+            import_profile_name="Test Profile",
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer.files_processed = []
+        importer._do_work_async = MethodType(
+            MARCImportTask._do_work_async, importer
+        )
+        
+        # Make the file not exist
+        mock_folder_structure.results_folder = Path("/nonexistent/path")
+        
+        with pytest.raises(FileNotFoundError):
+            await importer._do_work_async()
+
+
+class TestMARCImportTaskDoWork:
+    """Tests for the synchronous do_work entry point."""
+
+    def test_do_work_propagates_file_not_found(self):
+        """Test that FileNotFoundError is propagated."""
+        importer = Mock(spec=MARCImportTask)
+        importer._do_work_async = AsyncMock(side_effect=FileNotFoundError("File not found"))
+        importer.do_work = MethodType(MARCImportTask.do_work, importer)
+        
+        with pytest.raises(FileNotFoundError):
+            importer.do_work()
+
+    def test_do_work_propagates_generic_exception(self):
+        """Test that generic exceptions are propagated."""
+        importer = Mock(spec=MARCImportTask)
+        importer._do_work_async = AsyncMock(side_effect=RuntimeError("Something went wrong"))
+        importer.do_work = MethodType(MARCImportTask.do_work, importer)
+        
+        with pytest.raises(RuntimeError):
+            importer.do_work()
+
+
+class TestMARCImportTaskWrapUp:
+    """Tests for the wrap_up method."""
+
+    def test_wrap_up_writes_reports(self, tmp_path):
+        """Test that wrap_up writes migration reports."""
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="bibs.mrc")],
+            import_profile_name="Test Profile",
+        )
+        importer.total_records_sent = 1000
+        importer.job_ids = ["job-1", "job-2"]
+        importer.files_processed = ["bibs.mrc"]
+        importer.folder_structure = Mock()
+        importer.folder_structure.migration_reports_file = tmp_path / "report.md"
+        importer.folder_structure.migration_reports_raw_file = tmp_path / "report.json"
+        importer.start_datetime = datetime.now(timezone.utc)
+        importer.migration_report = Mock()
+        importer.clean_out_empty_logs = Mock()
+        
+        importer._translate_stats_to_migration_report = MethodType(
+            MARCImportTask._translate_stats_to_migration_report, importer
+        )
+        importer.wrap_up = MethodType(MARCImportTask.wrap_up, importer)
+        
+        importer.wrap_up()
+        
+        # Verify reports were written
+        assert importer.migration_report.write_migration_report.called
+        assert importer.migration_report.write_json_report.called
+        assert importer.clean_out_empty_logs.called
+
+
+class TestMARCImportTaskPreprocessorArgsFromFile:
+    """Tests for loading preprocessor args from file."""
+
+    def test_create_fdi_config_preprocessors_args_from_file(self, mock_folder_structure, tmp_path):
+        """Test loading preprocessor args from a JSON file."""
+        # Create a preprocessor args file
+        args_file = tmp_path / "preprocessor_args.json"
+        args_content = {"add_035": {"prefix": "(OCoLC)"}}
+        args_file.write_text(json.dumps(args_content))
+        
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="test.mrc")],
+            import_profile_name="Test Profile",
+            marc_record_preprocessors=["add_035"],
+            preprocessors_args="preprocessor_args.json",  # String path
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer.folder_structure.mapping_files_folder = tmp_path
+        importer._create_fdi_config = MethodType(
+            MARCImportTask._create_fdi_config, importer
+        )
+        
+        file_paths = [Path("/tmp/test.mrc")]
+        fdi_config = importer._create_fdi_config(file_paths)
+        
+        assert fdi_config.preprocessors_args == args_content
+
+
+class TestMARCImportTaskNoProgress:
+    """Tests for progress reporting configuration."""
+
+    def test_create_fdi_config_no_progress_true(self, mock_folder_structure):
+        """Test FDI config with progress disabled."""
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="test.mrc")],
+            import_profile_name="Test Profile",
+            no_progress=True,
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer._create_fdi_config = MethodType(
+            MARCImportTask._create_fdi_config, importer
+        )
+        
+        file_paths = [Path("/tmp/test.mrc")]
+        fdi_config = importer._create_fdi_config(file_paths)
+        
+        assert fdi_config.no_progress is True
+
+    def test_create_fdi_config_no_progress_false(self, mock_folder_structure):
+        """Test FDI config with progress enabled (default)."""
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="test.mrc")],
+            import_profile_name="Test Profile",
+            no_progress=False,
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer._create_fdi_config = MethodType(
+            MARCImportTask._create_fdi_config, importer
+        )
+        
+        file_paths = [Path("/tmp/test.mrc")]
+        fdi_config = importer._create_fdi_config(file_paths)
+        
+        assert fdi_config.no_progress is False
+
+
+class TestMARCImportTaskJobIDsFile:
+    """Tests for job IDs file configuration."""
+
+    def test_job_ids_file_path_set(self, mock_folder_structure):
+        """Test that job IDs file path is set correctly."""
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="test.mrc")],
+            import_profile_name="Test Profile",
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer._create_fdi_config = MethodType(
+            MARCImportTask._create_fdi_config, importer
+        )
+        
+        file_paths = [Path("/tmp/test.mrc")]
+        fdi_config = importer._create_fdi_config(file_paths)
+        
+        expected_path = mock_folder_structure.results_folder / "marc_import_job_ids.txt"
+        assert fdi_config.job_ids_file_path == expected_path
+
+
+class TestMARCImportTaskSplitOptions:
+    """Tests for file splitting configuration."""
+
+    def test_create_fdi_config_split_options(self, mock_folder_structure):
+        """Test FDI config with split options enabled."""
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="test.mrc")],
+            import_profile_name="Test Profile",
+            split_files=True,
+            split_size=2500,
+            split_offset=5,
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer._create_fdi_config = MethodType(
+            MARCImportTask._create_fdi_config, importer
+        )
+        
+        file_paths = [Path("/tmp/test.mrc")]
+        fdi_config = importer._create_fdi_config(file_paths)
+        
+        assert fdi_config.split_files is True
+        assert fdi_config.split_size == 2500
+        assert fdi_config.split_offset == 5
+
+
+class TestMARCImportTaskSummaryOptions:
+    """Tests for summary configuration options."""
+
+    def test_create_fdi_config_skip_summary(self, mock_folder_structure):
+        """Test FDI config with summary skipped."""
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="test.mrc")],
+            import_profile_name="Test Profile",
+            skip_summary=True,
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer._create_fdi_config = MethodType(
+            MARCImportTask._create_fdi_config, importer
+        )
+        
+        file_paths = [Path("/tmp/test.mrc")]
+        fdi_config = importer._create_fdi_config(file_paths)
+        
+        assert fdi_config.no_summary is True
+
+    def test_create_fdi_config_let_summary_fail(self, mock_folder_structure):
+        """Test FDI config with let_summary_fail enabled."""
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="test.mrc")],
+            import_profile_name="Test Profile",
+            let_summary_fail=True,
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer._create_fdi_config = MethodType(
+            MARCImportTask._create_fdi_config, importer
+        )
+        
+        file_paths = [Path("/tmp/test.mrc")]
+        fdi_config = importer._create_fdi_config(file_paths)
+        
+        assert fdi_config.let_summary_fail is True
+
+
+class TestMARCImportTaskEmptyPreprocessors:
+    """Tests for empty preprocessor handling."""
+
+    def test_create_fdi_config_empty_preprocessors(self, mock_folder_structure):
+        """Test that empty preprocessors list results in None."""
+        task_config = MARCImportTask.TaskConfiguration(
+            name="test",
+            migration_task_type="MARCImportTask",
+            files=[FileDefinition(file_name="test.mrc")],
+            import_profile_name="Test Profile",
+            marc_record_preprocessors=[],
+        )
+        
+        importer = Mock(spec=MARCImportTask)
+        importer.task_configuration = task_config
+        importer.folder_structure = mock_folder_structure
+        importer._create_fdi_config = MethodType(
+            MARCImportTask._create_fdi_config, importer
+        )
+        
+        file_paths = [Path("/tmp/test.mrc")]
+        fdi_config = importer._create_fdi_config(file_paths)
+        
+        assert fdi_config.marc_record_preprocessors is None
