@@ -1,3 +1,10 @@
+"""MARC file processing orchestration.
+
+Orchestrates the processing of MARC records through the transformation pipeline.
+Handles record reading, validation, transformation via rules mappers, and output
+writing. Manages error handling, progress reporting, and batch processing.
+"""
+
 import logging
 import os
 import sys
@@ -29,6 +36,13 @@ class MarcFileProcessor:
         folder_structure: FolderStructure,
         created_objects_file: TextIO,
     ):
+        """Initialize MARC file processor for processing MARC records.
+
+        Args:
+            mapper (RulesMapperBase): MARC rules mapper for transformations.
+            folder_structure (FolderStructure): Folder structure for file paths.
+            created_objects_file (TextIO): File handle for writing created objects.
+        """
         self.object_type: FOLIONamespaces = folder_structure.object_type
         self.folder_structure: FolderStructure = folder_structure
         self.mapper: RulesMapperBase = mapper
@@ -51,7 +65,7 @@ class MarcFileProcessor:
             self.parent_hrids = {entity[1]: entity[2] for entity in mapper.parent_id_map.values()}
 
     def process_record(self, idx: int, marc_record: Record, file_def: FileDefinition):
-        """processes a marc holdings record and saves it
+        """Processes a marc holdings record and saves it.
 
         Args:
             idx (int): Index in file being parsed

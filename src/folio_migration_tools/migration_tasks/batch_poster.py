@@ -1,3 +1,13 @@
+"""Legacy BatchPoster task for posting transformed records to FOLIO.
+
+This module provides the BatchPoster migration task which posts transformed FOLIO
+records via batch API endpoints. It supports batch processing, automatic retry of
+failed records, and version management for upsert operations.
+
+Note: This is the legacy implementation. For new migrations, consider using
+InventoryBatchPoster or other specialized batch posters instead.
+"""
+
 import asyncio
 import copy
 import json
@@ -37,7 +47,7 @@ def write_failed_batch_to_file(batch, file):
 
 
 class BatchPoster(MigrationTaskBase):
-    """BatchPoster
+    """BatchPoster.
 
     Parents:
         MigrationTaskBase (_type_): _description_
@@ -220,6 +230,14 @@ class BatchPoster(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize BatchPoster for posting transformed records to FOLIO.
+
+        Args:
+            task_config (TaskConfiguration): Batch posting configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.migration_report = MigrationReport()
         self.performing_rerun = False
@@ -335,9 +353,7 @@ class BatchPoster(MigrationTaskBase):
             json_rec["source"] = "CONSORTIUM-FOLIO"
 
     def set_version(self, batch, query_api, object_type) -> None:
-        """
-        Synchronous wrapper for set_version_async
-        """
+        """Synchronous wrapper for set_version_async."""
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -349,8 +365,7 @@ class BatchPoster(MigrationTaskBase):
             loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
 
     async def set_version_async(self, batch, query_api, object_type) -> None:
-        """
-        Fetches the current version of the records in the batch if the record exists in FOLIO
+        """Fetches the current version of the records in the batch if the record exists in FOLIO.
 
         Args:
             batch (list): List of records to fetch versions for
@@ -388,8 +403,7 @@ class BatchPoster(MigrationTaskBase):
                 self.prepare_record_for_upsert(record, existing_records[record["id"]])
 
     def patch_record(self, new_record: dict, existing_record: dict, patch_paths: List[str]):
-        """
-        Updates new_record with values from existing_record according to patch_paths.
+        """Updates new_record with values from existing_record according to patch_paths.
 
         Args:
             new_record (dict): The new record to be updated.
@@ -420,8 +434,7 @@ class BatchPoster(MigrationTaskBase):
     def collect_existing_records_for_upsert(
         object_type: str, response_json: dict, existing_records: dict
     ):
-        """
-        Collects existing records from API response into existing_records dict.
+        """Collects existing records from API response into existing_records dict.
 
         Args:
             object_type: The key in response containing the records array
@@ -508,8 +521,7 @@ class BatchPoster(MigrationTaskBase):
             new_record.update(updates)
 
     async def get_with_retry(self, url: str, params=None):
-        """
-        Wrapper around folio_get_async with selective retry logic.
+        """Wrapper around folio_get_async with selective retry logic.
 
         Retries on:
         - Connection errors (FolioConnectionError): Always retry
@@ -1066,9 +1078,7 @@ def get_req_size(response: "Response"):
 
 
 def parse_path(path):
-    """
-    Parses a path like 'foo.bar[0].baz' into ['foo', 'bar', 0, 'baz']
-    """
+    """Parses a path like 'foo.bar[0].baz' into ['foo', 'bar', 0, 'baz']."""
     tokens = []
     # Split by dot, then extract indices
     for part in path.split("."):
@@ -1122,8 +1132,8 @@ def extract_paths(data, paths):
 
 
 def deep_update(target, patch):
-    """
-    Recursively update target dict/list with values from patch dict/list.
+    """Recursively update target dict/list with values from patch.
+
     For lists, only non-None values in patch are merged into target.
     """
     if isinstance(patch, dict):

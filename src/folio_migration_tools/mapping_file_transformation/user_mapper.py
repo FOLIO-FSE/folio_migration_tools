@@ -1,3 +1,9 @@
+"""Mapper for transforming user/patron data to FOLIO Users format.
+
+Provides the UserMapper class for mapping legacy patron data to FOLIO User records
+using configured mapping files.
+"""
+
 import csv
 import json
 import logging
@@ -31,6 +37,16 @@ class UserMapper(MappingFileMapperBase):
         departments_mapping,
         groups_map,
     ):
+        """Initialize UserMapper for user transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            task_config: Task configuration for users migration.
+            library_config: Library configuration.
+            user_map: Mapping configuration for user fields.
+            departments_mapping: Mapping of legacy to FOLIO departments.
+            groups_map: Mapping of legacy to FOLIO user groups.
+        """
         try:
             user_schema = folio_client.get_from_github(
                 "folio-org", "mod-user-import", "/ramls/schemas/userdataimport.json"

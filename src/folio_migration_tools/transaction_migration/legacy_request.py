@@ -1,3 +1,10 @@
+"""Legacy request data model and validation.
+
+Defines the LegacyRequest class for representing patron requests from legacy ILS systems.
+Handles validation, timezone conversion, request type mapping, and transformation to FOLIO
+request format. Supports hold queue positioning and expiration dates.
+"""
+
 import datetime
 import logging
 import uuid
@@ -13,6 +20,13 @@ utc = ZoneInfo("UTC")
 
 class LegacyRequest(object):
     def __init__(self, legacy_request_dict, tenant_timezone=utc, row=0):
+        """Initialize LegacyRequest from legacy request data.
+
+        Args:
+            legacy_request_dict: Dictionary containing legacy request data.
+            tenant_timezone: Timezone of the tenant (default: UTC).
+            row (int): Row number in source data for error reporting.
+        """
         # validate
         correct_headers = [
             "item_barcode",

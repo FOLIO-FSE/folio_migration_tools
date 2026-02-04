@@ -1,3 +1,10 @@
+"""Helper utilities for circulation transactions migration.
+
+Provides the CirculationHelper class with methods for validating and posting
+circulation transactions (loans, requests). Handles patron and item lookups,
+loan policy validation, and error handling for circulation operations.
+"""
+
 import copy
 import json
 import logging
@@ -29,6 +36,13 @@ class CirculationHelper:
         service_point_id,
         migration_report: MigrationReport,
     ):
+        """Initialize CirculationHelper with FOLIO client and service point.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client for circulation operations.
+            service_point_id: ID of the service point for check-outs and check-ins.
+            migration_report (MigrationReport): Report object for tracking statistics.
+        """
         self.folio_client = folio_client
         self.service_point_id = service_point_id
         self.missing_patron_barcodes: Set[str] = set()
@@ -72,15 +86,16 @@ class CirculationHelper:
             return {}
 
     def is_checked_out(self, legacy_loan: LegacyLoan) -> bool:
-        """Makes a deeper check to find out if the loan is already processed.
+        """Makes a deeper check to find out if the loan is already checked out in FOLIO.
+
         Looks up the item id, and then searches Loan Storage for any open loans.
         If there are open loans, returns True. Else False.
 
         Args:
-            legacy_loan (LegacyLoan): _description_
+            legacy_loan (LegacyLoan): The legacy loan object to check.
 
         Returns:
-            bool: _description_
+            bool: True if the loan is already checked out, False otherwise.
         """
         if item := self.get_item_by_barcode(legacy_loan.item_barcode):
             if self.get_active_loan_by_item_id(item["id"]):
@@ -113,16 +128,16 @@ class CirculationHelper:
             return {}
 
     def check_out_by_barcode(self, legacy_loan: LegacyLoan) -> TransactionResult:
-        """Checks out a legacy loan using the Endpoint /circulation/check-out-by-barcode
-        Adds all possible overrides in order to make the transaction go through
+        """Checks out a legacy loan using the Endpoint /circulation/check-out-by-barcode.
+
+        Adds all possible overrides in order to make the transaction go through.
 
         Args:
-            legacy_loan (LegacyLoan): _description_
+            legacy_loan (LegacyLoan): The legacy loan object to check.
 
         Returns:
-            TransactionResult: _description_
+            TransactionResult: The result of the check-out transaction.
         """
-
         t0_function = time.time()
         data = {
             "itemBarcode": legacy_loan.item_barcode,

@@ -1,3 +1,10 @@
+"""Library and task configuration models.
+
+Defines Pydantic models for library-wide configuration (LibraryConfiguration) and
+file definitions (FileDefinition). Handles configuration validation, folder structure
+setup, and migration parameters like HRID handling and iteration identifiers.
+"""
+
 from enum import Enum
 from typing import Annotated
 
@@ -7,12 +14,14 @@ from pydantic.types import DirectoryPath
 
 class HridHandling(str, Enum):
     """Enum determining how the HRID generation should be handled.
+
+    Options:
         - default: Enumerates the HRID, building on the current value in the HRID settings
         - preserve001: Takes the 001 and uses this as the HRID.
 
     Args:
-        str (_type_): _description_
-        Enum (_type_): _description_
+        str (_type_): The type of HRID handling.
+        Enum (_type_): The enumeration of HRID handling options.
     """
 
     default = "default"
@@ -249,8 +258,9 @@ class LibraryConfiguration(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def set_error_thresholds_for_debug(cls, values):
-        """If log_level_debug is true, set error thresholds to very high values to avoid
-        process shutdown during debugging.
+        """If log_level_debug is true, set error thresholds to very high values.
+
+        This avoids process shutdown during debugging.
         """
         if values.get("log_level_debug", False):
             values["failed_records_threshold"] = 10_000_000

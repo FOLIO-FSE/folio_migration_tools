@@ -1,3 +1,10 @@
+"""Legacy loan data model and validation.
+
+Defines the LegacyLoan class for representing circulation loans from legacy ILS systems.
+Handles validation, timezone conversion, date normalization, and transformation to FOLIO
+loan format. Supports renewal counts and loan policy mapping.
+"""
+
 import json
 import logging
 import i18n
@@ -23,6 +30,15 @@ class LegacyLoan(object):
         tenant_timezone=utc,
         row=0,
     ):
+        """Initialize LegacyLoan from legacy loan data.
+
+        Args:
+            legacy_loan_dict: Dictionary containing legacy loan data.
+            fallback_service_point_id (str): Service point to use if not specified.
+            migration_report (MigrationReport): Report for tracking issues.
+            tenant_timezone: Timezone of the tenant (default: UTC).
+            row (int): Row number in source data for error reporting.
+        """
         self.migration_report: MigrationReport = migration_report
         # validate
         correct_headers = [

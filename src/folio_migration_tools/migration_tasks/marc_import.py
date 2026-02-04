@@ -1,13 +1,12 @@
-"""
-MARCImportTask module for FOLIO MARC data import operations.
+"""MARCImportTask module for FOLIO MARC data import operations.
 
 This module provides an adapter that wraps folio_data_import.MARCImportJob
 to conform to the folio_migration_tools MigrationTaskBase interface.
 It supports importing MARC records directly into FOLIO using the Data Import
-APIs (change-manager), bypassing the need for manual SRS record creation.
+APIs (change-manager), bypassing the need for SRS record creation during MARC transformation.
 
 This provides an alternative workflow for MARC record loading, using FOLIO's
-native Data Import capabilities with configurable job profiles.
+native Data Import capabilities.
 """
 
 import asyncio
@@ -31,7 +30,7 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 
 class MARCImportTask(MigrationTaskBase):
-    """MARCImportTask
+    """MARCImportTask.
 
     An adapter that wraps folio_data_import.MARCImportJob to provide MARC import
     functionality via FOLIO's Data Import APIs while conforming to the
@@ -211,6 +210,14 @@ class MARCImportTask(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize MarcImport for MARC record import via Data Import APIs.
+
+        Args:
+            task_config (TaskConfiguration): MARC import configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.migration_report = MigrationReport()
         self.total_records_sent = 0
@@ -223,8 +230,7 @@ class MARCImportTask(MigrationTaskBase):
         logging.info("Results folder: %s", self.folder_structure.results_folder)
 
     def _create_fdi_config(self, file_paths: List[Path]) -> FDIMARCImportJob.Config:
-        """
-        Create a folio_data_import.MARCImportJob.Config from our TaskConfiguration.
+        """Create a folio_data_import.MARCImportJob.Config from our TaskConfiguration.
 
         Args:
             file_paths: List of file paths to process
@@ -274,9 +280,7 @@ class MARCImportTask(MigrationTaskBase):
         )
 
     async def _do_work_async(self) -> None:
-        """
-        Async implementation of the work logic.
-        """
+        """Async implementation of the work logic."""
         file_paths: List[Path] = []
         for file_def in self.task_configuration.files:
             path = self.folder_structure.results_folder / file_def.file_name
@@ -318,8 +322,7 @@ class MARCImportTask(MigrationTaskBase):
         # We don't have direct access to those stats as they're logged, not returned.
 
     def do_work(self) -> None:
-        """
-        Main work method that processes MARC files and imports them to FOLIO.
+        """Main work method that processes MARC files and imports them to FOLIO.
 
         This method reads MARC records from the configured files and imports them
         to FOLIO using the Data Import APIs via folio_data_import.MARCImportJob.
@@ -339,8 +342,7 @@ class MARCImportTask(MigrationTaskBase):
         logging.info("MARCImportTask work complete")
 
     def _translate_stats_to_migration_report(self) -> None:
-        """
-        Translate MARC import stats to MigrationReport format.
+        """Translate MARC import stats to MigrationReport format.
 
         Note:
             Detailed stats (created, updated, discarded, error) are retrieved from
@@ -365,8 +367,7 @@ class MARCImportTask(MigrationTaskBase):
             self.migration_report.add("FilesProcessed", file_name)
 
     def wrap_up(self) -> None:
-        """
-        Finalize the migration task and write reports.
+        """Finalize the migration task and write reports.
 
         This method translates statistics to the MigrationReport format and writes
         both markdown and JSON reports. Error files created by folio_data_import

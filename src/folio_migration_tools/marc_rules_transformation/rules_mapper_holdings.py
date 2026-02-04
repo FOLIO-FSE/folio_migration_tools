@@ -1,3 +1,10 @@
+"""MARC holdings records rules-based transformation.
+
+Implements transformation of MARC21 holdings (MFHD) records to FOLIO Holdings using
+rules-based mapping. Handles holdings-specific fields including locations, call numbers,
+holdings statements, and notes.
+"""
+
 import copy
 import json
 import logging
@@ -45,6 +52,17 @@ class RulesMapperHoldings(RulesMapperBase):
         boundwith_relationship_map_rows: List[Dict],
         statistical_codes_map: Optional[Dict] = None,
     ):
+        """Initialize mapper for holdings record transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            location_map: Mapping of legacy to FOLIO locations.
+            task_configuration: Holdings transformation configuration.
+            library_configuration (LibraryConfiguration): Library configuration.
+            parent_id_map (dict): Mapping of parent instance IDs.
+            boundwith_relationship_map_rows (List[Dict]): Bound-with relationship mappings.
+            statistical_codes_map (Optional[Dict]): Mapping for statistical codes.
+        """
         self.conditions = Conditions(
             folio_client,
             self,
@@ -116,9 +134,9 @@ class RulesMapperHoldings(RulesMapperBase):
     def parse_record(
         self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
     ) -> list[dict]:
-        """Parses a mfhd recod into a FOLIO Inventory holdings object
+        """Parse a MFHD record into a FOLIO Inventory holdings object.
+
         Community mapping suggestion: https://tinyurl.com/3rh52e2x
-         This is the main function
 
         Args:
             marc_record (Record): _description_
@@ -131,7 +149,6 @@ class RulesMapperHoldings(RulesMapperBase):
         Returns:
             dict: _description_
         """
-
         self.print_progress()
         folio_holding = self.perform_initial_preparation(marc_record, legacy_ids)
         self.prep_852_notes(marc_record)
@@ -246,7 +263,7 @@ class RulesMapperHoldings(RulesMapperBase):
         ignored_subsequent_fields: Set,
         index_or_legacy_ids: List[str],
     ):
-        """This overwrites the implementation for Auth and instances
+        """This overwrites the implementation for Auth and instances.
 
         Args:
             folio_holding (dict): _description_
@@ -273,7 +290,7 @@ class RulesMapperHoldings(RulesMapperBase):
         legacy_ids: List[str],
         file_def: FileDefinition,
     ):
-        """_summary_
+        """_summary_.
 
         Args:
             marc_record (Record): _description_
@@ -367,10 +384,10 @@ class RulesMapperHoldings(RulesMapperBase):
         self.collect_mrk_statement_notes(marc_record, folio_holding, legacy_ids)
 
     def collect_mrk_statement_notes(self, marc_record, folio_holding, legacy_ids):
-        """Collects MFHD holdings statements as MARC Maker field strings in a FOLIO holdings note
-        and adds them to the FOLIO holdings record.
+        """Collect MFHD holdings statements as MARC Maker field strings in a note.
 
-        This is done to preserve the information in the MARC record for future reference.
+        Preserves the MARC record information for future reference by adding
+        the statements to the FOLIO holdings record.
 
         Args:
             marc_record (Record): PyMARC record
@@ -389,7 +406,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 ) + self.add_mrk_statements_note(mrk_statement_notes, legacy_ids)
 
     def add_mrk_statements_note(self, mrk_statement_notes: List[str], legacy_ids) -> List[Dict]:
-        """Creates a note from the MRK statements
+        """Creates a note from the MRK statements.
 
         Args:
             mrk_statement_notes (List[str]): A list of MFHD holdings statements as MRK strings
@@ -442,7 +459,7 @@ class RulesMapperHoldings(RulesMapperBase):
     def add_mfhd_as_mrk_note(
         self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]
     ):
-        """Adds the MFHD as a note to the holdings record
+        """Adds the MFHD as a note to the holdings record.
 
         This is done to preserve the information in the MARC record for future reference.
 
@@ -498,7 +515,7 @@ class RulesMapperHoldings(RulesMapperBase):
     def add_mfhd_as_mrc_note(
         self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]
     ):
-        """Adds the MFHD as a note to the holdings record
+        """Adds the MFHD as a note to the holdings record.
 
         This is done to preserve the information in the MARC record for future reference.
 
@@ -660,8 +677,7 @@ class RulesMapperHoldings(RulesMapperBase):
             )
 
     def setup_boundwith_relationship_map(self, boundwith_relationship_map_list: List[Dict]):
-        """
-        Creates a map of MFHD_ID to BIB_ID for boundwith relationships.
+        """Creates a map of MFHD_ID to BIB_ID for boundwith relationships.
 
         Arguments:
             boundwith_relationship_map: A list of dictionaries containing the MFHD_ID and BIB_ID.

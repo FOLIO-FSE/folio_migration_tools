@@ -1,3 +1,9 @@
+"""Internationalization configuration.
+
+Defines settings for the i18n library used for translation of user-facing messages
+in migration reports and logs. Configures translation file locations and formats.
+"""
+
 from pathlib import Path
 
 settings = {

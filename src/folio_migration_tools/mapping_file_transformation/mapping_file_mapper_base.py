@@ -1,3 +1,10 @@
+"""Base class for all mapping file-based data transformations.
+
+Provides the MappingFileMapperBase abstract class that all mapper classes inherit
+from. Handles common functionality for loading mapping files, validating mappings,
+and performing data transformations based on configured field mappings.
+"""
+
 import csv
 import itertools
 import json
@@ -38,6 +45,18 @@ class MappingFileMapperBase(MapperBase):
         task_config: AbstractTaskConfiguration,
         ignore_legacy_identifier=False,
     ):
+        """Initialize the base mapper for mapping file transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            schema: JSON schema for validation.
+            record_map: Mapping configuration from legacy to FOLIO fields.
+            statistical_codes_map: Mapping for statistical codes.
+            uuid_namespace (UUID): UUID namespace for deterministic IDs.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_config (AbstractTaskConfiguration): Task configuration.
+            ignore_legacy_identifier (bool): Whether to ignore legacy identifiers.
+        """
         super().__init__(library_configuration, task_config, folio_client)
         self.uuid_namespace = uuid_namespace
         self.ignore_legacy_identifier = ignore_legacy_identifier
@@ -685,12 +704,10 @@ class MappingFileMapperBase(MapperBase):
 
     @staticmethod
     def _get_delimited_file_reader(source_file, file_name: Path):
-        """
-            First, let's count:
-            * The total number of rows in the source file
-            * The total number of empty rows in the source file
+        """Count rows in source file and return counts with a DictReader.
 
-            Then, we'll return those counts and a csv.DictReader
+        Counts total rows and empty rows, then returns those counts
+        along with a csv.DictReader.
 
         Args:
             source_file (_type_): _description_
@@ -884,7 +901,7 @@ def weird_division(number, divisor):
 
 
 def set_deep(dictionary, key, value):
-    """sets a nested property in a dict given a dot notated address
+    """Sets a nested property in a dict given a dot notated address.
 
     Args:
         dictionary (_type_): a python dictionary ({"a":{"b":{"c":"value"}}})
@@ -901,7 +918,7 @@ def set_deep(dictionary, key, value):
 
 
 def set_deep2(dictionary, key, value):
-    """sets a nested property in a dict given a dot notated address
+    """Sets a nested property in a dict given a dot notated address.
 
     Args:
         dictionary (_type_): a python dictionary ({"a":{"b":{"c":"value"}}})
@@ -938,7 +955,7 @@ def set_deep2(dictionary, key, value):
 
 
 def get_deep(dictionary, keys, default=None):
-    """returns a nested property in a dict given a dot notated address
+    """Returns a nested property in a dict given a dot notated address.
 
     Args:
         dictionary (_type_): a python dictionary ({"a":{"b":{"c":"value"}}})
@@ -956,7 +973,7 @@ def get_deep(dictionary, keys, default=None):
 
 
 def in_deep(dictionary, keys):
-    """Checks if a property exists given a dot notated address
+    """Checks if a property exists given a dot notated address.
 
     Args:
         dictionary (_type_): a python dictionary ({"a":{"b":{"c":"value"}}})

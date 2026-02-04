@@ -1,3 +1,10 @@
+"""Custom CSV DictReader with case-insensitive field names.
+
+Provides the InsensitiveDictReader class that normalizes CSV field names to
+lowercase and strips whitespace, making CSV parsing more forgiving of
+inconsistent header formatting.
+"""
+
 import csv
 
 

@@ -1,3 +1,10 @@
+"""Base class for all data mappers.
+
+Provides the MapperBase class with common functionality for transforming legacy
+data to FOLIO format. Handles reference data mapping, field validation, error
+handling, bound-with processing, and statistical code mapping.
+"""
+
 import ast
 import copy
 import json
@@ -41,6 +48,14 @@ class MapperBase:
         folio_client: FolioClient,
         parent_id_map: Dict[str, Tuple] | None = None,
     ):
+        """Initialize the mapper base with configuration and FOLIO client.
+
+        Args:
+            library_configuration (LibraryConfiguration): Library-specific configuration.
+            task_configuration (AbstractTaskConfiguration): Task-specific transformation settings.
+            folio_client (FolioClient): FOLIO API client for reference data and posting.
+            parent_id_map (Dict[str, Tuple] | None): Optional mapping of parent IDs from prior transformations.
+        """
         logging.info("MapperBase initiating")
         self.parent_id_map: dict[str, tuple] = parent_id_map or {}
         self.extradata_writer: ExtradataWriter = ExtradataWriter(Path(""))

@@ -1,3 +1,10 @@
+"""MARC record reader wrapper.
+
+Provides a wrapper around pymarc's MARCReader with enhanced error handling,
+encoding detection, and record validation. Supports multiple MARC file formats
+and handles corrupted records gracefully.
+"""
+
 import logging
 import sys
 from io import IOBase

@@ -1,3 +1,9 @@
+"""Purchase orders transformation task.
+
+Transforms purchase order data from CSV files to FOLIO Orders. Handles composite
+orders with embedded purchase order lines, acquisition units, and vendor references.
+"""
+
 import csv
 import ctypes
 import json
@@ -136,6 +142,14 @@ class OrdersTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize OrdersTransformer for purchase order transformations.
+
+        Args:
+            task_config (TaskConfiguration): Orders transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
 
         super().__init__(library_config, task_config, folio_client, use_logging)

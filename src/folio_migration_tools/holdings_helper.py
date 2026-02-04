@@ -1,3 +1,10 @@
+"""Helper utilities specific to holdings transformations.
+
+Provides the HoldingsHelper class with methods for holdings-specific validations
+and transformations including location handling, call number processing, and
+holdings notes management.
+"""
+
 import json
 import logging
 import i18n
@@ -17,14 +24,13 @@ class HoldingsHelper:
         migration_report: MigrationReport,
         holdings_type_id_to_exclude_from_merging: str = "Not set",
     ) -> str:
-        """Creates a key from values determined by the fields_crieteria in a holding
-        record to determine uniquenes
+        """Create a unique key from holding field values for merging.
 
         fields_criterias are limited to the strings and UUID properties on the first level of
-        the object. If the property is not found, or empty, it will be ignored
+        the object. If the property is not found, or empty, it will be ignored.
 
-        IF the holdings type id is matched to holdings_type_id_to_exclude_from_merging,
-        the key will be added with a uuid to prevent merging of this holding
+        If the holdings type id is matched to holdings_type_id_to_exclude_from_merging,
+        the key will be added with a uuid to prevent merging of this holding.
 
         Args:
             holdings_record (dict): The Holdingsrecord

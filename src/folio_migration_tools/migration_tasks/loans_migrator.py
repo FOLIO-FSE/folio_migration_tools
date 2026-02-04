@@ -1,3 +1,9 @@
+"""Open loans migration task.
+
+Migrates open/active circulation loans from legacy ILS to FOLIO. Validates patron
+and item barcodes, handles loan policies, and maintains due dates and renewal counts.
+"""
+
 import copy
 import csv
 import json
@@ -98,6 +104,13 @@ class LoansMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
         folio_client,
     ):
+        """Initialize LoansMigrator for migrating circulation loans.
+
+        Args:
+            task_configuration (TaskConfiguration): Loans migration configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         self.patron_item_combos: set = set()
         self.t0 = time.time()
@@ -284,7 +297,7 @@ class LoansMigrator(MigrationTaskBase):
             )
 
     def set_new_status(self, legacy_loan: LegacyLoan, res_checkout: TransactionResult):
-        """Updates checkout loans with their destination statuses
+        """Updates checkout loans with their destination statuses.
 
         Args:
             legacy_loan (LegacyLoan): _description_
@@ -441,7 +454,7 @@ class LoansMigrator(MigrationTaskBase):
     def handle_checkout_failure(
         self, legacy_loan, folio_checkout: TransactionResult
     ) -> TransactionResult:
-        """Determines what can be done about a previously failed transaction
+        """Determines what can be done about a previously failed transaction.
 
         Args:
             legacy_loan (_type_): The legacy loan

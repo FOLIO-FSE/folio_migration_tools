@@ -1,3 +1,14 @@
+"""Base class and utilities for all migration tasks.
+
+This module provides the abstract MigrationTaskBase class that all migration tasks
+must inherit from. It handles common functionality including:
+- Folder structure setup and management
+- Logging configuration
+- Reference data mapping file loading and validation
+- MARC file processing workflows
+- Error tracking and reporting
+"""
+
 import csv
 import io
 import json
@@ -44,6 +55,14 @@ class MigrationTaskBase:
         folio_client: folioclient.FolioClient,
         use_logging: bool = True,
     ):
+        """Initialize base migration task with configurations and FOLIO client.
+
+        Args:
+            library_configuration: Library-specific configuration.
+            task_configuration: Task-specific configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         self.start_datetime = datetime.now(timezone.utc)
         self.task_configuration = task_configuration
         self.folio_client: FolioClient = folio_client
@@ -126,7 +145,7 @@ class MigrationTaskBase:
     def check_source_files(
         source_path: Path, file_defs: list[library_configuration.FileDefinition]
     ) -> None:
-        """Lists the source data files. Special case since we use the Items folder for holdings
+        """Lists the source data files. Special case since we use the Items folder for holdings.
 
         Args:
             source_path (Path): _description_
@@ -156,12 +175,11 @@ class MigrationTaskBase:
             logging.info("\t%s", filename)
 
     def load_instance_id_map(self, raise_if_empty=True) -> dict:
+        """Load instance ID maps for holdings and other transformations.
+
+        Handles ECS environments where instances are transformed for central and
+        data tenants separately, but data tenants need central tenant instance IDs.
         """
-        This method handles loading instance id maps for holdings and other transformations that require it.
-        This is in the base class because multiple tasks need it. It exists because instances in an ECS environment
-        are transformed for the central and data tenants separately, but the data tenants need to know about
-        the central tenant instance ids. This is a bit of a hack, but it works for now.
-        """  # noqa: E501
         map_files = []
         instance_id_map = {}
         if self.library_configuration.is_ecs and self.central_folder_structure:
@@ -324,8 +342,7 @@ class MigrationTaskBase:
 
     @staticmethod
     def validate_ref_data_mapping_lines(lines, num_of_columns):
-        """
-        Helper method to validate the structure of individual lines in a mapping file.
+        """Helper method to validate the structure of individual lines in a mapping file.
 
         Args:
             lines (list): List of lines in the mapping file
@@ -352,8 +369,7 @@ class MigrationTaskBase:
 
     @staticmethod
     def verify_ref_data_mapping_file_structure(map_file: io.TextIOBase):
-        """
-        Helper method to validate the structure of a mapping file.
+        """Helper method to validate the structure of a mapping file.
 
         Args:
             map_file (io.TextIOBase): The mapping file to validate
@@ -393,8 +409,7 @@ class MigrationTaskBase:
         folio_keys,
         required: bool = True,
     ):
-        """
-        Helper method to load a reference data mapping file.
+        """Helper method to load a reference data mapping file.
 
         Args:
             folio_property_name (str): The name of the property in FOLIO
@@ -448,8 +463,7 @@ class MigrationTaskBase:
 
 
 class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
-    """
-    Base class for MARC task configurations.
+    """Base class for MARC task configurations.
 
     Attributes:
         files (List[library_configuration.FileDefinition]):
@@ -533,6 +547,11 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
 
 class ExcludeLevelFilter(logging.Filter):
     def __init__(self, level):
+        """Initialize filter to exclude logs of a specific level.
+
+        Args:
+            level: Logging level to exclude.
+        """
         super().__init__()
         self.level = level
 
@@ -542,6 +561,11 @@ class ExcludeLevelFilter(logging.Filter):
 
 class TaskNameFilter(logging.Filter):
     def __init__(self, task_configuration_name):
+        """Initialize filter to add task name to log records.
+
+        Args:
+            task_configuration_name (str): Name of the task configuration to add to logs.
+        """
         super().__init__()
         self.task_configuration_name = task_configuration_name
 
@@ -552,6 +576,11 @@ class TaskNameFilter(logging.Filter):
 
 class LevelFilter(logging.Filter):
     def __init__(self, level):
+        """Initialize filter to include only logs of a specific level.
+
+        Args:
+            level: Logging level to include.
+        """
         super().__init__()
         self.level = level
 

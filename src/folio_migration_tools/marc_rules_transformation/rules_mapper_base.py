@@ -1,3 +1,10 @@
+"""Base class for MARC rules-based transformations.
+
+Provides the abstract RulesMapperBase class that all MARC rules mappers inherit from.
+Handles loading transformation rules from JSON, applying rules with conditions,
+and managing the transformation workflow for MARC-to-FOLIO conversions.
+"""
+
 import datetime
 import json
 import logging
@@ -41,6 +48,17 @@ class RulesMapperBase(MapperBase):
         conditions=None,
         parent_id_map: dict[str, tuple] = None,
     ):
+        """Initialize base mapper for MARC rules-based transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_configuration: Task configuration for MARC transformation.
+            statistical_codes_map (Optional[Dict]): Mapping for statistical codes.
+            schema (dict): JSON schema for validation.
+            conditions: Conditions processor for rules evaluation.
+            parent_id_map (dict[str, tuple]): Optional mapping of parent IDs.
+        """
         super().__init__(library_configuration, task_configuration, folio_client, parent_id_map)
         self.parsed_records = 0
         self.id_map: dict[str, tuple] = {}
@@ -538,7 +556,7 @@ class RulesMapperBase(MapperBase):
             )
 
     def remove_from_id_map(self, former_ids: List[str]):
-        """removes the ID from the map in case parsing failed
+        """Removes the ID from the map in case parsing failed.
 
         Args:
             former_ids (_type_): _description_
@@ -739,9 +757,7 @@ class RulesMapperBase(MapperBase):
 
     @staticmethod
     def grouped(marc_field: Field):
-        """Groups the subfields
-        s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ...
-
+        """Group subfields into tuples by repeated subfield occurrences.
 
         Args:
             marc_field (Field): _description_
@@ -778,8 +794,7 @@ class RulesMapperBase(MapperBase):
 
     @staticmethod
     def remove_repeated_subfields(marc_field: Field):
-        """Removes repeated subfields
-        s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ...
+        """Remove repeated subfields, keeping only the first occurrence of each.
 
         Args:
             marc_field (Field): _description_
@@ -803,7 +818,7 @@ class RulesMapperBase(MapperBase):
         marc_record: Record,
         folio_record,
     ):
-        """Saves the source marc_record to a file to be loaded via Data Import
+        """Saves the source marc_record to a file to be loaded via Data Import.
 
         Args:
             srs_records_file (_type_): _description_
@@ -838,7 +853,7 @@ class RulesMapperBase(MapperBase):
         file_def: FileDefinition,
         marc_record: Record,
     ):
-        """Map statistical codes to FOLIO instance
+        """Map statistical codes to FOLIO instance.
 
         This method first calls the base class method to map statistical codes
         from the file_def. Then, it checks to see if there are any MARC field
@@ -920,7 +935,7 @@ class RulesMapperBase(MapperBase):
         legacy_ids: List[str],
         suppress: bool,
     ):
-        """Saves the source Marc_record to the Source record Storage module
+        """Saves the source Marc_record to the Source record Storage module.
 
         Args:
             srs_records_file (_type_): _description_
@@ -1075,18 +1090,12 @@ def is_array_of_objects(schema_property):
 
 
 def entity_indicators_match(entity_mapping, marc_field):
-    """
-    Check if the indicators of the entity mapping match the indicators of the MARC field.
-    Entity mappings can limit the fields they are applied to by specifying indicator values that
-    must match the provided MARC field's indicators. If the entity mapping does not specify any
-    indicator values, it is assumed to match all MARC fields. Entity indicator values can be a
-    specific value or a wildcard "*", which matches any value.
+    """Check if entity mapping indicators match the MARC field indicators.
 
-    This function compares the indicators of the entity mapping with the indicators of the MARC field.
-    If the entity does not specify any indicator values, the function returns True. If the entity does
-    specify indicator values, the function checks if the MARC field's indicators match the specified
-    values or if the specified values are wildcards. If both indicators match, the function returns True;
-    otherwise, it returns False.
+    Entity mappings can limit the fields they are applied to by specifying indicator
+    values that must match the provided MARC field's indicators. If the entity mapping
+    does not specify any indicator values, it is assumed to match all MARC fields.
+    Entity indicator values can be a specific value or a wildcard "*".
 
     Args:
         entity_mapping (dict): _description_
@@ -1094,7 +1103,7 @@ def entity_indicators_match(entity_mapping, marc_field):
 
     Returns:
         bool: True if the indicators match, False otherwise.
-    """  # noqa: E501
+    """
     if indicator_rule := [x["indicators"] for x in entity_mapping if "indicators" in x]:
         return all(
             [

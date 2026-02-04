@@ -1,3 +1,9 @@
+"""User/patron records transformation task.
+
+Transforms user/patron data from CSV files to FOLIO Users. Handles patron groups,
+addresses, departments, and user permissions with validation and cleanup.
+"""
+
 import json
 import logging
 import sys
@@ -123,6 +129,14 @@ class UserTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize UserTransformer for user record transformations.
+
+        Args:
+            task_config (TaskConfiguration): Users transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
         self.task_configuration = self.task_config

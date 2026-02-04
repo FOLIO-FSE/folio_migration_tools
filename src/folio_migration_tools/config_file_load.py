@@ -1,3 +1,10 @@
+"""Configuration file loading and merging utilities.
+
+Provides functions for loading JSON configuration files with support for
+inheriting from parent configurations. Handles deep merging of nested
+dictionaries and lists while preserving unique entries.
+"""
+
 import json
 from pathlib import Path
 

@@ -1,3 +1,9 @@
+"""Course records migration task.
+
+Migrates course information from CSV files to FOLIO Course Reserves module.
+Transforms and validates course data including departments and terms.
+"""
+
 import csv
 import json
 import logging
@@ -92,6 +98,13 @@ class CoursesMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
         folio_client,
     ):
+        """Initialize CoursesMigrator for migrating course reserves.
+
+        Args:
+            task_configuration (TaskConfiguration): Courses migration configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         self.task_configuration = task_configuration
         super().__init__(library_config, task_configuration, folio_client)

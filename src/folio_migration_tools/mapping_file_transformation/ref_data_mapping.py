@@ -1,3 +1,10 @@
+"""Reference data mapping utilities.
+
+Provides the RefDataMapping class for mapping legacy reference data values to FOLIO
+reference data UUIDs. Handles lookups in FOLIO, wildcard matching, and default values
+for common reference data types like locations, material types, and patron groups.
+"""
+
 import json
 import logging
 import sys
@@ -17,6 +24,16 @@ class RefDataMapping(object):
         key_type,
         blurb_id,
     ):
+        """Initialize RefDataMapping for reference data transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client for fetching reference data.
+            ref_data_path: API path to reference data endpoint.
+            array_name: Name of the data array in the API response.
+            the_map: Mapping configuration for data transformation.
+            key_type: Type of key being mapped.
+            blurb_id: Identifier for blurbs related to this mapping.
+        """
         self.name = array_name
         self.cache: dict = {}
         self.blurb_id = blurb_id

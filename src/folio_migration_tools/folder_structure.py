@@ -1,3 +1,10 @@
+"""Folder structure management for migration tasks.
+
+Defines the FolderStructure class that manages the standardized directory layout
+for migration tasks. Creates and manages folders for source data, results, reports,
+logs, and mapping files. Handles path generation and validation.
+"""
+
 import logging
 import sys
 import time
@@ -15,6 +22,15 @@ class FolderStructure:
         iteration_identifier: str,
         add_time_stamp_to_file_names: bool,
     ):
+        """Initialize folder structure for a migration task iteration.
+
+        Args:
+            base_path (Path): Root folder for the migration.
+            object_type (FOLIONamespaces): Type of FOLIO object being migrated.
+            migration_task_name (str): Name of the migration task.
+            iteration_identifier (str): Identifier for this migration iteration.
+            add_time_stamp_to_file_names (bool): Whether to add timestamps to output files.
+        """
         logging.info("Validating folder structure")
 
         self.object_type: FOLIONamespaces = object_type
