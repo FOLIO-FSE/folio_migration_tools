@@ -43,6 +43,8 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 class ItemsTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for ItemsTransformer."""
+
         name: Annotated[
             str,
             Field(

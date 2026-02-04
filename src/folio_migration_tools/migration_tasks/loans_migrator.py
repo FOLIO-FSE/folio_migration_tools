@@ -44,6 +44,8 @@ from folio_migration_tools.transaction_migration.transaction_result import (
 
 class LoansMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for LoansMigrator."""
+
         name: Annotated[
             str,
             Field(

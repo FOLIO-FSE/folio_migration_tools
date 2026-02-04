@@ -46,6 +46,8 @@ csv.register_dialect("tsv", delimiter="\t")
 
 class HoldingsCsvTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for HoldingsCsvTransformer."""
+
         name: Annotated[
             str,
             Field(

@@ -33,6 +33,8 @@ from folio_migration_tools.transaction_migration.legacy_reserve import LegacyRes
 
 class ReservesMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for ReservesMigrator."""
+
         name: Annotated[
             str,
             Field(

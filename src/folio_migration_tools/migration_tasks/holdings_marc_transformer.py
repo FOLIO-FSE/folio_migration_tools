@@ -32,6 +32,8 @@ from folio_migration_tools.migration_tasks.migration_task_base import (
 
 class HoldingsMarcTransformer(MigrationTaskBase):
     class TaskConfiguration(MarcTaskConfigurationBase):
+        """Task configuration for HoldingsMarcTransformer."""
+
         name: Annotated[
             str,
             Field(

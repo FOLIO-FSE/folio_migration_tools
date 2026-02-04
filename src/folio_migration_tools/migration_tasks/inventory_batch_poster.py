@@ -47,6 +47,8 @@ class InventoryBatchPoster(MigrationTaskBase):
     """
 
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for InventoryBatchPoster."""
+
         name: Annotated[
             str,
             Field(

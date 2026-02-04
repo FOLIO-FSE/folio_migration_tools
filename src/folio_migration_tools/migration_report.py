@@ -39,12 +39,12 @@ class MigrationReport:
                 self.report[blurb_id][measure_to_add] = number
 
     def set(self, blurb_id, measure_to_add: str, number: int):
-        """Set a section value  to a specific number.
+        """Set a section value to a specific number.
 
         Args:
-            blurb (_type_): _description_
-            measure_to_add (str): _description_
-            number (int): _description_
+            blurb_id: The report section identifier.
+            measure_to_add (str): The measure name to set.
+            number (int): The value to set.
         """
         if blurb_id not in self.report:
             self.report[blurb_id] = {}

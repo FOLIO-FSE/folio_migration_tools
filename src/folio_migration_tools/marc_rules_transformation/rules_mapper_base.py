@@ -818,16 +818,13 @@ class RulesMapperBase(MapperBase):
         marc_record: Record,
         folio_record,
     ):
-        """Saves the source marc_record to a file to be loaded via Data Import.
+        """Save the source MARC record to a file for Data Import loading.
 
         Args:
-            srs_records_file (_type_): _description_
-            record_type (FOLIONamespaces): _description_
-            folio_client (FolioClient): _description_
-            marc_record (Record): _description_
-            folio_record (_type_): _description_
-            legacy_ids (List[str]): _description_
-            suppress (bool): _description_
+            data_import_marc_file: File handle for writing MARC records.
+            record_type (FOLIONamespaces): Type of record being saved.
+            marc_record (Record): The MARC record to save.
+            folio_record: The corresponding FOLIO record.
         """
         marc_record.add_ordered_field(
             Field(

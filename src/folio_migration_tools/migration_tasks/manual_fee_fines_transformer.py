@@ -37,6 +37,8 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class ManualFeeFinesTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for ManualFeeFinesTransformer."""
+
         name: str
         feefines_map: str
         migration_task_type: str
@@ -59,7 +61,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         """Initialize ManualFeeFinesTransformer for fee/fine transformations.
 
         Args:
-            task_config (TaskConfiguration): Manual fee fines transformation configuration.
+            task_configuration (TaskConfiguration): Manual fee fines transformation config.
             library_config (LibraryConfiguration): Library configuration.
             folio_client: FOLIO API client.
             use_logging (bool): Whether to set up task logging.
