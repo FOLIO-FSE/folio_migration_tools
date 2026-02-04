@@ -5,6 +5,7 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from pathlib import Path
 import json
 import pytest
+from datetime import datetime, timezone
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
@@ -305,3 +306,218 @@ class TestBatchPosterV2MigrationReport:
 
         assert ("GeneralStatistics", "Rerun succeeded") not in call_keys
         assert ("GeneralStatistics", "Rerun still failed") not in call_keys
+
+
+class TestInventoryBatchPosterOnBatchError:
+    """Tests for the _on_batch_error callback."""
+
+    def test_on_batch_error_captures_error(self):
+        """Test that batch errors are captured in migration report."""
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.batch_errors = []
+        poster.migration_report = Mock()
+        poster._on_batch_error = MethodType(
+            InventoryBatchPoster._on_batch_error, poster
+        )
+        
+        batch = [{"id": "1"}, {"id": "2"}]
+        error_message = "Batch failed: 500 Internal Server Error"
+        
+        poster._on_batch_error(batch, error_message)
+        
+        assert error_message in poster.batch_errors
+        poster.migration_report.add.assert_called_once_with("Details", error_message)
+
+    def test_on_batch_error_accumulates_errors(self):
+        """Test that multiple batch errors are accumulated."""
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.batch_errors = []
+        poster.migration_report = Mock()
+        poster._on_batch_error = MethodType(
+            InventoryBatchPoster._on_batch_error, poster
+        )
+        
+        errors = ["Error 1", "Error 2", "Error 3"]
+        for error in errors:
+            poster._on_batch_error([], error)
+        
+        assert len(poster.batch_errors) == 3
+        assert all(e in poster.batch_errors for e in errors)
+
+
+class TestInventoryBatchPosterDoWorkAsync:
+    """Tests for the async work execution."""
+
+    @pytest.mark.asyncio
+    async def test_do_work_async_file_not_found(self, mock_folder_structure):
+        """Test that FileNotFoundError is raised for missing files."""
+        task_config = InventoryBatchPoster.TaskConfiguration(
+            name="test",
+            migration_task_type="InventoryBatchPoster",
+            object_type="Instances",
+            files=[FileDefinition(file_name="nonexistent.json")],
+        )
+        
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.task_configuration = task_config
+        poster.folder_structure = mock_folder_structure
+        poster._do_work_async = MethodType(
+            InventoryBatchPoster._do_work_async, poster
+        )
+        
+        # Make the file not exist
+        mock_folder_structure.results_folder = Path("/nonexistent/path")
+        
+        with pytest.raises(FileNotFoundError):
+            await poster._do_work_async()
+
+
+class TestInventoryBatchPosterDoWork:
+    """Tests for the synchronous do_work entry point."""
+
+    def test_do_work_propagates_file_not_found(self):
+        """Test that FileNotFoundError is propagated."""
+        poster = Mock(spec=InventoryBatchPoster)
+        poster._do_work_async = AsyncMock(side_effect=FileNotFoundError("File not found"))
+        poster.do_work = MethodType(InventoryBatchPoster.do_work, poster)
+        
+        with pytest.raises(FileNotFoundError):
+            poster.do_work()
+
+    def test_do_work_propagates_generic_exception(self):
+        """Test that generic exceptions are propagated."""
+        poster = Mock(spec=InventoryBatchPoster)
+        poster._do_work_async = AsyncMock(side_effect=RuntimeError("Something went wrong"))
+        poster.do_work = MethodType(InventoryBatchPoster.do_work, poster)
+        
+        with pytest.raises(RuntimeError):
+            poster.do_work()
+
+
+class TestInventoryBatchPosterWrapUp:
+    """Tests for the wrap_up method."""
+
+    def test_wrap_up_writes_reports(self, tmp_path):
+        """Test that wrap_up writes migration reports."""
+        from folio_data_import.BatchPoster import BatchPosterStats
+        
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.task_configuration = InventoryBatchPoster.TaskConfiguration(
+            name="test",
+            migration_task_type="InventoryBatchPoster",
+            object_type="Instances",
+            files=[FileDefinition(file_name="test.json")],
+            rerun_failed_records=True,
+        )
+        poster.stats = BatchPosterStats(
+            records_processed=100,
+            records_posted=95,
+            records_created=90,
+            records_updated=5,
+            records_failed=5,
+            batches_posted=10,
+            batches_failed=0,
+            rerun_succeeded=3,
+            rerun_still_failed=2,
+        )
+        poster.folder_structure = Mock()
+        poster.folder_structure.migration_reports_file = tmp_path / "report.md"
+        poster.folder_structure.migration_reports_raw_file = tmp_path / "report.json"
+        poster.folder_structure.failed_recs_path = tmp_path / "failed.json"
+        poster.start_datetime = datetime.now(timezone.utc)
+        poster.migration_report = Mock()
+        poster.clean_out_empty_logs = Mock()
+        
+        poster._translate_stats_to_migration_report = MethodType(
+            InventoryBatchPoster._translate_stats_to_migration_report, poster
+        )
+        poster.wrap_up = MethodType(InventoryBatchPoster.wrap_up, poster)
+        
+        poster.wrap_up()
+        
+        # Verify stats were translated
+        assert poster.migration_report.set.called
+        # Verify reports were written
+        assert poster.migration_report.write_migration_report.called
+        assert poster.migration_report.write_json_report.called
+        # Verify cleanup was called
+        assert poster.clean_out_empty_logs.called
+
+
+class TestInventoryBatchPosterFilesProcessed:
+    """Tests for file processing tracking."""
+
+    def test_files_added_to_report(self):
+        """Test that processed files are added to migration report."""
+        from folio_data_import.BatchPoster import BatchPosterStats
+        
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.task_configuration = InventoryBatchPoster.TaskConfiguration(
+            name="test",
+            migration_task_type="InventoryBatchPoster",
+            object_type="Holdings",
+            files=[
+                FileDefinition(file_name="holdings1.json"),
+                FileDefinition(file_name="holdings2.json"),
+                FileDefinition(file_name="holdings3.json"),
+            ],
+            rerun_failed_records=False,
+        )
+        poster.stats = BatchPosterStats()
+        poster.migration_report = Mock()
+        poster._translate_stats_to_migration_report = MethodType(
+            InventoryBatchPoster._translate_stats_to_migration_report, poster
+        )
+        
+        poster._translate_stats_to_migration_report()
+        
+        # Verify all files were added
+        add_calls = poster.migration_report.add.call_args_list
+        added_files = [call[0][1] for call in add_calls if call[0][0] == "FilesProcessed"]
+        assert "holdings1.json" in added_files
+        assert "holdings2.json" in added_files
+        assert "holdings3.json" in added_files
+
+
+class TestInventoryBatchPosterNoProgress:
+    """Tests for progress reporting configuration."""
+
+    def test_create_fdi_config_shadow_instances(self):
+        """Test FDI config for ShadowInstances object type."""
+        task_config = InventoryBatchPoster.TaskConfiguration(
+            name="test",
+            migration_task_type="InventoryBatchPoster",
+            object_type="ShadowInstances",
+            files=[FileDefinition(file_name="shadow.json")],
+        )
+        
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.task_configuration = task_config
+        poster._create_fdi_config = MethodType(
+            InventoryBatchPoster._create_fdi_config, poster
+        )
+        
+        fdi_config = poster._create_fdi_config()
+        
+        assert fdi_config.object_type == "ShadowInstances"
+
+    def test_create_fdi_config_empty_patch_paths(self):
+        """Test FDI config with empty patch_paths becomes None."""
+        task_config = InventoryBatchPoster.TaskConfiguration(
+            name="test",
+            migration_task_type="InventoryBatchPoster",
+            object_type="Items",
+            files=[FileDefinition(file_name="items.json")],
+            patch_existing_records=True,
+            patch_paths=[],
+        )
+        
+        poster = Mock(spec=InventoryBatchPoster)
+        poster.task_configuration = task_config
+        poster._create_fdi_config = MethodType(
+            InventoryBatchPoster._create_fdi_config, poster
+        )
+        
+        fdi_config = poster._create_fdi_config()
+        
+        assert fdi_config.patch_paths is None

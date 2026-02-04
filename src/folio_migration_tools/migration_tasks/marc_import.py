@@ -188,16 +188,16 @@ class MARCImportTask(MigrationTaskBase):
                 ),
             ),
         ] = False
-        show_progress: Annotated[
+        no_progress: Annotated[
             bool,
             Field(
-                title="Show progress",
+                title="No progress",
                 description=(
-                    "If true, display rich progress bars during import. "
-                    "Disable for non-interactive/CI environments."
+                    "Disable progress reporting in the console output. "
+                    "Set to true for non-interactive/CI environments."
                 ),
             ),
-        ] = True
+        ] = False
 
     task_configuration: TaskConfiguration
 
@@ -269,7 +269,7 @@ class MARCImportTask(MigrationTaskBase):
             batch_delay=self.task_configuration.batch_delay,
             marc_record_preprocessors=preprocessors_str,
             preprocessors_args=preprocessors_args,
-            no_progress=not self.task_configuration.show_progress,
+            no_progress=self.task_configuration.no_progress,
             no_summary=self.task_configuration.skip_summary,
             let_summary_fail=self.task_configuration.let_summary_fail,
             split_files=self.task_configuration.split_files,
@@ -296,7 +296,7 @@ class MARCImportTask(MigrationTaskBase):
         # Create the folio_data_import MARCImportJob config
         fdi_config = self._create_fdi_config(file_paths)
 
-        # Create progress reporter - use Rich if show_progress is enabled
+        # Create progress reporter
         if self.task_configuration.no_progress:
             from folio_data_import._progress import NoOpProgressReporter
 
