@@ -927,7 +927,10 @@ class BatchPoster(MigrationTaskBase):
                 temp_start = self.start_datetime
                 self.task_configuration.rerun_failed_records = False
                 self.__init__(
-                    self.task_configuration, self.library_configuration, self.folio_client
+                    self.task_configuration,
+                    self.library_configuration,
+                    self.folio_client,
+                    use_logging=False,
                 )
                 self.performing_rerun = True
                 self.migration_report = temp_report
