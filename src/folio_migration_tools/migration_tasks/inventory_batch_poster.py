@@ -1,5 +1,4 @@
-"""
-BatchPosterV2 module for FOLIO inventory batch operations.
+"""InventoryBatchPoster module for FOLIO inventory batch operations.
 
 This module provides an adapter that wraps folio_data_import.BatchPoster
 to conform to the folio_migration_tools MigrationTaskBase interface.
@@ -30,7 +29,7 @@ from folio_data_import._progress import RichProgressReporter
 
 
 class InventoryBatchPoster(MigrationTaskBase):
-    """InventoryBatchPoster
+    """InventoryBatchPoster.
 
     An adapter that wraps folio_data_import.BatchPoster to provide batch posting
     functionality for Instances, Holdings, Items, and ShadowInstances while
@@ -206,6 +205,14 @@ class InventoryBatchPoster(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize InventoryBatchPoster for posting inventory records to FOLIO.
+
+        Args:
+            task_config (TaskConfiguration): Inventory batch posting configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.migration_report = MigrationReport()
         self.stats: BatchPosterStats = BatchPosterStats()
@@ -217,8 +224,7 @@ class InventoryBatchPoster(MigrationTaskBase):
         logging.info("Upsert mode: %s", "On" if self.task_configuration.upsert else "Off")
 
     def _create_fdi_config(self) -> FDIBatchPoster.Config:
-        """
-        Create a folio_data_import.BatchPoster.Config from our TaskConfiguration.
+        """Create a folio_data_import.BatchPoster.Config from our TaskConfiguration.
 
         Returns:
             FDIBatchPoster.Config: Configuration for the underlying BatchPoster
@@ -238,8 +244,7 @@ class InventoryBatchPoster(MigrationTaskBase):
         )
 
     def _on_batch_error(self, batch: list, error_message: str) -> None:
-        """
-        Callback for batch errors to capture in migration report.
+        """Callback for batch errors to capture in migration report.
 
         Args:
             batch: The batch of records that failed
@@ -249,9 +254,7 @@ class InventoryBatchPoster(MigrationTaskBase):
         self.migration_report.add("Details", error_message)
 
     async def _do_work_async(self) -> None:
-        """
-        Async implementation of the work logic.
-        """
+        """Async implementation of the work logic."""
         # Build list of file paths
         file_paths = []
         for file_def in self.task_configuration.files:
@@ -299,8 +302,7 @@ class InventoryBatchPoster(MigrationTaskBase):
                     self.stats = poster.get_stats()
 
     def do_work(self) -> None:
-        """
-        Main work method that processes files and posts records to FOLIO.
+        """Main work method that processes files and posts records to FOLIO.
 
         This method reads records from the configured files and posts them
         to FOLIO in batches using the folio_data_import.BatchPoster.
@@ -320,9 +322,7 @@ class InventoryBatchPoster(MigrationTaskBase):
         logging.info("InventoryBatchPoster work complete")
 
     def _translate_stats_to_migration_report(self) -> None:
-        """
-        Translate BatchPosterStats to MigrationReport format.
-        """
+        """Translate BatchPosterStats to MigrationReport format."""
         # General statistics
         self.migration_report.set(
             "GeneralStatistics",
@@ -378,8 +378,7 @@ class InventoryBatchPoster(MigrationTaskBase):
             self.migration_report.add("FilesProcessed", file_def.file_name)
 
     def wrap_up(self) -> None:
-        """
-        Finalize the migration task and write reports.
+        """Finalize the migration task and write reports.
 
         This method translates statistics from the underlying BatchPoster
         to the MigrationReport format and writes both markdown and JSON reports.

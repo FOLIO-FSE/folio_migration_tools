@@ -1,3 +1,10 @@
+"""Holdings records transformation from CSV files.
+
+Transforms holdings records from CSV/TSV files to FOLIO Holdings records using
+mapping files. Handles bound-with relationships, location mapping, and statistical
+code assignments.
+"""
+
 import csv
 import ctypes
 import json
@@ -176,6 +183,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize HoldingsCsvTransformer for CSV holdings transformations.
+
+        Args:
+            task_config (TaskConfiguration): Holdings CSV transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
         self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
@@ -463,9 +478,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str
     ) -> None:
-        """Determines what newly generated holdingsrecords are to be merged with
-        previously created ones. When that is done, it generates the correct boundwith
-        parts needed.
+        """Merge newly generated holdings with existing ones and create boundwith parts.
 
         Args:
             incoming_holding (dict): The newly created FOLIO Holding

@@ -1,3 +1,9 @@
+"""Manual fee/fine records transformation task.
+
+Transforms manual fee and fine data from CSV files to FOLIO Accounts (fees/fines).
+Handles fee/fine types, owners, and amounts with proper validation.
+"""
+
 import csv
 import json
 import logging
@@ -50,6 +56,14 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize ManualFeeFinesTransformer for fee/fine transformations.
+
+        Args:
+            task_config (TaskConfiguration): Manual fee fines transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
 
         super().__init__(library_config, task_configuration, folio_client, use_logging)

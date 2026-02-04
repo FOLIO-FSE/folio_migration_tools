@@ -1,3 +1,9 @@
+"""Item records transformation task.
+
+Transforms item records from CSV/TSV files to FOLIO Item records using mapping
+files. Handles material types, loan types, location mapping, and statistical codes.
+"""
+
 import csv
 import ctypes
 import json
@@ -196,6 +202,14 @@ class ItemsTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize ItemsTransformer for transforming item records.
+
+        Args:
+            task_config (TaskConfiguration): Items transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config

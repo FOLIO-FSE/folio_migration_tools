@@ -1,3 +1,9 @@
+"""Request records migration task.
+
+Migrates patron requests from legacy ILS to FOLIO. Validates patron and item
+barcodes, handles request types and statuses, and maintains request dates.
+"""
+
 import csv
 import json
 import logging
@@ -88,6 +94,13 @@ class RequestsMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
         folio_client,
     ):
+        """Initialize RequestsMigrator for migrating circulation requests.
+
+        Args:
+            task_configuration (TaskConfiguration): Requests migration configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
         self.valid_legacy_requests = []

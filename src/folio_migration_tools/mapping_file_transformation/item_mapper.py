@@ -1,3 +1,10 @@
+"""Mapper for transforming item data to FOLIO Items format.
+
+Provides the ItemMapper class for mapping legacy item data to FOLIO Item records
+using configured mapping files. Handles material types, loan types, statuses, and
+circulation notes.
+"""
+
 import json
 import logging
 import sys
@@ -44,6 +51,23 @@ class ItemMapper(MappingFileMapperBase):
         library_configuration: LibraryConfiguration,
         task_configuration: AbstractTaskConfiguration,
     ):
+        """Initialize ItemMapper for item transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            items_map: Mapping configuration for item fields.
+            material_type_map: Mapping of legacy to FOLIO material types.
+            loan_type_map: Mapping of legacy to FOLIO loan types.
+            location_map: Mapping of legacy to FOLIO locations.
+            call_number_type_map: Mapping of legacy to FOLIO call number types.
+            holdings_id_map: Mapping of legacy to FOLIO holdings IDs.
+            statistical_codes_map: Mapping of legacy to FOLIO statistical codes.
+            item_statuses_map: Mapping of legacy to FOLIO item statuses.
+            temporary_loan_type_mapping: Mapping for temporary loan types.
+            temporary_location_mapping: Mapping for temporary locations.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_configuration (AbstractTaskConfiguration): Task configuration.
+        """
         item_schema = folio_client.get_item_schema()
         super().__init__(
             folio_client,

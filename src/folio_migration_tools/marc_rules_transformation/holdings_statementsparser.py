@@ -1,3 +1,10 @@
+"""MARC holdings statements parser.
+
+Parses MARC21 holdings statements from fields 853-855, 863-865, 866-868 and converts
+them to FOLIO-compatible holdings statements. Handles enumeration, chronology, and
+holdings notes with proper formatting and validation.
+"""
+
 import calendar
 import contextlib
 import logging
@@ -20,7 +27,7 @@ class HoldingsStatementsParser:
         legacy_ids: List[str],
         dedupe_results: bool = True,
     ) -> dict:
-        """_summary_
+        """_summary_.
 
         Args:
             marc_record (Record): pymarc Record object
@@ -36,7 +43,6 @@ class HoldingsStatementsParser:
         Returns:
             dict: A dictionary containing parsed holdings statements and related information.
         """  # noqa: E501
-
         # Textual holdings statements
         return_dict: dict = {"statements": [], "migration_report": [], "hlm_stmts": []}
         HoldingsStatementsParser.get_textual_statements(
@@ -178,7 +184,7 @@ class HoldingsStatementsParser:
     def get_textual_statements(
         marc_record: Record, field_textual: str, return_dict: dict, legacy_ids: List[str]
     ):
-        """Returns the textual statements from the relevant marc fields
+        """Returns the textual statements from the relevant marc fields.
 
         Args:
             marc_record (Record): _description_

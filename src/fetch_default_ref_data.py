@@ -1,3 +1,10 @@
+"""Utility script to fetch default reference data from FOLIO instances.
+
+Retrieves common reference data (locations, material types, loan types, etc.) from
+a FOLIO module GitHub repo and stores it in a JSON file for offline use. Useful for development
+and testing without requiring a live FOLIO connection.
+"""
+
 import json
 import logging
 import os

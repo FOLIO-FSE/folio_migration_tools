@@ -1,3 +1,10 @@
+"""Main entry point for the folio_migration_tools CLI.
+
+Provides the command-line interface for running migration tasks. Loads configuration
+files, validates parameters, instantiates appropriate task classes, and executes
+the migration workflow. Supports all transformation and loading tasks.
+"""
+
 from importlib import metadata
 import json
 import logging

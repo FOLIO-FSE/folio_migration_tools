@@ -1,3 +1,9 @@
+"""Mapper for transforming manual fee/fine data to FOLIO Accounts format.
+
+Provides the ManualFeeFinesMapper class for mapping legacy fee and fine data to FOLIO
+Account records. Handles fee/fine types, owners, amounts, and payment status.
+"""
+
 import json
 import logging
 import uuid
@@ -34,6 +40,18 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         service_point_map,
         ignore_legacy_identifier: bool = True,
     ):
+        """Initialize ManualFeeFinesMapper for fee/fine transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_configuration: Task configuration for fee fines migration.
+            feefines_map: Mapping configuration for fee/fine fields.
+            feefines_owner_map: Mapping of legacy to FOLIO fee/fine owners.
+            feefines_type_map: Mapping of legacy to FOLIO fee/fine types.
+            service_point_map: Mapping of legacy to FOLIO service points.
+            ignore_legacy_identifier (bool): Whether to ignore legacy identifiers.
+        """
         self.folio_client: FolioClient = folio_client
         self.composite_feefine_schema = self.get_composite_feefine_schema()
         self.task_configuration = task_configuration

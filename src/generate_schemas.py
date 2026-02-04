@@ -1,3 +1,10 @@
+"""Schema generation utility for migration task configurations.
+
+Generates JSON schemas from Pydantic task configuration models. Creates schema files
+for all migration tasks and the library configuration, used for validation and
+documentation of configuration files.
+"""
+
 import json
 import os
 import sys
@@ -22,12 +29,11 @@ from folio_migration_tools.migration_tasks import migration_task_base
 
 
 def parse_args():
-    """Parses arguments from the tool
+    """Parses arguments from the tool.
 
     Returns:
         _type_: The parsed areguments
     """
-
     parser = PromptParser()
     parser.add_argument("results_path", help="Path to store schemas")
     return parser.parse_args()

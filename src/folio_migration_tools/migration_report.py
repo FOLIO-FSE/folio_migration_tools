@@ -1,3 +1,10 @@
+"""Migration reporting and statistics tracking.
+
+Provides the MigrationReport class for tracking migration statistics, errors,
+and warnings during transformation and loading tasks. Generates markdown and
+JSON formatted reports with categorized statistics.
+"""
+
 import logging
 import json
 import i18n
@@ -8,9 +15,10 @@ from folio_migration_tools.i18n_cache import i18n_t
 
 
 class MigrationReport:
-    """Class responsible for handling the migration report"""
+    """Class responsible for handling the migration report."""
 
     def __init__(self):
+        """Initialize a new migration report for tracking statistics and issues."""
         self.report = {}
         self.stats = {}
 
@@ -31,7 +39,7 @@ class MigrationReport:
                 self.report[blurb_id][measure_to_add] = number
 
     def set(self, blurb_id, measure_to_add: str, number: int):
-        """Set a section value  to a specific number
+        """Set a section value  to a specific number.
 
         Args:
             blurb (_type_): _description_
@@ -43,7 +51,7 @@ class MigrationReport:
         self.report[blurb_id][measure_to_add] = number
 
     def add_general_statistics(self, measure_to_add: str):
-        """Shortcut for adding to the first breakdown
+        """Shortcut for adding to the first breakdown.
 
         Args:
             measure_to_add (str): _description_

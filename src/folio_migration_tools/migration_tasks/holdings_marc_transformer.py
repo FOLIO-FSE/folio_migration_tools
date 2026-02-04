@@ -1,3 +1,10 @@
+"""Holdings records transformation from MARC21 holdings (MFHD).
+
+Transforms MARC21 holdings records to FOLIO Holdings using a rules-based mapping system similar to
+that implemented by FOLIO. Supports holdings statements, location mapping, and bound-with
+relationships.
+"""
+
 import csv
 import json
 import logging
@@ -215,6 +222,14 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize HoldingsMarcTransformer for MARC holdings transformations.
+
+        Args:
+            task_config (TaskConfiguration): Holdings MARC transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, folio_client, use_logging)
         if self.task_configuration.statistical_codes_map_file_name:

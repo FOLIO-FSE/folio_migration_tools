@@ -1,3 +1,9 @@
+"""Course reserves migration task.
+
+Migrates course reserve records from legacy ILS to FOLIO Course Reserves module.
+Handles course listings, items on reserve, and reserve relationships.
+"""
+
 import csv
 import json
 import logging
@@ -62,6 +68,13 @@ class ReservesMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
         folio_client,
     ):
+        """Initialize ReservesMigrator for migrating course reserves.
+
+        Args:
+            task_configuration (TaskConfiguration): Reserves migration configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
         self.valid_reserves = []

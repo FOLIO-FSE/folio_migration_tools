@@ -1,3 +1,10 @@
+"""Mapper for transforming course data to FOLIO Course Reserves format.
+
+Provides the CoursesMapper class for mapping legacy course data to FOLIO course
+records using configured mapping files. Handles course listings, instructors, and
+term/department references.
+"""
+
 import i18n
 from typing import Any
 from typing import Dict
@@ -27,6 +34,16 @@ class CoursesMapper(MappingFileMapperBase):
         library_configuration: LibraryConfiguration,
         task_configuration,
     ):
+        """Initialize CoursesMapper with mapping configurations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            course_map: Course mapping configuration.
+            terms_map: Academic terms mapping configuration.
+            departments_map: Department mapping configuration.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_configuration: Task configuration for course migration.
+        """
         self.folio_client: FolioClient = folio_client
         self.user_cache: dict = {}
         self.notes_mapper: NotesMapper = NotesMapper(

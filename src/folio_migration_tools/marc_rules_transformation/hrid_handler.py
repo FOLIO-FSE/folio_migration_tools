@@ -1,3 +1,10 @@
+"""HRID (Human Readable ID) handling for MARC transformations.
+
+Manages HRID generation and 001/003/035 field manipulation during MARC transformation.
+Supports both FOLIO-generated HRIDs and preservation of legacy 001 fields as HRIDs.
+Handles creation of 035 fields from previous 001/003 combinations.
+"""
+
 import json
 import logging
 from typing import Set
@@ -22,6 +29,14 @@ class HRIDHandler:
         migration_report: MigrationReport,
         deactivate035_from001: bool,
     ):
+        """Initialize HRID handler for managing FOLIO Human-Readable IDs.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            handling (HridHandling): HRID handling configuration.
+            migration_report (MigrationReport): Report for tracking operations.
+            deactivate035_from001 (bool): Whether to deactivate 035 fields derived from 001.
+        """
         self.unique_001s: Set[str] = set()
         self.deactivate035_from001: bool = deactivate035_from001
         self.hrid_path = "/hrid-settings-storage/hrid-settings"
@@ -45,7 +60,7 @@ class HRIDHandler:
         marc_record: Record,
         legacy_ids: list[str],
     ) -> None:
-        """Create HRID if not mapped. Add hrid as MARC record 001
+        """Create HRID if not mapped. Add hrid as MARC record 001.
 
         Args:
             namespace (FOLIONamespaces): determening the type of hrid setting to update

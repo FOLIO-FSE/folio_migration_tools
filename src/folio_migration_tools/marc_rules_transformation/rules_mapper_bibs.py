@@ -1,5 +1,4 @@
-"""The default mapper, responsible for parsing MARC21 records acording to the
-FOLIO community specifications"""
+"""MARC21 to FOLIO Instance mapper using community specifications."""
 
 import logging
 import sys
@@ -37,8 +36,7 @@ from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskCo
 
 
 class BibsRulesMapper(RulesMapperBase):
-    """Maps a MARC record to inventory instance format according to
-    the FOLIO community convention"""
+    """Map MARC records to FOLIO inventory instance format."""
 
     def __init__(
         self,
@@ -47,6 +45,14 @@ class BibsRulesMapper(RulesMapperBase):
         task_configuration: MarcTaskConfigurationBase,
         statistical_codes_map: Dict[str, str] = None,
     ):
+        """Initialize mapper for bibliographic record transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_configuration (MarcTaskConfigurationBase): Bibs transformation configuration.
+            statistical_codes_map (Dict[str, str]): Mapping for statistical codes.
+        """
         super().__init__(
             folio_client,
             library_configuration,
@@ -110,9 +116,9 @@ class BibsRulesMapper(RulesMapperBase):
     def parse_record(
         self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
     ) -> list[dict]:
-        """Parses a bib recod into a FOLIO Inventory instance object
+        """Parse a MARC bib record into a FOLIO Inventory instance object.
+
         Community mapping suggestion: https://bit.ly/2S7Gyp3
-         This is the main function
 
         Args:
             marc_record (Record): _description_
@@ -155,11 +161,10 @@ class BibsRulesMapper(RulesMapperBase):
         ignored_subsequent_fields: set,
         legacy_ids: List[str],
     ):
-        """
-        This method applies a much simplified MARC-to-instance
-        mapping to create a minimal FOLIO Instance record to be
-        used with a Data Import based MARC loading flow, rather
-        than creating SRS records during transformation.
+        """Apply simplified MARC-to-instance mapping for Data Import flow.
+
+        Creates a minimal FOLIO Instance record to be used with a Data Import
+        based MARC loading flow, rather than creating SRS records during transformation.
 
         Args:
             folio_instance (dict): _description_
@@ -200,7 +205,7 @@ class BibsRulesMapper(RulesMapperBase):
         legacy_ids: List[str],
         file_def: FileDefinition,
     ) -> None:
-        """Do stuff not easily captured by the mapping rules
+        """Do stuff not easily captured by the mapping rules.
 
         Args:
             folio_instance (dict): _description_
@@ -575,7 +580,7 @@ class BibsRulesMapper(RulesMapperBase):
         return languages
 
     def get_languages(self, marc_record: Record, legacy_id: List[str]) -> List[str]:
-        """Get languages and tranforms them to correct codes
+        """Get languages and tranforms them to correct codes.
 
         Args:
             marc_record (Record): A pymarc Record object
@@ -591,7 +596,7 @@ class BibsRulesMapper(RulesMapperBase):
         return list(languages)
 
     def fetch_language_codes(self) -> Generator[str, None, None]:
-        """Loads the  list of standardized language codes from LoC
+        """Loads the  list of standardized language codes from LoC.
 
         Yields:
             Generator[str, None, None]: _description_

@@ -1,5 +1,4 @@
-"""
-UserImporterTask module for FOLIO user import operations.
+"""UserImporterTask module for FOLIO user import operations.
 
 This module provides an adapter that wraps folio_data_import.UserImporter
 to conform to the folio_migration_tools MigrationTaskBase interface.
@@ -32,10 +31,10 @@ from folio_data_import._progress import RichProgressReporter
 
 
 class UserImportTask(MigrationTaskBase):
-    """UserImportTask
+    """A wrapper for folio_data_import.UserImporter.
 
-    An adapter that wraps folio_data_import.UserImporter to provide user import
-    functionality while conforming to the MigrationTaskBase interface.
+    This class adapts the UserImporter from folio_data_import to fit within the
+    folio_migration_tools MigrationTaskBase framework.
 
     This implementation handles:
     - User create/update with full upsert support
@@ -160,6 +159,14 @@ class UserImportTask(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize UserImporter for bulk user import via /users APIs.
+
+        Args:
+            task_config (TaskConfiguration): User import configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.migration_report = MigrationReport()
         self.stats: UserImporterStats = UserImporterStats()
@@ -171,8 +178,7 @@ class UserImportTask(MigrationTaskBase):
         logging.info("User match key: %s", self.task_configuration.user_match_key)
 
     def _create_fdi_config(self, file_paths: List[Path]) -> FDIUserImporter.Config:
-        """
-        Create a folio_data_import.UserImporter.Config from our TaskConfiguration.
+        """Create a folio_data_import.UserImporter.Config from our TaskConfiguration.
 
         Args:
             file_paths: List of file paths to process
@@ -192,9 +198,7 @@ class UserImportTask(MigrationTaskBase):
         )
 
     async def _do_work_async(self) -> None:
-        """
-        Async implementation of the work logic.
-        """
+        """Async implementation of the work logic."""
         # Build list of file paths
         file_paths: List[Path] = []
         for file_def in self.task_configuration.files:
@@ -243,8 +247,7 @@ class UserImportTask(MigrationTaskBase):
             await importer.close()
 
     def do_work(self) -> None:
-        """
-        Main work method that processes files and imports users to FOLIO.
+        """Main work method that processes files and imports users to FOLIO.
 
         This method reads user records from the configured files and imports them
         to FOLIO using the folio_data_import.UserImporter, handling all related
@@ -265,9 +268,7 @@ class UserImportTask(MigrationTaskBase):
         logging.info("UserImportTask work complete")
 
     def _translate_stats_to_migration_report(self) -> None:
-        """
-        Translate UserImporterStats to MigrationReport format.
-        """
+        """Translate UserImporterStats to MigrationReport format."""
         # General statistics
         total_processed = self.stats.created + self.stats.updated + self.stats.failed
         self.migration_report.set(
@@ -301,8 +302,7 @@ class UserImportTask(MigrationTaskBase):
             self.migration_report.add("FilesProcessed", file_name)
 
     def wrap_up(self) -> None:
-        """
-        Finalize the migration task and write reports.
+        """Finalize the migration task and write reports.
 
         This method translates statistics from the underlying UserImporter
         to the MigrationReport format and writes both markdown and JSON reports.
