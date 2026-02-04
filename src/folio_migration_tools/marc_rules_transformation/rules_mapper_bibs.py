@@ -167,10 +167,10 @@ class BibsRulesMapper(RulesMapperBase):
         based MARC loading flow, rather than creating SRS records during transformation.
 
         Args:
-            folio_instance (dict): _description_
-            marc_record (Record): _description_
-            legacy_ids (List[str]): _description_
-            file_def (FileDefinition): _description_
+            folio_instance (dict): The FOLIO instance record to populate.
+            marc_record (Record): The source MARC record.
+            ignored_subsequent_fields (set): Fields to skip during processing.
+            legacy_ids (List[str]): Legacy identifiers for the record.
         """
         main_entry_field_tags = ["100", "110", "111", "130"]
         main_entry_fields = marc_record.get_fields(*main_entry_field_tags)

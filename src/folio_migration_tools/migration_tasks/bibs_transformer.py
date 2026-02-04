@@ -30,6 +30,8 @@ from folio_migration_tools.migration_tasks.migration_task_base import (
 
 class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(MarcTaskConfigurationBase):
+        """Task configuration for BibsTransformer."""
+
         ils_flavour: Annotated[
             IlsFlavour,
             Field(

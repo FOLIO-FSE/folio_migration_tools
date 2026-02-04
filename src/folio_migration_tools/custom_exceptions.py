@@ -36,6 +36,7 @@ class TransformationFieldMappingError(TransformationError):
         super().__init__(self.message)
 
     def __str__(self):
+        """Return formatted error message with record context."""
         return (
             i18n.t("Data issue. Consider fixing the record. ")
             + f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
@@ -69,6 +70,7 @@ class TransformationRecordFailedError(TransformationError):
         super().__init__(self.message)
 
     def __str__(self):
+        """Return formatted error message with record context."""
         return (
             f"Critical data issue. Record needs fixing"
             f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
@@ -110,6 +112,7 @@ class TransformationProcessError(TransformationError):
         super().__init__(self.message)
 
     def __str__(self):
+        """Return formatted error message with process context."""
         return (
             f"Critical Process issue. Check configuration, mapping files and reference data"
             f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"

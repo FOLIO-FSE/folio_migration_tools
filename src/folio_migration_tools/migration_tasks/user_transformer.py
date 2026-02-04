@@ -33,6 +33,8 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class UserTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for UserTransformer."""
+
         name: Annotated[
             str,
             Field(

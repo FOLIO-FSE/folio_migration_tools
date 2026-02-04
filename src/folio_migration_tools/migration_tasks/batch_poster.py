@@ -65,6 +65,8 @@ class BatchPoster(MigrationTaskBase):
     """
 
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for BatchPoster."""
+
         name: Annotated[
             str,
             Field(

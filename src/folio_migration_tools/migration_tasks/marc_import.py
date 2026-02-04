@@ -52,6 +52,8 @@ class MARCImportTask(MigrationTaskBase):
     """
 
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for MARCImportTask."""
+
         name: Annotated[
             str,
             Field(

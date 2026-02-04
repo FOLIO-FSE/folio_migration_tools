@@ -53,6 +53,8 @@ class UserImportTask(MigrationTaskBase):
     """
 
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for UserImporter."""
+
         name: Annotated[
             str,
             Field(

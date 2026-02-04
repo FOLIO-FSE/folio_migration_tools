@@ -43,6 +43,8 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 # Read files and do some work
 class OrganizationTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for OrganizationTransformer."""
+
         name: Annotated[
             str,
             Field(
@@ -120,7 +122,7 @@ class OrganizationTransformer(MigrationTaskBase):
         """Initialize OrganizationTransformer for organization transformations.
 
         Args:
-            task_config (TaskConfiguration): Organizations transformation configuration.
+            task_configuration (TaskConfiguration): Organizations transformation config.
             library_config (LibraryConfiguration): Library configuration.
             folio_client: FOLIO API client.
             use_logging (bool): Whether to set up task logging.

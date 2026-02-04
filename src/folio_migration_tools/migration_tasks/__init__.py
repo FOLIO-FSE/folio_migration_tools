@@ -1,3 +1,5 @@
+"""Migration task implementations for various FOLIO data types."""
+
 from os.path import dirname, basename, isfile, join
 import glob
 

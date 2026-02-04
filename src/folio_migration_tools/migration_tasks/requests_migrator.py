@@ -32,6 +32,8 @@ from folio_migration_tools.transaction_migration.legacy_request import LegacyReq
 
 class RequestsMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for RequestsMigrator."""
+
         name: Annotated[
             str,
             Field(

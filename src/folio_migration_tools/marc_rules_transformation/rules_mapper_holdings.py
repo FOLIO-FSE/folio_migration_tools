@@ -390,9 +390,9 @@ class RulesMapperHoldings(RulesMapperBase):
         the statements to the FOLIO holdings record.
 
         Args:
-            marc_record (Record): PyMARC record
-            folio_holding (Dict): FOLIO holdings record
-
+            marc_record (Record): PyMARC record.
+            folio_holding (Dict): FOLIO holdings record.
+            legacy_ids: Legacy identifiers for the record.
         """
         if self.task_configuration.include_mrk_statements:
             mrk_statement_notes = []
@@ -406,13 +406,14 @@ class RulesMapperHoldings(RulesMapperBase):
                 ) + self.add_mrk_statements_note(mrk_statement_notes, legacy_ids)
 
     def add_mrk_statements_note(self, mrk_statement_notes: List[str], legacy_ids) -> List[Dict]:
-        """Creates a note from the MRK statements.
+        """Create a note from the MRK statements.
 
         Args:
-            mrk_statement_notes (List[str]): A list of MFHD holdings statements as MRK strings
+            mrk_statement_notes (List[str]): A list of MFHD holdings statements as MRK strings.
+            legacy_ids: Legacy identifiers for error reporting.
 
         Returns:
-            List: A list containing the FOLIO holdings note object (Dict)
+            List: A list containing the FOLIO holdings note object (Dict).
         """
         holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
             self.folio.holding_note_types,
@@ -459,13 +460,14 @@ class RulesMapperHoldings(RulesMapperBase):
     def add_mfhd_as_mrk_note(
         self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]
     ):
-        """Adds the MFHD as a note to the holdings record.
+        """Add the MFHD as a note to the holdings record.
 
-        This is done to preserve the information in the MARC record for future reference.
+        Preserves the MARC record information for future reference.
 
         Args:
-            marc_record (Record): PyMARC record
-            folio_holding (Dict): FOLIO holdings record
+            marc_record (Record): PyMARC record.
+            folio_holding (Dict): FOLIO holdings record.
+            legacy_ids (List[str]): Legacy identifiers for error reporting.
         """
         if self.task_configuration.include_mfhd_mrk_as_note:
             holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
@@ -515,13 +517,14 @@ class RulesMapperHoldings(RulesMapperBase):
     def add_mfhd_as_mrc_note(
         self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]
     ):
-        """Adds the MFHD as a note to the holdings record.
+        """Add the MFHD as a note to the holdings record.
 
-        This is done to preserve the information in the MARC record for future reference.
+        Preserves the MARC record information for future reference.
 
         Args:
-            marc_record (Record): PyMARC record
-            folio_holding (Dict): FOLIO holdings record
+            marc_record (Record): PyMARC record.
+            folio_holding (Dict): FOLIO holdings record.
+            legacy_ids (List[str]): Legacy identifiers for error reporting.
         """
         if self.task_configuration.include_mfhd_mrc_as_note:
             holdings_note_type_tuple = self.conditions.get_ref_data_tuple_by_name(
@@ -677,16 +680,16 @@ class RulesMapperHoldings(RulesMapperBase):
             )
 
     def setup_boundwith_relationship_map(self, boundwith_relationship_map_list: List[Dict]):
-        """Creates a map of MFHD_ID to BIB_ID for boundwith relationships.
+        """Create a map of MFHD_ID to BIB_ID for boundwith relationships.
 
-        Arguments:
-            boundwith_relationship_map: A list of dictionaries containing the MFHD_ID and BIB_ID.
+        Args:
+            boundwith_relationship_map_list: A list of dicts containing MFHD_ID and BIB_ID.
 
         Returns:
             A dictionary mapping MFHD_ID to a list of BIB_IDs.
 
         Raises:
-            TransformationProcessError: If MFHD_ID or BIB_ID is missing from the entry or if the instance_uuid is not in the parent_id_map.
+            TransformationProcessError: If MFHD_ID or BIB_ID is missing from the entry or instance not in parent_id_map.
             TransformationRecordFailedError: If BIB_ID is not in the instance id map.
         """  # noqa: E501
         new_map = {}

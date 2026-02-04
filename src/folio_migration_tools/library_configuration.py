@@ -86,7 +86,7 @@ class FileDefinition(BaseModel):
 
 
 class IlsFlavour(str, Enum):
-    """ """
+    """Enum representing different ILS flavours for migration."""
 
     aleph = "aleph"
     voyager = "voyager"
@@ -101,6 +101,8 @@ class IlsFlavour(str, Enum):
 
 
 class FolioRelease(str, Enum):
+    """Enum representing different FOLIO releases."""
+
     ramsons = "ramsons"
     sunflower = "sunflower"
     trillium = "trillium"
@@ -108,6 +110,8 @@ class FolioRelease(str, Enum):
 
 
 class LibraryConfiguration(BaseModel):
+    """Pydantic model for tenant-level configuration."""
+
     gateway_url: Annotated[
         str,
         Field(

@@ -36,6 +36,8 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class CoursesMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for CoursesMigrator."""
+
         name: Annotated[
             str,
             Field(

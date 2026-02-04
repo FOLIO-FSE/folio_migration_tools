@@ -54,7 +54,7 @@ class MapperBase:
             library_configuration (LibraryConfiguration): Library-specific configuration.
             task_configuration (AbstractTaskConfiguration): Task-specific transformation settings.
             folio_client (FolioClient): FOLIO API client for reference data and posting.
-            parent_id_map (Dict[str, Tuple] | None): Optional mapping of parent IDs from prior transformations.
+            parent_id_map (Dict[str, Tuple] | None): Optional parent id map from prior transform.
         """
         logging.info("MapperBase initiating")
         self.parent_id_map: dict[str, tuple] = parent_id_map or {}
