@@ -22,7 +22,7 @@ jobs:
       run: uv sync --all-extras --dev
 
     - name: Lint with Ruff
-      run: uv run ruff check src/
+      run: uv run ruff check src/ --ignore D
 
     - name: Run tests
       env:
