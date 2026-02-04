@@ -11,10 +11,12 @@ myst_heading_anchors = 3
 html_theme_options = {
     "repository_url": "https://github.com/folio-fse/folio_migration_tools",
     "use_repository_button": True,
-    "show_navbar_depth": 2,
-    "max_navbar_depth": 3,
-    "show_nav_level": 2,
-    "collapse_navigation": True
+    "show_navbar_depth": 3,
+    "max_navbar_depth": 4,
+    "show_nav_level": 0,
+    "collapse_navigation": False,
+    "navigation_depth": 4,
+    "show_toc_level": 2,
 }
 myst_enable_extensions = [
     "deflist",

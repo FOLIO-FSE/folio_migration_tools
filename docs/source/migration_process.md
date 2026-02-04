@@ -1,7 +1,7 @@
 # The migration process
 
 In order to perform migrations according to this process, you need the following:
-* Python 3.9 or later
+* Python 3.10 or later
 * An Installation of [FOLIO Migration Tools](https://pypi.org/project/folio-migration-tools/). See the Installing page for information.
 * A repo created from  the template repository [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
 * A FOLIO tenant running Ramsons or later
@@ -32,7 +32,7 @@ folio_marc_instances_<transformer_task_name>.mrc | A MARC dump of the bib record
 ## HRID handling
 
 ### Current implementation
-Previous versions of the migration tools pre-populated HRIDs for instances when transforming to acommodate requirements for creating SRS JSON records. The current process for transforming MARC bibs does not require setting the HRID of the instance record. The value will be set by FOLIO when the instances are posted and in the SRS records created by Data Import when [loading the corresponding MARC data](./marc_rule_based_mapping.md#posting-bibtransformer-marc-records).
+Previous versions of the migration tools pre-populated HRIDs for instances when transforming to acommodate requirements for creating SRS JSON records. The current process for transforming MARC bibs does not require setting the HRID of the instance record. The value will be set by FOLIO when the instances are posted and in the SRS records created by Data Import when {ref}`loading the corresponding MARC data <posting-bibtransformer-marc-records>`.
 
 ```{note}
 If you set `hridHandling` to `"preserve001"`, the 001 of the source MARC record will be used as the instance HRID value.

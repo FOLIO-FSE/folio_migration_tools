@@ -11,10 +11,11 @@ quick_tutorial.md
 :hidden:
 :caption: Using the Tools
 migration_process.md
-migration_tasks.md
+tasks/index.md
 migration_reports.md
 mapping_file_based_mapping.md
 marc_rule_based_mapping.md
+reference_data_mapping.md
 Transforming inventory <mapping_files_inventory.md>
 statistical_codes.md
 Migrating circulation <mapping_files_circulation.md>
@@ -33,13 +34,6 @@ FOLIO Migration Tools currently covers the following data sets:
 * Courses and Reserves (Course reserves)
 * Organizations (Used in ERM and Aquisitions)
 
-## What additional functionality is on the roadmap?
-This is the loose roadmap, in order of most likely implementations first
-* Orders (In development)
-* Invoices
-* ERM-related objects (In the planning)
-
-Financial records are not on the road map, given the structure in FOLIO and the practice of libraries usually wanting to set up the financial structures manually.
 
 ## Can I use the tools for ongoing imports and integrations?
 The tools are primarily maintained for performing initial data migrations. We recommend that you use native FOLIO functionality for ongoing loads where possible. 
@@ -60,14 +54,21 @@ the tests and the tools rely on many calls to GitHub, and you need to create a [
 ```GITHUB_TOKEN=ghp_.....```   
 Then, either restart your shell or run   
 ```source .env```    
-from the command line
+from the command line 
 
 ## Running the tests for the Rules mapper
-### Pipenv
-* Install the packages in the Pipfile
-* Run ```clear; pipenv run pytest -v --log-level=DEBUG --password PASSWORD --tenant_id TENANT_ID --okapi_url OKAPI URL --username USERNAME```
-### Poetry
-* Install the packages from the pyproject.toml
-* Run ```clear; poetry run pytest -v --log-level=DEBUG --password folio --tenant_id fs09000000 --okapi_url https://okapi-bugfest-lotus.int.aws.folio.org --username folio --cov```
+### Using uv
+* Install the packages from the pyproject.toml:
+```shell
+uv sync --all-groups --all-extras
+```
+* Run the tests:
+```shell
+uv run pytest -v --log-level=DEBUG --password PASSWORD --tenant_id TENANT_ID --okapi_url OKAPI_URL --username USERNAME
+```
+* With coverage:
+```shell
+uv run pytest --cov=./ --cov-report=xml
+```
 
  {sub-ref}`today` | {sub-ref}`wordcount-words` words | {sub-ref}`wordcount-minutes` min read

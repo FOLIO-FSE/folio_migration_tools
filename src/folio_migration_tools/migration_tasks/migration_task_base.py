@@ -44,11 +44,10 @@ class MigrationTaskBase:
         folio_client: folioclient.FolioClient,
         use_logging: bool = True,
     ):
-        logging.info("MigrationTaskBase init")
         self.start_datetime = datetime.now(timezone.utc)
         self.task_configuration = task_configuration
-        logging.info(self.task_configuration.model_dump_json(indent=4))
         self.folio_client: FolioClient = folio_client
+        self.library_configuration = library_configuration
         self.ecs_tenant_id = (
             task_configuration.ecs_tenant_id or library_configuration.ecs_tenant_id
         )
@@ -72,7 +71,6 @@ class MigrationTaskBase:
             library_configuration.add_time_stamp_to_file_names,
         )
 
-        self.library_configuration = library_configuration
         self.object_type = self.get_object_type()
         try:
             self.folder_structure.setup_migration_file_structure()
@@ -89,8 +87,13 @@ class MigrationTaskBase:
         self.extradata_writer = ExtradataWriter(
             self.folder_structure.transformation_extra_data_path
         )
+
+        # Setup logging after folder_structure, library_configuration, and task_configuration
+        # are initialized since setup_logging depends on all three
         if use_logging:
             self.setup_logging()
+        logging.info("MigrationTaskBase init")
+        logging.info(self.task_configuration.model_dump_json(indent=4))
         self.folder_structure.log_folder_structure()
         logging.info("MigrationTaskBase init done")
 
