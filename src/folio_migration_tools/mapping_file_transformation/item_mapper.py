@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 from typing import Dict, List, Set
 from uuid import uuid4
 
-import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
@@ -21,6 +20,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -114,6 +114,14 @@ class ItemMapper(MappingFileMapperBase):
                 "name",
                 "CallNumberTypeMapping",
             )
+        elif self.task_configuration.default_call_number_type_name:
+            logging.info(
+                "No call number type map provided, setting default to '%s'.",
+                self.task_configuration.default_call_number_type_name,
+            )
+            self.default_call_number_type_id = self.get_call_number_type_id_by_name(
+                self.folio_client, self.task_configuration.default_call_number_type_name
+            )
         self.loan_type_mapping = RefDataMapping(
             self.folio_client,
             "/loan-types",
@@ -141,9 +149,28 @@ class ItemMapper(MappingFileMapperBase):
             "LocationMapping",
         )
 
+    def apply_default_call_number_type(self, folio_rec: Dict):
+        """Apply default call number type if call number parts exist but type is not set.
+
+        Args:
+            folio_rec (Dict): The FOLIO item record being transformed.
+        """
+        if (
+            getattr(self, "default_call_number_type_id", None)
+            and self.has_call_number_parts(folio_rec)
+            and not folio_rec.get("itemLevelCallNumberTypeId")
+        ):
+            folio_rec["itemLevelCallNumberTypeId"] = self.default_call_number_type_id
+            self.migration_report.add(
+                "CallNumberTypeMapping",
+                i18n_t("Unmapped (default applied)")
+                + f" -> {self.task_configuration.default_call_number_type_name}",
+            )
+
     def perform_additional_mappings(
         self, legacy_ids: List[str] | str, folio_rec: Dict, file_def: FileDefinition
     ):
+        self.apply_default_call_number_type(folio_rec)
         self.handle_suppression(folio_rec, file_def)
         self.map_statistical_codes(folio_rec, file_def)
         self.map_statistical_code_ids(legacy_ids, folio_rec)
@@ -152,7 +179,7 @@ class ItemMapper(MappingFileMapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            i18n.t("Suppressed from discovery") + f" = {folio_record['discoverySuppress']}",
+            i18n_t("Suppressed from discovery") + f" = {folio_record['discoverySuppress']}",
         )
 
     def setup_status_mapping(self, item_statuses_map):
@@ -247,7 +274,7 @@ class ItemMapper(MappingFileMapperBase):
             normalized_barcode = barcode.strip().lower()
             if normalized_barcode and normalized_barcode in self.unique_barcodes:
                 Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
-                self.migration_report.add_general_statistics(i18n.t("Duplicate barcodes"))
+                self.migration_report.add_general_statistics(i18n_t("Duplicate barcodes"))
                 return f"{barcode}-{uuid4()}"
             else:
                 if normalized_barcode:
@@ -259,7 +286,7 @@ class ItemMapper(MappingFileMapperBase):
             elif f"{self.bib_id_template}{mapped_value}" in self.holdings_id_map:
                 return self.holdings_id_map[f"{self.bib_id_template}{mapped_value}"][1]
             self.migration_report.add_general_statistics(
-                i18n.t("Records failed because of failed holdings"),
+                i18n_t("Records failed because of failed holdings"),
             )
             s = (
                 "Holdings id referenced in legacy item "
@@ -279,7 +306,7 @@ class ItemMapper(MappingFileMapperBase):
             )
         self.migration_report.add(
             "CallNumberTypeMapping",
-            i18n.t("Mapping not setup"),
+            i18n_t("Mapping not setup"),
         )
         return ""
 

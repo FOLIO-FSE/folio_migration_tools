@@ -15,6 +15,9 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.holdings_csv_transformer import (
     HoldingsCsvTransformer,
 )
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from pathlib import Path
+
 from .test_infrastructure import mocked_classes
 
 
@@ -489,3 +492,213 @@ def test_perform_additional_mappings_with_stat_codes(mapper: HoldingsMapper, cap
     assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" in suppressed_holdings["statisticalCodeIds"]
     assert "b6b46869-f3c1-4370-b603-29774a1e42b1" in unsuppressed_holdings["statisticalCodeIds"]
     assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" not in unsuppressed_holdings["statisticalCodeIds"]
+
+
+def test_apply_default_call_number_type_when_call_number_present_and_no_type():
+    """Test that default call number type is applied when call number exists but type doesn't."""
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    mocked_mapper.default_call_number_type_id = "test-uuid-1234"
+    mocked_mapper.task_configuration = Mock()
+    mocked_mapper.task_configuration.default_call_number_type_name = "Library of Congress classification"
+    mocked_mapper.has_call_number_parts = HoldingsMapper.has_call_number_parts
+    mocked_mapper.migration_report = MigrationReport()
+
+    folio_rec = {"callNumber": "QA76.73", "instanceId": "inst-123", "permanentLocationId": "loc-1"}
+
+    HoldingsMapper.apply_default_call_number_type(mocked_mapper, folio_rec)
+
+    assert folio_rec["callNumberTypeId"] == "test-uuid-1234"
+    assert "CallNumberTypeMapping" in mocked_mapper.migration_report.report
+
+
+def test_apply_default_call_number_type_not_applied_when_type_already_exists():
+    """Test that default call number type is NOT applied when callNumberTypeId already exists."""
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    mocked_mapper.default_call_number_type_id = "test-uuid-1234"
+    mocked_mapper.task_configuration = Mock()
+    mocked_mapper.task_configuration.default_call_number_type_name = "Library of Congress classification"
+    mocked_mapper.has_call_number_parts = HoldingsMapper.has_call_number_parts
+    mocked_mapper.migration_report = MigrationReport()
+
+    folio_rec = {
+        "callNumber": "QA76.73",
+        "callNumberTypeId": "existing-type-uuid",
+        "instanceId": "inst-123",
+        "permanentLocationId": "loc-1",
+    }
+
+    HoldingsMapper.apply_default_call_number_type(mocked_mapper, folio_rec)
+
+    assert folio_rec["callNumberTypeId"] == "existing-type-uuid"
+
+
+def test_apply_default_call_number_type_not_applied_when_no_call_number():
+    """Test that default call number type is NOT applied when no call number parts exist."""
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    mocked_mapper.default_call_number_type_id = "test-uuid-1234"
+    mocked_mapper.task_configuration = Mock()
+    mocked_mapper.task_configuration.default_call_number_type_name = "Library of Congress classification"
+    mocked_mapper.has_call_number_parts = HoldingsMapper.has_call_number_parts
+    mocked_mapper.migration_report = MigrationReport()
+
+    folio_rec = {"instanceId": "inst-123", "permanentLocationId": "loc-1"}
+
+    HoldingsMapper.apply_default_call_number_type(mocked_mapper, folio_rec)
+
+    assert "callNumberTypeId" not in folio_rec
+
+
+def test_apply_default_call_number_type_not_applied_when_no_default_configured():
+    """Test that nothing happens when no default call number type is configured."""
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    # Simulate no default_call_number_type_id attribute
+    del mocked_mapper.default_call_number_type_id
+    mocked_mapper.has_call_number_parts = HoldingsMapper.has_call_number_parts
+    mocked_mapper.migration_report = MigrationReport()
+
+    folio_rec = {"callNumber": "QA76.73", "instanceId": "inst-123", "permanentLocationId": "loc-1"}
+
+    HoldingsMapper.apply_default_call_number_type(mocked_mapper, folio_rec)
+
+    assert "callNumberTypeId" not in folio_rec
+
+
+def test_apply_default_call_number_type_with_call_number_prefix():
+    """Test that default is applied when callNumberPrefix exists (not just callNumber)."""
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    mocked_mapper.default_call_number_type_id = "test-uuid-1234"
+    mocked_mapper.task_configuration = Mock()
+    mocked_mapper.task_configuration.default_call_number_type_name = "Dewey Decimal classification"
+    mocked_mapper.has_call_number_parts = HoldingsMapper.has_call_number_parts
+    mocked_mapper.migration_report = MigrationReport()
+
+    folio_rec = {
+        "callNumberPrefix": "REF",
+        "instanceId": "inst-123",
+        "permanentLocationId": "loc-1",
+    }
+
+    HoldingsMapper.apply_default_call_number_type(mocked_mapper, folio_rec)
+
+    assert folio_rec["callNumberTypeId"] == "test-uuid-1234"
+
+
+def test_apply_default_call_number_type_not_applied_for_additional_call_numbers():
+    """Test that default is NOT applied when only additionalCallNumbers exists.
+
+    The has_call_number_parts method should exclude fields containing 'additional'
+    to avoid applying call number type to additional call numbers which have their
+    own type embedded in the structure.
+    """
+    mocked_mapper = Mock(spec=HoldingsMapper)
+    mocked_mapper.default_call_number_type_id = "test-uuid-1234"
+    mocked_mapper.task_configuration = Mock()
+    mocked_mapper.task_configuration.default_call_number_type_name = "Library of Congress classification"
+    mocked_mapper.has_call_number_parts = HoldingsMapper.has_call_number_parts
+    mocked_mapper.migration_report = MigrationReport()
+
+    # Record has only additionalCallNumbers, not a primary call number
+    folio_rec = {
+        "additionalCallNumbers": ["ABC123", "DEF456"],
+        "instanceId": "inst-123",
+        "permanentLocationId": "loc-1",
+    }
+
+    HoldingsMapper.apply_default_call_number_type(mocked_mapper, folio_rec)
+
+    assert "callNumberTypeId" not in folio_rec
+
+
+def test_mapper_init_with_default_call_number_type_no_map():
+    """Test HoldingsMapper initialization with default call number type but no mapping file."""
+
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    lib = LibraryConfiguration(
+        okapi_url="okapi_url",
+        tenant_id="tenant_id",
+        okapi_username="username",
+        okapi_password="password",
+        folio_release=FolioRelease.ramsons,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="test",
+        base_folder=Path("/"),
+    )
+
+    holdings_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "ID", "value": "", "description": ""},
+            {"folio_field": "callNumber", "legacy_field": "CN", "value": "", "description": ""},
+            {"folio_field": "permanentLocationId", "legacy_field": "LOC", "value": "", "description": ""},
+            {"folio_field": "instanceId", "legacy_field": "BIB", "value": "", "description": ""},
+        ]
+    }
+    location_map = [{"folio_code": "E", "LOC": "*"}]
+    instance_id_map = {"b1": ["b1", "88009a08-5a2e-49e1-a3dd-d44c44d21b76"]}
+
+    mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mocked_config.look_up_instructor = False
+    mocked_config.default_call_number_type_name = "Library of Congress classification"
+
+    mapper = HoldingsMapper(
+        mock_folio,
+        holdings_map,
+        location_map,
+        None,  # No call number type map
+        instance_id_map,
+        lib,
+        mocked_config,
+        None,
+    )
+
+    # Should have resolved the default call number type ID
+    assert hasattr(mapper, "default_call_number_type_id")
+    assert mapper.default_call_number_type_id == "95467209-6d7b-468b-94df-0f5d7ad2747d"
+
+
+def test_mapper_init_with_invalid_default_call_number_type():
+    """Test that HoldingsMapper raises error when default call number type name is invalid."""
+
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    lib = LibraryConfiguration(
+        okapi_url="okapi_url",
+        tenant_id="tenant_id",
+        okapi_username="username",
+        okapi_password="password",
+        folio_release=FolioRelease.ramsons,
+        library_name="Test Run Library",
+        log_level_debug=False,
+        iteration_identifier="test",
+        base_folder=Path("/"),
+    )
+
+    holdings_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "ID", "value": "", "description": ""},
+            {"folio_field": "permanentLocationId", "legacy_field": "LOC", "value": "", "description": ""},
+            {"folio_field": "instanceId", "legacy_field": "BIB", "value": "", "description": ""},
+        ]
+    }
+    location_map = [{"folio_code": "E", "LOC": "*"}]
+    instance_id_map = {"b1": ["b1", "88009a08-5a2e-49e1-a3dd-d44c44d21b76"]}
+
+    mocked_config = Mock(spec=HoldingsCsvTransformer.TaskConfiguration)
+    mocked_config.look_up_instructor = False
+    mocked_config.default_call_number_type_name = "Nonexistent Call Number Type"
+
+    with pytest.raises(TransformationProcessError) as exc_info:
+        HoldingsMapper(
+            mock_folio,
+            holdings_map,
+            location_map,
+            None,  # No call number type map
+            instance_id_map,
+            lib,
+            mocked_config,
+            None,
+        )
+
+    assert "Nonexistent Call Number Type" in str(exc_info.value)
+    assert "not found in tenant" in str(exc_info.value)
