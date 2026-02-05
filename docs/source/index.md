@@ -18,7 +18,6 @@ marc_rule_based_mapping.md
 reference_data_mapping.md
 Transforming inventory <mapping_files_inventory.md>
 statistical_codes.md
-Migrating circulation <mapping_files_circulation.md>
 q_and_a.md
 ```
 
