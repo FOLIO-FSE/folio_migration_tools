@@ -162,5 +162,4 @@ Valid FOLIO item statuses:
 
 - [Mapping File Based Mapping](mapping_file_based_mapping) - General mapping file syntax
 - [Mapping Files for Inventory](mapping_files_inventory) - Inventory-specific mapping files
-- [Mapping Files for Circulation](mapping_files_circulation) - Circulation-specific mapping files
 - [Statistical Code Mapping](statistical_codes) - Detailed statistical code mapping
