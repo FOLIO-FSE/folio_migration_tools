@@ -13,7 +13,7 @@ import re
 import uuid
 from functools import reduce
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 from uuid import UUID
 
 import i18n
@@ -25,6 +25,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.migration_report import MigrationReport
@@ -250,7 +251,7 @@ class MappingFileMapperBase(MapperBase):
             )
         self.migration_report.add(
             "StatisticalCodeMapping",
-            i18n.t("Mapping not setup"),
+            i18n_t("Mapping not setup"),
         )
         return ""
 
@@ -886,8 +887,52 @@ class MappingFileMapperBase(MapperBase):
         else:
             folio_object.pop(schema_property_name, [])
 
+    @staticmethod
+    def has_call_number_parts(folio_rec: Dict[str, Any]) -> bool:
+        """Check if a FOLIO record has any call number parts (excluding call number type ID).
 
-def skip_property(property_name, property):
+        Args:
+            folio_rec (Dict[str, Any]): A FOLIO record represented as a dictionary
+        Returns:
+            bool: True if any call number parts exist, False otherwise
+        """
+        return any(
+            folio_rec.get(part)
+            for part in folio_rec.keys()
+            if (
+                "callnumbertypeid" not in part.lower()
+                and ("callnumber" in part.lower() and "additional" not in part.lower())
+            )
+        )
+
+    @staticmethod
+    def get_call_number_type_id_by_name(
+        folio_client: FolioClient, call_number_type_name: str
+    ) -> str:
+        """Look up call number type ID by name from FOLIO.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            call_number_type_name (str): The name of the call number type to look up.
+
+        Returns:
+            str: The UUID of the matching call number type.
+
+        Raises:
+            TransformationProcessError: If the call number type is not found in the tenant.
+        """
+        try:
+            return {x["name"]: x["id"] for x in folio_client.call_number_types}[
+                call_number_type_name
+            ]
+        except KeyError as ke:
+            raise TransformationProcessError(
+                "",
+                f"Default call number type '{call_number_type_name}' not found in tenant.",
+            ) from ke
+
+
+def skip_property(property_name: str, property: Dict[str, Any]) -> bool:
     return bool(
         property_name in ["metadata", "id", "lastCheckIn"]
         or property_name.startswith("effective")
