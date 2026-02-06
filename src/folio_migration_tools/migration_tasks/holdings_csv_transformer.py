@@ -229,6 +229,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 library_config,
                 task_config,
                 statcode_mapping,
+                call_number_type_blurb_id="CallNumberTypeMappingCSV"
             )
             self.holdings = {}
             self.total_records = 0
