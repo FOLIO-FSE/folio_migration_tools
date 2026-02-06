@@ -1,3 +1,10 @@
+"""Holdings records transformation from CSV files.
+
+Transforms holdings records from CSV/TSV files to FOLIO Holdings records using
+mapping files. Handles bound-with relationships, location mapping, and statistical
+code assignments.
+"""
+
 import csv
 import ctypes
 import json
@@ -8,7 +15,6 @@ import traceback
 from typing import Annotated, List, Optional
 from pathlib import Path
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from httpx import HTTPError
 from pydantic import Field
@@ -19,6 +25,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -40,6 +47,8 @@ csv.register_dialect("tsv", delimiter="\t")
 
 class HoldingsCsvTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for HoldingsCsvTransformer."""
+
         name: Annotated[
             str,
             Field(
@@ -177,6 +186,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize HoldingsCsvTransformer for CSV holdings transformations.
+
+        Args:
+            task_config (TaskConfiguration): Holdings CSV transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
         self.location_map = []
@@ -356,14 +373,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         )
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
-                        i18n.t("Holdings Records Written to disk")
+                        i18n_t("Holdings Records Written to disk")
                     )
             self.mapper.save_id_map_file(
                 self.folder_structure.holdings_id_map_path, self.holdings_id_map
             )
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Holdings transformation report"),
+                i18n_t("Holdings transformation report"),
                 migration_report_file,
                 self.mapper.start_datetime,
             )
@@ -373,6 +390,8 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         logging.info("All done!")
         self.clean_out_empty_logs()
 
@@ -398,7 +417,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         full_path = self.folder_structure.data_folder / "items" / file_def.file_name
         with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of files processed")
+                i18n_t("Number of files processed")
             )
             start = time.time()
             records_processed = 0
@@ -417,7 +436,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Number of Legacy items in file")
+                    i18n_t("Number of Legacy items in file")
                 )
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
@@ -466,9 +485,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str
     ) -> None:
-        """Determines what newly generated holdingsrecords are to be merged with
-        previously created ones. When that is done, it generates the correct boundwith
-        parts needed.
+        """Merge newly generated holdings with existing ones and create boundwith parts.
 
         Args:
             incoming_holding (dict): The newly created FOLIO Holding
@@ -486,7 +503,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 self.holdings[bw_key] = incoming_holding
                 self.mapper.create_and_write_boundwith_part(legacy_item_id, incoming_holding["id"])
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Unique BW Holdings created from Items")
+                    i18n_t("Unique BW Holdings created from Items")
                 )
             else:
                 self.merge_holding(bw_key, incoming_holding)
@@ -497,7 +514,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     legacy_item_id, self.holdings[bw_key], self.object_type
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("BW Items found tied to previously created BW Holdings")
+                    i18n_t("BW Items found tied to previously created BW Holdings")
                 )
         else:
             # Regular holding. Merge according to criteria
@@ -509,12 +526,12 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             if self.holdings.get(new_holding_key, None):
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Holdings already created from Item")
+                    i18n_t("Holdings already created from Item")
                 )
                 self.merge_holding(new_holding_key, incoming_holding)
             else:
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Unique Holdings created from Items")
+                    i18n_t("Unique Holdings created from Items")
                 )
                 self.holdings[new_holding_key] = incoming_holding
 

@@ -1,3 +1,9 @@
+"""Mapper for transforming notes to FOLIO Notes format.
+
+Provides the NotesMapper class for mapping legacy notes to FOLIO Notes records.
+Handles note types, content, and object associations.
+"""
+
 import logging
 import i18n
 
@@ -20,6 +26,16 @@ class NotesMapper(MappingFileMapperBase):
         object_type: FOLIONamespaces,
         ignore_legacy_identifier: bool = False,
     ) -> None:
+        """Initialize NotesMapper for handling note transformations.
+
+        Args:
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_configuration: Task configuration for note migration.
+            folio_client (FolioClient): FOLIO API client.
+            record_map (dict): Mapping configuration for note fields.
+            object_type (FOLIONamespaces): Type of object containing notes.
+            ignore_legacy_identifier (bool): Whether to ignore legacy identifiers.
+        """
         self.folio_client: FolioClient = folio_client
         self.setup_notes_schema()
         super().__init__(

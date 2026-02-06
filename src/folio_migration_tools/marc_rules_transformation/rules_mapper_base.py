@@ -1,3 +1,10 @@
+"""Base class for MARC rules-based transformations.
+
+Provides the abstract RulesMapperBase class that all MARC rules mappers inherit from.
+Handles loading transformation rules from JSON, applying rules with conditions,
+and managing the transformation workflow for MARC-to-FOLIO conversions.
+"""
+
 import datetime
 import json
 import logging
@@ -15,6 +22,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 from pymarc import Field, Optional, Record, Subfield
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -40,6 +48,17 @@ class RulesMapperBase(MapperBase):
         conditions=None,
         parent_id_map: dict[str, tuple] = None,
     ):
+        """Initialize base mapper for MARC rules-based transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_configuration: Task configuration for MARC transformation.
+            statistical_codes_map (Optional[Dict]): Mapping for statistical codes.
+            schema (dict): JSON schema for validation.
+            conditions: Conditions processor for rules evaluation.
+            parent_id_map (dict[str, tuple]): Optional mapping of parent IDs.
+        """
         super().__init__(library_configuration, task_configuration, folio_client, parent_id_map)
         self.parsed_records = 0
         self.id_map: dict[str, tuple] = {}
@@ -299,13 +318,13 @@ class RulesMapperBase(MapperBase):
     def perform_proxy_mapping(self, marc_field):
         proxy_mapping = next(iter(self.mappings.get("880", [])), [])
         if "6" not in marc_field:
-            self.migration_report.add("Field880Mappings", i18n.t("Records without $6"))
+            self.migration_report.add("Field880Mappings", i18n_t("Records without $6"))
             return None
         if not proxy_mapping or not proxy_mapping.get("fieldReplacementBy3Digits", False):
             return None
         if not marc_field["6"][:3] or len(marc_field["6"][:3]) != 3:
             self.migration_report.add(
-                "Field880Mappings", i18n.t("Records with unexpected length in $6")
+                "Field880Mappings", i18n_t("Records with unexpected length in $6")
             )
             return None
         first_three = marc_field["6"][:3]
@@ -320,16 +339,16 @@ class RulesMapperBase(MapperBase):
         )
         self.migration_report.add(
             "Field880Mappings",
-            i18n.t("Source digits")
+            i18n_t("Source digits")
             + f": {marc_field['6']} "
-            + i18n.t("Target field")
+            + i18n_t("Target field")
             + f": {target_field}",
         )
         mappings = self.mappings.get(target_field, {})
         if not mappings:
             self.migration_report.add(
                 "Field880Mappings",
-                i18n.t("Mapping not set up for target field")
+                i18n_t("Mapping not set up for target field")
                 + f": {target_field} ({marc_field['6']})",
             )
         return mappings
@@ -337,7 +356,7 @@ class RulesMapperBase(MapperBase):
     def report_marc_stats(
         self, marc_field: Field, bad_tags, legacy_ids, ignored_subsequent_fields
     ):
-        self.migration_report.add("Trivia", i18n.t("Total number of Tags processed"))
+        self.migration_report.add("Trivia", i18n_t("Total number of Tags processed"))
         self.report_source_and_links(marc_field)
         self.report_bad_tags(marc_field, bad_tags, legacy_ids)
         mapped = marc_field.tag in self.mappings
@@ -351,7 +370,7 @@ class RulesMapperBase(MapperBase):
         for subfield_2 in marc_field.get_subfields("2"):
             self.migration_report.add(
                 "AuthoritySources",
-                i18n.t("Source of heading or term") + f": {subfield_2.split(' ')[0]}",
+                i18n_t("Source of heading or term") + f": {subfield_2.split(' ')[0]}",
             )
         for subfield_0 in marc_field.get_subfields("0"):
             code = ""
@@ -363,7 +382,7 @@ class RulesMapperBase(MapperBase):
                     code = subfield_0[: subfield_0.find(url.path)]
             if code:
                 self.migration_report.add(
-                    "AuthoritySources", i18n.t("$0 base uri or source code") + f": {code}"
+                    "AuthoritySources", i18n_t("$0 base uri or source code") + f": {code}"
                 )
 
     def apply_rules(self, marc_field: pymarc.Field, mapping, legacy_ids):
@@ -402,7 +421,7 @@ class RulesMapperBase(MapperBase):
             )
             trfe.log_it()
             self.migration_report.add_general_statistics(
-                i18n.t("Records failed due to an error. See data issues log for details")
+                i18n_t("Records failed due to an error. See data issues log for details")
             )
         except Exception as exception:
             self.handle_generic_exception(self.parsed_records, exception)
@@ -537,7 +556,7 @@ class RulesMapperBase(MapperBase):
             )
 
     def remove_from_id_map(self, former_ids: List[str]):
-        """removes the ID from the map in case parsing failed
+        """Removes the ID from the map in case parsing failed.
 
         Args:
             former_ids (_type_): _description_
@@ -738,9 +757,7 @@ class RulesMapperBase(MapperBase):
 
     @staticmethod
     def grouped(marc_field: Field):
-        """Groups the subfields
-        s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ...
-
+        """Group subfields into tuples by repeated subfield occurrences.
 
         Args:
             marc_field (Field): _description_
@@ -777,8 +794,7 @@ class RulesMapperBase(MapperBase):
 
     @staticmethod
     def remove_repeated_subfields(marc_field: Field):
-        """Removes repeated subfields
-        s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ...
+        """Remove repeated subfields, keeping only the first occurrence of each.
 
         Args:
             marc_field (Field): _description_
@@ -802,16 +818,13 @@ class RulesMapperBase(MapperBase):
         marc_record: Record,
         folio_record,
     ):
-        """Saves the source marc_record to a file to be loaded via Data Import
+        """Save the source MARC record to a file for Data Import loading.
 
         Args:
-            srs_records_file (_type_): _description_
-            record_type (FOLIONamespaces): _description_
-            folio_client (FolioClient): _description_
-            marc_record (Record): _description_
-            folio_record (_type_): _description_
-            legacy_ids (List[str]): _description_
-            suppress (bool): _description_
+            data_import_marc_file: File handle for writing MARC records.
+            record_type (FOLIONamespaces): Type of record being saved.
+            marc_record (Record): The MARC record to save.
+            folio_record: The corresponding FOLIO record.
         """
         marc_record.add_ordered_field(
             Field(
@@ -837,7 +850,7 @@ class RulesMapperBase(MapperBase):
         file_def: FileDefinition,
         marc_record: Record,
     ):
-        """Map statistical codes to FOLIO instance
+        """Map statistical codes to FOLIO instance.
 
         This method first calls the base class method to map statistical codes
         from the file_def. Then, it checks to see if there are any MARC field
@@ -919,7 +932,7 @@ class RulesMapperBase(MapperBase):
         legacy_ids: List[str],
         suppress: bool,
     ):
-        """Saves the source Marc_record to the Source record Storage module
+        """Saves the source Marc_record to the Source record Storage module.
 
         Args:
             srs_records_file (_type_): _description_
@@ -962,7 +975,6 @@ class RulesMapperBase(MapperBase):
         srs_types = {
             FOLIONamespaces.holdings: FOLIONamespaces.srs_records_holdingsrecord,
             FOLIONamespaces.instances: FOLIONamespaces.srs_records_bib,
-            FOLIONamespaces.authorities: FOLIONamespaces.srs_records_auth,
             FOLIONamespaces.edifact: FOLIONamespaces.srs_records_edifact,
         }
 
@@ -1020,7 +1032,6 @@ class RulesMapperBase(MapperBase):
         record_types = {
             FOLIONamespaces.holdings: "MARC_HOLDING",
             FOLIONamespaces.instances: "MARC_BIB",
-            FOLIONamespaces.authorities: "MARC_AUTHORITY",
             FOLIONamespaces.edifact: "EDIFACT",
         }
 
@@ -1032,10 +1043,6 @@ class RulesMapperBase(MapperBase):
             FOLIONamespaces.holdings: {
                 "holdingsId": folio_object["id"],
                 "holdingsHrid": folio_object.get("hrid", ""),
-            },
-            FOLIONamespaces.authorities: {
-                "authorityId": folio_object["id"],
-                "authorityHrid": marc_record["001"].data,
             },
             FOLIONamespaces.edifact: {},
         }
@@ -1080,18 +1087,12 @@ def is_array_of_objects(schema_property):
 
 
 def entity_indicators_match(entity_mapping, marc_field):
-    """
-    Check if the indicators of the entity mapping match the indicators of the MARC field.
-    Entity mappings can limit the fields they are applied to by specifying indicator values that
-    must match the provided MARC field's indicators. If the entity mapping does not specify any
-    indicator values, it is assumed to match all MARC fields. Entity indicator values can be a
-    specific value or a wildcard "*", which matches any value.
+    """Check if entity mapping indicators match the MARC field indicators.
 
-    This function compares the indicators of the entity mapping with the indicators of the MARC field.
-    If the entity does not specify any indicator values, the function returns True. If the entity does
-    specify indicator values, the function checks if the MARC field's indicators match the specified
-    values or if the specified values are wildcards. If both indicators match, the function returns True;
-    otherwise, it returns False.
+    Entity mappings can limit the fields they are applied to by specifying indicator
+    values that must match the provided MARC field's indicators. If the entity mapping
+    does not specify any indicator values, it is assumed to match all MARC fields.
+    Entity indicator values can be a specific value or a wildcard "*".
 
     Args:
         entity_mapping (dict): _description_
@@ -1099,7 +1100,7 @@ def entity_indicators_match(entity_mapping, marc_field):
 
     Returns:
         bool: True if the indicators match, False otherwise.
-    """  # noqa: E501
+    """
     if indicator_rule := [x["indicators"] for x in entity_mapping if "indicators" in x]:
         return all(
             [

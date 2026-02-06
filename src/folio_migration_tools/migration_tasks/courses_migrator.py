@@ -1,3 +1,9 @@
+"""Course records migration task.
+
+Migrates course information from CSV files to FOLIO Course Reserves module.
+Transforms and validates course data including departments and terms.
+"""
+
 import csv
 import json
 import logging
@@ -30,6 +36,8 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class CoursesMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for CoursesMigrator."""
+
         name: Annotated[
             str,
             Field(
@@ -92,6 +100,13 @@ class CoursesMigrator(MigrationTaskBase):
         library_config: LibraryConfiguration,
         folio_client,
     ):
+        """Initialize CoursesMigrator for migrating course reserves.
+
+        Args:
+            task_configuration (TaskConfiguration): Courses migration configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         self.task_configuration = task_configuration
         super().__init__(library_config, task_configuration, folio_client)
@@ -178,6 +193,8 @@ class CoursesMigrator(MigrationTaskBase):
             self.mapper.migration_report.write_migration_report(
                 i18n.t("Courses migration report"), report_file, self.mapper.start_datetime
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
 
 

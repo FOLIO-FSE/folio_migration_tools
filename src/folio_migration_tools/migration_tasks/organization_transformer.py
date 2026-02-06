@@ -1,3 +1,9 @@
+"""Organization records transformation task.
+
+Transforms organization/vendor data from CSV files to FOLIO Organizations. Handles
+embedded interfaces, contacts, and categories with extradata object creation.
+"""
+
 import csv
 import ctypes
 import json
@@ -37,6 +43,8 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 # Read files and do some work
 class OrganizationTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for OrganizationTransformer."""
+
         name: Annotated[
             str,
             Field(
@@ -111,6 +119,14 @@ class OrganizationTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize OrganizationTransformer for organization transformations.
+
+        Args:
+            task_configuration (TaskConfiguration): Organizations transformation config.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
 
         super().__init__(library_config, task_configuration, folio_client, use_logging)
@@ -299,6 +315,8 @@ class OrganizationTransformer(MigrationTaskBase):
             self.mapper.save_id_map_file(
                 self.folder_structure.organizations_id_map_path, self.organizations_id_map
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
 
         logging.info("All done!")
@@ -399,8 +417,7 @@ class OrganizationTransformer(MigrationTaskBase):
         return record
 
     def create_referenced_extradata_object(self, embedded_object, extradata_object_type):
-        """Creates an extradata object from an embedded object,
-        and returns the UUID.
+        """Create an extradata object from an embedded object and return its UUID.
 
         Args:
             embedded_object (_type_): _description_

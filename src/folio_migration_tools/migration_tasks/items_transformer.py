@@ -1,3 +1,9 @@
+"""Item records transformation task.
+
+Transforms item records from CSV/TSV files to FOLIO Item records using mapping
+files. Handles material types, loan types, location mapping, and statistical codes.
+"""
+
 import csv
 import ctypes
 import json
@@ -11,6 +17,8 @@ from typing import Annotated, List, Optional
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
+
+from folio_migration_tools.i18n_cache import i18n_t
 
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -35,6 +43,8 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 class ItemsTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for ItemsTransformer."""
+
         name: Annotated[
             str,
             Field(
@@ -194,6 +204,14 @@ class ItemsTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize ItemsTransformer for transforming item records.
+
+        Args:
+            task_config (TaskConfiguration): Items transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
@@ -335,7 +353,7 @@ class ItemsTransformer(MigrationTaskBase):
         records_in_file = 0
         with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of files processed")
+                i18n_t("Number of files processed")
             )
             start = time.time()
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
@@ -368,7 +386,7 @@ class ItemsTransformer(MigrationTaskBase):
                     # TODO: turn this into a asynchronous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
-                        i18n.t("Number of records written to disk")
+                        i18n_t("Number of records written to disk")
                     )
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.schema)
                 except TransformationProcessError as process_error:
@@ -387,7 +405,7 @@ class ItemsTransformer(MigrationTaskBase):
                     i18n.t("Number of Legacy items in %{container}", container=file_def),
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Number of Legacy items in total")
+                    i18n_t("Number of Legacy items in total")
                 )
                 self.print_progress(idx, start)
                 records_in_file = idx + 1
@@ -469,7 +487,7 @@ class ItemsTransformer(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Item transformation report"),
+                i18n_t("Item transformation report"),
                 migration_report_file,
                 self.mapper.start_datetime,
             )
@@ -479,5 +497,7 @@ class ItemsTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
         logging.info("All done!")

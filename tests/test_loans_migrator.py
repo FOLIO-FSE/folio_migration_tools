@@ -168,6 +168,8 @@ def test_checkout_single_loan_success(mock_i18n, migrator):
     res_checkout.was_successful = True
     migrator.circulation_helper.check_out_by_barcode.return_value = res_checkout
 
+    mock_i18n.t.return_value = 'Checked out on first try'
+
     LoansMigrator.checkout_single_loan(migrator, legacy_loan)
 
     migrator.migration_report.add.assert_called_with("Details", mock_i18n.t.return_value)
@@ -186,6 +188,8 @@ def test_checkout_single_loan_retry_success(mock_i18n, migrator):
     res_checkout2.folio_loan = True
     migrator.circulation_helper.check_out_by_barcode.return_value = res_checkout
     migrator.handle_checkout_failure.return_value = res_checkout2
+
+    mock_i18n.t.return_value = 'Checked out on second try'
 
     LoansMigrator.checkout_single_loan(migrator, legacy_loan)
 

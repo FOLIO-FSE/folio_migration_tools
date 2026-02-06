@@ -1,3 +1,10 @@
+"""Helper utilities specific to holdings transformations.
+
+Provides the HoldingsHelper class with methods for holdings-specific validations
+and transformations including location handling, call number processing, and
+holdings notes management.
+"""
+
 import json
 import logging
 import i18n
@@ -5,6 +12,7 @@ from uuid import uuid4
 
 from folio_migration_tools import custom_exceptions
 from folio_migration_tools import helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import MigrationReport
 
 
@@ -16,14 +24,13 @@ class HoldingsHelper:
         migration_report: MigrationReport,
         holdings_type_id_to_exclude_from_merging: str = "Not set",
     ) -> str:
-        """Creates a key from values determined by the fields_crieteria in a holding
-        record to determine uniquenes
+        """Create a unique key from holding field values for merging.
 
         fields_criterias are limited to the strings and UUID properties on the first level of
-        the object. If the property is not found, or empty, it will be ignored
+        the object. If the property is not found, or empty, it will be ignored.
 
-        IF the holdings type id is matched to holdings_type_id_to_exclude_from_merging,
-        the key will be added with a uuid to prevent merging of this holding
+        If the holdings type id is matched to holdings_type_id_to_exclude_from_merging,
+        the key will be added with a uuid to prevent merging of this holding.
 
         Args:
             holdings_record (dict): The Holdingsrecord
@@ -54,7 +61,7 @@ class HoldingsHelper:
                 values.append(str(uuid4()))
                 migration_report.add(
                     "HoldingsMerging",
-                    i18n.t("Holding prevented from merging by holdingsTypeId"),
+                    i18n_t("Holding prevented from merging by holdingsTypeId"),
                 )
             return "-".join(values)
         except Exception as exception:
@@ -99,12 +106,12 @@ class HoldingsHelper:
                     )
                     migration_report.add(
                         "HoldingsMerging",
-                        i18n.t("Duplicate key based on current merge criteria. Records merged"),
+                        i18n_t("Duplicate key based on current merge criteria. Records merged"),
                     )
                 else:
                     migration_report.add(
                         "HoldingsMerging",
-                        i18n.t("Previously transformed holdings record loaded"),
+                        i18n_t("Previously transformed holdings record loaded"),
                     )
                     prev_holdings[stored_key] = stored_holding
             return prev_holdings

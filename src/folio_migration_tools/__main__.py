@@ -1,9 +1,17 @@
+"""Main entry point for the folio_migration_tools CLI.
+
+Provides the command-line interface for running migration tasks. Loads configuration
+files, validates parameters, instantiates appropriate task classes, and executes
+the migration workflow. Supports all transformation and loading tasks.
+"""
+
 from importlib import metadata
 import json
 import logging
 import sys
 from os import environ
 from pathlib import Path
+from warnings import warn
 
 import httpx
 import humps
@@ -126,6 +134,14 @@ def main():
         i18n.set("locale", args.report_language)
         config_file, library_config = prep_library_config(args)
         try:
+            if args.task_name == "AuthorityTransformer":
+                warn(
+                    "The AuthorityTransformer has been removed."
+                    " Please update your configuration accordingly."
+                    " Use Data Import to load authority records.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             migration_task_config = next(
                 t for t in config_file["migration_tasks"] if t["name"] == args.task_name
             )

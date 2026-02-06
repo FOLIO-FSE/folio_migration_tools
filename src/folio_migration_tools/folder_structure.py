@@ -1,3 +1,10 @@
+"""Folder structure management for migration tasks.
+
+Defines the FolderStructure class that manages the standardized directory layout
+for migration tasks. Creates and manages folders for source data, results, reports,
+logs, and mapping files. Handles path generation and validation.
+"""
+
 import logging
 import sys
 import time
@@ -15,6 +22,15 @@ class FolderStructure:
         iteration_identifier: str,
         add_time_stamp_to_file_names: bool,
     ):
+        """Initialize folder structure for a migration task iteration.
+
+        Args:
+            base_path (Path): Root folder for the migration.
+            object_type (FOLIONamespaces): Type of FOLIO object being migrated.
+            migration_task_name (str): Name of the migration task.
+            iteration_identifier (str): Identifier for this migration iteration.
+            add_time_stamp_to_file_names (bool): Whether to add timestamps to output files.
+        """
         logging.info("Validating folder structure")
 
         self.object_type: FOLIONamespaces = object_type
@@ -22,6 +38,8 @@ class FolderStructure:
         self.add_time_stamp_to_file_names = add_time_stamp_to_file_names
         self.iteration_identifier = iteration_identifier
         self.base_folder = Path(base_path)
+        # Ensure the base folder exists and is a directory. This differs from other folders, which
+        # are created if missing.
         if not self.base_folder.is_dir():
             logging.critical("Base Folder Path is not a folder. Exiting.")
             sys.exit(1)
@@ -42,6 +60,10 @@ class FolderStructure:
         self.verify_folder(self.results_folder)
         self.reports_folder = self.iteration_folder / "reports"
         self.verify_folder(self.reports_folder)
+
+        # Raw migration reports directory
+        self.raw_reports_folder = self.reports_folder / ".raw"
+        self.verify_folder(self.raw_reports_folder)
 
     def log_folder_structure(self):
         logging.info("Mapping files folder is %s", self.mapping_files_folder)
@@ -98,6 +120,10 @@ class FolderStructure:
 
         self.migration_reports_file = self.reports_folder / f"report{self.file_template}.md"
 
+        self.migration_reports_raw_file = (
+            self.raw_reports_folder / f"raw_report{self.file_template}.json"
+        )
+
         self.srs_records_path = (
             self.results_folder / f"folio_srs_{object_type_string}{self.file_template}.json"
         )
@@ -109,9 +135,6 @@ class FolderStructure:
         )
         self.instance_id_map_path = (
             self.results_folder / f"{str(FOLIONamespaces.instances.name).lower()}_id_map.json"
-        )
-        self.auth_id_map_path = (
-            self.results_folder / f"{str(FOLIONamespaces.authorities.name).lower()}_id_map.json"
         )
 
         self.holdings_id_map_path = (
@@ -131,10 +154,13 @@ class FolderStructure:
         self.item_statuses_map_path = self.mapping_files_folder / "item_statuses.tsv"
 
     def verify_folder(self, folder_path: Path):
-        if not folder_path.is_dir():
-            logging.critical("There is no folder located at %s. Exiting.", folder_path)
-            logging.critical("Create a folder by calling\n\tmkdir %s", folder_path)
+        if folder_path.exists() and not folder_path.is_dir():
+            logging.critical("Path exists but is not a directory: %s", folder_path)
             sys.exit(1)
+
+        if not folder_path.exists():
+            logging.info("Creating missing folder %s", folder_path)
+            folder_path.mkdir(parents=True, exist_ok=True)
         else:
             logging.info("Located %s", folder_path)
 

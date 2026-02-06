@@ -1,13 +1,24 @@
+"""Migration reporting and statistics tracking.
+
+Provides the MigrationReport class for tracking migration statistics, errors,
+and warnings during transformation and loading tasks. Generates markdown and
+JSON formatted reports with categorized statistics.
+"""
+
 import logging
+import json
 import i18n
 from datetime import datetime
 from datetime import timezone
 
+from folio_migration_tools.i18n_cache import i18n_t
+
 
 class MigrationReport:
-    """Class responsible for handling the migration report"""
+    """Class responsible for handling the migration report."""
 
     def __init__(self):
+        """Initialize a new migration report for tracking statistics and issues."""
         self.report = {}
         self.stats = {}
 
@@ -28,24 +39,32 @@ class MigrationReport:
                 self.report[blurb_id][measure_to_add] = number
 
     def set(self, blurb_id, measure_to_add: str, number: int):
-        """Set a section value  to a specific number
+        """Set a section value to a specific number.
 
         Args:
-            blurb (_type_): _description_
-            measure_to_add (str): _description_
-            number (int): _description_
+            blurb_id: The report section identifier.
+            measure_to_add (str): The measure name to set.
+            number (int): The value to set.
         """
         if blurb_id not in self.report:
             self.report[blurb_id] = {}
         self.report[blurb_id][measure_to_add] = number
 
     def add_general_statistics(self, measure_to_add: str):
-        """Shortcut for adding to the first breakdown
+        """Shortcut for adding to the first breakdown.
 
         Args:
             measure_to_add (str): _description_
         """
         self.add("GeneralStatistics", measure_to_add)
+
+    def write_json_report(self, report_file):
+        """Writes the raw migration report data to a JSON file.
+
+        Args:
+            report_file: An open file object to write the JSON data to
+        """
+        json.dump(self.report, report_file, indent=2)
 
     def write_migration_report(
         self,
@@ -66,13 +85,13 @@ class MigrationReport:
                 [
                     "# " + report_title,
                     i18n.t("blurbs.Introduction.description"),
-                    "## " + i18n.t("Timings"),
+                    "## " + i18n_t("Timings"),
                     "",
-                    i18n.t("Measure") + " | " + i18n.t("Value"),
+                    i18n_t("Measure") + " | " + i18n_t("Value"),
                     "--- | ---:",
-                    i18n.t("Time Started:") + " | " + datetime.isoformat(time_started),
-                    i18n.t("Time Finished:") + " | " + datetime.isoformat(time_finished),
-                    i18n.t("Elapsed time:") + " | " + str(time_finished - time_started),
+                    i18n_t("Time Started:") + " | " + datetime.isoformat(time_started),
+                    i18n_t("Time Finished:") + " | " + datetime.isoformat(time_finished),
+                    i18n_t("Elapsed time:") + " | " + str(time_finished - time_started),
                 ]
             )
         )
@@ -89,7 +108,7 @@ class MigrationReport:
                         + i18n.t("Click to expand all %{count} things", count=len(self.report[a]))
                         + "</summary>",
                         "",
-                        i18n.t("Measure") + " | " + i18n.t("Count"),
+                        i18n_t("Measure") + " | " + i18n_t("Count"),
                         "--- | ---:",
                     ]
                     + [

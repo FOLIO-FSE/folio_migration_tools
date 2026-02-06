@@ -1,3 +1,10 @@
+"""Mapper for transforming holdings data to FOLIO Holdings format.
+
+Provides the HoldingsMapper class for mapping legacy holdings data to FOLIO Holdings
+records using configured mapping files. Handles locations, call numbers, notes, and
+bound-with relationships.
+"""
+
 import ast
 import json
 import logging
@@ -36,6 +43,18 @@ class HoldingsMapper(MappingFileMapperBase):
         statistical_codes_map=None,
         call_number_type_blurb_id="CallNumberTypeMapping",
     ):
+        """Initialize HoldingsMapper for holdings transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            holdings_map: Mapping configuration for holdings fields.
+            location_map: Mapping of legacy to FOLIO locations.
+            call_number_type_map: Mapping of legacy to FOLIO call number types.
+            instance_id_map: Mapping of legacy to FOLIO instance IDs.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_config (AbstractTaskConfiguration): Task configuration.
+            statistical_codes_map: Mapping of legacy to FOLIO statistical codes.
+        """
         holdings_schema = folio_client.get_holdings_schema()
         self.instance_id_map = instance_id_map
         super().__init__(

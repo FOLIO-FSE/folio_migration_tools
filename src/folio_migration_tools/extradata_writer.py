@@ -1,3 +1,10 @@
+"""Writer for extradata objects generated during transformation.
+
+Provides the ExtradataWriter class for buffering and writing extradata objects
+(e.g., organization interfaces, bound-with parts) to separate files during
+migration. Handles buffering, flushing, and file management.
+"""
+
 import json
 import logging
 import os
@@ -17,6 +24,11 @@ class ExtradataWriter:
         return cls.__instance
 
     def __init__(self, path_to_file: Path) -> None:
+        """Initialize the singleton extradata writer.
+
+        Args:
+            path_to_file (Path): Path to the file where extradata will be written.
+        """
         if type(self).__inited:
             return
         self.cache: List[str] = []

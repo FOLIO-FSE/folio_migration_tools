@@ -1,3 +1,11 @@
+"""MARC rules conditions processing.
+
+A reimplementation of FOLIO's MARC transformation rules. Handles
+evaluation of rule conditions including field presence, indicator values, subfield
+patterns, and parameter validation. Supports complex boolean logic for controlling
+when transformation rules should be applied.
+"""
+
 import logging
 import re
 import traceback
@@ -36,6 +44,15 @@ class Conditions:
         folio_release: FolioRelease,
         default_call_number_type_name="",
     ):
+        """Initialize Conditions processor for MARC field transformation rules.
+
+        Args:
+            folio (FolioClient): FOLIO API client.
+            mapper (RulesMapperBase): Base mapper for rules processing.
+            object_type: Type of FOLIO object being transformed.
+            folio_release (FolioRelease): FOLIO release version.
+            default_call_number_type_name (str): Default call number type name.
+        """
         self.filter_chars = r"[.,\/#!$%\^&\*;:{}=\-_`~()]"
         self.filter_chars_dop = r"[.,\/#!$%\^&\*;:{}=\_`~()]"
         self.folio_release: FolioRelease = folio_release
@@ -47,8 +64,6 @@ class Conditions:
         if object_type == "bibs":
             self.setup_reference_data_for_all()
             self.setup_reference_data_for_bibs()
-        elif object_type == "auth":
-            self.setup_reference_data_for_auth()
         else:
             self.setup_reference_data_for_all()
             self.setup_reference_data_for_items_and_holdings(default_call_number_type_name)
@@ -150,15 +165,6 @@ class Conditions:
         if not self.folio.class_types:
             raise TransformationProcessError("", "No class_types in FOLIO")
 
-    def setup_reference_data_for_auth(self):
-        self.authority_note_types = list(
-            self.folio.folio_get_all(
-                "/authority-note-types", "authorityNoteTypes", self.folio.cql_all, 1000
-            )
-        )
-        logging.info(f"{len(self.authority_note_types)} \tAuthority note types")
-        logging.info(f"{len(self.folio.identifier_types)} \tidentifier types")  # type: ignore
-
     def get_condition(
         self, name, legacy_id, value, parameter=None, marc_field: field.Field | None = None
     ):
@@ -172,10 +178,11 @@ class Conditions:
             return attr(legacy_id, value, parameter, marc_field)
 
     def condition_trim_punctuation(self, legacy_id, value, parameter, marc_field: field.Field):
-        """
-        Strip leading and trailing whitespace, as well as any trailing commas or periods, unless
-        the period is preceded by a single alpha character (eg. "John D."). Also preserves any
-        trailing "-" (eg. "1981-"). This condition was introduced in Poppy.
+        """Strip whitespace and trailing punctuation, preserving initials and hyphens.
+
+        Removes leading/trailing whitespace and trailing commas/periods, unless
+        the period is preceded by a single alpha character (eg. "John D.").
+        Also preserves any trailing "-" (eg. "1981-"). Introduced in Poppy.
         """
         pattern1 = re.compile(r"^(.*?)\s.[.]$")
         pattern2 = re.compile(r"^(.*?)\s.,[.]$")
@@ -325,7 +332,7 @@ class Conditions:
     def condition_remove_prefix_by_indicator(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
-        """Returns the index title according to the rules"""
+        """Returns the index title according to the rules."""
         ind2 = marc_field.indicator2
         reg_str = r"[\s:\/]{0,3}$"
         if ind2 not in map(str, range(1, 9)):
@@ -426,24 +433,6 @@ class Conditions:
             raise TransformationRecordFailedError(
                 legacy_id,
                 f"Holdings note type mapping error.\tParameter: {parameter.get('name', '')}\t"
-                f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
-                parameter.get("name", ""),
-            ) from ee
-
-    def condition_set_authority_note_type_id(
-        self, legacy_id, _, parameter, marc_field: field.Field
-    ):
-        try:
-            t = self.get_ref_data_tuple_by_name(
-                self.authority_note_types, "authority_note_types", parameter["name"]
-            )
-            self.mapper.migration_report.add("MappedNoteTypes", t[1])
-            return t[0]
-        except Exception as ee:
-            logging.error(ee)
-            raise TransformationProcessError(
-                legacy_id,
-                f"Authority note type mapping error.\tParameter: {parameter.get('name', '')}\t"
                 f"MARC Field: {marc_field}. Is mapping rules and ref data aligned?",
                 parameter.get("name", ""),
             ) from ee
@@ -788,12 +777,11 @@ class Conditions:
     def condition_set_electronic_access_relations_id(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
-        """
-        This method handles the mapping of electronic access relationship IDs.
-        If the record type being mapped is FOLIO holdings, it provides an (optional) alternative
-        mapping based on a provided name parameter, bypassing the FOLIO MARC-to-Holdings mapping
-        engine behavior. This requires use of a supplemental mapping rules file in the
-        HoldingsMarcTransformer task definition containing the name parameter.
+        """Map electronic access relationship IDs with optional holdings-specific behavior.
+
+        For FOLIO holdings, provides an optional alternative mapping based on a name
+        parameter, bypassing the FOLIO MARC-to-Holdings mapping engine. Requires a
+        supplemental mapping rules file in the HoldingsMarcTransformer task definition.
         """
         if self.object_type == "holdings" and "name" in parameter:
             try:
@@ -837,7 +825,7 @@ class Conditions:
     def condition_set_note_staff_only_via_indicator(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
-        """Returns true of false depending on the first indicator"""
+        """Returns true of false depending on the first indicator."""
         # https://www.loc.gov/marc/bibliographic/bd541.html
         ind1 = marc_field.indicator1
         self.mapper.migration_report.add(
@@ -898,11 +886,10 @@ class Conditions:
             ) from e
 
     def condition_set_receipt_status(self, legacy_id, value, parameter, marc_field: field.Field):
-        """
-        This method maps the receipt status based on the 008 field.
-        This condition is not available in FOLIO's MARC mapping engine and
-        will require use of a supplemental mapping rules file in the
-        HoldingsMarcTransformer task definition.
+        """Map receipt status from MARC 008 field.
+
+        Requires a supplemental mapping rules file in HoldingsMarcTransformer
+        as this condition is not available in FOLIO's MARC mapping engine.
         """
         if len(value) < 7:
             self.mapper.migration_report.add(
@@ -940,11 +927,10 @@ class Conditions:
     def condition_set_acquisition_method(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
-        """
-        This method maps the acquisition method based on the 008 field.
-        This condition is not available in FOLIO's MARC mapping engine and
-        will require use of a supplemental mapping rules file in the
-        HoldingsMarcTransformer task definition.
+        """Map acquisition method from MARC 008 field.
+
+        Requires a supplemental mapping rules file in HoldingsMarcTransformer
+        as this condition is not available in FOLIO's MARC mapping engine.
         """
         if len(value) < 8:
             self.mapper.migration_report.add(
@@ -982,11 +968,10 @@ class Conditions:
             return ""
 
     def condition_set_retention_policy(self, legacy_id, value, parameter, marc_field: field.Field):
-        """
-        This method maps the retention policy based on the 008 field.
-        This condition is not available in FOLIO's MARC mapping engine and
-        will require use of a supplemental mapping rules file in the
-        HoldingsMarcTransformer task definition.
+        """Map retention policy from MARC 008 field.
+
+        Requires a supplemental mapping rules file in HoldingsMarcTransformer
+        as this condition is not available in FOLIO's MARC mapping engine.
         """
         if len(value) < 13:
             self.mapper.migration_report.add(
@@ -1066,11 +1051,11 @@ class Conditions:
             return ""
 
     def condition_set_ill_policy(self, legacy_id, value, parameter, marc_field: field.Field):
+        """Map ILL policy from MARC 008 field.
+
+        Requires a supplemental mapping rules file in HoldingsMarcTransformer
+        as this condition is not available in FOLIO's MARC mapping engine.
         """
-        This method maps the ILL policy based on the 008 field.
-        This condition is not available in FOLIO's MARC mapping engine and
-        will require use of a supplemental mapping rules file in the
-        HoldingsMarcTransformer task definition."""
         if len(value) < 21:
             self.mapper.migration_report.add(
                 "ILLPolicyMapping", i18n.t("008 is too short") + f": {value}"
@@ -1106,11 +1091,10 @@ class Conditions:
     def condition_set_digitization_policy(
         self, legacy_id, value, parameter, marc_field: field.Field
     ):
-        """
-        This method maps the digitization policy based on the 008 field.
-        This condition is not available in FOLIO's MARC mapping engine and
-        will require use of a supplemental mapping rules file in the
-        HoldingsMarcTransformer task definition.
+        """Map digitization policy from MARC 008 field.
+
+        Requires a supplemental mapping rules file in HoldingsMarcTransformer
+        as this condition is not available in FOLIO's MARC mapping engine.
         """
         if len(value) < 22:
             self.mapper.migration_report.add(

@@ -1,10 +1,15 @@
+"""User/patron records transformation task.
+
+Transforms user/patron data from CSV files to FOLIO Users. Handles patron groups,
+addresses, departments, and user permissions with validation and cleanup.
+"""
+
 import json
 import logging
 import sys
 from typing import Optional, Annotated
 from pydantic import Field
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from art import tprint
 
@@ -13,6 +18,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -27,6 +33,8 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class UserTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for UserTransformer."""
+
         name: Annotated[
             str,
             Field(
@@ -101,6 +109,16 @@ class UserTransformer(MigrationTaskBase):
                 ),
             ),
         ] = False
+        remove_username: Annotated[
+            Optional[bool],
+            Field(
+                title="Remove username",
+                description=(
+                    "Specify whether to remove username. Resulting objects are not compatible with"
+                    " the mod-user-import. Optional, by default is False"
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -113,6 +131,14 @@ class UserTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize UserTransformer for user record transformations.
+
+        Args:
+            task_config (TaskConfiguration): Users transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
         self.task_configuration = self.task_config
@@ -208,13 +234,13 @@ class UserTransformer(MigrationTaskBase):
                                 logging.info("## First FOLIO  user")
                                 logging.info(json.dumps(folio_user, indent=4, sort_keys=True))
                             self.mapper.migration_report.add_general_statistics(
-                                i18n.t("Successful user transformations")
+                                i18n_t("Successful user transformations")
                             )
                             if num_users % 1000 == 0:
                                 logging.info(f"{num_users} users processed.")
                         except TransformationRecordFailedError as tre:
                             self.mapper.migration_report.add_general_statistics(
-                                i18n.t("Records failed")
+                                i18n_t("Records failed")
                             )
                             Helper.log_data_issue(tre.index_or_id, tre.message, tre.data_value)
                             logging.error(tre)
@@ -231,7 +257,7 @@ class UserTransformer(MigrationTaskBase):
                             logging.error(num_users)
                             logging.error(json.dumps(legacy_user))
                             self.mapper.migration_report.add_general_statistics(
-                                i18n.t("Failed user transformations")
+                                i18n_t("Failed user transformations")
                             )
                             logging.error(ee, exc_info=True)
 
@@ -245,7 +271,7 @@ class UserTransformer(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Users transformation report"),
+                i18n_t("Users transformation report"),
                 migration_report_file,
                 self.mapper.start_datetime,
             )
@@ -255,6 +281,8 @@ class UserTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         logging.info("All done!")
         self.clean_out_empty_logs()
 

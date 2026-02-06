@@ -1,38 +1,46 @@
 # Installing
-## Use pyenv for managing your python version
-Make sure you are running Python 3.9 or above (3.12 recommended). In order to have a good experience with Python versions, we recommend you use Pyenv. There are may good introductions to pyenv, like [Intro to pyenv](https://realpython.com/intro-to-pyenv/).
 
-``` 
-> python -V # outputs the version of Python
-Python 3.9.9
-``` 
-## Use a virtual environment
-We recommend that you use a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) when installing and running the tools. The most common one is [venv](https://docs.python.org/3/library/venv.html) 
- 
-```   
-python -m venv ./.venv     # Creates a virtual env in the current folder
-source .venv/bin/activate  # Activates the venv    
-```
-Another option is [uv](https://docs.astral.sh/uv/pip/environments/)
+## Python Version Requirements
+Make sure you are running Python 3.10 or above (3.12 recommended). You can check your Python version with:
 
-```
-uv venv .venv               # Creates a virtual env in the current directory
-source .venv/bin/activate   # Activate the venv
+```shell
+python -V  # outputs the version of Python
 ```
 
-## Install using pip (or uv pip):
+uv can automatically manage Python versions for you - see the [uv Python version documentation](https://docs.astral.sh/uv/concepts/python-versions/).
+
+## Installing with uv (Recommended)
+
+[uv](https://docs.astral.sh/uv/) is a fast Python package and project manager. It handles virtual environments and Python versions automatically.
+
+### Install uv
+```shell
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-python -m pip install folio_migration_tools
+
+### Install folio_migration_tools
+```shell
+uv tool install folio_migration_tools
 ```
-or
-```
-uv pip install folio_migration_tools
-```
-Test the installation by showing the help pages 
-```   
+
+Test the installation:
+```shell
 folio-migration-tools -h
 ```
-or
+
+## Installing with pip
+
+If you prefer pip, we recommend using a virtual environment:
+
+```shell
+python -m venv ./.venv       # Creates a virtual env in the current folder
+source .venv/bin/activate    # Activates the venv (macOS/Linux)
+# or on Windows: .venv\Scripts\activate
+
+pip install folio_migration_tools
 ```
-uv run python -m folio_migration_tools -h
+
+Test the installation:
+```shell
+folio-migration-tools -h
 ```

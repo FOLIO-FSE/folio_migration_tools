@@ -1,3 +1,9 @@
+"""Manual fee/fine records transformation task.
+
+Transforms manual fee and fine data from CSV files to FOLIO Accounts (fees/fines).
+Handles fee/fine types, owners, and amounts with proper validation.
+"""
+
 import csv
 import json
 import logging
@@ -6,7 +12,6 @@ import time
 import traceback
 from typing import List, Optional
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import (
@@ -15,6 +20,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -31,6 +37,8 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 class ManualFeeFinesTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for ManualFeeFinesTransformer."""
+
         name: str
         feefines_map: str
         migration_task_type: str
@@ -50,6 +58,14 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize ManualFeeFinesTransformer for fee/fine transformations.
+
+        Args:
+            task_configuration (TaskConfiguration): Manual fee fines transformation config.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
 
         super().__init__(library_config, task_configuration, folio_client, use_logging)
@@ -118,7 +134,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         full_path = self.folder_structure.legacy_records_folder / file_def.file_name
         with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of files processed")
+                i18n_t("Number of files processed")
             )
             start = time.time()
 
@@ -172,7 +188,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Manual fee/fine transformation report"),
+                i18n_t("Manual fee/fine transformation report"),
                 migration_report_file,
                 self.start_datetime,
             )
@@ -183,5 +199,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
 
         self.clean_out_empty_logs()

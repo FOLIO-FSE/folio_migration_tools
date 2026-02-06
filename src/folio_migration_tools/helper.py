@@ -1,6 +1,14 @@
+"""General helper utilities for migration tasks.
+
+Provides the Helper class with static utility methods for data validation,
+mapping report generation, and common transformation operations used across
+multiple migration tasks.
+"""
+
 import json
 import logging
-import i18n
+
+from folio_migration_tools.i18n_cache import i18n_t
 
 
 class Helper:
@@ -9,15 +17,15 @@ class Helper:
         report_file, total_records: int, mapped_folio_fields, mapped_legacy_fields
     ):
         details_start = (
-            "<details><summary>" + i18n.t("Click to expand field report") + "</summary>\n\n"
+            "<details><summary>" + i18n_t("Click to expand field report") + "</summary>\n\n"
         )
         details_end = "</details>\n"
-        report_file.write("\n## " + i18n.t("Mapped FOLIO fields") + "\n")
+        report_file.write("\n## " + i18n_t("Mapped FOLIO fields") + "\n")
         # report_file.write(f"{blurbs[header]}\n")
 
         d_sorted = {k: mapped_folio_fields[k] for k in sorted(mapped_folio_fields)}
         report_file.write(details_start)
-        columns = [i18n.t("FOLIO Field"), i18n.t("Mapped"), i18n.t("Unmapped")]
+        columns = [i18n_t("FOLIO Field"), i18n_t("Mapped"), i18n_t("Unmapped")]
         report_file.write(" | ".join(columns) + "\n")
         report_file.write("|".join(len(columns) * ["---"]) + "\n")
         for k, v in d_sorted.items():
@@ -32,12 +40,12 @@ class Helper:
             )
         report_file.write(details_end)
 
-        report_file.write("\n## " + i18n.t("Mapped Legacy fields") + "\n")
+        report_file.write("\n## " + i18n_t("Mapped Legacy fields") + "\n")
         # report_file.write(f"{blurbs[header]}\n")
 
         d_sorted = {k: mapped_legacy_fields[k] for k in sorted(mapped_legacy_fields)}
         report_file.write(details_start)
-        columns = [i18n.t("Legacy Field"), i18n.t("Present"), i18n.t("Mapped"), i18n.t("Unmapped")]
+        columns = [i18n_t("Legacy Field"), i18n_t("Present"), i18n_t("Mapped"), i18n_t("Unmapped")]
         report_file.write("|".join(columns) + "\n")
         report_file.write("|".join(len(columns) * ["---"]) + "\n")
         for k, v in d_sorted.items():

@@ -1,14 +1,21 @@
+"""Holdings records transformation from MARC21 holdings (MFHD).
+
+Transforms MARC21 holdings records to FOLIO Holdings using a rules-based mapping system similar to
+that implemented by FOLIO. Supports holdings statements, location mapping, and bound-with
+relationships.
+"""
+
 import csv
 import json
 import logging
 from typing import Annotated, List
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -25,6 +32,8 @@ from folio_migration_tools.migration_tasks.migration_task_base import (
 
 class HoldingsMarcTransformer(MigrationTaskBase):
     class TaskConfiguration(MarcTaskConfigurationBase):
+        """Task configuration for HoldingsMarcTransformer."""
+
         name: Annotated[
             str,
             Field(
@@ -215,6 +224,14 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize HoldingsMarcTransformer for MARC holdings transformations.
+
+        Args:
+            task_config (TaskConfiguration): Holdings MARC transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, folio_client, use_logging)
         if self.task_configuration.statistical_codes_map_file_name:
@@ -269,7 +286,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             except FileNotFoundError as fnfe:
                 raise TransformationProcessError(
                     "",
-                    i18n.t("Provided boundwith relationship file not found"),
+                    i18n_t("Provided boundwith relationship file not found"),
                     self.task_configuration.boundwith_relationship_file_path,
                 ) from fnfe
 
@@ -350,7 +367,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Bibliographic records transformation report"),
+                i18n_t("Bibliographic records transformation report"),
                 report_file,
                 self.start_datetime,
             )
@@ -360,6 +377,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
 
         logging.info(
             "Done. Transformation report written to %s",

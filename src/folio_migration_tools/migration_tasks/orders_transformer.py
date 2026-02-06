@@ -1,3 +1,9 @@
+"""Purchase orders transformation task.
+
+Transforms purchase order data from CSV files to FOLIO Orders. Handles composite
+orders with embedded purchase order lines, acquisition units, and vendor references.
+"""
+
 import csv
 import ctypes
 import json
@@ -16,6 +22,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -37,6 +44,8 @@ csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 # Read files and do some work
 class OrdersTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
+        """Task configuration for OrdersTransformer."""
+
         name: Annotated[
             str,
             Field(
@@ -135,6 +144,14 @@ class OrdersTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize OrdersTransformer for purchase order transformations.
+
+        Args:
+            task_config (TaskConfiguration): Orders transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         csv.register_dialect("tsv", delimiter="\t")
 
         super().__init__(library_config, task_config, folio_client, use_logging)
@@ -234,7 +251,7 @@ class OrdersTransformer(MigrationTaskBase):
             open(self.folder_structure.created_objects_path, "w+") as results_file,
         ):
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of files processed")
+                i18n_t("Number of files processed")
             )
             start = time.time()
             records_processed = 0
@@ -253,7 +270,7 @@ class OrdersTransformer(MigrationTaskBase):
                     self.mapper.perform_additional_mapping(legacy_id, folio_rec)
 
                     self.mapper.migration_report.add_general_statistics(
-                        i18n.t("TOTAL Purchase Order Lines created")
+                        i18n_t("TOTAL Purchase Order Lines created")
                     )
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
                     self.mapper.notes_mapper.map_notes(
@@ -316,7 +333,7 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Pruchase Orders and Purchase Order Lines Transformation Report"),
+                i18n_t("Pruchase Orders and Purchase Order Lines Transformation Report"),
                 migration_report_file,
                 self.start_datetime,
             )
@@ -327,6 +344,8 @@ class OrdersTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
         logging.info("All done!")
 
     def merge_into_orders_with_embedded_pols(self, folio_rec, results_file):

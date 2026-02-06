@@ -1,5 +1,5 @@
 # Mapping files for Inventory migrations
-In order to successfully migrate Inventory data into FOLIO, you will need to create (or account for) the following files in the [`mapping_files`](quick_tutorial.md#step-into-the-repo-and-create-the-example-folder-structure-py-running) directory of your migration project.
+In order to successfully migrate Inventory data into FOLIO, you will need to create (or account for) the following files in the {ref}`mapping_files <step-into-the-repo-and-create-the-example-folder-structure-py-running>` directory of your migration project.
 
 ## What file is needed for what objects?
 File\Process | Bibs->Instances | Holdings (from MARC/MFHD) | Holdings (from item tsv/csv) | Items  | Open Loans  | Users   
@@ -32,7 +32,7 @@ These are the mapping rules from MARC21 bib records to FOLIO instances. The rule
 This file is built out according to the [mapping rules for bibs](https://github.com/folio-org/mod-source-record-manager/blob/master/RuleProcessorApi.md). The rules are stored in the tenant. The conditions are different, and not well documented at this point. Look at the example file and refer to the mapping rules documentation.
 
 ### 📄 supplemental_mfhd_rules.json
-This file contains mapping rules to augment/customize the tenant-supplied rules (see above). The field rules defined here will replace the tenant-supplied rules for that field (useful for transforming MFHD holdings to source=FOLIO holdings). For more information, see: [Supplemental MFHD Mapping Rules](marc_rule_based_mapping.md#supplemental-mfhd-mapping-rules)
+This file contains mapping rules to augment/customize the tenant-supplied rules (see above). The field rules defined here will replace the tenant-supplied rules for that field (useful for transforming MFHD holdings to source=FOLIO holdings). For more information, see: {ref}`Supplemental MFHD Mapping Rules <supplemental-mfhd-mapping-rules>`
 
 ## Delimited Data to FOLIO Mapping Rules
 ```{important}

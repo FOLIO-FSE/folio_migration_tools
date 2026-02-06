@@ -1,11 +1,17 @@
+"""Bibliographic records transformation task.
+
+Transforms MARC21 bibliographic records to FOLIO Inventory Instances using
+rules-based mapping. Supports various ILS flavors and custom field mappings.
+"""
+
 import logging
 from typing import Annotated, List
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     IlsFlavour,
     LibraryConfiguration,
@@ -24,6 +30,8 @@ from folio_migration_tools.migration_tasks.migration_task_base import (
 
 class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(MarcTaskConfigurationBase):
+        """Task configuration for BibsTransformer."""
+
         ils_flavour: Annotated[
             IlsFlavour,
             Field(
@@ -116,6 +124,14 @@ class BibsTransformer(MigrationTaskBase):
         folio_client,
         use_logging: bool = True,
     ):
+        """Initialize BibsTransformer for transforming bibliographic records.
+
+        Args:
+            task_config (TaskConfiguration): MARC transformation configuration.
+            library_config (LibraryConfiguration): Library configuration.
+            folio_client: FOLIO API client.
+            use_logging (bool): Whether to set up task logging.
+        """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
         self.task_configuration = self.task_config
@@ -153,7 +169,7 @@ class BibsTransformer(MigrationTaskBase):
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Bibliographic records transformation report"),
+                i18n_t("Bibliographic records transformation report"),
                 report_file,
                 self.start_datetime,
             )
@@ -163,6 +179,8 @@ class BibsTransformer(MigrationTaskBase):
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
             )
+        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+            self.mapper.migration_report.write_json_report(raw_report_file)
 
         logging.info(
             "Done. Transformation report written to %s",

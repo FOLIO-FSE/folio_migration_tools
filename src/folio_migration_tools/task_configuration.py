@@ -1,3 +1,10 @@
+"""Base task configuration model.
+
+Defines the abstract AbstractTaskConfiguration class that all migration task
+configurations inherit from. Provides common configuration fields and utilities
+for camelCase conversion for FOLIO API compatibility.
+"""
+
 from typing import Annotated
 
 from humps import camelize

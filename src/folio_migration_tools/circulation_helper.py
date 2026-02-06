@@ -1,3 +1,10 @@
+"""Helper utilities for circulation transactions migration.
+
+Provides the CirculationHelper class with methods for validating and posting
+circulation transactions (loans, requests). Handles patron and item lookups,
+loan policy validation, and error handling for circulation operations.
+"""
+
 import copy
 import json
 import logging
@@ -11,6 +18,7 @@ import i18n
 from folioclient import FolioClient, FolioClientError, FolioConnectionError, FolioValidationError
 
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
@@ -28,6 +36,13 @@ class CirculationHelper:
         service_point_id,
         migration_report: MigrationReport,
     ):
+        """Initialize CirculationHelper with FOLIO client and service point.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client for circulation operations.
+            service_point_id: ID of the service point for check-outs and check-ins.
+            migration_report (MigrationReport): Report object for tracking statistics.
+        """
         self.folio_client = folio_client
         self.service_point_id = service_point_id
         self.missing_patron_barcodes: Set[str] = set()
@@ -37,7 +52,7 @@ class CirculationHelper:
     def get_user_by_barcode(self, user_barcode):
         if user_barcode in self.missing_patron_barcodes:
             self.migration_report.add_general_statistics(
-                i18n.t("Users already detected as missing")
+                i18n_t("Users already detected as missing")
             )
             logging.info("User is already detected as missing")
             return {}
@@ -55,7 +70,7 @@ class CirculationHelper:
     def get_item_by_barcode(self, item_barcode):
         if item_barcode in self.missing_item_barcodes:
             self.migration_report.add_general_statistics(
-                i18n.t("Items already detected as missing")
+                i18n_t("Items already detected as missing")
             )
             logging.info("Item is already detected as missing")
             return {}
@@ -71,15 +86,16 @@ class CirculationHelper:
             return {}
 
     def is_checked_out(self, legacy_loan: LegacyLoan) -> bool:
-        """Makes a deeper check to find out if the loan is already processed.
+        """Makes a deeper check to find out if the loan is already checked out in FOLIO.
+
         Looks up the item id, and then searches Loan Storage for any open loans.
         If there are open loans, returns True. Else False.
 
         Args:
-            legacy_loan (LegacyLoan): _description_
+            legacy_loan (LegacyLoan): The legacy loan object to check.
 
         Returns:
-            bool: _description_
+            bool: True if the loan is already checked out, False otherwise.
         """
         if item := self.get_item_by_barcode(legacy_loan.item_barcode):
             if self.get_active_loan_by_item_id(item["id"]):
@@ -112,16 +128,16 @@ class CirculationHelper:
             return {}
 
     def check_out_by_barcode(self, legacy_loan: LegacyLoan) -> TransactionResult:
-        """Checks out a legacy loan using the Endpoint /circulation/check-out-by-barcode
-        Adds all possible overrides in order to make the transaction go through
+        """Checks out a legacy loan using the Endpoint /circulation/check-out-by-barcode.
+
+        Adds all possible overrides in order to make the transaction go through.
 
         Args:
-            legacy_loan (LegacyLoan): _description_
+            legacy_loan (LegacyLoan): The legacy loan object to check.
 
         Returns:
-            TransactionResult: _description_
+            TransactionResult: The result of the check-out transaction.
         """
-
         t0_function = time.time()
         data = {
             "itemBarcode": legacy_loan.item_barcode,
@@ -140,7 +156,7 @@ class CirculationHelper:
         path = "/circulation/check-out-by-barcode"
         try:
             if legacy_loan.patron_barcode in self.missing_patron_barcodes:
-                error_message = i18n.t("Patron barcode already detected as missing")
+                error_message = i18n_t("Patron barcode already detected as missing")
                 logging.error(
                     f"{error_message} Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
@@ -189,7 +205,7 @@ class CirculationHelper:
             elif "find user with matching barcode" in error_message_from_folio:
                 self.missing_patron_barcodes.add(legacy_loan.patron_barcode)
                 error_message = f"No patron with barcode {legacy_loan.patron_barcode} in FOLIO"
-                stat_message = i18n.t("Patron barcode not in FOLIO")
+                stat_message = i18n_t("Patron barcode not in FOLIO")
                 return TransactionResult(
                     False,
                     False,
@@ -248,7 +264,7 @@ class CirculationHelper:
                 False,
                 None,
                 "Connection error",
-                i18n.t("Connection error during checkout"),
+                i18n_t("Connection error during checkout"),
             )
 
     @staticmethod

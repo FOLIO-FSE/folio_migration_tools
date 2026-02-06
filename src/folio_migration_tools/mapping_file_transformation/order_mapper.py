@@ -1,3 +1,10 @@
+"""Mapper for transforming order data to FOLIO Orders format.
+
+Provides the OrderMapper class for mapping legacy purchase order data to FOLIO
+Orders and PurchaseOrderLines. Handles composite orders with embedded lines,
+acquisition units, fund distributions, and vendor references.
+"""
+
 import json
 import logging
 import os
@@ -41,6 +48,23 @@ class CompositeOrderMapper(MappingFileMapperBase):
         funds_map,
         funds_expense_class_map=None,
     ):
+        """Initialize CompositeOrderMapper for purchase order transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_configuration: Task configuration for orders migration.
+            composite_order_map (dict): Mapping configuration for order fields.
+            organizations_id_map (dict): Mapping of legacy to FOLIO organizations.
+            instance_id_map (dict): Mapping of legacy to FOLIO instances.
+            acquisition_method_map: Mapping of legacy to FOLIO acquisition methods.
+            payment_status_map: Mapping of legacy to FOLIO payment statuses.
+            receipt_status_map: Mapping of legacy to FOLIO receipt statuses.
+            workflow_status_map: Mapping of legacy to FOLIO workflow statuses.
+            location_map: Mapping of legacy to FOLIO locations.
+            funds_map: Mapping of legacy to FOLIO funds.
+            funds_expense_class_map: Mapping for fund expense classes.
+        """
         # Get organization schema
         self.composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-orders", "mod-orders", "composite_purchase_order"
@@ -139,19 +163,16 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
-        """
-        Given a repository owner, a repository, a module name and the name
-        of a FOLIO acquisition object, returns a schema for that object that
-        also includes the schemas of any other referenced acq objects.
+        """Fetch acquisition object schema from GitHub with referenced schemas.
 
         Args:
-            owner (_type_): _description_
-            repo (_type_): _description_
-            module (_type_): _description_
-            object (_type_): _description_
+            owner (str): GitHub repository owner.
+            repo (str): GitHub repository name.
+            module (str): Module name within the repository.
+            object (str): Object name whose schema is to be fetched.
 
         Returns:
-            _type_: _description_
+            Dict: _description_
         """
         try:
             # Authenticate when calling GitHub, using an API key stored in .env
@@ -206,22 +227,18 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     @staticmethod
     def get_submodules_of_latest_release(owner, repo, github_headers):
-        """
-        Given a repository owner and a repository, identifies the latest
-        release of the repository and returns the submodules associated with
-        this release.
+        """Get submodules associated with the latest release of a repository.
 
         Args:
-            owner (_type_): _description_
-            repo (_type_): _description_
-            github_headers (_type_): _description_
+            owner (str): GitHub repository owner.
+            repo (str): GitHub repository name.
+            github_headers (dict): Headers to use for GitHub API requests.
 
         Returns:
-            _type_: _description_
+            list: List of submodules associated with the latest release.
 
 
         """
-
         github_path = "https://api.github.com/repos"
 
         # Get metadata for the latest release
@@ -258,20 +275,16 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     @staticmethod
     def build_extended_object(object_schema, submodule_path, github_headers):
-        """
-        Takes an object schema (for example an organization) and the path to a
-        submodule repository and returns the same schema with the full schemas
-        of subordinate objects (for example aliases).
+        """Extend an object schema with full schemas of subordinate objects.
 
         Args:
-            object_schema (_type_): _description_
-            submodule_path (_type_): _description_
-            github_headers (_type_): _description_
+            object_schema (dict): The schema of the object to be extended.
+            submodule_path (str): The path to the submodule containing schemas.
+            github_headers (dict): Headers to use for GitHub API requests.
 
         Returns:
-            _type_: _description_
+            dict: The extended object schema.
         """
-
         supported_types = [
             "string",
             "boolean",

@@ -1,3 +1,10 @@
+"""Mapper for transforming organization data to FOLIO Organizations format.
+
+Provides the OrganizationMapper class for mapping legacy vendor/organization data
+to FOLIO Organization records. Handles embedded interfaces, contacts, categories,
+and extradata object creation.
+"""
+
 import json
 import logging
 import os
@@ -30,6 +37,18 @@ class OrganizationMapper(MappingFileMapperBase):
         email_categories_map,
         phone_categories_map,
     ):
+        """Initialize OrganizationMapper for organization transformations.
+
+        Args:
+            folio_client (FolioClient): FOLIO API client.
+            library_configuration (LibraryConfiguration): Library configuration.
+            task_config: Task configuration for organizations migration.
+            organization_map (dict): Mapping configuration for organization fields.
+            organization_types_map: Mapping of legacy to FOLIO organization types.
+            address_categories_map: Mapping of legacy to FOLIO address categories.
+            email_categories_map: Mapping of legacy to FOLIO email categories.
+            phone_categories_map: Mapping of legacy to FOLIO phone categories.
+        """
         # Build composite organization schema
         if os.environ.get("GITHUB_TOKEN"):
             logging.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
@@ -119,15 +138,14 @@ class OrganizationMapper(MappingFileMapperBase):
         email_categories_map,
         phone_categories_map,
     ):
-        """
+        """Set up reference data mappings for organization categories and types.
 
         Args:
-            organization_types_map (_type_): _description_
-            address_categories_map (_type_): _description_
-            email_categories_map (_type_): _description_
-            phone_categories_map (_type_): _description_
+        organization_types_map (dict): Mapping for organization types.
+        address_categories_map (dict): Mapping for address categories.
+        email_categories_map (dict): Mapping for email categories.
+        phone_categories_map (dict): Mapping for phone categories.
         """
-
         categories_shared_args = (
             self.folio_client,
             "/organizations-storage/categories",
@@ -169,19 +187,16 @@ class OrganizationMapper(MappingFileMapperBase):
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object):
-        """
-        Given a repository owner, a repository, a module name and the name
-        of a FOLIO acquisition object, returns a schema for that object that
-        also includes the schemas of any other referenced acq objects.
+        """Fetch acquisition object schema from GitHub with referenced schemas.
 
         Args:
-            owner (_type_): _description_
-            repo (_type_): _description_
-            module (_type_): _description_
-            object (_type_): _description_
+            owner (str): GitHub repository owner.
+            repo (str): GitHub repository name.
+            module (str): Module name within the repository.
+            object (str): Object name whose schema is to be fetched.
 
         Returns:
-            _type_: _description_
+            dict: The extended object schema.
         """
         try:
             # Authenticate when calling GitHub, using an API key stored in .env
@@ -232,20 +247,16 @@ class OrganizationMapper(MappingFileMapperBase):
 
     @staticmethod
     def get_submodules_of_latest_release(owner, repo, github_headers):
-        """
-        Given a repository owner and a repository, identifies the latest
-        release of the repository and returns the submodules associated with
-        this release.
+        """Get submodules associated with the latest release of a repository.
 
         Args:
-            owner (_type_): _description_
-            repo (_type_): _description_
-            github_headers (_type_): _description_
+            owner (str): GitHub repository owner.
+            repo (str): GitHub repository name.
+            github_headers (dict): Headers to use for GitHub API requests.
 
         Returns:
-            _type_: _description_
+            list: List of submodules associated with the latest release.
         """
-
         github_path = "https://api.github.com/repos"
 
         # Get metadata for the latest release
@@ -280,20 +291,16 @@ class OrganizationMapper(MappingFileMapperBase):
 
     @staticmethod
     def build_extended_object(object_schema, submodule_path, github_headers):
-        """
-        Takes an object schema (for example an organization) and the path to a
-        submodule repository and returns the same schema with the full schemas
-        of subordinate objects (for example aliases).
+        """Extend an object schema with full schemas of subordinate objects.
 
         Args:
-            object_schema (_type_): _description_
-            submodule_path (_type_): _description_
-            github_headers (_type_): _description_
+            object_schema (dict): The base object schema to extend.
+            submodule_path (str): Path to the submodule containing additional schemas.
+            github_headers (dict): Headers to use for GitHub API requests.
 
         Returns:
-            _type_: _description_
+            dict: The extended object schema.
         """
-
         supported_types = ["string", "boolean", "number", "integer", "text", "object", "array"]
 
         try:

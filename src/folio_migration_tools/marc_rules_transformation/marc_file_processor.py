@@ -1,3 +1,10 @@
+"""MARC file processing orchestration.
+
+Orchestrates the processing of MARC records through the transformation pipeline.
+Handles record reading, validation, transformation via rules mappers, and output
+writing. Manages error handling, progress reporting, and batch processing.
+"""
+
 import logging
 import os
 import sys
@@ -29,6 +36,13 @@ class MarcFileProcessor:
         folder_structure: FolderStructure,
         created_objects_file: TextIO,
     ):
+        """Initialize MARC file processor for processing MARC records.
+
+        Args:
+            mapper (RulesMapperBase): MARC rules mapper for transformations.
+            folder_structure (FolderStructure): Folder structure for file paths.
+            created_objects_file (TextIO): File handle for writing created objects.
+        """
         self.object_type: FOLIONamespaces = folder_structure.object_type
         self.folder_structure: FolderStructure = folder_structure
         self.mapper: RulesMapperBase = mapper
@@ -51,7 +65,7 @@ class MarcFileProcessor:
             self.parent_hrids = {entity[1]: entity[2] for entity in mapper.parent_id_map.values()}
 
     def process_record(self, idx: int, marc_record: Record, file_def: FileDefinition):
-        """processes a marc holdings record and saves it
+        """Processes a marc holdings record and saves it.
 
         Args:
             idx (int): Index in file being parsed
@@ -93,8 +107,8 @@ class MarcFileProcessor:
                             legacy_ids,
                             self.object_type,
                         )
-                    if getattr(self.mapper.task_configuration, "data_import_marc", False):
-                        self.save_marc_record(marc_record, folio_rec, self.object_type)
+
+                    self.save_marc_record(marc_record, file_def, folio_rec, self.object_type)
                 Helper.write_to_file(self.created_objects_file, folio_rec)
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Inventory records written to disk")
@@ -131,13 +145,23 @@ class MarcFileProcessor:
                     ):
                         self.mapper.remove_from_id_map(folio_rec.get("formerIds", []))
 
-    def save_marc_record(self, marc_record: Record, folio_rec: Dict, object_type: FOLIONamespaces):
-        self.mapper.save_data_import_marc_record(
-            self.data_import_marc_file,
-            object_type,
-            marc_record,
-            folio_rec,
-        )
+    def save_marc_record(
+        self,
+        marc_record: Record,
+        file_def: FileDefinition,
+        folio_rec: Dict,
+        object_type: FOLIONamespaces,
+    ):
+        if (
+            getattr(self.mapper.task_configuration, "data_import_marc", False)
+            and file_def.data_import_marc
+        ):
+            self.mapper.save_data_import_marc_record(
+                self.data_import_marc_file,
+                object_type,
+                marc_record,
+                folio_rec,
+            )
 
     def save_srs_record(
         self,

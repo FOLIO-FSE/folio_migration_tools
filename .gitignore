@@ -117,7 +117,7 @@ tests/test_data/bibsTransformation.json
 archive/
 *.data
 source_data/
-scratch_pad.ipynb
+scratch_pad.*
 *.db
 
 .env.json
@@ -126,3 +126,4 @@ poetry.lock
 *.mrk
 *.lock
 pylock.toml
+reference_material/

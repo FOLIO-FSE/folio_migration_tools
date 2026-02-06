@@ -1,6 +1,6 @@
 [project]
 name = "folio_migration_tools"
-version = "1.10.0b2"
+version = "1.10.3"
 description =  "A tool allowing you to migrate data from legacy ILS:s (Library systems) into FOLIO LSP"
 authors = [
 	{name = "Theodor Tolstoy", email = "github.teddes@tolstoy.se"},
@@ -14,19 +14,19 @@ readme = "README.md"
 keywords = ["FOLIO", "ILS", "LSP", "Library Systems", "MARC21", "Library data"]
 requires-python = ">=3.10,<4.0"
 dependencies = [
-    "folioclient>=1.0.1",
-	"pyhumps>=3.7.3,<4.0.0",
-	"defusedxml>=0.7.1,<1.0.0",
-	"python-dateutil>=2.8.2,<3.0.0",
-	"folio-uuid>=1.0.0,<2.0.0",
-	"pymarc>=5.2.3,<6.0.0",
-	"pydantic>=2.12.3,<3.0.0",
-	"argparse-prompt>=0.0.5,<1.0.0",
-	"deepdiff>=6.2.3,<7.0.0",
-	"pyaml>=21.10.1,<22.0.0",
-	"python-i18n>=0.3.9,<1.0.0",
-	"art>=6.5,<7.0",
-	# "folio-data-import>=0.4.1"
+    "folioclient>=1.0.4",
+    "pyhumps>=3.7.3,<4.0.0",
+    "defusedxml>=0.7.1,<1.0.0",
+    "python-dateutil>=2.8.2,<3.0.0",
+    "folio-uuid>=1.0.0,<2.0.0",
+    "pymarc>=5.2.3,<6.0.0",
+    "pydantic>=2.12.3,<3.0.0",
+    "argparse-prompt>=0.0.5,<1.0.0",
+    "deepdiff>=6.2.3,<7.0.0",
+    "pyaml>=21.10.1,<22.0.0",
+    "python-i18n>=0.3.9,<1.0.0",
+    "art>=6.5,<7.0",
+    "folio-data-import>=0.5.0,<0.6.0",
 ]
 
 [dependency-groups]
@@ -43,13 +43,12 @@ dev = [
 	"flake8-isort>=6.1.2,<7.0.0",
 	"flake8-docstrings>=1.6.0,<2.0.0",
 	"darglint>=1.8.1,<2.0.0",
-	"types-requests>=2.28.11.17,<3.0.0",
 	"types-python-dateutil>=2.8.19.11,<3.0.0",
 	"ipykernel>=6.29.5,<7.0.0",
 	"pytest-asyncio>=0.23.0,<0.24.0",
 	"lxml>=6.0.2",
-	"ty>=0.0.1a27",
 	"pyrefly>=0.43.1",
+	"ruff>=0.14.13",
 ]
 docs = [
 	"m2r>=0.2.1,<0.3.0",
@@ -120,8 +119,8 @@ indent-width = 4
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["B", "B9", "C", "E", "F", "S", "W"]
-ignore = ["E741", "S113"]
+select = ["B", "B9", "C", "D", "E", "F", "S", "W"]
+ignore = ["E741", "S113", "D101", "D102", "D103", "D107"]
 
 fixable = ["ALL"]
 unfixable = []
@@ -144,3 +143,6 @@ docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
