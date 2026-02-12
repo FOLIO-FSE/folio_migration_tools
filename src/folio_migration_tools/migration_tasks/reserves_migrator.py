@@ -10,13 +10,13 @@ import logging
 import sys
 import time
 import traceback
-from typing import Dict, Annotated
+from typing import Annotated, Dict
 from urllib.error import HTTPError
-from pydantic import Field
 
 import httpx
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -29,6 +29,8 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_reserve import LegacyReserve
+
+logger = logging.getLogger(__name__)
 
 
 class ReservesMigrator(MigrationTaskBase):
@@ -92,7 +94,7 @@ class ReservesMigrator(MigrationTaskBase):
                     InsensitiveDictReader(reserves_file, dialect="tsv")
                 )
             )
-            logging.info(
+            logger.info(
                 "Loaded and validated %s reserves in file",
                 len(self.semi_valid_reserves),
             )
@@ -100,21 +102,21 @@ class ReservesMigrator(MigrationTaskBase):
             self.valid_reserves = self.semi_valid_reserves
         self.t0 = time.time()
         self.failed: Dict = {}
-        logging.info("Init completed")
+        logger.info("Init completed")
 
     def do_work(self):
-        logging.info("Starting")
+        logger.info("Starting")
         for num_reserves, legacy_reserve in enumerate(self.valid_reserves, start=1):
             t0_migration = time.time()
             self.migration_report.add_general_statistics(i18n_t("Processed reserves"))
             try:
                 self.post_single_reserve(legacy_reserve)
             except Exception as ee:
-                logging.exception(
+                logger.exception(
                     f"Error in row {num_reserves}  Reserve: {json.dumps(legacy_reserve)} {ee}"
                 )
             if num_reserves % 50 == 0:
-                logging.info(f"{timings(self.t0, t0_migration, num_reserves)} {num_reserves}")
+                logger.info(f"{timings(self.t0, t0_migration, num_reserves)} {num_reserves}")
 
     def post_single_reserve(self, legacy_reserve: LegacyReserve):
         try:
@@ -128,7 +130,7 @@ class ReservesMigrator(MigrationTaskBase):
             else:
                 self.migration_report.add_general_statistics(i18n_t("Failure to post reserve"))
         except Exception as ee:
-            logging.error(ee)
+            logger.error(ee)
 
     def wrap_up(self):
         self.extradata_writer.flush()
@@ -180,7 +182,7 @@ class ReservesMigrator(MigrationTaskBase):
 
     def load_and_validate_legacy_reserves(self, reserves_reader):
         num_bad = 0
-        logging.info("Validating legacy loans in file...")
+        logger.info("Validating legacy loans in file...")
         for legacy_reserve_count, legacy_reserve_dict in enumerate(reserves_reader):
             try:
                 legacy_reserve = LegacyReserve(
@@ -196,15 +198,15 @@ class ReservesMigrator(MigrationTaskBase):
                 else:
                     yield legacy_reserve
             except ValueError as ve:
-                logging.exception(ve)
-        logging.info(
+                logger.exception(ve)
+        logger.info(
             f"Done validating {legacy_reserve_count} legacy reserves with {num_bad} rotten apples"
         )
         if num_bad / legacy_reserve_count > 0.5:
             q = num_bad / legacy_reserve_count
-            logging.error("%s percent of reserves failed to validate.", (q * 100))
+            logger.error("%s percent of reserves failed to validate.", (q * 100))
             self.migration_report.log_me()
-            logging.critical("Halting...")
+            logger.critical("Halting...")
             sys.exit(1)
 
     def folio_put_post(self, url, data_dict, verb, action_description=""):
@@ -226,7 +228,7 @@ class ReservesMigrator(MigrationTaskBase):
                 raise TransformationProcessError("Bad verb supplied. This is a code issue.")
             if resp.status_code == 422:
                 error_message = json.loads(resp.text)["errors"][0]["message"]
-                logging.error(error_message)
+                logger.error(error_message)
                 self.migration_report.add(
                     "Details",
                     i18n.t(
@@ -251,13 +253,13 @@ class ReservesMigrator(MigrationTaskBase):
                         status=resp.status_code,
                     ),
                 )
-                logging.error(json.dumps(data_dict))
+                logger.error(json.dumps(data_dict))
                 resp.raise_for_status()
             return True
         except HTTPError as exception:
-            logging.error(f"{resp.status_code}. {verb} FAILED for {url}")
+            logger.error(f"{resp.status_code}. {verb} FAILED for {url}")
             traceback.print_exc()
-            logging.info(exception)
+            logger.info(exception)
             return False
 
 

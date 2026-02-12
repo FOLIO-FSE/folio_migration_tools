@@ -13,6 +13,8 @@ from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 
+logger = logging.getLogger(__name__)
+
 
 class RefDataMapping(object):
     def __init__(
@@ -37,8 +39,8 @@ class RefDataMapping(object):
         self.name = array_name
         self.cache: dict = {}
         self.blurb_id = blurb_id
-        logging.info("%s reference data mapping. Initializing", self.name)
-        logging.info("Fetching %s reference data from FOLIO", self.name)
+        logger.info("%s reference data mapping. Initializing", self.name)
+        logger.info("Fetching %s reference data from FOLIO", self.name)
         self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name, "", 1000))
         self.map = the_map
         self.regular_mappings: list = []
@@ -49,7 +51,7 @@ class RefDataMapping(object):
         self.default_name = ""
         self.cached_dict = {}
         self.setup_mappings()
-        logging.info("%s reference data mapping. Done init", self.name)
+        logger.info("%s reference data mapping. Done init", self.name)
 
     def get_ref_data_tuple(self, key_value):
         if ref_object := self.cached_dict.get(key_value.lower().strip(), ()):
@@ -61,7 +63,7 @@ class RefDataMapping(object):
 
     def setup_mappings(self):
         if not self.map:
-            logging.info("%s legacy map file is empty or not provided", self.name)
+            logger.info("%s legacy map file is empty or not provided", self.name)
             return
         self.pre_validate_map()
         for idx, mapping in enumerate(self.map):
@@ -73,7 +75,7 @@ class RefDataMapping(object):
                     if t := self.get_ref_data_tuple(mapping[f"folio_{self.key_type}"]):
                         self.default_id = t[0]
                         self.default_name = t[1]
-                        logging.info(
+                        logger.info(
                             "Set %s as default %s mapping",
                             mapping[f"folio_{self.key_type}"],
                             self.name,
@@ -98,19 +100,19 @@ class RefDataMapping(object):
             except TransformationProcessError as transformation_process_error:
                 raise transformation_process_error from transformation_process_error
             except Exception as ee:
-                logging.info(json.dumps(self.map, indent=4))
-                logging.error(ee)
+                logger.info(json.dumps(self.map, indent=4))
+                logger.error(ee)
                 raise TransformationProcessError(
                     "",
                     f'"{mapping[f"folio_{self.key_type}"]}" could not be found in FOLIO',
                 ) from ee
 
         self.post_validate_map()
-        logging.info(
+        logger.info(
             f"Loaded {len(self.regular_mappings)} mappings for {len(self.ref_data)} {self.name} "
             "in FOLIO"
         )
-        logging.info(
+        logger.info(
             f"loaded {len(self.hybrid_mappings)} hybrid mappings for {len(self.ref_data)} "
             f"{self.name} in FOLIO"
         )
@@ -175,7 +177,7 @@ class RefDataMapping(object):
             {f for f in folio_values_from_map if f not in folio_values_from_folio}
         )
         if any(folio_values_not_in_map):
-            logging.info(
+            logger.info(
                 "Values from %s ref data in FOLIO that are not in the map: %s",
                 self.name,
                 folio_values_not_in_map,
@@ -199,7 +201,7 @@ class RefDataMapping(object):
             )
         for mapping in self.map:
             if f"folio_{self.key_type}" not in mapping:
-                logging.critical(
+                logger.critical(
                     f"folio_{self.key_type} is not a column in the {self.name} mapping file. Fix."
                 )
                 sys.exit(1)
@@ -207,7 +209,7 @@ class RefDataMapping(object):
                 all(k not in mapping for k in self.mapped_legacy_keys)
                 and "legacy_code" not in mapping
             ):
-                logging.critical(
+                logger.critical(
                     (
                         "field names from %s missing in map legacy_code is "
                         "not a column in the %s mapping file"
@@ -217,7 +219,7 @@ class RefDataMapping(object):
                 )
                 sys.exit(1)
             elif not all(mapping.values()):
-                logging.critical(
+                logger.critical(
                     f"empty value in mapping {mapping.values()}. Check {self.name} mapping file"
                 )
                 sys.exit(1)

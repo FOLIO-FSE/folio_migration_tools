@@ -16,6 +16,8 @@ from pymarc import Field, Record
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
 
+logger = logging.getLogger(__name__)
+
 
 class HoldingsStatementsParser:
     @staticmethod
@@ -102,7 +104,7 @@ class HoldingsStatementsParser:
         if parsed_dict["hlm_stmt"]:
             return_dict["hlm_stmts"].append(parsed_dict["hlm_stmt"])
         if parsed_dict["statement"]:
-            logging.info(
+            logger.info(
                 f"HOLDINGS STATEMENT PATTERN\t{'-'.join(legacy_ids)}\t{pattern_field}"
                 f"\t{linked_value_field}"
                 f"\t{parsed_dict['statement']['statement']}"

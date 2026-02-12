@@ -19,7 +19,6 @@ from pymarc import Optional
 from pymarc.field import Field
 from pymarc.record import Record
 
-from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -27,6 +26,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.holdings_helper import HoldingsHelper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -39,6 +39,8 @@ from folio_migration_tools.marc_rules_transformation.holdings_statementsparser i
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class RulesMapperHoldings(RulesMapperBase):
@@ -91,7 +93,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.ref_data_dicts: dict = {}
         self.fallback_holdings_type_id = self.task_configuration.fallback_holdings_type_id
         self.setup_holdings_sources()
-        logging.info("Fetching mapping rules from the tenant")
+        logger.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-holdings"
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
 
@@ -249,7 +251,7 @@ class RulesMapperHoldings(RulesMapperBase):
         holdings_sources = list(
             self.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
         )
-        logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
+        logger.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
         self.holdingssources = {n["name"].upper(): n["id"] for n in holdings_sources}
         if "FOLIO" not in self.holdingssources:
             raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
@@ -423,7 +425,7 @@ class RulesMapperHoldings(RulesMapperBase):
         try:
             holdings_note_type_id = holdings_note_type_tuple[0]
         except Exception as ee:
-            logging.error(ee)
+            logger.error(ee)
             raise TransformationRecordFailedError(
                 legacy_ids,
                 f"Holdings note type mapping error.\tNote type name: "
@@ -478,7 +480,7 @@ class RulesMapperHoldings(RulesMapperBase):
             try:
                 holdings_note_type_id = holdings_note_type_tuple[0]
             except Exception as ee:
-                logging.error(ee)
+                logger.error(ee)
                 raise TransformationRecordFailedError(
                     legacy_ids,
                     f"Holdings note type mapping error.\tNote type name: "
@@ -535,7 +537,7 @@ class RulesMapperHoldings(RulesMapperBase):
             try:
                 holdings_note_type_id = holdings_note_type_tuple[0]
             except Exception as ee:
-                logging.error(ee)
+                logger.error(ee)
                 raise TransformationRecordFailedError(
                     legacy_ids,
                     f"Holdings note type mapping error.\tNote type name: "
@@ -553,27 +555,27 @@ class RulesMapperHoldings(RulesMapperBase):
             ]
 
     def wrap_up(self):
-        logging.info("Mapper wrapping up")
+        logger.info("Mapper wrapping up")
         source_file_create_source_records = [
             x.create_source_records for x in self.task_configuration.files
         ]
         if all(source_file_create_source_records):
             create_source_records = self.create_source_records
         else:
-            logging.info(
+            logger.info(
                 "If all source files have create_source_records set to false, "
                 "this will override the task configuration setting"
             )
             create_source_records = any(source_file_create_source_records)
         if self.task_configuration.update_hrid_settings:
             if create_source_records:
-                logging.info("Storing HRID settings")
+                logger.info("Storing HRID settings")
                 self.hrid_handler.store_hrid_settings()
             else:
-                logging.info("NOT storing HRID settings since that is managed by FOLIO")
+                logger.info("NOT storing HRID settings since that is managed by FOLIO")
 
     def fetch_holdings_schema(self, folio_client: FolioClient):
-        logging.info("Fetching HoldingsRecord schema...")
+        logger.info("Fetching HoldingsRecord schema...")
         return folio_client.get_holdings_schema()
 
     def set_holdings_type(self, marc_record: Record, folio_holding: Dict, legacy_ids: List[str]):

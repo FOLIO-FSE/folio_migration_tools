@@ -15,6 +15,8 @@ from dateutil.parser import parse
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 
+logger = logging.getLogger(__name__)
+
 utc = ZoneInfo("UTC")
 
 
@@ -97,7 +99,7 @@ class LegacyRequest(object):
                     self.request_date = self.request_date.replace(hour=0, minute=1)
             self.make_request_utc()
         except Exception as ee:
-            logging.error(ee)
+            logger.error(ee)
             self.errors.append(("Time alignment issues", "both dates"))
 
     def to_dict(self):

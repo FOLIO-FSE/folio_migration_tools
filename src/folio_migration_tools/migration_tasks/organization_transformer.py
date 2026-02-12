@@ -13,11 +13,11 @@ import time
 import uuid
 from hashlib import sha1
 from os.path import isfile
-from typing import List, Optional, Annotated
-from pydantic import Field
+from typing import Annotated, List, Optional
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -36,6 +36,8 @@ from folio_migration_tools.mapping_file_transformation.organization_mapper impor
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
+logger = logging.getLogger(__name__)
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -201,9 +203,9 @@ class OrganizationTransformer(MigrationTaskBase):
                 f"Files {ret_str} not found in"
                 "{self.folder_structure.data_folder} / {self.object_type_name}"
             )
-        logging.info("Files to process:")
+        logger.info("Files to process:")
         for filename in files:
-            logging.info("\t%s", filename)
+            logger.info("\t%s", filename)
         return files
 
     def process_single_file(self, filename):
@@ -220,8 +222,8 @@ class OrganizationTransformer(MigrationTaskBase):
                 records_processed += 1
                 try:
                     if idx == 0:
-                        logging.info("First legacy record:")
-                        logging.info(json.dumps(record, indent=4))
+                        logger.info("First legacy record:")
+                        logger.info(json.dumps(record, indent=4))
 
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.organizations
@@ -244,8 +246,8 @@ class OrganizationTransformer(MigrationTaskBase):
                     Helper.write_to_file(results_file, folio_rec)
 
                     if idx == 0:
-                        logging.info("First FOLIO record:")
-                        logging.info(json.dumps(folio_rec, indent=4))
+                        logger.info("First FOLIO record:")
+                        logger.info(json.dumps(folio_rec, indent=4))
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -265,21 +267,21 @@ class OrganizationTransformer(MigrationTaskBase):
                 if idx > 1 and idx % 50 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
-                    logging.info(  # pylint: disable=logging-fstring-interpolation
+                    logger.info(  # pylint: disable=logging-fstring-interpolation
                         f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
                     )
 
             self.total_records = records_processed
 
-            logging.info(  # pylint: disable=logging-fstring-interpolation
+            logger.info(  # pylint: disable=logging-fstring-interpolation
                 f"Done processing {filename} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
 
     def do_work(self):
-        logging.info("Getting started!")
+        logger.info("Getting started!")
         for file in self.files:
-            logging.info("Processing %s", file)
+            logger.info("Processing %s", file)
             try:
                 self.process_single_file(file)
             except Exception as ee:
@@ -287,15 +289,15 @@ class OrganizationTransformer(MigrationTaskBase):
                     f"Processing of {file} failed:\n{ee}."
                     "Check source files for empty rows or missing reference data"
                 )
-                logging.exception(error_str)
+                logger.exception(error_str)
                 self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
     def wrap_up(self):
-        logging.info("Done. Transformer wrapping up...")
+        logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logging.info(
+            logger.info(
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )
@@ -319,7 +321,7 @@ class OrganizationTransformer(MigrationTaskBase):
             self.mapper.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
 
-        logging.info("All done!")
+        logger.info("All done!")
 
     def clean_org(self, record):
         if record.get("addresses"):

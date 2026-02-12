@@ -25,7 +25,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 
-# flake8: noqa: s
+logger = logging.getLogger(__name__)
 
 
 class Conditions:
@@ -71,12 +71,12 @@ class Conditions:
         self.condition_cache: dict = {}
 
     def setup_reference_data_for_bibs(self):
-        logging.info("Setting up reference data for bib transformation")
-        logging.info("%s\tcontrib_name_types", len(self.folio.contrib_name_types))  # type: ignore
-        logging.info("%s\tcontributor_types", len(self.folio.contributor_types))  # type: ignore
-        logging.info("%s\talt_title_types", len(self.folio.alt_title_types))  # type: ignore
-        logging.info("%s\tidentifier_types", len(self.folio.identifier_types))  # type: ignore
-        logging.info("%s\tsubject_types", len(self.folio.subject_types))  # type: ignore
+        logger.info("Setting up reference data for bib transformation")
+        logger.info("%s\tcontrib_name_types", len(self.folio.contrib_name_types))  # type: ignore
+        logger.info("%s\tcontributor_types", len(self.folio.contributor_types))  # type: ignore
+        logger.info("%s\talt_title_types", len(self.folio.alt_title_types))  # type: ignore
+        logger.info("%s\tidentifier_types", len(self.folio.identifier_types))  # type: ignore
+        logger.info("%s\tsubject_types", len(self.folio.subject_types))  # type: ignore
         # Raise for empty settings
         if not self.folio.contributor_types:
             raise TransformationProcessError("", "No contributor_types in FOLIO")
@@ -90,21 +90,21 @@ class Conditions:
             raise TransformationProcessError("", "No subject_types in FOLIO")
 
         # Set defaults
-        logging.info("Setting defaults")
+        logger.info("Setting defaults")
         self.default_contributor_name_type: str = self.folio.contrib_name_types[0]["id"]  # type: ignore
-        logging.info("Contributor name type:\t%s", self.default_contributor_name_type)
+        logger.info("Contributor name type:\t%s", self.default_contributor_name_type)
         self.default_contributor_type = next(
             ct
             for ct in self.folio.contributor_types
             if ct["code"] == "ctb"  # type: ignore
         )
-        logging.info("Contributor type:\t%s", self.default_contributor_type["id"])
+        logger.info("Contributor type:\t%s", self.default_contributor_type["id"])
 
     def setup_reference_data_for_items_and_holdings(self, default_call_number_type_name):
-        logging.info(f"{len(self.folio.locations)}\tlocations")  # type: ignore
+        logger.info(f"{len(self.folio.locations)}\tlocations")  # type: ignore
         self.default_call_number_type = {}
-        logging.info("%s\tholding_note_types", len(self.folio.holding_note_types))  # type: ignore
-        logging.info("%s\tcall_number_types", len(self.folio.call_number_types))  # type: ignore
+        logger.info("%s\tholding_note_types", len(self.folio.holding_note_types))  # type: ignore
+        logger.info("%s\tcall_number_types", len(self.folio.call_number_types))  # type: ignore
         self.setup_and_validate_holdings_types()
         self.ill_policies = self.folio.folio_get_all("/ill-policies", "illPolicies")
         # Raise for empty settings
@@ -116,7 +116,7 @@ class Conditions:
             raise TransformationProcessError("", "No locations in FOLIO")
 
         # Set defaults
-        logging.info("Defaults")
+        logger.info("Defaults")
         self.default_call_number_type: dict = next(
             (
                 ct
@@ -134,7 +134,7 @@ class Conditions:
                     "Please specify another UUID as the default Callnumber Type"
                 ),
             )
-        logging.info("Default Callnumber type Name:\t%s", self.default_call_number_type["name"])
+        logger.info("Default Callnumber type Name:\t%s", self.default_call_number_type["name"])
 
     def setup_and_validate_holdings_types(self):
         self.holdings_types = self.folio.holdings_types
@@ -151,15 +151,15 @@ class Conditions:
                 "Holdings types are missing from the tenant. Please set them up",
                 missing_holdings_types,
             )
-        logging.info("%s\tholdings types", len(self.holdings_types))  # type: ignore
+        logger.info("%s\tholdings types", len(self.holdings_types))  # type: ignore
 
     def setup_reference_data_for_all(self):
-        logging.info(f"{len(self.folio.class_types)}\tclass_types")  # type: ignore
-        logging.info(
+        logger.info(f"{len(self.folio.class_types)}\tclass_types")  # type: ignore
+        logger.info(
             f"{len(self.folio.electronic_access_relationships)}\telectronic_access_relationships"  # type: ignore
         )
         self.statistical_codes = self.folio.statistical_codes
-        logging.info(f"{len(self.statistical_codes)} \tstatistical_codes")  # type: ignore
+        logger.info(f"{len(self.statistical_codes)} \tstatistical_codes")  # type: ignore
 
         # Raise for empty settings
         if not self.folio.class_types:
@@ -429,7 +429,7 @@ class Conditions:
             self.mapper.migration_report.add("MappedNoteTypes", t[1])
             return t[0]
         except Exception as ee:
-            logging.error(ee)
+            logger.error(ee)
             raise TransformationRecordFailedError(
                 legacy_id,
                 f"Holdings note type mapping error.\tParameter: {parameter.get('name', '')}\t"
@@ -469,7 +469,7 @@ class Conditions:
             )
             return t[0]
         except Exception as ee:
-            logging.exception("Identifier type")
+            logger.exception("Identifier type")
             raise TransformationProcessError(
                 legacy_id,
                 f'Unmapped identifier type : "{parameter["name"]}"\tMARC Field: {marc_field}'
@@ -660,7 +660,7 @@ class Conditions:
         try:
             return value
         except IndexError:
-            logging.debug("Exception occurred: %s", traceback.format_exc())
+            logger.debug("Exception occurred: %s", traceback.format_exc())
             return ""
 
     def condition_set_alternative_title_type_id(self, legacy_id, value, parameter, marc_field):

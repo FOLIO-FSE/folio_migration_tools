@@ -20,6 +20,8 @@ from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.migration_report import MigrationReport
 
+logger = logging.getLogger(__name__)
+
 
 class HRIDHandler:
     def __init__(
@@ -51,7 +53,7 @@ class HRIDHandler:
         self.items_hrid_prefix = self.hrid_settings["items"].get("prefix", "")
         self.items_hrid_counter = self.hrid_settings["items"]["startNumber"]
         self.common_retain_leading_zeroes: bool = self.hrid_settings["commonRetainLeadingZeroes"]
-        logging.info(f"HRID handling is set to: '{self.handling}'")
+        logger.info(f"HRID handling is set to: '{self.handling}'")
 
     def handle_hrid(
         self,
@@ -166,10 +168,10 @@ class HRIDHandler:
         )
 
     def store_hrid_settings(self):
-        logging.info("Setting HRID counter to current")
+        logger.info("Setting HRID counter to current")
         try:
             if self.hrids_not_updated():
-                logging.info("NOT POSTing HRID settings, since did not change.")
+                logger.info("NOT POSTing HRID settings, since did not change.")
                 return
 
             self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter
@@ -182,17 +184,17 @@ class HRIDHandler:
                 headers=self.folio_client.okapi_headers,
             )
             resp.raise_for_status()
-            logging.info("%s Successfully set HRID settings.", resp.status_code)
+            logger.info("%s Successfully set HRID settings.", resp.status_code)
             a = self.folio_client.folio_get_single_object(self.hrid_path)
-            logging.info("Current hrid settings: %s", json.dumps(a, indent=4))
+            logger.info("Current hrid settings: %s", json.dumps(a, indent=4))
         except Exception:
-            logging.exception(
+            logger.exception(
                 f"Something went wrong when setting the HRID settings. "
                 f"Update them manually. {json.dumps(self.hrid_settings)}"
             )
 
     def reset_instance_hrid_counter(self):
-        logging.info("Resetting Instances HRID settings to 1")
+        logger.info("Resetting Instances HRID settings to 1")
         self.instance_hrid_counter = 1
         self.migration_report.set(
             "GeneralStatistics",
@@ -202,7 +204,7 @@ class HRIDHandler:
         self.store_hrid_settings()
 
     def reset_holdings_hrid_counter(self):
-        logging.info("Resetting Holdings HRID settings to 1")
+        logger.info("Resetting Holdings HRID settings to 1")
         self.holdings_hrid_counter = 1
         self.migration_report.set(
             "GeneralStatistics", "Holdings HRID starting number", self.holdings_hrid_counter
@@ -210,7 +212,7 @@ class HRIDHandler:
         self.store_hrid_settings()
 
     def reset_item_hrid_counter(self):
-        logging.info("Resetting Items HRID settings to 1")
+        logger.info("Resetting Items HRID settings to 1")
         self.items_hrid_counter = 1
         self.migration_report.set(
             "GeneralStatistics", "Items HRID starting number", self.items_hrid_counter

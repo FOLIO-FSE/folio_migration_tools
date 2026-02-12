@@ -12,6 +12,8 @@ from pathlib import Path
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+logger = logging.getLogger(__name__)
+
 
 class FolderStructure:
     def __init__(
@@ -31,7 +33,7 @@ class FolderStructure:
             iteration_identifier (str): Identifier for this migration iteration.
             add_time_stamp_to_file_names (bool): Whether to add timestamps to output files.
         """
-        logging.info("Validating folder structure")
+        logger.info("Validating folder structure")
 
         self.object_type: FOLIONamespaces = object_type
         self.migration_task_name = migration_task_name
@@ -41,7 +43,7 @@ class FolderStructure:
         # Ensure the base folder exists and is a directory. This differs from other folders, which
         # are created if missing.
         if not self.base_folder.is_dir():
-            logging.critical("Base Folder Path is not a folder. Exiting.")
+            logger.critical("Base Folder Path is not a folder. Exiting.")
             sys.exit(1)
 
         # Basic folders
@@ -66,18 +68,18 @@ class FolderStructure:
         self.verify_folder(self.raw_reports_folder)
 
     def log_folder_structure(self):
-        logging.info("Mapping files folder is %s", self.mapping_files_folder)
-        logging.info("Git ignore is set up correctly")
-        logging.info("Base folder is %s", self.base_folder)
-        logging.info("Reports and logs folder is %s", self.reports_folder)
-        logging.info("Results folder is %s", self.results_folder)
-        logging.info("Data folder is %s", self.data_folder)
-        logging.info("Source records files folder is %s", self.legacy_records_folder)
-        logging.info("Log file will be located at %s", self.transformation_log_path)
-        logging.info("Extra data will be stored at%s", self.transformation_extra_data_path)
-        logging.info("Data issue reports %s", self.data_issue_file_path)
-        logging.info("Created objects will be stored at  %s", self.created_objects_path)
-        logging.info("Migration report file will be saved at %s", self.migration_reports_file)
+        logger.info("Mapping files folder is %s", self.mapping_files_folder)
+        logger.info("Git ignore is set up correctly")
+        logger.info("Base folder is %s", self.base_folder)
+        logger.info("Reports and logs folder is %s", self.reports_folder)
+        logger.info("Results folder is %s", self.results_folder)
+        logger.info("Data folder is %s", self.data_folder)
+        logger.info("Source records files folder is %s", self.legacy_records_folder)
+        logger.info("Log file will be located at %s", self.transformation_log_path)
+        logger.info("Extra data will be stored at%s", self.transformation_extra_data_path)
+        logger.info("Data issue reports %s", self.data_issue_file_path)
+        logger.info("Created objects will be stored at  %s", self.created_objects_path)
+        logger.info("Migration report file will be saved at %s", self.migration_reports_file)
 
     def setup_migration_file_structure(self, source_file_type: str = ""):
         self.time_stamp = f"_{time.strftime('%Y%m%d-%H%M%S')}"
@@ -155,14 +157,14 @@ class FolderStructure:
 
     def verify_folder(self, folder_path: Path):
         if folder_path.exists() and not folder_path.is_dir():
-            logging.critical("Path exists but is not a directory: %s", folder_path)
+            logger.critical("Path exists but is not a directory: %s", folder_path)
             sys.exit(1)
 
         if not folder_path.exists():
-            logging.info("Creating missing folder %s", folder_path)
+            logger.info("Creating missing folder %s", folder_path)
             folder_path.mkdir(parents=True, exist_ok=True)
         else:
-            logging.info("Located %s", folder_path)
+            logger.info("Located %s", folder_path)
 
 
 def verify_git_ignore(gitignore: Path):
@@ -178,4 +180,4 @@ def verify_git_ignore(gitignore: Path):
             f.write("source_data/\n")
         if "*.data" not in contents:
             f.write("*.data\n")
-    logging.info("Made sure there was a valid .gitignore file at %s", gitignore)
+    logger.info("Made sure there was a valid .gitignore file at %s", gitignore)

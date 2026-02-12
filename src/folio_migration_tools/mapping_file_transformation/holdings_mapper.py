@@ -29,6 +29,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
 )
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
+logger = logging.getLogger(__name__)
+
 
 class HoldingsMapper(MappingFileMapperBase):
     def __init__(
@@ -85,7 +87,7 @@ class HoldingsMapper(MappingFileMapperBase):
                 "CallNumberTypeMapping",
             )
         elif self.task_configuration.default_call_number_type_name:
-            logging.info(
+            logger.info(
                 "No call number type map provided, setting default to '%s'.",
                 self.task_configuration.default_call_number_type_name,
             )
@@ -99,13 +101,13 @@ class HoldingsMapper(MappingFileMapperBase):
         holdings_sources = list(
             self.folio_client.folio_get_all("/holdings-sources", "holdingsRecordsSources")
         )
-        logging.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
+        logger.info("Fetched %s holdingsRecordsSources from tenant", len(holdings_sources))
         res = {n["name"].upper(): n["id"] for n in holdings_sources}
         if "FOLIO" not in res:
             raise TransformationProcessError("", "No holdings source with name FOLIO in tenant")
         if "MARC" not in res:
             raise TransformationProcessError("", "No holdings source with name MARC in tenant")
-        logging.info(json.dumps(res, indent=4))
+        logger.info(json.dumps(res, indent=4))
         return res
 
     def apply_default_call_number_type(self, folio_rec):

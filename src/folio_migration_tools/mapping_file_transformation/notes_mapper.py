@@ -5,8 +5,8 @@ Handles note types, content, and object associations.
 """
 
 import logging
-import i18n
 
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
@@ -14,6 +14,8 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class NotesMapper(MappingFileMapperBase):
@@ -52,8 +54,8 @@ class NotesMapper(MappingFileMapperBase):
         self.noteprops = {
             "data": [p for p in record_map["data"] if p["folio_field"].startswith("notes[")]
         }
-        logging.info("Set %s props used for note mapping", len(self.noteprops["data"]))
-        logging.info("Initiated mapper for Notes")
+        logger.info("Set %s props used for note mapping", len(self.noteprops["data"]))
+        logger.info("Initiated mapper for Notes")
 
     def setup_notes_schema(self):
         notes_schemas = self.get_notes_schema()

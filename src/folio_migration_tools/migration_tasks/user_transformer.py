@@ -7,11 +7,11 @@ addresses, departments, and user permissions with validation and cleanup.
 import json
 import logging
 import sys
-from typing import Optional, Annotated
-from pydantic import Field
+from typing import Annotated, Optional
 
-from folio_uuid.folio_namespaces import FOLIONamespaces
 from art import tprint
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -29,6 +29,8 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.user_mapper import UserMapper
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
+logger = logging.getLogger(__name__)
 
 
 class UserTransformer(MigrationTaskBase):
@@ -161,7 +163,7 @@ class UserTransformer(MigrationTaskBase):
                 self.folio_keys,
             )
         else:
-            logging.info(
+            logger.info(
                 "%s not found. No patronGroup mapping will be performed",
                 self.folder_structure.mapping_files_folder / self.task_config.group_map_path,
             )
@@ -176,7 +178,7 @@ class UserTransformer(MigrationTaskBase):
                 self.folio_keys,
             )
         else:
-            logging.info(
+            logger.info(
                 "%s not found. No departments mapping will be performed",
                 self.folder_structure.mapping_files_folder / self.task_config.departments_map_path,
             )
@@ -195,10 +197,10 @@ class UserTransformer(MigrationTaskBase):
                 group_mapping,
             )
 
-        logging.info("UserTransformer init done")
+        logger.info("UserTransformer init done")
 
     def do_work(self):
-        logging.info("Starting....")
+        logger.info("Starting....")
         source_path = (
             self.folder_structure.legacy_records_folder / self.task_config.user_file.file_name
         )
@@ -210,15 +212,15 @@ class UserTransformer(MigrationTaskBase):
                 encoding="utf-8",
             ) as results_file:
                 with open(source_path, encoding="utf8") as object_file:
-                    logging.info(f"processing {source_path}")
+                    logger.info(f"processing {source_path}")
                     file_format = "tsv" if str(source_path).endswith(".tsv") else "csv"
                     for num_users, legacy_user in enumerate(
                         self.mapper.get_users(object_file, file_format), start=1
                     ):
                         try:
                             if num_users == 1:
-                                logging.info("First Legacy  user")
-                                logging.info(json.dumps(legacy_user, indent=4))
+                                logger.info("First Legacy  user")
+                                logger.info(json.dumps(legacy_user, indent=4))
                                 print_email_warning()
                             folio_user, index_or_id = self.mapper.do_map(
                                 legacy_user,
@@ -231,39 +233,39 @@ class UserTransformer(MigrationTaskBase):
                             self.clean_user(folio_user, index_or_id)
                             results_file.write(f"{json.dumps(folio_user)}\n")
                             if num_users == 1:
-                                logging.info("## First FOLIO  user")
-                                logging.info(json.dumps(folio_user, indent=4, sort_keys=True))
+                                logger.info("## First FOLIO  user")
+                                logger.info(json.dumps(folio_user, indent=4, sort_keys=True))
                             self.mapper.migration_report.add_general_statistics(
                                 i18n_t("Successful user transformations")
                             )
                             if num_users % 1000 == 0:
-                                logging.info(f"{num_users} users processed.")
+                                logger.info(f"{num_users} users processed.")
                         except TransformationRecordFailedError as tre:
                             self.mapper.migration_report.add_general_statistics(
                                 i18n_t("Records failed")
                             )
                             Helper.log_data_issue(tre.index_or_id, tre.message, tre.data_value)
-                            logging.error(tre)
+                            logger.error(tre)
                         except TransformationProcessError as tpe:
-                            logging.critical(tpe)
+                            logger.critical(tpe)
                             print(f"\n{tpe.message}: {tpe.data_value}")
                             print("\nHalting")
                             sys.exit(1)
                         except ValueError as ve:
-                            logging.error(ve)
+                            logger.error(ve)
                             raise ve
                         except Exception as ee:
-                            logging.error(ee)
-                            logging.error(num_users)
-                            logging.error(json.dumps(legacy_user))
+                            logger.error(ee)
+                            logger.error(num_users)
+                            logger.error(json.dumps(legacy_user))
                             self.mapper.migration_report.add_general_statistics(
                                 i18n_t("Failed user transformations")
                             )
-                            logging.error(ee, exc_info=True)
+                            logger.error(ee, exc_info=True)
 
                         self.total_records = num_users
         except FileNotFoundError as fn:
-            logging.exception("File not found")
+            logger.exception("File not found")
             print(f"\n{fn}")
             sys.exit(1)
 
@@ -283,7 +285,7 @@ class UserTransformer(MigrationTaskBase):
             )
         with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
             self.mapper.migration_report.write_json_report(raw_report_file)
-        logging.info("All done!")
+        logger.info("All done!")
         self.clean_out_empty_logs()
 
     @staticmethod

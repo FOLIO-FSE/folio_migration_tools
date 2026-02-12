@@ -24,6 +24,8 @@ from folio_migration_tools.marc_rules_transformation.marc_file_processor import 
 )
 from folio_migration_tools.migration_report import MigrationReport
 
+logger = logging.getLogger(__name__)
+
 
 class MARCReaderWrapper:
     @staticmethod
@@ -42,15 +44,15 @@ class MARCReaderWrapper:
                     reader = MARCReader(marc_file, to_unicode=True, permissive=True)
                     reader.hide_utf8_warnings = True
                     reader.force_utf8 = False
-                    logging.info("Running %s", file_def.file_name)
+                    logger.info("Running %s", file_def.file_name)
                     MARCReaderWrapper.read_records(
                         reader, file_def, failed_marc_records_file, processor
                     )
         except TransformationProcessError as tpe:
-            logging.critical(tpe)
+            logger.critical(tpe)
             sys.exit(1)
         except Exception:
-            logging.exception("Failure in Main: %s", file_def.file_name, stack_info=True)
+            logger.exception("Failure in Main: %s", file_def.file_name, stack_info=True)
 
     @staticmethod
     def read_records(
@@ -86,8 +88,8 @@ class MARCReaderWrapper:
                     i18n.t("Records that failed transformation. Check log for details"),
                 )
             except ValueError as error:
-                logging.error(error)
-        logging.info("Done reading %s records from file", idx + 1)
+                logger.error(error)
+        logger.info("Done reading %s records from file", idx + 1)
 
     @staticmethod
     def set_leader(marc_record: Record, migration_report: MigrationReport):

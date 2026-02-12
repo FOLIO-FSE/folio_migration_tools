@@ -9,12 +9,12 @@ import json
 import logging
 import sys
 import time
-from typing import Optional, Annotated
-from pydantic import Field
+from typing import Annotated, Optional
+from zoneinfo import ZoneInfo
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
-from zoneinfo import ZoneInfo
+from pydantic import Field
 
 from folio_migration_tools.circulation_helper import CirculationHelper
 from folio_migration_tools.custom_dict import InsensitiveDictReader
@@ -28,6 +28,8 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
+
+logger = logging.getLogger(__name__)
 
 
 class RequestsMigrator(MigrationTaskBase):
@@ -113,16 +115,16 @@ class RequestsMigrator(MigrationTaskBase):
             self.migration_report,
         )
         try:
-            logging.info("Attempting to retrieve tenant timezone configuration...")
+            logger.info("Attempting to retrieve tenant timezone configuration...")
             my_path = (
                 "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
             )
             self.tenant_timezone_str = json.loads(
                 self.folio_client.folio_get_single_object(my_path)["configs"][0]["value"]
             )["timezone"]
-            logging.info("Tenant timezone is: %s", self.tenant_timezone_str)
+            logger.info("Tenant timezone is: %s", self.tenant_timezone_str)
         except Exception:
-            logging.info('Tenant locale settings not available. Using "UTC".')
+            logger.info('Tenant locale settings not available. Using "UTC".')
             self.tenant_timezone_str = "UTC"
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         with open(
@@ -136,37 +138,37 @@ class RequestsMigrator(MigrationTaskBase):
                     InsensitiveDictReader(requests_file, dialect="tsv")
                 )
             )
-            logging.info(
+            logger.info(
                 "Loaded and validated %s requests in file",
                 len(self.semi_valid_legacy_requests),
             )
         if any(self.task_configuration.item_files) or any(self.task_configuration.patron_files):
             self.valid_legacy_requests = list(self.check_barcodes())
-            logging.info(
+            logger.info(
                 "Loaded and validated %s requests against barcodes",
                 len(self.valid_legacy_requests),
             )
         else:
-            logging.info(
+            logger.info(
                 "No item or user files supplied. Not validating againstpreviously migrated objects"
             )
             self.valid_legacy_requests = self.semi_valid_legacy_requests
 
         self.valid_legacy_requests.sort(key=lambda x: x.request_date)
-        logging.info("Sorted the list of requests by request date")
+        logger.info("Sorted the list of requests by request date")
 
         self.t0 = time.time()
         self.skipped_since_already_added = 0
         self.failed_requests = set()
-        logging.info("Starting row is %s", task_configuration.starting_row)
-        logging.info("Init completed")
+        logger.info("Starting row is %s", task_configuration.starting_row)
+        logger.info("Init completed")
 
     def prepare_legacy_request(self, legacy_request: LegacyRequest):
         patron = self.circulation_helper.get_user_by_barcode(legacy_request.patron_barcode)
         self.migration_report.add_general_statistics(i18n_t("Patron lookups performed"))
 
         if not patron:
-            logging.error(f"No user with barcode {legacy_request.patron_barcode} found in FOLIO")
+            logger.error(f"No user with barcode {legacy_request.patron_barcode} found in FOLIO")
             Helper.log_data_issue(
                 f"{legacy_request.patron_barcode}",
                 "No user with barcode.",
@@ -182,7 +184,7 @@ class RequestsMigrator(MigrationTaskBase):
         item = self.circulation_helper.get_item_by_barcode(legacy_request.item_barcode)
         self.migration_report.add_general_statistics(i18n_t("Item lookups performed"))
         if not item:
-            logging.error(f"No item with barcode {legacy_request.item_barcode} found in FOLIO")
+            logger.error(f"No item with barcode {legacy_request.item_barcode} found in FOLIO")
             self.migration_report.add_general_statistics(
                 i18n_t("No item with barcode found in FOLIO")
             )
@@ -200,16 +202,16 @@ class RequestsMigrator(MigrationTaskBase):
         legacy_request.instance_id = holding.get("instanceId")
         if item["status"]["name"] in ["Available"]:
             legacy_request.request_type = "Page"
-            logging.info(f"Setting request to Page, since the status is {item['status']['name']}")
+            logger.info(f"Setting request to Page, since the status is {item['status']['name']}")
         self.migration_report.add_general_statistics(
             i18n_t("Valid, prepared requests, ready for posting")
         )
         return True, legacy_request
 
     def do_work(self):
-        logging.info("Starting")
+        logger.info("Starting")
         if self.task_configuration.starting_row > 1:
-            logging.info(f"Skipping {(self.task_configuration.starting_row - 1)} records")
+            logger.info(f"Skipping {(self.task_configuration.starting_row - 1)} records")
         for num_requests, legacy_request in enumerate(
             self.valid_legacy_requests[self.task_configuration.starting_row - 1 :],
             start=1,
@@ -230,9 +232,9 @@ class RequestsMigrator(MigrationTaskBase):
                         )
                         self.failed_requests.add(legacy_request)
                 if num_requests == 1:
-                    logging.info(json.dumps(legacy_request.to_dict(), indent=4))
+                    logger.info(json.dumps(legacy_request.to_dict(), indent=4))
             except Exception:
-                logging.exception(
+                logger.exception(
                     "Error in row %s  Item barcode: %s Patron barcode: %s",
                     num_requests,
                     legacy_request.item_barcode,
@@ -240,8 +242,8 @@ class RequestsMigrator(MigrationTaskBase):
                 )
                 sys.exit(1)
             if num_requests % 10 == 0:
-                logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
-        logging.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
+                logger.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
+        logger.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
 
     def wrap_up(self):
         self.extradata_writer.flush()
@@ -319,7 +321,7 @@ class RequestsMigrator(MigrationTaskBase):
 
     def load_and_validate_legacy_requests(self, requests_reader):
         num_bad = 0
-        logging.info("Validating legacy requests in file...")
+        logger.info("Validating legacy requests in file...")
         for legacy_reques_count, legacy_request_dict in enumerate(requests_reader, start=1):
             self.migration_report.add_general_statistics(i18n.t("Requests in file"))
             try:
@@ -346,15 +348,15 @@ class RequestsMigrator(MigrationTaskBase):
                     )
                     yield legacy_request
             except ValueError as ve:
-                logging.exception(ve)
-        logging.info(
+                logger.exception(ve)
+        logger.info(
             f"Done validating {legacy_reques_count} legacy requests with {num_bad} rotten apples"
         )
         if num_bad > 0 and (num_bad / legacy_reques_count) > 0.5:
             q = num_bad / legacy_reques_count
-            logging.error("%s percent of requests failed to validate.", (q * 100))
+            logger.error("%s percent of requests failed to validate.", (q * 100))
             self.migration_report.log_me()
-            logging.critical("Halting...")
+            logger.critical("Halting...")
             sys.exit(1)
 
 

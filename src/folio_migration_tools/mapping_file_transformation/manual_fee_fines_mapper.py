@@ -7,18 +7,19 @@ Account records. Handles fee/fine types, owners, amounts, and payment status.
 import json
 import logging
 import uuid
-import i18n
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 from zoneinfo import ZoneInfo
 
+import i18n
 from dateutil import parser as dateutil_parser
 from dateutil import tz
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -26,6 +27,8 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ManualFeeFinesMapper(MappingFileMapperBase):
@@ -185,7 +188,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             tenant_timezone_str = json.loads(
                 self.folio_client.folio_get_single_object(config_path)["configs"][0]["value"]
             )["timezone"]
-            logging.info("Tenant timezone is: %s", tenant_timezone_str)
+            logger.info("Tenant timezone is: %s", tenant_timezone_str)
             return ZoneInfo(tenant_timezone_str)
         except TypeError as te:
             raise TransformationProcessError(

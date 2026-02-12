@@ -5,10 +5,10 @@ files, validates parameters, instantiates appropriate task classes, and executes
 the migration workflow. Supports all transformation and loading tasks.
 """
 
-from importlib import metadata
 import json
 import logging
 import sys
+from importlib import metadata
 from os import environ
 from pathlib import Path
 from warnings import warn
@@ -23,8 +23,11 @@ from pydantic import ValidationError
 from folio_migration_tools.config_file_load import merge_load
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.logging_config import setup_logging
 from folio_migration_tools.migration_tasks import *  # noqa: F403, F401
 from folio_migration_tools.migration_tasks import migration_task_base
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args(args):
@@ -114,6 +117,9 @@ def print_version(args):
 
 
 def main():
+    # Set up logging early with RichHandler for progress bar compatibility
+    setup_logging()
+
     try:
         task_classes = list(inheritors(migration_task_base.MigrationTaskBase))
         # Check if the script is run with the --version or -V flag
@@ -167,9 +173,6 @@ def main():
             )
             sys.exit("Task Type Not Found")
         try:
-            logging.getLogger("httpx").setLevel(
-                logging.WARNING
-            )  # Exclude info messages from httpx
             with FolioClient(
                 library_config.gateway_url,
                 library_config.tenant_id,
@@ -181,13 +184,13 @@ def main():
                 task_obj.do_work()
                 task_obj.wrap_up()
         except TransformationProcessError as tpe:
-            logging.critical(tpe.message)
+            logger.critical(tpe.message)
             print(f"\n{tpe.message}: {tpe.data_value}")
             print("Task failure. Halting.")
             sys.exit(1)
-        logging.info("Work done. Shutting down")
+        logger.info("Work done. Shutting down")
     except json.decoder.JSONDecodeError as json_error:
-        logging.critical(json_error)
+        logger.critical(json_error)
         print(json_error.doc)
         print(
             f"\n{json_error}\nError parsing the above JSON mapping or configruation file. Halting."
@@ -222,7 +225,7 @@ def main():
         print(f"\n{fnf_error.strerror}: {fnf_error.filename}")
         sys.exit("File not found")
     except Exception as ee:
-        logging.exception("Unhandled exception")
+        logger.exception("Unhandled exception")
         print(f"\n{ee}")
         sys.exit(ee.__class__.__name__)
     sys.exit(0)

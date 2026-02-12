@@ -10,12 +10,12 @@ import json
 import logging
 import sys
 import time
-from typing import List, Optional, Annotated
-from pydantic import Field
+from typing import Annotated, List, Optional
 
 import i18n
 from deepdiff import DeepDiff
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -37,6 +37,8 @@ from folio_migration_tools.migration_tasks.migration_task_base import (
     MigrationTaskBase,
 )
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
+logger = logging.getLogger(__name__)
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -240,9 +242,9 @@ class OrdersTransformer(MigrationTaskBase):
                     f"\n\nERROR: File defined in task not found - {f.file_name}"
                 )
             files.append(file_path)
-        logging.info("Files to process:")
+        logger.info("Files to process:")
         for filename in files:
-            logging.info("\t%s", filename)
+            logger.info("\t%s", filename)
         return files
 
     def process_single_file(self, filename):
@@ -261,8 +263,8 @@ class OrdersTransformer(MigrationTaskBase):
                 try:
                     # Print first legacy record, then first transformed record
                     if idx == 0:
-                        logging.info("First legacy record:")
-                        logging.info(json.dumps(record, indent=4))
+                        logger.info("First legacy record:")
+                        logger.info(json.dumps(record, indent=4))
 
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.orders, True
@@ -293,26 +295,26 @@ class OrdersTransformer(MigrationTaskBase):
                 if idx > 1 and idx % 50 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
-                    logging.info(  # pylint: disable=logging-fstring-interpolation
+                    logger.info(  # pylint: disable=logging-fstring-interpolation
                         f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
                     )
 
             self.total_records = records_processed
 
-            logging.info(  # pylint: disable=logging-fstring-interpolation
+            logger.info(  # pylint: disable=logging-fstring-interpolation
                 f"Done processing {filename} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
-            logging.info("Storing last record to disk")
+            logger.info("Storing last record to disk")
             Helper.write_to_file(results_file, self.current_folio_record)
             self.mapper.migration_report.add_general_statistics(
                 i18n.t("TOTAL Purchase Orders created")
             )
 
     def do_work(self):
-        logging.info("Getting started!")
+        logger.info("Getting started!")
         for file in self.files:
-            logging.info("Processing %s", file)
+            logger.info("Processing %s", file)
             try:
                 print(file)
                 self.process_single_file(file)
@@ -321,14 +323,14 @@ class OrdersTransformer(MigrationTaskBase):
                     f"Processing of {file} failed:\n{ee}."
                     "Check source files for empty lines or missing reference data"
                 )
-                logging.exception(error_str)
+                logger.exception(error_str)
                 self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
     def wrap_up(self):
-        logging.info("Done. Wrapping up...")
+        logger.info("Done. Wrapping up...")
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logging.info(
+            logger.info(
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )
@@ -346,7 +348,7 @@ class OrdersTransformer(MigrationTaskBase):
             )
         with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
             self.mapper.migration_report.write_json_report(raw_report_file)
-        logging.info("All done!")
+        logger.info("All done!")
 
     def merge_into_orders_with_embedded_pols(self, folio_rec, results_file):
         # Handle merging and storage

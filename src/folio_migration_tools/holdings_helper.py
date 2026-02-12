@@ -7,13 +7,15 @@ holdings notes management.
 
 import json
 import logging
-import i18n
 from uuid import uuid4
 
-from folio_migration_tools import custom_exceptions
-from folio_migration_tools import helper
+import i18n
+
+from folio_migration_tools import custom_exceptions, helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import MigrationReport
+
+logger = logging.getLogger(__name__)
 
 
 class HoldingsHelper:
@@ -65,7 +67,7 @@ class HoldingsHelper:
                 )
             return "-".join(values)
         except Exception as exception:
-            logging.error(json.dumps(holdings_record, indent=4))
+            logger.error(json.dumps(holdings_record, indent=4))
             raise exception from exception
 
     @staticmethod
@@ -79,7 +81,7 @@ class HoldingsHelper:
             raise custom_exceptions.TransformationProcessError(
                 "", "File not found", holdings_file_path
             )
-        logging.info(
+        logger.info(
             "Holdings type id to exclude is set to %s",
             holdings_type_id_to_exclude_from_merging,
         )

@@ -28,6 +28,8 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
 )
 from folio_migration_tools.migration_report import MigrationReport
 
+logger = logging.getLogger(__name__)
+
 
 class MarcFileProcessor:
     def __init__(
@@ -61,7 +63,7 @@ class MarcFileProcessor:
         self.start: float = time.time()
         self.legacy_ids: Set[str] = set()
         if self.object_type == FOLIONamespaces.holdings and self.mapper.create_source_records:
-            logging.info("Loading Parent HRID map for SRS creation")
+            logger.info("Loading Parent HRID map for SRS creation")
             self.parent_hrids = {entity[1]: entity[2] for entity in mapper.parent_id_map.values()}
 
     def process_record(self, idx: int, marc_record: Record, file_def: FileDefinition):
@@ -127,11 +129,11 @@ class MarcFileProcessor:
         except Exception as inst:
             success = False
             traceback.print_exc()
-            logging.error(type(inst))
-            logging.error(inst.args)
-            logging.error(inst)
-            logging.error(marc_record)
-            logging.error(folio_recs)
+            logger.error(type(inst))
+            logger.error(inst.args)
+            logger.error(inst)
+            logger.error(marc_record)
+            logger.error(folio_recs)
             raise TransformationProcessError("", inst.args, "") from inst
         finally:
             if not success:
@@ -237,7 +239,7 @@ class MarcFileProcessor:
             and self.failed_records_count
             > self.mapper.library_configuration.failed_records_threshold
         ):
-            logging.critical("More than 20 percent of the records have failed. Halting")
+            logger.critical("More than 20 percent of the records have failed. Halting")
             sys.exit(1)
 
     @staticmethod
@@ -266,13 +268,13 @@ class MarcFileProcessor:
 
     def wrap_up(self):
         """Finalizes the mapping by writing things out."""
-        logging.info(
+        logger.info(
             "Saving map of %s old and new IDs to %s",
             len(self.mapper.id_map),
             self.folder_structure.id_map_path,
         )
         self.mapper.save_id_map_file(self.folder_structure.id_map_path, self.mapper.id_map)
-        logging.info("%s records processed", self.records_count)
+        logger.info("%s records processed", self.records_count)
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
                 i18n.t("MFHD records transformation report"),
@@ -297,8 +299,8 @@ class MarcFileProcessor:
             self.data_import_marc_file.close()
         self.mapper.wrap_up()
 
-        logging.info("Transformation report written to %s", report_file.name)
-        logging.info("Processor is done.")
+        logger.info("Transformation report written to %s", report_file.name)
+        logger.info("Processor is done.")
 
     def add_legacy_ids_to_map(self, folio_rec: Dict, filtered_legacy_ids: List[str]):
         for legacy_id in filtered_legacy_ids:

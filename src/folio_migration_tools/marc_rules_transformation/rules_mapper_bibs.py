@@ -13,15 +13,15 @@ from defusedxml.ElementTree import fromstring
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
-from pymarc.record import Leader, Record
 from pymarc.field import Field
+from pymarc.record import Leader, Record
 
-from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -33,6 +33,8 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase
+
+logger = logging.getLogger(__name__)
 
 
 class BibsRulesMapper(RulesMapperBase):
@@ -61,10 +63,10 @@ class BibsRulesMapper(RulesMapperBase):
             self.get_instance_schema(folio_client),
             Conditions(folio_client, self, "bibs", library_configuration.folio_release),
         )
-        logging.info("Fetching mapping rules from the tenant")
+        logger.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-bib"
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
-        logging.info("Fetching valid language codes...")
+        logger.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
         self.instance_relationships: dict = {}
         self.instance_relationship_types: dict = {}
@@ -248,7 +250,7 @@ class BibsRulesMapper(RulesMapperBase):
         )
 
     def get_instance_schema(self, folio_client: FolioClient):
-        logging.info("Fetching Instance schema...")
+        logger.info("Fetching Instance schema...")
         return folio_client.get_from_github(
             "folio-org", "mod-inventory-storage", "ramls/instance.json"
         )
@@ -286,7 +288,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
 
     def wrap_up(self):
-        logging.info("Mapper wrapping up")
+        logger.info("Mapper wrapping up")
         if self.create_source_records:
             if self.task_configuration.update_hrid_settings:
                 self.hrid_handler.store_hrid_settings()
@@ -537,7 +539,7 @@ class BibsRulesMapper(RulesMapperBase):
 
             return self.other_mode_of_issuance_id
         except StopIteration as ee:
-            logging.exception(f"{marc_record.leader} {list(self.folio_client.modes_of_issuance)}")
+            logger.exception(f"{marc_record.leader} {list(self.folio_client.modes_of_issuance)}")
             raise ee from ee
 
     def get_nature_of_content(self, marc_record: Record) -> List[str]:
@@ -690,10 +692,10 @@ class BibsRulesMapper(RulesMapperBase):
 def get_unspecified_mode_of_issuance(folio_client: FolioClient) -> str:
     m_o_is = list(folio_client.modes_of_issuance)
     if not any(m_o_is):
-        logging.critical("No Modes of issuance set up in tenant. Quitting...")
+        logger.critical("No Modes of issuance set up in tenant. Quitting...")
         sys.exit(1)
     if not any(i for i in m_o_is if i["name"].lower() == "unspecified"):
-        logging.critical(
+        logger.critical(
             "Mode of issuance 'unspecified' missing in tenant "
             "configuration. Please add this to continue. Quitting..."
         )

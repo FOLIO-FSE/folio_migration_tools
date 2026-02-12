@@ -8,8 +8,7 @@ for camelCase conversion for FOLIO API compatibility.
 from typing import Annotated
 
 from humps import camelize
-from pydantic import BaseModel, ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def to_camel(string):

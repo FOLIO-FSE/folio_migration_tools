@@ -26,6 +26,9 @@ from folio_migration_tools.transaction_migration.transaction_result import (
     TransactionResult,
 )
 
+logger = logging.getLogger(__name__)
+
+
 date_time_format = "%Y-%m-%dT%H:%M:%S.%f+0000"
 
 
@@ -54,7 +57,7 @@ class CirculationHelper:
             self.migration_report.add_general_statistics(
                 i18n_t("Users already detected as missing")
             )
-            logging.info("User is already detected as missing")
+            logger.info("User is already detected as missing")
             return {}
         user_path = f"/users?query=barcode=={user_barcode}"
         try:
@@ -64,7 +67,7 @@ class CirculationHelper:
             self.missing_patron_barcodes.add(user_barcode)
             return {}
         except Exception as ee:
-            logging.error(f"{ee} {user_path}")
+            logger.error(f"{ee} {user_path}")
             return {}
 
     def get_item_by_barcode(self, item_barcode):
@@ -72,7 +75,7 @@ class CirculationHelper:
             self.migration_report.add_general_statistics(
                 i18n_t("Items already detected as missing")
             )
-            logging.info("Item is already detected as missing")
+            logger.info("Item is already detected as missing")
             return {}
         item_path = f"/item-storage/items?query=barcode=={item_barcode}"
         try:
@@ -82,7 +85,7 @@ class CirculationHelper:
             self.missing_item_barcodes.add(item_barcode)
             return {}
         except Exception as ee:
-            logging.error(f"{ee} {item_path}")
+            logger.error(f"{ee} {item_path}")
             return {}
 
     def is_checked_out(self, legacy_loan: LegacyLoan) -> bool:
@@ -116,7 +119,7 @@ class CirculationHelper:
             loans = self.folio_client.folio_get(loan_path, "loans")
             return next((loan for loan in loans if loan["status"]["name"] == "Open"), {})
         except Exception as ee:
-            logging.error(f"{ee} {loan_path}")
+            logger.error(f"{ee} {loan_path}")
             return {}
 
     def get_holding_by_uuid(self, holdings_uuid):
@@ -124,7 +127,7 @@ class CirculationHelper:
         try:
             return self.folio_client.folio_get_single_object(holdings_path)
         except Exception as ee:
-            logging.error(f"{ee} {holdings_path}")
+            logger.error(f"{ee} {holdings_path}")
             return {}
 
     def check_out_by_barcode(self, legacy_loan: LegacyLoan) -> TransactionResult:
@@ -157,14 +160,14 @@ class CirculationHelper:
         try:
             if legacy_loan.patron_barcode in self.missing_patron_barcodes:
                 error_message = i18n_t("Patron barcode already detected as missing")
-                logging.error(
+                logger.error(
                     f"{error_message} Patron barcode: {legacy_loan.patron_barcode} "
                     f"Item Barcode:{legacy_loan.item_barcode}"
                 )
                 return TransactionResult(False, False, "", error_message, error_message)
             loan = self.folio_client.folio_post(path, data)
             stats = "Successfully checked out by barcode"
-            logging.debug(
+            logger.debug(
                 "%s (item barcode %s}) in %ss",
                 stats,
                 legacy_loan.item_barcode,
@@ -229,7 +232,7 @@ class CirculationHelper:
                     error_message_from_folio,
                     error_message_from_folio,
                 )
-            logging.error(
+            logger.error(
                 f"{error_message} "
                 f"Patron barcode: {legacy_loan.patron_barcode} "
                 f"Item Barcode:{legacy_loan.item_barcode}"
@@ -239,7 +242,7 @@ class CirculationHelper:
                 False, True, None, error_message, f"Check out error: {stat_message}"
             )
         except FolioClientError as fce:
-            logging.exception(
+            logger.exception(
                 "%s\tPOST FAILED %s\n\t%s\n\t%s",
                 fce.response.status_code,
                 fce.request.url,
@@ -254,7 +257,7 @@ class CirculationHelper:
                 i18n.t("Failed checkout http status %{code}", code=fce.response.status_code),
             )
         except FolioConnectionError as fce:
-            logging.exception(
+            logger.exception(
                 "Connection error\tPOST FAILED %s\n\t%s\n\t%s",
                 fce.request.url,
                 json.dumps(data),
@@ -285,8 +288,8 @@ class CirculationHelper:
                 }
             }
             _ = folio_client.folio_post(path, data)
-            logging.debug(f"POST {path}\t{json.dumps(data)}")
-            logging.info(
+            logger.debug(f"POST {path}\t{json.dumps(data)}")
+            logger.info(
                 "%s Successfully created %s",
                 HTTPStatus.OK,
                 legacy_request.request_type,
@@ -294,7 +297,7 @@ class CirculationHelper:
             return True
         except FolioValidationError as fve:
             message = folio_client.handle_json_response(fve.response)["errors"][0]["message"]
-            logging.error(message)
+            logger.error(message)
             migration_report.add_general_statistics(message)
             return False
         except (FolioConnectionError, FolioClientError) as fce:
@@ -303,14 +306,14 @@ class CirculationHelper:
                     f"HTTP {client_response.status_code} Error creating request: "
                     f"{client_response.text}"
                 )
-                logging.error(message)
+                logger.error(message)
                 migration_report.add_general_statistics(message)
             else:
-                logging.error(f"Connection error creating request: {fce}")
+                logger.error(f"Connection error creating request: {fce}")
                 migration_report.add_general_statistics("Connection error creating request")
             return False
         except Exception as exception:
-            logging.error(exception, exc_info=True)
+            logger.error(exception, exc_info=True)
             migration_report.add("Details", exception)
             Helper.log_data_issue(
                 legacy_request.item_barcode,
@@ -327,7 +330,7 @@ class CirculationHelper:
                     for row in patron_file:
                         rec = json.loads(row)
                         user_barcodes.add(rec.get("barcode", "None"))
-            logging.info("Loaded %s barcodes from users", len(user_barcodes))
+            logger.info("Loaded %s barcodes from users", len(user_barcodes))
 
     def load_migrated_item_barcodes(self, item_barcodes, item_files, folder_structure):
         if any(item_files):
@@ -337,7 +340,7 @@ class CirculationHelper:
                     for row in item_file:
                         rec = json.loads(row)
                         item_barcodes.add(rec.get("barcode", "None"))
-            logging.info("Loaded %s barcodes from items", len(item_barcodes))
+            logger.info("Loaded %s barcodes from items", len(item_barcodes))
 
     @staticmethod
     def extend_open_loan(folio_client: FolioClient, loan, extension_due_date, extend_out_date):
@@ -351,7 +354,7 @@ class CirculationHelper:
             req = httpx.put(
                 url, headers=folio_client.okapi_headers, json=loan_to_put, timeout=None
             )
-            logging.info(
+            logger.info(
                 "%s\tPUT Extend loan %s to %s\t %s",
                 req.status_code,
                 loan_to_put["id"],
@@ -359,7 +362,7 @@ class CirculationHelper:
                 url,
             )
             if str(req.status_code) == "422":
-                logging.error(
+                logger.error(
                     "%s\t%s",
                     json.loads(req.text)["errors"][0]["message"],
                     json.dumps(loan_to_put),
@@ -367,10 +370,10 @@ class CirculationHelper:
                 return False
             else:
                 req.raise_for_status()
-                logging.info("%s Successfully Extended loan", req.status_code)
+                logger.info("%s Successfully Extended loan", req.status_code)
             return True
         except Exception:
-            logging.exception(
+            logger.exception(
                 "PUT FAILED Extend loan to %s\t %s\t%s",
                 loan_to_put["dueDate"],
                 url,

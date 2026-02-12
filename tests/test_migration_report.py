@@ -193,16 +193,29 @@ class TestMigrationReport:
 
     def test_log_me_logs_report_sections(self, caplog):
         """Test that log_me logs all report sections."""
+        import logging as logging_mod
+
         report = MigrationReport()
         report.add("GeneralStatistics", "Records processed", 100)
         report.add("GeneralStatistics", "Records failed", 5)
 
-        with caplog.at_level(logging.INFO):
+        # Re-enable propagation temporarily for test capture
+        package_logger = logging_mod.getLogger("folio_migration_tools")
+        module_logger = logging_mod.getLogger("folio_migration_tools.migration_report")
+        orig_pkg_prop = package_logger.propagate
+        orig_mod_prop = module_logger.propagate
+        package_logger.propagate = True
+        module_logger.propagate = True
+        try:
+            caplog.set_level(logging_mod.INFO)
             report.log_me()
 
-        assert "GeneralStatistics" in caplog.text
-        assert "Records processed" in caplog.text
-        assert "100" in caplog.text
+            assert "GeneralStatistics" in caplog.text
+            assert "Records processed" in caplog.text
+            assert "100" in caplog.text
+        finally:
+            package_logger.propagate = orig_pkg_prop
+            module_logger.propagate = orig_mod_prop
 
 
 class TestAsStr:

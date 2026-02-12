@@ -30,6 +30,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class CompositeOrderMapper(MappingFileMapperBase):
     def __init__(
@@ -79,7 +81,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             library_configuration,
             task_configuration,
         )
-        logging.info("Loading Instance ID map...")
+        logger.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
         self.organizations_id_map = organizations_id_map
         self.folio_organization_cache = {}
@@ -92,7 +94,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "value",
             "AcquisitionMethodMapping",
         )
-        logging.info("Init done")
+        logger.info("Init done")
         self.location_mapping = RefDataMapping(
             self.folio_client,
             "/locations",
@@ -178,11 +180,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
             # Authenticate when calling GitHub, using an API key stored in .env
             github_headers = {
                 "content-type": "application/json",
-                "User-Agent": "FOLIO Migration Tools (https://github.com/FOLIO-FSE/folio_migration_tools/)",  # noqa:E501,B950
+                "User-Agent": "FOLIO Migration Tools (https://github.com/FOLIO-FSE/folio_migration_tools/)",  # noqa: E501,B950
             }
 
             if os.environ.get("GITHUB_TOKEN"):
-                logging.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
+                logger.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
                 github_headers["authorization"] = f"token {os.environ.get('GITHUB_TOKEN')}"
 
             # Start talkign to GitHub...
@@ -218,11 +220,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 object_schema, acq_models_path, github_headers
             )
         except httpx.HTTPError as http_error:
-            logging.critical(f"Halting! \t{http_error}")
+            logger.critical(f"Halting! \t{http_error}")
             sys.exit(2)
 
         except json.decoder.JSONDecodeError as json_error:
-            logging.critical(json_error)
+            logger.critical(json_error)
             sys.exit(2)
 
     @staticmethod
@@ -251,7 +253,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         # Get the tag assigned to the latest release
         release_tag = latest_release["tag_name"]
-        logging.info(f"Using schemas from latest {repo} release: {release_tag}")
+        logger.info(f"Using schemas from latest {repo} release: {release_tag}")
 
         # Get the tree for the latest release
         tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
@@ -312,12 +314,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
             ).items():
                 # Report and discard unhandled properties
                 if property_level1.get("type") not in supported_types:
-                    logging.info(f"Property not yet supported: {property_name_level1}")
+                    logger.info(f"Property not yet supported: {property_name_level1}")
                     property_level1["type"] = "Deprecated"
 
                 # Handle object properties
                 elif property_level1.get("type") == "object" and property_level1.get("$ref"):
-                    logging.info("Fecthing referenced schema for object %s", property_name_level1)
+                    logger.info("Fecthing referenced schema for object %s", property_name_level1)
                     actual_path = urllib.parse.urljoin(
                         f"{submodule_path}", object_schema.get("$ref", "")
                     )
@@ -335,7 +337,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 elif property_level1.get("type") == "array" and property_level1.get("items").get(
                     "$ref"
                 ):
-                    logging.info(
+                    logger.info(
                         "Fetching referenced schema for array object %s", property_name_level1
                     )
                     actual_path = urllib.parse.urljoin(
@@ -350,7 +352,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     )
                     property_level1["items"] = p2
                 elif property_level1.get("type") == "string" and property_level1.get("$ref"):
-                    logging.info("Fetching referenced schema for object %s", property_name_level1)
+                    logger.info("Fetching referenced schema for object %s", property_name_level1)
                     actual_path = urllib.parse.urljoin(
                         f"{submodule_path}", object_schema.get("$ref", "")
                     )
@@ -362,7 +364,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return object_schema
 
         except HTTPError as he:
-            logging.error(he)
+            logger.error(he)
 
     @staticmethod
     def inject_schema_by_ref(submodule_path, github_headers, property: dict):
@@ -381,7 +383,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             req.raise_for_status()
             return dict(property, **json.loads(req.text))
         except Exception as ee:
-            logging.error(ee)
+            logger.error(ee)
             return {}
 
     @staticmethod
@@ -395,7 +397,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             req.raise_for_status()
             return dict(property["items"], **json.loads(req.text))
         except Exception as ee:
-            logging.error(ee)
+            logger.error(ee)
             return {}
 
     def perform_additional_mapping(self, index_or_id, composite_order):
