@@ -7,16 +7,18 @@ loan format. Supports renewal counts and loan policy mapping.
 
 import json
 import logging
-import i18n
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import i18n
 from dateutil import tz
-from dateutil.parser import parse, ParserError
+from dateutil.parser import ParserError, parse
 
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+
+logger = logging.getLogger(__name__)
 
 utc = ZoneInfo("UTC")
 
@@ -99,7 +101,7 @@ class LegacyLoan(object):
                 )
                 self.report("Hour and minute not specified for due date")
         except (ParserError, OverflowError) as ee:
-            logging.error(ee)
+            logger.error(ee)
             self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "due_date"))
             temp_date_due = datetime.now(ZoneInfo("UTC"))
         try:

@@ -26,6 +26,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class UserMapper(MappingFileMapperBase):
     def __init__(
@@ -87,9 +89,9 @@ class UserMapper(MappingFileMapperBase):
                         custom_field_prop_name
                     ] = {"type": "string", "description": "dynamically added custom prop"}
 
-            logging.info("Init done.")
+            logger.info("Init done.")
         except TransformationProcessError as tpe:
-            logging.critical(tpe)
+            logger.critical(tpe)
             print(f"\n{tpe.message}\t{tpe.data_value}")
             sys.exit(1)
 
@@ -215,7 +217,7 @@ class UserMapper(MappingFileMapperBase):
             return format_date.isoformat()
         except Exception as ee:
             v = mapped_value
-            logging.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
+            logger.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
             fmt_string = i18n.t(
                 "Parsing error! %{prop_name}: %{value}. The empty string was returned",
                 prop_name=folio_prop_name,

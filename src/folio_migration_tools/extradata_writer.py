@@ -13,6 +13,8 @@ from typing import List
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 
+logger = logging.getLogger(__name__)
+
 
 class ExtradataWriter:
     __instance = None
@@ -45,14 +47,14 @@ class ExtradataWriter:
                 with open(self.path_to_file, "a") as extradata_file:
                     extradata_file.writelines(self.cache)
                     self.cache = []
-                    logging.debug("Extradata writer flushing the cache")
+                    logger.debug("Extradata writer flushing the cache")
         except Exception as ee:
             error_message = "Something went wrong in extradata Writer"
-            logging.error(error_message)
+            logger.error(error_message)
             raise TransformationProcessError("", error_message, record_type) from ee
 
     def flush(self):
         self.write("", {}, True)
         if self.path_to_file.is_file() and os.stat(self.path_to_file).st_size == 0:
-            logging.info("Removing extradata file since it is empty")
+            logger.info("Removing extradata file since it is empty")
             os.remove(self.path_to_file)

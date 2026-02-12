@@ -24,6 +24,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class OrganizationMapper(MappingFileMapperBase):
     def __init__(
@@ -51,7 +53,7 @@ class OrganizationMapper(MappingFileMapperBase):
         """
         # Build composite organization schema
         if os.environ.get("GITHUB_TOKEN"):
-            logging.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
+            logger.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
         organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
             "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
         )
@@ -238,11 +240,11 @@ class OrganizationMapper(MappingFileMapperBase):
             return extended_object_schema
 
         except httpx.HTTPError as http_error:
-            logging.critical(f"Halting! \t{http_error}")
+            logger.critical(f"Halting! \t{http_error}")
             sys.exit(2)
 
         except json.decoder.JSONDecodeError as json_error:
-            logging.critical(json_error)
+            logger.critical(json_error)
             sys.exit(2)
 
     @staticmethod
@@ -267,7 +269,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         # Get the tag assigned to the latest release
         release_tag = latest_release["tag_name"]
-        logging.info(f"Using schemas from latest {repo} release: {release_tag}")
+        logger.info(f"Using schemas from latest {repo} release: {release_tag}")
 
         # Get the tree for the latest release
         tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
@@ -356,11 +358,11 @@ class OrganizationMapper(MappingFileMapperBase):
                     or "../" in property_level1.get("$ref", "")
                     or "../" in property_level1.get("items", {}).get("$ref", "")
                 ):
-                    logging.info(f"Property not yet supported: {property_name_level1}")
+                    logger.info(f"Property not yet supported: {property_name_level1}")
 
                 # Handle object properties
                 elif property_level1.get("type") == "object" and property_level1.get("$ref"):
-                    logging.info("Fecthing referenced schema for object %s", property_name_level1)
+                    logger.info("Fecthing referenced schema for object %s", property_name_level1)
 
                     ref_object = property_level1["$ref"]
                     schema_url = f"{submodule_path}/{ref_object}"
@@ -386,7 +388,7 @@ class OrganizationMapper(MappingFileMapperBase):
             return object_schema
 
         except httpx.HTTPError as he:
-            logging.error(he)
+            logger.error(he)
 
     @staticmethod
     def fetch_additional_schema(folio_object):

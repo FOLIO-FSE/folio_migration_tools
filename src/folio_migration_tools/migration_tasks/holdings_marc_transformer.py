@@ -29,6 +29,8 @@ from folio_migration_tools.migration_tasks.migration_task_base import (
     MigrationTaskBase,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class HoldingsMarcTransformer(MigrationTaskBase):
     class TaskConfiguration(MarcTaskConfigurationBase):
@@ -263,7 +265,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                     " not found in FOLIO."
                 ),
             )
-        logging.info(
+        logger.info(
             "%s will be used as default holdings type",
             self.default_holdings_type.get("name", ""),
         )
@@ -279,7 +281,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
                     self.boundwith_relationship_map_rows = list(
                         csv.DictReader(boundwith_relationship_file, dialect="tsv")
                     )
-                logging.info(
+                logger.info(
                     "Rows in Bound with relationship map: %s",
                     len(self.boundwith_relationship_map_rows),
                 )
@@ -296,7 +298,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         )
         with open(location_map_path) as location_map_file:
             self.location_map = list(csv.DictReader(location_map_file, dialect="tsv"))
-            logging.info("Locations in map: %s", len(self.location_map))
+            logger.info("Locations in map: %s", len(self.location_map))
 
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_configuration.files
@@ -317,8 +319,8 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             and self.task_configuration.update_hrid_settings
         ):
             self.mapper.hrid_handler.reset_holdings_hrid_counter()
-        logging.info("%s Instance ids in map", len(self.instance_id_map))
-        logging.info("Init done")
+        logger.info("%s Instance ids in map", len(self.instance_id_map))
+        logger.info("Init done")
 
     def add_supplemental_mfhd_mappings(self):
         if self.task_configuration.supplemental_mfhd_mapping_rules_file:
@@ -351,14 +353,14 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         self.do_work_marc_transformer()
 
     def wrap_up(self):
-        logging.info("Done. Transformer Wrapping up...")
+        logger.info("Done. Transformer Wrapping up...")
         self.extradata_writer.flush()
         self.processor.wrap_up()
         if self.mapper.boundwith_relationship_map:
             with open(
                 self.folder_structure.boundwith_relationships_map_path, "w+"
             ) as boundwith_relationship_file:
-                logging.info(
+                logger.info(
                     "Writing boundwiths relationship map to %s",
                     boundwith_relationship_file.name,
                 )
@@ -380,7 +382,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
             self.mapper.migration_report.write_json_report(raw_report_file)
 
-        logging.info(
+        logger.info(
             "Done. Transformation report written to %s",
             self.folder_structure.migration_reports_file.name,
         )

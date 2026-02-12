@@ -10,11 +10,11 @@ import logging
 import sys
 import time
 import traceback
-from typing import Optional, Annotated
-from pydantic import Field
+from typing import Annotated, Optional
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -32,6 +32,8 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
+logger = logging.getLogger(__name__)
 
 
 class CoursesMigrator(MigrationTaskBase):
@@ -138,30 +140,30 @@ class CoursesMigrator(MigrationTaskBase):
             self.library_configuration,
             self.task_configuration,
         )
-        logging.info("Init completed")
+        logger.info("Init completed")
 
     def do_work(self):
-        logging.info("Starting")
+        logger.info("Starting")
         full_path = (
             self.folder_structure.legacy_records_folder
             / self.task_configuration.courses_file.file_name
         )
-        logging.info("Processing %s", full_path)
+        logger.info("Processing %s", full_path)
         start = time.time()
         with open(full_path, encoding="utf-8-sig") as records_file:
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
                 try:
                     if idx == 0:
-                        logging.info("First legacy record:")
-                        logging.info(json.dumps(record, indent=4))
+                        logger.info("First legacy record:")
+                        logger.info(json.dumps(record, indent=4))
                         self.mapper.verify_legacy_record(record, idx)
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.course
                     )
                     self.mapper.perform_additional_mappings((folio_rec, legacy_id))
                     if idx == 0:
-                        logging.info("First FOLIO record:")
-                        logging.info(json.dumps(folio_rec, indent=4))
+                        logger.info("First FOLIO record:")
+                        logger.info(json.dumps(folio_rec, indent=4))
                     self.mapper.store_objects((folio_rec, legacy_id))
                     self.mapper.notes_mapper.map_notes(
                         record, legacy_id, folio_rec["course"]["id"], FOLIONamespaces.course
@@ -173,8 +175,8 @@ class CoursesMigrator(MigrationTaskBase):
                     self.mapper.handle_transformation_record_failed_error(idx, data_error)
                 except AttributeError as attribute_error:
                     traceback.print_exc()
-                    logging.fatal(attribute_error)
-                    logging.info("Quitting...")
+                    logger.fatal(attribute_error)
+                    logger.info("Quitting...")
                     sys.exit(1)
                 except Exception as excepion:
                     self.mapper.handle_generic_exception(idx, excepion)

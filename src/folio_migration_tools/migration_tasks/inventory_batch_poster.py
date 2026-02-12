@@ -12,11 +12,11 @@ import asyncio
 import logging
 from typing import Annotated, List, Literal
 
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import Field
-
+from folio_data_import._progress import RichProgressReporter
 from folio_data_import.BatchPoster import BatchPoster as FDIBatchPoster
 from folio_data_import.BatchPoster import BatchPosterStats
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -25,7 +25,8 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
-from folio_data_import._progress import RichProgressReporter
+
+logger = logging.getLogger(__name__)
 
 
 class InventoryBatchPoster(MigrationTaskBase):
@@ -220,10 +221,10 @@ class InventoryBatchPoster(MigrationTaskBase):
         self.stats: BatchPosterStats = BatchPosterStats()
         self.batch_errors: List[str] = []
 
-        logging.info("InventoryBatchPoster initialized")
-        logging.info("Object type: %s", self.task_configuration.object_type)
-        logging.info("Batch size: %s", self.task_configuration.batch_size)
-        logging.info("Upsert mode: %s", "On" if self.task_configuration.upsert else "Off")
+        logger.info("InventoryBatchPoster initialized")
+        logger.info("Object type: %s", self.task_configuration.object_type)
+        logger.info("Batch size: %s", self.task_configuration.batch_size)
+        logger.info("Upsert mode: %s", "On" if self.task_configuration.upsert else "Off")
 
     def _create_fdi_config(self) -> FDIBatchPoster.Config:
         """Create a folio_data_import.BatchPoster.Config from our TaskConfiguration.
@@ -262,10 +263,10 @@ class InventoryBatchPoster(MigrationTaskBase):
         for file_def in self.task_configuration.files:
             path = self.folder_structure.results_folder / file_def.file_name
             if not path.exists():
-                logging.error("File not found: %s", path)
+                logger.error("File not found: %s", path)
                 raise FileNotFoundError(f"File not found: {path}")
             file_paths.append(path)
-            logging.info("Will process file: %s", path)
+            logger.info("Will process file: %s", path)
 
         # Create the folio_data_import BatchPoster config
         fdi_config = self._create_fdi_config()
@@ -295,7 +296,7 @@ class InventoryBatchPoster(MigrationTaskBase):
 
                 # If rerun is enabled and there are failures, reprocess them
                 if self.task_configuration.rerun_failed_records and self.stats.records_failed > 0:
-                    logging.info(
+                    logger.info(
                         "Rerunning %s failed records one at a time",
                         self.stats.records_failed,
                     )
@@ -309,19 +310,19 @@ class InventoryBatchPoster(MigrationTaskBase):
         This method reads records from the configured files and posts them
         to FOLIO in batches using the folio_data_import.BatchPoster.
         """
-        logging.info("Starting InventoryBatchPoster work...")
+        logger.info("Starting InventoryBatchPoster work...")
 
         try:
             # Run the async work in an event loop
             asyncio.run(self._do_work_async())
         except FileNotFoundError as e:
-            logging.error("File not found: %s", e)
+            logger.error("File not found: %s", e)
             raise
         except Exception as e:
-            logging.error("Error during batch posting: %s", e)
+            logger.error("Error during batch posting: %s", e)
             raise
 
-        logging.info("InventoryBatchPoster work complete")
+        logger.info("InventoryBatchPoster work complete")
 
     def _translate_stats_to_migration_report(self) -> None:
         """Translate BatchPosterStats to MigrationReport format."""
@@ -385,25 +386,25 @@ class InventoryBatchPoster(MigrationTaskBase):
         This method translates statistics from the underlying BatchPoster
         to the MigrationReport format and writes both markdown and JSON reports.
         """
-        logging.info("Done. Wrapping up InventoryBatchPoster")
+        logger.info("Done. Wrapping up InventoryBatchPoster")
 
         # Translate stats to migration report
         self._translate_stats_to_migration_report()
 
         # Log summary
-        logging.info("=" * 60)
-        logging.info("InventoryBatchPoster Summary")
-        logging.info("=" * 60)
-        logging.info("Records processed: %d", self.stats.records_processed)
-        logging.info("Records posted: %d", self.stats.records_posted)
-        logging.info("Records created: %d", self.stats.records_created)
-        logging.info("Records updated: %d", self.stats.records_updated)
-        logging.info("Records failed: %d", self.stats.records_failed)
+        logger.info("=" * 60)
+        logger.info("InventoryBatchPoster Summary")
+        logger.info("=" * 60)
+        logger.info("Records processed: %d", self.stats.records_processed)
+        logger.info("Records posted: %d", self.stats.records_posted)
+        logger.info("Records created: %d", self.stats.records_created)
+        logger.info("Records updated: %d", self.stats.records_updated)
+        logger.info("Records failed: %d", self.stats.records_failed)
         if self.task_configuration.rerun_failed_records:
-            logging.info("Rerun succeeded: %d", self.stats.rerun_succeeded)
-            logging.info("Rerun still failed: %d", self.stats.rerun_still_failed)
+            logger.info("Rerun succeeded: %d", self.stats.rerun_succeeded)
+            logger.info("Rerun still failed: %d", self.stats.rerun_still_failed)
         if self.stats.records_failed > 0:
-            logging.info(
+            logger.info(
                 "Failed records written to: %s",
                 self.folder_structure.failed_recs_path,
             )

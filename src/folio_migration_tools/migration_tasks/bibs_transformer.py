@@ -27,6 +27,8 @@ from folio_migration_tools.migration_tasks.migration_task_base import (
     MigrationTaskBase,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class BibsTransformer(MigrationTaskBase):
     class TaskConfiguration(MarcTaskConfigurationBase):
@@ -158,13 +160,13 @@ class BibsTransformer(MigrationTaskBase):
             and self.task_configuration.update_hrid_settings
         ):
             self.mapper.hrid_handler.reset_instance_hrid_counter()
-        logging.info("Init done")
+        logger.info("Init done")
 
     def do_work(self):
         self.do_work_marc_transformer()
 
     def wrap_up(self):
-        logging.info("Done. Transformer wrapping up...")
+        logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         self.processor.wrap_up()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
@@ -182,7 +184,7 @@ class BibsTransformer(MigrationTaskBase):
         with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
             self.mapper.migration_report.write_json_report(raw_report_file)
 
-        logging.info(
+        logger.info(
             "Done. Transformation report written to %s",
             self.folder_structure.migration_reports_file.name,
         )

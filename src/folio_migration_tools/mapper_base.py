@@ -36,6 +36,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
+logger = logging.getLogger(__name__)
+
 
 class MapperBase:
     legacy_id_template = "Identifier(s) from previous system:"
@@ -56,7 +58,7 @@ class MapperBase:
             folio_client (FolioClient): FOLIO API client for reference data and posting.
             parent_id_map (Dict[str, Tuple] | None): Optional parent id map from prior transform.
         """
-        logging.info("MapperBase initiating")
+        logger.info("MapperBase initiating")
         self.parent_id_map: dict[str, tuple] = parent_id_map or {}
         self.extradata_writer: ExtradataWriter = ExtradataWriter(Path(""))
         self.start_datetime = datetime.now(timezone.utc)
@@ -95,7 +97,7 @@ class MapperBase:
                 if prop not in self.mapped_folio_fields:
                     self.mapped_folio_fields[prop] = [0]
         except Exception as ee:
-            logging.error(ee, stack_info=True)
+            logger.error(ee, stack_info=True)
             raise ee from ee
 
     def report_legacy_mapping_no_schema(self, legacy_object):
@@ -254,7 +256,7 @@ class MapperBase:
 
     def handle_transformation_process_error(self, idx, error: TransformationProcessError):
         self.migration_report.add_general_statistics(i18n_t("Transformation process error"))
-        logging.critical("%s\t%s", idx, error)
+        logger.critical("%s\t%s", idx, error)
         print(f"\n{error.message}: {error.data_value}")
         sys.exit(1)
 
@@ -279,7 +281,7 @@ class MapperBase:
                 ),
                 self.num_criticalerrors,
             )
-            logging.error(
+            logger.error(
                 "Errors: %s\terrors/records: %s",
                 self.num_criticalerrors,
                 (self.num_criticalerrors / (records_processed + 1)),
@@ -304,7 +306,7 @@ class MapperBase:
             f"Row {idx:,} failed with the following unhandled Exception: {exception}  "
             f"of type {type(exception).__name__}"
         )
-        logging.error(exception, exc_info=True)
+        logger.error(exception, exc_info=True)
         if self.num_exceptions > self.library_configuration.generic_exception_threshold:
             logging.fatal(
                 "Stopping. More than %s unhandled exceptions. Code needs fixing",
@@ -319,7 +321,7 @@ class MapperBase:
                 self.migration_report.add(
                     "GeneralStatistics", i18n_t("Unique ID:s written to legacy map")
                 )
-        logging.info("Wrote legacy id map to %s", path)
+        logger.info("Wrote legacy id map to %s", path)
 
     @staticmethod
     def validate_required_properties(
@@ -495,12 +497,12 @@ class MapperBase:
                 "code",
                 "StatisticalCodeMapping",
             )
-            logging.info(
+            logger.info(
                 f"Statistical codes mapping set up {self.statistical_codes_mapping.mapped_legacy_keys}"  # noqa: E501
             )
         else:
             self.statistical_codes_mapping = None
-            logging.info("Statistical codes map is not set up")
+            logger.info("Statistical codes map is not set up")
 
     def get_statistical_code(self, legacy_item: dict, folio_prop_name: str, index_or_id):
         if self.statistical_codes_mapping:

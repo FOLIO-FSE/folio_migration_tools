@@ -28,6 +28,8 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
+logger = logging.getLogger(__name__)
+
 
 class MARCImportTask(MigrationTaskBase):
     """MARCImportTask.
@@ -226,10 +228,10 @@ class MARCImportTask(MigrationTaskBase):
         self.job_ids: List[str] = []
         self.files_processed: List[str] = []
 
-        logging.info("MARCImportTask initialized")
-        logging.info("Import profile: %s", self.task_configuration.import_profile_name)
-        logging.info("Batch size: %s", self.task_configuration.batch_size)
-        logging.info("Results folder: %s", self.folder_structure.results_folder)
+        logger.info("MARCImportTask initialized")
+        logger.info("Import profile: %s", self.task_configuration.import_profile_name)
+        logger.info("Batch size: %s", self.task_configuration.batch_size)
+        logger.info("Results folder: %s", self.folder_structure.results_folder)
 
     def _create_fdi_config(self, file_paths: List[Path]) -> FDIMARCImportJob.Config:
         """Create a folio_data_import.MARCImportJob.Config from our TaskConfiguration.
@@ -287,11 +289,11 @@ class MARCImportTask(MigrationTaskBase):
         for file_def in self.task_configuration.files:
             path = self.folder_structure.results_folder / file_def.file_name
             if not path.exists():
-                logging.error("File not found: %s", path)
+                logger.error("File not found: %s", path)
                 raise FileNotFoundError(f"File not found: {path}")
             file_paths.append(path)
             self.files_processed.append(file_def.file_name)
-            logging.info("Will process file: %s", path)
+            logger.info("Will process file: %s", path)
 
         # Create the folio_data_import MARCImportJob config
         fdi_config = self._create_fdi_config(file_paths)
@@ -329,19 +331,19 @@ class MARCImportTask(MigrationTaskBase):
         This method reads MARC records from the configured files and imports them
         to FOLIO using the Data Import APIs via folio_data_import.MARCImportJob.
         """
-        logging.info("Starting MARCImportTask work...")
+        logger.info("Starting MARCImportTask work...")
 
         try:
             # Run the async work in an event loop
             asyncio.run(self._do_work_async())
         except FileNotFoundError as e:
-            logging.error("File not found: %s", e)
+            logger.error("File not found: %s", e)
             raise
         except Exception as e:
-            logging.error("Error during MARC import: %s", e)
+            logger.error("Error during MARC import: %s", e)
             raise
 
-        logging.info("MARCImportTask work complete")
+        logger.info("MARCImportTask work complete")
 
     def _translate_stats_to_migration_report(self) -> None:
         """Translate MARC import stats to MigrationReport format.
@@ -376,18 +378,18 @@ class MARCImportTask(MigrationTaskBase):
         (bad_marc_records_*.mrc, failed_batches_*.mrc) are already in results_folder
         since that's where we read the input files from.
         """
-        logging.info("Done. Wrapping up MARCImportTask")
+        logger.info("Done. Wrapping up MARCImportTask")
 
         # Translate stats to migration report
         self._translate_stats_to_migration_report()
 
         # Log summary
-        logging.info("=" * 60)
-        logging.info("MARCImportTask Summary")
-        logging.info("=" * 60)
-        logging.info("Records sent to Data Import: %d", self.total_records_sent)
-        logging.info("Files processed: %d", len(self.files_processed))
-        logging.info("Data Import jobs created: %d", len(self.job_ids))
+        logger.info("=" * 60)
+        logger.info("MARCImportTask Summary")
+        logger.info("=" * 60)
+        logger.info("Records sent to Data Import: %d", self.total_records_sent)
+        logger.info("Files processed: %d", len(self.files_processed))
+        logger.info("Data Import jobs created: %d", len(self.job_ids))
 
         # Write markdown report
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
@@ -404,4 +406,4 @@ class MARCImportTask(MigrationTaskBase):
         # Clean up empty log files
         self.clean_out_empty_logs()
 
-        logging.info("MARCImportTask wrap up complete")
+        logger.info("MARCImportTask wrap up complete")

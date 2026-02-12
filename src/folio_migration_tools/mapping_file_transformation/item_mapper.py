@@ -33,6 +33,8 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
 )
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
+logger = logging.getLogger(__name__)
+
 
 class ItemMapper(MappingFileMapperBase):
     def __init__(
@@ -115,7 +117,7 @@ class ItemMapper(MappingFileMapperBase):
                 "CallNumberTypeMapping",
             )
         elif self.task_configuration.default_call_number_type_name:
-            logging.info(
+            logger.info(
                 "No call number type map provided, setting default to '%s'.",
                 self.task_configuration.default_call_number_type_name,
             )
@@ -186,31 +188,31 @@ class ItemMapper(MappingFileMapperBase):
         statuses = self.item_schema["properties"]["status"]["properties"]["name"]["enum"]
         for mapping in item_statuses_map:
             if "folio_name" not in mapping:
-                logging.critical("folio_name is not a column in the status mapping file")
+                logger.critical("folio_name is not a column in the status mapping file")
                 sys.exit(1)
             elif "legacy_code" not in mapping:
-                logging.critical("legacy_code is not a column in the status mapping file")
+                logger.critical("legacy_code is not a column in the status mapping file")
                 sys.exit(1)
             elif mapping["folio_name"] not in statuses:
-                logging.critical(
+                logger.critical(
                     "%s in the mapping file is not a FOLIO item status",
                     mapping["folio_name"],
                 )
                 sys.exit(1)
             elif mapping["legacy_code"] == "*":
-                logging.critical(
+                logger.critical(
                     "* in status mapping not allowed. Available will be the default mapping. "
                     "Please remove the row with the *"
                 )
                 sys.exit(1)
             elif not all(mapping.values()):
-                logging.critical("empty value in mapping %s. Check mapping file", mapping.values())
+                logger.critical("empty value in mapping %s. Check mapping file", mapping.values())
                 sys.exit(1)
             else:
                 self.status_mapping = {
                     v["legacy_code"]: v["folio_name"] for v in item_statuses_map
                 }
-        logging.info(json.dumps(statuses, indent=True))
+        logger.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):  # noqa: C901
         if folio_prop_name == "permanentLocationId":

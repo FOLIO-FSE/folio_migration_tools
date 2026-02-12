@@ -34,12 +34,15 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.logging_config import PACKAGE_LOGGER_NAME, setup_logging
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
 )
 from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
     MARCReaderWrapper,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class MigrationTaskBase:
@@ -97,10 +100,10 @@ class MigrationTaskBase:
                 self.central_folder_structure.setup_migration_file_structure()
             # Initiate Worker
         except FileNotFoundError as fne:
-            logging.error(fne)
+            logger.error(fne)
         except TransformationProcessError as process_error:
-            logging.critical(process_error)
-            logging.critical("Halting...")
+            logger.critical(process_error)
+            logger.critical("Halting...")
             sys.exit(1)
         self.num_exeptions: int = 0
         self.extradata_writer = ExtradataWriter(
@@ -111,10 +114,10 @@ class MigrationTaskBase:
         # are initialized since setup_logging depends on all three
         if use_logging:
             self.setup_logging()
-        logging.info("MigrationTaskBase init")
-        logging.info(self.task_configuration.model_dump_json(indent=4))
+        logger.info("MigrationTaskBase init")
+        logger.info(self.task_configuration.model_dump_json(indent=4))
         self.folder_structure.log_folder_structure()
-        logging.info("MigrationTaskBase init done")
+        logger.info("MigrationTaskBase init done")
 
     @abstractmethod
     def wrap_up(self):
@@ -126,16 +129,16 @@ class MigrationTaskBase:
             self.folder_structure.data_issue_file_path.is_file()
             and os.stat(self.folder_structure.data_issue_file_path).st_size == 0
         ):
-            logging.info("Removing data issues file since it is empty")
+            logger.info("Removing data issues file since it is empty")
             os.remove(self.folder_structure.data_issue_file_path)
-            logging.info("Removed data issues file since it was empty")
+            logger.info("Removed data issues file since it was empty")
 
         if (
             self.folder_structure.failed_marc_recs_file.is_file()
             and os.stat(self.folder_structure.failed_marc_recs_file).st_size == 0
         ):
             os.remove(self.folder_structure.failed_marc_recs_file)
-            logging.info("Removed empty failed marc records file since it was empty")
+            logger.info("Removed empty failed marc records file since it was empty")
 
     @abstractmethod
     def do_work(self):
@@ -170,9 +173,9 @@ class MigrationTaskBase:
                 f"None of the files listed in task configuration found in {source_path}."
                 f"Listed files: {ret_str}",
             )
-        logging.info("Files to process:")
+        logger.info("Files to process:")
         for filename in files:
-            logging.info("\t%s", filename)
+            logger.info("\t%s", filename)
 
     def load_instance_id_map(self, raise_if_empty=True) -> dict:
         """Load instance ID maps for holdings and other transformations.
@@ -183,7 +186,7 @@ class MigrationTaskBase:
         map_files = []
         instance_id_map = {}
         if self.library_configuration.is_ecs and self.central_folder_structure:
-            logging.info(
+            logger.info(
                 "Loading ECS central tenant instance id map from %s",
                 self.central_folder_structure.instance_id_map_path,
             )
@@ -192,7 +195,7 @@ class MigrationTaskBase:
                 raise_if_empty=False,
             )
             map_files.append(str(self.central_folder_structure.instance_id_map_path))
-            logging.info(
+            logger.info(
                 "Loading member tenant isntance id map from %s",
                 self.folder_structure.instance_id_map_path,
             )
@@ -210,7 +213,7 @@ class MigrationTaskBase:
     @staticmethod
     def load_id_map(map_path, raise_if_empty=False, existing_id_map=None):
         if not isfile(map_path):
-            logging.warning("No legacy id map found at %s. Will build one from scratch", map_path)
+            logger.warning("No legacy id map found at %s. Will build one from scratch", map_path)
             return {}
         id_map = existing_id_map or {}
         loaded_rows = len(id_map)
@@ -226,7 +229,7 @@ class MigrationTaskBase:
                     )
 
                 id_map[map_tuple[0]] = map_tuple
-        logging.info("Loaded %s migrated IDs from %s", loaded_rows, id_map_file.name)
+        logger.info("Loaded %s migrated IDs from %s", loaded_rows, id_map_file.name)
         if not any(id_map) and raise_if_empty:
             raise TransformationProcessError("", "Legacy id map is empty", map_path)
         return id_map
@@ -236,78 +239,51 @@ class MigrationTaskBase:
         parser.add_argument(dest=destination, help=help, **kwargs)
 
     def setup_logging(self):
+        """Set up logging for the migration task.
+
+        Uses the centralized logging configuration with RichHandler for console
+        output that properly coordinates with Rich progress bars. Sets up file
+        handlers for persistent logging and data issues.
+        """
         debug = self.library_configuration.log_level_debug
 
-        DATA_ISSUE_LVL_NUM = 26
-        logging.addLevelName(DATA_ISSUE_LVL_NUM, "DATA_ISSUES")
-
-        def data_issues(self, message, *args, **kws):
-            if self.isEnabledFor(DATA_ISSUE_LVL_NUM):
-                # Yes, logger takes its '*args' as 'args'.
-                self._log(DATA_ISSUE_LVL_NUM, message, args, **kws)
-
-        logging.Logger.data_issues = data_issues
-        logger = logging.getLogger()
-        logger.propogate = True
-        logger.handlers = []
-        formatter = logging.Formatter(
-            "%(asctime)s\t%(levelname)s\t%(message)s\t%(task_configuration_name)s"
+        # Use the centralized logging setup
+        setup_logging(
+            debug=debug,
+            log_file=self.folder_structure.transformation_log_path,
+            data_issues_file=self.folder_structure.data_issue_file_path,
+            task_name=self.task_configuration.name,
         )
-        stream_handler = logging.StreamHandler()
-        stream_handler.addFilter(ExcludeLevelFilter(26))
-        stream_handler.addFilter(TaskNameFilter(self.task_configuration.name))
-        if debug:
-            logger.setLevel(logging.DEBUG)
-            stream_handler.setLevel(logging.DEBUG)
-            logging.getLogger("httpx").setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.INFO)
-            stream_handler.setLevel(logging.INFO)
-            stream_handler.addFilter(ExcludeLevelFilter(30))  # Exclude warnings from pymarc
-        stream_handler.setFormatter(formatter)
-        logger.addHandler(stream_handler)
 
-        file_formatter = logging.Formatter(
-            "%(asctime)s\t%(message)s\t%(task_configuration_name)s\t%(filename)s:%(lineno)d"
-        )
-        file_handler = logging.FileHandler(
-            filename=self.folder_structure.transformation_log_path, mode="w"
-        )
-        file_handler.addFilter(ExcludeLevelFilter(26))
-        file_handler.addFilter(TaskNameFilter(self.task_configuration.name))
-        # file_handler.addFilter(LevelFilter(0, 20))
-        file_handler.setFormatter(file_formatter)
-        file_handler.setLevel(logging.INFO)
-        logging.getLogger().addHandler(file_handler)
+        # Keep a reference to the data issues handler for cleanup
+        package_logger = logging.getLogger(PACKAGE_LOGGER_NAME)
+        self.data_issue_file_handler = None
+        for handler in package_logger.handlers:
+            if isinstance(handler, logging.FileHandler) and handler.baseFilename == str(
+                self.folder_structure.data_issue_file_path
+            ):
+                self.data_issue_file_handler = handler
+                break
 
-        # Data issue file formatter
-        data_issue_file_formatter = logging.Formatter("%(message)s")
-        self.data_issue_file_handler = logging.FileHandler(
-            filename=str(self.folder_structure.data_issue_file_path), mode="w"
-        )
-        self.data_issue_file_handler.addFilter(LevelFilter(26))
-        self.data_issue_file_handler.setFormatter(data_issue_file_formatter)
-        self.data_issue_file_handler.setLevel(26)
-        logging.getLogger().addHandler(self.data_issue_file_handler)
         logger.info("Logging set up")
 
     def setup_records_map(self, mapping_file_path):
         with open(mapping_file_path) as mapping_file:
             field_map = json.load(mapping_file)
-            logging.info("%s fields present in record mapping file", len(field_map["data"]))
+            logger.info("%s fields present in record mapping file", len(field_map["data"]))
             mapped_fields = (
                 f
                 for f in field_map["data"]
                 if f["legacy_field"] and f["legacy_field"] != "Not mapped"
             )
-            logging.info("%s fields mapped in record mapping file", len(list(mapped_fields)))
+            logger.info("%s fields mapped in record mapping file", len(list(mapped_fields)))
             return field_map
 
     def log_and_exit_if_too_many_errors(self, error: TransformationRecordFailedError, idx):
         self.num_exeptions += 1
         error.log_it()
         if self.num_exeptions / (1 + idx) > 0.2 and self.num_exeptions > 5000:
-            logging.fatal(
+            logger.fatal(
                 f"Number of exceptions exceeded limit of "
                 f"{self.num_exeptions}. and failure rate is "
                 f"{self.num_exeptions / (1 + idx)} Stopping."
@@ -319,15 +295,15 @@ class MigrationTaskBase:
         if num_processed > 1 and num_processed % 10000 == 0:
             elapsed = num_processed / (time.time() - start_time)
             elapsed_formatted = "{0:.4g}".format(elapsed)
-            logging.info(f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} ")
+            logger.info(f"{num_processed:,} records processed. Recs/sec: {elapsed_formatted} ")
 
     def do_work_marc_transformer(
         self,
     ):
-        logging.info("Starting....")
+        logger.info("Starting....")
         if self.folder_structure.failed_marc_recs_file.is_file():
             os.remove(self.folder_structure.failed_marc_recs_file)
-            logging.info("Removed failed marc records file to prevent duplicating data")
+            logger.info("Removed failed marc records file to prevent duplicating data")
         with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
             self.processor = MarcFileProcessor(
                 self.mapper, self.folder_structure, created_records_file
@@ -429,7 +405,7 @@ class MigrationTaskBase:
                     # Validate the structure of the mapping file
                     MigrationTaskBase.verify_ref_data_mapping_file_structure(map_file)
                     ref_data_map = list(csv.DictReader(map_file, dialect="tsv"))
-                    logging.info(
+                    logger.info(
                         "Found %s rows in %s map",
                         len(ref_data_map),
                         folio_property_name,
@@ -443,7 +419,7 @@ class MigrationTaskBase:
                                 "but forgot to add a mapping file?"
                             ),
                         )
-                    logging.info(
+                    logger.info(
                         "%s will be used for determining %s",
                         ", ".join(ref_data_map[0].keys()),
                         folio_property_name,
@@ -453,9 +429,9 @@ class MigrationTaskBase:
                 raise exception
 
         else:
-            logging.info("No mapping setup for %s", folio_property_name)
-            logging.info("%s will have default mapping if any ", folio_property_name)
-            logging.info(
+            logger.info("No mapping setup for %s", folio_property_name)
+            logger.info("%s will have default mapping if any ", folio_property_name)
+            logger.info(
                 "Add a file named %s and add the field to the field mapping json file.",
                 map_file_path,
             )

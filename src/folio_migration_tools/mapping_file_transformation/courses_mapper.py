@@ -5,12 +5,10 @@ records using configured mapping files. Handles course listings, instructors, an
 term/department references.
 """
 
-import i18n
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
-from folio_uuid.folio_uuid import FOLIONamespaces
-from folio_uuid.folio_uuid import FolioUUID
+import i18n
+from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError

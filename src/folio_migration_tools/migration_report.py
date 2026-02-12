@@ -5,13 +5,15 @@ and warnings during transformation and loading tasks. Generates markdown and
 JSON formatted reports with categorized statistics.
 """
 
-import logging
 import json
+import logging
+from datetime import datetime, timezone
+
 import i18n
-from datetime import datetime
-from datetime import timezone
 
 from folio_migration_tools.i18n_cache import i18n_t
+
+logger = logging.getLogger(__name__)
 
 
 class MigrationReport:
@@ -95,7 +97,7 @@ class MigrationReport:
                 ]
             )
         )
-        logging.info(f"Elapsed time: {time_finished - time_started}")
+        logger.info(f"Elapsed time: {time_finished - time_started}")
         for a in self.report:
             blurb_id = self.report[a].get("blurb_id") or ""
             report_file.write(
@@ -123,12 +125,12 @@ class MigrationReport:
     def log_me(self):
         for a in self.report:
             blurb_id = self.report[a].get("blurb_id") or ""
-            logging.info(f"{blurb_id}    ")
-            logging.info("_______________")
+            logger.info(f"{blurb_id}    ")
+            logger.info("_______________")
             b = self.report[a]
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_id"]
             for b in sortedlist:
-                logging.info(f"{b[0] or 'EMPTY'} \t\t{b[1]:,}   ")
+                logger.info(f"{b[0] or 'EMPTY'} \t\t{b[1]:,}   ")
 
 
 def as_str(s):

@@ -40,6 +40,8 @@ from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHan
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
+logger = logging.getLogger(__name__)
+
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 csv.register_dialect("tsv", delimiter="\t")
 
@@ -225,7 +227,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.holdings_types = list(
                 self.folio_client.folio_get_all("/holdings-types", "holdingsTypes")
             )
-            logging.info("%s\tholdings types in tenant", len(self.holdings_types))
+            logger.info("%s\tholdings types in tenant", len(self.holdings_types))
             self.validate_merge_criterias()
             self.check_source_files(
                 self.folder_structure.data_folder / "items", self.task_configuration.files
@@ -244,13 +246,13 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                         "not found in FOLIO."
                     ),
                 )
-            logging.info(
+            logger.info(
                 "%s will be used as default holdings type",
                 self.fallback_holdings_type["name"],
             )
             if any(self.task_configuration.previously_generated_holdings_files):
                 for file_name in self.task_configuration.previously_generated_holdings_files:
-                    logging.info("Processing %s", file_name)
+                    logger.info("Processing %s", file_name)
                     self.holdings.update(
                         HoldingsHelper.load_previously_generated_holdings(
                             self.folder_structure.results_folder / file_name,
@@ -261,7 +263,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     )
 
             else:
-                logging.info("No file of legacy holdings setup.")
+                logger.info("No file of legacy holdings setup.")
 
             if (
                 self.task_configuration.reset_hrid_settings
@@ -273,21 +275,21 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 hrid_handler.reset_holdings_hrid_counter()
 
         except HTTPError as http_error:
-            logging.critical(http_error)
+            logger.critical(http_error)
             sys.exit(1)
         except (FileNotFoundError, TransformationProcessError) as process_error:
-            logging.critical(process_error)
-            logging.critical("Halting.")
+            logger.critical(process_error)
+            logger.critical("Halting.")
             sys.exit(1)
         except json.JSONDecodeError as jde:
             raise jde
         except Exception as exception:
-            logging.info("\n=======ERROR===========")
-            logging.info(exception)
-            logging.info("\n=======Stack Trace===========")
+            logger.info("\n=======ERROR===========")
+            logger.info(exception)
+            logger.info("\n=======Stack Trace===========")
             traceback.print_exc()
             sys.exit(1)
-        logging.info("Init done")
+        logger.info("Init done")
 
     def load_call_number_type_map(self):
         with open(
@@ -311,7 +313,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     # TODO Rename this here and in `load_call_number_type_map` and `load_location_map`
     def load_ref_data_map_from_file(self, file, message):
         ref_dat_map = list(csv.DictReader(file, dialect="tsv"))
-        logging.info(message, len(ref_dat_map))
+        logger.info(message, len(ref_dat_map))
         return ref_dat_map
 
     def load_mapped_fields(self):
@@ -320,20 +322,20 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             / self.task_configuration.holdings_map_file_name  # noqa: E501
         ) as holdings_mapper_f:
             holdings_map = json.load(holdings_mapper_f)
-            logging.info("%s fields in holdings mapping file map", len(holdings_map["data"]))
+            logger.info("%s fields in holdings mapping file map", len(holdings_map["data"]))
             mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(
                 holdings_map
             )
-            logging.info(
+            logger.info(
                 "%s mapped fields in holdings mapping file map",
                 len(list(mapped_fields)),
             )
             return mapped_fields, holdings_map
 
     def do_work(self):
-        logging.info("Starting....")
+        logger.info("Starting....")
         for file_def in self.task_configuration.files:
-            logging.info("Processing %s", file_def.file_name)
+            logger.info("Processing %s", file_def.file_name)
             try:
                 self.process_single_file(file_def)
             except Exception as ee:
@@ -341,19 +343,19 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     f"Processing of {file_def.file_name} failed:\n{ee}."
                     "\nCheck source files for empty rows or missing reference data"
                 )
-                logging.critical(error_str)
+                logger.critical(error_str)
                 print(f"\n{error_str}\nHalting")
                 sys.exit(1)
-        logging.info(
+        logger.info(
             f"processed {self.total_records:,} records in "
             f"{len(self.task_configuration.files)} files"
         )
 
     def wrap_up(self):
-        logging.info("Done. Transformer wrapping up...")
+        logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         if any(self.holdings):
-            logging.info(
+            logger.info(
                 "Saving holdings created to %s",
                 self.folder_structure.created_objects_path,
             )
@@ -387,19 +389,19 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
         with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
             self.mapper.migration_report.write_json_report(raw_report_file)
-        logging.info("All done!")
+        logger.info("All done!")
         self.clean_out_empty_logs()
 
     def validate_merge_criterias(self):
         holdings_schema = self.folio_client.get_holdings_schema()
         properties = holdings_schema["properties"].keys()
-        logging.info(properties)
-        logging.info(self.task_configuration.holdings_merge_criteria)
+        logger.info(properties)
+        logger.info(self.task_configuration.holdings_merge_criteria)
         res = [
             mc for mc in self.task_configuration.holdings_merge_criteria if mc not in properties
         ]
         if any(res):
-            logging.critical(
+            logger.critical(
                 (
                     "Merge criteria(s) is not a property of a holdingsrecord: %s"
                     "check the merge criteria names and try again"
@@ -436,9 +438,9 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 if idx > 1 and idx % 10000 == 0:
                     elapsed = idx / (time.time() - start)
                     elapsed_formatted = "{0:.4g}".format(elapsed)
-                    logging.info(f"{idx:,} records processed. Recs/sec: {elapsed_formatted} ")
+                    logger.info(f"{idx:,} records processed. Recs/sec: {elapsed_formatted} ")
             self.total_records = records_processed
-            logging.info(
+            logger.info(
                 f"Done processing {file_def.file_name} containing {self.total_records:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )

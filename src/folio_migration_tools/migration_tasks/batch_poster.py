@@ -40,6 +40,8 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
+logger = logging.getLogger(__name__)
+
 
 def write_failed_batch_to_file(batch, file):
     for record in batch:
@@ -253,13 +255,13 @@ class BatchPoster(MigrationTaskBase):
         if self.api_info["supports_upsert"]:
             self.query_params["upsert"] = self.task_configuration.upsert
         elif self.task_configuration.upsert and not self.api_info["supports_upsert"]:
-            logging.info(
+            logger.info(
                 "Upsert is not supported for this object type. Query parameter will not be set."
             )
         self.snapshot_id = str(uuid4())
         self.failed_objects: list = []
         self.batch_size = self.task_configuration.batch_size
-        logging.info("Batch size is %s", self.batch_size)
+        logger.info("Batch size is %s", self.batch_size)
         self.processed = 0
         self.failed_batches = 0
         self.users_created = 0
@@ -285,7 +287,7 @@ class BatchPoster(MigrationTaskBase):
                 for idx, file_def in enumerate(self.task_configuration.files):  # noqa: B007
                     path = self.folder_structure.results_folder / file_def.file_name
                     with open(path) as rows:
-                        logging.info("Running %s", path)
+                        logger.info("Running %s", path)
                         last_row = ""
                         for self.processed, row in enumerate(rows, start=1):
                             last_row = row
@@ -323,7 +325,7 @@ class BatchPoster(MigrationTaskBase):
                                     )
                                     batch = []
                                 except (FileNotFoundError, PermissionError) as ose:
-                                    logging.error("Error reading file: %s", ose)
+                                    logger.error("Error reading file: %s", ose)
 
             except Exception as ee:
                 if "idx" in locals() and self.task_configuration.files[idx:]:
@@ -335,7 +337,7 @@ class BatchPoster(MigrationTaskBase):
                                 failed_recs_file.write(failed_file.read())
                                 self.processed = 0
                         except (FileNotFoundError, PermissionError) as ose:
-                            logging.error("Error reading file: %s", ose)
+                            logger.error("Error reading file: %s", ose)
                 raise ee
             finally:
                 if self.task_configuration.object_type != "Extradata" and any(batch):
@@ -345,7 +347,7 @@ class BatchPoster(MigrationTaskBase):
                         self.handle_generic_exception(
                             exception, last_row, batch, self.processed, failed_recs_file
                         )
-                logging.info("Done posting %s records. ", self.processed)
+                logger.info("Done posting %s records. ", self.processed)
 
     @staticmethod
     def set_consortium_source(json_rec):
@@ -486,12 +488,12 @@ class BatchPoster(MigrationTaskBase):
                 if ("suppress" in x.lower() or x.lower() == "deleted")
             ]
             if patch_paths:
-                logging.debug(
+                logger.debug(
                     "Record %s is a MARC record, only suppression related fields will be patched",
                     existing_record["id"],
                 )
             else:
-                logging.debug(
+                logger.debug(
                     "Record %s is a MARC record, patch_paths will be ignored",
                     existing_record["id"],
                 )
@@ -546,13 +548,13 @@ class BatchPoster(MigrationTaskBase):
                 # Network/connection errors - always retry
                 if attempt < retries - 1:
                     wait_time = 2**attempt
-                    logging.warning(
+                    logger.warning(
                         f"Connection error, retrying in {wait_time}s "
                         f"(attempt {attempt + 1}/{retries}): {e}"
                     )
                     await asyncio.sleep(wait_time)
                 else:
-                    logging.error(f"Connection failed after {retries} attempts: {e}")
+                    logger.error(f"Connection failed after {retries} attempts: {e}")
                     raise
 
             except folioclient.FolioHTTPError as e:
@@ -563,7 +565,7 @@ class BatchPoster(MigrationTaskBase):
                 if should_retry and attempt < retries - 1:
                     # Longer wait for rate limiting
                     wait_time = 5 if status_code == 429 else 2**attempt
-                    logging.warning(
+                    logger.warning(
                         f"HTTP {status_code} error, retrying in {wait_time}s "
                         f"(attempt {attempt + 1}/{retries}): {e}"
                     )
@@ -571,11 +573,11 @@ class BatchPoster(MigrationTaskBase):
                 else:
                     # Either not retryable or out of attempts
                     if should_retry:
-                        logging.error(
+                        logger.error(
                             f"HTTP {status_code} error persisted after {retries} attempts: {e}"
                         )
                     else:
-                        logging.error(f"HTTP {status_code} error (not retryable): {e}")
+                        logger.error(f"HTTP {status_code} error (not retryable): {e}")
                     raise
 
     def post_record_batch(self, batch, failed_recs_file, row):
@@ -583,7 +585,7 @@ class BatchPoster(MigrationTaskBase):
         if self.task_configuration.object_type == "ShadowInstances":
             self.set_consortium_source(json_rec)
         if self.processed == 1:
-            logging.info(json.dumps(json_rec, indent=True))
+            logger.info(json.dumps(json_rec, indent=True))
         batch.append(json_rec)
         if len(batch) == int(self.batch_size):
             self.post_batch(batch, failed_recs_file, self.processed)
@@ -601,7 +603,7 @@ class BatchPoster(MigrationTaskBase):
             if fhe.response.status_code == 422:
                 self.num_failures += 1
                 error_msg = json.loads(fhe.response.text)["errors"][0]["message"]
-                logging.error(
+                logger.error(
                     "Row %s\tHTTP %s\t %s", num_records, fhe.response.status_code, error_msg
                 )
                 if (
@@ -611,12 +613,12 @@ class BatchPoster(MigrationTaskBase):
                     failed_recs_file.write(row)
             else:
                 self.num_failures += 1
-                logging.error(
+                logger.error(
                     "Row %s\tHTTP %s\t%s", num_records, fhe.response.status_code, fhe.response.text
                 )
                 failed_recs_file.write(row)
         if num_records % 50 == 0:
-            logging.info(
+            logger.info(
                 "%s records posted successfully. %s failed",
                 self.num_posted,
                 self.num_failures,
@@ -662,7 +664,7 @@ class BatchPoster(MigrationTaskBase):
             if fhe.response.status_code == 422:
                 self.num_failures += 1
                 error_msg = json.loads(fhe.response.text)["errors"][0]["message"]
-                logging.error(
+                logger.error(
                     "Row %s\tHTTP %s\t %s", num_records, fhe.response.status_code, error_msg
                 )
                 if (
@@ -672,7 +674,7 @@ class BatchPoster(MigrationTaskBase):
                     failed_recs_file.write(row)
             else:
                 self.num_failures += 1
-                logging.error(
+                logger.error(
                     "Row %s\tHTTP %s\t%s",
                     num_records,
                     fhe.response.status_code,
@@ -680,52 +682,52 @@ class BatchPoster(MigrationTaskBase):
                 )
                 failed_recs_file.write(row)
             if num_records % 50 == 0:
-                logging.info(
+                logger.info(
                     "%s records posted successfully. %s failed",
                     self.num_posted,
                     self.num_failures,
                 )
 
     def handle_generic_exception(self, exception, last_row, batch, num_records, failed_recs_file):
-        logging.error("%s", exception)
+        logger.error("%s", exception)
         self.migration_report.add("Details", i18n_t("Generic exceptions (see log for details)"))
-        # logging.error("Failed row: %s", last_row)
+        # logger.error("Failed row: %s", last_row)
         self.failed_batches += 1
         self.num_failures += len(batch)
         write_failed_batch_to_file(batch, failed_recs_file)
-        logging.info("Resetting batch...Number of failed batches: %s", self.failed_batches)
+        logger.info("Resetting batch...Number of failed batches: %s", self.failed_batches)
         batch = []
         if self.failed_batches > 50000:
-            logging.error("Exceeded number of failed batches at row %s", num_records)
-            logging.critical("Halting")
+            logger.error("Exceeded number of failed batches at row %s", num_records)
+            logger.critical("Halting")
             sys.exit(1)
 
     def handle_unicode_error(self, unicode_error, last_row):
         self.migration_report.add("Details", i18n_t("Encoding errors"))
-        logging.info("=========ERROR==============")
-        logging.info(
+        logger.info("=========ERROR==============")
+        logger.info(
             "%s Posting failed. Encoding error reading file",
             unicode_error,
         )
-        logging.info(
+        logger.info(
             "Failing row, either the one shown here or the next row in %s",
             self.task_configuration.file.file_name,
         )
-        logging.info(last_row)
-        logging.info("=========Stack trace==============")
+        logger.info(last_row)
+        logger.info("=========Stack trace==============")
         traceback.logging.info_exc()  # type: ignore
-        logging.info("=======================")
+        logger.info("=======================")
 
     def post_batch(self, batch, failed_recs_file, num_records):
         if self.query_params.get("upsert", False) and self.api_info.get("query_endpoint", ""):
             self.set_version(batch, self.api_info["query_endpoint"], self.api_info["object_name"])
         response = self.do_post(batch)
         if response.status_code == 401:
-            logging.error("Authorization failed (%s). Fetching new auth token...", response.text)
+            logger.error("Authorization failed (%s). Fetching new auth token...", response.text)
             self.folio_client.login()
             response = self.do_post(batch)
         if response.status_code == 201:
-            logging.info(
+            logger.info(
                 (
                     "Posting successful! Total rows: %s Total failed: %s "
                     "in %ss "
@@ -745,22 +747,22 @@ class BatchPoster(MigrationTaskBase):
             self.num_posted = self.users_updated + self.users_created
             self.num_failures += json_report.get("failedRecords", 0)
             if json_report.get("failedRecords", 0) > 0:
-                logging.error(
+                logger.error(
                     "%s users in batch failed to load",
                     json_report.get("failedRecords", 0),
                 )
                 write_failed_batch_to_file(batch, failed_recs_file)
             if json_report.get("failedUsers", []):
-                logging.error("Error message: %s", json_report.get("error", []))
+                logger.error("Error message: %s", json_report.get("error", []))
                 for failed_user in json_report.get("failedUsers"):
-                    logging.error(
+                    logger.error(
                         "User failed. %s\t%s\t%s",
                         failed_user.get("username", ""),
                         failed_user.get("externalSystemId", ""),
                         failed_user.get("errorMessage", ""),
                     )
                     self.migration_report.add("Details", failed_user.get("errorMessage", ""))
-            logging.info(
+            logger.info(
                 (
                     "Posting successful! Total rows: %s Total failed: %s "
                     "created: %s updated: %s in %ss Batch Size: %s Request size: %s "
@@ -786,22 +788,22 @@ class BatchPoster(MigrationTaskBase):
             )
         elif response.status_code == 400:
             # Likely a json parsing error
-            logging.error(response.text)
+            logger.error(response.text)
             raise TransformationProcessError("", "HTTP 400. Something is wrong. Quitting")
         elif (
             response.status_code == 413 and "DB_ALLOW_SUPPRESS_OPTIMISTIC_LOCKING" in response.text
         ):
-            logging.error(response.text)
+            logger.error(response.text)
             raise TransformationProcessError("", response.text, "")
 
         else:
             try:
-                logging.info(response.text)
+                logger.info(response.text)
                 resp = json.dumps(response, indent=4)
             except TypeError:
                 resp = response
             except Exception as e:
-                logging.exception(f"something unexpected happened, {e}")
+                logger.exception(f"something unexpected happened, {e}")
                 resp = response
             raise TransformationRecordFailedError(
                 "",
@@ -834,12 +836,12 @@ class BatchPoster(MigrationTaskBase):
                 res = self.folio_client.folio_get(url, query_params=query_params)
                 return res["totalRecords"]
             except folioclient.FolioHTTPError as fhe:
-                logging.error(
+                logger.error(
                     "Failed to get current record count. HTTP %s", fhe.response.status_code
                 )
                 return 0
             except KeyError:
-                logging.error(
+                logger.error(
                     "Failed to get current record count. "
                     f"No 'totalRecords' in response: {json.dumps(res, indent=2)}"
                 )
@@ -852,29 +854,29 @@ class BatchPoster(MigrationTaskBase):
 
     def get_starting_record_count(self):
         if "query_endpoint" in self.api_info and not self.starting_record_count_in_folio:
-            logging.info("Getting starting record count in FOLIO")
+            logger.info("Getting starting record count in FOLIO")
             self.starting_record_count_in_folio = self.get_current_record_count_in_folio()
         else:
-            logging.info(
+            logger.info(
                 "No query_endpoint available for %s. Cannot get starting record count.",
                 self.task_configuration.object_type,
             )
 
     def get_finished_record_count(self):
         if "query_endpoint" in self.api_info:
-            logging.info("Getting finished record count in FOLIO")
+            logger.info("Getting finished record count in FOLIO")
             self.finished_record_count_in_folio = self.get_current_record_count_in_folio()
         else:
-            logging.info(
+            logger.info(
                 "No query_endpoint available for %s. Cannot get ending record count.",
                 self.task_configuration.object_type,
             )
 
     def wrap_up(self):
-        logging.info("Done. Wrapping up")
+        logger.info("Done. Wrapping up")
         self.extradata_writer.flush()
         if self.task_configuration.object_type != "Extradata":
-            logging.info(
+            logger.info(
                 (
                     "Failed records: %s failed records in %s "
                     "failed batches. Failed records saved to %s"
@@ -884,7 +886,7 @@ class BatchPoster(MigrationTaskBase):
                 self.folder_structure.failed_recs_path,
             )
         else:
-            logging.info("Done posting %s records. %s failed", self.num_posted, self.num_failures)
+            logger.info("Done posting %s records. %s failed", self.num_posted, self.num_failures)
         if self.starting_record_count_in_folio:
             self.get_finished_record_count()
             total_on_server = (
@@ -892,7 +894,7 @@ class BatchPoster(MigrationTaskBase):
             )
             discrepancy = self.processed - self.num_failures - total_on_server
             if discrepancy != 0:
-                logging.error(
+                logger.error(
                     (
                         "Discrepancy in record count. "
                         "Starting record count: %s. Finished record count: %s. "
@@ -928,7 +930,7 @@ class BatchPoster(MigrationTaskBase):
 
     def rerun_run(self):
         if self.task_configuration.rerun_failed_records and (self.num_failures > 0):
-            logging.info(
+            logger.info(
                 "Rerunning the %s failed records from the load with a batchsize of 1",
                 self.num_failures,
             )
@@ -951,12 +953,12 @@ class BatchPoster(MigrationTaskBase):
                 self.start_datetime = temp_start
                 self.do_work()
                 self.wrap_up()
-                logging.info("Done rerunning the posting")
+                logger.info("Done rerunning the posting")
             except Exception as ee:
-                logging.exception("Occurred during rerun")
+                logger.exception("Occurred during rerun")
                 raise TransformationProcessError("Error during rerun") from ee
         elif not self.task_configuration.rerun_failed_records and (self.num_failures > 0):
-            logging.info(
+            logger.info(
                 (
                     "Task configured to not rerun failed records. "
                     " File with failed records is located at %s"
@@ -1055,10 +1057,10 @@ def get_api_info(object_type: str, use_safe: bool = True):
         return choices[object_type]
     except KeyError:
         key_string = ", ".join(choices.keys())
-        logging.error(
+        logger.error(
             f"Wrong type. Only one of {key_string} are allowed, received {object_type=} instead"
         )
-        logging.error("Halting")
+        logger.error("Halting")
         sys.exit(1)
 
 

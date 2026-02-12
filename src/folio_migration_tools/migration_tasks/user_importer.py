@@ -14,11 +14,11 @@ import logging
 from pathlib import Path
 from typing import Annotated, List, Literal
 
-from folio_uuid.folio_namespaces import FOLIONamespaces
-from pydantic import Field
-
+from folio_data_import._progress import RichProgressReporter
 from folio_data_import.UserImport import UserImporter as FDIUserImporter
 from folio_data_import.UserImport import UserImporterStats
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from pydantic import Field
 
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -27,7 +27,8 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
-from folio_data_import._progress import RichProgressReporter
+
+logger = logging.getLogger(__name__)
 
 
 class UserImportTask(MigrationTaskBase):
@@ -175,9 +176,9 @@ class UserImportTask(MigrationTaskBase):
         self.total_records = 0
         self.files_processed: List[str] = []
 
-        logging.info("UserImporterTask initialized")
-        logging.info("Batch size: %s", self.task_configuration.batch_size)
-        logging.info("User match key: %s", self.task_configuration.user_match_key)
+        logger.info("UserImporterTask initialized")
+        logger.info("Batch size: %s", self.task_configuration.batch_size)
+        logger.info("User match key: %s", self.task_configuration.user_match_key)
 
     def _create_fdi_config(self, file_paths: List[Path]) -> FDIUserImporter.Config:
         """Create a folio_data_import.UserImporter.Config from our TaskConfiguration.
@@ -207,11 +208,11 @@ class UserImportTask(MigrationTaskBase):
         for file_def in self.task_configuration.files:
             path = self.folder_structure.results_folder / file_def.file_name
             if not path.exists():
-                logging.error("File not found: %s", path)
+                logger.error("File not found: %s", path)
                 raise FileNotFoundError(f"File not found: {path}")
             file_paths.append(path)
             self.files_processed.append(file_def.file_name)
-            logging.info("Will process file: %s", path)
+            logger.info("Will process file: %s", path)
 
         # Count total records for reporting
         for file_path in file_paths:
@@ -256,19 +257,19 @@ class UserImportTask(MigrationTaskBase):
         to FOLIO using the folio_data_import.UserImporter, handling all related
         objects (request preferences, permission users, service points).
         """
-        logging.info("Starting UserImportTask work...")
+        logger.info("Starting UserImportTask work...")
 
         try:
             # Run the async work in an event loop
             asyncio.run(self._do_work_async())
         except FileNotFoundError as e:
-            logging.error("File not found: %s", e)
+            logger.error("File not found: %s", e)
             raise
         except Exception as e:
-            logging.error("Error during user import: %s", e)
+            logger.error("Error during user import: %s", e)
             raise
 
-        logging.info("UserImportTask work complete")
+        logger.info("UserImportTask work complete")
 
     def _translate_stats_to_migration_report(self) -> None:
         """Translate UserImporterStats to MigrationReport format."""
@@ -310,21 +311,21 @@ class UserImportTask(MigrationTaskBase):
         This method translates statistics from the underlying UserImporter
         to the MigrationReport format and writes both markdown and JSON reports.
         """
-        logging.info("Done. Wrapping up UserImportTask")
+        logger.info("Done. Wrapping up UserImportTask")
 
         # Translate stats to migration report
         self._translate_stats_to_migration_report()
 
         # Log summary
-        logging.info("=" * 60)
-        logging.info("UserImportTask Summary")
-        logging.info("=" * 60)
-        logging.info("Total records in files: %d", self.total_records)
-        logging.info("Users created: %d", self.stats.created)
-        logging.info("Users updated: %d", self.stats.updated)
-        logging.info("Users failed: %d", self.stats.failed)
+        logger.info("=" * 60)
+        logger.info("UserImportTask Summary")
+        logger.info("=" * 60)
+        logger.info("Total records in files: %d", self.total_records)
+        logger.info("Users created: %d", self.stats.created)
+        logger.info("Users updated: %d", self.stats.updated)
+        logger.info("Users failed: %d", self.stats.failed)
         if self.stats.failed > 0:
-            logging.info(
+            logger.info(
                 "Failed users written to: %s",
                 self.folder_structure.failed_recs_path,
             )
@@ -344,4 +345,4 @@ class UserImportTask(MigrationTaskBase):
         # Clean up empty log files
         self.clean_out_empty_logs()
 
-        logging.info("UserImportTask wrap up complete")
+        logger.info("UserImportTask wrap up complete")

@@ -34,6 +34,8 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
+logger = logging.getLogger(__name__)
+
 
 class ManualFeeFinesTransformer(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
@@ -116,9 +118,9 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         )
 
     def do_work(self):
-        logging.info("Getting started!")
+        logger.info("Getting started!")
         for file in self.task_configuration.files:
-            logging.info("Processing %s", file)
+            logger.info("Processing %s", file)
             try:
                 self.process_single_file(file)
             except Exception as ee:
@@ -126,7 +128,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     f"Processing of {file} failed:\n{ee}."
                     "Check source files for empty rows or missing reference data"
                 )
-                logging.exception(error_str)
+                logger.exception(error_str)
                 self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
@@ -141,8 +143,8 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
                 try:
                     if idx == 0:
-                        logging.info("First legacy record:")
-                        logging.info(json.dumps(record, indent=4))
+                        logger.info("First legacy record:")
+                        logger.info(json.dumps(record, indent=4))
 
                     self.mapper.report_legacy_mapping_no_schema(record)
 
@@ -159,8 +161,8 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                     self.mapper.store_objects(composite_feefine)
 
                     if idx == 0:
-                        logging.info("First FOLIO record:")
-                        logging.info(json.dumps(composite_feefine, indent=4))
+                        logger.info("First FOLIO record:")
+                        logger.info(json.dumps(composite_feefine, indent=4))
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -171,8 +173,8 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
 
                 except AttributeError as attribute_error:
                     traceback.print_exc()
-                    logging.fatal(attribute_error)
-                    logging.info("Quitting...")
+                    logger.fatal(attribute_error)
+                    logger.info("Quitting...")
                     sys.exit(1)
                 except Exception as exception:
                     self.mapper.handle_generic_exception(idx, exception)
@@ -180,10 +182,10 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
                 self.print_progress(idx, start)
 
     def wrap_up(self):
-        logging.info("Done. Transformer wrapping up...")
+        logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logging.info(
+            logger.info(
                 "Writing migration- and mapping report to %s",
                 self.folder_structure.migration_reports_file,
             )

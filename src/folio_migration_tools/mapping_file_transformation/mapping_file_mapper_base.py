@@ -31,6 +31,9 @@ from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
+logger = logging.getLogger(__name__)
+
+
 empty_vals = ["Not mapped", None, ""]
 
 
@@ -84,7 +87,7 @@ class MappingFileMapperBase(MapperBase):
                 f"Property name: {ke}",
             ) from ke
 
-        logging.info(
+        logger.info(
             "Mapped values:\n%s",
             json.dumps(self.mapped_from_values, indent=4, sort_keys=True),
         )
@@ -110,11 +113,11 @@ class MappingFileMapperBase(MapperBase):
                 elif k["legacy_field"] not in self.mapped_from_legacy_data[k["folio_field"]]:
                     self.mapped_from_legacy_data[k["folio_field"]].append(k["legacy_field"])
 
-        logging.info(
+        logger.info(
             "Mapped legacy fields:\n%s",
             json.dumps(list(legacy_fields), indent=4, sort_keys=True),
         )
-        logging.info(
+        logger.info(
             "Mapped FOLIO fields:\n%s",
             json.dumps(self.folio_keys, indent=4, sort_keys=True),
         )
@@ -145,7 +148,7 @@ class MappingFileMapperBase(MapperBase):
         if not ignore_legacy_identifier:
             try:
                 self.legacy_id_property_names = field_map["legacyIdentifier"]
-                logging.info(
+                logger.info(
                     "Legacy identifier will be mapped from %s",
                     ",".join(self.legacy_id_property_names),
                 )
@@ -357,10 +360,10 @@ class MappingFileMapperBase(MapperBase):
                         index_or_id,
                     )
                 else:
-                    logging.info("Edge case %s", schema_property_name)
+                    logger.info("Edge case %s", schema_property_name)
 
             except KeyError as schema_anomaly:
-                logging.error(
+                logger.error(
                     "Cannot create property '%s'. Unsupported schema format: %s",
                     schema_property_name,
                     schema_anomaly,
@@ -736,8 +739,8 @@ class MappingFileMapperBase(MapperBase):
 
     def get_objects(self, source_file, file_name: Path):
         total_rows, empty_rows, reader = self._get_delimited_file_reader(source_file, file_name)
-        logging.info("Source data file contains %d rows", total_rows)
-        logging.info("Source data file contains %d empty rows", empty_rows)
+        logger.info("Source data file contains %d rows", total_rows)
+        logger.info("Source data file contains %d empty rows", empty_rows)
         self.migration_report.set(
             "GeneralStatistics", "Number of rows in {}".format(file_name.name), total_rows
         )
@@ -749,7 +752,7 @@ class MappingFileMapperBase(MapperBase):
         try:
             yield from reader
         except Exception as exception:
-            logging.error("%s at row %s", exception, reader.line_num)
+            logger.error("%s at row %s", exception, reader.line_num)
             raise exception from exception
 
     def has_property(self, legacy_object, folio_prop_name: str):
@@ -805,7 +808,7 @@ class MappingFileMapperBase(MapperBase):
                     missing_keys_in_record,
                 )
             else:
-                logging.info("All mapped legacy fields are in the legacy object")
+                logger.info("All mapped legacy fields are in the legacy object")
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):
         return self.get_ref_data_tuple(ref_data, ref_name, code, "code")

@@ -18,13 +18,12 @@ import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
-from folio_migration_tools.i18n_cache import i18n_t
-
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -37,6 +36,8 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
+logger = logging.getLogger(__name__)
 
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
@@ -251,7 +252,7 @@ class ItemsTransformer(MigrationTaskBase):
                 self.folio_keys,
             )
         else:
-            logging.info(
+            logger.info(
                 "%s not found. No temporary loan type mapping will be performed",
                 self.folder_structure.temp_loan_type_map_path,
             )
@@ -271,7 +272,7 @@ class ItemsTransformer(MigrationTaskBase):
                 self.folio_keys,
             )
         else:
-            logging.info(
+            logger.info(
                 "%s not found. No temporary location mapping will be performed",
                 self.task_config.temp_location_map_file_name,
             )
@@ -326,30 +327,30 @@ class ItemsTransformer(MigrationTaskBase):
             )
             hrid_handler.reset_item_hrid_counter()
 
-        logging.info("Init done")
+        logger.info("Init done")
 
     def do_work(self):
-        logging.info("Starting....")
+        logger.info("Starting....")
         with open(self.folder_structure.created_objects_path, "w+") as results_file:
             for file_def in self.task_config.files:
                 try:
                     self.process_single_file(file_def, results_file)
                 except Exception as exception:
                     error_str = f"\n\nProcessing of {file_def.file_name} failed:\n{exception}."
-                    logging.exception(error_str, stack_info=True)
-                    logging.fatal("Check source files for empty rows or missing reference data.")
+                    logger.exception(error_str, stack_info=True)
+                    logger.fatal("Check source files for empty rows or missing reference data.")
                     self.mapper.migration_report.add(
                         "FailedFiles", f"{file_def.file_name} - {exception}"
                     )
-                    logging.fatal(error_str)
+                    logger.fatal(error_str)
                     sys.exit(1)
-        logging.info(
+        logger.info(
             f"processed {self.total_records:,} records in {len(self.task_config.files)} files"
         )
 
     def process_single_file(self, file_def: FileDefinition, results_file):
         full_path = self.folder_structure.legacy_records_folder / file_def.file_name
-        logging.info("Processing %s", full_path)
+        logger.info("Processing %s", full_path)
         records_in_file = 0
         with open(full_path, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
@@ -359,8 +360,8 @@ class ItemsTransformer(MigrationTaskBase):
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
                 try:
                     if idx == 0:
-                        logging.info("First legacy record:")
-                        logging.info(json.dumps(record, indent=4))
+                        logger.info("First legacy record:")
+                        logger.info(json.dumps(record, indent=4))
                         self.mapper.verify_legacy_record(record, idx)
                     folio_rec, legacy_id = self.mapper.do_map(
                         record, f"row {idx}", FOLIONamespaces.items
@@ -381,8 +382,8 @@ class ItemsTransformer(MigrationTaskBase):
                                 )
                             self.mapper.create_and_write_boundwith_part(legacy_id, bw_id)
                     if idx == 0:
-                        logging.info("First FOLIO record:")
-                        logging.info(json.dumps(folio_rec, indent=4))
+                        logger.info("First FOLIO record:")
+                        logger.info(json.dumps(folio_rec, indent=4))
                     # TODO: turn this into a asynchronous task
                     Helper.write_to_file(results_file, folio_rec)
                     self.mapper.migration_report.add_general_statistics(
@@ -395,8 +396,8 @@ class ItemsTransformer(MigrationTaskBase):
                     self.mapper.handle_transformation_record_failed_error(idx, data_error)
                 except AttributeError as attribute_error:
                     traceback.print_exc()
-                    logging.fatal(attribute_error)
-                    logging.info("Quitting...")
+                    logger.fatal(attribute_error)
+                    logger.info("Quitting...")
                     sys.exit(1)
                 except Exception as exception:
                     self.mapper.handle_generic_exception(idx, exception)
@@ -410,7 +411,7 @@ class ItemsTransformer(MigrationTaskBase):
                 self.print_progress(idx, start)
                 records_in_file = idx + 1
 
-            logging.info(
+            logger.info(
                 f"Done processing {file_def} containing {records_in_file:,} records. "
                 f"Total records processed: {records_in_file:,}"
             )
@@ -464,7 +465,7 @@ class ItemsTransformer(MigrationTaskBase):
                 self.boundwith_relationship_map = dict(
                     json.loads(x) for x in boundwith_relationship_file
                 )
-            logging.info(
+            logger.info(
                 "Rows in Bound with relationship map: %s", len(self.boundwith_relationship_map)
             )
         except FileNotFoundError as fnfe:
@@ -483,7 +484,7 @@ class ItemsTransformer(MigrationTaskBase):
             ) from ve
 
     def wrap_up(self):
-        logging.info("Done. Transformer wrapping up...")
+        logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(
@@ -500,4 +501,4 @@ class ItemsTransformer(MigrationTaskBase):
         with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
             self.mapper.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
-        logging.info("All done!")
+        logger.info("All done!")

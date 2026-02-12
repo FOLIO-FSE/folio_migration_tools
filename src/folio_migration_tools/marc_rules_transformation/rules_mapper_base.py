@@ -22,19 +22,21 @@ from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 from pymarc import Field, Optional, Record, Subfield
 
-from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
 )
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
+
+logger = logging.getLogger(__name__)
 
 
 class RulesMapperBase(MapperBase):
@@ -85,7 +87,7 @@ class RulesMapperBase(MapperBase):
             )
 
         self.setup_statistical_codes_map(statistical_codes_map)
-        logging.info("Current user id is %s", self.folio_client.current_user)
+        logger.info("Current user id is %s", self.folio_client.current_user)
 
     def print_progress(self):
         self.parsed_records += 1
@@ -95,7 +97,7 @@ class RulesMapperBase(MapperBase):
             elapsed_formatted = "{0:.4g}".format(elapsed)
             elapsed_last = num_recs / (time.time() - self.last_batch_time)
             elapsed_formatted_last = "{0:.4g}".format(elapsed_last)
-            logging.info(
+            logger.info(
                 f"{elapsed_formatted_last} (avg. {elapsed_formatted}) "
                 f"records/sec.\t\t{self.parsed_records:,} records processed"
             )
@@ -307,7 +309,7 @@ class RulesMapperBase(MapperBase):
                 if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                     ignored_subsequent_fields.add(marc_field.tag)
             except Exception as ee:
-                logging.error(
+                logger.error(
                     "map_field_according_to_mapping %s %s %s",
                     marc_field.tag,
                     marc_field.format_field(),
@@ -467,8 +469,8 @@ class RulesMapperBase(MapperBase):
                         and sc_prop.get("type", "string") == "string"
                     ):
                         s = "This should be unreachable code. Check schema for changes"
-                        logging.error(s)
-                        logging.error(parent)
+                        logger.error(s)
+                        logger.error(parent)
                         raise TransformationProcessError("", s)
                         # break
                     else:
@@ -839,7 +841,7 @@ class RulesMapperBase(MapperBase):
         try:
             marc_record.leader[9] = "a"
         except Exception as ee:
-            logging.exception(
+            logger.exception(
                 "Something is wrong with the marc record's leader: %s, %s", marc_record.leader, ee
             )
         data_import_marc_file.write(marc_record.as_marc())
@@ -959,7 +961,7 @@ class RulesMapperBase(MapperBase):
         try:
             marc_record.leader[9] = "a"
         except Exception as ee:
-            logging.exception(
+            logger.exception(
                 "Something is wrong with the marc record's leader: %s, %s", marc_record.leader, ee
             )
         srs_record_string = self.get_srs_string(
