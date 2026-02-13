@@ -107,8 +107,9 @@ def setup_logging(
     """Set up logging for the folio_migration_tools package.
 
     Configures a package-level logger with RichHandler for console output
-    that coordinates properly with Rich progress bars. Optionally sets up
-    file handlers for persistent logging.
+    that coordinates properly with Rich progress bars and attaches the same
+    handlers to the root logger so third-party libraries (e.g., folio_data_import)
+    also emit through them. Optionally sets up file handlers for persistent logging.
 
     Args:
         debug: Enable debug-level logging.
@@ -125,11 +126,9 @@ def setup_logging(
     # Clear any existing handlers to avoid duplicates on re-initialization
     package_logger.handlers.clear()
 
-    # Set level
+    # Set level and propagate so records reach the root handlers we configure below
     package_logger.setLevel(logging.DEBUG if debug else logging.INFO)
-
-    # Don't propagate to root logger - we handle everything ourselves
-    package_logger.propagate = False
+    package_logger.propagate = True
 
     # Console handler using RichHandler for proper progress bar coordination
     console_handler = RichHandler(
@@ -145,7 +144,7 @@ def setup_logging(
     console_handler.addFilter(ExcludeLevelFilter(DATA_ISSUE_LVL_NUM))
     if task_name:
         console_handler.addFilter(TaskNameFilter(task_name))
-    package_logger.addHandler(console_handler)
+    handlers = [console_handler]
 
     # File handler for general logs (if path provided)
     if log_file:
@@ -156,7 +155,7 @@ def setup_logging(
         file_handler.addFilter(ExcludeLevelFilter(DATA_ISSUE_LVL_NUM))
         if task_name:
             file_handler.addFilter(TaskNameFilter(task_name))
-        package_logger.addHandler(file_handler)
+        handlers.append(file_handler)
 
     # Separate file handler for data issues (if path provided)
     if data_issues_file:
@@ -164,7 +163,15 @@ def setup_logging(
         data_issues_handler.setLevel(DATA_ISSUE_LVL_NUM)
         data_issues_handler.addFilter(IncludeLevelFilter(DATA_ISSUE_LVL_NUM))
         data_issues_handler.setFormatter(logging.Formatter("%(message)s"))
-        package_logger.addHandler(data_issues_handler)
+        handlers.append(data_issues_handler)
+
+    # Attach handlers to the root logger so third-party module loggers (e.g., folio_data_import)
+    # also emit through the same Rich/file handlers.
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    root_logger.setLevel(logging.DEBUG if debug else logging.INFO)
+    for handler in handlers:
+        root_logger.addHandler(handler)
 
     # Suppress noisy third-party loggers
     logging.getLogger("httpx").setLevel(logging.WARNING)
