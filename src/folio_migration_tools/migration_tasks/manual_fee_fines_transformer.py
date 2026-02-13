@@ -45,9 +45,9 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         feefines_map: str
         migration_task_type: str
         files: List[FileDefinition]
-        feefines_owner_map: Optional[str]
-        feefines_type_map: Optional[str]
-        service_point_map: Optional[str]
+        feefines_owner_map: Optional[str] = None
+        feefines_type_map: Optional[str] = None
+        service_point_map: Optional[str] = None
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
