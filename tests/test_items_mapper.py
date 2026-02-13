@@ -10,8 +10,10 @@ from folio_migration_tools.library_configuration import (
 )
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
+from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.migration_report import MigrationReport
 from .test_infrastructure import mocked_classes
-
+from pathlib import Path
 
 @pytest.fixture(scope="session", autouse=True)
 def mapper(pytestconfig) -> ItemMapper:
@@ -214,9 +216,6 @@ def test_perform_additional_mappings_with_stat_codes(mapper: ItemMapper, caplog)
     assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" not in unsuppressed_item["statisticalCodeIds"]
 
 
-from folio_migration_tools.migration_report import MigrationReport
-
-
 def test_apply_default_call_number_type_when_call_number_present_and_no_type():
     """Test that default call number type is applied when item call number exists but type doesn't."""
     mocked_mapper = Mock(spec=ItemMapper)
@@ -279,7 +278,7 @@ def test_apply_default_call_number_type_not_applied_when_no_default_configured()
     """Test that nothing happens when no default call number type is configured."""
     mocked_mapper = Mock(spec=ItemMapper)
     # Simulate no default_call_number_type_id attribute
-    del mocked_mapper.default_call_number_type_id
+    # del mocked_mapper.default_call_number_type_id
     mocked_mapper.has_call_number_parts = ItemMapper.has_call_number_parts
     mocked_mapper.migration_report = MigrationReport()
 
@@ -316,8 +315,6 @@ def test_apply_default_call_number_type_with_call_number_prefix():
 
 def test_mapper_init_with_default_call_number_type_no_map():
     """Test ItemMapper initialization with default call number type but no mapping file."""
-    from folio_migration_tools.custom_exceptions import TransformationProcessError
-    from pathlib import Path
 
     mock_folio = mocked_classes.mocked_folio_client()
 
@@ -363,8 +360,6 @@ def test_mapper_init_with_default_call_number_type_no_map():
 
 def test_mapper_init_with_invalid_default_call_number_type():
     """Test that ItemMapper raises error when default call number type name is invalid."""
-    from folio_migration_tools.custom_exceptions import TransformationProcessError
-    from pathlib import Path
 
     mock_folio = mocked_classes.mocked_folio_client()
 

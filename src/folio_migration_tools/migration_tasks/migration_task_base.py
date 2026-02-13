@@ -34,7 +34,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
-from folio_migration_tools.logging_config import PACKAGE_LOGGER_NAME, setup_logging
+from folio_migration_tools.logging_config import setup_logging
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
 )
@@ -109,6 +109,9 @@ class MigrationTaskBase:
         self.extradata_writer = ExtradataWriter(
             self.folder_structure.transformation_extra_data_path
         )
+
+        # Initialize handler reference (may be set by setup_logging if use_logging=True)
+        self.data_issue_file_handler: logging.Handler | None = None
 
         # Setup logging after folder_structure, library_configuration, and task_configuration
         # are initialized since setup_logging depends on all three
@@ -256,9 +259,10 @@ class MigrationTaskBase:
         )
 
         # Keep a reference to the data issues handler for cleanup
-        package_logger = logging.getLogger(PACKAGE_LOGGER_NAME)
+        # Handlers are attached to the root logger by setup_logging()
+        root_logger = logging.getLogger()
         self.data_issue_file_handler = None
-        for handler in package_logger.handlers:
+        for handler in root_logger.handlers:
             if isinstance(handler, logging.FileHandler) and handler.baseFilename == str(
                 self.folder_structure.data_issue_file_path
             ):
