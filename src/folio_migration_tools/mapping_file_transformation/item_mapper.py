@@ -302,7 +302,7 @@ class ItemMapper(MappingFileMapperBase):
             return ""
 
     def get_item_level_call_number_type_id(self, legacy_item, folio_prop_name: str, index_or_id):
-        if self.call_number_mapping:
+        if getattr(self, "call_number_mapping", None):
             return self.get_mapped_ref_data_value(
                 self.call_number_mapping, legacy_item, index_or_id, folio_prop_name
             )

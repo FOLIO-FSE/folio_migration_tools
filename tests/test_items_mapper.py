@@ -1,3 +1,5 @@
+"""Tests for the ItemMapper class."""
+
 from unittest.mock import Mock, create_autospec
 
 import pytest
@@ -14,6 +16,7 @@ from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.migration_report import MigrationReport
 from .test_infrastructure import mocked_classes
 from pathlib import Path
+
 
 @pytest.fixture(scope="session", autouse=True)
 def mapper(pytestconfig) -> ItemMapper:
@@ -121,16 +124,31 @@ def test_perform_additional_mappings(mapper: ItemMapper):
     assert suppressed_holdings["discoverySuppress"] is True
     assert unsuppressed_holdings["discoverySuppress"] is False
 
+
 def test_get_prop_permanent_location(mapper: ItemMapper):
-    item_data = {"barcode": "000000950000010", "note": "Check it out!", "lt": "ah", "mat": "oh", "PERM_LOCATION": "infoOff"}
-    prop = mapper.get_prop(item_data, "permanentLocationId", item_data['barcode'], "")
-    assert prop == 'b241764c-1466-4e1d-a028-1a3684a5da87'
+    item_data = {
+        "barcode": "000000950000010",
+        "note": "Check it out!",
+        "lt": "ah",
+        "mat": "oh",
+        "PERM_LOCATION": "infoOff",
+    }
+    prop = mapper.get_prop(item_data, "permanentLocationId", item_data["barcode"], "")
+    assert prop == "b241764c-1466-4e1d-a028-1a3684a5da87"
+
 
 def test_get_prop_permanent_location_no_default(mapper: ItemMapper):
-    item_data = {"barcode": "000000950000010", "note": "Check it out!", "lt": "ah", "mat": "oh", "PERM_LOCATION": "invalidLoc"}
+    item_data = {
+        "barcode": "000000950000010",
+        "note": "Check it out!",
+        "lt": "ah",
+        "mat": "oh",
+        "PERM_LOCATION": "invalidLoc",
+    }
     mapper.task_configuration.prevent_permanent_location_map_default = True
-    prop = mapper.get_prop(item_data, "permanentLocationId", item_data['barcode'], "")
+    prop = mapper.get_prop(item_data, "permanentLocationId", item_data["barcode"], "")
     assert prop == ""
+
 
 # Shared map
 
@@ -217,11 +235,13 @@ def test_perform_additional_mappings_with_stat_codes(mapper: ItemMapper, caplog)
 
 
 def test_apply_default_call_number_type_when_call_number_present_and_no_type():
-    """Test that default call number type is applied when item call number exists but type doesn't."""
+    """Test default call number type applied when call number exists but type doesn't."""
     mocked_mapper = Mock(spec=ItemMapper)
     mocked_mapper.default_call_number_type_id = "test-uuid-1234"
     mocked_mapper.task_configuration = Mock()
-    mocked_mapper.task_configuration.default_call_number_type_name = "Library of Congress classification"
+    mocked_mapper.task_configuration.default_call_number_type_name = (
+        "Library of Congress classification"
+    )
     mocked_mapper.has_call_number_parts = ItemMapper.has_call_number_parts
     mocked_mapper.migration_report = MigrationReport()
 
@@ -238,11 +258,13 @@ def test_apply_default_call_number_type_when_call_number_present_and_no_type():
 
 
 def test_apply_default_call_number_type_not_applied_when_type_already_exists():
-    """Test that default call number type is NOT applied when itemLevelCallNumberTypeId already exists."""
+    """Test default call number type NOT applied when itemLevelCallNumberTypeId exists."""
     mocked_mapper = Mock(spec=ItemMapper)
     mocked_mapper.default_call_number_type_id = "test-uuid-1234"
     mocked_mapper.task_configuration = Mock()
-    mocked_mapper.task_configuration.default_call_number_type_name = "Library of Congress classification"
+    mocked_mapper.task_configuration.default_call_number_type_name = (
+        "Library of Congress classification"
+    )
     mocked_mapper.has_call_number_parts = ItemMapper.has_call_number_parts
     mocked_mapper.migration_report = MigrationReport()
 
@@ -263,7 +285,9 @@ def test_apply_default_call_number_type_not_applied_when_no_call_number():
     mocked_mapper = Mock(spec=ItemMapper)
     mocked_mapper.default_call_number_type_id = "test-uuid-1234"
     mocked_mapper.task_configuration = Mock()
-    mocked_mapper.task_configuration.default_call_number_type_name = "Library of Congress classification"
+    mocked_mapper.task_configuration.default_call_number_type_name = (
+        "Library of Congress classification"
+    )
     mocked_mapper.has_call_number_parts = ItemMapper.has_call_number_parts
     mocked_mapper.migration_report = MigrationReport()
 
@@ -315,14 +339,13 @@ def test_apply_default_call_number_type_with_call_number_prefix():
 
 def test_mapper_init_with_default_call_number_type_no_map():
     """Test ItemMapper initialization with default call number type but no mapping file."""
-
     mock_folio = mocked_classes.mocked_folio_client()
 
     lib = LibraryConfiguration(
         okapi_url="okapi_url",
         tenant_id="tenant_id",
         okapi_username="username",
-        okapi_password="password",
+        okapi_password="password",  # noqa: S106
         folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
@@ -360,14 +383,13 @@ def test_mapper_init_with_default_call_number_type_no_map():
 
 def test_mapper_init_with_invalid_default_call_number_type():
     """Test that ItemMapper raises error when default call number type name is invalid."""
-
     mock_folio = mocked_classes.mocked_folio_client()
 
     lib = LibraryConfiguration(
         okapi_url="okapi_url",
         tenant_id="tenant_id",
         okapi_username="username",
-        okapi_password="password",
+        okapi_password="password",  # noqa: S106
         folio_release=FolioRelease.ramsons,
         library_name="Test Run Library",
         log_level_debug=False,
@@ -401,3 +423,111 @@ def test_mapper_init_with_invalid_default_call_number_type():
 
     assert "Nonexistent Call Number Type" in str(exc_info.value)
     assert "not found in tenant" in str(exc_info.value)
+
+
+def test_get_prop_material_type_returns_uuid(mapper: ItemMapper):
+    """Test that materialTypeId property returns correct UUID."""
+    item_data = {"barcode": "000000950000010", "note": "Test", "lt": "ah", "mat": "book"}
+    prop = mapper.get_prop(item_data, "materialTypeId", item_data["barcode"], "")
+    # Should return a UUID based on the material type mapping
+    assert prop is not None
+
+
+def test_get_prop_status_date_returns_iso_format(mapper: ItemMapper):
+    """Test that status.date property returns ISO formatted date."""
+    item_data = {"barcode": "000000950000010", "note": "Test", "lt": "ah", "mat": "oh"}
+    prop = mapper.get_prop(item_data, "status.date", item_data["barcode"], "")
+    # Should be an ISO formatted date string
+    assert "T" in prop  # ISO format includes T separator
+    assert "+" in prop or "Z" in prop  # Has timezone
+
+
+def test_get_prop_status_name_transforms_status(mapper: ItemMapper):
+    """Test that status.name property transforms through status mapping."""
+    item_data = {"barcode": "000000950000010", "code": "Available", "lt": "ah", "mat": "oh"}
+    prop = mapper.get_prop(item_data, "status.name", item_data["barcode"], "Available")
+    assert prop == "Available"  # Default if not in mapping
+
+
+def test_transform_status_default_available(mapper: ItemMapper):
+    """Test transform_status returns Available for unmapped status."""
+    status = mapper.transform_status("UNKNOWN_STATUS")
+    assert status == "Available"
+
+
+def test_get_item_level_call_number_type_id_not_setup():
+    """Test that get_item_level_call_number_type_id reports not setup when no mapping."""
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    lib = LibraryConfiguration(
+        okapi_url="okapi_url",
+        tenant_id="tenant_id",
+        okapi_username="username",
+        okapi_password="password",  # noqa: S106
+        folio_release=FolioRelease.ramsons,
+        library_name="Test Library",
+        log_level_debug=False,
+        iteration_identifier="test",
+        base_folder=Path("/"),
+    )
+
+    mocked_config = create_autospec(ItemsTransformer.TaskConfiguration)
+    mocked_config.default_call_number_type_name = ""
+
+    loan_type_map = [{"lt": "*", "folio_name": "Can circulate"}]
+    material_type_map = [{"mat": "*", "folio_name": "book"}]
+    location_map = [{"folio_code": "E", "LOC": "*"}]
+
+    mapper = ItemMapper(
+        mock_folio,
+        item_map,
+        material_type_map,
+        loan_type_map,
+        location_map,
+        None,  # No call number type map
+        {"h1": ["h1", "holdings-uuid"]},
+        None,
+        None,
+        None,
+        None,
+        lib,
+        mocked_config,
+    )
+
+    item_data = {"barcode": "000000950000010"}
+    # The call_number_mapping attribute won't exist if no map is provided
+    # So get_prop for itemLevelCallNumberTypeId returns empty when hasattr fails
+    result = mapper.get_prop(item_data, "itemLevelCallNumberTypeId", "index", "")
+    assert result == ""  # Should return empty string when no mapping
+
+
+def test_get_prop_returns_from_parent_class(mapper: ItemMapper):
+    """Test that unmapped properties fall back to parent class behavior."""
+    # Use a unique barcode that hasn't been seen before
+    item_data = {"barcode": "UNIQUE_TEST_123", "note": "Test note", "lt": "ah", "mat": "oh"}
+    # Access a property that is mapped through the parent class
+    prop = mapper.get_prop(item_data, "barcode", item_data["barcode"], "")
+    assert prop == "UNIQUE_TEST_123"
+
+
+def test_get_prop_permanent_loan_type(mapper: ItemMapper):
+    """Test that permanentLoanTypeId property returns correct UUID."""
+    item_data = {
+        "barcode": "LOAN_TEST_001",
+        "note": "Test",
+        "lt": "cst",  # Should map to "Can circulate"
+        "mat": "oh",
+    }
+    prop = mapper.get_prop(item_data, "permanentLoanTypeId", item_data["barcode"], "")
+    # Should return a UUID based on the loan type mapping
+    assert prop is not None
+    assert len(prop) == 36  # UUID length with hyphens
+
+
+def test_has_call_number_parts_item_mapper():
+    """Test that has_call_number_parts works correctly for items."""
+    record_with_item_call_number = {"itemLevelCallNumber": "QA76.73"}
+    record_without = {"id": "123"}
+
+    assert ItemMapper.has_call_number_parts(record_with_item_call_number) is True
+    assert ItemMapper.has_call_number_parts(record_without) is False
