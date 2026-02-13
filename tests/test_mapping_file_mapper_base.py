@@ -8,7 +8,10 @@ import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -22,6 +25,7 @@ from .test_infrastructure import mocked_classes
 @pytest.fixture(scope="session", autouse=True)
 def mocked_folio_client(pytestconfig):
     return mocked_classes.mocked_folio_client()
+
 
 @pytest.fixture
 def mocked_file_mapper(mocked_folio_client):
@@ -128,8 +132,17 @@ def mocked_file_mapper(mocked_folio_client):
         name="Test Task",
         migration_task_type="Test Task",
     )
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), task_config)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        task_config,
+    )
     return mapper
+
 
 # flake8: noqa
 class MyTestableFileMapper(MappingFileMapperBase):
@@ -149,7 +162,9 @@ class MyTestableFileMapper(MappingFileMapperBase):
         return super().get_prop(legacy_item, folio_prop_name, index_or_id, schema_default_value)
 
 
-def test_validate_required_properties_sub_pro_missing_uri(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_validate_required_properties_sub_pro_missing_uri(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
 
     record = {
         "link_": "some_link",
@@ -284,8 +299,16 @@ def test_validate_required_properties_sub_pro_missing_uri_and_more(
             },
         ]
     }
-    mocked_file_mapper = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
-    mocked_file_mapper.schema['properties'].update(schema['properties'])
+    mocked_file_mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    mocked_file_mapper.schema["properties"].update(schema["properties"])
     record = {
         "link_": "some_link",
         "formerIds_1": "id1",
@@ -302,7 +325,9 @@ def test_validate_required_properties_sub_pro_missing_uri_and_more(
     assert len(folio_rec["electronicAccess"]) == 1
 
 
-def test_validate_required_properties_item_notes(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_validate_required_properties_item_notes(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -392,7 +417,15 @@ def test_validate_required_properties_item_notes(mocked_folio_client: FolioClien
         ]
     }
     record = {"note_1": "my note", "note_2": "", "id": "12"}
-    mocked_file_mapper = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mocked_file_mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
     ItemsTransformer.handle_notes(folio_rec)
     assert len(folio_rec["notes"]) == 1
@@ -408,7 +441,7 @@ def test_instantiate_record_non_holdings(mocked_file_mapper: MappingFileMapperBa
             "barcode": "1234567890",
         },
         ["12345"],
-        FOLIONamespaces.items
+        FOLIONamespaces.items,
     )
     assert "id" in folio_record
     assert "sourceId" not in folio_record
@@ -425,7 +458,7 @@ def test_instantiate_record_holdings(mocked_file_mapper: MappingFileMapperBase):
             "barcode": "1234567890",
         },
         ["12345"],
-        FOLIONamespaces.holdings
+        FOLIONamespaces.holdings,
     )
     assert "sourceId" in folio_record
     assert folio_record["sourceId"] == "source_id"
@@ -460,14 +493,24 @@ def test_validate_required_properties_item_notes_defaults_in_simple_objects(
         ]
     }
     record = {"title": "", "id": "aa_34"}
-    mocked_file_mapper = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mocked_file_mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
     ItemsTransformer.handle_notes(folio_rec)
     assert "title" in folio_rec
     assert folio_rec["title"] == "Fallback title"
 
 
-def test_validate_required_properties_item_notes_unmapped(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_validate_required_properties_item_notes_unmapped(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -557,13 +600,23 @@ def test_validate_required_properties_item_notes_unmapped(mocked_folio_client: F
         ]
     }
     record = {"note_1": "my note", "id": "34"}
-    mocked_file_mapper = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mocked_file_mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
     ItemsTransformer.handle_notes(folio_rec)
     assert len(folio_rec["notes"]) == 1
 
 
-def test_validate_required_properties_item_notes_unmapped_2(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_validate_required_properties_item_notes_unmapped_2(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -653,7 +706,15 @@ def test_validate_required_properties_item_notes_unmapped_2(mocked_folio_client:
         ]
     }
     record = {"note_1": "my note", "id": "35"}
-    mocked_file_mapper = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mocked_file_mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
     ItemsTransformer.handle_notes(folio_rec)
     assert len(folio_rec["notes"]) == 1
@@ -762,7 +823,15 @@ def test_validate_required_properties_obj(mocked_folio_client: FolioClient, mock
         "id": "36",
         "third_0": "",
     }
-    mocked_file_mapper = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mocked_file_mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["electronicAccessObj"]["uri"] == "some_link"
 
@@ -838,7 +907,15 @@ def test_validate_required_properties_array_object_with_object_and_strings(
             },
         ]
     }
-    contact = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.organizations, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    contact = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.organizations,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert "contacts" not in folio_rec
@@ -918,7 +995,15 @@ def test_validate_required_properties_item_notes_split_on_delimiter_notes(
         ]
     }
     record = {"note_1": "my note<delimiter>my second note", "id": "37"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     ItemsTransformer.handle_notes(folio_rec)
     assert len(folio_rec["notes"]) == 2
@@ -932,7 +1017,9 @@ def test_validate_required_properties_item_notes_split_on_delimiter_notes(
     assert folio_rec["notes"][1]["itemNoteTypeId"] == "A UUID"
 
 
-def test_validate_remove_and_report_incomplete_object_property(mocked_folio_client, mocked_file_mapper):
+def test_validate_remove_and_report_incomplete_object_property(
+    mocked_folio_client, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -1039,7 +1126,15 @@ def test_validate_remove_and_report_incomplete_object_property(mocked_folio_clie
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.organizations, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.organizations,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record1, record1["id"], FOLIONamespaces.organizations)
     assert len(folio_rec["interfaces"]) == 1
 
@@ -1051,7 +1146,9 @@ def test_validate_remove_and_report_incomplete_object_property(mocked_folio_clie
     assert "interfaces" not in folio_rec
 
 
-def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_folio_client, mocked_file_mapper):
+def test_validate_required_properites_in_array_objects_with_sub_objects(
+    mocked_folio_client, mocked_file_mapper
+):
     # 531
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -1203,12 +1300,22 @@ def test_validate_required_properites_in_array_objects_with_sub_objects(mocked_f
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.organizations, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.organizations,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     org, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert len(org["contacts"]) == 1
 
 
-def test_multiple_repeated_split_on_delimiter_electronic_access(mocked_folio_client, mocked_file_mapper):
+def test_multiple_repeated_split_on_delimiter_electronic_access(
+    mocked_folio_client, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1274,7 +1381,15 @@ def test_multiple_repeated_split_on_delimiter_electronic_access(mocked_folio_cli
         "subtitle_": "object",
         "id": "38",
     }
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert len(folio_rec["electronicAccess"]) == 2
     assert folio_id == "38"
@@ -1343,14 +1458,24 @@ def test_validate_required_properties_item_notes_split_on_delimiter_plain_object
         ]
     }
     record = {"note_1": "my note<delimiter>my second note", "id": "39"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     ItemsTransformer.handle_notes(folio_rec)
     assert folio_rec["uber_prop"]["prop1"] == "my note<delimiter>my second note"
     assert folio_rec["uber_prop"]["prop2"] == "Some value"
 
 
-def test_concatenate_fields_if_mapped_multiple_times(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_concatenate_fields_if_mapped_multiple_times(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1393,7 +1518,15 @@ def test_concatenate_fields_if_mapped_multiple_times(mocked_folio_client: FolioC
     }
     record = {"note_1": "my note", "note_2": "my second note", "id": "1493"}
     # Loop to make sure the right order occurs the first time.
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     for r in range(8000, 2000):
         record["id"] = str(r)
         folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
@@ -1445,7 +1578,15 @@ def test_concatenate_fields_if_mapped_multiple_times_and_data_is_in_random_order
     }
     record = {"note_2": "my second note", "id": "14", "note_1": "my note"}
     # Loop to make sure the right order occurs the first time.
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     for r in range(11000, 2000):
         record["id"] = str(r)
         folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
@@ -1494,7 +1635,15 @@ def test_do_not_split_string_prop(mocked_folio_client: FolioClient, mocked_file_
         "formerIds_1": "id2<delimiter>id3",
         "id": "15",
     }
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["formerId"] == "id2<delimiter>id3"
 
@@ -1541,7 +1690,15 @@ def test_split_former_ids(mocked_folio_client: FolioClient, mocked_file_mapper):
         "formerIds_2": "id2<delimiter>id3",
         "id": "16",
     }
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert len(folio_rec["formerIds"]) == 3
     assert "id1" in folio_rec["formerIds"]
@@ -1549,7 +1706,9 @@ def test_split_former_ids(mocked_folio_client: FolioClient, mocked_file_mapper):
     assert "id3" in folio_rec["formerIds"]
 
 
-def test_validate_no_leakage_between_properties(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_validate_no_leakage_between_properties(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1638,7 +1797,15 @@ def test_validate_no_leakage_between_properties(mocked_folio_client: FolioClient
         ]
     }
     record = {"stmt_1": "stmt", "id": "17", "stmt_2": "suppl", "stmt_3": "idx"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert len(folio_rec["holdingsStatements"]) == 1
     assert folio_rec["holdingsStatements"][0]["statement"] == "stmt"
@@ -1713,7 +1880,15 @@ def test_map_string_first_level(mocked_folio_client: FolioClient, mocked_file_ma
         ]
     }
     record = {"title_": "actual value", "id": "id"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["title"] == "actual value"
 
@@ -1750,7 +1925,15 @@ def test_map_string_array_first_level(mocked_folio_client: FolioClient, mocked_f
         ]
     }
     record = {"title_": "actual value", "id": "id"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_holdings_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["stringArray"][0] == "actual value"
 
@@ -1792,7 +1975,15 @@ def test_map_string_second_level(mocked_folio_client: FolioClient, mocked_file_m
     }
     record = {"id": "488", "note_1": "my note"}
     # Loop to make sure the right order occurs the first time.
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     for r in range(10000, 2000):
         record["id"] = str(r)
         folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
@@ -1839,12 +2030,22 @@ def test_map_string_array_second_level(mocked_folio_client: FolioClient, mocked_
     record = {"id": "19", "note_1": "my note"}
     # Loop to make sure the right order occurs the first time.
 
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["firstLevel"]["stringArray"] == ["my note"]
 
 
-def test_map_string_array_second_level_multiple_values(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_string_array_second_level_multiple_values(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1890,7 +2091,15 @@ def test_map_string_array_second_level_multiple_values(mocked_folio_client: Foli
     record = {"id": "20", "note_1": "my note", "note_2": "my note 2"}
     # Loop to make sure the right order occurs the first time.
 
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["firstLevel"]["stringArray"] == ["my note", "my note 2"]
 
@@ -1943,12 +2152,22 @@ def test_map_string_array_second_level_multiple_additional_split_values(
     record = {"id": "21", "note_1": "my note", "note_2": "my note 2<delimiter>my note 3"}
     # Loop to make sure the right order occurs the first time.
 
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["firstLevel"]["stringArray"] == ["my note", "my note 2", "my note 3"]
 
 
-def test_map_string_array_second_level_split_values(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_string_array_second_level_split_values(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -1994,7 +2213,15 @@ def test_map_string_array_second_level_split_values(mocked_folio_client: FolioCl
     record = {"id": "22", "note_2": "my note 2<delimiter>my note 3"}
     # Loop to make sure the right order occurs the first time.
 
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["firstLevel"]["stringArray"] == ["my note 2", "my note 3"]
 
@@ -2045,12 +2272,22 @@ def test_map_string_array_second_level_split_values_with_replace_values(
     }
     # Loop to make sure the right order occurs the first time.
 
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["firstLevel"]["stringArray"] == ["Cute Kitten", "Pretty Puppy"]
 
 
-def test_map_array_of_objects_with_string_array(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_of_objects_with_string_array(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "type": "object",
         "required": [],
@@ -2095,12 +2332,22 @@ def test_map_array_of_objects_with_string_array(mocked_folio_client: FolioClient
     record = {"id": "23", "note_1": "my note", "note_2": "my note 2"}
     # Loop to make sure the right order occurs the first time.
 
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["firstLevel"][0]["secondLevel"] == ["my note", "my note 2"]
 
 
-def test_map_array_of_objects_with_string_array_delimiter(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_of_objects_with_string_array_delimiter(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "type": "object",
         "required": [],
@@ -2145,7 +2392,15 @@ def test_map_array_of_objects_with_string_array_delimiter(mocked_folio_client: F
     record = {"id": "24", "note_1": "my note", "note_2": "my note 2<delimiter>my note 3"}
     # Loop to make sure the right order occurs the first time.
 
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["firstLevel"][0]["secondLevel"] == ["my note", "my note 2", "my note 3"]
 
@@ -2190,14 +2445,24 @@ def test_map_string_third_level(mocked_folio_client: FolioClient, mocked_file_ma
         ]
     }
     record = {"id": "25", "note_1": "my note"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert (
         folio_rec["firstLevel"]["secondLevel"]["thirdLevel"] == "my note"
     )  # No mapping on third level yet...
 
 
-def test_map_string_and_array_of_strings_fourth_level(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_string_and_array_of_strings_fourth_level(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -2258,7 +2523,15 @@ def test_map_string_and_array_of_strings_fourth_level(mocked_folio_client: Folio
         ]
     }
     record = {"id": "26", "note_1": "my note", "note_2": "my note 2", "note_3": "my note 3"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert folio_rec["firstLevel"]["secondLevel"]["thirdLevel"]["fourthLevel"] == "my note"
     assert folio_rec["firstLevel"]["secondLevel"]["thirdLevel"]["fourthLevelArr"] == [
@@ -2267,7 +2540,9 @@ def test_map_string_and_array_of_strings_fourth_level(mocked_folio_client: Folio
     ]  # No mapping on third level yet...
 
 
-def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_object_and_array_of_strings_fourth_level(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "A holdings record",
@@ -2348,7 +2623,15 @@ def test_map_object_and_array_of_strings_fourth_level(mocked_folio_client: Folio
         ]
     }
     record = {"id": "27", "note_1": "my note", "note_2": "my note 2", "note_3": "my note 3"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_item_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        fake_item_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(record, record["id"], FOLIONamespaces.items)
     assert (
         folio_rec["firstLevel"]["secondLevel"]["thirdLevel"]["fourthLevel"]["fifthLevel1"]
@@ -2471,7 +2754,15 @@ def test_map_enums(mocked_folio_client: FolioClient, mocked_file_mapper):
             {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert folio_rec["status"] == "Pending"
 
@@ -2588,7 +2879,15 @@ def test_map_enums_empty_required(mocked_folio_client, mocked_file_mapper):
         ]
     }
     with pytest.raises(TransformationRecordFailedError):
-        mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+        mapper = MappingFileMapperBase(
+            mocked_folio_client,
+            schema,
+            the_map,
+            None,
+            FOLIONamespaces.items,
+            mocked_classes.get_mocked_library_config(),
+            mocked_file_mapper.task_configuration,
+        )
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
@@ -2703,7 +3002,15 @@ def test_map_empty_not_required_enums(mocked_folio_client: FolioClient, mocked_f
             {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert "status" not in folio_rec
 
@@ -2740,7 +3047,15 @@ def test_map_enums_invalid_required(mocked_folio_client, mocked_file_mapper):
             {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     with pytest.raises(TransformationRecordFailedError, match=r"Forbidden enum value found"):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
@@ -2777,7 +3092,15 @@ def test_map_enums_invalid_not_required(mocked_folio_client, mocked_file_mapper)
             {"folio_field": "status", "legacy_field": "status", "value": "", "description": ""},
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     with pytest.raises(TransformationRecordFailedError, match=r"Forbidden enum value found"):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
@@ -2859,7 +3182,15 @@ def test_map_enums_empty_not_required_deeper_level(mocked_folio_client, mocked_f
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert "deliveryMethod" not in folio_rec["interfaces"][0]
 
@@ -2926,7 +3257,15 @@ def test_map_enums_invalid_not_required_deeper_level(mocked_folio_client, mocked
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     with pytest.raises(TransformationRecordFailedError, match=r"Forbidden enum value found"):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
@@ -2974,7 +3313,15 @@ def test_map_booleans_regular_mapping(mocked_folio_client: FolioClient, mocked_f
         ]
     }
 
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_recs = []
 
     for record in records:
@@ -3033,7 +3380,15 @@ def test_map_booleans_with_replace_values(mocked_folio_client: FolioClient, mock
         ]
     }
 
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_recs = []
 
     for record in records:
@@ -3093,16 +3448,34 @@ def test_map_booeleans_set_schema_default(mocked_folio_client: FolioClient, mock
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema_default_false, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema_default_false,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert isinstance(folio_rec["trueOrFalse"], bool) and folio_rec["trueOrFalse"] is False
 
-    mapper = MappingFileMapperBase(mocked_folio_client, schema_default_true, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema_default_true,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert isinstance(folio_rec["trueOrFalse"], bool) and folio_rec["trueOrFalse"] is True
 
 
-def test_map_booleans_schema_default_false_and_mapped_to_true(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_booleans_schema_default_false_and_mapped_to_true(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "properties": {
             "id": {
@@ -3136,12 +3509,22 @@ def test_map_booleans_schema_default_false_and_mapped_to_true(mocked_folio_clien
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert folio_rec["trueOrFalse"] is True
 
 
-def test_map_booleans_schema_default_false_and_value_set_to_true(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_booleans_schema_default_false_and_value_set_to_true(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3177,7 +3560,15 @@ def test_map_booleans_schema_default_false_and_value_set_to_true(mocked_folio_cl
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert folio_rec["trueOrFalse"] is True
 
@@ -3233,7 +3624,15 @@ def test_default_no_defaults_on_subprops(mocked_folio_client: FolioClient, mocke
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert "interfaces" not in folio_rec
 
@@ -3274,12 +3673,22 @@ def test_default_true(mocked_folio_client: FolioClient, mocked_file_mapper):
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
     assert folio_rec["isVendor"] is True
 
 
-def test_map_wrong_not_required_deeper_level_enums(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_wrong_not_required_deeper_level_enums(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3341,12 +3750,22 @@ def test_map_wrong_not_required_deeper_level_enums(mocked_folio_client: FolioCli
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     with pytest.raises(TransformationRecordFailedError, match=r"Forbidden enum value found"):
         folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
-def test_map_array_object_array_object_string(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_object_array_object_string(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3419,7 +3838,15 @@ def test_map_array_object_array_object_string(mocked_folio_client: FolioClient, 
         ]
     }
 
-    contact = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    contact = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["contacts"][0]["addresses"][0]["addressLine1"] == "My Street"
@@ -3514,7 +3941,15 @@ def test_do_not_overwrite_array_object_array_object_string_with_array_object_str
         ]
     }
 
-    contact = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    contact = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["contacts"][0]["firstName"] == "Jane"
@@ -3645,7 +4080,15 @@ def test_do_not_overwrite_array_object_array_object_string_with_array_object_str
         ]
     }
 
-    contact = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    contact = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["contacts"][0]["firstName"] == "Jane"
@@ -3656,7 +4099,9 @@ def test_do_not_overwrite_array_object_array_object_string_with_array_object_str
     assert folio_rec["contacts"][0]["addresses"][1]["city"] == "Fritsla"
 
 
-def test_map_array_object_array_string_on_edge(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_object_array_string_on_edge(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3720,7 +4165,15 @@ def test_map_array_object_array_string_on_edge(mocked_folio_client: FolioClient,
         ]
     }
 
-    contact = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    contact = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["contacts"][0]["streets"][0] == "My Street"
@@ -3728,7 +4181,9 @@ def test_map_array_object_array_string_on_edge(mocked_folio_client: FolioClient,
     assert folio_rec["contacts"][1]["streets"][0] == "Yet another street"
 
 
-def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_object_array_string_on_edge_lowest(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3778,7 +4233,15 @@ def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client: Folio
         ]
     }
 
-    contact = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    contact = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["streets"][0] == "My Street"
@@ -3786,7 +4249,9 @@ def test_map_array_object_array_string_on_edge_lowest(mocked_folio_client: Folio
     assert folio_rec["streets"][2] == "Yet another street"
 
 
-def test_map_array_object_array_object_array_string(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_object_array_object_array_string(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "description": "The record of an organization",
@@ -3847,7 +4312,15 @@ def test_map_array_object_array_object_array_string(mocked_folio_client: FolioCl
         ]
     }
 
-    contact = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    contact = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["contacts"][0]["addresses"][0]["categories"] == ["support", "sales"]
@@ -3860,7 +4333,9 @@ def test_set_default(mocked_folio_client: FolioClient, mocked_file_mapper):
     assert d1["level1"]["level2"] == {"apa": 1, "papa": 2}
 
 
-def test_get_prop_multiple_legacy_identifiers_only_one(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_get_prop_multiple_legacy_identifiers_only_one(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     record_map = {
         "data": [
             {
@@ -3890,12 +4365,22 @@ def test_get_prop_multiple_legacy_identifiers_only_one(mocked_folio_client: Foli
         },
     }
     legacy_record = {"firstLevel": "user_name_1", "id": "1 1"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, record_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        record_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
     assert folio_rec["id"] == "fbf2bbd4-a8bd-5571-9a60-8d8ad6ad22b0"
 
 
-def test_get_prop_multiple_legacy_identifiers(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_get_prop_multiple_legacy_identifiers(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     record_map = {
         "data": [
             {
@@ -3931,7 +4416,15 @@ def test_get_prop_multiple_legacy_identifiers(mocked_folio_client: FolioClient, 
         },
     }
     legacy_record = {"firstLevel": "user_name_1", "id": "44", "id2": "1"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, record_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        record_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
     assert folio_rec["id"] == "57ef254c-c8c1-50e2-b331-55b9a2141391"
 
@@ -3966,7 +4459,15 @@ def test_value_mapped_enum_properties(mocked_folio_client: FolioClient, mocked_f
         },
     }
     legacy_record = {"id": "1"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, record_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        record_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
     assert folio_rec["my_enum"] == "014/EAN"
 
@@ -4000,12 +4501,22 @@ def test_value_mapped_non_enum_properties(mocked_folio_client: FolioClient, mock
         },
     }
     legacy_record = {"id": "29"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, record_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        record_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
     assert folio_rec["my_enum"] == "014/EAN"
 
 
-def test_value_not_mapped_mapped_non_enum_properties(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_value_not_mapped_mapped_non_enum_properties(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     record_map = {
         "data": [
             {
@@ -4034,7 +4545,15 @@ def test_value_not_mapped_mapped_non_enum_properties(mocked_folio_client: FolioC
         },
     }
     legacy_record = {"id": "30"}
-    tfm = MappingFileMapperBase(mocked_folio_client, schema, record_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    tfm = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        record_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, _ = tfm.do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
     assert folio_rec["my_enum"] == "014/EAN"
 
@@ -4084,7 +4603,15 @@ def test_map_array_object_array_string(mocked_folio_client: FolioClient, mocked_
         ]
     }
 
-    interface = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    interface = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["interfaces"][0]["type"] == ["Admin"]
@@ -4249,7 +4776,15 @@ def test_get_prop(mocked_folio_client, mocked_file_mapper):
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     res = mapper.get_prop(legacy_object, "title", "", "")
     assert res == "Alpha Omega"
 
@@ -4274,7 +4809,15 @@ def test_get_prop_one_value(mocked_folio_client, mocked_file_mapper):
             },
         ]
     }
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, the_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     res = mapper.get_prop(legacy_object, "title", "", "")
     assert res == "Alpha Beta"
 
@@ -4345,7 +4888,15 @@ def test_map_array_object_object_string(mocked_folio_client, mocked_file_mapper)
         ]
     }
 
-    interface = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    interface = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["interfaces"][0]["interfaceCredential"]["username"] == "MyUsername"
@@ -4397,7 +4948,15 @@ def test_map_array_object_subproperty_string(mocked_folio_client: FolioClient, m
         ]
     }
 
-    interface = MappingFileMapperBase(mocked_folio_client, schema, org_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    interface = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        org_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
     folio_rec, folio_id = interface.do_map(record, record["id"], FOLIONamespaces.organizations)
 
     assert folio_rec["interfaces"][0]["name"] == "FOLIO"
@@ -4586,7 +5145,15 @@ def test_add_default_from_schema(mocked_folio_client: FolioClient, mocked_file_m
             "cost_discount_type": "amount",
         },
     ]
-    mapper = MappingFileMapperBase(mocked_folio_client, schema, order_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        order_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
 
     folio_recs = []
 
@@ -4607,6 +5174,7 @@ def test_add_default_from_schema(mocked_folio_client: FolioClient, mocked_file_m
     assert folio_recs[1]["compositePoLines"][0]["checkinItems"] is True
     assert folio_recs[1]["compositePoLines"][0]["receiptStatus"] == "Ongoing"
     assert folio_recs[1]["compositePoLines"][0]["cost"]["discountType"] == "amount"
+
 
 def test_get_map_entries_by_folio_prop_name_with_matching_entries():
     data = [
@@ -4687,7 +5255,9 @@ def test_get_map_entries_by_folio_prop_name_with_partial_matches():
     assert result[0]["value"] == "Valid Value"
 
 
-def test_map_array_object_array_string_with_delimiter_and_delimited_enum(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_object_array_string_with_delimiter_and_delimited_enum(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     data = [
         {
             "folio_field": "legacyIdentifier",
@@ -4706,7 +5276,7 @@ def test_map_array_object_array_string_with_delimiter_and_delimited_enum(mocked_
             "legacy_field": "circulation_note_type",
             "value": "",
             "description": "",
-        }
+        },
     ]
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -4718,9 +5288,7 @@ def test_map_array_object_array_string_with_delimiter_and_delimited_enum(mocked_
                 "items": {
                     "type": "object",
                     "properties": {
-                        "note": {
-                            "type": "string"
-                        },
+                        "note": {"type": "string"},
                         "noteType": {
                             "type": "string",
                             "enum": ["Type A", "Type B", "Type C"],
@@ -4742,7 +5310,7 @@ def test_map_array_object_array_string_with_delimiter_and_delimited_enum(mocked_
         None,
         FOLIONamespaces.items,
         mocked_classes.get_mocked_library_config(),
-        mocked_file_mapper.task_configuration
+        mocked_file_mapper.task_configuration,
     ).do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
     assert result["circulationNotes"][0]["note"] == "Note 1"
     assert result["circulationNotes"][0]["noteType"] == "Type A"
@@ -4750,7 +5318,9 @@ def test_map_array_object_array_string_with_delimiter_and_delimited_enum(mocked_
     assert result["circulationNotes"][1]["noteType"] == "Type B"
 
 
-def test_map_array_object_array_string_with_delimiter_and_invalid_delimited_enum(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_object_array_string_with_delimiter_and_invalid_delimited_enum(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     data = [
         {
             "folio_field": "legacyIdentifier",
@@ -4769,7 +5339,7 @@ def test_map_array_object_array_string_with_delimiter_and_invalid_delimited_enum
             "legacy_field": "circulation_note_type",
             "value": "",
             "description": "",
-        }
+        },
     ]
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -4781,9 +5351,7 @@ def test_map_array_object_array_string_with_delimiter_and_invalid_delimited_enum
                 "items": {
                     "type": "object",
                     "properties": {
-                        "note": {
-                            "type": "string"
-                        },
+                        "note": {"type": "string"},
                         "noteType": {
                             "type": "string",
                             "enum": ["Type A", "Type B"],
@@ -4806,12 +5374,14 @@ def test_map_array_object_array_string_with_delimiter_and_invalid_delimited_enum
             None,
             FOLIONamespaces.items,
             mocked_classes.get_mocked_library_config(),
-            mocked_file_mapper.task_configuration
+            mocked_file_mapper.task_configuration,
         ).do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
     assert "Allowed values for noteType are ['Type A', 'Type B']" in str(trfe.value)
 
 
-def test_map_array_object_array_string_with_delimiter_and_non_delimited_enum(mocked_folio_client: FolioClient, mocked_file_mapper):
+def test_map_array_object_array_string_with_delimiter_and_non_delimited_enum(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
     data = [
         {
             "folio_field": "legacyIdentifier",
@@ -4830,7 +5400,7 @@ def test_map_array_object_array_string_with_delimiter_and_non_delimited_enum(moc
             "legacy_field": "circulation_note_type",
             "value": "",
             "description": "",
-        }
+        },
     ]
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -4842,9 +5412,7 @@ def test_map_array_object_array_string_with_delimiter_and_non_delimited_enum(moc
                 "items": {
                     "type": "object",
                     "properties": {
-                        "note": {
-                            "type": "string"
-                        },
+                        "note": {"type": "string"},
                         "noteType": {
                             "type": "string",
                             "enum": ["Type A", "Type B", "Type C"],
@@ -4857,7 +5425,7 @@ def test_map_array_object_array_string_with_delimiter_and_non_delimited_enum(moc
     legacy_record = {
         "id": "id1",
         "circulation_note": "Note 1<delimiter>Note 2",
-        "circulation_note_type": "Type A"
+        "circulation_note_type": "Type A",
     }
     result, folio_id = MappingFileMapperBase(
         mocked_folio_client,
@@ -4866,9 +5434,136 @@ def test_map_array_object_array_string_with_delimiter_and_non_delimited_enum(moc
         None,
         FOLIONamespaces.items,
         mocked_classes.get_mocked_library_config(),
-        mocked_file_mapper.task_configuration
+        mocked_file_mapper.task_configuration,
     ).do_map(legacy_record, legacy_record["id"], FOLIONamespaces.items)
     assert result["circulationNotes"][0]["note"] == "Note 1"
     assert result["circulationNotes"][0]["noteType"] == "Type A"
     assert result["circulationNotes"][1]["note"] == "Note 2"
     assert result["circulationNotes"][1]["noteType"] == "Type A"
+
+
+# Tests for has_call_number_parts static method
+class TestHasCallNumberParts:
+    """Tests for the MappingFileMapperBase.has_call_number_parts static method."""
+
+    def test_has_call_number_returns_true(self):
+        """Test returns True when callNumber field is present and has value."""
+        record = {"callNumber": "QA76.73", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is True
+
+    def test_has_call_number_prefix_returns_true(self):
+        """Test returns True when callNumberPrefix field is present and has value."""
+        record = {"callNumberPrefix": "REF", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is True
+
+    def test_has_call_number_suffix_returns_true(self):
+        """Test returns True when callNumberSuffix field is present and has value."""
+        record = {"callNumberSuffix": "v.1", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is True
+
+    def test_has_item_level_call_number_returns_true(self):
+        """Test returns True when itemLevelCallNumber field is present."""
+        record = {"itemLevelCallNumber": "PS3545.H16", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is True
+
+    def test_has_item_level_call_number_prefix_returns_true(self):
+        """Test returns True when itemLevelCallNumberPrefix is present."""
+        record = {"itemLevelCallNumberPrefix": "Oversize", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is True
+
+    def test_has_item_level_call_number_suffix_returns_true(self):
+        """Test returns True when itemLevelCallNumberSuffix is present."""
+        record = {"itemLevelCallNumberSuffix": "c.2", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is True
+
+    def test_no_call_number_parts_returns_false(self):
+        """Test returns False when no call number parts exist."""
+        record = {"id": "123", "barcode": "ABC123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is False
+
+    def test_empty_call_number_returns_false(self):
+        """Test returns False when callNumber field is empty string."""
+        record = {"callNumber": "", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is False
+
+    def test_none_call_number_returns_false(self):
+        """Test returns False when callNumber field is None."""
+        record = {"callNumber": None, "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is False
+
+    def test_only_call_number_type_id_returns_false(self):
+        """Test returns False when only callNumberTypeId exists (no actual call number)."""
+        record = {"callNumberTypeId": "95467209-6d7b-468b-94df-0f5d7ad2747d", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is False
+
+    def test_only_item_level_call_number_type_id_returns_false(self):
+        """Test returns False when only itemLevelCallNumberTypeId exists."""
+        record = {"itemLevelCallNumberTypeId": "95467209-6d7b-468b-94df-0f5d7ad2747d", "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is False
+
+    def test_additional_call_number_fields_excluded(self):
+        """Test that fields containing 'additional' are excluded."""
+        # Only additionalCallNumbers present - should return False
+        record = {"additionalCallNumbers": ["QA76"], "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is False
+
+    def test_call_number_with_additional_fields_returns_true(self):
+        """Test returns True when regular callNumber exists alongside additional fields."""
+        record = {"callNumber": "QA76.73", "additionalCallNumbers": ["PS3545"], "id": "123"}
+        assert MappingFileMapperBase.has_call_number_parts(record) is True
+
+    def test_multiple_call_number_parts_returns_true(self):
+        """Test returns True when multiple call number parts exist."""
+        record = {
+            "callNumber": "QA76.73",
+            "callNumberPrefix": "REF",
+            "callNumberSuffix": "v.1",
+            "id": "123",
+        }
+        assert MappingFileMapperBase.has_call_number_parts(record) is True
+
+    def test_empty_record_returns_false(self):
+        """Test returns False for empty record."""
+        record = {}
+        assert MappingFileMapperBase.has_call_number_parts(record) is False
+
+
+# Tests for get_call_number_type_id_by_name static method
+class TestGetCallNumberTypeIdByName:
+    """Tests for the MappingFileMapperBase.get_call_number_type_id_by_name static method."""
+
+    def test_valid_call_number_type_name(self, mocked_folio_client):
+        """Test returns UUID for valid call number type name."""
+        result = MappingFileMapperBase.get_call_number_type_id_by_name(
+            mocked_folio_client, "Library of Congress classification"
+        )
+        assert result == "95467209-6d7b-468b-94df-0f5d7ad2747d"
+
+    def test_another_valid_call_number_type_name(self, mocked_folio_client):
+        """Test returns correct UUID for Dewey Decimal classification."""
+        result = MappingFileMapperBase.get_call_number_type_id_by_name(
+            mocked_folio_client, "Dewey Decimal classification"
+        )
+        assert result == "03dd64d0-5626-4ecd-8ece-4531e0069f35"
+
+    def test_invalid_call_number_type_name_raises_error(self, mocked_folio_client):
+        """Test raises TransformationProcessError for invalid call number type name."""
+        with pytest.raises(TransformationProcessError) as exc_info:
+            MappingFileMapperBase.get_call_number_type_id_by_name(
+                mocked_folio_client, "Nonexistent Call Number Type"
+            )
+        assert "Nonexistent Call Number Type" in str(exc_info.value)
+        assert "not found in tenant" in str(exc_info.value)
+
+    def test_empty_call_number_type_name_raises_error(self, mocked_folio_client):
+        """Test raises TransformationProcessError for empty string."""
+        with pytest.raises(TransformationProcessError):
+            MappingFileMapperBase.get_call_number_type_id_by_name(mocked_folio_client, "")
+
+    def test_case_sensitive_lookup(self, mocked_folio_client):
+        """Test that lookup is case-sensitive."""
+        with pytest.raises(TransformationProcessError):
+            MappingFileMapperBase.get_call_number_type_id_by_name(
+                mocked_folio_client,
+                "library of congress classification",  # lowercase
+            )
