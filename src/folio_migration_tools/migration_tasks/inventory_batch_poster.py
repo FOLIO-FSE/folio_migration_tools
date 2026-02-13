@@ -282,8 +282,6 @@ class InventoryBatchPoster(MigrationTaskBase):
         # Create the poster with our failed records path
         failed_records_path = self.folder_structure.failed_recs_path
 
-        # Note: FolioClient is already managed by the calling code in __main__.py
-        # so we don't need to wrap it in an async context manager here
         poster = FDIBatchPoster(
             folio_client=self.folio_client,
             config=fdi_config,
