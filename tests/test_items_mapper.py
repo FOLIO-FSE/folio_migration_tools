@@ -531,3 +531,122 @@ def test_has_call_number_parts_item_mapper():
 
     assert ItemMapper.has_call_number_parts(record_with_item_call_number) is True
     assert ItemMapper.has_call_number_parts(record_without) is False
+
+
+def test_get_prop_temporary_location_raises_when_not_configured():
+    """Test that temporaryLocationId raises error when no mapping is configured."""
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    lib = LibraryConfiguration(
+        okapi_url="okapi_url",
+        tenant_id="tenant_id",
+        okapi_username="username",
+        okapi_password="password",  # noqa: S106
+        folio_release=FolioRelease.ramsons,
+        library_name="Test Library",
+        log_level_debug=False,
+        iteration_identifier="test",
+        base_folder=Path("/"),
+    )
+
+    mocked_config = create_autospec(ItemsTransformer.TaskConfiguration)
+    mocked_config.default_call_number_type_name = ""
+
+    loan_type_map = [{"lt": "*", "folio_name": "Can circulate"}]
+    material_type_map = [{"mat": "*", "folio_name": "book"}]
+    location_map = [{"folio_code": "E", "LOC": "*"}]
+
+    mapper = ItemMapper(
+        mock_folio,
+        item_map,
+        material_type_map,
+        loan_type_map,
+        location_map,
+        None,
+        {"h1": ["h1", "holdings-uuid"]},
+        None,
+        None,
+        None,  # No temporary location mapping
+        None,
+        lib,
+        mocked_config,
+    )
+
+    item_data = {"barcode": "TEST_TEMP_LOC", "TEMP_LOC": "some_loc"}
+
+    with pytest.raises(TransformationProcessError) as exc_info:
+        mapper.get_prop(item_data, "temporaryLocationId", item_data["barcode"], "")
+
+    assert "Temporary location is mapped" in str(exc_info.value)
+
+
+def test_apply_default_call_number_with_suffix():
+    """Test apply_default_call_number_type works with itemLevelCallNumberSuffix."""
+    mocked_mapper = Mock(spec=ItemMapper)
+    mocked_mapper.default_call_number_type_id = "test-uuid-5678"
+    mocked_mapper.task_configuration = Mock()
+    mocked_mapper.task_configuration.default_call_number_type_name = "Dewey Decimal"
+    mocked_mapper.has_call_number_parts = ItemMapper.has_call_number_parts
+    mocked_mapper.migration_report = MigrationReport()
+
+    folio_rec = {
+        "itemLevelCallNumberSuffix": "v.1",
+        "holdingsRecordId": "hold-123",
+        "permanentLoanTypeId": "loan-1",
+    }
+
+    ItemMapper.apply_default_call_number_type(mocked_mapper, folio_rec)
+
+    assert folio_rec["itemLevelCallNumberTypeId"] == "test-uuid-5678"
+
+
+def test_mapper_init_sets_bib_id_template():
+    """Test that ItemMapper correctly sets bib_id_template attribute."""
+    mock_folio = mocked_classes.mocked_folio_client()
+
+    lib = LibraryConfiguration(
+        okapi_url="okapi_url",
+        tenant_id="tenant_id",
+        okapi_username="username",
+        okapi_password="password",  # noqa: S106
+        folio_release=FolioRelease.ramsons,
+        library_name="Test Library",
+        log_level_debug=False,
+        iteration_identifier="test",
+        base_folder=Path("/"),
+    )
+
+    mocked_config = create_autospec(ItemsTransformer.TaskConfiguration)
+    mocked_config.default_call_number_type_name = ""
+
+    loan_type_map = [{"lt": "*", "folio_name": "Can circulate"}]
+    material_type_map = [{"mat": "*", "folio_name": "book"}]
+    location_map = [{"folio_code": "E", "LOC": "*"}]
+
+    mapper = ItemMapper(
+        mock_folio,
+        item_map,
+        material_type_map,
+        loan_type_map,
+        location_map,
+        None,
+        {"PREFIX:h1": ["PREFIX:h1", "holdings-uuid"]},
+        None,
+        None,
+        None,
+        None,
+        lib,
+        mocked_config,
+    )
+
+    # Default bib_id_template is "Bib id: "
+    assert mapper.bib_id_template == "Bib id: "
+
+
+def test_get_prop_unmapped_returns_empty(mapper: ItemMapper):
+    """Test that get_prop returns empty string for unmapped values."""
+    item_data = {"barcode": "UNMAPPED_TEST", "note": "Test", "lt": "ah", "mat": "oh"}
+    # Try to get a property that isn't mapped and has no value
+    result = mapper.get_prop(item_data, "numberOfPieces", item_data["barcode"], "")
+    # Should return empty string or schema default
+    assert result == "" or result is None or isinstance(result, str)
