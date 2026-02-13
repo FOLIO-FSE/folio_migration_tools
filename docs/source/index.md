@@ -13,6 +13,7 @@ quick_tutorial.md
 migration_process.md
 tasks/index.md
 migration_reports.md
+logging.md
 mapping_file_based_mapping.md
 marc_rule_based_mapping.md
 reference_data_mapping.md
