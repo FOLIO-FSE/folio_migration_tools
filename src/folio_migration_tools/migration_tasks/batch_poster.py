@@ -715,7 +715,7 @@ class BatchPoster(MigrationTaskBase):
         )
         logger.info(last_row)
         logger.info("=========Stack trace==============")
-        traceback.logging.info_exc()  # type: ignore
+        traceback.print_exc()  # type: ignore
         logger.info("=======================")
 
     def post_batch(self, batch, failed_recs_file, num_records):
