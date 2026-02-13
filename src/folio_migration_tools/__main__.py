@@ -24,7 +24,7 @@ from folio_migration_tools.config_file_load import merge_load
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.logging_config import setup_logging
-from folio_migration_tools.migration_tasks import *  # noqa: F403, F401
+from folio_migration_tools.migration_tasks import *  # noqa: F403, F401, S2208
 from folio_migration_tools.migration_tasks import migration_task_base
 
 logger = logging.getLogger(__name__)

@@ -282,27 +282,28 @@ class InventoryBatchPoster(MigrationTaskBase):
         # Create the poster with our failed records path
         failed_records_path = self.folder_structure.failed_recs_path
 
-        async with self.folio_client:
-            poster = FDIBatchPoster(
-                folio_client=self.folio_client,
-                config=fdi_config,
-                failed_records_file=failed_records_path,
-                reporter=reporter,
-            )
+        # Note: FolioClient is already managed by the calling code in __main__.py
+        # so we don't need to wrap it in an async context manager here
+        poster = FDIBatchPoster(
+            folio_client=self.folio_client,
+            config=fdi_config,
+            failed_records_file=failed_records_path,
+            reporter=reporter,
+        )
 
-            async with poster:
-                # Process all files
-                self.stats = await poster.do_work(file_paths)
+        async with poster:
+            # Process all files
+            self.stats = await poster.do_work(file_paths)
 
-                # If rerun is enabled and there are failures, reprocess them
-                if self.task_configuration.rerun_failed_records and self.stats.records_failed > 0:
-                    logger.info(
-                        "Rerunning %s failed records one at a time",
-                        self.stats.records_failed,
-                    )
-                    await poster.rerun_failed_records_one_by_one()
-                    # Update stats after rerun
-                    self.stats = poster.get_stats()
+            # If rerun is enabled and there are failures, reprocess them
+            if self.task_configuration.rerun_failed_records and self.stats.records_failed > 0:
+                logger.info(
+                    "Rerunning %s failed records one at a time",
+                    self.stats.records_failed,
+                )
+                await poster.rerun_failed_records_one_by_one()
+                # Update stats after rerun
+                self.stats = poster.get_stats()
 
     def do_work(self) -> None:
         """Main work method that processes files and posts records to FOLIO.
