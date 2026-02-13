@@ -66,10 +66,12 @@ def test_setup_logging_separates_data_issues(tmp_path):
     assert "data issue occurred" not in general_content
     assert "data issue occurred" in data_issue_content
 
-    rich_handler = next(h for h in logger.handlers if isinstance(h, RichHandler))
+    # Handlers are attached to the root logger for third-party library compatibility
+    root_logger = logging.getLogger()
+    rich_handler = next(h for h in root_logger.handlers if isinstance(h, RichHandler))
     assert any(isinstance(f, ExcludeLevelFilter) for f in rich_handler.filters)
 
-    file_handlers = [h for h in logger.handlers if isinstance(h, logging.FileHandler)]
+    file_handlers = [h for h in root_logger.handlers if isinstance(h, logging.FileHandler)]
     assert any(isinstance(f, TaskNameFilter) for h in file_handlers for f in h.filters)
 
 
