@@ -1,10 +1,12 @@
 import json
 import pytest
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.custom_exceptions import TransformationProcessError, TransformationRecordFailedError
+from folio_migration_tools.transaction_migration import legacy_loan as legacy_loan_module
 
 
 def test_init():
@@ -327,3 +329,30 @@ def test_correct_for_1_day_loans_no_out_or_due_date_info() -> None:
     # When both dates are missing, LegacyLoan previously defaulted to current UTC dates and
     # adjusted them to keep due_date after out_date without raising.
     assert legacy_loan.due_date > legacy_loan.out_date
+
+
+def test_parse_errors_use_end_of_day(monkeypatch):
+    fake_now = datetime(2024, 1, 2, 12, 30, tzinfo=ZoneInfo("UTC"))
+
+    class DummyDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):  # pragma: no cover - delegated call
+            return fake_now
+
+    monkeypatch.setattr(legacy_loan_module, "datetime", DummyDateTime)
+
+    loan_dict = {
+        "item_barcode": "item",
+        "patron_barcode": "patron",
+        "due_date": "not-a-date",
+        "out_date": "not-a-date",
+        "renewal_count": "2",
+        "next_item_status": "Checked out",
+    }
+    tenant_timezone = ZoneInfo("UTC")
+    migration_report = MigrationReport()
+
+    legacy_loan = LegacyLoan(loan_dict, "fallback-sp", migration_report, tenant_timezone)
+
+    assert legacy_loan.due_date == fake_now.replace(hour=23, minute=59, second=0, microsecond=0)
+    assert legacy_loan.out_date == fake_now.replace(hour=0, minute=1, second=0, microsecond=0)
