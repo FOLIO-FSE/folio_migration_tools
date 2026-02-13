@@ -180,7 +180,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             # Authenticate when calling GitHub, using an API key stored in .env
             github_headers = {
                 "content-type": "application/json",
-                "User-Agent": "FOLIO Migration Tools (https://github.com/FOLIO-FSE/folio_migration_tools/)",  # noqa: E501,B950
+                "User-Agent": "FOLIO Migration Tools (https://github.com/FOLIO-FSE/folio_migration_tools/)",  # noqa: E501
             }
 
             if os.environ.get("GITHUB_TOKEN"):
