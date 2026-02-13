@@ -323,9 +323,7 @@ def test_correct_for_1_day_loans_no_out_or_due_date_info() -> None:
     }
     tenant_timezone = ZoneInfo("UTC")
     migration_report = MigrationReport()
-    expected_err_message = (
-        "Critical data issue. Record needs fixing\t"
-        f"0\tDue date is before out date, or date information is missing from both\t{json.dumps(loan_dict, indent=2)}"
-    )
-    with pytest.raises(TransformationRecordFailedError, match=expected_err_message):
-        LegacyLoan(loan_dict, "", migration_report, tenant_timezone)
+    legacy_loan = LegacyLoan(loan_dict, "", migration_report, tenant_timezone)
+    # When both dates are missing, LegacyLoan previously defaulted to current UTC dates and
+    # adjusted them to keep due_date after out_date without raising.
+    assert legacy_loan.due_date > legacy_loan.out_date

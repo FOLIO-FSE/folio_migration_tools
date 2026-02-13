@@ -103,7 +103,8 @@ class LegacyLoan(object):
         except (ParserError, OverflowError) as ee:
             logger.error(ee)
             self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "due_date"))
-            temp_date_due = datetime.now(ZoneInfo("UTC"))
+            # Keep ordering consistent: assume end of day on current date.
+            temp_date_due = datetime.now(ZoneInfo("UTC")).replace(hour=23, minute=59, second=0, microsecond=0)
         try:
             temp_date_out: datetime = parse(self.legacy_loan_dict["out_date"])
             if temp_date_out.tzinfo != tz.UTC:
@@ -119,9 +120,7 @@ class LegacyLoan(object):
                     f"timezone ({self.tenant_timezone})"
                 )
         except (ParserError, OverflowError):
-            temp_date_out = datetime.now(
-                ZoneInfo("UTC")
-            )  # TODO: Consider moving this assignment block above the temp_date_due
+            temp_date_out = datetime.now(ZoneInfo("UTC")).replace(hour=0, minute=1, second=0, microsecond=0)
             self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "out_date"))
 
         # good to go, set properties
