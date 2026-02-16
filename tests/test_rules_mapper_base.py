@@ -529,6 +529,7 @@ def test_handle_entity_mapping_with_856_no_u(mapper_base, caplog):
 
 def test_map_field_according_to_mapping_exception_logging(mapper_base, caplog):
     """Test that map_field_according_to_mapping logs error on exception."""
+    from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
     from unittest.mock import MagicMock
 
     mapper = mapper_base
@@ -538,20 +539,23 @@ def test_map_field_according_to_mapping_exception_logging(mapper_base, caplog):
         subfields=[Subfield(code="a", value="Test Author")],
     )
 
-    # Create a mapping that will cause an exception
-    bad_mapping = [{"target": "invalid.path[0]", "rules": [{"conditions": [{"type": "nonexistent_condition"}]}]}]
+    # Create a mapping that will trigger entity mapping
+    entity_mapping = [{"entity": [], "target": "contributors"}]
     folio_record = {}
     legacy_ids = ["legacy-id-1"]
 
-    # Mock map_field_according_to_mapping to raise an exception
+    # Mock handle_entity_mapping to raise a TransformationFieldMappingError
     original_method = mapper.handle_entity_mapping
-    mapper.handle_entity_mapping = MagicMock(side_effect=Exception("Mapping error"))
+    mapping_error = TransformationFieldMappingError("legacy-id-1", "Test error", "test data")
+    mapper.handle_entity_mapping = MagicMock(side_effect=mapping_error)
 
-    with caplog.at_level("ERROR"):
-        try:
-            mapper.map_field_according_to_mapping(marc_field, bad_mapping, folio_record, legacy_ids)
-        except Exception:
-            pass  # Expected
+    with caplog.at_level(26):  # DATA_ISSUES level
+        mapper.map_field_according_to_mapping(marc_field, entity_mapping, folio_record, legacy_ids)
+
+    # Verify that the error was logged (log_it was called on the exception)
+    assert "FIELD MAPPING FAILED" in caplog.text
+    assert "legacy-id-1" in caplog.text
+    assert "Test error" in caplog.text
 
     # Restore
     mapper.handle_entity_mapping = original_method
