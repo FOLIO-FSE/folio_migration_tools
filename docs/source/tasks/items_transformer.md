@@ -45,7 +45,6 @@ Transform delimited (CSV/TSV) data into FOLIO Item records with support for mate
 | `damagedStatusMapFileName` | string | No | TSV file mapping damaged statuses |
 | `preventPermanentLocationMapDefault` | boolean | No | If `true`, don't use fallback for permanent location mapping |
 | `boundwithRelationshipFilePath` | string | No | TSV file for boundwith relationships |
-| `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith items |
 | `files` | array | Yes | List of source data files to process |
 
 ## Source Data Requirements
@@ -209,7 +208,6 @@ For Sierra/III-style boundwiths where items link to multiple bibs:
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
     "boundwithRelationshipFilePath": "item_bib_links.tsv",
-    "holdingsTypeUuidForBoundwiths": "1b6c62cf-034c-4972-ac80-fa595a9bfbde",
     "files": [
         {
             "file_name": "items.tsv"
