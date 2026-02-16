@@ -37,7 +37,7 @@ def test_write_basic(tmp_path):
 
 
 def test_write_with_flush_on_cache_limit(tmp_path, caplog):
-    """Test that write flushes when cache exceeds limit and logs debug message."""
+    """Test that write flushes when cache exceeds limit."""
     extradata_file = tmp_path / "test_cache_limit.extradata"
 
     writer = ExtradataWriter(extradata_file)
@@ -45,12 +45,12 @@ def test_write_with_flush_on_cache_limit(tmp_path, caplog):
     writer.cache = [f"test_type\t{{\"id\": \"{i}\"}}\n" for i in range(1001)]
 
     # Now write one more which should trigger the flush
-    with caplog.at_level("DEBUG"):
-        writer.write("test_type", {"id": "final"})
+    writer.write("test_type", {"id": "final"})
 
-    # Check that flush was triggered
+    # Check that flush was triggered - file exists and cache is cleared
     assert extradata_file.exists()
-    assert "Extradata writer flushing the cache" in caplog.text
+    assert len(writer.cache) == 0  # Cache should be empty after flush
+    assert extradata_file.stat().st_size > 0
 
 
 def test_write_exception_logs_error(tmp_path, caplog):

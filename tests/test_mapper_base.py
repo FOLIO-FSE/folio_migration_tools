@@ -226,3 +226,18 @@ def test_save_id_map_file(mocked_mapper, tmp_path, caplog):
     content = map_path.read_text()
     assert "folio1" in content
     assert "folio2" in content
+
+
+def test_handle_transformation_process_error(mocked_mapper, caplog):
+    """Test that handle_transformation_process_error logs critical and exits."""
+    from folio_migration_tools.custom_exceptions import TransformationProcessError
+    from unittest.mock import patch
+
+    error = TransformationProcessError("123", "Test process error", "test_value")
+
+    with caplog.at_level("CRITICAL"):
+        with patch("sys.exit") as mock_exit:
+            mocked_mapper.handle_transformation_process_error(1, error)
+            mock_exit.assert_called_once_with(1)
+
+    assert "Test process error" in caplog.text
