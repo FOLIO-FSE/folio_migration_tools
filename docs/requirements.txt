@@ -68,7 +68,7 @@ debugpy==1.8.17
     # via ipykernel
 decorator==5.2.1
     # via ipython
-deepdiff==6.7.1
+deepdiff==8.6.1
     # via folio-migration-tools
 defusedxml==0.7.1
     # via folio-migration-tools
