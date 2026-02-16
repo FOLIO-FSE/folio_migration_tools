@@ -78,7 +78,7 @@ For MARC-based holdings, the legacy location values are extracted from the MFHD 
 For Voyager-style boundwiths, create a TSV file mapping MFHDs to multiple bibs:
 
 ```text
-mfhd_id	bib_id
+MFHD_ID	BIB_ID
 12345	100001
 12345	100002
 12346	100003
