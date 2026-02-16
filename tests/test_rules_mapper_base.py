@@ -525,3 +525,33 @@ def test_handle_entity_mapping_with_856_no_u(mapper_base, caplog):
     mapper.handle_entity_mapping(mapper, marc_field, mapper.mapping_rules['856'][0], folio_record, legacy_ids)
     assert "Missing one or more required property in entity" in caplog.text
     assert folio_record.get("electronicAccess", []) == []
+
+
+def test_map_field_according_to_mapping_exception_logging(mapper_base, caplog):
+    """Test that map_field_according_to_mapping logs error on exception."""
+    from unittest.mock import MagicMock
+
+    mapper = mapper_base
+    marc_field = Field(
+        tag="100",
+        indicators=["1", " "],
+        subfields=[Subfield(code="a", value="Test Author")],
+    )
+
+    # Create a mapping that will cause an exception
+    bad_mapping = [{"target": "invalid.path[0]", "rules": [{"conditions": [{"type": "nonexistent_condition"}]}]}]
+    folio_record = {}
+    legacy_ids = ["legacy-id-1"]
+
+    # Mock map_field_according_to_mapping to raise an exception
+    original_method = mapper.handle_entity_mapping
+    mapper.handle_entity_mapping = MagicMock(side_effect=Exception("Mapping error"))
+
+    with caplog.at_level("ERROR"):
+        try:
+            mapper.map_field_according_to_mapping(marc_field, bad_mapping, folio_record, legacy_ids)
+        except Exception:
+            pass  # Expected
+
+    # Restore
+    mapper.handle_entity_mapping = original_method

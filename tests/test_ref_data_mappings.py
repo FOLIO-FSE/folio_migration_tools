@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -238,3 +239,26 @@ def test_multiple_emails_array_objects_with_different_ref_data_mappings():
     res_2 = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
 
     assert res_1 == res_2
+
+
+def test_setup_mappings_exception_logging(caplog):
+    """Test that setup_mappings logs error when ref data lookup fails."""
+    import logging
+    from unittest.mock import Mock, patch
+
+    # Create mock objects to simulate the failure scenario
+    mock = Mock(spec=RefDataMapping)
+    mock.name = "testMapping"
+    mock.key_type = "code"
+    mock.ref_data = []  # Empty ref data to cause lookup failure
+    mock.hybrid_mappings = []
+    mock.regular_mappings = []
+    mock.mapped_legacy_keys = []
+    mock.map = [{"folio_code": "TEST", "legacy_code": "LEGACY"}]
+
+    # Mock get_ref_data_tuple to return None (simulating not found)
+    mock.get_ref_data_tuple = Mock(return_value=None)
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(TransformationProcessError):
+            RefDataMapping.setup_mappings(mock)

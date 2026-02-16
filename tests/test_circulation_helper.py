@@ -75,3 +75,31 @@ def test_get_item_by_barcode_api_error(caplog):
 
     assert result == {}
     assert "Item API Error" in caplog.text
+
+
+def test_get_active_loan_by_item_id_exception(caplog):
+    """Test that get_active_loan_by_item_id logs error and returns empty dict on exception."""
+    mocked_folio = mocked_classes.mocked_folio_client()
+    mocked_folio.folio_get = MagicMock(side_effect=Exception("Loan lookup failed"))
+    sp_id = str(uuid.uuid4())
+    circ_helper = CirculationHelper(mocked_folio, sp_id, MigrationReport())
+
+    with caplog.at_level("ERROR"):
+        result = circ_helper.get_active_loan_by_item_id("item-uuid-123")
+
+    assert result == {}
+    assert "Loan lookup failed" in caplog.text
+
+
+def test_get_holding_by_uuid_exception(caplog):
+    """Test that get_holding_by_uuid logs error and returns empty dict on exception."""
+    mocked_folio = mocked_classes.mocked_folio_client()
+    mocked_folio.folio_get_single_object = MagicMock(side_effect=Exception("Holdings lookup failed"))
+    sp_id = str(uuid.uuid4())
+    circ_helper = CirculationHelper(mocked_folio, sp_id, MigrationReport())
+
+    with caplog.at_level("ERROR"):
+        result = circ_helper.get_holding_by_uuid("holdings-uuid-456")
+
+    assert result == {}
+    assert "Holdings lookup failed" in caplog.text

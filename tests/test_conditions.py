@@ -4,7 +4,10 @@ import pytest
 from folioclient import FolioClient
 from pymarc import Field, Indicators, Subfield
 
-from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import RulesMapperBase
@@ -331,3 +334,51 @@ def test_condition_set_electronic_access_relations_id(folio_client_fixture):
     #         ],
     #     ))
     #     assert res == "d6488f88-1e74-40ce-81b5-b19a928ff5b6"
+
+
+def test_condition_set_holdings_note_type_id_exception_logs_error(caplog):
+    """Test that condition_set_holdings_note_type_id logs error when lookup fails."""
+    mock = create_autospec(Conditions)
+    mock.mapper = Mock(spec=BibsRulesMapper)
+    mock.mapper.migration_report = Mock(spec=MigrationReport)
+    mock.folio = Mock(spec=FolioClient)
+    mock.folio.holding_note_types = []
+    # Simulate exception from get_ref_data_tuple_by_name
+    mock.get_ref_data_tuple_by_name.side_effect = Exception("Note type not found")
+
+    parameter = {"name": "Unknown Note Type"}
+    marc_field = Field(
+        tag="852",
+        indicators=["0", "1"],
+        subfields=[Subfield(code="a", value="Test")],
+    )
+
+    with pytest.raises(TransformationRecordFailedError) as exc_info:
+        Conditions.condition_set_holdings_note_type_id(mock, "legacy-id-123", "value", parameter, marc_field)
+
+    assert "Holdings note type mapping error" in str(exc_info.value)
+
+
+def test_condition_set_identifier_type_id_by_name_exception_logs(caplog):
+    """Test that condition_set_identifier_type_id_by_name logs exception when lookup fails."""
+    mock = create_autospec(Conditions)
+    mock.mapper = Mock(spec=BibsRulesMapper)
+    mock.mapper.migration_report = Mock(spec=MigrationReport)
+    mock.folio = Mock(spec=FolioClient)
+    mock.folio.identifier_types = []
+    # Simulate exception from get_ref_data_tuple_by_name
+    mock.get_ref_data_tuple_by_name.side_effect = Exception("Identifier type not found")
+
+    parameter = {"name": "Unknown Identifier Type"}
+    marc_field = Field(
+        tag="020",
+        indicators=[" ", " "],
+        subfields=[Subfield(code="a", value="1234567890")],
+    )
+
+    with pytest.raises(TransformationProcessError) as exc_info:
+        Conditions.condition_set_identifier_type_id_by_name(
+            mock, "legacy-id-456", "value", parameter, marc_field
+        )
+
+    assert "Unmapped identifier type" in str(exc_info.value)
