@@ -196,3 +196,33 @@ def test_add_legacy_identifier_to_admin_note_dupe(mocked_mapper):
     legacy_id = "legacy_ID"
     mocked_mapper.add_legacy_id_to_admin_note(folio_record, legacy_id)
     assert f"{MapperBase.legacy_id_template} legacy_ID" in folio_record["administrativeNotes"]
+
+
+def test_handle_generic_exception(mocked_mapper, caplog):
+    """Test that handle_generic_exception logs the error and counts exceptions."""
+    mocked_mapper.num_exceptions = 0
+
+    with caplog.at_level("ERROR"):
+        mocked_mapper.handle_generic_exception(1, Exception("Test exception"))
+
+    assert "Test exception" in caplog.text
+    assert mocked_mapper.num_exceptions == 1
+
+
+def test_save_id_map_file(mocked_mapper, tmp_path, caplog):
+    """Test that save_id_map_file writes the map and logs the path."""
+    mocked_mapper.migration_report = MigrationReport()
+    legacy_map = {
+        "legacy1": ("legacy1", "folio1"),
+        "legacy2": ("legacy2", "folio2"),
+    }
+    map_path = tmp_path / "id_map.json"
+
+    with caplog.at_level("INFO"):
+        mocked_mapper.save_id_map_file(map_path, legacy_map)
+
+    assert map_path.exists()
+    assert "Wrote legacy id map to" in caplog.text
+    content = map_path.read_text()
+    assert "folio1" in content
+    assert "folio2" in content

@@ -73,3 +73,30 @@ def test_request_dates_to_utc():
     legacy_request = LegacyRequest(legacy_request_dict, ZoneInfo("America/Chicago"))
     assert legacy_request.request_date.isoformat() == "2022-09-01T05:00:00+00:00"
     assert legacy_request.request_expiration_date.isoformat() == "2022-10-02T04:59:00+00:00"
+
+
+def test_correct_for_1_day_requests_exception(caplog):
+    """Test that correct_for_1_day_requests logs errors when UTC conversion fails."""
+    from unittest.mock import patch
+
+    legacy_request_dict = {
+        "item_barcode": "ib",
+        "patron_barcode": "pb",
+        "request_date": "2022-09-01",
+        "request_expiration_date": "2022-09-01",  # Same day to trigger the correction path
+        "comment": "comment",
+        "request_type": "Hold",
+        "pickup_servicepoint_id": str(uuid.uuid4()),
+    }
+    # First create the request without the patch to get the dates set up
+    legacy_request = LegacyRequest(legacy_request_dict, ZoneInfo("America/Chicago"))
+
+    # Now trigger the error path by making make_request_utc raise an exception
+    with caplog.at_level("ERROR"):
+        with patch.object(
+            legacy_request, "make_request_utc", side_effect=Exception("UTC conversion error")
+        ):
+            legacy_request.correct_for_1_day_requests()
+
+    assert "UTC conversion error" in caplog.text
+    assert ("Time alignment issues", "both dates") in legacy_request.errors

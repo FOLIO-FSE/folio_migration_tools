@@ -120,3 +120,48 @@ def test_base_folder_must_exist(tmp_path):
         FolderStructure(
             missing_base, FOLIONamespaces.other, "test_task", "test_iteration", False
         )
+
+
+@patch.object(FolderStructure, "verify_folder", fake_verify_folder)
+def test_log_folder_structure(caplog):
+    """Test that log_folder_structure logs the expected messages."""
+    folder_structure = FolderStructure(
+        "", FOLIONamespaces.other, "test_task", "test_iteration", False
+    )
+    folder_structure.setup_migration_file_structure()
+
+    with caplog.at_level("INFO"):
+        folder_structure.log_folder_structure()
+
+    # Verify that the expected log messages were emitted
+    assert "Mapping files folder is" in caplog.text
+    assert "Base folder is" in caplog.text
+    assert "Reports and logs folder is" in caplog.text
+    assert "Results folder is" in caplog.text
+    assert "Data folder is" in caplog.text
+    assert "Source records files folder is" in caplog.text
+    assert "Log file will be located at" in caplog.text
+    assert "Data issue reports" in caplog.text
+
+
+def test_verify_folder_path_is_file(tmp_path, caplog):
+    """Test that verify_folder exits when path exists but is a file, not a directory."""
+    # Create a file at the path where a directory should be
+    file_as_folder = tmp_path / "should_be_dir"
+    file_as_folder.touch()
+
+    # Need a .gitignore file for FolderStructure to work
+    (tmp_path / ".gitignore").write_text("")
+
+    # Create a temporary FolderStructure with mocked verify for initial setup
+    with patch.object(FolderStructure, "verify_folder", fake_verify_folder):
+        folder_structure = FolderStructure(
+            tmp_path, FOLIONamespaces.other, "test_task", "test_iteration", False
+        )
+
+    # Now call verify_folder directly with file path
+    with caplog.at_level("CRITICAL"):
+        with pytest.raises(SystemExit):
+            folder_structure.verify_folder(file_as_folder)
+
+    assert "Path exists but is not a directory" in caplog.text
