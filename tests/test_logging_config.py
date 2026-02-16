@@ -80,3 +80,34 @@ def test_get_logger_returns_namespaced_logger():
     module_logger = get_logger("folio_migration_tools.custom")
     module_logger.info("hello")
     assert module_logger.name == "folio_migration_tools.custom"
+
+
+def test_data_issues_method_logs_at_custom_level(tmp_path):
+    """Test that the data_issues method logs at the custom DATA_ISSUES level (26)."""
+    data_issues_log = tmp_path / "data_issues.log"
+
+    # Setup logging with data issues file
+    setup_logging(
+        debug=False,
+        log_file=None,
+        data_issues_file=data_issues_log,
+        task_name="TestTask",
+    )
+
+    module_logger = get_logger("folio_migration_tools.data_test")
+    module_logger.data_issues("Test data issue message")
+
+    # Flush all handlers attached to the root logger
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        if hasattr(handler, "flush"):
+            handler.flush()
+
+    data_issue_content = data_issues_log.read_text()
+    assert "Test data issue message" in data_issue_content
+
+
+def test_setup_logging_without_files():
+    """Test setup_logging works without file handlers."""
+    package_logger = setup_logging(debug=True)
+    assert package_logger.name == "folio_migration_tools"
