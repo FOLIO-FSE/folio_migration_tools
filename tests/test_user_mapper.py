@@ -940,6 +940,7 @@ def test_basic_turn_off_username(mocked_folio_client):
     mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    assert "username" in folio_user and folio_user["username"] == "user_name_1"
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
     )
