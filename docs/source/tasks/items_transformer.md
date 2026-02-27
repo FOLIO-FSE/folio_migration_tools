@@ -44,7 +44,9 @@ Transform delimited (CSV/TSV) data into FOLIO Item records with support for mate
 | `statisticalCodeMapFileName` | string | No | TSV file mapping statistical codes |
 | `damagedStatusMapFileName` | string | No | TSV file mapping damaged statuses |
 | `preventPermanentLocationMapDefault` | boolean | No | If `true`, don't use fallback for permanent location mapping |
-| `boundwithRelationshipFilePath` | string | No | TSV file for boundwith relationships |
+| `boundwithFlavor` | string | No | ILS flavor for boundwith handling. Supported: `"voyager"` (default), `"aleph"` |
+| `boundwithRelationshipFilePath` | string | No | TSV file for boundwith relationships (required when `boundwithFlavor` is set) |
+| `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith items |
 | `files` | array | Yes | List of source data files to process |
 
 ## Source Data Requirements
@@ -197,7 +199,15 @@ Unlike BibsTransformer and the Holdings transformers, ItemsTransformer does not 
 
 ### With Boundwith Support
 
-For Sierra/III-style boundwiths where items link to multiple bibs:
+The ItemsTransformer supports creating FOLIO `boundwithPart` records to link items to multiple holdings. The `boundwithFlavor` parameter determines how relationships are loaded and resolved. Supported values are `"voyager"` (default) and `"aleph"`.
+
+```{note}
+For III/Sierra/Millennium-style boundwiths — where items link to multiple bibs directly in the source data — boundwith handling is performed at the holdings level by [HoldingsCsvTransformer](holdings_csv_transformer#boundwith-handling), not here. No `boundwithFlavor` or `boundwithRelationshipFilePath` is needed in that case.
+```
+
+#### Voyager-style boundwiths
+
+For Voyager migrations, the ItemsTransformer reads the `boundwith_relationships_map.json` file produced by [HoldingsMarcTransformer](holdings_marc_transformer) during its `wrap_up` phase. You must still specify the `boundwithRelationshipFilePath` — if it is not set, the transformer will skip loading boundwith relationships entirely. The map links holdings UUIDs to lists of instance UUIDs, and the transformer creates `boundwithPart` records for each relationship.
 
 ```json
 {
@@ -207,13 +217,51 @@ For Sierra/III-style boundwiths where items link to multiple bibs:
     "locationMapFileName": "locations.tsv",
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
-    "boundwithRelationshipFilePath": "item_bib_links.tsv",
+    "boundwithFlavor": "voyager",
+    "boundwithRelationshipFilePath": "boundwith_map.tsv",
     "files": [
         {
             "file_name": "items.tsv"
         }
     ]
 }
+```
+
+#### Aleph-style boundwiths
+
+For Aleph migrations, the item-level boundwith relationships are described in a separate TSV file with columns `LKR_HOL` (holdings legacy ID) and `ITEM_REC_KEY` (item legacy ID). This file is placed in `source_data/items/` and referenced via `boundwithRelationshipFilePath`.
+
+Unlike Voyager mode (which maps holdings UUIDs to instance UUIDs), Aleph mode maps **item legacy IDs** to **holdings legacy IDs** using the `holdings_id_map` produced by the holdings transformation to resolve FOLIO UUIDs at runtime.
+
+```text
+LKR_HOL	ITEM_REC_KEY
+000123456	ITEM001
+000123457	ITEM001
+000789012	ITEM002
+```
+
+```json
+{
+    "name": "transform_items",
+    "migrationTaskType": "ItemsTransformer",
+    "itemsMappingFileName": "item_mapping.json",
+    "locationMapFileName": "locations.tsv",
+    "materialTypesMapFileName": "material_types.tsv",
+    "loanTypesMapFileName": "loan_types.tsv",
+    "boundwithFlavor": "aleph",
+    "boundwithRelationshipFilePath": "item_holdings_links.tsv",
+    "files": [
+        {
+            "file_name": "items.tsv"
+        }
+    ]
+}
+```
+
+
+
+```{important}
+When using Aleph-style boundwiths, any `LKR_HOL` value that cannot be found in the `holdings_id_map` will be logged as a data issue and skipped. Ensure the holdings transformation has completed successfully before running the items transformation.
 ```
 
 ### Multiple Files with Different Settings
