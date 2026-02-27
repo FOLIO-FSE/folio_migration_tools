@@ -152,8 +152,6 @@ def aleph_transformer():
     transformer.task_configuration = mock_config
     transformer.task_config = mock_config
     transformer.boundwith_relationship_map = {}
-    transformer.mapper = Mock()
-    transformer.mapper.holdings_id_map = {"HOL001": "uuid-001", "HOL002": "uuid-002"}
     return transformer
 
 
@@ -162,6 +160,7 @@ def test_load_aleph_boundwith_relationships_happy_path(aleph_transformer):
     with patch("builtins.open", mock_open(read_data=tsv_data)):
         ItemsTransformer._load_aleph_boundwith_relationships(aleph_transformer)
         assert "ITEM001" in aleph_transformer.boundwith_relationship_map
+        assert "HOL001" in aleph_transformer.boundwith_relationship_map["ITEM001"]
 
 
 def test_load_aleph_boundwith_relationships_file_not_found(aleph_transformer):
@@ -171,20 +170,12 @@ def test_load_aleph_boundwith_relationships_file_not_found(aleph_transformer):
         assert "Boundwith relationship file specified, but file not found." in str(exc_info.value)
 
 
-def test_load_aleph_boundwith_missing_holdings_id(aleph_transformer):
-    aleph_transformer.mapper.holdings_id_map = {}  # No holdings
-    tsv_data = "LKR_HOL\tITEM_REC_KEY\nHOL_MISSING\tITEM001\n"
+def test_load_aleph_boundwith_multiple_holdings_per_item(aleph_transformer):
+    tsv_data = "LKR_HOL\tITEM_REC_KEY\nHOL001\tITEM001\nHOL002\tITEM001\n"
     with patch("builtins.open", mock_open(read_data=tsv_data)):
-        with patch(
-            "folio_migration_tools.migration_tasks.items_transformer.Helper.log_data_issue_failed"
-        ) as mock_log:
-            ItemsTransformer._load_aleph_boundwith_relationships(aleph_transformer)
-            mock_log.assert_called_once_with(
-                "ITEM001",
-                "Holdings for boundwith relationship not found in holdings id map",
-                "HOL_MISSING",
-            )
-    assert "ITEM001" not in aleph_transformer.boundwith_relationship_map
+        ItemsTransformer._load_aleph_boundwith_relationships(aleph_transformer)
+        assert "ITEM001" in aleph_transformer.boundwith_relationship_map
+        assert aleph_transformer.boundwith_relationship_map["ITEM001"] == {"HOL001", "HOL002"}
 
 
 def test_load_aleph_boundwith_empty_file(aleph_transformer):
@@ -192,3 +183,68 @@ def test_load_aleph_boundwith_empty_file(aleph_transformer):
     with patch("builtins.open", mock_open(read_data=tsv_data)):
         ItemsTransformer._load_aleph_boundwith_relationships(aleph_transformer)
         assert len(aleph_transformer.boundwith_relationship_map) == 0
+
+
+# --- Tests for _validate_boundwith_relationships ---
+
+
+def test_validate_boundwith_relationships_noop_for_voyager():
+    mock_config = Mock(spec=ItemsTransformer.TaskConfiguration)
+    mock_config.boundwith_flavor = IlsFlavour.voyager
+    transformer = Mock(spec=ItemsTransformer)
+    transformer.task_configuration = mock_config
+    transformer.boundwith_relationship_map = {"ITEM001": {"HOL001"}}
+    transformer.mapper = Mock()
+    transformer.mapper.holdings_id_map = {}
+    ItemsTransformer._validate_boundwith_relationships(transformer)
+    # Map should be untouched since voyager skips validation
+    assert transformer.boundwith_relationship_map == {"ITEM001": {"HOL001"}}
+
+
+def test_validate_aleph_boundwith_all_valid(aleph_transformer):
+    aleph_transformer.boundwith_relationship_map = {
+        "ITEM001": {"HOL001", "HOL002"},
+    }
+    aleph_transformer.mapper = Mock()
+    aleph_transformer.mapper.holdings_id_map = {"HOL001": "uuid-001", "HOL002": "uuid-002"}
+    ItemsTransformer._validate_boundwith_relationships(aleph_transformer)
+    assert aleph_transformer.boundwith_relationship_map["ITEM001"] == {"HOL001", "HOL002"}
+
+
+def test_validate_aleph_boundwith_partial_valid(aleph_transformer):
+    aleph_transformer.boundwith_relationship_map = {
+        "ITEM001": {"HOL001", "HOL_MISSING"},
+    }
+    aleph_transformer.mapper = Mock()
+    aleph_transformer.mapper.holdings_id_map = {"HOL001": "uuid-001"}
+    with patch(
+        "folio_migration_tools.migration_tasks.items_transformer.Helper.log_data_issue_failed"
+    ) as mock_log:
+        ItemsTransformer._validate_boundwith_relationships(aleph_transformer)
+        mock_log.assert_called_once_with(
+            "ITEM001",
+            "Holdings for boundwith relationship not found in holdings id map",
+            "HOL_MISSING",
+        )
+    assert aleph_transformer.boundwith_relationship_map["ITEM001"] == {"HOL001"}
+
+
+def test_validate_aleph_boundwith_all_invalid_removes_entry(aleph_transformer):
+    aleph_transformer.boundwith_relationship_map = {
+        "ITEM001": {"HOL_MISSING"},
+    }
+    aleph_transformer.mapper = Mock()
+    aleph_transformer.mapper.holdings_id_map = {}
+    with patch(
+        "folio_migration_tools.migration_tasks.items_transformer.Helper.log_data_issue_failed"
+    ):
+        ItemsTransformer._validate_boundwith_relationships(aleph_transformer)
+    assert "ITEM001" not in aleph_transformer.boundwith_relationship_map
+
+
+def test_validate_aleph_boundwith_empty_map(aleph_transformer):
+    aleph_transformer.boundwith_relationship_map = {}
+    aleph_transformer.mapper = Mock()
+    aleph_transformer.mapper.holdings_id_map = {"HOL001": "uuid-001"}
+    ItemsTransformer._validate_boundwith_relationships(aleph_transformer)
+    assert len(aleph_transformer.boundwith_relationship_map) == 0
