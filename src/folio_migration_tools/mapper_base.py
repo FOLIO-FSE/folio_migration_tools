@@ -409,6 +409,7 @@ class MapperBase:
             ),
         }
         self.extradata_writer.write("boundwithPart", part)
+        self.migration_report.add_general_statistics(i18n_t("Boundwith parts created"))
 
     def create_bound_with_holdings(
         self,
