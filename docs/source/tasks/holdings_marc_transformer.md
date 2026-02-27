@@ -75,7 +75,7 @@ For MARC-based holdings, the legacy location values are extracted from the MFHD 
 
 ### Boundwith Relationship File (Optional)
 
-For Voyager-style boundwiths, create a TSV file mapping MFHDs to multiple bibs:
+TFor Voyager-style boundwiths, provide a TSV file mapping MFHDs to multiple bibs:
 
 ```text
 MFHD_ID	BIB_ID
@@ -83,6 +83,10 @@ MFHD_ID	BIB_ID
 12345	100002
 12346	100003
 ```
+
+This file is placed in `source_data/holdings/` and referenced via `boundwithRelationshipFilePath`. For each MFHD that maps to more than one bib, the transformer creates additional holdings records (one per extra bib), setting their `holdingsTypeId` to `holdingsTypeUuidForBoundwiths` with deterministic UUIDs.
+
+The resulting relationship map (`boundwith_relationships_map.json`) is written to the results folder and consumed by the [ItemsTransformer](items_transformer) to create `boundwithPart` records. See the [ItemsTransformer documentation](items_transformer) for details on how boundwith relationships are resolved at the item level, including support for different ILS flavors via the `boundwithFlavor` parameter.
 
 ## Output Files
 

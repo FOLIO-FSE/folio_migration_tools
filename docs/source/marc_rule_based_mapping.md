@@ -117,7 +117,37 @@ The first step in preparing to transform MARC Bib records for FOLIO is to create
 For more information on the task configuration options for MFHD transformation, see [HoldingsMarcTransformer](./tasks/holdings_marc_transformer)
 
 ### Boundwith Mapping for MFHD Holdings ("Voyager-style" boundwiths)
-In the MFHD transformer task above, you will notice the `"boundwithRelationshipFilePath"` key. This is a filename, relative to the `source_data/holdings` directory of your iteration that contains a tab-delimited file mapping MFHD legacy ID values to MARC Bib legacy ID values. This file should also be included in any related item transformation task your perform later.
+
+The MFHD transformer supports migrating boundwith relationships — where multiple bibliographic records share a single physical holdings record — via the `"boundwithRelationshipFilePath"` configuration key. The boundwith relationship file is a TSV placed in `source_data/holdings/` with columns `MFHD_ID` and `BIB_ID` mapping each holdings record to one or more bib records:
+
+```text
+MFHD_ID	BIB_ID
+12345	100001
+12345	100002
+12346	100003
+```
+
+During transformation, the tool creates a copy of the holdings record for each additional bib (instance), setting the `holdingsTypeId` to the value of `"holdingsTypeUuidForBoundwiths"` and generating deterministic UUIDs for the copies. The resulting relationship map (`boundwith_relationships_map.json`) is written to the results folder and consumed by the [ItemsTransformer](./tasks/items_transformer) to create `boundwithPart` records linking items to their boundwith holdings.
+
+#### Configuration example
+
+```json
+{
+    "name": "transform_mfhd",
+    "migrationTaskType": "HoldingsMarcTransformer",
+    "legacyIdMarcPath": "001",
+    "locationMapFileName": "location_map.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
+    "fallbackHoldingsTypeId": "82747568-cdf3-4980-bba2-e5b38950f65b",
+    "holdingsTypeUuidForBoundwiths": "1b6c62cf-034c-4972-ac80-fa595a9bfbde",
+    "boundwithRelationshipFilePath": "bib_mfhd.tsv",
+    "hridHandling": "default",
+    "createSourceRecords": false,
+    "files": [
+        {"file_name": "mfhd.mrc"}
+    ]
+}
+```
 
 (supplemental-mfhd-mapping-rules)=
 ### Supplemental MFHD Mapping Rules
