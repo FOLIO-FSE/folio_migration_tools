@@ -570,7 +570,8 @@ class ItemsTransformer(MigrationTaskBase):
         """
         if self.task_configuration.boundwith_flavor != IlsFlavour.aleph:
             return
-        for item_legacy_id, holdings_ids in self.boundwith_relationship_map.items():
+        original_relationship_map_items = list(self.boundwith_relationship_map.items())
+        for item_legacy_id, holdings_ids in original_relationship_map_items:
             valid_ids = set()
             for mfhd_id in holdings_ids:
                 if mfhd_id not in self.mapper.holdings_id_map:
