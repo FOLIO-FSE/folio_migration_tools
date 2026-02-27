@@ -301,10 +301,6 @@ class UserImportTask(MigrationTaskBase):
             self.stats.failed,
         )
 
-        # Add file information
-        for file_name in self.files_processed:
-            self.migration_report.add("FilesProcessed", file_name)
-
     def wrap_up(self) -> None:
         """Finalize the migration task and write reports.
 
