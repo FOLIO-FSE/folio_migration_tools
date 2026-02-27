@@ -370,6 +370,9 @@ class ItemsTransformer(MigrationTaskBase):
             and self.boundwith_relationship_map
             and folio_rec["holdingsRecordId"] in self.boundwith_relationship_map
         ):
+            self.mapper.migration_report.add_general_statistics(
+                i18n_t("Items matched to boundwith relationships")
+            )
             for idx_, instance_id in enumerate(
                 self.boundwith_relationship_map.get(folio_rec["holdingsRecordId"])
             ):
@@ -385,6 +388,9 @@ class ItemsTransformer(MigrationTaskBase):
             and self.boundwith_relationship_map
             and legacy_id in self.boundwith_relationship_map
         ):
+            self.mapper.migration_report.add_general_statistics(
+                i18n_t("Items matched to boundwith relationships")
+            )
             for holdings_id in self.boundwith_relationship_map.get(legacy_id):
                 self.mapper.create_and_write_boundwith_part(
                     legacy_id, self.mapper.holdings_id_map.get(holdings_id)[1]
@@ -547,6 +553,10 @@ class ItemsTransformer(MigrationTaskBase):
                     holdings_ids = self.boundwith_relationship_map.get(item_legacy_id, set())
                     holdings_ids.add(mfhd_id)
                     self.boundwith_relationship_map[item_legacy_id] = holdings_ids
+            logger.info(
+                "Rows in Aleph boundwith relationship map: %s",
+                len(self.boundwith_relationship_map),
+            )
         except FileNotFoundError as fnfe:
             raise TransformationProcessError(
                 "",
@@ -561,16 +571,26 @@ class ItemsTransformer(MigrationTaskBase):
             ) from exception
 
     def _validate_boundwith_relationships(self):
-        """Validate boundwith relationships against the holdings ID map.
+        """Report and validate loaded boundwith relationships.
 
-        For Aleph-flavor boundwiths, removes any holdings IDs from the
-        boundwith_relationship_map that are not present in the mapper's
-        holdings_id_map, and logs data issues for each missing ID.
-        No-op for other flavors. Must be called after the mapper is instantiated.
+        Reports the number of loaded boundwith relationships to the migration
+        report for all flavors. For Aleph-flavor boundwiths, additionally
+        validates relationships against the mapper's holdings_id_map, removing
+        invalid entries and logging data issues.
+        Must be called after the mapper is instantiated.
         """
+        if not self.boundwith_relationship_map:
+            return
+        self.mapper.migration_report.set(
+            "GeneralStatistics",
+            i18n_t("Boundwith relationships loaded"),
+            len(self.boundwith_relationship_map),
+        )
         if self.task_configuration.boundwith_flavor != IlsFlavour.aleph:
             return
         original_relationship_map_items = list(self.boundwith_relationship_map.items())
+        total_relationships = sum(len(ids) for _, ids in original_relationship_map_items)
+        removed_count = 0
         for item_legacy_id, holdings_ids in original_relationship_map_items:
             valid_ids = set()
             for mfhd_id in holdings_ids:
@@ -580,12 +600,23 @@ class ItemsTransformer(MigrationTaskBase):
                         "Holdings for boundwith relationship not found in holdings id map",
                         mfhd_id,
                     )
+                    removed_count += 1
                 else:
                     valid_ids.add(mfhd_id)
             if valid_ids:
                 self.boundwith_relationship_map[item_legacy_id] = valid_ids
             else:
                 del self.boundwith_relationship_map[item_legacy_id]
+        self.mapper.migration_report.set(
+            "GeneralStatistics",
+            i18n_t("Aleph boundwith relationships validated successfully"),
+            total_relationships - removed_count,
+        )
+        self.mapper.migration_report.set(
+            "GeneralStatistics",
+            i18n_t("Aleph boundwith relationships removed (holdings not found)"),
+            removed_count,
+        )
 
     def wrap_up(self):
         logger.info("Done. Transformer wrapping up...")

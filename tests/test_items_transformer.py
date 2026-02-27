@@ -199,6 +199,8 @@ def test_validate_boundwith_relationships_noop_for_voyager():
     ItemsTransformer._validate_boundwith_relationships(transformer)
     # Map should be untouched since voyager skips validation
     assert transformer.boundwith_relationship_map == {"ITEM001": {"HOL001"}}
+    # Should still report loaded count
+    transformer.mapper.migration_report.set.assert_called_once()
 
 
 def test_validate_aleph_boundwith_all_valid(aleph_transformer):
@@ -209,6 +211,8 @@ def test_validate_aleph_boundwith_all_valid(aleph_transformer):
     aleph_transformer.mapper.holdings_id_map = {"HOL001": "uuid-001", "HOL002": "uuid-002"}
     ItemsTransformer._validate_boundwith_relationships(aleph_transformer)
     assert aleph_transformer.boundwith_relationship_map["ITEM001"] == {"HOL001", "HOL002"}
+    # 3 report calls: loaded count, validated successfully, removed
+    assert aleph_transformer.mapper.migration_report.set.call_count == 3
 
 
 def test_validate_aleph_boundwith_partial_valid(aleph_transformer):
@@ -242,9 +246,11 @@ def test_validate_aleph_boundwith_all_invalid_removes_entry(aleph_transformer):
     assert "ITEM001" not in aleph_transformer.boundwith_relationship_map
 
 
-def test_validate_aleph_boundwith_empty_map(aleph_transformer):
+def test_validate_boundwith_relationships_empty_map(aleph_transformer):
     aleph_transformer.boundwith_relationship_map = {}
     aleph_transformer.mapper = Mock()
     aleph_transformer.mapper.holdings_id_map = {"HOL001": "uuid-001"}
     ItemsTransformer._validate_boundwith_relationships(aleph_transformer)
     assert len(aleph_transformer.boundwith_relationship_map) == 0
+    # No report calls when map is empty
+    aleph_transformer.mapper.migration_report.set.assert_not_called()
