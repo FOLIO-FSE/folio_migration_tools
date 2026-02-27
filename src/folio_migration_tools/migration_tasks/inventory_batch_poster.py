@@ -375,10 +375,6 @@ class InventoryBatchPoster(MigrationTaskBase):
                 self.stats.rerun_still_failed,
             )
 
-        # Add file information
-        for file_def in self.task_configuration.files:
-            self.migration_report.add("FilesProcessed", file_def.file_name)
-
     def wrap_up(self) -> None:
         """Finalize the migration task and write reports.
 
