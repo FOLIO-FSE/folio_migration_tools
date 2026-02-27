@@ -27,6 +27,7 @@ from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
+    IlsFlavour,
     LibraryConfiguration,
 )
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
@@ -170,6 +171,19 @@ class ItemsTransformer(MigrationTaskBase):
                 ),
             ),
         ] = True
+        boundwith_flavor: Annotated[
+            IlsFlavour,
+            Field(
+                title="Boundwith flavor",
+                description=(
+                    "If boundwith relationships are present, this setting determines "
+                    "the flavor of ILS-specific boundwith handling to be applied. "
+                    "The default is 'voyager', meaning Voyager-specific handling will be applied. "
+                    "Supported values are 'voyager' and 'aleph', and requires a properly "
+                    "formatted boundwith relationship file to be provided."
+                ),
+            ),
+        ] = "voyager"
         boundwith_relationship_file_path: Annotated[
             str,
             Field(
@@ -177,8 +191,9 @@ class ItemsTransformer(MigrationTaskBase):
                 description=(
                     "Path to a file outlining Boundwith relationships, "
                     "in the style of Voyager. "
-                    "A TSV file with MFHD_ID and BIB_ID headers and values. "
-                    "By default is empty string."
+                    "A TSV file with MFHD_ID and BIB_ID headers and values (voyager-style) or "
+                    "LKR_HOL and ITEM_REC_KEY headers and values (aleph-style). "
+                    "Default is empty string."
                 ),
             ),
         ] = ""
@@ -189,7 +204,7 @@ class ItemsTransformer(MigrationTaskBase):
                 description=(
                     "Prevent the default mapping of permanent location "
                     "to the default location. "
-                    "By default is False."
+                    "Default is False."
                 ),
             ),
         ] = False
@@ -348,6 +363,32 @@ class ItemsTransformer(MigrationTaskBase):
             f"processed {self.total_records:,} records in {len(self.task_config.files)} files"
         )
 
+    def handle_boundwith_parts(self, folio_rec, legacy_id):
+        if (
+            self.task_configuration.boundwith_flavor == IlsFlavour.voyager
+            and self.boundwith_relationship_map
+            and folio_rec["holdingsRecordId"] in self.boundwith_relationship_map
+        ):
+            for idx_, instance_id in enumerate(
+                self.boundwith_relationship_map.get(folio_rec["holdingsRecordId"])
+            ):
+                if idx_ == 0:
+                    bw_id = folio_rec["holdingsRecordId"]
+                else:
+                    bw_id = self.mapper.generate_boundwith_holding_uuid(
+                        folio_rec["holdingsRecordId"], instance_id
+                    )
+                self.mapper.create_and_write_boundwith_part(legacy_id, bw_id)
+        elif (
+            self.task_configuration.boundwith_flavor == IlsFlavour.aleph
+            and self.boundwith_relationship_map
+            and legacy_id in self.boundwith_relationship_map
+        ):
+            for holdings_id in self.boundwith_relationship_map.get(legacy_id):
+                self.mapper.create_and_write_boundwith_part(
+                    legacy_id, self.mapper.holdings_id_map.get(holdings_id)[1]
+                )
+
     def process_single_file(self, file_def: FileDefinition, results_file):
         full_path = self.folder_structure.legacy_records_folder / file_def.file_name
         logger.info("Processing %s", full_path)
@@ -370,17 +411,8 @@ class ItemsTransformer(MigrationTaskBase):
                     self.mapper.perform_additional_mappings(legacy_id, folio_rec, file_def)
                     self.handle_circulation_notes(folio_rec, self.folio_client.current_user)
                     self.handle_notes(folio_rec)
-                    if folio_rec["holdingsRecordId"] in self.boundwith_relationship_map:
-                        for idx_, instance_id in enumerate(
-                            self.boundwith_relationship_map.get(folio_rec["holdingsRecordId"])
-                        ):
-                            if idx_ == 0:
-                                bw_id = folio_rec["holdingsRecordId"]
-                            else:
-                                bw_id = self.mapper.generate_boundwith_holding_uuid(
-                                    folio_rec["holdingsRecordId"], instance_id
-                                )
-                            self.mapper.create_and_write_boundwith_part(legacy_id, bw_id)
+                    self.handle_boundwith_parts(folio_rec, legacy_id)
+
                     if idx == 0:
                         logger.info("First FOLIO record:")
                         logger.info(json.dumps(folio_rec, indent=4))
@@ -458,6 +490,18 @@ class ItemsTransformer(MigrationTaskBase):
             del folio_rec["circulationNotes"]
 
     def load_boundwith_relationships(self):
+        if self.task_configuration.boundwith_flavor == IlsFlavour.voyager:
+            self._load_voyager_boundwith_relationships()
+        elif self.task_configuration.boundwith_flavor == IlsFlavour.aleph:
+            self._load_aleph_boundwith_relationships()
+        else:
+            raise TransformationProcessError(
+                "",
+                f"Unsupported boundwith flavor: {self.task_configuration.boundwith_flavor}. "
+                f"Supported flavors are 'voyager' and 'aleph'.",
+            )
+
+    def _load_voyager_boundwith_relationships(self):
         try:
             with open(
                 self.folder_structure.boundwith_relationships_map_path
@@ -482,6 +526,39 @@ class ItemsTransformer(MigrationTaskBase):
                 "from holdings transformation is not a valid line JSON.",
                 self.folder_structure.boundwith_relationships_map_path,
             ) from ve
+
+    def _load_aleph_boundwith_relationships(self):
+        try:
+            with open(
+                self.folder_structure.legacy_records_folder
+                / self.task_configuration.boundwith_relationship_file_path
+            ) as boundwith_relationship_file:
+                for line in csv.DictReader(boundwith_relationship_file, delimiter="\t"):
+                    mfhd_id = line.get("LKR_HOL", "").strip()
+                    item_legacy_id = line.get("ITEM_REC_KEY", "").strip()
+                    if mfhd_id not in self.mapper.holdings_id_map:
+                        Helper.log_data_issue_failed(
+                            item_legacy_id,
+                            "Holdings for boundwith relationship not found in holdings id map",
+                            mfhd_id,
+                        )
+                        continue
+                    else:
+                        self.boundwith_relationship_map[item_legacy_id] = (
+                            self.boundwith_relationship_map.get(item_legacy_id, set()).add(mfhd_id)
+                        )
+        except FileNotFoundError as fnfe:
+            raise TransformationProcessError(
+                "",
+                "Boundwith relationship file specified, but file not found.",
+                self.task_config.boundwith_relationship_file_path,
+            ) from fnfe
+        except Exception as exception:
+            raise TransformationProcessError(
+                "",
+                f"An error occurred while loading the boundwith relationship file. {exception}",
+                self.task_config.boundwith_relationship_file_path,
+            ) from exception
 
     def wrap_up(self):
         logger.info("Done. Transformer wrapping up...")
