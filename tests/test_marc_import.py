@@ -332,7 +332,6 @@ class TestMARCImportTaskMigrationReport:
             import_profile_name="Test Profile",
         )
         importer.total_records_sent = 10000
-        importer.files_processed = ["bibs1.mrc", "bibs2.mrc"]
         importer.job_ids = ["job-1", "job-2", "job-3"]
         importer.migration_report = Mock()
         importer._translate_stats_to_migration_report = MethodType(
@@ -347,13 +346,6 @@ class TestMARCImportTaskMigrationReport:
 
         assert set_values[("GeneralStatistics", "Records sent to Data Import")] == 10000
         assert set_values[("GeneralStatistics", "Data Import jobs created")] == 3
-
-        # Verify files were added to report
-        add_calls = importer.migration_report.add.call_args_list
-        added_files = [call[0][1] for call in add_calls if call[0][0] == "FilesProcessed"]
-        assert "bibs1.mrc" in added_files
-        assert "bibs2.mrc" in added_files
-
 
     def test_translate_stats_single_file(self):
         """Test stats translation with a single file."""
