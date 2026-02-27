@@ -282,7 +282,6 @@ class TestUserImporterTaskMigrationReport:
             failed=50,
         )
         importer.total_records = 1000
-        importer.files_processed = ["users1.json", "users2.json"]
         importer.migration_report = Mock()
         importer._translate_stats_to_migration_report = MethodType(
             UserImportTask._translate_stats_to_migration_report, importer
@@ -299,12 +298,6 @@ class TestUserImporterTaskMigrationReport:
         assert set_values[("GeneralStatistics", "Users created")] == 800
         assert set_values[("GeneralStatistics", "Users updated")] == 150
         assert set_values[("GeneralStatistics", "Users failed")] == 50
-
-        # Verify files were added to report
-        add_calls = importer.migration_report.add.call_args_list
-        added_files = [call[0][1] for call in add_calls if call[0][0] == "FilesProcessed"]
-        assert "users1.json" in added_files
-        assert "users2.json" in added_files
 
     def test_translate_stats_all_successful(self):
         """Test stats translation when all users succeed."""

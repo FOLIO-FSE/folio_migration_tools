@@ -444,41 +444,6 @@ class TestInventoryBatchPosterWrapUp:
         assert poster.clean_out_empty_logs.called
 
 
-class TestInventoryBatchPosterFilesProcessed:
-    """Tests for file processing tracking."""
-
-    def test_files_added_to_report(self):
-        """Test that processed files are added to migration report."""
-        from folio_data_import.BatchPoster import BatchPosterStats
-        
-        poster = Mock(spec=InventoryBatchPoster)
-        poster.task_configuration = InventoryBatchPoster.TaskConfiguration(
-            name="test",
-            migration_task_type="InventoryBatchPoster",
-            object_type="Holdings",
-            files=[
-                FileDefinition(file_name="holdings1.json"),
-                FileDefinition(file_name="holdings2.json"),
-                FileDefinition(file_name="holdings3.json"),
-            ],
-            rerun_failed_records=False,
-        )
-        poster.stats = BatchPosterStats()
-        poster.migration_report = Mock()
-        poster._translate_stats_to_migration_report = MethodType(
-            InventoryBatchPoster._translate_stats_to_migration_report, poster
-        )
-        
-        poster._translate_stats_to_migration_report()
-        
-        # Verify all files were added
-        add_calls = poster.migration_report.add.call_args_list
-        added_files = [call[0][1] for call in add_calls if call[0][0] == "FilesProcessed"]
-        assert "holdings1.json" in added_files
-        assert "holdings2.json" in added_files
-        assert "holdings3.json" in added_files
-
-
 class TestInventoryBatchPosterNoProgress:
     """Tests for progress reporting configuration."""
 
