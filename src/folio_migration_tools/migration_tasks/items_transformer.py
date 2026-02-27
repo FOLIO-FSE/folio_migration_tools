@@ -333,6 +333,7 @@ class ItemsTransformer(MigrationTaskBase):
             self.library_configuration,
             self.task_configuration,
         )
+        self._validate_boundwith_relationships()
         if (
             self.task_configuration.reset_hrid_settings
             and self.task_configuration.update_hrid_settings
@@ -528,6 +529,13 @@ class ItemsTransformer(MigrationTaskBase):
             ) from ve
 
     def _load_aleph_boundwith_relationships(self):
+        """Load Aleph-style boundwith relationships from TSV file.
+
+        Loads raw relationship data into boundwith_relationship_map without
+        validating against the holdings ID map. Validation is deferred to
+        _validate_aleph_boundwith_relationships, which must be called after
+        the mapper (and its holdings_id_map) is available.
+        """
         try:
             with open(
                 self.folder_structure.legacy_records_folder
@@ -536,17 +544,9 @@ class ItemsTransformer(MigrationTaskBase):
                 for line in csv.DictReader(boundwith_relationship_file, delimiter="\t"):
                     mfhd_id = line.get("LKR_HOL", "").strip()
                     item_legacy_id = line.get("ITEM_REC_KEY", "").strip()
-                    if mfhd_id not in self.mapper.holdings_id_map:
-                        Helper.log_data_issue_failed(
-                            item_legacy_id,
-                            "Holdings for boundwith relationship not found in holdings id map",
-                            mfhd_id,
-                        )
-                        continue
-                    else:
-                        self.boundwith_relationship_map[item_legacy_id] = (
-                            self.boundwith_relationship_map.get(item_legacy_id, set()).add(mfhd_id)
-                        )
+                    holdings_ids = self.boundwith_relationship_map.get(item_legacy_id, set())
+                    holdings_ids.add(mfhd_id)
+                    self.boundwith_relationship_map[item_legacy_id] = holdings_ids
         except FileNotFoundError as fnfe:
             raise TransformationProcessError(
                 "",
@@ -559,6 +559,32 @@ class ItemsTransformer(MigrationTaskBase):
                 f"An error occurred while loading the boundwith relationship file. {exception}",
                 self.task_config.boundwith_relationship_file_path,
             ) from exception
+
+    def _validate_boundwith_relationships(self):
+        """Validate boundwith relationships against the holdings ID map.
+
+        For Aleph-flavor boundwiths, removes any holdings IDs from the
+        boundwith_relationship_map that are not present in the mapper's
+        holdings_id_map, and logs data issues for each missing ID.
+        No-op for other flavors. Must be called after the mapper is instantiated.
+        """
+        if self.task_configuration.boundwith_flavor != IlsFlavour.aleph:
+            return
+        for item_legacy_id, holdings_ids in self.boundwith_relationship_map.items():
+            valid_ids = set()
+            for mfhd_id in holdings_ids:
+                if mfhd_id not in self.mapper.holdings_id_map:
+                    Helper.log_data_issue_failed(
+                        item_legacy_id,
+                        "Holdings for boundwith relationship not found in holdings id map",
+                        mfhd_id,
+                    )
+                else:
+                    valid_ids.add(mfhd_id)
+            if valid_ids:
+                self.boundwith_relationship_map[item_legacy_id] = valid_ids
+            else:
+                del self.boundwith_relationship_map[item_legacy_id]
 
     def wrap_up(self):
         logger.info("Done. Transformer wrapping up...")
