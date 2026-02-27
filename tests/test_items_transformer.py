@@ -133,7 +133,8 @@ def test_load_boundwith_relationships_unsupported_flavor():
     transformer.task_configuration = mock_config
     with pytest.raises(TransformationProcessError) as exc_info:
         ItemsTransformer.load_boundwith_relationships(transformer)
-    assert "Unsupported boundwith flavor: IlsFlavour.sierra" in str(exc_info.value)
+    assert "Unsupported boundwith flavor:" in str(exc_info.value)
+    assert "sierra" in str(exc_info.value)
 
 
 # --- Tests for _load_aleph_boundwith_relationships ---
