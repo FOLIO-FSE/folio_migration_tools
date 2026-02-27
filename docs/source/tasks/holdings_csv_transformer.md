@@ -42,6 +42,7 @@ Transform delimited (CSV/TSV) data into FOLIO Holdings records. Use this when yo
 | `callNumberTypeMapFileName` | string | No | TSV file mapping call number types |
 | `holdingsTypeMapFileName` | string | No | TSV file mapping holdings types |
 | `statisticalCodeMapFileName` | string | No | TSV file mapping statistical codes |
+| `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith holdings (enables automatic boundwith handling) |
 | `previouslyGeneratedHoldingsFiles` | array | No | List of previous holdings result files to avoid duplicates |
 | `files` | array | Yes | List of source data files to process |
 
@@ -187,6 +188,44 @@ When you have both MFHD-derived holdings and need additional holdings from items
         }
     ]
 }
+```
+
+## Boundwith Handling
+
+The HoldingsCsvTransformer handles boundwith relationships automatically when an item maps to **multiple instance IDs** (i.e., the source data row resolves to more than one bib). You may see these referred to as "Sierra-style boundwiths" or "Millenium-style boundwiths". This differs from the MFHD-based approach used by [HoldingsMarcTransformer](holdings_marc_transformer), which requires a separate boundwith relationship file.
+
+### How It Works
+
+When a source data row maps to multiple instances:
+
+1. A primary holdings record is created for the first instance.
+2. Additional holdings records are generated for each subsequent instance, with their `holdingsTypeId` set to `holdingsTypeUuidForBoundwiths`.
+3. A `boundwithPart` record is written to the extradata file linking the item to each holdings record.
+4. Boundwith holdings are excluded from the normal `holdingsMergeCriteria` merge process. Instead, they are de-duplicated using their own composite key (instance ID + location + call number + the full set of bound instance IDs). If a subsequent row produces the same boundwith key, it is merged into the existing boundwith holdings record rather than creating a duplicate.
+
+### Configuration
+
+To enable boundwith handling, set the `holdingsTypeUuidForBoundwiths` parameter to the UUID of the appropriate holdings type from your FOLIO tenant (found under Settings → Inventory → Holdings types):
+
+```json
+{
+    "name": "transform_csv_holdings",
+    "migrationTaskType": "HoldingsCsvTransformer",
+    "holdingsMapFileName": "holdings_mapping.json",
+    "locationMapFileName": "locations.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
+    "fallbackHoldingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
+    "holdingsTypeUuidForBoundwiths": "1b6c62cf-034c-4972-ac80-fa595a9bfbde",
+    "files": [
+        {
+            "file_name": "items.tsv"
+        }
+    ]
+}
+```
+
+```{note}
+No `boundwithFlavor` or `boundwithRelationshipFilePath` is needed for the CSV transformer. Boundwith detection is automatic based on multiple instance IDs in the source data.
 ```
 
 ## Running the Task
