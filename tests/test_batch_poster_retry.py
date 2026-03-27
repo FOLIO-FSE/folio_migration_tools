@@ -39,7 +39,8 @@ def create_batch_poster():
     batch_poster = Mock(spec=BatchPoster)
     batch_poster.folio_client = Mock(spec=FolioClient)
     
-    batch_poster.semaphore = asyncio.Semaphore(10)
+    batch_poster._semaphore = None
+    batch_poster._max_concurrent_requests = 10
     
     # Bind the actual get_with_retry method to the mock
     batch_poster.get_with_retry = MethodType(BatchPoster.get_with_retry, batch_poster)
