@@ -76,8 +76,7 @@ async def test_get_with_retry_successful():
     batch_poster.folio_client = Mock(spec=FolioClient)
     batch_poster.folio_client.folio_get_async = AsyncMock(return_value=mock_response_data)
     batch_poster.get_with_retry = Mock(wraps=BatchPoster.get_with_retry)
-    batch_poster._semaphore = None
-    batch_poster._max_concurrent_requests = 10
+    batch_poster._semaphore = asyncio.Semaphore(10)
     
     # Define test inputs
     query_api = "/instance-storage/instances"
@@ -109,6 +108,7 @@ async def test_set_version_async():
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -181,6 +181,7 @@ async def test_set_version_async_preserve_status_false():
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -253,6 +254,7 @@ async def test_set_version_async_one_existing_items():
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -328,6 +330,7 @@ async def test_set_version_async_preserve_temporary_locations():
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -398,6 +401,7 @@ async def test_set_version_async_preserve_temporary_loan_types():
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -469,6 +473,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -545,6 +550,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -631,6 +637,7 @@ async def test_set_version_async_source_marc_instance():
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -732,6 +739,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_statistica
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -833,6 +841,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_administra
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -939,6 +948,7 @@ async def test_set_version_async_patch_object_with_patch_paths_no_preserve():
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -1051,6 +1061,7 @@ async def test_set_version_async_patch_object_with_patch_paths_preserve_statisti
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -1167,6 +1178,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_preserve_stati
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
@@ -1283,6 +1295,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_no_preserve_st
 
     # Create an instance of the BatchPoster class
     batch_poster = create_autospec(spec=BatchPoster)
+    batch_poster._max_concurrent_requests = 10
     batch_poster.task_configuration = Mock()
     batch_poster.task_configuration = BatchPoster.TaskConfiguration(
         name="Test Task",
