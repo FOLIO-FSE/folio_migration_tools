@@ -362,8 +362,11 @@ class BatchPoster(MigrationTaskBase):
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
-            asyncio.set_event_loop(None)  # Reset the event loop
+            try:
+                loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
+            finally:
+                loop.close()
+                asyncio.set_event_loop(None)
         else:
             loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
 
