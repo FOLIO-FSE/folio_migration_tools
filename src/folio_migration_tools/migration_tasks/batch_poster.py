@@ -382,6 +382,9 @@ class BatchPoster(MigrationTaskBase):
         fetch_tasks = []
         existing_records = {}
 
+        # Initialize the semaphore for this batch of record retrievals
+        self._semaphore = asyncio.Semaphore(self._max_concurrent_requests)
+
         for i in range(0, len(batch), fetch_batch_size):
             batch_slice = batch[i : i + fetch_batch_size]
             fetch_tasks.append(
@@ -537,8 +540,6 @@ class BatchPoster(MigrationTaskBase):
         if params is None:
             params = {}
         retries = 3
-        if self._semaphore is None:
-            self._semaphore = asyncio.Semaphore(self._max_concurrent_requests)
 
         for attempt in range(retries):
             try:
