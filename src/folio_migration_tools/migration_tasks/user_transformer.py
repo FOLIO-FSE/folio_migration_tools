@@ -199,7 +199,7 @@ class UserTransformer(MigrationTaskBase):
 
         logger.info("UserTransformer init done")
 
-    def do_work(self):
+    async def do_work(self):
         logger.info("Starting....")
         source_path = (
             self.folder_structure.legacy_records_folder / self.task_config.user_file.file_name
@@ -269,7 +269,7 @@ class UserTransformer(MigrationTaskBase):
             print(f"\n{fn}")
             sys.exit(1)
 
-    def wrap_up(self):
+    async def wrap_up(self):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             self.mapper.migration_report.write_migration_report(

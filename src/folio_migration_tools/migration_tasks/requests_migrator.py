@@ -208,7 +208,7 @@ class RequestsMigrator(MigrationTaskBase):
         )
         return True, legacy_request
 
-    def do_work(self):
+    async def do_work(self):
         logger.info("Starting")
         if self.task_configuration.starting_row > 1:
             logger.info(f"Skipping {(self.task_configuration.starting_row - 1)} records")
@@ -245,7 +245,7 @@ class RequestsMigrator(MigrationTaskBase):
                 logger.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
         logger.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
 
-    def wrap_up(self):
+    async def wrap_up(self):
         self.extradata_writer.flush()
         self.write_failed_request_to_file()
 

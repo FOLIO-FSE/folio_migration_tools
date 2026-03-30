@@ -8,7 +8,6 @@ to FOLIO's inventory storage endpoints with support for upsert operations.
 This is intended to eventually replace the existing BatchPoster implementation.
 """
 
-import asyncio
 import logging
 from typing import Annotated, List, Literal
 
@@ -256,54 +255,7 @@ class InventoryBatchPoster(MigrationTaskBase):
         self.batch_errors.append(error_message)
         self.migration_report.add("Details", error_message)
 
-    async def _do_work_async(self) -> None:
-        """Async implementation of the work logic."""
-        # Build list of file paths
-        file_paths = []
-        for file_def in self.task_configuration.files:
-            path = self.folder_structure.results_folder / file_def.file_name
-            if not path.exists():
-                logger.error("File not found: %s", path)
-                raise FileNotFoundError(f"File not found: {path}")
-            file_paths.append(path)
-            logger.info("Will process file: %s", path)
-
-        # Create the folio_data_import BatchPoster config
-        fdi_config = self._create_fdi_config()
-
-        # Create the Progress Reporter
-        if self.task_configuration.no_progress:
-            from folio_data_import._progress import NoOpProgressReporter
-
-            reporter = NoOpProgressReporter()
-        else:
-            reporter = RichProgressReporter(enabled=True)
-
-        # Create the poster with our failed records path
-        failed_records_path = self.folder_structure.failed_recs_path
-
-        poster = FDIBatchPoster(
-            folio_client=self.folio_client,
-            config=fdi_config,
-            failed_records_file=failed_records_path,
-            reporter=reporter,
-        )
-
-        async with poster:
-            # Process all files
-            self.stats = await poster.do_work(file_paths)
-
-            # If rerun is enabled and there are failures, reprocess them
-            if self.task_configuration.rerun_failed_records and self.stats.records_failed > 0:
-                logger.info(
-                    "Rerunning %s failed records one at a time",
-                    self.stats.records_failed,
-                )
-                await poster.rerun_failed_records_one_by_one()
-                # Update stats after rerun
-                self.stats = poster.get_stats()
-
-    def do_work(self) -> None:
+    async def do_work(self) -> None:
         """Main work method that processes files and posts records to FOLIO.
 
         This method reads records from the configured files and posts them
@@ -312,8 +264,50 @@ class InventoryBatchPoster(MigrationTaskBase):
         logger.info("Starting InventoryBatchPoster work...")
 
         try:
-            # Run the async work in an event loop
-            asyncio.run(self._do_work_async())
+            # Build list of file paths
+            file_paths = []
+            for file_def in self.task_configuration.files:
+                path = self.folder_structure.results_folder / file_def.file_name
+                if not path.exists():
+                    logger.error("File not found: %s", path)
+                    raise FileNotFoundError(f"File not found: {path}")
+                file_paths.append(path)
+                logger.info("Will process file: %s", path)
+
+            # Create the folio_data_import BatchPoster config
+            fdi_config = self._create_fdi_config()
+
+            # Create the Progress Reporter
+            if self.task_configuration.no_progress:
+                from folio_data_import._progress import NoOpProgressReporter
+
+                reporter = NoOpProgressReporter()
+            else:
+                reporter = RichProgressReporter(enabled=True)
+
+            # Create the poster with our failed records path
+            failed_records_path = self.folder_structure.failed_recs_path
+
+            poster = FDIBatchPoster(
+                folio_client=self.folio_client,
+                config=fdi_config,
+                failed_records_file=failed_records_path,
+                reporter=reporter,
+            )
+
+            async with poster:
+                # Process all files
+                self.stats = await poster.do_work(file_paths)
+
+                # If rerun is enabled and there are failures, reprocess them
+                if self.task_configuration.rerun_failed_records and self.stats.records_failed > 0:
+                    logger.info(
+                        "Rerunning %s failed records one at a time",
+                        self.stats.records_failed,
+                    )
+                    await poster.rerun_failed_records_one_by_one()
+                    # Update stats after rerun
+                    self.stats = poster.get_stats()
         except FileNotFoundError as e:
             logger.error("File not found: %s", e)
             raise
@@ -375,7 +369,7 @@ class InventoryBatchPoster(MigrationTaskBase):
                 self.stats.rerun_still_failed,
             )
 
-    def wrap_up(self) -> None:
+    async def wrap_up(self) -> None:
         """Finalize the migration task and write reports.
 
         This method translates statistics from the underlying BatchPoster

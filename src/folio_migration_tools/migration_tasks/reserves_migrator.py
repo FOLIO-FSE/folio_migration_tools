@@ -104,7 +104,7 @@ class ReservesMigrator(MigrationTaskBase):
         self.failed: Dict = {}
         logger.info("Init completed")
 
-    def do_work(self):
+    async def do_work(self):
         logger.info("Starting")
         for num_reserves, legacy_reserve in enumerate(self.valid_reserves, start=1):
             t0_migration = time.time()
@@ -132,7 +132,7 @@ class ReservesMigrator(MigrationTaskBase):
         except Exception as ee:
             logger.error(ee)
 
-    def wrap_up(self):
+    async def wrap_up(self):
         self.extradata_writer.flush()
         for k, v in self.failed.items():
             self.failed_and_not_dupe[k] = [v.to_dict()]
