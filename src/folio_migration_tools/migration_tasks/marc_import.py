@@ -9,7 +9,6 @@ This provides an alternative workflow for MARC record loading, using FOLIO's
 native Data Import capabilities.
 """
 
-import asyncio
 import json
 import logging
 from pathlib import Path
@@ -283,49 +282,7 @@ class MARCImportTask(MigrationTaskBase):
             ),
         )
 
-    async def _do_work_async(self) -> None:
-        """Async implementation of the work logic."""
-        file_paths: List[Path] = []
-        for file_def in self.task_configuration.files:
-            path = self.folder_structure.results_folder / file_def.file_name
-            if not path.exists():
-                logger.error("File not found: %s", path)
-                raise FileNotFoundError(f"File not found: {path}")
-            file_paths.append(path)
-            self.files_processed.append(file_def.file_name)
-            logger.info("Will process file: %s", path)
-
-        # Create the folio_data_import MARCImportJob config
-        fdi_config = self._create_fdi_config(file_paths)
-
-        # Create progress reporter
-        if self.task_configuration.no_progress:
-            from folio_data_import._progress import NoOpProgressReporter
-
-            reporter = NoOpProgressReporter()
-        else:
-            reporter = RichProgressReporter(enabled=True)
-
-        # Create and run the importer
-        # folio_data_import handles its own error files and progress reporting
-        importer = FDIMARCImportJob(
-            folio_client=self.folio_client,
-            config=fdi_config,
-            reporter=reporter,
-        )
-
-        await importer.do_work()
-        await importer.wrap_up()
-
-        # Capture stats and job IDs from the importer
-        self.total_records_sent = importer.total_records_sent
-        self.job_ids = importer.job_ids
-
-        # Note: Detailed stats (created/updated/discarded/error) are retrieved from
-        # the job summary by folio_data_import and logged via log_job_summary().
-        # We don't have direct access to those stats as they're logged, not returned.
-
-    def do_work(self) -> None:
+    async def do_work(self) -> None:
         """Main work method that processes MARC files and imports them to FOLIO.
 
         This method reads MARC records from the configured files and imports them
@@ -334,8 +291,45 @@ class MARCImportTask(MigrationTaskBase):
         logger.info("Starting MARCImportTask work...")
 
         try:
-            # Run the async work in an event loop
-            asyncio.run(self._do_work_async())
+            file_paths: List[Path] = []
+            for file_def in self.task_configuration.files:
+                path = self.folder_structure.results_folder / file_def.file_name
+                if not path.exists():
+                    logger.error("File not found: %s", path)
+                    raise FileNotFoundError(f"File not found: {path}")
+                file_paths.append(path)
+                self.files_processed.append(file_def.file_name)
+                logger.info("Will process file: %s", path)
+
+            # Create the folio_data_import MARCImportJob config
+            fdi_config = self._create_fdi_config(file_paths)
+
+            # Create progress reporter
+            if self.task_configuration.no_progress:
+                from folio_data_import._progress import NoOpProgressReporter
+
+                reporter = NoOpProgressReporter()
+            else:
+                reporter = RichProgressReporter(enabled=True)
+
+            # Create and run the importer
+            # folio_data_import handles its own error files and progress reporting
+            importer = FDIMARCImportJob(
+                folio_client=self.folio_client,
+                config=fdi_config,
+                reporter=reporter,
+            )
+
+            await importer.do_work()
+            await importer.wrap_up()
+
+            # Capture stats and job IDs from the importer
+            self.total_records_sent = importer.total_records_sent
+            self.job_ids = importer.job_ids
+
+            # Note: Detailed stats (created/updated/discarded/error) are retrieved from
+            # the job summary by folio_data_import and logged via log_job_summary().
+            # We don't have direct access to those stats as they're logged, not returned.
         except FileNotFoundError as e:
             logger.error("File not found: %s", e)
             raise
@@ -370,7 +364,7 @@ class MARCImportTask(MigrationTaskBase):
         for file_name in self.files_processed:
             self.migration_report.add("FilesProcessed", file_name)
 
-    def wrap_up(self) -> None:
+    async def wrap_up(self) -> None:
         """Finalize the migration task and write reports.
 
         This method translates statistics to the MigrationReport format and writes

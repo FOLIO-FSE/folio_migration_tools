@@ -123,7 +123,7 @@ class MigrationTaskBase:
         logger.info("MigrationTaskBase init done")
 
     @abstractmethod
-    def wrap_up(self):
+    async def wrap_up(self):
         raise NotImplementedError()
 
     def clean_out_empty_logs(self):
@@ -144,7 +144,7 @@ class MigrationTaskBase:
             logger.info("Removed empty failed marc records file since it was empty")
 
     @abstractmethod
-    def do_work(self):
+    async def do_work(self):
         raise NotImplementedError
 
     @staticmethod

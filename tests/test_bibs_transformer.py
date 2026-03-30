@@ -58,12 +58,12 @@ def test_init(mock_folder_structure, mock_check_source_files):
     'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer'
     '.do_work_marc_transformer'
 )
-def test_do_work(mock_do_work_marc_transformer, mock_folder_structure, mock_check_source_files):
+async def test_do_work(mock_do_work_marc_transformer, mock_folder_structure, mock_check_source_files):
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
     transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
     transformer.processor = MagicMock()
-    transformer.do_work()
+    await transformer.do_work()
     mock_do_work_marc_transformer.assert_called_once()
 
 
@@ -71,12 +71,12 @@ def test_do_work(mock_do_work_marc_transformer, mock_folder_structure, mock_chec
     'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer'
     '.clean_out_empty_logs'
 )
-def test_wrap_up(mock_clean_out_empty_logs, mock_folder_structure, mock_check_source_files):
+async def test_wrap_up(mock_clean_out_empty_logs, mock_folder_structure, mock_check_source_files):
     library_config = get_mocked_library_config()
     folio_client = mocked_folio_client()
     transformer = BibsTransformer(TASK_CONFIG, library_config, folio_client)
     transformer.processor = MagicMock()
-    transformer.wrap_up()
+    await transformer.wrap_up()
     mock_clean_out_empty_logs.assert_called_once()
 
 
@@ -84,7 +84,7 @@ def test_wrap_up(mock_clean_out_empty_logs, mock_folder_structure, mock_check_so
     'folio_migration_tools.migration_tasks.bibs_transformer.BibsTransformer'
     '.clean_out_empty_logs'
 )
-def test_wrap_up_writes_json_report(
+async def test_wrap_up_writes_json_report(
     mock_clean_out_empty_logs, mock_folder_structure, mock_check_source_files, tmp_path
 ):
     """Test that wrap_up writes both markdown and JSON reports."""
@@ -102,7 +102,7 @@ def test_wrap_up_writes_json_report(
     # Add some data to the migration report
     transformer.mapper.migration_report.add("GeneralStatistics", "Records processed", 100)
 
-    transformer.wrap_up()
+    await transformer.wrap_up()
 
     # Verify both files were created
     assert md_report_path.exists(), "Markdown report file should be created"

@@ -162,10 +162,10 @@ class BibsTransformer(MigrationTaskBase):
             self.mapper.hrid_handler.reset_instance_hrid_counter()
         logger.info("Init done")
 
-    def do_work(self):
+    async def do_work(self):
         self.do_work_marc_transformer()
 
-    def wrap_up(self):
+    async def wrap_up(self):
         logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         self.processor.wrap_up()

@@ -332,7 +332,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             return mapped_fields, holdings_map
 
-    def do_work(self):
+    async def do_work(self):
         logger.info("Starting....")
         for file_def in self.task_configuration.files:
             logger.info("Processing %s", file_def.file_name)
@@ -351,7 +351,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             f"{len(self.task_configuration.files)} files"
         )
 
-    def wrap_up(self):
+    async def wrap_up(self):
         logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         if any(self.holdings):

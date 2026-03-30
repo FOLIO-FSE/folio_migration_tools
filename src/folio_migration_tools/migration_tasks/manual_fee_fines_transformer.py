@@ -117,7 +117,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
             ignore_legacy_identifier=True,
         )
 
-    def do_work(self):
+    async def do_work(self):
         logger.info("Getting started!")
         for file in self.task_configuration.files:
             logger.info("Processing %s", file)
@@ -181,7 +181,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
 
                 self.print_progress(idx, start)
 
-    def wrap_up(self):
+    async def wrap_up(self):
         logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:

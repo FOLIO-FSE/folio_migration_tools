@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from unittest import mock
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -25,11 +26,11 @@ class MockTask:
         pass
 
     @staticmethod
-    def do_work():
+    async def do_work():
         pass
 
     @staticmethod
-    def wrap_up():
+    async def wrap_up():
         pass
 
     @staticmethod
@@ -39,6 +40,12 @@ class MockTask:
 
 class MockFolioClient:
     def __init__(self, *args, **kwargs):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
         pass
 
 
@@ -205,7 +212,7 @@ def test_task_name_arg_exception(insecure_inputs, secure_inputs):
 )
 def test_file_not_found():
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
 
     assert exit_info.value.args[0] == "File not found"
 
@@ -224,7 +231,7 @@ def test_file_not_found():
 )
 def test_json_fail():
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
 
     assert exit_info.value.args[0] == "Invalid JSON"
 
@@ -243,7 +250,7 @@ def test_json_fail():
 )
 def test_validation_fail():
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
     assert exit_info.value.args[0] == "JSON Not Matching Spec"
 
 
@@ -261,7 +268,7 @@ def test_validation_fail():
 )
 def test_migration_task_exhaustion():
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
     assert exit_info.value.args[0] == "Task Name Not Found"
 
 
@@ -279,7 +286,7 @@ def test_migration_task_exhaustion():
 )
 def test_task_name_type_exception():
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
     assert exit_info.value.args[0] == "Task Type Not Found"
 
 
@@ -299,8 +306,10 @@ def test_task_name_type_exception():
 @mock.patch("folio_migration_tools.__main__.inheritors", lambda x: [MockTask])
 @mock.patch("folio_migration_tools.__main__.FolioClient")
 def test_execute_task(mock_folio_client, do_work, wrap_up):
+    mock_folio_client.return_value.__aenter__ = AsyncMock(return_value=mock_folio_client.return_value)
+    mock_folio_client.return_value.__aexit__ = AsyncMock(return_value=False)
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
     assert exit_info.value.args[0] == 0
     do_work.assert_called_once()
     wrap_up.assert_called_once()
@@ -325,11 +334,13 @@ def test_execute_task(mock_folio_client, do_work, wrap_up):
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch("folio_migration_tools.__main__.FolioClient")
 def test_fail_task(mock_folio_client, do_work, wrap_up):
+    mock_folio_client.return_value.__aenter__ = AsyncMock(return_value=mock_folio_client.return_value)
+    mock_folio_client.return_value.__aexit__ = AsyncMock(return_value=False)
     do_work.side_effect = raise_exception_factory(
         TransformationProcessError, "error_message", "error_data"
     )
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
     assert exit_info.value.args[0] == 1
     do_work.assert_called_once()
     wrap_up.assert_not_called()
@@ -352,9 +363,11 @@ def test_fail_task(mock_folio_client, do_work, wrap_up):
 @mock.patch.object(MockTask, "do_work", wraps=MockTask.do_work)
 @mock.patch("folio_migration_tools.__main__.FolioClient")
 def test_fail_http(mock_folio_client, do_work, wrap_up):
+    mock_folio_client.return_value.__aenter__ = AsyncMock(return_value=mock_folio_client.return_value)
+    mock_folio_client.return_value.__aexit__ = AsyncMock(return_value=False)
     do_work.side_effect = raise_exception_factory(httpx.HTTPError, "message")
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
     assert exit_info.value.args[0] == "HTTP Not Connecting"
     do_work.assert_called_once()
     wrap_up.assert_not_called()
@@ -376,9 +389,11 @@ def test_fail_http(mock_folio_client, do_work, wrap_up):
 @mock.patch.object(MockTask, "wrap_up", wraps=MockTask.wrap_up)
 @mock.patch("folio_migration_tools.__main__.FolioClient")
 def test_fail_unhandled(mock_folio_client, wrap_up, do_work):
+    mock_folio_client.return_value.__aenter__ = AsyncMock(return_value=mock_folio_client.return_value)
+    mock_folio_client.return_value.__aexit__ = AsyncMock(return_value=False)
     do_work.side_effect = raise_exception_factory(Exception, "error_message", "error_data")
     with pytest.raises(SystemExit) as exit_info:
-        __main__.main()
+        __main__.cli()
     assert exit_info.value.args[0] == "Exception"
     do_work.assert_called_once()
     wrap_up.assert_not_called()
@@ -411,6 +426,6 @@ def test_authority_transformer_deprecation_warning(mock_prep_config):
     
     with pytest.warns(DeprecationWarning, match="The AuthorityTransformer has been removed"):
         with pytest.raises(SystemExit) as exit_info:
-            __main__.main()
+            __main__.cli()
         # Should exit with Task Type Not Found since the task doesn't exist anymore
         assert exit_info.value.args[0] == "Task Type Not Found"

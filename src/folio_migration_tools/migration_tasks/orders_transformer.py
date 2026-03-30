@@ -311,7 +311,7 @@ class OrdersTransformer(MigrationTaskBase):
                 i18n.t("TOTAL Purchase Orders created")
             )
 
-    def do_work(self):
+    async def do_work(self):
         logger.info("Getting started!")
         for file in self.files:
             logger.info("Processing %s", file)
@@ -327,7 +327,7 @@ class OrdersTransformer(MigrationTaskBase):
                 self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
                 sys.exit()
 
-    def wrap_up(self):
+    async def wrap_up(self):
         logger.info("Done. Wrapping up...")
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             logger.info(

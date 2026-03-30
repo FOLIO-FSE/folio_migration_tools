@@ -142,7 +142,7 @@ class CoursesMigrator(MigrationTaskBase):
         )
         logger.info("Init completed")
 
-    def do_work(self):
+    async def do_work(self):
         logger.info("Starting")
         full_path = (
             self.folder_structure.legacy_records_folder
@@ -189,7 +189,7 @@ class CoursesMigrator(MigrationTaskBase):
                 )
                 self.print_progress(idx, start)
 
-    def wrap_up(self):
+    async def wrap_up(self):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(

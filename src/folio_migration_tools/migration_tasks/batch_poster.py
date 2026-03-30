@@ -276,7 +276,7 @@ class BatchPoster(MigrationTaskBase):
         self._semaphore: Optional[asyncio.Semaphore] = None
         self._max_concurrent_requests = int(os.environ.get("FOLIO_MAX_CONCURRENT_REQUESTS", 10))
 
-    def do_work(self):  # noqa: C901
+    async def do_work(self):  # noqa: C901
         with open(
             self.folder_structure.failed_recs_path, "w", encoding="utf-8"
         ) as failed_recs_file:
@@ -299,7 +299,7 @@ class BatchPoster(MigrationTaskBase):
                                             row, self.processed, failed_recs_file
                                         )
                                     else:
-                                        batch = self.post_record_batch(
+                                        batch = await self.post_record_batch(
                                             batch, failed_recs_file, row
                                         )
                                 except UnicodeDecodeError as unicode_error:
@@ -341,7 +341,7 @@ class BatchPoster(MigrationTaskBase):
             finally:
                 if self.task_configuration.object_type != "Extradata" and any(batch):
                     try:
-                        self.post_batch(batch, failed_recs_file, self.processed)
+                        await self.post_batch(batch, failed_recs_file, self.processed)
                     except Exception as exception:
                         self.handle_generic_exception(
                             exception, last_row, batch, self.processed, failed_recs_file
@@ -355,22 +355,7 @@ class BatchPoster(MigrationTaskBase):
         elif json_rec["source"] == "FOLIO":
             json_rec["source"] = "CONSORTIUM-FOLIO"
 
-    def set_version(self, batch, query_api, object_type) -> None:
-        """Synchronous wrapper for set_version_async."""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
-            finally:
-                loop.close()
-                asyncio.set_event_loop(None)
-        else:
-            loop.run_until_complete(self.set_version_async(batch, query_api, object_type))
-
-    async def set_version_async(self, batch, query_api, object_type) -> None:
+    async def set_version(self, batch, query_api, object_type) -> None:
         """Fetches the current version of the records in the batch if the record exists in FOLIO.
 
         Args:
@@ -585,7 +570,7 @@ class BatchPoster(MigrationTaskBase):
                         logger.error(f"HTTP {status_code} error (not retryable): {e}")
                     raise
 
-    def post_record_batch(self, batch, failed_recs_file, row):
+    async def post_record_batch(self, batch, failed_recs_file, row):
         json_rec = json.loads(row.split("\t")[-1])
         if self.task_configuration.object_type == "ShadowInstances":
             self.set_consortium_source(json_rec)
@@ -593,7 +578,7 @@ class BatchPoster(MigrationTaskBase):
             logger.info(json.dumps(json_rec, indent=True))
         batch.append(json_rec)
         if len(batch) == int(self.batch_size):
-            self.post_batch(batch, failed_recs_file, self.processed)
+            await self.post_batch(batch, failed_recs_file, self.processed)
             batch = []
         return batch
 
@@ -723,9 +708,11 @@ class BatchPoster(MigrationTaskBase):
         traceback.print_exc()  # type: ignore
         logger.info("=======================")
 
-    def post_batch(self, batch, failed_recs_file, num_records):
+    async def post_batch(self, batch, failed_recs_file, num_records):
         if self.query_params.get("upsert", False) and self.api_info.get("query_endpoint", ""):
-            self.set_version(batch, self.api_info["query_endpoint"], self.api_info["object_name"])
+            await self.set_version(
+                batch, self.api_info["query_endpoint"], self.api_info["object_name"]
+            )
         response = self.do_post(batch)
         if response.status_code == 401:
             logger.error("Authorization failed (%s). Fetching new auth token...", response.text)
@@ -877,7 +864,7 @@ class BatchPoster(MigrationTaskBase):
                 self.task_configuration.object_type,
             )
 
-    def wrap_up(self):
+    async def wrap_up(self):
         logger.info("Done. Wrapping up")
         self.extradata_writer.flush()
         if self.task_configuration.object_type != "Extradata":
@@ -922,7 +909,7 @@ class BatchPoster(MigrationTaskBase):
                 f"Discrepancy in record count {run}",
                 discrepancy,
             )
-        self.rerun_run()
+        await self.rerun_run()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
                 f"{self.task_configuration.object_type} loading report",
@@ -933,7 +920,7 @@ class BatchPoster(MigrationTaskBase):
             self.migration_report.write_json_report(raw_report_file)
         self.clean_out_empty_logs()
 
-    def rerun_run(self):
+    async def rerun_run(self):
         if self.task_configuration.rerun_failed_records and (self.num_failures > 0):
             logger.info(
                 "Rerunning the %s failed records from the load with a batchsize of 1",
@@ -956,8 +943,8 @@ class BatchPoster(MigrationTaskBase):
                 self.performing_rerun = True
                 self.migration_report = temp_report
                 self.start_datetime = temp_start
-                self.do_work()
-                self.wrap_up()
+                await self.do_work()
+                await self.wrap_up()
                 logger.info("Done rerunning the posting")
             except Exception as ee:
                 logger.exception("Occurred during rerun")

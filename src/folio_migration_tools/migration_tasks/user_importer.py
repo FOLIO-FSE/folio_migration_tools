@@ -9,7 +9,6 @@ This provides an alternative to posting users via BatchPoster with the
 /user-import endpoint, offering more granular control and better error handling.
 """
 
-import asyncio
 import logging
 from pathlib import Path
 from typing import Annotated, List, Literal
@@ -201,56 +200,7 @@ class UserImportTask(MigrationTaskBase):
             no_progress=self.task_configuration.no_progress,
         )
 
-    async def _do_work_async(self) -> None:
-        """Async implementation of the work logic."""
-        # Build list of file paths
-        file_paths: List[Path] = []
-        for file_def in self.task_configuration.files:
-            path = self.folder_structure.results_folder / file_def.file_name
-            if not path.exists():
-                logger.error("File not found: %s", path)
-                raise FileNotFoundError(f"File not found: {path}")
-            file_paths.append(path)
-            self.files_processed.append(file_def.file_name)
-            logger.info("Will process file: %s", path)
-
-        # Count total records for reporting
-        for file_path in file_paths:
-            with open(file_path, "rb") as f:
-                self.total_records += sum(
-                    buf.count(b"\n") for buf in iter(lambda: f.read(1024 * 1024), b"")
-                )
-
-        # Create the folio_data_import UserImporter config
-        fdi_config = self._create_fdi_config(file_paths)
-
-        # Create Progress Reporter
-        if self.task_configuration.no_progress:
-            from folio_data_import._progress import NoOpProgressReporter
-
-            reporter = NoOpProgressReporter()
-        else:
-            reporter = RichProgressReporter(enabled=True)
-
-        # Error file path
-        error_file_path = self.folder_structure.failed_recs_path
-
-        # Create and run the importer
-        importer = FDIUserImporter(
-            folio_client=self.folio_client,
-            config=fdi_config,
-            reporter=reporter,
-        )
-
-        await importer.setup(error_file_path)
-
-        try:
-            await importer.do_import()
-            self.stats = importer.stats
-        finally:
-            await importer.close()
-
-    def do_work(self) -> None:
+    async def do_work(self) -> None:
         """Main work method that processes files and imports users to FOLIO.
 
         This method reads user records from the configured files and imports them
@@ -260,8 +210,52 @@ class UserImportTask(MigrationTaskBase):
         logger.info("Starting UserImportTask work...")
 
         try:
-            # Run the async work in an event loop
-            asyncio.run(self._do_work_async())
+            # Build list of file paths
+            file_paths: List[Path] = []
+            for file_def in self.task_configuration.files:
+                path = self.folder_structure.results_folder / file_def.file_name
+                if not path.exists():
+                    logger.error("File not found: %s", path)
+                    raise FileNotFoundError(f"File not found: {path}")
+                file_paths.append(path)
+                self.files_processed.append(file_def.file_name)
+                logger.info("Will process file: %s", path)
+
+            # Count total records for reporting
+            for file_path in file_paths:
+                with open(file_path, "rb") as f:
+                    self.total_records += sum(
+                        buf.count(b"\n") for buf in iter(lambda: f.read(1024 * 1024), b"")
+                    )
+
+            # Create the folio_data_import UserImporter config
+            fdi_config = self._create_fdi_config(file_paths)
+
+            # Create Progress Reporter
+            if self.task_configuration.no_progress:
+                from folio_data_import._progress import NoOpProgressReporter
+
+                reporter = NoOpProgressReporter()
+            else:
+                reporter = RichProgressReporter(enabled=True)
+
+            # Error file path
+            error_file_path = self.folder_structure.failed_recs_path
+
+            # Create and run the importer
+            importer = FDIUserImporter(
+                folio_client=self.folio_client,
+                config=fdi_config,
+                reporter=reporter,
+            )
+
+            await importer.setup(error_file_path)
+
+            try:
+                await importer.do_import()
+                self.stats = importer.stats
+            finally:
+                await importer.close()
         except FileNotFoundError as e:
             logger.error("File not found: %s", e)
             raise
@@ -305,7 +299,7 @@ class UserImportTask(MigrationTaskBase):
         for file_name in self.files_processed:
             self.migration_report.add("FilesProcessed", file_name)
 
-    def wrap_up(self) -> None:
+    async def wrap_up(self) -> None:
         """Finalize the migration task and write reports.
 
         This method translates statistics from the underlying UserImporter
