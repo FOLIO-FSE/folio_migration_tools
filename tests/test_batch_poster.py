@@ -96,7 +96,7 @@ async def test_get_with_retry_successful():
 
 
 @pytest.mark.asyncio
-async def test_set_version_async():
+async def test_set_version():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -126,7 +126,7 @@ async def test_set_version_async():
         preserve_temporary_loan_types=False,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -159,7 +159,7 @@ async def test_set_version_async():
     object_type = "instances"
 
     # Act
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -169,7 +169,7 @@ async def test_set_version_async():
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_preserve_status_false():
+async def test_set_version_preserve_status_false():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -200,7 +200,7 @@ async def test_set_version_async_preserve_status_false():
         preserve_item_status=False
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -233,7 +233,7 @@ async def test_set_version_async_preserve_status_false():
     object_type = "instances"
 
     # Act
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -243,7 +243,7 @@ async def test_set_version_async_preserve_status_false():
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_one_existing_items():
+async def test_set_version_one_existing_items():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -272,7 +272,7 @@ async def test_set_version_async_one_existing_items():
         preserve_temporary_loan_types=False,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -305,7 +305,7 @@ async def test_set_version_async_one_existing_items():
     object_type = "items"
 
     # Act
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -315,7 +315,7 @@ async def test_set_version_async_one_existing_items():
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_preserve_temporary_locations():
+async def test_set_version_preserve_temporary_locations():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -348,7 +348,7 @@ async def test_set_version_async_preserve_temporary_locations():
         preserve_temporary_loan_types=False,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -377,7 +377,7 @@ async def test_set_version_async_preserve_temporary_locations():
     query_api = "/item-storage/items"
     object_type = "items"
 
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -386,7 +386,7 @@ async def test_set_version_async_preserve_temporary_locations():
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_preserve_temporary_loan_types():
+async def test_set_version_preserve_temporary_loan_types():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -419,7 +419,7 @@ async def test_set_version_async_preserve_temporary_loan_types():
         preserve_temporary_loan_types=True,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -448,7 +448,7 @@ async def test_set_version_async_preserve_temporary_loan_types():
     query_api = "/item-storage/items"
     object_type = "items"
 
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -457,7 +457,7 @@ async def test_set_version_async_preserve_temporary_loan_types():
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_preserve_administrative_notes_and_statistical_codes():
+async def test_set_version_preserve_administrative_notes_and_statistical_codes():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -491,7 +491,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
         preserve_temporary_loan_types=False,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -526,7 +526,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
     query_api = "/item-storage/items"
     object_type = "items"
 
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -536,7 +536,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_preserve_administrative_notes_and_statistical_codes_no_existing_codes_or_notes():
+async def test_set_version_preserve_administrative_notes_and_statistical_codes_no_existing_codes_or_notes():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -568,7 +568,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
         preserve_temporary_loan_types=False,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -603,7 +603,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
     query_api = "/item-storage/items"
     object_type = "items"
 
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -613,7 +613,7 @@ async def test_set_version_async_preserve_administrative_notes_and_statistical_c
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_source_marc_instance():
+async def test_set_version_source_marc_instance():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -655,7 +655,7 @@ async def test_set_version_async_source_marc_instance():
         preserve_temporary_loan_types=False,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -693,7 +693,7 @@ async def test_set_version_async_source_marc_instance():
     query_api = "/instance-storage/instances"
     object_type = "instances"
 
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -715,7 +715,7 @@ async def test_set_version_async_source_marc_instance():
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_source_marc_instance_do_not_preserve_statistical_codes():
+async def test_set_version_source_marc_instance_do_not_preserve_statistical_codes():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -757,7 +757,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_statistica
         preserve_temporary_loan_types=False,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -795,7 +795,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_statistica
     query_api = "/instance-storage/instances"
     object_type = "instances"
 
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -817,7 +817,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_statistica
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_source_marc_instance_do_not_preserve_administrative_notes():
+async def test_set_version_source_marc_instance_do_not_preserve_administrative_notes():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -859,7 +859,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_administra
         preserve_temporary_loan_types=False,
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -901,7 +901,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_administra
     query_api = "/instance-storage/instances"
     object_type = "instances"
 
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -924,7 +924,7 @@ async def test_set_version_async_source_marc_instance_do_not_preserve_administra
     assert batch[1]["title"] == "Test Title 2"
 
 @pytest.mark.asyncio
-async def test_set_version_async_patch_object_with_patch_paths_no_preserve():
+async def test_set_version_patch_object_with_patch_paths_no_preserve():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -968,7 +968,7 @@ async def test_set_version_async_patch_object_with_patch_paths_no_preserve():
         patch_paths=["statisticalCodeIds[1]", "subObject.subObjectField"]
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -1013,7 +1013,7 @@ async def test_set_version_async_patch_object_with_patch_paths_no_preserve():
     query_api = "/item-storage/items"
     object_type = "items"
 
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
 
     # Assert
     assert batch[0]["_version"] == 1
@@ -1037,7 +1037,7 @@ async def test_set_version_async_patch_object_with_patch_paths_no_preserve():
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_patch_object_with_patch_paths_preserve_statistical_codes_and_administrative_notes():
+async def test_set_version_patch_object_with_patch_paths_preserve_statistical_codes_and_administrative_notes():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -1081,7 +1081,7 @@ async def test_set_version_async_patch_object_with_patch_paths_preserve_statisti
         patch_paths=["statisticalCodeIds[1]", "subObject.subObjectField"]
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -1127,7 +1127,7 @@ async def test_set_version_async_patch_object_with_patch_paths_preserve_statisti
     ]
     query_api = "/item-storage/items"
     object_type = "items"
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
     # Assert
     assert batch[0]["_version"] == 1
     assert batch[1]["_version"] == 2
@@ -1152,7 +1152,7 @@ async def test_set_version_async_patch_object_with_patch_paths_preserve_statisti
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_patch_object_with_no_patch_paths_preserve_statistical_codes_and_administrative_notes():
+async def test_set_version_patch_object_with_no_patch_paths_preserve_statistical_codes_and_administrative_notes():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -1198,7 +1198,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_preserve_stati
         patch_paths=[]
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -1240,7 +1240,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_preserve_stati
     ]
     query_api = "/item-storage/items"
     object_type = "items"
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
     # Assert
     assert batch[0]["_version"] == 1
     assert batch[1]["_version"] == 2
@@ -1269,7 +1269,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_preserve_stati
 
 
 @pytest.mark.asyncio
-async def test_set_version_async_patch_object_with_no_patch_paths_no_preserve_statistical_codes_and_administrative_notes():
+async def test_set_version_patch_object_with_no_patch_paths_no_preserve_statistical_codes_and_administrative_notes():
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -1315,7 +1315,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_no_preserve_st
         patch_paths=[]
     )
     batch_poster.folio_client = Mock(spec=FolioClient)
-    batch_poster.set_version_async = Mock(wraps=BatchPoster.set_version_async)
+    batch_poster.set_version = Mock(wraps=BatchPoster.set_version)
     batch_poster.get_with_retry = AsyncMock(return_value=mock_response.json.return_value)
     batch_poster.prepare_record_for_upsert = MethodType(
         BatchPoster.prepare_record_for_upsert, batch_poster
@@ -1357,7 +1357,7 @@ async def test_set_version_async_patch_object_with_no_patch_paths_no_preserve_st
     ]
     query_api = "/item-storage/items"
     object_type = "items"
-    await batch_poster.set_version_async(batch_poster, batch, query_api, object_type)
+    await batch_poster.set_version(batch_poster, batch, query_api, object_type)
     # Assert
     assert batch[0]["_version"] == 1
     assert batch[1]["_version"] == 2
@@ -1385,23 +1385,67 @@ async def test_set_version_async_patch_object_with_no_patch_paths_no_preserve_st
     assert batch[0]["subObject"]["subObjectField"] == "subObjectValue"
 
 
-def test_set_version():
-    # Mock the asynchronous function
-    with patch(
-        "folio_migration_tools.migration_tasks.batch_poster.BatchPoster.set_version_async"
-    ) as mock_async:
-        mock_async.return_value = None
+@pytest.mark.asyncio
+async def test_set_version_delegates_to_get_with_retry():
+    """Test that set_version calls get_with_retry and updates batch records."""
+    mock_response = {
+        "instances": [
+            {"id": "record1", "_version": 1},
+            {"id": "record2", "_version": 2},
+        ]
+    }
 
-        batch_poster_task = create_autospec(spec=BatchPoster)
-        batch_poster_task.set_version_async = mock_async
-        batch_poster_task.set_version = Mock(wraps=BatchPoster.set_version)
+    batch_poster_task = create_autospec(spec=BatchPoster)
+    batch_poster_task._max_concurrent_requests = 10
+    batch_poster_task.task_configuration = BatchPoster.TaskConfiguration(
+        name="Test Task",
+        migration_task_type="Test Type",
+        object_type="Test Object",
+        files=[],
+        batch_size=100,
+        rerun_failed_records=True,
+        use_safe_inventory_endpoints=True,
+        extradata_endpoints={},
+        upsert=False,
+        preserve_statistical_codes=False,
+        preserve_administrative_notes=False,
+        preserve_temporary_locations=False,
+        preserve_temporary_loan_types=False,
+    )
+    batch_poster_task.folio_client = Mock(spec=FolioClient)
+    batch_poster_task.set_version = Mock(wraps=BatchPoster.set_version)
+    batch_poster_task.get_with_retry = AsyncMock(return_value=mock_response)
+    batch_poster_task.prepare_record_for_upsert = MethodType(
+        BatchPoster.prepare_record_for_upsert, batch_poster_task
+    )
+    batch_poster_task.collect_existing_records_for_upsert = (
+        BatchPoster.collect_existing_records_for_upsert
+    )
+    batch_poster_task.handle_upsert_for_statistical_codes = MethodType(
+        BatchPoster.handle_upsert_for_statistical_codes, batch_poster_task
+    )
+    batch_poster_task.handle_upsert_for_administrative_notes = MethodType(
+        BatchPoster.handle_upsert_for_administrative_notes, batch_poster_task
+    )
+    batch_poster_task.handle_upsert_for_temporary_locations = MethodType(
+        BatchPoster.handle_upsert_for_temporary_locations, batch_poster_task
+    )
+    batch_poster_task.handle_upsert_for_temporary_loan_types = MethodType(
+        BatchPoster.handle_upsert_for_temporary_loan_types, batch_poster_task
+    )
+    batch_poster_task.handle_source_marc = MethodType(
+        BatchPoster.patch_record, batch_poster_task
+    )
+    batch_poster_task.keep_existing_fields = MethodType(
+        BatchPoster.keep_existing_fields, batch_poster_task
+    )
 
-        batch = [{"id": "record1"}, {"id": "record2"}]
-        query_api = "/instance-storage/instances"
-        object_type = "instances"
+    batch = [{"id": "record1"}, {"id": "record2"}]
+    query_api = "/instance-storage/instances"
+    object_type = "instances"
 
-        batch_poster_task.set_version(batch_poster_task, batch, query_api, object_type)
-        mock_async.assert_called_once_with(batch, query_api, object_type)
+    await batch_poster_task.set_version(batch_poster_task, batch, query_api, object_type)
 
-        batch_poster_task.set_version(batch_poster_task, batch, query_api, object_type)
-        mock_async.assert_called_with(batch, query_api, object_type)
+    batch_poster_task.get_with_retry.assert_called_once()
+    assert batch[0]["_version"] == 1
+    assert batch[1]["_version"] == 2

@@ -345,7 +345,7 @@ class ItemsTransformer(MigrationTaskBase):
 
         logger.info("Init done")
 
-    def do_work(self):
+    async def do_work(self):
         logger.info("Starting....")
         with open(self.folder_structure.created_objects_path, "w+") as results_file:
             for file_def in self.task_config.files:
@@ -618,7 +618,7 @@ class ItemsTransformer(MigrationTaskBase):
             removed_count,
         )
 
-    def wrap_up(self):
+    async def wrap_up(self):
         logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:

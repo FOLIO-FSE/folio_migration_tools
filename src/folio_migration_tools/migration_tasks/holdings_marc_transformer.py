@@ -349,10 +349,10 @@ class HoldingsMarcTransformer(MigrationTaskBase):
             new_rules = {}
         self.mapper.integrate_supplemental_mfhd_mappings(new_rules)
 
-    def do_work(self):
+    async def do_work(self):
         self.do_work_marc_transformer()
 
-    def wrap_up(self):
+    async def wrap_up(self):
         logger.info("Done. Transformer Wrapping up...")
         self.extradata_writer.flush()
         self.processor.wrap_up()

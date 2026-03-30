@@ -5,6 +5,7 @@ files, validates parameters, instantiates appropriate task classes, and executes
 the migration workflow. Supports all transformation and loading tasks.
 """
 
+import asyncio
 import json
 import logging
 import sys
@@ -116,7 +117,7 @@ def print_version(args):
     return None
 
 
-def main():
+async def main():
     # Set up logging early with RichHandler for progress bar compatibility
     setup_logging()
 
@@ -173,7 +174,7 @@ def main():
             )
             sys.exit("Task Type Not Found")
         try:
-            with FolioClient(
+            async with FolioClient(
                 library_config.gateway_url,
                 library_config.tenant_id,
                 library_config.folio_username,
@@ -181,8 +182,8 @@ def main():
             ) as folio_client:
                 task_config = task_class.TaskConfiguration(**migration_task_config)
                 task_obj = task_class(task_config, library_config, folio_client)
-                task_obj.do_work()
-                task_obj.wrap_up()
+                await task_obj.do_work()
+                await task_obj.wrap_up()
         except TransformationProcessError as tpe:
             logger.critical(tpe.message)
             print(f"\n{tpe.message}: {tpe.data_value}")
@@ -243,5 +244,9 @@ def inheritors(base_class):
     return subclasses
 
 
+def cli():
+    asyncio.run(main())
+
+
 if __name__ == "__main__":
-    main()
+    cli()

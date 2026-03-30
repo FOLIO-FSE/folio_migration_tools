@@ -342,7 +342,7 @@ class TestUserImporterTaskDoWorkAsync:
     """Tests for the async work execution."""
 
     @pytest.mark.asyncio
-    async def test_do_work_async_file_not_found(self, mock_folder_structure):
+    async def test_do_work_file_not_found(self, mock_folder_structure):
         """Test that FileNotFoundError is raised for missing files."""
         task_config = UserImportTask.TaskConfiguration(
             name="test",
@@ -355,43 +355,56 @@ class TestUserImporterTaskDoWorkAsync:
         importer.folder_structure = mock_folder_structure
         importer.files_processed = []
         importer.total_records = 0
-        importer._do_work_async = MethodType(
-            UserImportTask._do_work_async, importer
+        importer.do_work = MethodType(
+            UserImportTask.do_work, importer
         )
         
         # Make the file not exist
         mock_folder_structure.results_folder = Path("/nonexistent/path")
         
         with pytest.raises(FileNotFoundError):
-            await importer._do_work_async()
+            await importer.do_work()
 
 
 class TestUserImporterTaskDoWork:
-    """Tests for the synchronous do_work entry point."""
+    """Tests for the async do_work entry point."""
 
-    def test_do_work_propagates_file_not_found(self):
+    @pytest.mark.asyncio
+    async def test_do_work_propagates_file_not_found(self):
         """Test that FileNotFoundError is propagated."""
         importer = Mock(spec=UserImportTask)
-        importer._do_work_async = AsyncMock(side_effect=FileNotFoundError("File not found"))
+        importer.task_configuration = Mock()
+        importer.task_configuration.files = [Mock(file_name="nonexistent.json")]
+        importer.folder_structure = Mock()
+        importer.folder_structure.results_folder = Path("/nonexistent")
+        importer.files_processed = []
+        importer.total_records = 0
         importer.do_work = MethodType(UserImportTask.do_work, importer)
         
         with pytest.raises(FileNotFoundError):
-            importer.do_work()
+            await importer.do_work()
 
-    def test_do_work_propagates_generic_exception(self):
+    @pytest.mark.asyncio
+    async def test_do_work_propagates_generic_exception(self):
         """Test that generic exceptions are propagated."""
         importer = Mock(spec=UserImportTask)
-        importer._do_work_async = AsyncMock(side_effect=RuntimeError("Something went wrong"))
+        importer.task_configuration = Mock()
+        importer.task_configuration.files = [Mock(file_name="nonexistent.json")]
+        importer.folder_structure = Mock()
+        importer.folder_structure.results_folder = Path("/nonexistent")
+        importer.files_processed = []
+        importer.total_records = 0
         importer.do_work = MethodType(UserImportTask.do_work, importer)
         
-        with pytest.raises(RuntimeError):
-            importer.do_work()
+        with pytest.raises(FileNotFoundError):
+            await importer.do_work()
 
 
 class TestUserImporterTaskWrapUp:
     """Tests for the wrap_up method."""
 
-    def test_wrap_up_writes_reports(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_wrap_up_writes_reports(self, tmp_path):
         """Test that wrap_up writes migration reports."""
         from folio_data_import.UserImport import UserImporterStats
         
@@ -417,7 +430,7 @@ class TestUserImporterTaskWrapUp:
         )
         importer.wrap_up = MethodType(UserImportTask.wrap_up, importer)
         
-        importer.wrap_up()
+        await importer.wrap_up()
         
         # Verify reports were written
         assert importer.migration_report.write_migration_report.called

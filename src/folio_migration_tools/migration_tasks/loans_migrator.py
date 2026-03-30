@@ -208,7 +208,7 @@ class LoansMigrator(MigrationTaskBase):
         else:
             logger.info("SMTP connection is disabled...")
 
-    def do_work(self):
+    async def do_work(self):
         with self.folio_client.get_folio_http_client() as self.http_client:
             logger.info("Starting")
             starting_index = (
@@ -320,7 +320,7 @@ class LoansMigrator(MigrationTaskBase):
             self.update_open_loan(res_checkout.folio_loan, legacy_loan)
             self.migration_report.add_general_statistics(i18n_t("Updated renewal count for loan"))
 
-    def wrap_up(self):
+    async def wrap_up(self):
         for k, v in self.failed.items():
             self.failed_and_not_dupe[k] = [v if isinstance(v, dict) else v.to_dict()]
         print(f"Wrapping up. Unique loans in failed:{len(self.failed_and_not_dupe)}")
