@@ -258,7 +258,80 @@ LKR_HOL	ITEM_REC_KEY
 }
 ```
 
+Extract the LKR boundwith relationships via SQL from the database using a query like this:
 
+```sql
+-- Note: You will need to replace "XXX" or "xxx" in this query with the appropriate collection table prefix
+-- Note: You may need to adjust enumeration and chronology matching to account for local practices
+-- Credit: Aaron Bales and the team at University of Notre Dame Libraries for developing this example
+WITH ITEM AS (
+    SELECT item.Z30_REC_KEY AS ITEM_REC_KEY, item.z30_barcode AS BARCODE,
+      LPAD(MAP.Z103_LKR_DOC_NUMBER ,9,'0') AS ITM_ADM ,
+      item.Z30_SUB_LIBRARY AS sublib, item.Z30_COLLECTION AS collection ,
+      item.Z30_HOL_DOC_NUMBER_X AS ITEM_HOL ,
+      SUBSTR(MAP.Z103_REC_KEY_1 ,6,9) AS LKR_BIB ,
+      MAP.Z103_ENUMERATION_A AS LKR_ENUM_A, ITEM.Z30_ENUMERATION_A AS ENUM_A,
+      MAP.Z103_ENUMERATION_B AS LKR_ENUM_B, ITEM.Z30_ENUMERATION_B AS ENUM_B,
+      MAP.Z103_ENUMERATION_C AS LKR_ENUM_C, ITEM.Z30_ENUMERATION_C AS ENUM_C
+    FROM xxx01.z103 MAP INNER JOIN XXX50.Z30 item ON
+        SUBSTR(MAP.Z103_REC_KEY_1 ,1,5) = 'XXX01'
+        AND MAP.Z103_LKR_TYPE = 'ITM'
+        AND SUBSTR(item.Z30_REC_KEY ,1,9) = LPAD(MAP.Z103_LKR_DOC_NUMBER ,9,'0')
+        AND COALESCE(MAP.Z103_ENUMERATION_A,'null') = COALESCE(item.Z30_ENUMERATION_A ,'null')
+        AND COALESCE(MAP.Z103_ENUMERATION_B,'null') = COALESCE(item.Z30_ENUMERATION_B ,'null')
+        AND COALESCE(MAP.Z103_ENUMERATION_C,'null') = COALESCE(item.Z30_ENUMERATION_C ,'null')
+), BIB AS (
+    SELECT ITEM.ITEM_REC_KEY , ITEM.BARCODE , ITEM.ITM_ADM , ITEM.SUBLIB , ITEM.COLLECTION ,
+        bib.Z13_REC_KEY AS ITEM_BIB, item.ITEM_HOL ,
+        ITEM.ENUM_A , ITEM.ENUM_B , ITEM.ENUM_C ,
+        item.LKR_BIB
+    FROM ITEM LEFT JOIN xxx01.z103 
+        ON ITEM.ITM_ADM = SUBSTR(z103_rec_key,6,9) 
+        AND SUBSTR(z103_rec_key,1,5) = 'XXX50'
+    LEFT JOIN xxx01.z13 BIB 
+        ON SUBSTR(z103_rec_key_1,6.9) = z13_rec_key
+), DATA AS (
+    SELECT bib.*, hol.Z00R_DOC_NUMBER AS LKR_HOL, loc.Z00R_DOC_NUMBER LOC_HOL
+    FROM BIB
+    LEFT JOIN XXX60.Z00R hol ON (
+        SUBSTR(hol.Z00R_FIELD_CODE ,1,3) = 'LKR'
+        AND lpad(REPLACE(REGEXP_SUBSTR(hol.Z00R_TEXT ,'\$\$b[^$]*'),'$$b'),9,'0') = bib.LKR_BIB
+    )
+    LEFT JOIN XXX60.Z00R loc ON (
+        SUBSTR(loc.Z00R_FIELD_CODE ,1,3) = '852'
+        AND hol.Z00R_DOC_NUMBER = loc.Z00R_DOC_NUMBER
+        AND bib.sublib = REPLACE(REGEXP_SUBSTR(loc.Z00R_TEXT ,'\$\$b[^$]*'),'$$b')
+        AND bib.COLLECTION = REPLACE(REGEXP_SUBSTR(loc.Z00R_TEXT ,'\$\$c[^$]*'),'$$c')
+    )
+    ORDER BY ITEM_REC_KEY , LKR_BIB
+)
+SELECT ITEM_REC_KEY , ITEM_BIB , ITEM_HOL , LKR_BIB , LKR_HOL FROM DATA ;
+```
+
+Once you have the data, you can use a dataframe library to select the needed data and export an appropriate file:
+
+```python
+# Example python script (using polars dataframe library) to generate the actual boundwith_data file
+import polars as pl
+from pathlib import Path
+
+relationship_file = Path("../iterations/iteration_1/source_data/items/raw_boundwith_data.tsv")
+
+# Create the initial lazyframe for the raw data
+boundwiths_df = pl.scan_csv(relationship_file, separator="\t", infer_schema=False, null_values=["", "[NULL]"])
+
+# We need to capture all item->holdings relationships, so we will concatenate two sub-selections
+prepped_df = pl.concat(
+    [
+        boundwiths_df.select(["ITEM_REC_KEY", "ITEM_HOL"]).rename({"ITEM_HOL": "LKR_HOL"}), boundwiths_df.select(["ITEM_REC_KEY", "LKR_HOL"])
+    ]
+)
+
+# Now, we need to export to a TSV file that can be included in the items transformer task configuration
+prepped_df.filter(
+    pl.col("LKR_HOL").is_not_null() # We can't link an item to a holdings record that doesn't exist
+).unique().sink_csv(relationship_file.parent.joinpath("item_holdings_links.tsv", separator="\t"))
+```
 
 ```{important}
 When using Aleph-style boundwiths, any `LKR_HOL` value that cannot be found in the `holdings_id_map` will be logged as a data issue and skipped. Ensure the holdings transformation has completed successfully before running the items transformation.
