@@ -58,6 +58,7 @@ Mapping statistical code data from delimited data files (CSV/TSV) is somewhat mo
 
 * A field mapping configuration that maps at least one legacy field to `statisticalCodeIds`
 * A statistical code mapping file
+* A task configuration that specifies the statistical code mapping file
 
 Here is an example field mapping and it's mapping TSV:
 
