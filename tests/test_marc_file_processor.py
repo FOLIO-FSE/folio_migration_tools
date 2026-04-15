@@ -228,3 +228,118 @@ def test_save_marc_record_no_data_import_marc_attribute():
     
     mock_mapper.save_data_import_marc_record.assert_not_called()
 
+
+def test_add_legacy_ids_to_map_returns_added_ids():
+    """Test that add_legacy_ids_to_map returns the IDs that were actually added."""
+    mock_processor = Mock(spec=MarcFileProcessor)
+    mock_processor.legacy_ids = set()
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.id_map = {}
+    mock_mapper.get_id_map_tuple.side_effect = lambda lid, rec, ot: (lid, rec["id"])
+    mock_processor.mapper = mock_mapper
+    mock_processor.object_type = FOLIONamespaces.holdings
+
+    folio_rec = {"id": "folio-uuid-1"}
+    result = MarcFileProcessor.add_legacy_ids_to_map(
+        mock_processor, folio_rec, ["legacy-1", "legacy-2"]
+    )
+
+    assert result == ["legacy-1", "legacy-2"]
+    assert "legacy-1" in mock_mapper.id_map
+    assert "legacy-2" in mock_mapper.id_map
+
+
+def test_add_legacy_ids_to_map_raises_on_duplicate_in_id_map():
+    """Test that add_legacy_ids_to_map raises when a legacy ID is already in the id_map."""
+    mock_processor = Mock(spec=MarcFileProcessor)
+    mock_processor.legacy_ids = set()
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.id_map = {"legacy-1": ("legacy-1", "existing-folio-uuid")}
+    mock_mapper.get_id_map_tuple.side_effect = lambda lid, rec, ot: (lid, rec["id"])
+    mock_processor.mapper = mock_mapper
+    mock_processor.object_type = FOLIONamespaces.holdings
+
+    folio_rec = {"id": "folio-uuid-2"}
+    with pytest.raises(TransformationRecordFailedError):
+        MarcFileProcessor.add_legacy_ids_to_map(mock_processor, folio_rec, ["legacy-1"])
+
+    # The original entry must still be in the map
+    assert mock_mapper.id_map["legacy-1"] == ("legacy-1", "existing-folio-uuid")
+
+
+def test_process_record_duplicate_does_not_remove_original_from_id_map():
+    """Test that a duplicate record does not remove the original record's entry from the id_map.
+
+    This is the core regression test for the bug where the finally block in process_record
+    would call remove_from_id_map with formerIds from a duplicate record, erroneously
+    removing the first (valid) record's entry.
+    """
+    mock_processor = Mock(spec=MarcFileProcessor)
+    mock_processor.legacy_ids = set()
+    mock_processor.records_count = 0
+    mock_processor.failed_records_count = 0
+
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.id_map = {}
+    mock_mapper.get_id_map_tuple.side_effect = lambda lid, rec, ot: (lid, rec["id"])
+    mock_mapper.migration_report = MigrationReport()
+    mock_mapper.library_configuration = Mock()
+    mock_mapper.library_configuration.failed_percentage_threshold = 20
+    mock_mapper.library_configuration.failed_records_threshold = 10
+    mock_mapper.create_source_records = False
+    mock_processor.mapper = mock_mapper
+    mock_processor.object_type = FOLIONamespaces.holdings
+    mock_processor.created_objects_file = Mock()
+
+    # Wire real implementations for methods called by process_record
+    mock_processor.process_record = lambda idx, rec, fd: MarcFileProcessor.process_record(
+        mock_processor, idx, rec, fd
+    )
+    mock_processor.add_legacy_ids_to_map = lambda rec, ids: MarcFileProcessor.add_legacy_ids_to_map(
+        mock_processor, rec, ids
+    )
+    mock_processor.get_valid_folio_record_ids = MarcFileProcessor.get_valid_folio_record_ids
+    mock_processor.exit_on_too_many_exceptions = lambda: MarcFileProcessor.exit_on_too_many_exceptions(
+        mock_processor
+    )
+
+    record_a = Record()
+    record_a.add_field(
+        Field(tag="001", data="legacy-1"),
+        Field(
+            tag="852",
+            indicators=["0", " "],
+            subfields=[Subfield(code="b", value="MAIN")],
+        ),
+    )
+    folio_rec_a = {"id": "folio-uuid-a", "formerIds": ["legacy-1"]}
+    mock_mapper.get_legacy_ids.return_value = ["legacy-1"]
+    mock_mapper.parse_record.return_value = [folio_rec_a]
+
+    file_def = FileDefinition(file_name="test.mrc")
+
+    # Process record A — should succeed
+    mock_processor.process_record(0, record_a, file_def)
+    assert "legacy-1" in mock_mapper.id_map
+
+    # Now process record B — a duplicate with the same legacy ID
+    record_b = Record()
+    record_b.add_field(
+        Field(tag="001", data="legacy-1"),
+        Field(
+            tag="852",
+            indicators=["0", " "],
+            subfields=[Subfield(code="b", value="MAIN")],
+        ),
+    )
+    folio_rec_b = {"id": "folio-uuid-b", "formerIds": ["legacy-1"]}
+    mock_mapper.parse_record.return_value = [folio_rec_b]
+
+    # process_record raises TransformationRecordFailedError for the duplicate
+    with pytest.raises(TransformationRecordFailedError):
+        mock_processor.process_record(1, record_b, file_def)
+
+    # The original record's entry must still be in the id_map
+    assert "legacy-1" in mock_mapper.id_map
+    assert mock_mapper.id_map["legacy-1"] == ("legacy-1", "folio-uuid-a")
+
