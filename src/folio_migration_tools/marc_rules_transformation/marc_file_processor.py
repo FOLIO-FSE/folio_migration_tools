@@ -80,6 +80,7 @@ class MarcFileProcessor:
         """
         success = True
         folio_recs = []
+        ids_added_to_map: List[str] = []
         self.records_count += 1
         try:
             # Transform the MARC21 to a FOLIO record
@@ -99,7 +100,9 @@ class MarcFileProcessor:
                     filtered_legacy_ids = self.get_valid_folio_record_ids(
                         legacy_ids, self.legacy_ids, self.mapper.migration_report
                     )
-                    self.add_legacy_ids_to_map(folio_rec, filtered_legacy_ids)
+                    ids_added_to_map = self.add_legacy_ids_to_map(
+                        folio_rec, filtered_legacy_ids
+                    )
 
                     if file_def.create_source_records and self.mapper.create_source_records:
                         self.save_srs_record(
@@ -139,13 +142,8 @@ class MarcFileProcessor:
             if not success:
                 self.failed_records_count += 1
                 remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
-                for folio_rec in folio_recs:
-                    if (
-                        callable(remove_from_id_map)
-                        and "folio_rec" in locals()
-                        and folio_rec.get("formerIds", "")
-                    ):
-                        self.mapper.remove_from_id_map(folio_rec.get("formerIds", []))
+                if callable(remove_from_id_map) and ids_added_to_map:
+                    self.mapper.remove_from_id_map(ids_added_to_map)
 
     def save_marc_record(
         self,
@@ -302,17 +300,33 @@ class MarcFileProcessor:
         logger.info("Transformation report written to %s", report_file.name)
         logger.info("Processor is done.")
 
-    def add_legacy_ids_to_map(self, folio_rec: Dict, filtered_legacy_ids: List[str]):
+    def add_legacy_ids_to_map(
+        self, folio_rec: Dict, filtered_legacy_ids: List[str]
+    ) -> List[str]:
+        """Add legacy IDs to the mapper's ID map.
+
+        Args:
+            folio_rec (Dict): The transformed FOLIO record.
+            filtered_legacy_ids (List[str]): Legacy IDs that passed deduplication.
+
+        Returns:
+            List[str]: The legacy IDs that were actually added to the map.
+
+        Raises:
+            TransformationRecordFailedError: If a legacy ID is already in the map.
+        """
+        added: List[str] = []
         for legacy_id in filtered_legacy_ids:
             self.legacy_ids.add(legacy_id)
             if legacy_id not in self.mapper.id_map:
                 self.mapper.id_map[legacy_id] = self.mapper.get_id_map_tuple(
                     legacy_id, folio_rec, self.object_type
                 )
-
+                added.append(legacy_id)
             else:
                 raise TransformationRecordFailedError(
                     legacy_id,
                     "Legacy ID already added to Legacy Id map.",
                     ",".join(filtered_legacy_ids),
                 )
+        return added
