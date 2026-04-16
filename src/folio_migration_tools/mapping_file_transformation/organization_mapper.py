@@ -403,11 +403,9 @@ class OrganizationMapper(MappingFileMapperBase):
         for prop in schema.get("properties", {}).values():
             if "../../common/schemas/uuid.json" in prop.get("$ref", ""):
                 prop["type"] = "string"
-            elif (
-                prop.get("type") == "array"
-                and "../../common/schemas/uuid.json"
-                in prop.get("items", {}).get("$ref", "")
-            ):
+            elif prop.get("type") == "array" and "../../common/schemas/uuid.json" in prop.get(
+                "items", {}
+            ).get("$ref", ""):
                 prop["items"]["type"] = "string"
 
     @staticmethod
