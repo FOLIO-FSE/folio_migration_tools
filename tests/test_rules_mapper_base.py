@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import logging.handlers
+import types
 from pathlib import Path
 from unittest.mock import Mock
 from uuid import uuid4
@@ -32,11 +33,8 @@ def folio_client():
     fc.folio_auth.tenant_id = "diku"
     fc.folio_username = "diku_admin"
     fc.folio_password = "admin"
-    fc.get_from_github = FolioClient.get_from_github
-    fc.get_latest_from_github = FolioClient.get_latest_from_github
-    fc.get_module_version = FolioClient.get_module_version
-    fc.get_holdings_schema = FolioClient.get_holdings_schema
-    fc.get_instance_json_schema = FolioClient.get_instance_json_schema
+    fc.get_holdings_schema = types.MethodType(FolioClient.get_holdings_schema, fc)
+    fc.get_instance_json_schema = types.MethodType(FolioClient.get_instance_json_schema, fc)
     reference_data = list(Path(__file__).parent.joinpath("test_data/reference_data").glob("*.json"))
     for ref_data in reference_data:
         with open(ref_data, "r") as f:
@@ -164,12 +162,10 @@ def test_date_from_008_holding():
     # assert holding["metadata"]["createdDate"] == "2017-03-09T00:00:00"
 
 
-def test_add_entity_to_record():
+def test_add_entity_to_record(folio_client):
     entity = {"id": "id", "type": "type"}
     rec = {}
-    latest_schema = FolioClient.get_latest_from_github(
-        "folio-org", "mod-inventory-storage", "ramls/instance.json"
-    )
+    latest_schema = folio_client.get_instance_json_schema()
     RulesMapperBase.add_entity_to_record(entity, "identifiers", rec, latest_schema)
     assert rec == {"identifiers": [{"id": "id", "type": "type"}]}
 

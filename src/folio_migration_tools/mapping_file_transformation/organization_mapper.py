@@ -325,6 +325,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
                 elif property_name_level1 == "contacts":
                     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
+                    OrganizationMapper.resolve_uuid_refs(contact_schema)
                     property_level1["items"] = contact_schema
 
                 elif property_name_level1 == "interfaces":
@@ -343,6 +344,7 @@ class OrganizationMapper(MappingFileMapperBase):
                         interface_credential_schema
                     )
 
+                    OrganizationMapper.resolve_uuid_refs(interface_schema)
                     property_level1["items"] = interface_schema
 
                 elif (
@@ -384,11 +386,29 @@ class OrganizationMapper(MappingFileMapperBase):
                     property_level1["items"] = dict(
                         property_level1["items"], **json.loads(req.text)
                     )
+                    OrganizationMapper.resolve_uuid_refs(property_level1["items"])
 
             return object_schema
 
         except httpx.HTTPError as he:
             logger.error(he)
+
+    @staticmethod
+    def resolve_uuid_refs(schema):
+        """Resolve UUID $ref entries to type 'string' in a schema's properties.
+
+        Args:
+            schema (dict): A JSON schema whose properties may contain UUID $refs.
+        """
+        for prop in schema.get("properties", {}).values():
+            if "../../common/schemas/uuid.json" in prop.get("$ref", ""):
+                prop["type"] = "string"
+            elif (
+                prop.get("type") == "array"
+                and "../../common/schemas/uuid.json"
+                in prop.get("items", {}).get("$ref", "")
+            ):
+                prop["items"]["type"] = "string"
 
     @staticmethod
     def fetch_additional_schema(folio_object):
