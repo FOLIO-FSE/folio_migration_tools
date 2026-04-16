@@ -444,7 +444,7 @@ class ItemsTransformer(MigrationTaskBase):
                     "GeneralStatistics",
                     i18n.t(
                         "Number of Legacy items in %{container}",
-                        container=file_def.get("file_name", "unknown file"),
+                        container=file_def.file_name,
                     ),
                 )
                 self.mapper.migration_report.add_general_statistics(
@@ -454,7 +454,7 @@ class ItemsTransformer(MigrationTaskBase):
                 records_in_file = idx + 1
 
             logger.info(
-                f"Done processing {file_def} containing {records_in_file:,} records. "
+                f"Done processing {file_def.file_name} containing {records_in_file:,} records. "
                 f"Total records processed: {records_in_file:,}"
             )
         self.total_records += records_in_file
