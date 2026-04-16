@@ -251,9 +251,7 @@ class BibsRulesMapper(RulesMapperBase):
 
     def get_instance_schema(self, folio_client: FolioClient):
         logger.info("Fetching Instance schema...")
-        return folio_client.get_from_github(
-            "folio-org", "mod-inventory-storage", "ramls/instance.json"
-        )
+        return folio_client.get_instance_json_schema()
 
     def handle_holdings(self, marc_record: Record):
         if "852" in marc_record:
