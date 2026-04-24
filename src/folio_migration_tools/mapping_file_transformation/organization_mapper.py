@@ -52,10 +52,27 @@ class OrganizationMapper(MappingFileMapperBase):
             phone_categories_map: Mapping of legacy to FOLIO phone categories.
         """
         # Build composite organization schema
+        release_tag = None
+        try:
+            release_tag = folio_client.get_module_version("mod-organizations-storage")
+            logger.info(
+                "Using mod-organizations-storage version from FOLIO environment: %s",
+                release_tag,
+            )
+        except Exception:
+            logger.info(
+                "Could not determine mod-organizations-storage "
+                "version, falling back to latest release"
+            )
+
         if os.environ.get("GITHUB_TOKEN"):
             logger.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
         organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-            "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
+            "folio-org",
+            "mod-organizations-storage",
+            "mod-orgs",
+            "organization",
+            release_tag,
         )
 
         super().__init__(
@@ -188,7 +205,7 @@ class OrganizationMapper(MappingFileMapperBase):
             self.organization_types_map = None
 
     @staticmethod
-    def get_latest_acq_schemas_from_github(owner, repo, module, object):
+    def get_latest_acq_schemas_from_github(owner, repo, module, object, release_tag=None):
         """Fetch acquisition object schema from GitHub with referenced schemas.
 
         Args:
@@ -196,6 +213,8 @@ class OrganizationMapper(MappingFileMapperBase):
             repo (str): GitHub repository name.
             module (str): Module name within the repository.
             object (str): Object name whose schema is to be fetched.
+            release_tag (str, optional): Specific release tag to fetch.
+                If None, fetches the latest release.
 
         Returns:
             dict: The extended object schema.
@@ -212,8 +231,8 @@ class OrganizationMapper(MappingFileMapperBase):
 
             # Start talkign to GitHub...
             github_path = "https://raw.githubusercontent.com"
-            submodules = OrganizationMapper.get_submodules_of_latest_release(
-                owner, repo, github_headers
+            submodules = OrganizationMapper.get_submodules_of_release(
+                owner, repo, github_headers, release_tag
             )
 
             # Get the sha's of sunmodules acq-models and raml_utils
@@ -234,7 +253,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
             # Fetch referenced schemas
             extended_object_schema = OrganizationMapper.build_extended_object(
-                object_schema, acq_models_path, github_headers
+                object_schema, acq_models_path, github_headers, release_tag
             )
 
             return extended_object_schema
@@ -248,28 +267,34 @@ class OrganizationMapper(MappingFileMapperBase):
             sys.exit(2)
 
     @staticmethod
-    def get_submodules_of_latest_release(owner, repo, github_headers):
-        """Get submodules associated with the latest release of a repository.
+    def get_submodules_of_release(owner, repo, github_headers, release_tag=None):
+        """Get submodules associated with a release of a repository.
 
         Args:
             owner (str): GitHub repository owner.
             repo (str): GitHub repository name.
-            github_headers (dict): Headers to use for GitHub API requests.
+            github_headers (dict): Headers for GitHub API requests.
+            release_tag (str, optional): Specific release tag.
+                If None, fetches latest.
 
         Returns:
-            list: List of submodules associated with the latest release.
+            list: List of submodules associated with the release.
         """
         github_path = "https://api.github.com/repos"
 
-        # Get metadata for the latest release
-        latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
-        req = httpx.get(f"{latest_release_path}", headers=github_headers, timeout=None)
-        req.raise_for_status()
-        latest_release = json.loads(req.text)
+        if not release_tag:
+            # Get metadata for the latest release
+            latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
+            req = httpx.get(
+                f"{latest_release_path}",
+                headers=github_headers,
+                timeout=None,
+            )
+            req.raise_for_status()
+            latest_release = json.loads(req.text)
+            release_tag = latest_release["tag_name"]
 
-        # Get the tag assigned to the latest release
-        release_tag = latest_release["tag_name"]
-        logger.info(f"Using schemas from latest {repo} release: {release_tag}")
+        logger.info(f"Using schemas from {repo} release: {release_tag}")
 
         # Get the tree for the latest release
         tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
@@ -292,13 +317,15 @@ class OrganizationMapper(MappingFileMapperBase):
         return submodules
 
     @staticmethod
-    def build_extended_object(object_schema, submodule_path, github_headers):
+    def build_extended_object(object_schema, submodule_path, github_headers, release_tag=None):
         """Extend an object schema with full schemas of subordinate objects.
 
         Args:
             object_schema (dict): The base object schema to extend.
-            submodule_path (str): Path to the submodule containing additional schemas.
-            github_headers (dict): Headers to use for GitHub API requests.
+            submodule_path (str): Path to the submodule containing schemas.
+            github_headers (dict): Headers for GitHub API requests.
+            release_tag (str, optional): Specific release tag for
+                additional schema fetches.
 
         Returns:
             dict: The extended object schema.
@@ -324,17 +351,21 @@ class OrganizationMapper(MappingFileMapperBase):
                     }
 
                 elif property_name_level1 == "contacts":
-                    contact_schema = OrganizationMapper.fetch_additional_schema("contact")
+                    contact_schema = OrganizationMapper.fetch_additional_schema(
+                        "contact", release_tag
+                    )
                     OrganizationMapper.resolve_uuid_refs(contact_schema)
                     property_level1["items"] = contact_schema
 
                 elif property_name_level1 == "interfaces":
-                    interface_schema = OrganizationMapper.fetch_additional_schema("interface")
+                    interface_schema = OrganizationMapper.fetch_additional_schema(
+                        "interface", release_tag
+                    )
                     interface_schema["required"] = ["name"]
 
                     # Temporarily add the credential object as a subproperty
                     interface_credential_schema = OrganizationMapper.fetch_additional_schema(
-                        "interface_credential"
+                        "interface_credential", release_tag
                     )
                     interface_credential_schema["required"] = (
                         ["username", "password", "interfaceId"],
@@ -409,8 +440,12 @@ class OrganizationMapper(MappingFileMapperBase):
                 prop["items"]["type"] = "string"
 
     @staticmethod
-    def fetch_additional_schema(folio_object):
+    def fetch_additional_schema(folio_object, release_tag=None):
         additional_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-            "folio-org", "mod-organizations-storage", "mod-orgs", folio_object
+            "folio-org",
+            "mod-organizations-storage",
+            "mod-orgs",
+            folio_object,
+            release_tag,
         )
         return additional_schema

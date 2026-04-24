@@ -31,6 +31,34 @@ def test_fetch_org_schemas_from_github_happy_path():
     assert organization_schema["$schema"]
 
 
+@pytest.mark.slow
+def test_fetch_org_schemas_for_specific_release():
+    # Ramsons-era release
+    old_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
+        "folio-org", "mod-organizations-storage", "mod-orgs",
+        "organization", "v4.8.2",
+    )
+    assert old_schema["$schema"]
+    assert "name" in old_schema["properties"]
+    # Verify $ref resolution for contacts and interfaces
+    assert "contacts" in old_schema["properties"]
+    assert "items" in old_schema["properties"]["contacts"]
+    assert "properties" in old_schema["properties"]["contacts"]["items"]
+    assert "firstName" in old_schema["properties"]["contacts"]["items"]["properties"]
+    assert "interfaces" in old_schema["properties"]
+    assert "items" in old_schema["properties"]["interfaces"]
+    assert "properties" in old_schema["properties"]["interfaces"]["items"]
+    assert "name" in old_schema["properties"]["interfaces"]["items"]["properties"]
+
+    # Trillium release
+    new_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
+        "folio-org", "mod-organizations-storage", "mod-orgs",
+        "organization", "v5.0.0",
+    )
+    assert new_schema["$schema"]
+    assert "name" in new_schema["properties"]
+
+
 # Build contact schema from github
 def test_fetch_contact_schemas_from_github_happy_path():
     contact_schema = OrganizationMapper.fetch_additional_schema("contact")
