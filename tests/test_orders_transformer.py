@@ -18,6 +18,7 @@ def test_merge_into_orders_with_embedded_pols():
     mocked_orders_transformer.mapper = Mock(spec=CompositeOrderMapper)
     mocked_orders_transformer.mapper.migration_report = Mock(spec=MigrationReport)
     mocked_orders_transformer.mapper.migration_report = Mock(spec=MigrationReport)
+    mocked_orders_transformer.mapper.po_lines_key = "compositePoLines"
     mocked_orders_transformer.current_folio_record = {}
 
     order_objects = [
