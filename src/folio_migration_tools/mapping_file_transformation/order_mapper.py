@@ -67,10 +67,40 @@ class CompositeOrderMapper(MappingFileMapperBase):
             funds_map: Mapping of legacy to FOLIO funds.
             funds_expense_class_map: Mapping for fund expense classes.
         """
-        # Get organization schema
+        # Get order schema, using module version from FOLIO environment if available
+        release_tag = None
+        try:
+            release_tag = folio_client.get_module_version("mod-orders")
+            logger.info(
+                "Using mod-orders version from FOLIO environment: %s",
+                release_tag,
+            )
+        except Exception:
+            logger.info("Could not determine mod-orders version, falling back to latest release")
+
         self.composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
-            "folio-org", "mod-orders", "mod-orders", "composite_purchase_order"
+            "folio-org", "mod-orders", "mod-orders", "composite_purchase_order", release_tag
         )
+
+        # Detect PO lines property name from schema (compositePoLines or poLines)
+        self.po_lines_key = next(
+            (
+                p
+                for p in self.composite_order_schema.get("properties", {})
+                if p in ("compositePoLines", "poLines")
+            ),
+            "compositePoLines",
+        )
+        logger.info("PO lines schema property: %s", self.po_lines_key)
+
+        # Rewrite mapping entries for backward compatibility
+        legacy_key = "compositePoLines"
+        if self.po_lines_key != legacy_key:
+            for entry in composite_order_map.get("data", []):
+                if entry.get("folio_field", "").startswith(legacy_key):
+                    entry["folio_field"] = entry["folio_field"].replace(
+                        legacy_key, self.po_lines_key, 1
+                    )
 
         super().__init__(
             folio_client,
@@ -133,7 +163,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 False,
             )
 
-        elif re.compile(r"compositePoLines\[(\d+)\]\.id").fullmatch(folio_prop_name):
+        elif re.compile(rf"{re.escape(self.po_lines_key)}\[(\d+)\]\.id").fullmatch(
+            folio_prop_name
+        ):
             return str(uuid.uuid4())
 
         elif re.compile(r"notes\[\d+\]\.").match(folio_prop_name):
@@ -164,7 +196,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         return mapped_value
 
     @staticmethod
-    def get_latest_acq_schemas_from_github(owner, repo, module, object):
+    def get_latest_acq_schemas_from_github(owner, repo, module, object, release_tag=None):
         """Fetch acquisition object schema from GitHub with referenced schemas.
 
         Args:
@@ -172,6 +204,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             repo (str): GitHub repository name.
             module (str): Module name within the repository.
             object (str): Object name whose schema is to be fetched.
+            release_tag (str, optional): Specific release tag to fetch. If None,
+                fetches the latest release.
 
         Returns:
             Dict: _description_
@@ -189,8 +223,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
             # Start talkign to GitHub...
             github_path = "https://raw.githubusercontent.com"
-            submodules = CompositeOrderMapper.get_submodules_of_latest_release(
-                owner, repo, github_headers
+            submodules = CompositeOrderMapper.get_submodules_of_release(
+                owner, repo, github_headers, release_tag
             )
 
             # Get the sha's of submodules acq-models and raml_utils
@@ -228,32 +262,34 @@ class CompositeOrderMapper(MappingFileMapperBase):
             sys.exit(2)
 
     @staticmethod
-    def get_submodules_of_latest_release(owner, repo, github_headers):
-        """Get submodules associated with the latest release of a repository.
+    def get_submodules_of_release(owner, repo, github_headers, release_tag=None):
+        """Get submodules associated with a specific or latest release of a repository.
 
         Args:
             owner (str): GitHub repository owner.
             repo (str): GitHub repository name.
             github_headers (dict): Headers to use for GitHub API requests.
+            release_tag (str, optional): Specific release tag. If None, fetches latest.
 
         Returns:
-            list: List of submodules associated with the latest release.
-
-
+            list: List of submodules associated with the release.
         """
         github_path = "https://api.github.com/repos"
 
-        # Get metadata for the latest release
-        latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
-        req = httpx.get(
-            f"{latest_release_path}", headers=github_headers, follow_redirects=True, timeout=None
-        )
-        req.raise_for_status()
-        latest_release = json.loads(req.text)
+        if not release_tag:
+            # Get metadata for the latest release
+            latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
+            req = httpx.get(
+                f"{latest_release_path}",
+                headers=github_headers,
+                follow_redirects=True,
+                timeout=None,
+            )
+            req.raise_for_status()
+            latest_release = json.loads(req.text)
+            release_tag = latest_release["tag_name"]
 
-        # Get the tag assigned to the latest release
-        release_tag = latest_release["tag_name"]
-        logger.info(f"Using schemas from latest {repo} release: {release_tag}")
+        logger.info(f"Using schemas from {repo} release: {release_tag}")
 
         # Get the tree for the latest release
         tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
@@ -409,9 +445,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
 
         # Replace legacy bib ID with instance UUID from map
-        bib_id = composite_order["compositePoLines"][0].pop("instanceId", "")
+        bib_id = composite_order[self.po_lines_key][0].pop("instanceId", "")
         if matching_instance := self.get_folio_instance_uuid(index_or_id, bib_id):
-            composite_order["compositePoLines"][0]["instanceId"] = matching_instance
+            composite_order[self.po_lines_key][0]["instanceId"] = matching_instance
 
         return composite_order
 

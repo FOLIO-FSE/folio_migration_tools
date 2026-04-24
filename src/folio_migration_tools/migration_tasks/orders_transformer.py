@@ -365,9 +365,9 @@ class OrdersTransformer(MigrationTaskBase):
         else:
             # Merge if possible
             diff = DeepDiff(self.current_folio_record, folio_rec)
-            if "compositePoLines" in diff.affected_root_keys:
-                self.current_folio_record.get("compositePoLines", []).extend(
-                    folio_rec.get("compositePoLines", [])
+            if self.mapper.po_lines_key in diff.affected_root_keys:
+                self.current_folio_record.get(self.mapper.po_lines_key, []).extend(
+                    folio_rec.get(self.mapper.po_lines_key, [])
                 )
                 self.mapper.migration_report.add_general_statistics(
                     i18n.t("Rows merged to create Purchase Orders")
