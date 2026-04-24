@@ -239,7 +239,14 @@ def test_fetch_acq_schemas_from_github_happy_path():
 
     assert composite_order_schema["$schema"]
     assert composite_order_schema["properties"]["orderType"]["enum"] == ["One-Time", "Ongoing"]
-    assert composite_order_schema["properties"]["compositePoLines"]["items"]["properties"][
+    # Detect the PO lines key (compositePoLines or poLines depending on version)
+    po_lines_key = next(
+        (p for p in composite_order_schema["properties"]
+         if p in ("compositePoLines", "poLines")),
+        None,
+    )
+    assert po_lines_key is not None
+    assert composite_order_schema["properties"][po_lines_key]["items"]["properties"][
         "receiptStatus"
     ]["enum"] == [
         "Awaiting Receipt",
@@ -250,7 +257,7 @@ def test_fetch_acq_schemas_from_github_happy_path():
         "Receipt Not Required",
         "Ongoing",
     ]
-    assert composite_order_schema["properties"]["compositePoLines"]["items"]["properties"][
+    assert composite_order_schema["properties"][po_lines_key]["items"]["properties"][
         "paymentStatus"
     ]["enum"] == [
         "Awaiting Payment",
@@ -261,6 +268,39 @@ def test_fetch_acq_schemas_from_github_happy_path():
         "Pending",
         "Ongoing",
     ]
+
+
+@pytest.mark.slow
+def test_fetch_acq_schemas_for_specific_release():
+    # Ramsons-era release should use compositePoLines
+    old_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
+        "folio-org", "mod-orders", "mod-orders",
+        "composite_purchase_order", "v12.9.14",
+    )
+    assert old_schema["$schema"]
+    assert "compositePoLines" in old_schema["properties"]
+
+    # Verify $ref resolution: PO line items should have resolved properties
+    old_pol_props = old_schema["properties"]["compositePoLines"]["items"]["properties"]
+    assert "titleOrPackage" in old_pol_props
+    assert "cost" in old_pol_props
+    assert "properties" in old_pol_props["cost"], "cost $ref was not resolved"
+    assert "currency" in old_pol_props["cost"]["properties"]
+
+    # Trillium release should use poLines
+    new_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
+        "folio-org", "mod-orders", "mod-orders",
+        "composite_purchase_order", "v13.1.0",
+    )
+    assert new_schema["$schema"]
+    assert "poLines" in new_schema["properties"]
+
+    # Verify $ref resolution: PO line items should have resolved properties
+    new_pol_props = new_schema["properties"]["poLines"]["items"]["properties"]
+    assert "titleOrPackage" in new_pol_props
+    assert "cost" in new_pol_props
+    assert "properties" in new_pol_props["cost"], "cost $ref was not resolved"
+    assert "currency" in new_pol_props["cost"]["properties"]
 
 
 def test_parse_record_mapping_file(mapper):
@@ -329,20 +369,21 @@ def test_composite_order_with_one_pol_mapping(mapper):
 
     assert composite_order_with_pol["poNumber"] == "o124"
 
+    pol_key = mapper.po_lines_key
     assert (
-        composite_order_with_pol["compositePoLines"][0]["titleOrPackage"] == "Once upon a time..."
+        composite_order_with_pol[pol_key][0]["titleOrPackage"] == "Once upon a time..."
     )
-    assert composite_order_with_pol["compositePoLines"][0]["instanceId"] == "1"
-    assert composite_order_with_pol["compositePoLines"][0]["cost"]["currency"] == "USD"
-    assert composite_order_with_pol["compositePoLines"][0]["cost"]["quantityPhysical"] == "1"
+    assert composite_order_with_pol[pol_key][0]["instanceId"] == "1"
+    assert composite_order_with_pol[pol_key][0]["cost"]["currency"] == "USD"
+    assert composite_order_with_pol[pol_key][0]["cost"]["quantityPhysical"] == "1"
     assert (
-        composite_order_with_pol["compositePoLines"][0]["cost"]["poLineEstimatedPrice"] == "125.00"
+        composite_order_with_pol[pol_key][0]["cost"]["poLineEstimatedPrice"] == "125.00"
     )
     assert (
-        composite_order_with_pol["compositePoLines"][0]["locations"][0]["locationId"]
+        composite_order_with_pol[pol_key][0]["locations"][0]["locationId"]
         == "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
     )
-    assert composite_order_with_pol["compositePoLines"][0]["locations"][0]["quantity"] == "2"
+    assert composite_order_with_pol[pol_key][0]["locations"][0]["quantity"] == "2"
 
 
 def test_one_order_one_pol_multiple_notes(mapper):
@@ -362,10 +403,11 @@ def test_one_order_one_pol_multiple_notes(mapper):
     }
     mapper.extradata_writer.cache = []
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders, True)
+    pol_key = mapper.po_lines_key
     mapper.notes_mapper.map_notes(
         data,
         data["order_number"],
-        composite_order["compositePoLines"][0]["id"],
+        composite_order[pol_key][0]["id"],
         FOLIONamespaces.orders,
     )
 
@@ -374,7 +416,7 @@ def test_one_order_one_pol_multiple_notes(mapper):
 
     # There should be two notes linked to the POL
     assert (
-        str(mapper.extradata_writer.cache).count(composite_order["compositePoLines"][0]["id"]) == 2
+        str(mapper.extradata_writer.cache).count(composite_order[pol_key][0]["id"]) == 2
     )
 
 
@@ -409,6 +451,7 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
 
     composite_orders = []
     mapper.extradata_writer.cache = []
+    pol_key = mapper.po_lines_key
 
     for row in data_pols:
         composite_order, idx = mapper.do_map(
@@ -420,7 +463,7 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
         mapper.notes_mapper.map_notes(
             row,
             row["order_number"],
-            composite_order["compositePoLines"][0]["id"],
+            composite_order[pol_key][0]["id"],
             FOLIONamespaces.orders,
         )
 
@@ -429,24 +472,25 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
 
     # There should be two notes linked to the first POL
     assert (
-        str(mapper.extradata_writer.cache).count(composite_orders[0]["compositePoLines"][0]["id"])
+        str(mapper.extradata_writer.cache).count(composite_orders[0][pol_key][0]["id"])
         == 2
     )
 
     # There should be one notes linked to the first POL
     assert (
-        str(mapper.extradata_writer.cache).count(composite_orders[1]["compositePoLines"][0]["id"])
+        str(mapper.extradata_writer.cache).count(composite_orders[1][pol_key][0]["id"])
         == 1
     )
 
 
 def test_perform_additional_mapping_get_org_from_folio(mapper):
+    pol_key = mapper.po_lines_key
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
         "poNumber": "o124",
         "orderType": "One-Time",
         "vendor": "EBSCO",
-        "compositePoLines": [
+        pol_key: [
             {
                 "locations": [
                     {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
@@ -471,12 +515,13 @@ def test_perform_additional_mapping_get_org_from_folio(mapper):
 
 
 def test_perform_additional_mapping_org_and_instance_uuids_from_id_maps(mapper):
+    pol_key = mapper.po_lines_key
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
         "poNumber": "o124",
         "orderType": "One-Time",
         "vendor": "BAE",
-        "compositePoLines": [
+        pol_key: [
             {
                 "locations": [
                     {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
@@ -498,16 +543,17 @@ def test_perform_additional_mapping_org_and_instance_uuids_from_id_maps(mapper):
 
     folio_po = mapper.perform_additional_mapping("1", folio_po)
     assert folio_po["vendor"] == "bbf61aa3-05ea-5d15-99c8-e3e547001543"
-    assert folio_po["compositePoLines"][0]["instanceId"] == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
+    assert folio_po[pol_key][0]["instanceId"] == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
 
 
 def test_perform_additional_mapping_invalid_po_number(mapper):
+    pol_key = mapper.po_lines_key
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
         "poNumber": "o-124",
         "orderType": "One-Time",
         "vendor": "HamAwesomeStartup",
-        "compositePoLines": [
+        pol_key: [
             {
                 "locations": [
                     {
@@ -535,12 +581,13 @@ def test_perform_additional_mapping_invalid_po_number(mapper):
 
 
 def test_perform_additional_mapping_org_uuid_no_match(mapper):
+    pol_key = mapper.po_lines_key
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
         "poNumber": "o124",
         "orderType": "One-Time",
         "vendor": "LisasAwesomeStartup",
-        "compositePoLines": [
+        pol_key: [
             {
                 "locations": [
                     {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
@@ -565,12 +612,13 @@ def test_perform_additional_mapping_org_uuid_no_match(mapper):
 
 
 def test_perform_additional_mapping_instance_uuid_no_match(mapper):
+    pol_key = mapper.po_lines_key
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
         "poNumber": "o124",
         "orderType": "One-Time",
         "vendor": "BAE",
-        "compositePoLines": [
+        pol_key: [
             {
                 "locations": [
                     {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
@@ -592,7 +640,7 @@ def test_perform_additional_mapping_instance_uuid_no_match(mapper):
 
     folio_po = mapper.perform_additional_mapping("1", folio_po)
 
-    assert "instanceId" not in folio_po["compositePoLines"][0]
+    assert "instanceId" not in folio_po[pol_key][0]
 
 
 def test_is_valid_po_number():
