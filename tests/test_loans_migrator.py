@@ -378,8 +378,7 @@ class TestPreValidateItemBarcodes:
 
         # The query should only contain I001, not empty string
         call_args = m.folio_client.folio_post.call_args
-        assert "barcode==" in call_args[0][2]["query"]
-        assert "barcode==" + '""' not in call_args[0][2]["query"]
+        assert "barcode==I001" in call_args[0][1]["query"]
 
 
 # --- Tests for check_barcodes ---

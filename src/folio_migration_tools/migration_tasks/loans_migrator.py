@@ -464,7 +464,6 @@ class LoansMigrator(MigrationTaskBase):
         )
         fetch_items = self.folio_client.folio_post(
             "/item-storage/items/retrieve",
-            "items",
             {"query": " OR ".join([f"barcode=={barcode}" for barcode in loan_barcodes])},
         ).get("items", [])
         logger.info("Fetched %s items matching loan barcodes", len(fetch_items))
