@@ -497,26 +497,6 @@ class LoansMigrator(MigrationTaskBase):
                 f"Barcode: {barcode}",
             )
 
-    def log_loan_barcode_data_issues(
-        self, has_item_barcode, has_patron_barcode, has_proxy_barcode, loan
-    ):
-        if not has_item_barcode:
-            Helper.log_data_issue_failed(
-                "", "Loan without matched item barcode", json.dumps(loan.to_dict())
-            )
-        if not has_patron_barcode:
-            Helper.log_data_issue(
-                "",
-                "Loan without matched patron barcode",
-                json.dumps(loan.to_dict()),
-            )
-        if not has_proxy_barcode:
-            Helper.log_data_issue_failed(
-                "",
-                "Loan without matched proxy patron barcode",
-                json.dumps(loan.to_dict()),
-            )
-
     def check_barcodes(self):
         self.pre_validate_item_barcodes()
         self.pre_validate_patron_barcodes()
@@ -551,9 +531,6 @@ class LoansMigrator(MigrationTaskBase):
                     + i18n_t("Had migrated proxy barcode")
                     + f": {has_proxy_barcode}",
                 )
-            self.log_loan_barcode_data_issues(
-                has_item_barcode, has_patron_barcode, has_proxy_barcode, loan
-            )
 
     def load_and_validate_legacy_loans(self, loans_reader, service_point_id: str) -> list:
         results = []
