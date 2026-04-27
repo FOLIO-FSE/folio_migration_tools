@@ -378,7 +378,23 @@ class TestPreValidateItemBarcodes:
 
         # The query should only contain I001, not empty string
         call_args = m.folio_client.folio_post.call_args
-        assert "barcode==I001" in call_args[0][1]["query"]
+        assert 'barcode=="I001"' in call_args[0][1]["query"]
+
+    def test_batches_requests(self):
+        """Verifies that large sets of barcodes are split into batches."""
+        loans = [DummyLegacyLoan(item_barcode=f"I{i:04d}") for i in range(5)]
+        m = self._make_migrator(loans)
+        # Return different items per batch call
+        m.folio_client.folio_post.side_effect = [
+            {"items": [{"barcode": "I0000", "id": "uuid-0"}, {"barcode": "I0001", "id": "uuid-1"}]},
+            {"items": [{"barcode": "I0002", "id": "uuid-2"}, {"barcode": "I0003", "id": "uuid-3"}]},
+            {"items": [{"barcode": "I0004", "id": "uuid-4"}]},
+        ]
+
+        LoansMigrator.pre_validate_item_barcodes(m, batch_size=2)
+
+        assert m.folio_client.folio_post.call_count == 3
+        assert m.valid_item_barcodes == {"I0000", "I0001", "I0002", "I0003", "I0004"}
 
 
 # --- Tests for check_barcodes ---
