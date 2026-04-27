@@ -9,7 +9,7 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.loans_migrator import LoansMigrator
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 
 def test_get_object_type():
@@ -138,9 +138,11 @@ def test_load_and_validate_legacy_loans_with_proxy():
             mock_migrator, reader, "Set on file or config"
         )
         assert a[0].proxy_patron_barcode == "prox_barcode"
-        
+
 class DummyLegacyLoan:
-    def __init__(self, item_barcode="item1", patron_barcode="patron1", proxy_patron_barcode="", row=1):
+    def __init__(
+        self, item_barcode="item1", patron_barcode="patron1", proxy_patron_barcode="", row=1
+    ):
         self.item_barcode = item_barcode
         self.patron_barcode = patron_barcode
         self.proxy_patron_barcode = proxy_patron_barcode
@@ -386,8 +388,14 @@ class TestPreValidateItemBarcodes:
         m = self._make_migrator(loans)
         # Return different items per batch call
         m.folio_client.folio_post.side_effect = [
-            {"items": [{"barcode": "I0000", "id": "uuid-0"}, {"barcode": "I0001", "id": "uuid-1"}]},
-            {"items": [{"barcode": "I0002", "id": "uuid-2"}, {"barcode": "I0003", "id": "uuid-3"}]},
+            {"items": [
+                {"barcode": "I0000", "id": "uuid-0"},
+                {"barcode": "I0001", "id": "uuid-1"},
+            ]},
+            {"items": [
+                {"barcode": "I0002", "id": "uuid-2"},
+                {"barcode": "I0003", "id": "uuid-3"},
+            ]},
             {"items": [{"barcode": "I0004", "id": "uuid-4"}]},
         ]
 
@@ -410,7 +418,6 @@ class TestCheckBarcodes:
         m.valid_patron_map = {}
         m.pre_validate_item_barcodes = Mock()
         m.pre_validate_patron_barcodes = Mock()
-        m.log_loan_barcode_data_issues = Mock()
         return m
 
     def test_yields_loan_when_all_barcodes_valid(self):
