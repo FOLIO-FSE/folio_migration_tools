@@ -462,11 +462,18 @@ class LoansMigrator(MigrationTaskBase):
         logger.info(
             "Fetching items matching loan barcodes via /item-storage/items/retrieve endpoint..."
         )
-        fetch_items = self.folio_client.folio_post(
-            "/item-storage/items/retrieve",
-            {"query": " OR ".join([f"barcode=={barcode}" for barcode in loan_barcodes])},
-        ).get("items", [])
-        logger.info("Fetched %s items matching loan barcodes", len(fetch_items))
+        try:
+            fetch_items = self.folio_client.folio_post(
+                "/item-storage/items/retrieve",
+                {
+                    "query": " OR ".join([f'barcode=="{barcode}"' for barcode in loan_barcodes]),
+                    "limit": len(loan_barcodes),
+                },
+            ).get("items", [])
+            logger.info("Fetched %s items matching loan barcodes", len(fetch_items))
+        except folioclient.FolioClientError as e:
+            logger.error("Error fetching items: %s", e)
+            fetch_items = []
         self.valid_item_barcodes = {item["barcode"] for item in fetch_items if "barcode" in item}
         missing_item_barcodes = loan_barcodes - self.valid_item_barcodes
         for barcode in missing_item_barcodes:
