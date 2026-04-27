@@ -88,6 +88,7 @@
   "Field Mapping Errors found": "Erreurs de correspondance de champs trouvées",
   "Generic exceptions (see log for details)": "Exceptions génériques (voir le journal pour les détails)",
   "Had migrated user barcode": "Code-barres utilisateur migré",
+  "Had migrated proxy barcode": "Code-barres de mandataire migré",
   "Handled inactive users": "Utilisateurs inactifs traités",
   "Holding prevented from merging by holdingsTypeId": "Fusion du fonds empêchée par holdingsTypeId",
   "Holdings Records Written to disk": "Notices de fonds écrites sur le disque",

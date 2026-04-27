@@ -88,6 +88,7 @@
   "Field Mapping Errors found": "Field Mapping Errors found",
   "Generic exceptions (see log for details)": "Generic exceptions (see log for details)",
   "Had migrated user barcode": "Had migrated user barcode",
+  "Had migrated proxy barcode": "Had migrated proxy barcode",
   "Handled inactive users": "Handled inactive users",
   "Holding prevented from merging by holdingsTypeId": "Holding prevented from merging by holdingsTypeId",
   "Holdings Records Written to disk": "Holdings Records Written to disk",

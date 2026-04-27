@@ -140,11 +140,16 @@ def test_load_and_validate_legacy_loans_with_proxy():
         assert a[0].proxy_patron_barcode == "prox_barcode"
         
 class DummyLegacyLoan:
-    def __init__(self, item_barcode="item1", patron_barcode="patron1", row=1):
+    def __init__(self, item_barcode="item1", patron_barcode="patron1", proxy_patron_barcode="", row=1):
         self.item_barcode = item_barcode
         self.patron_barcode = patron_barcode
+        self.proxy_patron_barcode = proxy_patron_barcode
         self.row = row
-        self.to_dict = lambda: {"item_barcode": self.item_barcode, "patron_barcode": self.patron_barcode}
+        self.to_dict = lambda: {
+            "item_barcode": self.item_barcode,
+            "patron_barcode": self.patron_barcode,
+            "proxy_patron_barcode": self.proxy_patron_barcode,
+        }
         self.next_item_status = ""
         self.renewal_count = 0
 
@@ -196,3 +201,276 @@ def test_checkout_single_loan_retry_success(mock_i18n, migrator):
     migrator.migration_report.add.assert_any_call("Details", mock_i18n.t.return_value)
     migrator.set_renewal_count.assert_called_once_with(legacy_loan, res_checkout2)
     migrator.set_new_status.assert_called_once_with(legacy_loan, res_checkout2)
+
+
+# --- Tests for pre_validate_patron_barcodes ---
+
+
+class TestPreValidatePatronBarcodes:
+    def _make_migrator(self, loans, patron_identifiers=None):
+        m = Mock(spec=LoansMigrator)
+        m.semi_valid_legacy_loans = loans
+        m.patron_identifiers = patron_identifiers or ["barcode", "externalSystemId"]
+        m.folio_client = Mock()
+        m.valid_patron_map = {}
+        return m
+
+    def test_valid_patron_found(self):
+        loans = [DummyLegacyLoan(patron_barcode="P001")]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_get.return_value = [{"barcode": "P001", "id": "uuid-1"}]
+
+        LoansMigrator.pre_validate_patron_barcodes(m)
+
+        assert m.valid_patron_map == {"P001": "P001"}
+
+    def test_no_patron_found(self):
+        loans = [DummyLegacyLoan(patron_barcode="P002")]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_get.return_value = []
+
+        LoansMigrator.pre_validate_patron_barcodes(m)
+
+        assert m.valid_patron_map == {}
+
+    def test_multiple_patrons_found(self):
+        loans = [DummyLegacyLoan(patron_barcode="P003")]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_get.return_value = [
+            {"barcode": "P003", "id": "uuid-1"},
+            {"barcode": "P003", "id": "uuid-2"},
+        ]
+
+        LoansMigrator.pre_validate_patron_barcodes(m)
+
+        assert m.valid_patron_map == {}
+
+    def test_patron_without_barcode_field(self):
+        loans = [DummyLegacyLoan(patron_barcode="P004")]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_get.return_value = [{"id": "uuid-1", "username": "someuser"}]
+
+        LoansMigrator.pre_validate_patron_barcodes(m)
+
+        assert m.valid_patron_map == {}
+
+    def test_deduplicates_barcodes(self):
+        loans = [
+            DummyLegacyLoan(patron_barcode="P001"),
+            DummyLegacyLoan(patron_barcode="P001"),
+        ]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_get.return_value = [{"barcode": "P001", "id": "uuid-1"}]
+
+        LoansMigrator.pre_validate_patron_barcodes(m)
+
+        # Should only call the API once for the deduplicated barcode
+        assert m.folio_client.folio_get.call_count == 1
+        assert m.valid_patron_map == {"P001": "P001"}
+
+    def test_includes_proxy_barcodes(self):
+        loans = [DummyLegacyLoan(patron_barcode="P001", proxy_patron_barcode="PROXY1")]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_get.side_effect = [
+            [{"barcode": "P001", "id": "uuid-1"}],
+            [{"barcode": "PROXY1", "id": "uuid-2"}],
+        ]
+
+        LoansMigrator.pre_validate_patron_barcodes(m)
+
+        assert m.folio_client.folio_get.call_count == 2
+        assert "P001" in m.valid_patron_map
+        assert "PROXY1" in m.valid_patron_map
+
+    def test_builds_query_with_patron_identifiers(self):
+        loans = [DummyLegacyLoan(patron_barcode="P001")]
+        m = self._make_migrator(loans, patron_identifiers=["barcode", "externalSystemId"])
+        m.folio_client.folio_get.return_value = [{"barcode": "P001", "id": "uuid-1"}]
+
+        LoansMigrator.pre_validate_patron_barcodes(m)
+
+        m.folio_client.folio_get.assert_called_once_with(
+            "/users",
+            "users",
+            query="barcode==P001 OR externalSystemId==P001",
+        )
+
+
+# --- Tests for pre_validate_item_barcodes ---
+
+
+class TestPreValidateItemBarcodes:
+    def _make_migrator(self, loans):
+        m = Mock(spec=LoansMigrator)
+        m.semi_valid_legacy_loans = loans
+        m.folio_client = Mock()
+        m.valid_item_barcodes = set()
+        return m
+
+    def test_all_items_found(self):
+        loans = [
+            DummyLegacyLoan(item_barcode="I001"),
+            DummyLegacyLoan(item_barcode="I002"),
+        ]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_post.return_value = {
+            "items": [
+                {"barcode": "I001", "id": "item-uuid-1"},
+                {"barcode": "I002", "id": "item-uuid-2"},
+            ]
+        }
+
+        LoansMigrator.pre_validate_item_barcodes(m)
+
+        assert m.valid_item_barcodes == {"I001", "I002"}
+
+    def test_some_items_missing(self):
+        loans = [
+            DummyLegacyLoan(item_barcode="I001"),
+            DummyLegacyLoan(item_barcode="I002"),
+        ]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_post.return_value = {
+            "items": [{"barcode": "I001", "id": "item-uuid-1"}]
+        }
+
+        LoansMigrator.pre_validate_item_barcodes(m)
+
+        assert m.valid_item_barcodes == {"I001"}
+        assert "I002" not in m.valid_item_barcodes
+
+    def test_no_items_found(self):
+        loans = [DummyLegacyLoan(item_barcode="I001")]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_post.return_value = {"items": []}
+
+        LoansMigrator.pre_validate_item_barcodes(m)
+
+        assert m.valid_item_barcodes == set()
+
+    def test_deduplicates_item_barcodes(self):
+        loans = [
+            DummyLegacyLoan(item_barcode="I001"),
+            DummyLegacyLoan(item_barcode="I001"),
+        ]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_post.return_value = {
+            "items": [{"barcode": "I001", "id": "item-uuid-1"}]
+        }
+
+        LoansMigrator.pre_validate_item_barcodes(m)
+
+        # Single query with deduplicated barcodes
+        assert m.folio_client.folio_post.call_count == 1
+        assert m.valid_item_barcodes == {"I001"}
+
+    def test_skips_loans_without_item_barcode(self):
+        loans = [
+            DummyLegacyLoan(item_barcode="I001"),
+            DummyLegacyLoan(item_barcode=""),
+        ]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_post.return_value = {
+            "items": [{"barcode": "I001", "id": "item-uuid-1"}]
+        }
+
+        LoansMigrator.pre_validate_item_barcodes(m)
+
+        # The query should only contain I001, not empty string
+        call_args = m.folio_client.folio_post.call_args
+        assert "barcode==" in call_args[0][2]["query"]
+        assert "barcode==" + '""' not in call_args[0][2]["query"]
+
+
+# --- Tests for check_barcodes ---
+
+
+class TestCheckBarcodes:
+    def _make_migrator(self, loans):
+        m = Mock(spec=LoansMigrator)
+        m.semi_valid_legacy_loans = loans
+        m.failed = {}
+        m.migration_report = Mock()
+        m.valid_item_barcodes = set()
+        m.valid_patron_map = {}
+        m.pre_validate_item_barcodes = Mock()
+        m.pre_validate_patron_barcodes = Mock()
+        m.log_loan_barcode_data_issues = Mock()
+        return m
+
+    def test_yields_loan_when_all_barcodes_valid(self):
+        loan = DummyLegacyLoan(item_barcode="I001", patron_barcode="P001")
+        m = self._make_migrator([loan])
+        m.valid_item_barcodes = {"I001"}
+        m.valid_patron_map = {"P001": "P001"}
+
+        result = list(LoansMigrator.check_barcodes(m))
+
+        assert result == [loan]
+
+    def test_discards_loan_with_invalid_item_barcode(self):
+        loan = DummyLegacyLoan(item_barcode="I999", patron_barcode="P001")
+        m = self._make_migrator([loan])
+        m.valid_item_barcodes = {"I001"}
+        m.valid_patron_map = {"P001": "P001"}
+
+        result = list(LoansMigrator.check_barcodes(m))
+
+        assert result == []
+        assert "I999" in m.failed
+
+    def test_discards_loan_with_invalid_patron_barcode(self):
+        loan = DummyLegacyLoan(item_barcode="I001", patron_barcode="P999")
+        m = self._make_migrator([loan])
+        m.valid_item_barcodes = {"I001"}
+        m.valid_patron_map = {"P001": "P001"}
+
+        result = list(LoansMigrator.check_barcodes(m))
+
+        assert result == []
+        assert "I001" in m.failed
+
+    def test_discards_loan_with_invalid_proxy_barcode(self):
+        loan = DummyLegacyLoan(
+            item_barcode="I001", patron_barcode="P001", proxy_patron_barcode="PROXY_BAD"
+        )
+        m = self._make_migrator([loan])
+        m.valid_item_barcodes = {"I001"}
+        m.valid_patron_map = {"P001": "P001"}
+
+        result = list(LoansMigrator.check_barcodes(m))
+
+        assert result == []
+        assert "I001" in m.failed
+
+    def test_yields_loan_with_valid_proxy_barcode(self):
+        loan = DummyLegacyLoan(
+            item_barcode="I001", patron_barcode="P001", proxy_patron_barcode="PROXY1"
+        )
+        m = self._make_migrator([loan])
+        m.valid_item_barcodes = {"I001"}
+        m.valid_patron_map = {"P001": "P001", "PROXY1": "PROXY1"}
+
+        result = list(LoansMigrator.check_barcodes(m))
+
+        assert result == [loan]
+
+    def test_calls_pre_validation_methods(self):
+        m = self._make_migrator([])
+
+        list(LoansMigrator.check_barcodes(m))
+
+        m.pre_validate_item_barcodes.assert_called_once()
+        m.pre_validate_patron_barcodes.assert_called_once()
+
+    def test_empty_validation_results_discards_all_loans(self):
+        """If pre-validation returns nothing, all loans should be discarded."""
+        loan = DummyLegacyLoan(item_barcode="I001", patron_barcode="P001")
+        m = self._make_migrator([loan])
+        m.valid_item_barcodes = set()
+        m.valid_patron_map = {}
+
+        result = list(LoansMigrator.check_barcodes(m))
+
+        assert result == []
+        assert "I001" in m.failed
