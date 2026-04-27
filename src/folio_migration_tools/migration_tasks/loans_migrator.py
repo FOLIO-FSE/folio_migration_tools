@@ -450,9 +450,10 @@ class LoansMigrator(MigrationTaskBase):
             f" {len(self.valid_patron_map)} valid, {num_invalid} not found.     "
         )
 
-    def pre_validate_item_barcodes(self):
+    def pre_validate_item_barcodes(self, batch_size: int = 1000):
         """Pre-validates item barcodes by checking if they exist in FOLIO.
 
+        Fetches items in batches to avoid exceeding query size limits.
         Logs any barcodes that do not match an item.
         """
         loan_barcodes = {
@@ -462,18 +463,30 @@ class LoansMigrator(MigrationTaskBase):
         logger.info(
             "Fetching items matching loan barcodes via /item-storage/items/retrieve endpoint..."
         )
-        try:
-            fetch_items = self.folio_client.folio_post(
-                "/item-storage/items/retrieve",
-                {
-                    "query": " OR ".join([f'barcode=="{barcode}"' for barcode in loan_barcodes]),
-                    "limit": len(loan_barcodes),
-                },
-            ).get("items", [])
-            logger.info("Fetched %s items matching loan barcodes", len(fetch_items))
-        except folioclient.FolioClientError as e:
-            logger.error("Error fetching items: %s", e.response.text)
-            fetch_items = []
+        fetch_items = []
+        barcode_list = list(loan_barcodes)
+        for i in range(0, len(barcode_list), batch_size):
+            batch = barcode_list[i : i + batch_size]
+            try:
+                batch_items = self.folio_client.folio_post(
+                    "/item-storage/items/retrieve",
+                    {
+                        "query": " OR ".join([f'barcode=="{barcode}"' for barcode in batch]),
+                        "limit": len(batch),
+                    },
+                ).get("items", [])
+                fetch_items.extend(batch_items)
+            except folioclient.FolioClientError as e:
+                logger.error(
+                    "Error fetching items batch %s: %s", i // batch_size + 1, e.response.text
+                )
+            logger.info(
+                "Batch %s/%s: fetched %s items",
+                i // batch_size + 1,
+                (len(barcode_list) + batch_size - 1) // batch_size,
+                len(fetch_items),
+            )
+        logger.info("Fetched %s items matching loan barcodes", len(fetch_items))
         self.valid_item_barcodes = {item["barcode"] for item in fetch_items if "barcode" in item}
         missing_item_barcodes = loan_barcodes - self.valid_item_barcodes
         for barcode in missing_item_barcodes:
