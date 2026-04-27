@@ -530,6 +530,13 @@ class LoansMigrator(MigrationTaskBase):
                 self.migration_report.add_general_statistics(
                     i18n_t("Loans verified against migrated user and item")
                 )
+                loan.patron_barcode = self.valid_patron_map.get(
+                    loan.patron_barcode, loan.patron_barcode
+                )
+                if loan.proxy_patron_barcode:
+                    loan.proxy_patron_barcode = self.valid_patron_map.get(
+                        loan.proxy_patron_barcode, loan.proxy_patron_barcode
+                    )
                 yield loan
             else:
                 # Add this loan to failed loans for later correction and re-run.
