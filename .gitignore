@@ -127,3 +127,4 @@ poetry.lock
 *.lock
 pylock.toml
 reference_material/
+.prompts/
