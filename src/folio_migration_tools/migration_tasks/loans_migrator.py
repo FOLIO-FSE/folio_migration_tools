@@ -16,6 +16,7 @@ from typing import Annotated, List, Literal, Optional
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
 
+import folioclient
 import i18n
 from art import tprint
 from dateutil import parser as du_parser
@@ -97,6 +98,16 @@ class LoansMigrator(MigrationTaskBase):
                 description=("List of files containing patron data. By default is empty list."),
             ),
         ] = []
+        skip_barcode_prevalidation: Annotated[
+            Optional[bool],
+            Field(
+                title="Skip barcode pre-validation",
+                description=(
+                    "Skip pre-validation of patron and item barcodes against FOLIO. "
+                    "By default, barcodes are validated before loan migration."
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -135,10 +146,14 @@ class LoansMigrator(MigrationTaskBase):
         self.check_smtp_config()
         logger.info("Proceeding with loans migration")
         logger.info("Attempting to retrieve tenant timezone configuration...")
-        my_path = "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
+        tenant_locale_endpoint = (
+            "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
+        )
         try:
             self.tenant_timezone_str = json.loads(
-                self.folio_client.folio_get_single_object(my_path)["configs"][0]["value"]
+                self.folio_client.folio_get_single_object(tenant_locale_endpoint)["configs"][0][
+                    "value"
+                ]
             )["timezone"]
             logger.info("Tenant timezone is: %s", self.tenant_timezone_str)
         except Exception:
@@ -146,6 +161,26 @@ class LoansMigrator(MigrationTaskBase):
             self.tenant_timezone_str = "UTC"
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         self.semi_valid_legacy_loans = []
+        other_circulation_settings_endpoint = (
+            "/configurations/entries?query=(module==CHECKOUT%20and%20configName==other_settings)"
+        )
+        try:
+            self.patron_identifiers = (
+                json.loads(
+                    self.folio_client.folio_get_single_object(other_circulation_settings_endpoint)[
+                        "configs"
+                    ][0]["value"]
+                )
+                .get("prefPatronIdentifier", "")
+                .split(",")
+            )
+            logger.info(
+                "Patron lookup identifiers available for this tenant: %s",
+                ", ".join(self.patron_identifiers),
+            )
+        except folioclient.FolioClientError as e:
+            logger.error("Error retrieving circulation settings: %s", e.response.text)
+            self.patron_identifiers = []
         for file_def in task_configuration.open_loans_files:
             loans_file_path = self.folder_structure.legacy_records_folder / file_def.file_name
             with open(loans_file_path, "r", encoding="utf-8") as loans_file:
@@ -177,17 +212,15 @@ class LoansMigrator(MigrationTaskBase):
                     file_def.file_name,
                 )
         logger.info("Loaded and validated %s loans in total", len(self.semi_valid_legacy_loans))
-        if any(self.task_configuration.item_files) or any(self.task_configuration.patron_files):
+        if self.task_configuration.skip_barcode_prevalidation:
+            logger.info("Barcode pre-validation is disabled by configuration. Skipping.")
+            self.valid_legacy_loans = self.semi_valid_legacy_loans
+        else:
             self.valid_legacy_loans = list(self.check_barcodes())
             logger.info(
                 "Loaded and validated %s loans against barcodes",
                 len(self.valid_legacy_loans),
             )
-        else:
-            logger.info(
-                "No item or user files supplied. Not validating againstpreviously migrated objects"
-            )
-            self.valid_legacy_loans = self.semi_valid_legacy_loans
         logger.info("Starting row number is %s", task_configuration.starting_row)
         logger.info("Init completed")
 
@@ -352,23 +385,128 @@ class LoansMigrator(MigrationTaskBase):
             for _k, failed_loan in self.failed_and_not_dupe.items():
                 writer.writerow(failed_loan[0])
 
-    def check_barcodes(self):
-        user_barcodes = set()
-        item_barcodes = set()
-        self.circulation_helper.load_migrated_item_barcodes(
-            item_barcodes, self.task_configuration.item_files, self.folder_structure
-        )
-        self.circulation_helper.load_migrated_user_barcodes(
-            user_barcodes, self.task_configuration.patron_files, self.folder_structure
-        )
+    def pre_validate_patron_barcodes(self):
+        """Pre-validates patron barcodes by checking if they exist in FOLIO.
+
+        Logs any barcodes that do not match a patron or match multiple patrons.
+        """
+        loan_barcodes = set()
+        self.valid_patron_map = {}
         for loan in self.semi_valid_legacy_loans:
-            has_item_barcode = loan.item_barcode in item_barcodes or not any(item_barcodes)
-            has_patron_barcode = loan.patron_barcode in user_barcodes or not any(user_barcodes)
+            if loan.patron_barcode:
+                loan_barcodes.add(loan.patron_barcode)
+            if loan.proxy_patron_barcode:
+                loan_barcodes.add(loan.proxy_patron_barcode)
+        logger.info("Pre-validating patron barcodes for %s unique barcodes", len(loan_barcodes))
+        num_invalid = 0
+        for idx, barcode in enumerate(loan_barcodes):
+            # Without a /retrieve POST query endpoint for Users, the only sensible way to check
+            # patron barcodes is to query them one by one. This is still faster than trying to
+            # match them in Python after fetching all users for most systems.
+            fetch_patron = self.folio_client.folio_get(
+                "/users",
+                "users",
+                query=(
+                    " OR ".join(
+                        [f"{id_field.strip()}=={barcode}" for id_field in self.patron_identifiers]
+                    )
+                ),
+            )
+            if not fetch_patron:
+                logger.warning("No patron found for barcode: %s", barcode)
+                Helper.log_data_issue_failed(
+                    "",
+                    "No patron found for barcode",
+                    f"Barcode: {barcode}",
+                )
+                num_invalid += 1
+            elif len(fetch_patron) > 1:
+                logger.warning("Multiple patrons found for barcode: %s", barcode)
+                Helper.log_data_issue_failed(
+                    "",
+                    "Multiple patrons found for barcode",
+                    f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
+                )
+                num_invalid += 1
+            else:
+                try:
+                    self.valid_patron_map[barcode] = fetch_patron[0]["barcode"]
+                except KeyError:
+                    logger.warning("Patron exists but has no barcode: %s", barcode)
+                    Helper.log_data_issue(
+                        "",
+                        "Fetched patron has no barcode",
+                        f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
+                    )
+                    num_invalid += 1
+            if idx % 100 == 0:
+                print(
+                    f"Pre-validation progress: {idx}/{len(loan_barcodes)} barcodes checked. "
+                    f"{len(self.valid_patron_map)} valid, {num_invalid} not found.",
+                    end="\r",
+                )
+        print(
+            f"Pre-validation progress: {len(loan_barcodes)}/{len(loan_barcodes)} barcodes checked."
+            f" {len(self.valid_patron_map)} valid, {num_invalid} not found.     "
+        )
+
+    def pre_validate_item_barcodes(self):
+        """Pre-validates item barcodes by checking if they exist in FOLIO.
+
+        Logs any barcodes that do not match an item.
+        """
+        loan_barcodes = {
+            loan.item_barcode for loan in self.semi_valid_legacy_loans if loan.item_barcode
+        }
+        logger.info("Pre-validating item barcodes for %s unique barcodes", len(loan_barcodes))
+        logger.info(
+            "Fetching items matching loan barcodes via /item-storage/items/retrieve endpoint..."
+        )
+        fetch_items = self.folio_client.folio_post(
+            "/item-storage/items/retrieve",
+            "items",
+            {"query": " OR ".join([f"barcode=={barcode}" for barcode in loan_barcodes])},
+        ).get("items", [])
+        logger.info("Fetched %s items matching loan barcodes", len(fetch_items))
+        self.valid_item_barcodes = {item["barcode"] for item in fetch_items if "barcode" in item}
+        missing_item_barcodes = loan_barcodes - self.valid_item_barcodes
+        for barcode in missing_item_barcodes:
+            logger.warning("No item found for barcode: %s", barcode)
+            Helper.log_data_issue_failed(
+                "",
+                "No item found for barcode",
+                f"Barcode: {barcode}",
+            )
+
+    def log_loan_barcode_data_issues(
+        self, has_item_barcode, has_patron_barcode, has_proxy_barcode, loan
+    ):
+        if not has_item_barcode:
+            Helper.log_data_issue_failed(
+                "", "Loan without matched item barcode", json.dumps(loan.to_dict())
+            )
+        if not has_patron_barcode:
+            Helper.log_data_issue(
+                "",
+                "Loan without matched patron barcode",
+                json.dumps(loan.to_dict()),
+            )
+        if not has_proxy_barcode:
+            Helper.log_data_issue_failed(
+                "",
+                "Loan without matched proxy patron barcode",
+                json.dumps(loan.to_dict()),
+            )
+
+    def check_barcodes(self):
+        self.pre_validate_item_barcodes()
+        self.pre_validate_patron_barcodes()
+        for loan in self.semi_valid_legacy_loans:
+            has_item_barcode = loan.item_barcode in self.valid_item_barcodes
+            has_patron_barcode = loan.patron_barcode in self.valid_patron_map
             has_proxy_barcode = True
             if loan.proxy_patron_barcode:
-                has_proxy_barcode = loan.proxy_patron_barcode in user_barcodes or not any(
-                    user_barcodes
-                )
+                has_proxy_barcode = loan.proxy_patron_barcode in self.valid_patron_map
             if has_item_barcode and has_patron_barcode and has_proxy_barcode:
                 self.migration_report.add_general_statistics(
                     i18n_t("Loans verified against migrated user and item")
@@ -383,25 +521,13 @@ class LoansMigrator(MigrationTaskBase):
                     i18n_t("Loans discarded. Had migrated item barcode")
                     + f": {has_item_barcode}. "
                     + i18n_t("Had migrated user barcode")
-                    + f": {has_patron_barcode}"
+                    + f": {has_patron_barcode}. "
+                    + i18n_t("Had migrated proxy barcode")
                     + f": {has_proxy_barcode}",
                 )
-            if not has_item_barcode:
-                Helper.log_data_issue_failed(
-                    "", "Loan without matched item barcode", json.dumps(loan.to_dict())
-                )
-            if not has_patron_barcode:
-                Helper.log_data_issue(
-                    "",
-                    "Loan without matched patron barcode",
-                    json.dumps(loan.to_dict()),
-                )
-            if not has_proxy_barcode:
-                Helper.log_data_issue_failed(
-                    "",
-                    "Loan without matched proxy patron barcode",
-                    json.dumps(loan.to_dict()),
-                )
+            self.log_loan_barcode_data_issues(
+                has_item_barcode, has_patron_barcode, has_proxy_barcode, loan
+            )
 
     def load_and_validate_legacy_loans(self, loans_reader, service_point_id: str) -> list:
         results = []
