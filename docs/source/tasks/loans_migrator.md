@@ -25,17 +25,7 @@ This task creates real circulation transactions and **can generate thousands of 
             "service_point_id": "a77b55e7-f9f3-40a1-83e0-241bc606a826"
         }
     ],
-    "startingRow": 1,
-    "itemFiles": [
-        {
-            "file_name": "folio_items_transform_items.json"
-        }
-    ],
-    "patronFiles": [
-        {
-            "file_name": "folio_users_transform_users.json"
-        }
-    ]
+    "startingRow": 1
 }
 ```
 
@@ -48,8 +38,9 @@ This task creates real circulation transactions and **can generate thousands of 
 | `fallbackServicePointId` | string | Yes | UUID of service point for check-out transactions |
 | `openLoansFiles` | array | Yes | List of loan data files with optional per-file service point |
 | `startingRow` | integer | No | Row number to start processing (for resuming). Default: 1 |
-| `itemFiles` | array | No | Transformed item files for pre-validation |
-| `patronFiles` | array | No | Transformed user files for pre-validation |
+| `skipBarcodePrevalidation` | boolean | No | Skip pre-validation of patron and item barcodes against FOLIO. Default: false |
+| `itemFiles` | array | No | **Deprecated.** No longer used for pre-validation. |
+| `patronFiles` | array | No | **Deprecated.** No longer used for pre-validation. |
 
 ## Source Data Requirements
 
@@ -91,11 +82,24 @@ Dates should be in ISO 8601 format:
 
 ## Pre-validation
 
-If `itemFiles` and/or `patronFiles` are specified, the task validates loans before attempting to create them:
+By default, the task validates patron and item barcodes directly against the FOLIO tenant before attempting to create loans. This can be disabled by setting `skipBarcodePrevalidation` to `true`.
 
-- **Missing items**: Rows with item barcodes not found in item files are set aside
-- **Missing patrons**: Rows with patron barcodes not found in user files are set aside
-- **Invalid dates**: Rows where `due_date` precedes `out_date` are set aside
+### Item barcode validation
+
+Item barcodes from the loan data are validated in batches against FOLIO's `/item-storage/items/retrieve` endpoint. Barcodes that do not match an existing item are logged and the corresponding loans are set aside.
+
+### Patron barcode validation
+
+Patron barcodes (including proxy patron barcodes) are validated individually against FOLIO's `/users` endpoint using the tenant's configured preferred patron identifier fields (from `mod-configuration`). This ensures that lookup barcodes are resolved to the patron's actual FOLIO barcode before checkout.
+
+Patrons that cannot be found, or where a lookup barcode matches multiple users, are logged and the corresponding loans are set aside.
+
+### Validation outcomes
+
+- **Missing items**: Loans with item barcodes not found in FOLIO are discarded
+- **Missing patrons**: Loans with patron barcodes not found in FOLIO are discarded
+- **Invalid dates**: Loans where `due_date` precedes `out_date` are discarded
+- **Barcode rewriting**: If a patron is found via a non-barcode identifier (e.g., `externalSystemId`), the loan's patron barcode is rewritten to the patron's actual FOLIO barcode for checkout
 
 Failed records are saved to `failed_records_<task_name>_<timestamp>.txt`.
 
@@ -136,7 +140,7 @@ Files are created in `iterations/<iteration>/results/`:
 }
 ```
 
-### With Pre-validation
+### Skipping Pre-validation
 
 ```json
 {
@@ -148,16 +152,7 @@ Files are created in `iterations/<iteration>/results/`:
             "file_name": "loans.tsv"
         }
     ],
-    "itemFiles": [
-        {
-            "file_name": "folio_items_transform_items.json"
-        }
-    ],
-    "patronFiles": [
-        {
-            "file_name": "folio_users_transform_users.json"
-        }
-    ]
+    "skipBarcodePrevalidation": true
 }
 ```
 
