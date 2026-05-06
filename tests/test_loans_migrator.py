@@ -1,15 +1,15 @@
+import asyncio
 import csv
 from io import StringIO
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, patch
 from zoneinfo import ZoneInfo
 
+import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.loans_migrator import LoansMigrator
-import pytest
-from unittest.mock import patch
 
 
 def test_get_object_type():
@@ -205,97 +205,113 @@ def test_checkout_single_loan_retry_success(mock_i18n, migrator):
     migrator.set_new_status.assert_called_once_with(legacy_loan, res_checkout2)
 
 
-# --- Tests for pre_validate_patron_barcodes ---
+# --- Tests for pre_validate_patron_barcodes_async ---
 
 
-class TestPreValidatePatronBarcodes:
+class TestPreValidatePatronBarcodesAsync:
     def _make_migrator(self, loans, patron_identifiers=None):
         m = Mock(spec=LoansMigrator)
         m.semi_valid_legacy_loans = loans
         m.patron_identifiers = patron_identifiers or ["barcode", "externalSystemId"]
         m.folio_client = Mock()
+        m.folio_client.folio_get_async = AsyncMock()
         m.valid_patron_map = {}
         return m
 
-    def test_valid_patron_found(self):
+    @pytest.mark.asyncio
+    async def test_valid_patron_found(self):
         loans = [DummyLegacyLoan(patron_barcode="P001")]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get.return_value = [{"barcode": "P001", "id": "uuid-1"}]
+        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1"}]
 
-        LoansMigrator.pre_validate_patron_barcodes(m)
+        await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
         assert m.valid_patron_map == {"P001": "P001"}
 
-    def test_no_patron_found(self):
+    @pytest.mark.asyncio
+    async def test_no_patron_found(self):
         loans = [DummyLegacyLoan(patron_barcode="P002")]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get.return_value = []
+        m.folio_client.folio_get_async.return_value = []
 
-        LoansMigrator.pre_validate_patron_barcodes(m)
+        await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
         assert m.valid_patron_map == {}
 
-    def test_multiple_patrons_found(self):
+    @pytest.mark.asyncio
+    async def test_multiple_patrons_found(self):
         loans = [DummyLegacyLoan(patron_barcode="P003")]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get.return_value = [
+        m.folio_client.folio_get_async.return_value = [
             {"barcode": "P003", "id": "uuid-1"},
             {"barcode": "P003", "id": "uuid-2"},
         ]
 
-        LoansMigrator.pre_validate_patron_barcodes(m)
+        await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
         assert m.valid_patron_map == {}
 
-    def test_patron_without_barcode_field(self):
+    @pytest.mark.asyncio
+    async def test_patron_without_barcode_field(self):
         loans = [DummyLegacyLoan(patron_barcode="P004")]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get.return_value = [{"id": "uuid-1", "username": "someuser"}]
+        m.folio_client.folio_get_async.return_value = [{"id": "uuid-1", "username": "someuser"}]
 
-        LoansMigrator.pre_validate_patron_barcodes(m)
+        await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
         assert m.valid_patron_map == {}
 
-    def test_deduplicates_barcodes(self):
+    @pytest.mark.asyncio
+    async def test_deduplicates_barcodes(self):
         loans = [
             DummyLegacyLoan(patron_barcode="P001"),
             DummyLegacyLoan(patron_barcode="P001"),
         ]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get.return_value = [{"barcode": "P001", "id": "uuid-1"}]
+        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1"}]
 
-        LoansMigrator.pre_validate_patron_barcodes(m)
+        await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
         # Should only call the API once for the deduplicated barcode
-        assert m.folio_client.folio_get.call_count == 1
+        assert m.folio_client.folio_get_async.call_count == 1
         assert m.valid_patron_map == {"P001": "P001"}
 
-    def test_includes_proxy_barcodes(self):
+    @pytest.mark.asyncio
+    async def test_includes_proxy_barcodes(self):
         loans = [DummyLegacyLoan(patron_barcode="P001", proxy_patron_barcode="PROXY1")]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get.side_effect = [
+        m.folio_client.folio_get_async.side_effect = [
             [{"barcode": "P001", "id": "uuid-1"}],
             [{"barcode": "PROXY1", "id": "uuid-2"}],
         ]
 
-        LoansMigrator.pre_validate_patron_barcodes(m)
+        await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
-        assert m.folio_client.folio_get.call_count == 2
+        assert m.folio_client.folio_get_async.call_count == 2
         assert "P001" in m.valid_patron_map
         assert "PROXY1" in m.valid_patron_map
 
-    def test_builds_query_with_patron_identifiers(self):
+    @pytest.mark.asyncio
+    async def test_builds_query_with_patron_identifiers(self):
         loans = [DummyLegacyLoan(patron_barcode="P001")]
         m = self._make_migrator(loans, patron_identifiers=["barcode", "externalSystemId"])
-        m.folio_client.folio_get.return_value = [{"barcode": "P001", "id": "uuid-1"}]
+        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1"}]
 
-        LoansMigrator.pre_validate_patron_barcodes(m)
+        await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
-        m.folio_client.folio_get.assert_called_once_with(
-            "/users",
-            "users",
-            query="barcode==P001 OR externalSystemId==P001",
+        m.folio_client.folio_get_async.assert_called_once_with(
+            "/users", key="users", query="barcode==P001 OR externalSystemId==P001",
         )
+
+    @pytest.mark.asyncio
+    async def test_handles_exception_gracefully(self):
+        loans = [DummyLegacyLoan(patron_barcode="P001")]
+        m = self._make_migrator(loans)
+        m.folio_client.folio_get_async.side_effect = Exception("Connection refused")
+
+        await LoansMigrator.pre_validate_patron_barcodes_async(m)
+
+        assert m.valid_patron_map == {}
 
 
 # --- Tests for pre_validate_item_barcodes ---
@@ -417,42 +433,46 @@ class TestCheckBarcodes:
         m.valid_item_barcodes = set()
         m.valid_patron_map = {}
         m.pre_validate_item_barcodes = Mock()
-        m.pre_validate_patron_barcodes = Mock()
+        m.pre_validate_patron_barcodes_async = AsyncMock()
         return m
 
-    def test_yields_loan_when_all_barcodes_valid(self):
+    @pytest.mark.asyncio
+    async def test_yields_loan_when_all_barcodes_valid(self):
         loan = DummyLegacyLoan(item_barcode="I001", patron_barcode="P001")
         m = self._make_migrator([loan])
         m.valid_item_barcodes = {"I001"}
         m.valid_patron_map = {"P001": "P001"}
 
-        result = list(LoansMigrator.check_barcodes(m))
+        result = [loan async for loan in LoansMigrator.check_barcodes(m)]
 
         assert result == [loan]
 
-    def test_discards_loan_with_invalid_item_barcode(self):
+    @pytest.mark.asyncio
+    async def test_discards_loan_with_invalid_item_barcode(self):
         loan = DummyLegacyLoan(item_barcode="I999", patron_barcode="P001")
         m = self._make_migrator([loan])
         m.valid_item_barcodes = {"I001"}
         m.valid_patron_map = {"P001": "P001"}
 
-        result = list(LoansMigrator.check_barcodes(m))
+        result = [loan async for loan in LoansMigrator.check_barcodes(m)]
 
         assert result == []
         assert "I999" in m.failed
 
-    def test_discards_loan_with_invalid_patron_barcode(self):
+    @pytest.mark.asyncio
+    async def test_discards_loan_with_invalid_patron_barcode(self):
         loan = DummyLegacyLoan(item_barcode="I001", patron_barcode="P999")
         m = self._make_migrator([loan])
         m.valid_item_barcodes = {"I001"}
         m.valid_patron_map = {"P001": "P001"}
 
-        result = list(LoansMigrator.check_barcodes(m))
+        result = [loan async for loan in LoansMigrator.check_barcodes(m)]
 
         assert result == []
         assert "I001" in m.failed
 
-    def test_discards_loan_with_invalid_proxy_barcode(self):
+    @pytest.mark.asyncio
+    async def test_discards_loan_with_invalid_proxy_barcode(self):
         loan = DummyLegacyLoan(
             item_barcode="I001", patron_barcode="P001", proxy_patron_barcode="PROXY_BAD"
         )
@@ -460,12 +480,13 @@ class TestCheckBarcodes:
         m.valid_item_barcodes = {"I001"}
         m.valid_patron_map = {"P001": "P001"}
 
-        result = list(LoansMigrator.check_barcodes(m))
+        result = [loan async for loan in LoansMigrator.check_barcodes(m)]
 
         assert result == []
         assert "I001" in m.failed
 
-    def test_yields_loan_with_valid_proxy_barcode(self):
+    @pytest.mark.asyncio
+    async def test_yields_loan_with_valid_proxy_barcode(self):
         loan = DummyLegacyLoan(
             item_barcode="I001", patron_barcode="P001", proxy_patron_barcode="PROXY1"
         )
@@ -473,26 +494,28 @@ class TestCheckBarcodes:
         m.valid_item_barcodes = {"I001"}
         m.valid_patron_map = {"P001": "P001", "PROXY1": "PROXY1"}
 
-        result = list(LoansMigrator.check_barcodes(m))
+        result = [loan async for loan in LoansMigrator.check_barcodes(m)]
 
         assert result == [loan]
 
-    def test_calls_pre_validation_methods(self):
+    @pytest.mark.asyncio
+    async def test_calls_pre_validation_methods(self):
         m = self._make_migrator([])
 
-        list(LoansMigrator.check_barcodes(m))
+        [loan async for loan in LoansMigrator.check_barcodes(m)]
 
         m.pre_validate_item_barcodes.assert_called_once()
-        m.pre_validate_patron_barcodes.assert_called_once()
+        m.pre_validate_patron_barcodes_async.assert_called_once()
 
-    def test_empty_validation_results_discards_all_loans(self):
+    @pytest.mark.asyncio
+    async def test_empty_validation_results_discards_all_loans(self):
         """If pre-validation returns nothing, all loans should be discarded."""
         loan = DummyLegacyLoan(item_barcode="I001", patron_barcode="P001")
         m = self._make_migrator([loan])
         m.valid_item_barcodes = set()
         m.valid_patron_map = {}
 
-        result = list(LoansMigrator.check_barcodes(m))
+        result = [loan async for loan in LoansMigrator.check_barcodes(m)]
 
         assert result == []
         assert "I001" in m.failed
