@@ -4,6 +4,7 @@ Migrates open/active circulation loans from legacy ILS to FOLIO. Validates patro
 and item barcodes, handles loan policies, and maintains due dates and renewal counts.
 """
 
+import asyncio
 import copy
 import csv
 import json
@@ -212,15 +213,6 @@ class LoansMigrator(MigrationTaskBase):
                     file_def.file_name,
                 )
         logger.info("Loaded and validated %s loans in total", len(self.semi_valid_legacy_loans))
-        if self.task_configuration.skip_barcode_prevalidation:
-            logger.info("Barcode pre-validation is disabled by configuration. Skipping.")
-            self.valid_legacy_loans = self.semi_valid_legacy_loans
-        else:
-            self.valid_legacy_loans = list(self.check_barcodes())
-            logger.info(
-                "Loaded and validated %s loans against barcodes",
-                len(self.valid_legacy_loans),
-            )
         logger.info("Starting row number is %s", task_configuration.starting_row)
         logger.info("Init completed")
 
@@ -241,7 +233,23 @@ class LoansMigrator(MigrationTaskBase):
         else:
             logger.info("SMTP connection is disabled...")
 
+    async def _pre_validate_barcodes(self):
+        if self.task_configuration.skip_barcode_prevalidation:
+            logger.info("Barcode pre-validation is disabled by configuration. Skipping.")
+            self.valid_legacy_loans = self.semi_valid_legacy_loans
+        else:
+            logger.info(
+                "Performing barcode pre-validation for %s legacy loans...",
+                len(self.semi_valid_legacy_loans),
+            )
+            self.valid_legacy_loans = [loan async for loan in self.check_barcodes()]
+            logger.info(
+                "Loaded and validated %s loans against barcodes",
+                len(self.valid_legacy_loans),
+            )
+
     async def do_work(self):
+        await self._pre_validate_barcodes()
         with self.folio_client.get_folio_http_client() as self.http_client:
             logger.info("Starting")
             starting_index = (
@@ -385,33 +393,38 @@ class LoansMigrator(MigrationTaskBase):
             for _k, failed_loan in self.failed_and_not_dupe.items():
                 writer.writerow(failed_loan[0])
 
-    def pre_validate_patron_barcodes(self):
-        """Pre-validates patron barcodes by checking if they exist in FOLIO.
-
-        Logs any barcodes that do not match a patron or match multiple patrons.
-        """
+    async def pre_validate_patron_barcodes_async(self, max_concurrent: int = 10):
         loan_barcodes = set()
-        self.valid_patron_map = {}
         for loan in self.semi_valid_legacy_loans:
             if loan.patron_barcode:
                 loan_barcodes.add(loan.patron_barcode)
             if loan.proxy_patron_barcode:
                 loan_barcodes.add(loan.proxy_patron_barcode)
-        logger.info("Pre-validating patron barcodes for %s unique barcodes", len(loan_barcodes))
+
+        logger.info("Pre-validating %s unique patron barcodes (async)", len(loan_barcodes))
+        semaphore = asyncio.Semaphore(max_concurrent)
+        self.valid_patron_map = {}
+        counter = 0
         num_invalid = 0
-        for idx, barcode in enumerate(loan_barcodes):
-            # Without a /retrieve POST query endpoint for Users, the only sensible way to check
-            # patron barcodes is to query them one by one. This is still faster than trying to
-            # match them in Python after fetching all users for most systems.
-            fetch_patron = self.folio_client.folio_get(
-                "/users",
-                "users",
-                query=(
-                    " OR ".join(
-                        [f"{id_field.strip()}=={barcode}" for id_field in self.patron_identifiers]
+
+        async def check_one(barcode: str):
+            nonlocal num_invalid
+            nonlocal counter
+            query = " OR ".join(f"{field.strip()}=={barcode}" for field in self.patron_identifiers)
+            async with semaphore:
+                try:
+                    fetch_patron = await self.folio_client.folio_get_async(
+                        "/users", key="users", query=query
                     )
-                ),
-            )
+                except Exception as e:
+                    if hasattr(e, "response"):
+                        logger.error(
+                            "Error fetching patron for barcode %s: %s", barcode, e.response.text
+                        )
+                    else:
+                        logger.error("Error fetching patron for barcode %s: %s", barcode, str(e))
+                    fetch_patron = []
+                counter += 1
             if not fetch_patron:
                 logger.warning("No patron found for barcode: %s", barcode)
                 Helper.log_data_issue_failed(
@@ -439,15 +452,26 @@ class LoansMigrator(MigrationTaskBase):
                         f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
                     )
                     num_invalid += 1
-            if idx % 100 == 0:
-                print(
-                    f"Pre-validation progress: {idx}/{len(loan_barcodes)} barcodes checked. "
-                    f"{len(self.valid_patron_map)} valid, {num_invalid} not found.",
-                    end="\r",
+            if counter % 100 == 0:
+                logger.info(
+                    "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
+                    counter,
+                    len(loan_barcodes),
+                    len(self.valid_patron_map),
+                    num_invalid,
                 )
-        print(
-            f"Pre-validation progress: {len(loan_barcodes)}/{len(loan_barcodes)} barcodes checked."
-            f" {len(self.valid_patron_map)} valid, {num_invalid} not found.     "
+
+        # Without a /retrieve POST query endpoint for Users, the only sensible way to check
+        # patron barcodes is to query them one by one. This is still faster than trying to
+        # match them in Python after fetching all users for most systems.
+        tasks = [check_one(bc) for bc in loan_barcodes]
+        await asyncio.gather(*tasks)
+        logger.info(
+            "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
+            counter,
+            len(loan_barcodes),
+            len(self.valid_patron_map),
+            num_invalid,
         )
 
     def pre_validate_item_barcodes(self, batch_size: int = 1000):
@@ -497,9 +521,9 @@ class LoansMigrator(MigrationTaskBase):
                 f"Barcode: {barcode}",
             )
 
-    def check_barcodes(self):
+    async def check_barcodes(self):
         self.pre_validate_item_barcodes()
-        self.pre_validate_patron_barcodes()
+        await self.pre_validate_patron_barcodes_async()
         for loan in self.semi_valid_legacy_loans:
             has_item_barcode = loan.item_barcode in self.valid_item_barcodes
             has_patron_barcode = loan.patron_barcode in self.valid_patron_map
